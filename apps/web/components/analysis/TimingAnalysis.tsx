@@ -1,19 +1,39 @@
 'use client';
 
-import { Clock, ArrowDown, ArrowUp, Brain } from 'lucide-react';
+// ===========================================
+// Timing Analysis Component
+// Matches API response structure
+// ===========================================
+
+import { Clock, ArrowDown, ArrowUp, Brain, CheckCircle, XCircle, Timer } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
+interface EntryZone {
+  priceLow: number;
+  priceHigh: number;
+  probability: number;
+  eta: string;
+}
+
+interface Condition {
+  name: string;
+  met: boolean;
+  details: string;
+}
+
+interface WaitFor {
+  event: string;
+  eta: string;
+  importance: 'high' | 'medium' | 'low';
+}
+
 interface TimingData {
-  symbol: string;
   currentPrice: number;
   optimalEntry: number;
-  entryZone: {
-    low: number;
-    high: number;
-  };
-  recommendation: string;
-  timeWindow: string;
-  confidence: number;
+  tradeNow: boolean;
+  entryZones: EntryZone[];
+  conditions: Condition[];
+  waitFor?: WaitFor;
   aiInsight?: string;
 }
 
@@ -30,27 +50,21 @@ export function TimingAnalysis({ data, symbol }: TimingAnalysisProps) {
           <Clock className="w-5 h-5 text-purple-500" />
           Timing Analysis - {symbol}
         </h3>
-        <p className="text-muted-foreground">Yükleniyor...</p>
+        <p className="text-muted-foreground">Loading...</p>
       </div>
     );
   }
 
-  const priceDiff = ((data.currentPrice - data.optimalEntry) / data.optimalEntry * 100);
+  const currentPrice = data.currentPrice || 0;
+  const optimalEntry = data.optimalEntry || currentPrice;
+  const priceDiff = optimalEntry > 0 ? ((currentPrice - optimalEntry) / optimalEntry * 100) : 0;
   const isAboveOptimal = priceDiff > 0;
 
-  const getRecommendationStyle = (rec: string) => {
-    const upper = rec.toUpperCase();
-    if (upper === 'BUY' || upper === 'ENTER') return 'bg-green-500/10 text-green-500 border-green-500/20';
-    if (upper === 'WAIT') return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-    return 'bg-red-500/10 text-red-500 border-red-500/20';
-  };
+  const conditionsMet = data.conditions?.filter(c => c.met).length || 0;
+  const totalConditions = data.conditions?.length || 0;
+  const conditionProgress = totalConditions > 0 ? (conditionsMet / totalConditions) * 100 : 0;
 
-  const getRecommendationLabel = (rec: string) => {
-    const upper = rec.toUpperCase();
-    if (upper === 'BUY' || upper === 'ENTER') return 'Giriş Yap';
-    if (upper === 'WAIT') return 'Bekle';
-    return 'Bekle';
-  };
+  const bestZone = data.entryZones?.[0];
 
   return (
     <div className="space-y-6">
@@ -59,77 +73,154 @@ export function TimingAnalysis({ data, symbol }: TimingAnalysisProps) {
         Timing Analysis - {symbol}
       </h3>
 
+      {/* Trade Now Status */}
+      <div className={cn(
+        "p-4 rounded-lg border-2 text-center",
+        data.tradeNow
+          ? 'bg-green-500/10 border-green-500/30'
+          : 'bg-yellow-500/10 border-yellow-500/30'
+      )}>
+        <p className="text-sm text-muted-foreground mb-1">Trade Signal</p>
+        <p className={cn(
+          "text-2xl font-bold",
+          data.tradeNow ? 'text-green-500' : 'text-yellow-500'
+        )}>
+          {data.tradeNow ? 'ENTER NOW' : 'WAIT'}
+        </p>
+        {data.waitFor && !data.tradeNow && (
+          <p className="text-sm text-muted-foreground mt-1">
+            Waiting for: {data.waitFor.event}
+          </p>
+        )}
+      </div>
+
+      {/* Price Info Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="bg-background rounded-lg p-4 border">
-          <p className="text-sm text-muted-foreground">Güncel Fiyat</p>
-          <p className="text-xl font-bold">${data.currentPrice.toLocaleString()}</p>
+          <p className="text-sm text-muted-foreground">Current Price</p>
+          <p className="text-xl font-bold">${currentPrice.toLocaleString()}</p>
         </div>
 
         <div className="bg-background rounded-lg p-4 border">
-          <p className="text-sm text-muted-foreground">Optimal Giriş</p>
-          <p className="text-xl font-bold text-green-500">${data.optimalEntry.toLocaleString()}</p>
+          <p className="text-sm text-muted-foreground">Optimal Entry</p>
+          <p className="text-xl font-bold text-green-500">${optimalEntry.toLocaleString()}</p>
           <p className="text-xs text-muted-foreground">
             {isAboveOptimal ? (
               <span className="text-red-500 flex items-center gap-1">
-                <ArrowUp className="w-3 h-3" /> {priceDiff.toFixed(2)}% üstünde
+                <ArrowUp className="w-3 h-3" /> {priceDiff.toFixed(2)}% above
               </span>
             ) : (
               <span className="text-green-500 flex items-center gap-1">
-                <ArrowDown className="w-3 h-3" /> {Math.abs(priceDiff).toFixed(2)}% altında
+                <ArrowDown className="w-3 h-3" /> {Math.abs(priceDiff).toFixed(2)}% below
               </span>
             )}
           </p>
         </div>
 
         <div className="bg-background rounded-lg p-4 border">
-          <p className="text-sm text-muted-foreground">Güven</p>
-          <p className="text-xl font-bold">{data.confidence}%</p>
+          <p className="text-sm text-muted-foreground">Conditions Met</p>
+          <p className="text-xl font-bold">{conditionsMet}/{totalConditions}</p>
           <div className="mt-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
             <div
-              className="h-full bg-purple-500 rounded-full"
-              style={{ width: `${data.confidence}%` }}
+              className={cn(
+                "h-full rounded-full transition-all",
+                conditionProgress >= 70 ? 'bg-green-500' :
+                conditionProgress >= 40 ? 'bg-yellow-500' : 'bg-red-500'
+              )}
+              style={{ width: `${conditionProgress}%` }}
             />
           </div>
         </div>
       </div>
 
-      {/* Entry Zone */}
-      <div className="bg-background rounded-lg p-4 border">
-        <p className="text-sm text-muted-foreground mb-2">Giriş Bölgesi</p>
-        <div className="relative h-10 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
-          <div
-            className="absolute h-full bg-green-500/30 flex items-center justify-center"
-            style={{
-              left: '10%',
-              width: '80%',
-            }}
-          >
-            <span className="text-xs font-medium">Giriş Bölgesi</span>
-          </div>
-          <div className="absolute inset-0 flex items-center justify-between px-4 text-sm font-medium">
-            <span>${data.entryZone.low.toLocaleString()}</span>
-            <span>${data.entryZone.high.toLocaleString()}</span>
+      {/* Entry Zones */}
+      {data.entryZones && data.entryZones.length > 0 && (
+        <div className="bg-background rounded-lg p-4 border">
+          <p className="text-sm font-medium mb-3">Entry Zones</p>
+          <div className="space-y-3">
+            {data.entryZones.slice(0, 3).map((zone, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "flex items-center justify-between p-3 rounded-lg",
+                  index === 0 ? 'bg-green-500/10 border border-green-500/30' : 'bg-muted/30'
+                )}
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "text-xs px-2 py-0.5 rounded",
+                      index === 0 ? 'bg-green-500 text-white' : 'bg-muted'
+                    )}>
+                      Zone {index + 1}
+                    </span>
+                    <span className="font-semibold">
+                      ${zone.priceLow?.toLocaleString()} - ${zone.priceHigh?.toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <Timer className="w-3 h-3" />
+                    ETA: {zone.eta || 'Unknown'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-lg">{(zone.probability * 100).toFixed(0)}%</p>
+                  <p className="text-xs text-muted-foreground">probability</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Recommendation */}
-      <div className={cn("p-4 rounded-lg border", getRecommendationStyle(data.recommendation))}>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-semibold text-lg">{getRecommendationLabel(data.recommendation)}</p>
-            <p className="text-sm opacity-80">
-              {data.recommendation.toUpperCase() === 'WAIT'
-                ? `Fiyatın giriş bölgesine gelmesini bekleyin`
-                : 'Fiyat optimal giriş bölgesinde'}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm opacity-80">Zaman Penceresi</p>
-            <p className="font-medium">{data.timeWindow}</p>
+      {/* Entry Conditions */}
+      {data.conditions && data.conditions.length > 0 && (
+        <div className="bg-background rounded-lg p-4 border">
+          <p className="text-sm font-medium mb-3">Entry Conditions</p>
+          <div className="space-y-2">
+            {data.conditions.map((condition, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "flex items-start gap-3 p-2 rounded",
+                  condition.met ? 'bg-green-500/10' : 'bg-muted/30'
+                )}
+              >
+                {condition.met ? (
+                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <p className="font-medium text-sm">{condition.name}</p>
+                  <p className="text-xs text-muted-foreground">{condition.details}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Wait For */}
+      {data.waitFor && !data.tradeNow && (
+        <div className={cn(
+          "p-4 rounded-lg border",
+          data.waitFor.importance === 'high' && 'bg-red-500/10 border-red-500/30',
+          data.waitFor.importance === 'medium' && 'bg-yellow-500/10 border-yellow-500/30',
+          data.waitFor.importance === 'low' && 'bg-blue-500/10 border-blue-500/30',
+        )}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Wait For</p>
+              <p className="font-semibold">{data.waitFor.event}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">Expected</p>
+              <p className="font-medium">{data.waitFor.eta}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Insight */}
       {data.aiInsight && (
@@ -137,7 +228,7 @@ export function TimingAnalysis({ data, symbol }: TimingAnalysisProps) {
           <div className="flex items-start gap-3">
             <Brain className="w-5 h-5 text-purple-500 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-sm font-medium text-purple-500 mb-1">AI Zamanlama Önerisi</p>
+              <p className="text-sm font-medium text-purple-500 mb-1">AI Timing Analysis</p>
               <p className="text-sm">{data.aiInsight}</p>
             </div>
           </div>

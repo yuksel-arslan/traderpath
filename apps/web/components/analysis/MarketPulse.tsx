@@ -24,7 +24,7 @@ export function MarketPulse({ data }: { data?: MarketPulseData }) {
           <Globe className="w-5 h-5 text-blue-500" />
           Market Pulse
         </h3>
-        <p className="text-muted-foreground">Yükleniyor...</p>
+        <p className="text-muted-foreground">Loading...</p>
       </div>
     );
   }
@@ -55,7 +55,7 @@ export function MarketPulse({ data }: { data?: MarketPulseData }) {
     <div className="space-y-6">
       <h3 className="flex items-center gap-2 text-lg font-semibold">
         <Globe className="w-5 h-5 text-blue-500" />
-        Market Pulse - Genel Piyasa Analizi
+        Market Pulse - Overall Market Analysis
       </h3>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -77,12 +77,12 @@ export function MarketPulse({ data }: { data?: MarketPulseData }) {
 
         {/* Market Regime */}
         <div className="bg-background rounded-lg p-4 border">
-          <p className="text-sm text-muted-foreground mb-1">Piyasa Rejimi</p>
+          <p className="text-sm text-muted-foreground mb-1">Market Regime</p>
           <span className={cn(
             "inline-block px-2 py-1 rounded text-sm font-medium border",
             getRegimeColor(data.marketRegime)
           )}>
-            {data.marketRegime === 'RISK_ON' ? 'Risk On' : data.marketRegime === 'RISK_OFF' ? 'Risk Off' : 'Nötr'}
+            {data.marketRegime === 'RISK_ON' ? 'Risk On' : data.marketRegime === 'RISK_OFF' ? 'Risk Off' : 'Neutral'}
           </span>
         </div>
 
@@ -103,7 +103,7 @@ export function MarketPulse({ data }: { data?: MarketPulseData }) {
           <div className="flex items-start gap-3">
             <Brain className="w-5 h-5 text-purple-500 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-sm font-medium text-purple-500 mb-1">AI Analizi</p>
+              <p className="text-sm font-medium text-purple-500 mb-1">AI Analysis</p>
               <p className="text-sm">{data.aiSummary}</p>
             </div>
           </div>
