@@ -2,19 +2,19 @@
 
 // ===========================================
 // Dashboard Home Page
-// Pro trader focused - Analysis first, gamification secondary
+// Pro trader focused - Statistics and performance tracking
 // ===========================================
 
 import { CreditBalance } from '../../../components/credits/CreditBalance';
 import { DailyRewards } from '../../../components/rewards/DailyRewards';
-import { CoinSelector } from '../../../components/common/CoinSelector';
 import { StreakDisplay } from '../../../components/rewards/StreakDisplay';
 import { LevelProgress } from '../../../components/rewards/LevelProgress';
 import { RecentAnalyses } from '../../../components/analysis/RecentAnalyses';
 import { AnalysisStats } from '../../../components/dashboard/AnalysisStats';
 import { PerformanceMetrics } from '../../../components/dashboard/PerformanceMetrics';
-import { ChevronDown, Gift } from 'lucide-react';
+import { ChevronDown, Gift, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
+import Link from 'next/link';
 
 export default function DashboardPage() {
   const [showRewards, setShowRewards] = useState(false);
@@ -24,23 +24,26 @@ export default function DashboardPage() {
       {/* Header with Credits */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Analysis Dashboard</h1>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">
             Track your performance and make informed decisions
           </p>
         </div>
-        <CreditBalance />
+        <div className="flex items-center gap-4">
+          <Link
+            href="/analyze"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
+          >
+            New Analysis
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+          <CreditBalance />
+        </div>
       </div>
 
       {/* PRIMARY: Analysis Performance Stats */}
       <div className="mb-8">
         <AnalysisStats />
-      </div>
-
-      {/* Quick Analysis - Start New */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Start New Analysis</h2>
-        <CoinSelector />
       </div>
 
       {/* Performance Metrics - Detailed Stats */}

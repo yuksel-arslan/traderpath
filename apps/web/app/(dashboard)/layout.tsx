@@ -21,7 +21,7 @@ import { ThemeToggle } from '../../components/common/ThemeToggle';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Analyze', href: '/analyze/BTC', icon: TrendingUp },
+  { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Rewards', href: '/rewards', icon: Gift },
   { name: 'Credits', href: '/credits', icon: Coins },
   { name: 'Alerts', href: '/alerts', icon: Bell },
