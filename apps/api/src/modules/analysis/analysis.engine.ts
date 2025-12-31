@@ -6,6 +6,33 @@
 import { config } from '../../core/config';
 
 // ===========================================
+// Price Formatting Utility
+// Handles decimal precision based on price level
+// ===========================================
+
+function roundPrice(price: number): number {
+  if (price === 0) return 0;
+
+  // Determine appropriate decimal places based on price magnitude
+  if (price >= 10000) {
+    // BTC-like: $93,245.50
+    return Math.round(price * 100) / 100;
+  } else if (price >= 100) {
+    // ETH-like: $3,456.78
+    return Math.round(price * 100) / 100;
+  } else if (price >= 1) {
+    // SOL-like: $123.4567
+    return Math.round(price * 10000) / 10000;
+  } else if (price >= 0.01) {
+    // DOGE-like: $0.31234567
+    return Math.round(price * 100000000) / 100000000;
+  } else {
+    // SHIB-like: $0.00002345
+    return Math.round(price * 100000000000) / 100000000000;
+  }
+}
+
+// ===========================================
 // Types - Matching Technical Specification
 // ===========================================
 
@@ -686,17 +713,17 @@ function findSupportResistance(candles: Candle[]): {
   const support = clusteredLevels
     .filter((l) => l.price < currentPrice)
     .slice(0, 3)
-    .map((l) => Math.round(l.price));
+    .map((l) => roundPrice(l.price));
 
   const resistance = clusteredLevels
     .filter((l) => l.price > currentPrice)
     .slice(0, 3)
-    .map((l) => Math.round(l.price));
+    .map((l) => roundPrice(l.price));
 
   // Calculate POC (Point of Control) - price with highest volume
   const poc = calculateVWAP(candles.slice(-50));
 
-  return { support, resistance, poc: Math.round(poc) };
+  return { support, resistance, poc: roundPrice(poc) };
 }
 
 function calculateTrend(
@@ -926,8 +953,8 @@ export const analysisEngine = {
       ? Math.sqrt(recentReturns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / recentReturns.length)
       : 0.02;
 
-    const price24h = Math.round(ticker.price * (1 + avgReturn));
-    const price7d = Math.round(ticker.price * (1 + avgReturn * 7));
+    const price24h = roundPrice(ticker.price * (1 + avgReturn));
+    const price7d = roundPrice(ticker.price * (1 + avgReturn * 7));
 
     // Confidence based on trend alignment
     let confidence = 50;
@@ -974,29 +1001,29 @@ export const analysisEngine = {
         scenarios: [
           {
             name: 'bull',
-            price: Math.round(price7d * (1 + volatility * 2)),
+            price: roundPrice(price7d * (1 + volatility * 2)),
             probability: bullProb,
           },
           { name: 'base', price: price7d, probability: baseProb },
           {
             name: 'bear',
-            price: Math.round(price7d * (1 - volatility * 2)),
+            price: roundPrice(price7d * (1 - volatility * 2)),
             probability: bearProb,
           },
         ],
       },
       levels: {
         resistance: levels.resistance.length > 0 ? levels.resistance : [
-          Math.round(ticker.price * 1.05),
-          Math.round(ticker.price * 1.1),
-          Math.round(ticker.price * 1.15),
+          roundPrice(ticker.price * 1.05),
+          roundPrice(ticker.price * 1.1),
+          roundPrice(ticker.price * 1.15),
         ],
         support: levels.support.length > 0 ? levels.support : [
-          Math.round(ticker.price * 0.95),
-          Math.round(ticker.price * 0.9),
-          Math.round(ticker.price * 0.85),
+          roundPrice(ticker.price * 0.95),
+          roundPrice(ticker.price * 0.9),
+          roundPrice(ticker.price * 0.85),
         ],
-        poc: levels.poc || Math.round((ticker.high24h + ticker.low24h) / 2),
+        poc: levels.poc || roundPrice((ticker.high24h + ticker.low24h) / 2),
       },
       indicators: {
         rsi: Math.round(rsi * 10) / 10,
@@ -1006,14 +1033,14 @@ export const analysisEngine = {
           histogram: parseFloat(macd.histogram.toFixed(2)),
         },
         movingAverages: {
-          ma20: Math.round(ma20),
-          ma50: Math.round(ma50),
-          ma200: Math.round(ma200),
+          ma20: roundPrice(ma20),
+          ma50: roundPrice(ma50),
+          ma200: roundPrice(ma200),
         },
         bollingerBands: {
-          upper: Math.round(bb.upper),
-          middle: Math.round(bb.middle),
-          lower: Math.round(bb.lower),
+          upper: roundPrice(bb.upper),
+          middle: roundPrice(bb.middle),
+          lower: roundPrice(bb.lower),
         },
         atr: parseFloat(atr.toFixed(2)),
       },
@@ -1271,7 +1298,7 @@ export const analysisEngine = {
 
     // Calculate optimal entry
     const nearestSupport = levels.support[0] ?? currentPrice * 0.97;
-    const optimalEntry = Math.round((currentPrice * 0.6 + nearestSupport * 0.4));
+    const optimalEntry = roundPrice(currentPrice * 0.6 + nearestSupport * 0.4);
 
     // Entry zones
     const entryZones: TimingResult['entryZones'] = [];
@@ -1279,8 +1306,8 @@ export const analysisEngine = {
     // Zone 1: Aggressive entry
     if (currentPrice <= bb.middle) {
       entryZones.push({
-        priceLow: Math.round(currentPrice * 0.99),
-        priceHigh: Math.round(currentPrice * 1.01),
+        priceLow: roundPrice(currentPrice * 0.99),
+        priceHigh: roundPrice(currentPrice * 1.01),
         probability: 70,
         eta: 'Now',
         quality: 4,
@@ -1290,8 +1317,8 @@ export const analysisEngine = {
     // Zone 2: Conservative entry
     if (levels.support[0]) {
       entryZones.push({
-        priceLow: Math.round(levels.support[0] * 0.99),
-        priceHigh: Math.round(levels.support[0] * 1.01),
+        priceLow: roundPrice(levels.support[0] * 0.99),
+        priceHigh: roundPrice(levels.support[0] * 1.01),
         probability: 60,
         eta: '4-12 hours',
         quality: 5,
@@ -1301,8 +1328,8 @@ export const analysisEngine = {
     // Zone 3: Deep value
     if (levels.support[1]) {
       entryZones.push({
-        priceLow: Math.round(levels.support[1] * 0.99),
-        priceHigh: Math.round(levels.support[1] * 1.01),
+        priceLow: roundPrice(levels.support[1] * 0.99),
+        priceHigh: roundPrice(levels.support[1] * 1.01),
         probability: 40,
         eta: '1-3 days',
         quality: 5,
@@ -1388,12 +1415,12 @@ export const analysisEngine = {
       : levels.resistance[0] || currentPrice * 1.05;
 
     const entries: TradePlanResult['entries'] = [
-      { price: Math.round(entry1), percentage: 40, type: 'limit' },
-      { price: Math.round(entry2), percentage: 35, type: 'limit' },
-      { price: Math.round(entry3), percentage: 25, type: 'stop_limit' },
+      { price: roundPrice(entry1), percentage: 40, type: 'limit' },
+      { price: roundPrice(entry2), percentage: 35, type: 'limit' },
+      { price: roundPrice(entry3), percentage: 25, type: 'stop_limit' },
     ];
 
-    const averageEntry = Math.round(
+    const averageEntry = roundPrice(
       entries.reduce((sum, e) => sum + e.price * (e.percentage / 100), 0)
     );
 
@@ -1411,7 +1438,7 @@ export const analysisEngine = {
     const stopPercentage = Math.abs((stopPrice - averageEntry) / averageEntry * 100);
 
     const stopLoss: TradePlanResult['stopLoss'] = {
-      price: Math.round(stopPrice),
+      price: roundPrice(stopPrice),
       percentage: parseFloat(stopPercentage.toFixed(2)),
       reason: `ATR-based stop (${atr.toFixed(2)} ATR) + support/resistance level`,
     };
@@ -1420,17 +1447,17 @@ export const analysisEngine = {
     const riskAmount = Math.abs(averageEntry - stopPrice);
     const takeProfits: TradePlanResult['takeProfits'] = [
       {
-        price: Math.round(direction === 'long' ? averageEntry + riskAmount * 1.5 : averageEntry - riskAmount * 1.5),
+        price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 1.5 : averageEntry - riskAmount * 1.5),
         percentage: 30,
         reason: '1.5R - First take profit',
       },
       {
-        price: Math.round(direction === 'long' ? averageEntry + riskAmount * 2.5 : averageEntry - riskAmount * 2.5),
+        price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 2.5 : averageEntry - riskAmount * 2.5),
         percentage: 40,
         reason: '2.5R - Main target',
       },
       {
-        price: Math.round(direction === 'long' ? averageEntry + riskAmount * 4 : averageEntry - riskAmount * 4),
+        price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 4 : averageEntry - riskAmount * 4),
         percentage: 30,
         reason: '4R - Extended target',
       },
@@ -1525,13 +1552,13 @@ export const analysisEngine = {
 
     // Liquidity grab zones
     const liquidityGrabZones: number[] = [];
-    if (levels.support[0]) liquidityGrabZones.push(Math.round(levels.support[0] * 0.98));
-    if (levels.resistance[0]) liquidityGrabZones.push(Math.round(levels.resistance[0] * 1.02));
+    if (levels.support[0]) liquidityGrabZones.push(roundPrice(levels.support[0] * 0.98));
+    if (levels.resistance[0]) liquidityGrabZones.push(roundPrice(levels.resistance[0] * 1.02));
 
     // Stop hunt zones (just below support, just above resistance)
     const stopHuntZones: number[] = [];
-    levels.support.forEach((s) => stopHuntZones.push(Math.round(s * 0.97)));
-    levels.resistance.forEach((r) => stopHuntZones.push(Math.round(r * 1.03)));
+    levels.support.forEach((s) => stopHuntZones.push(roundPrice(s * 0.97)));
+    levels.resistance.forEach((r) => stopHuntZones.push(roundPrice(r * 1.03)));
 
     // Fakeout risk
     let fakeoutRisk: 'low' | 'medium' | 'high' = 'low';
@@ -1543,12 +1570,12 @@ export const analysisEngine = {
     // Liquidation levels (estimated)
     const longLiquidations: TrapCheckResult['liquidationLevels'] = [
       {
-        price: Math.round(currentPrice * 0.9),
+        price: roundPrice(currentPrice * 0.9),
         amountUsd: ticker.quoteVolume24h * 0.1,
         type: 'longs',
       },
       {
-        price: Math.round(currentPrice * 0.85),
+        price: roundPrice(currentPrice * 0.85),
         amountUsd: ticker.quoteVolume24h * 0.15,
         type: 'longs',
       },
@@ -1556,12 +1583,12 @@ export const analysisEngine = {
 
     const shortLiquidations: TrapCheckResult['liquidationLevels'] = [
       {
-        price: Math.round(currentPrice * 1.1),
+        price: roundPrice(currentPrice * 1.1),
         amountUsd: ticker.quoteVolume24h * 0.08,
         type: 'shorts',
       },
       {
-        price: Math.round(currentPrice * 1.15),
+        price: roundPrice(currentPrice * 1.15),
         amountUsd: ticker.quoteVolume24h * 0.12,
         type: 'shorts',
       },

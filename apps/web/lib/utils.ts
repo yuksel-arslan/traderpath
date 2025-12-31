@@ -12,13 +12,45 @@ export function formatNumber(num: number): string {
   return num.toFixed(2);
 }
 
-export function formatPrice(price: number): string {
+export function formatPrice(price: number | undefined | null): string {
+  if (price === undefined || price === null || isNaN(price)) return '$0.00';
+  if (price === 0) return '$0.00';
+
+  // Determine decimal places based on price magnitude
+  let decimals: number;
+  if (price >= 1000) {
+    decimals = 2;
+  } else if (price >= 1) {
+    decimals = 4;
+  } else if (price >= 0.01) {
+    decimals = 6;
+  } else {
+    decimals = 8;
+  }
+
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
-    maximumFractionDigits: price < 1 ? 6 : 2,
+    maximumFractionDigits: decimals,
   }).format(price);
+}
+
+// Format price without currency symbol, useful for charts and displays
+export function formatPriceValue(price: number | undefined | null): string {
+  if (price === undefined || price === null || isNaN(price)) return '0';
+  if (price === 0) return '0';
+
+  // Determine decimal places based on price magnitude
+  if (price >= 1000) {
+    return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  } else if (price >= 1) {
+    return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+  } else if (price >= 0.01) {
+    return price.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 });
+  } else {
+    return price.toLocaleString('en-US', { minimumFractionDigits: 6, maximumFractionDigits: 8 });
+  }
 }
 
 export function formatPercentage(value: number): string {
