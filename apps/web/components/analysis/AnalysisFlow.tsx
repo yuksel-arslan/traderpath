@@ -1,7 +1,8 @@
 'use client';
 
 // ===========================================
-// 7-Step Analysis Flow Component
+// 7-Step Analysis Flow - Immersive Experience
+// Each step is a journey, not just a checkbox
 // ===========================================
 
 import { useState, useCallback } from 'react';
@@ -15,7 +16,13 @@ import {
   AlertTriangle,
   CheckCircle,
   Lock,
-  Loader2
+  Loader2,
+  ChevronRight,
+  Play,
+  Zap,
+  Brain,
+  TrendingUp,
+  Eye
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { CREDIT_COSTS } from '@tradepath/types';
@@ -42,70 +49,151 @@ const STEP_ENDPOINTS: Record<number, { url: string; method: string }> = {
   4: { url: '/api/analysis/timing', method: 'POST' },
   5: { url: '/api/analysis/trade-plan', method: 'POST' },
   6: { url: '/api/analysis/trap-check', method: 'POST' },
-  7: { url: '/api/analysis/full', method: 'POST' }, // Final verdict comes from full analysis
+  7: { url: '/api/analysis/full', method: 'POST' },
 };
 
+// Detailed step information - educational content
 const STEPS = [
   {
     id: 1,
     name: 'Market Pulse',
     icon: Globe,
+    color: 'blue',
     cost: CREDIT_COSTS.STEP_MARKET_PULSE,
-    description: 'Overall market analysis',
+    shortDesc: 'Overall market analysis',
+    fullDesc: 'Understand the current market environment before making any trade decision.',
+    whyMatters: 'Even the best coin analysis fails in a crashing market. We check BTC dominance, Fear & Greed Index, and overall market trend to ensure conditions favor your trade.',
+    checks: [
+      'BTC Dominance & Trend',
+      'Fear & Greed Index',
+      'Market Regime (Bull/Bear/Neutral)',
+      'Global Market Momentum'
+    ],
+    duration: '~5 seconds',
   },
   {
     id: 2,
     name: 'Asset Scanner',
     icon: Target,
+    color: 'cyan',
     cost: CREDIT_COSTS.STEP_ASSET_SCANNER,
-    description: 'Coin-specific forecast',
+    shortDesc: 'Technical analysis',
+    fullDesc: 'Deep dive into the specific asset using professional-grade technical indicators.',
+    whyMatters: 'We analyze the coin across multiple timeframes using RSI, MACD, Bollinger Bands, and more. This reveals the true trend direction and momentum.',
+    checks: [
+      'Multi-Timeframe Analysis (15m, 1h, 4h, 1d)',
+      'RSI with Wilder Smoothing',
+      'MACD Momentum & Divergence',
+      'Support & Resistance Levels'
+    ],
+    duration: '~8 seconds',
   },
   {
     id: 3,
     name: 'Safety Check',
     icon: Shield,
+    color: 'orange',
     cost: CREDIT_COSTS.STEP_SAFETY_CHECK,
-    description: 'Manipulation detection',
+    shortDesc: 'Risk assessment',
+    fullDesc: 'Detect manipulation, whale activity, and potential red flags that could trap you.',
+    whyMatters: 'Crypto markets are full of manipulation. We scan for pump & dump schemes, wash trading, whale movements, and spoofing to protect your capital.',
+    checks: [
+      'Pump & Dump Detection',
+      'Whale Activity Tracking',
+      'Wash Trading Analysis',
+      'Smart Money Positioning'
+    ],
+    duration: '~10 seconds',
   },
   {
     id: 4,
     name: 'Timing',
     icon: Clock,
+    color: 'purple',
     cost: CREDIT_COSTS.STEP_TIMING,
-    description: 'Entry zone calculation',
+    shortDesc: 'Entry optimization',
+    fullDesc: 'Calculate the optimal entry point and timing for maximum edge.',
+    whyMatters: 'Entering at the wrong time can turn a winning trade into a loser. We identify the best entry zones and tell you exactly when to pull the trigger.',
+    checks: [
+      'Optimal Entry Price Zones',
+      'Entry Condition Checklist',
+      'Wait-For Events',
+      'Time-Based Triggers'
+    ],
+    duration: '~6 seconds',
   },
   {
     id: 5,
     name: 'Trade Plan',
     icon: FileText,
+    color: 'indigo',
     cost: CREDIT_COSTS.STEP_TRADE_PLAN,
-    description: 'Full trading plan',
+    shortDesc: 'Execution strategy',
+    fullDesc: 'Complete trade execution plan with entries, exits, and position sizing.',
+    whyMatters: 'Professional traders never enter without a plan. We calculate your exact entry levels, stop loss, take profit targets, and position size based on your risk tolerance.',
+    checks: [
+      'DCA Entry Levels',
+      'Stop Loss Placement',
+      'Multiple Take Profit Targets',
+      'Risk/Reward Calculation'
+    ],
+    duration: '~8 seconds',
   },
   {
     id: 6,
     name: 'Trap Check',
     icon: AlertTriangle,
+    color: 'red',
     cost: CREDIT_COSTS.STEP_TRAP_CHECK,
-    description: 'Liquidation analysis',
+    shortDesc: 'Trap detection',
+    fullDesc: 'Identify potential bull/bear traps and liquidation zones.',
+    whyMatters: 'The market loves to trap retail traders. We scan for fakeouts, stop hunts, and liquidity grab zones so you don\'t become exit liquidity.',
+    checks: [
+      'Bull Trap Detection',
+      'Bear Trap Detection',
+      'Liquidity Grab Zones',
+      'Stop Hunt Analysis'
+    ],
+    duration: '~7 seconds',
   },
   {
     id: 7,
     name: 'Final Verdict',
     icon: CheckCircle,
+    color: 'green',
     cost: CREDIT_COSTS.STEP_FINAL_VERDICT,
-    description: 'Overall recommendation',
+    shortDesc: 'GO/NO-GO decision',
+    fullDesc: 'AI-powered final recommendation combining all analysis steps.',
+    whyMatters: 'This is the moment of truth. Our AI weighs all factors from previous steps and gives you a clear verdict: GO, WAIT, or AVOID with confidence scores.',
+    checks: [
+      'Weighted Component Scores',
+      'Confidence Factors',
+      'Risk-Adjusted Recommendation',
+      'AI-Powered Summary'
+    ],
+    duration: '~3 seconds',
   },
 ];
 
+const colorClasses = {
+  blue: { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-500', ring: 'ring-blue-500' },
+  cyan: { bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', text: 'text-cyan-500', ring: 'ring-cyan-500' },
+  orange: { bg: 'bg-orange-500/10', border: 'border-orange-500/30', text: 'text-orange-500', ring: 'ring-orange-500' },
+  purple: { bg: 'bg-purple-500/10', border: 'border-purple-500/30', text: 'text-purple-500', ring: 'ring-purple-500' },
+  indigo: { bg: 'bg-indigo-500/10', border: 'border-indigo-500/30', text: 'text-indigo-500', ring: 'ring-indigo-500' },
+  red: { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-500', ring: 'ring-red-500' },
+  green: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-500', ring: 'ring-green-500' },
+};
+
 export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCreditsUpdate }: AnalysisFlowProps) {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
-  const [activeStep, setActiveStep] = useState<number | null>(null);
-  const [loading, setLoading] = useState<number | null>(null);
+  const [activeStep, setActiveStep] = useState<number>(1);
+  const [viewMode, setViewMode] = useState<'intro' | 'result'>('intro');
+  const [loading, setLoading] = useState(false);
   const [isRunningFull, setIsRunningFull] = useState(false);
   const [results, setResults] = useState<Record<number, unknown>>({});
   const [error, setError] = useState<string | null>(null);
 
-  // Get auth token from localStorage
   const getAuthHeaders = useCallback(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     return {
@@ -114,7 +202,6 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
     };
   }, []);
 
-  // Call individual step API
   const callStepAPI = useCallback(async (stepId: number) => {
     const endpoint = STEP_ENDPOINTS[stepId];
     if (!endpoint) throw new Error('Invalid step');
@@ -133,12 +220,11 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
 
     if (!response.ok) {
       if (response.status === 402) {
-        throw new Error('Yetersiz kredi. Lütfen kredi satın alın.');
+        throw new Error('Insufficient credits. Please purchase more credits.');
       }
-      throw new Error(data.error?.message || 'Analiz başarısız');
+      throw new Error(data.error?.message || 'Analysis failed');
     }
 
-    // Update remaining credits if provided
     if (data.remainingCredits !== undefined && onCreditsUpdate) {
       onCreditsUpdate(data.remainingCredits);
     }
@@ -146,46 +232,47 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
     return data.data;
   }, [symbol, accountSize, getAuthHeaders, onCreditsUpdate]);
 
-  const handleStepClick = async (stepId: number) => {
-    // Check if step is unlocked
-    if (stepId > 1 && !completedSteps.includes(stepId - 1)) {
-      return; // Previous step not completed
-    }
+  const handleRunStep = async () => {
+    if (loading) return;
 
-    if (completedSteps.includes(stepId)) {
-      // Already completed, just show results
-      setActiveStep(stepId);
-      return;
-    }
-
-    // Run analysis for this step
-    setLoading(stepId);
+    setLoading(true);
     setError(null);
 
     try {
-      const data = await callStepAPI(stepId);
+      const data = await callStepAPI(activeStep);
 
-      setCompletedSteps((prev) => [...prev, stepId]);
-      setResults((prev) => ({
-        ...prev,
-        [stepId]: data,
-      }));
-      setActiveStep(stepId);
+      setCompletedSteps((prev) => [...prev, activeStep]);
+      setResults((prev) => ({ ...prev, [activeStep]: data }));
+      setViewMode('result');
     } catch (err) {
       console.error('Analysis failed:', err);
-      setError(err instanceof Error ? err.message : 'Analiz başarısız');
+      setError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
-      setLoading(null);
+      setLoading(false);
+    }
+  };
+
+  const handleNextStep = () => {
+    if (activeStep < 7) {
+      setActiveStep(activeStep + 1);
+      setViewMode('intro');
+    }
+  };
+
+  const handleViewResult = (stepId: number) => {
+    if (completedSteps.includes(stepId)) {
+      setActiveStep(stepId);
+      setViewMode('result');
     }
   };
 
   const handleRunFullAnalysis = async () => {
     setIsRunningFull(true);
     setError(null);
-    setLoading(1);
+    setActiveStep(1);
+    setViewMode('intro');
 
     try {
-      // Call the full analysis endpoint
       const response = await fetch('/api/analysis/full', {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -196,12 +283,11 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
 
       if (!response.ok) {
         if (response.status === 402) {
-          throw new Error('Yetersiz kredi (15 kredi gerekli). Lütfen kredi satın alın.');
+          throw new Error('Insufficient credits (15 required). Please purchase more credits.');
         }
-        throw new Error(data.error?.message || 'Tam analiz başarısız');
+        throw new Error(data.error?.message || 'Full analysis failed');
       }
 
-      // Update credits
       if (data.remainingCredits !== undefined && onCreditsUpdate) {
         onCreditsUpdate(data.remainingCredits);
       }
@@ -209,7 +295,6 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
       const analysisData = data.data;
       const steps = analysisData.steps;
 
-      // Populate all steps from the full analysis result
       const allResults: Record<number, unknown> = {
         1: steps.marketPulse,
         2: steps.assetScan,
@@ -220,157 +305,281 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
         7: steps.verdict,
       };
 
-      // Animate through steps
+      // Animate through steps with proper pacing
       for (let stepId = 1; stepId <= 7; stepId++) {
-        setLoading(stepId);
         setActiveStep(stepId);
-
-        // Small delay for animation effect
-        await new Promise((resolve) => setTimeout(resolve, 400));
+        setViewMode('intro');
+        await new Promise((resolve) => setTimeout(resolve, 600));
 
         setCompletedSteps((prev) => [...prev, stepId]);
-        setResults((prev) => ({
-          ...prev,
-          [stepId]: allResults[stepId],
-        }));
+        setResults((prev) => ({ ...prev, [stepId]: allResults[stepId] }));
+        setViewMode('result');
+        await new Promise((resolve) => setTimeout(resolve, 1200));
       }
 
-      // Show final verdict when complete
-      setActiveStep(7);
       onComplete?.();
     } catch (err) {
       console.error('Full analysis failed:', err);
-      setError(err instanceof Error ? err.message : 'Tam analiz başarısız');
+      setError(err instanceof Error ? err.message : 'Full analysis failed');
     } finally {
-      setLoading(null);
       setIsRunningFull(false);
     }
   };
 
-  const isStepUnlocked = (stepId: number) => {
-    if (stepId === 1) return true;
-    return completedSteps.includes(stepId - 1);
-  };
-
-  const isStepCompleted = (stepId: number) => completedSteps.includes(stepId);
+  const currentStep = STEPS[activeStep - 1];
+  const colors = colorClasses[currentStep.color as keyof typeof colorClasses];
+  const isStepCompleted = completedSteps.includes(activeStep);
+  const canProceed = activeStep === 1 || completedSteps.includes(activeStep - 1);
 
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Progress Steps */}
-      <div className="flex items-center justify-between mb-8 px-4">
-        {STEPS.map((step, index) => {
-          const Icon = step.icon;
-          const unlocked = isStepUnlocked(step.id);
-          const completed = isStepCompleted(step.id);
-          const isLoading = loading === step.id;
-          const isActive = activeStep === step.id;
+      {/* Step Progress Bar */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          {STEPS.map((step, index) => {
+            const Icon = step.icon;
+            const stepColors = colorClasses[step.color as keyof typeof colorClasses];
+            const completed = completedSteps.includes(step.id);
+            const active = activeStep === step.id;
+            const unlocked = step.id === 1 || completedSteps.includes(step.id - 1);
 
-          return (
-            <div key={step.id} className="flex items-center">
-              {/* Step Circle */}
-              <button
-                onClick={() => handleStepClick(step.id)}
-                disabled={!unlocked || isLoading}
-                className={cn(
-                  'relative flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all',
-                  completed && 'bg-green-500 border-green-500 text-white',
-                  isActive && !completed && 'bg-blue-500 border-blue-500 text-white',
-                  !unlocked && 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed',
-                  unlocked && !completed && !isActive && 'bg-white border-blue-500 text-blue-500 hover:bg-blue-50',
-                  isLoading && 'animate-pulse'
-                )}
-              >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : !unlocked ? (
-                  <Lock className="w-5 h-5" />
-                ) : completed ? (
-                  <CheckCircle className="w-5 h-5" />
-                ) : (
-                  <Icon className="w-5 h-5" />
-                )}
-
-                {/* Credit Cost Badge */}
-                {step.cost > 0 && !completed && (
-                  <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-                    {step.cost}
-                  </span>
-                )}
-              </button>
-
-              {/* Connector Line */}
-              {index < STEPS.length - 1 && (
-                <div
+            return (
+              <div key={step.id} className="flex items-center flex-1">
+                <button
+                  onClick={() => completed && handleViewResult(step.id)}
+                  disabled={!completed}
                   className={cn(
-                    'w-8 h-0.5 mx-1',
-                    isStepCompleted(step.id + 1) ? 'bg-green-500' : 'bg-gray-300'
+                    'relative flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all',
+                    completed && `${stepColors.bg} border-current ${stepColors.text}`,
+                    active && !completed && `ring-2 ${stepColors.ring} border-current ${stepColors.text}`,
+                    !unlocked && 'bg-muted border-muted-foreground/20 text-muted-foreground',
+                    unlocked && !completed && !active && 'bg-background border-muted-foreground/30',
+                    completed && 'cursor-pointer hover:scale-110'
                   )}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
+                >
+                  {completed ? (
+                    <CheckCircle className="w-5 h-5" />
+                  ) : !unlocked ? (
+                    <Lock className="w-4 h-4" />
+                  ) : (
+                    <Icon className="w-4 h-4" />
+                  )}
+                </button>
+                {index < STEPS.length - 1 && (
+                  <div className={cn(
+                    'flex-1 h-1 mx-2 rounded',
+                    completed ? 'bg-green-500' : 'bg-muted'
+                  )} />
+                )}
+              </div>
+            );
+          })}
+        </div>
 
-      {/* Step Labels */}
-      <div className="flex items-center justify-between mb-8 px-2">
-        {STEPS.map((step) => (
-          <div key={step.id} className="text-center w-16">
-            <p className="text-xs font-medium truncate">{step.name}</p>
-            <p className="text-[10px] text-muted-foreground">
-              {step.cost === 0 ? 'FREE' : `${step.cost} credits`}
-            </p>
-          </div>
-        ))}
+        {/* Step Labels */}
+        <div className="flex items-center justify-between text-[10px]">
+          {STEPS.map((step) => (
+            <div key={step.id} className="w-10 text-center text-muted-foreground">
+              {step.name.split(' ')[0]}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Error Display */}
       {error && (
-        <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm flex items-center gap-2">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm flex items-center gap-2"
+        >
           <AlertTriangle className="w-5 h-5 flex-shrink-0" />
           <span>{error}</span>
-        </div>
+        </motion.div>
       )}
 
-      {/* Active Step Content */}
+      {/* Active Step Card */}
       <AnimatePresence mode="wait">
-        {activeStep && (
-          <motion.div
-            key={activeStep}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="bg-card rounded-lg border p-6"
-          >
-            {activeStep === 1 && <MarketPulse data={results[1]} />}
-            {activeStep === 2 && <AssetScanner data={results[2]} symbol={symbol} />}
-            {activeStep === 3 && <SafetyCheck data={results[3]} symbol={symbol} />}
-            {activeStep === 4 && <TimingAnalysis data={results[4]} symbol={symbol} />}
-            {activeStep === 5 && <TradePlan data={results[5]} symbol={symbol} />}
-            {activeStep === 6 && <TrapCheck data={results[6]} symbol={symbol} />}
-            {activeStep === 7 && <FinalVerdict data={results[7]} symbol={symbol} />}
-          </motion.div>
-        )}
+        <motion.div
+          key={`${activeStep}-${viewMode}`}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+          className={cn(
+            'rounded-xl border-2 overflow-hidden',
+            colors.border
+          )}
+        >
+          {/* Step Header */}
+          <div className={cn('p-6', colors.bg)}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className={cn(
+                  'w-14 h-14 rounded-xl flex items-center justify-center',
+                  'bg-background/50 backdrop-blur',
+                  colors.text
+                )}>
+                  <currentStep.icon className="w-7 h-7" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Step {activeStep} of 7</span>
+                    {isStepCompleted && (
+                      <span className="px-2 py-0.5 bg-green-500 text-white text-xs rounded-full">
+                        Completed
+                      </span>
+                    )}
+                  </div>
+                  <h2 className={cn('text-2xl font-bold', colors.text)}>
+                    {currentStep.name}
+                  </h2>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <div className="text-sm text-muted-foreground">Cost</div>
+                <div className={cn('text-xl font-bold', colors.text)}>
+                  {currentStep.cost === 0 ? 'FREE' : `${currentStep.cost} credits`}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Content Area */}
+          <div className="p-6">
+            {viewMode === 'intro' && !isStepCompleted ? (
+              /* Step Introduction */
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">{currentStep.fullDesc}</h3>
+                  <p className="text-muted-foreground">{currentStep.whyMatters}</p>
+                </div>
+
+                {/* What We Check */}
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <h4 className="font-medium mb-3 flex items-center gap-2">
+                    <Eye className="w-4 h-4" />
+                    What We Analyze
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {currentStep.checks.map((check, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <ChevronRight className={cn('w-4 h-4', colors.text)} />
+                        <span>{check}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Zap className="w-4 h-4" />
+                    <span>Analysis time: {currentStep.duration}</span>
+                  </div>
+
+                  {canProceed ? (
+                    <button
+                      onClick={handleRunStep}
+                      disabled={loading || isRunningFull}
+                      className={cn(
+                        'px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all',
+                        'bg-gradient-to-r from-blue-500 to-purple-600 text-white',
+                        'hover:shadow-lg hover:scale-105',
+                        'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
+                      )}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-5 h-5" />
+                          Run {currentStep.name}
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Lock className="w-4 h-4" />
+                      <span>Complete previous step first</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Step Results */
+              <div className="space-y-6">
+                {activeStep === 1 && <MarketPulse data={results[1]} />}
+                {activeStep === 2 && <AssetScanner data={results[2]} symbol={symbol} />}
+                {activeStep === 3 && <SafetyCheck data={results[3]} symbol={symbol} />}
+                {activeStep === 4 && <TimingAnalysis data={results[4]} symbol={symbol} />}
+                {activeStep === 5 && <TradePlan data={results[5]} symbol={symbol} />}
+                {activeStep === 6 && <TrapCheck data={results[6]} symbol={symbol} />}
+                {activeStep === 7 && <FinalVerdict data={results[7]} symbol={symbol} />}
+
+                {/* Next Step Button */}
+                {activeStep < 7 && isStepCompleted && (
+                  <div className="flex justify-end pt-4 border-t">
+                    <button
+                      onClick={handleNextStep}
+                      className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 transition"
+                    >
+                      Continue to {STEPS[activeStep].name}
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </motion.div>
       </AnimatePresence>
 
       {/* Full Analysis Bundle CTA */}
-      {completedSteps.length === 0 && (
-        <div className="mt-8 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
+      {completedSteps.length === 0 && !isRunningFull && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mt-8 p-6 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 rounded-xl border border-blue-500/20"
+        >
           <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold">Full Analysis Bundle</h3>
-              <p className="text-sm text-muted-foreground">
-                Get all 7 steps at once and save 25%
-              </p>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                <Brain className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Full Analysis Bundle</h3>
+                <p className="text-sm text-muted-foreground">
+                  Run all 7 steps automatically and save 25% on credits
+                </p>
+              </div>
             </div>
             <button
               onClick={handleRunFullAnalysis}
               disabled={isRunningFull}
-              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2"
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all flex items-center gap-2"
             >
-              {isRunningFull && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isRunningFull ? 'Running Analysis...' : 'Run Full Analysis (15 credits)'}
+              <TrendingUp className="w-5 h-5" />
+              Run Full Analysis (15 credits)
             </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Running Full Analysis Indicator */}
+      {isRunningFull && (
+        <div className="mt-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+            <span className="font-medium">Running full analysis...</span>
+            <span className="text-sm text-muted-foreground">
+              Step {activeStep} of 7: {STEPS[activeStep - 1].name}
+            </span>
           </div>
         </div>
       )}
