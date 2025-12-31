@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { Gift, RotateCw, Brain, PlayCircle, Gem } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 
 interface DailyRewardsProps {
   className?: string;

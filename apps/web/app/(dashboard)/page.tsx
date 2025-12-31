@@ -4,12 +4,12 @@
 // Dashboard Home Page
 // ===========================================
 
-import { CreditBalance } from '@/components/credits/CreditBalance';
-import { DailyRewards } from '@/components/rewards/DailyRewards';
-import { CoinSelector } from '@/components/common/CoinSelector';
-import { StreakDisplay } from '@/components/rewards/StreakDisplay';
-import { LevelProgress } from '@/components/rewards/LevelProgress';
-import { RecentAnalyses } from '@/components/analysis/RecentAnalyses';
+import { CreditBalance } from '../../components/credits/CreditBalance';
+import { DailyRewards } from '../../components/rewards/DailyRewards';
+import { CoinSelector } from '../../components/common/CoinSelector';
+import { StreakDisplay } from '../../components/rewards/StreakDisplay';
+import { LevelProgress } from '../../components/rewards/LevelProgress';
+import { RecentAnalyses } from '../../components/analysis/RecentAnalyses';
 
 export default function DashboardPage() {
   return (

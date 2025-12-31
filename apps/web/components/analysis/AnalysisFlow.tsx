@@ -17,7 +17,7 @@ import {
   Lock,
   Loader2
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 import { CREDIT_COSTS } from '@tradepath/types';
 import { MarketPulse } from './MarketPulse';
 import { AssetScanner } from './AssetScanner';

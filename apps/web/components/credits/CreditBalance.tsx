@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { Gem, Plus, History } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 
 interface CreditBalanceData {
   balance: number;
