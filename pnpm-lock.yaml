@@ -177,9 +177,6 @@ importers:
       '@tradepath/types':
         specifier: workspace:*
         version: link:../../packages/types
-      '@types/file-saver':
-        specifier: ^2.0.7
-        version: 2.0.7
       axios:
         specifier: ^1.6.2
         version: 1.13.2
@@ -244,6 +241,9 @@ importers:
         specifier: ^4.4.7
         version: 4.5.7(@types/react@18.3.27)(react@18.3.1)
     devDependencies:
+      '@types/file-saver':
+        specifier: ^2.0.7
+        version: 2.0.7
       '@types/node':
         specifier: ^20.10.0
         version: 20.19.27
@@ -2562,7 +2562,7 @@ packages:
 
   /@types/file-saver@2.0.7:
     resolution: {integrity: sha512-dNKVfHd/jk0SkR/exKGj2ggkB45MAkzvWCaqLUUgkyjITkGNzH8H+yUwr+BLJUBjZOe9w8X3wgmXhZDRg1ED6A==}
-    dev: false
+    dev: true
 
   /@types/json5@0.0.29:
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
