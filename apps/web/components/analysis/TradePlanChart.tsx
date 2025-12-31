@@ -157,38 +157,44 @@ export function TradePlanChart({
     });
 
     // Entry levels (cyan/blue)
-    entries.forEach((entry, index) => {
-      series.createPriceLine({
-        price: entry.price,
-        color: '#06b6d4',
-        lineWidth: 2,
-        lineStyle: LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: `Entry ${index + 1} (${entry.percentage}%)`,
-      });
+    entries?.forEach((entry, index) => {
+      if (entry?.price) {
+        series.createPriceLine({
+          price: entry.price,
+          color: '#06b6d4',
+          lineWidth: 2,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: `Entry ${index + 1} (${entry.percentage ?? 0}%)`,
+        });
+      }
     });
 
     // Stop Loss (red)
-    series.createPriceLine({
-      price: stopLoss.price,
-      color: '#ef4444',
-      lineWidth: 2,
-      lineStyle: LineStyle.Solid,
-      axisLabelVisible: true,
-      title: `Stop Loss (${stopLoss.percentage.toFixed(1)}%)`,
-    });
+    if (stopLoss?.price) {
+      series.createPriceLine({
+        price: stopLoss.price,
+        color: '#ef4444',
+        lineWidth: 2,
+        lineStyle: LineStyle.Solid,
+        axisLabelVisible: true,
+        title: `Stop Loss (${(stopLoss.percentage ?? 0).toFixed(1)}%)`,
+      });
+    }
 
     // Take Profits (green gradient)
     const tpColors = ['#22c55e', '#16a34a', '#15803d'];
-    takeProfits.forEach((tp, index) => {
-      series.createPriceLine({
-        price: tp.price,
-        color: tpColors[index] || '#22c55e',
-        lineWidth: 2,
-        lineStyle: LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: `TP${index + 1} (${tp.riskReward.toFixed(1)}R)`,
-      });
+    takeProfits?.forEach((tp, index) => {
+      if (tp?.price) {
+        series.createPriceLine({
+          price: tp.price,
+          color: tpColors[index] || '#22c55e',
+          lineWidth: 2,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: `TP${index + 1} (${(tp.riskReward ?? 0).toFixed(1)}R)`,
+        });
+      }
     });
 
     // Support levels (orange, subtle)
@@ -256,9 +262,12 @@ export function TradePlanChart({
     }
   };
 
-  const avgEntry = entries.reduce((sum, e) => sum + e.price, 0) / entries.length;
-  const riskPercent = Math.abs((stopLoss.price - avgEntry) / avgEntry * 100);
-  const rewardPercent = takeProfits[0]
+  const avgEntry = entries?.length > 0
+    ? entries.reduce((sum, e) => sum + (e.price ?? 0), 0) / entries.length
+    : currentPrice || 0;
+  const slPrice = stopLoss?.price ?? 0;
+  const riskPercent = avgEntry > 0 ? Math.abs((slPrice - avgEntry) / avgEntry * 100) : 0;
+  const rewardPercent = takeProfits?.[0]?.price && avgEntry > 0
     ? Math.abs((takeProfits[0].price - avgEntry) / avgEntry * 100)
     : 0;
 
@@ -354,10 +363,10 @@ export function TradePlanChart({
         {/* Entries */}
         <div className="space-y-1">
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Entry Levels</div>
-          {entries.map((entry, i) => (
+          {entries?.map((entry, i) => (
             <div key={i} className="flex justify-between text-sm">
               <span className="text-cyan-500">E{i + 1}</span>
-              <span className="font-mono">${entry.price.toLocaleString()}</span>
+              <span className="font-mono">${(entry.price ?? 0).toLocaleString()}</span>
             </div>
           ))}
         </div>
@@ -367,22 +376,22 @@ export function TradePlanChart({
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Stop Loss</div>
           <div className="flex justify-between text-sm">
             <span className="text-red-500">SL</span>
-            <span className="font-mono">${stopLoss.price.toLocaleString()}</span>
+            <span className="font-mono">${slPrice.toLocaleString()}</span>
           </div>
-          <div className="text-xs text-red-400">-{stopLoss.percentage.toFixed(1)}% risk</div>
+          <div className="text-xs text-red-400">-{(stopLoss?.percentage ?? 0).toFixed(1)}% risk</div>
         </div>
 
         {/* Take Profits */}
         <div className="space-y-1 md:col-span-2">
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Take Profit Targets</div>
           <div className="grid grid-cols-3 gap-2">
-            {takeProfits.map((tp, i) => (
+            {takeProfits?.map((tp, i) => (
               <div key={i} className="text-sm">
                 <div className="flex justify-between">
                   <span className="text-green-500">TP{i + 1}</span>
-                  <span className="font-mono">${tp.price.toLocaleString()}</span>
+                  <span className="font-mono">${(tp.price ?? 0).toLocaleString()}</span>
                 </div>
-                <div className="text-xs text-green-400">{tp.riskReward.toFixed(1)}R</div>
+                <div className="text-xs text-green-400">{(tp.riskReward ?? 0).toFixed(1)}R</div>
               </div>
             ))}
           </div>

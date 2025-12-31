@@ -65,19 +65,23 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
   }
 
   const isLong = data.direction === 'long';
+  const averageEntry = data.averageEntry || 0;
+  const stopLossPrice = data.stopLoss?.price || 0;
   const riskPercent = data.stopLoss?.percentage ||
-    Math.abs((data.averageEntry - data.stopLoss.price) / data.averageEntry * 100);
+    (averageEntry > 0 && stopLossPrice > 0
+      ? Math.abs((averageEntry - stopLossPrice) / averageEntry * 100)
+      : 0);
 
   // Prepare data for chart
   const chartEntries = data.entries?.map(e => ({
-    price: e.price,
-    percentage: e.percentage,
-  })) || [{ price: data.averageEntry, percentage: 100 }];
+    price: e.price || 0,
+    percentage: e.percentage || 0,
+  })) || [{ price: averageEntry, percentage: 100 }];
 
   const chartTakeProfits = data.takeProfits?.map(tp => ({
-    price: tp.price,
-    percentage: tp.percentage,
-    riskReward: tp.riskReward,
+    price: tp.price || 0,
+    percentage: tp.percentage || 0,
+    riskReward: tp.riskReward || 0,
   })) || [];
 
   return (
@@ -90,14 +94,14 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
       {/* Trade Plan Chart */}
       <TradePlanChart
         symbol={symbol}
-        direction={data.direction}
+        direction={data.direction || 'long'}
         entries={chartEntries}
         stopLoss={{
-          price: data.stopLoss.price,
+          price: stopLossPrice,
           percentage: riskPercent,
         }}
         takeProfits={chartTakeProfits}
-        currentPrice={data.currentPrice || data.averageEntry}
+        currentPrice={data.currentPrice || averageEntry}
         support={data.support}
         resistance={data.resistance}
       />
@@ -127,11 +131,11 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
           <div className="flex gap-6">
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Risk/Reward</p>
-              <p className="font-bold text-xl">{data.riskReward.toFixed(1)}:1</p>
+              <p className="font-bold text-xl">{(data.riskReward ?? 0).toFixed(1)}:1</p>
             </div>
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Win Rate Est.</p>
-              <p className="font-bold text-xl text-blue-500">{data.winRateEstimate}%</p>
+              <p className="font-bold text-xl text-blue-500">{data.winRateEstimate ?? 0}%</p>
             </div>
           </div>
         </div>
@@ -141,28 +145,28 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-cyan-500/10 rounded-lg p-4 border border-cyan-500/20">
           <p className="text-sm text-cyan-500">Avg Entry</p>
-          <p className="text-xl font-bold">${data.averageEntry.toLocaleString()}</p>
+          <p className="text-xl font-bold">${averageEntry.toLocaleString()}</p>
         </div>
 
         <div className="bg-red-500/10 rounded-lg p-4 border border-red-500/20">
           <p className="text-sm text-red-500">Stop Loss</p>
-          <p className="text-xl font-bold">${data.stopLoss.price.toLocaleString()}</p>
+          <p className="text-xl font-bold">${stopLossPrice.toLocaleString()}</p>
           <p className="text-xs text-red-400">-{riskPercent.toFixed(2)}%</p>
         </div>
 
         <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20">
           <p className="text-sm text-green-500">First Target</p>
           <p className="text-xl font-bold">
-            ${data.takeProfits[0]?.price.toLocaleString() || '-'}
+            ${data.takeProfits?.[0]?.price?.toLocaleString() || '-'}
           </p>
           <p className="text-xs text-green-400">
-            {data.takeProfits[0]?.riskReward.toFixed(1)}R
+            {(data.takeProfits?.[0]?.riskReward ?? 0).toFixed(1)}R
           </p>
         </div>
 
         <div className="bg-background rounded-lg p-4 border">
           <p className="text-sm text-muted-foreground">Position Size</p>
-          <p className="text-xl font-bold">{data.positionSizePercent}%</p>
+          <p className="text-xl font-bold">{data.positionSizePercent ?? 0}%</p>
           <p className="text-xs text-muted-foreground">
             Risk: ${data.riskAmount?.toLocaleString() || '-'}
           </p>
@@ -195,11 +199,11 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
                       <span className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center text-xs font-bold text-cyan-500">
                         {i + 1}
                       </span>
-                      <span className="text-sm text-muted-foreground">{entry.type}</span>
+                      <span className="text-sm text-muted-foreground">{entry.type || 'Entry'}</span>
                     </div>
                     <div className="text-right">
-                      <span className="font-bold text-cyan-500">${entry.price.toLocaleString()}</span>
-                      <span className="text-sm text-muted-foreground ml-2">({entry.percentage}%)</span>
+                      <span className="font-bold text-cyan-500">${(entry.price ?? 0).toLocaleString()}</span>
+                      <span className="text-sm text-muted-foreground ml-2">({entry.percentage ?? 0}%)</span>
                     </div>
                   </div>
                 ))}
@@ -208,33 +212,36 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
           )}
 
           {/* Take Profit Levels */}
-          <div className="bg-background rounded-lg p-4 border">
-            <p className="text-sm font-medium mb-3 text-green-500">Take Profit Targets</p>
-            <div className="space-y-2">
-              {data.takeProfits.map((tp, i) => {
-                const profitPercent = tp.percentage ||
-                  ((tp.price - data.averageEntry) / data.averageEntry * 100);
-                return (
-                  <div key={i} className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Target className="w-4 h-4 text-green-500" />
-                      <span className="font-medium">TP{i + 1}</span>
-                      <span className="text-xs px-2 py-0.5 bg-green-500/20 rounded text-green-500">
-                        {tp.riskReward.toFixed(1)}R
-                      </span>
+          {data.takeProfits && data.takeProfits.length > 0 && (
+            <div className="bg-background rounded-lg p-4 border">
+              <p className="text-sm font-medium mb-3 text-green-500">Take Profit Targets</p>
+              <div className="space-y-2">
+                {data.takeProfits.map((tp, i) => {
+                  const tpPrice = tp.price ?? 0;
+                  const profitPercent = tp.percentage ||
+                    (averageEntry > 0 ? ((tpPrice - averageEntry) / averageEntry * 100) : 0);
+                  return (
+                    <div key={i} className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Target className="w-4 h-4 text-green-500" />
+                        <span className="font-medium">TP{i + 1}</span>
+                        <span className="text-xs px-2 py-0.5 bg-green-500/20 rounded text-green-500">
+                          {(tp.riskReward ?? 0).toFixed(1)}R
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-bold text-green-500">${tpPrice.toLocaleString()}</span>
+                        <span className="text-sm text-muted-foreground ml-2">+{profitPercent.toFixed(2)}%</span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="font-bold text-green-500">${tp.price.toLocaleString()}</span>
-                      <span className="text-sm text-muted-foreground ml-2">+{profitPercent.toFixed(2)}%</span>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Stop Loss Reason */}
-          {data.stopLoss.reason && (
+          {data.stopLoss?.reason && (
             <div className="bg-red-500/5 rounded-lg p-4 border border-red-500/20">
               <p className="text-sm font-medium text-red-500 mb-1">Stop Loss Placement</p>
               <p className="text-sm text-muted-foreground">{data.stopLoss.reason}</p>

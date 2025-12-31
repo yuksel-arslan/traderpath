@@ -106,8 +106,8 @@ export function FinalVerdict({ data, symbol }: FinalVerdictProps) {
     }
   };
 
-  const positiveFactors = data.confidenceFactors.filter(f => f.positive);
-  const negativeFactors = data.confidenceFactors.filter(f => !f.positive);
+  const positiveFactors = data.confidenceFactors?.filter(f => f.positive) || [];
+  const negativeFactors = data.confidenceFactors?.filter(f => !f.positive) || [];
 
   return (
     <div className="space-y-6">
@@ -130,8 +130,8 @@ export function FinalVerdict({ data, symbol }: FinalVerdictProps) {
           </div>
           <div className="text-right">
             <p className="text-sm text-muted-foreground">Score</p>
-            <p className={cn("text-4xl font-bold", getScoreColor(data.overallScore))}>
-              {data.overallScore}<span className="text-lg text-muted-foreground">/10</span>
+            <p className={cn("text-4xl font-bold", getScoreColor(data.overallScore ?? 0))}>
+              {data.overallScore ?? 0}<span className="text-lg text-muted-foreground">/10</span>
             </p>
           </div>
         </div>
@@ -143,28 +143,34 @@ export function FinalVerdict({ data, symbol }: FinalVerdictProps) {
       </div>
 
       {/* Component Scores */}
-      <div className="bg-card rounded-lg p-4 border">
-        <h4 className="font-medium mb-4">Component Scores</h4>
-        <div className="space-y-3">
-          {data.componentScores.map((cs, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <span className="text-sm w-32 truncate">{cs.step}</span>
-              <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className={cn("h-full rounded-full transition-all", getScoreBarColor(cs.score))}
-                  style={{ width: `${cs.score * 10}%` }}
-                />
-              </div>
-              <span className={cn("text-sm font-medium w-8", getScoreColor(cs.score))}>
-                {cs.score.toFixed(1)}
-              </span>
-              <span className="text-xs text-muted-foreground w-12">
-                ({(cs.weight * 100).toFixed(0)}%)
-              </span>
-            </div>
-          ))}
+      {data.componentScores && data.componentScores.length > 0 && (
+        <div className="bg-card rounded-lg p-4 border">
+          <h4 className="font-medium mb-4">Component Scores</h4>
+          <div className="space-y-3">
+            {data.componentScores.map((cs, i) => {
+              const score = cs.score ?? 0;
+              const weight = cs.weight ?? 0;
+              return (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="text-sm w-32 truncate">{cs.step || `Step ${i + 1}`}</span>
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={cn("h-full rounded-full transition-all", getScoreBarColor(score))}
+                      style={{ width: `${score * 10}%` }}
+                    />
+                  </div>
+                  <span className={cn("text-sm font-medium w-8", getScoreColor(score))}>
+                    {score.toFixed(1)}
+                  </span>
+                  <span className="text-xs text-muted-foreground w-12">
+                    ({(weight * 100).toFixed(0)}%)
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Confidence Factors */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -223,10 +229,12 @@ export function FinalVerdict({ data, symbol }: FinalVerdictProps) {
       )}
 
       {/* Meta Info */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Analysis ID: {data.analysisId}</span>
-        <span>Valid until: {new Date(data.expiresAt).toLocaleString()}</span>
-      </div>
+      {(data.analysisId || data.expiresAt) && (
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          {data.analysisId && <span>Analysis ID: {data.analysisId}</span>}
+          {data.expiresAt && <span>Valid until: {new Date(data.expiresAt).toLocaleString()}</span>}
+        </div>
+      )}
     </div>
   );
 }
