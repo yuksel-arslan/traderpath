@@ -33,6 +33,7 @@ import { TimingAnalysis } from './TimingAnalysis';
 import { TradePlan } from './TradePlan';
 import { TrapCheck } from './TrapCheck';
 import { FinalVerdict } from './FinalVerdict';
+import { DownloadReportButton } from '../reports/DownloadReportButton';
 
 interface AnalysisFlowProps {
   symbol: string;
@@ -520,6 +521,16 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
                 {activeStep === 5 && <TradePlan data={results[5]} symbol={symbol} />}
                 {activeStep === 6 && <TrapCheck data={results[6]} symbol={symbol} />}
                 {activeStep === 7 && <FinalVerdict data={results[7]} symbol={symbol} />}
+
+                {/* Download Report Button - Shows when all 7 steps are completed */}
+                {activeStep === 7 && isStepCompleted && completedSteps.length === 7 && (
+                  <div className="flex justify-center pt-6 border-t mt-6">
+                    <DownloadReportButton
+                      analysisData={results}
+                      symbol={symbol}
+                    />
+                  </div>
+                )}
 
                 {/* Next Step Button */}
                 {activeStep < 7 && isStepCompleted && (
