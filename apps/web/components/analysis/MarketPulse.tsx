@@ -62,17 +62,17 @@ export function MarketPulse({ data }: { data?: MarketPulseData }) {
         {/* BTC Dominance */}
         <div className="bg-background rounded-lg p-4 border">
           <p className="text-sm text-muted-foreground mb-1">BTC Dominance</p>
-          <p className="text-2xl font-bold">{data.btcDominance.toFixed(1)}%</p>
-          <p className="text-xs text-muted-foreground">{data.btcDominanceTrend}</p>
+          <p className="text-2xl font-bold">{(data.btcDominance ?? 0).toFixed(1)}%</p>
+          <p className="text-xs text-muted-foreground">{data.btcDominanceTrend || 'N/A'}</p>
         </div>
 
         {/* Fear & Greed */}
         <div className="bg-background rounded-lg p-4 border">
           <p className="text-sm text-muted-foreground mb-1">Fear & Greed</p>
-          <p className={cn("text-2xl font-bold", getFearGreedColor(data.fearGreedIndex))}>
-            {data.fearGreedIndex}
+          <p className={cn("text-2xl font-bold", getFearGreedColor(data.fearGreedIndex ?? 50))}>
+            {data.fearGreedIndex ?? 0}
           </p>
-          <p className="text-xs text-muted-foreground">{data.fearGreedLabel}</p>
+          <p className="text-xs text-muted-foreground">{data.fearGreedLabel || 'N/A'}</p>
         </div>
 
         {/* Market Regime */}
@@ -80,7 +80,7 @@ export function MarketPulse({ data }: { data?: MarketPulseData }) {
           <p className="text-sm text-muted-foreground mb-1">Market Regime</p>
           <span className={cn(
             "inline-block px-2 py-1 rounded text-sm font-medium border",
-            getRegimeColor(data.marketRegime)
+            getRegimeColor(data.marketRegime || 'NEUTRAL')
           )}>
             {data.marketRegime === 'RISK_ON' ? 'Risk On' : data.marketRegime === 'RISK_OFF' ? 'Risk Off' : 'Neutral'}
           </span>
@@ -90,10 +90,10 @@ export function MarketPulse({ data }: { data?: MarketPulseData }) {
         <div className="bg-background rounded-lg p-4 border">
           <p className="text-sm text-muted-foreground mb-1">Trend</p>
           <div className="flex items-center gap-2">
-            {getTrendIcon(data.trend.direction)}
-            <span className="text-xl font-bold">{data.trend.strength}%</span>
+            {getTrendIcon(data.trend?.direction || 'NEUTRAL')}
+            <span className="text-xl font-bold">{data.trend?.strength ?? 0}%</span>
           </div>
-          <p className="text-xs text-muted-foreground">{data.trend.direction}</p>
+          <p className="text-xs text-muted-foreground">{data.trend?.direction || 'N/A'}</p>
         </div>
       </div>
 
