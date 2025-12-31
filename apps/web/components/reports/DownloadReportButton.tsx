@@ -86,7 +86,8 @@ export function DownloadReportButton({
       await generateAnalysisReport(reportData);
     } catch (error) {
       console.error('Failed to generate report:', error);
-      alert('Failed to generate PDF report. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to generate PDF report: ${errorMessage}`);
     } finally {
       setIsGenerating(false);
     }

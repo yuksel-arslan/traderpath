@@ -11,28 +11,17 @@ import {
   Text,
   View,
   StyleSheet,
-  Font,
   pdf,
 } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
 
-// Register fonts for better typography
-Font.register({
-  family: 'Inter',
-  fonts: [
-    { src: 'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hjp-Ek-_0.woff2', fontWeight: 400 },
-    { src: 'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hjp-Ek-_0.woff2', fontWeight: 600 },
-    { src: 'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFuYAZ9hjp-Ek-_0.woff2', fontWeight: 700 },
-  ],
-});
-
-// Styles
+// Styles - using Helvetica (built-in PDF font)
 const styles = StyleSheet.create({
   page: {
     flexDirection: 'column',
     backgroundColor: '#ffffff',
     padding: 40,
-    fontFamily: 'Inter',
+    fontFamily: 'Helvetica',
   },
   // Cover Page
   coverPage: {
