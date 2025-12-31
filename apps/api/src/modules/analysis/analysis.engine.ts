@@ -1136,31 +1136,31 @@ export const analysisEngine = {
     let riskScore = 100;
 
     if (spoofingDetected) {
-      warnings.push('Spoofing belirtileri tespit edildi - dikkatli olun');
+      warnings.push('Spoofing detected - proceed with caution');
       riskScore -= 20;
     }
     if (layeringDetected) {
-      warnings.push('Layering aktivitesi mevcut');
+      warnings.push('Layering activity detected');
       riskScore -= 15;
     }
     if (icebergDetected) {
-      warnings.push(`$${icebergPrice} seviyesinde gizli emir tespit edildi`);
+      warnings.push(`Hidden iceberg order detected at $${icebergPrice}`);
       riskScore -= 10;
     }
     if (washTrading) {
-      warnings.push('Wash trading şüphesi var');
+      warnings.push('Wash trading suspected');
       riskScore -= 15;
     }
     if (pumpDumpRisk === 'high') {
-      warnings.push('Pump & dump riski yüksek!');
+      warnings.push('High pump & dump risk!');
       riskScore -= 25;
     }
     if (volumeRatio > 3) {
-      warnings.push(`Anormal hacim: ${volumeRatio.toFixed(1)}x ortalama`);
+      warnings.push(`Abnormal volume: ${volumeRatio.toFixed(1)}x average`);
       riskScore -= 10;
     }
     if (Math.abs(ticker.priceChangePercent24h) > 15) {
-      warnings.push(`Büyük fiyat hareketi: ${ticker.priceChangePercent24h.toFixed(1)}%`);
+      warnings.push(`Large price movement: ${ticker.priceChangePercent24h.toFixed(1)}%`);
       riskScore -= 10;
     }
 
@@ -1175,9 +1175,9 @@ export const analysisEngine = {
       symbol,
       manipulation: {
         spoofingDetected,
-        spoofingDetails: spoofingDetected ? 'Fiyattan uzak büyük emirler tespit edildi' : undefined,
+        spoofingDetails: spoofingDetected ? 'Large orders detected far from current price' : undefined,
         layeringDetected,
-        layeringDetails: layeringDetected ? 'Çok sayıda küçük fiyat seviyesinde emir' : undefined,
+        layeringDetails: layeringDetected ? 'Multiple orders at many small price levels' : undefined,
         icebergDetected,
         icebergPrice,
         icebergSide: icebergDetected
@@ -1200,7 +1200,7 @@ export const analysisEngine = {
           inflow: sellVolume,
           outflow: buyVolume,
           net: netFlowUsd,
-          interpretation: netFlowUsd > 0 ? 'Net çıkış - boğa sinyali' : 'Net giriş - ayı sinyali',
+          interpretation: netFlowUsd > 0 ? 'Net outflow - bullish signal' : 'Net inflow - bearish signal',
         },
       ],
       smartMoney: {
@@ -1238,31 +1238,31 @@ export const analysisEngine = {
     // Entry conditions
     const conditions: Array<{ name: string; met: boolean; details: string }> = [
       {
-        name: 'RSI Durumu',
+        name: 'RSI Status',
         met: rsi4h >= 30 && rsi4h <= 70,
-        details: rsi4h < 30 ? 'Aşırı satım' : rsi4h > 70 ? 'Aşırı alım' : 'Normal bölgede',
+        details: rsi4h < 30 ? 'Oversold' : rsi4h > 70 ? 'Overbought' : 'Normal zone',
       },
       {
-        name: 'Bollinger Pozisyonu',
+        name: 'Bollinger Position',
         met: currentPrice <= bb.middle,
-        details: currentPrice > bb.upper ? 'Üst bandın üzerinde' :
-                 currentPrice < bb.lower ? 'Alt bandın altında' :
-                 currentPrice <= bb.middle ? 'Ortanın altında - iyi giriş' : 'Ortanın üstünde',
+        details: currentPrice > bb.upper ? 'Above upper band' :
+                 currentPrice < bb.lower ? 'Below lower band' :
+                 currentPrice <= bb.middle ? 'Below middle - good entry' : 'Above middle',
       },
       {
-        name: 'MACD Sinyali',
+        name: 'MACD Signal',
         met: trend.direction === 'bullish' ? macd.histogram > 0 : macd.histogram < 0,
-        details: macd.histogram > 0 ? 'Pozitif histogram' : 'Negatif histogram',
+        details: macd.histogram > 0 ? 'Positive histogram' : 'Negative histogram',
       },
       {
-        name: 'Trend Uyumu',
+        name: 'Trend Alignment',
         met: trend.strength >= 60,
-        details: `Trend gücü: ${trend.strength}%`,
+        details: `Trend strength: ${trend.strength}%`,
       },
       {
-        name: 'Destek Yakınlığı',
+        name: 'Support Proximity',
         met: levels.support.length > 0 && currentPrice <= (levels.support[0] ?? currentPrice) * 1.03,
-        details: levels.support[0] !== undefined ? `En yakın destek: $${levels.support[0]}` : 'Destek bulunamadı',
+        details: levels.support[0] !== undefined ? `Nearest support: $${levels.support[0]}` : 'No support found',
       },
     ];
 
@@ -1282,7 +1282,7 @@ export const analysisEngine = {
         priceLow: Math.round(currentPrice * 0.99),
         priceHigh: Math.round(currentPrice * 1.01),
         probability: 70,
-        eta: 'Şimdi',
+        eta: 'Now',
         quality: 4,
       });
     }
@@ -1293,7 +1293,7 @@ export const analysisEngine = {
         priceLow: Math.round(levels.support[0] * 0.99),
         priceHigh: Math.round(levels.support[0] * 1.01),
         probability: 60,
-        eta: '4-12 saat',
+        eta: '4-12 hours',
         quality: 5,
       });
     }
@@ -1304,7 +1304,7 @@ export const analysisEngine = {
         priceLow: Math.round(levels.support[1] * 0.99),
         priceHigh: Math.round(levels.support[1] * 1.01),
         probability: 40,
-        eta: '1-3 gün',
+        eta: '1-3 days',
         quality: 5,
       });
     }
@@ -1314,18 +1314,18 @@ export const analysisEngine = {
     if (!tradeNow) {
       if (rsi4h > 70) {
         waitFor = {
-          event: 'RSI düşüşü (70 altına)',
-          estimatedTime: '4-8 saat',
+          event: 'RSI drop (below 70)',
+          estimatedTime: '4-8 hours',
         };
       } else if (currentPrice > bb.upper) {
         waitFor = {
-          event: 'Fiyatın BB üst bandının altına inmesi',
-          estimatedTime: '2-6 saat',
+          event: 'Price dropping below upper BB band',
+          estimatedTime: '2-6 hours',
         };
       } else if (conditionsMet < 3) {
         waitFor = {
-          event: 'Daha fazla koşulun sağlanması',
-          estimatedTime: '6-24 saat',
+          event: 'More conditions to be met',
+          estimatedTime: '6-24 hours',
         };
       }
     }
@@ -1333,13 +1333,13 @@ export const analysisEngine = {
     // Reason
     let reason = '';
     if (tradeNow) {
-      reason = `${conditionsMet}/5 koşul sağlandı. `;
-      if (rsi4h < 40) reason += 'RSI düşük - iyi alım fırsatı. ';
-      if (currentPrice < bb.middle) reason += 'Fiyat BB ortasının altında. ';
+      reason = `${conditionsMet}/5 conditions met. `;
+      if (rsi4h < 40) reason += 'RSI low - good buying opportunity. ';
+      if (currentPrice < bb.middle) reason += 'Price below BB middle. ';
     } else {
-      reason = `${conditionsMet}/5 koşul sağlandı - yeterli değil. `;
-      if (rsi4h > 70) reason += 'RSI aşırı alım bölgesinde. ';
-      if (currentPrice > bb.upper) reason += 'Fiyat BB üst bandının üzerinde. ';
+      reason = `${conditionsMet}/5 conditions met - not enough. `;
+      if (rsi4h > 70) reason += 'RSI in overbought zone. ';
+      if (currentPrice > bb.upper) reason += 'Price above upper BB band. ';
     }
 
     // Score calculation
@@ -1413,7 +1413,7 @@ export const analysisEngine = {
     const stopLoss: TradePlanResult['stopLoss'] = {
       price: Math.round(stopPrice),
       percentage: parseFloat(stopPercentage.toFixed(2)),
-      reason: `ATR tabanlı stop (${atr.toFixed(2)} ATR) + destek/direnç seviyesi`,
+      reason: `ATR-based stop (${atr.toFixed(2)} ATR) + support/resistance level`,
     };
 
     // Take profit levels (R:R based)
@@ -1422,17 +1422,17 @@ export const analysisEngine = {
       {
         price: Math.round(direction === 'long' ? averageEntry + riskAmount * 1.5 : averageEntry - riskAmount * 1.5),
         percentage: 30,
-        reason: '1.5R - İlk kar al',
+        reason: '1.5R - First take profit',
       },
       {
         price: Math.round(direction === 'long' ? averageEntry + riskAmount * 2.5 : averageEntry - riskAmount * 2.5),
         percentage: 40,
-        reason: '2.5R - Ana hedef',
+        reason: '2.5R - Main target',
       },
       {
         price: Math.round(direction === 'long' ? averageEntry + riskAmount * 4 : averageEntry - riskAmount * 4),
         percentage: 30,
-        reason: '4R - Genişletilmiş hedef',
+        reason: '4R - Extended target',
       },
     ];
 
@@ -1457,7 +1457,7 @@ export const analysisEngine = {
 
     // Trailing stop
     const trailingStop: TradePlanResult['trailingStop'] = {
-      activateAfter: 'TP1 ulaşıldığında',
+      activateAfter: 'When TP1 is reached',
       trailPercent: parseFloat((atr / averageEntry * 100).toFixed(2)),
     };
 
@@ -1570,25 +1570,25 @@ export const analysisEngine = {
     // Counter strategies
     const counterStrategy: string[] = [];
     if (bullTrap) {
-      counterStrategy.push('Kırılımın ardından hacim artışı bekleyin');
-      counterStrategy.push('Stop-loss emirlerini direncin hemen üstüne koymayın');
+      counterStrategy.push('Wait for volume confirmation after breakout');
+      counterStrategy.push('Do not place stop-loss orders right above resistance');
     }
     if (bearTrap) {
-      counterStrategy.push('Panik satışlarına kapılmayın');
-      counterStrategy.push('Desteğin altına kısa vadeli stop koymayın');
+      counterStrategy.push('Do not panic sell');
+      counterStrategy.push('Do not place short-term stops below support');
     }
     if (fakeoutRisk !== 'low') {
-      counterStrategy.push('Pozisyona kademeli girin');
-      counterStrategy.push('Onay mumu bekleyin');
+      counterStrategy.push('Scale into position gradually');
+      counterStrategy.push('Wait for confirmation candle');
     }
-    counterStrategy.push('Likidite bölgelerinde dikkatli olun');
+    counterStrategy.push('Be cautious around liquidity zones');
 
     // Pro tip
-    let proTip = 'Hacim onayı olmadan yapılan kırılımlara güvenmeyin.';
+    let proTip = 'Do not trust breakouts without volume confirmation.';
     if (bullTrap) {
-      proTip = 'Direnç kırılımları düşük hacimle gerçekleşirse bull trap olasılığı yüksektir.';
+      proTip = 'Resistance breakouts with low volume have high bull trap probability.';
     } else if (bearTrap) {
-      proTip = 'Destek kırılımları panik satışlarıyla olur ve sıklıkla bear trap oluşturur.';
+      proTip = 'Support breakdowns often occur with panic selling and frequently form bear traps.';
     }
 
     // Risk level
@@ -1665,48 +1665,48 @@ export const analysisEngine = {
 
     // Market conditions
     if (marketPulse.marketRegime === 'risk_on') {
-      confidenceFactors.push({ factor: 'Risk-on piyasa ortamı', positive: true, impact: 'high' });
+      confidenceFactors.push({ factor: 'Risk-on market environment', positive: true, impact: 'high' });
     } else if (marketPulse.marketRegime === 'risk_off') {
-      confidenceFactors.push({ factor: 'Risk-off piyasa ortamı', positive: false, impact: 'high' });
+      confidenceFactors.push({ factor: 'Risk-off market environment', positive: false, impact: 'high' });
     }
 
     // Trend alignment
     const mainTrend = assetScan.timeframes.find((t) => t.tf === '4H');
     if (mainTrend?.trend === 'bullish' && mainTrend.strength >= 70) {
-      confidenceFactors.push({ factor: 'Güçlü yükseliş trendi', positive: true, impact: 'high' });
+      confidenceFactors.push({ factor: 'Strong bullish trend', positive: true, impact: 'high' });
     } else if (mainTrend?.trend === 'bearish' && mainTrend.strength >= 70) {
-      confidenceFactors.push({ factor: 'Güçlü düşüş trendi', positive: false, impact: 'high' });
+      confidenceFactors.push({ factor: 'Strong bearish trend', positive: false, impact: 'high' });
     }
 
     // Safety
     if (safetyCheck.riskLevel === 'low') {
-      confidenceFactors.push({ factor: 'Düşük manipülasyon riski', positive: true, impact: 'medium' });
+      confidenceFactors.push({ factor: 'Low manipulation risk', positive: true, impact: 'medium' });
     } else if (safetyCheck.riskLevel === 'high') {
-      confidenceFactors.push({ factor: 'Yüksek manipülasyon riski', positive: false, impact: 'high' });
+      confidenceFactors.push({ factor: 'High manipulation risk', positive: false, impact: 'high' });
     }
 
     // Timing
     if (timing.tradeNow) {
-      confidenceFactors.push({ factor: 'İyi giriş zamanı', positive: true, impact: 'medium' });
+      confidenceFactors.push({ factor: 'Good entry timing', positive: true, impact: 'medium' });
     }
 
     // RSI
     if (assetScan.indicators.rsi >= 30 && assetScan.indicators.rsi <= 70) {
-      confidenceFactors.push({ factor: 'RSI normal bölgede', positive: true, impact: 'low' });
+      confidenceFactors.push({ factor: 'RSI in normal zone', positive: true, impact: 'low' });
     } else if (assetScan.indicators.rsi > 70) {
-      confidenceFactors.push({ factor: 'Aşırı alım bölgesi', positive: false, impact: 'medium' });
+      confidenceFactors.push({ factor: 'Overbought zone', positive: false, impact: 'medium' });
     } else {
-      confidenceFactors.push({ factor: 'Aşırı satım bölgesi', positive: true, impact: 'medium' });
+      confidenceFactors.push({ factor: 'Oversold zone', positive: true, impact: 'medium' });
     }
 
     // Traps
     if (trapCheck.riskLevel === 'high') {
-      confidenceFactors.push({ factor: 'Tuzak riski yüksek', positive: false, impact: 'high' });
+      confidenceFactors.push({ factor: 'High trap risk', positive: false, impact: 'high' });
     }
 
     // Risk/Reward
     if (tradePlan.riskReward >= 2.5) {
-      confidenceFactors.push({ factor: `İyi R:R oranı (${tradePlan.riskReward})`, positive: true, impact: 'medium' });
+      confidenceFactors.push({ factor: `Good R:R ratio (${tradePlan.riskReward})`, positive: true, impact: 'medium' });
     }
 
     // Determine verdict
@@ -1725,23 +1725,23 @@ export const analysisEngine = {
 
     if (verdict === 'go') {
       const targetPrice = tradePlan.takeProfits[1]?.price ?? tradePlan.takeProfits[0]?.price ?? tradePlan.averageEntry;
-      recommendation = `${symbol} için koşullar uygun. ${tradePlan.direction.toUpperCase()} pozisyon açılabilir. ` +
-        `Giriş: $${tradePlan.averageEntry}, Stop: $${tradePlan.stopLoss.price}, ` +
-        `Hedef: $${targetPrice}. ` +
-        `Risk: ${tradePlan.positionSizePercent.toFixed(1)}% portföy.`;
+      recommendation = `Conditions are favorable for ${symbol}. ${tradePlan.direction.toUpperCase()} position can be opened. ` +
+        `Entry: $${tradePlan.averageEntry}, Stop: $${tradePlan.stopLoss.price}, ` +
+        `Target: $${targetPrice}. ` +
+        `Risk: ${tradePlan.positionSizePercent.toFixed(1)}% of portfolio.`;
     } else if (verdict === 'conditional_go') {
-      recommendation = `${symbol} için temkinli yaklaşım önerilir. ` +
-        `${timing.waitFor ? timing.waitFor.event + ' beklenmeli. ' : ''}` +
-        `Pozisyon açılacaksa küçük başlanmalı ve kademeli artırılmalı.`;
+      recommendation = `Cautious approach recommended for ${symbol}. ` +
+        `${timing.waitFor ? 'Wait for ' + timing.waitFor.event + '. ' : ''}` +
+        `If opening position, start small and scale in gradually.`;
     } else if (verdict === 'wait') {
-      recommendation = `${symbol} için bekleme önerilir. ` +
-        `${timing.waitFor ? timing.waitFor.event + ' bekleyin. ' : 'Daha iyi koşulları bekleyin. '}` +
-        `Mevcut skor: ${overallScore}/10.`;
+      recommendation = `Waiting recommended for ${symbol}. ` +
+        `${timing.waitFor ? 'Wait for ' + timing.waitFor.event + '. ' : 'Wait for better conditions. '}` +
+        `Current score: ${overallScore}/10.`;
     } else {
-      recommendation = `${symbol} için pozisyon açılmaması önerilir. ` +
-        `${safetyCheck.riskLevel === 'high' ? 'Manipülasyon riski yüksek. ' : ''}` +
-        `${trapCheck.riskLevel === 'high' ? 'Tuzak riski mevcut. ' : ''}` +
-        `Koşullar iyileşene kadar bekleyin.`;
+      recommendation = `Opening position not recommended for ${symbol}. ` +
+        `${safetyCheck.riskLevel === 'high' ? 'High manipulation risk. ' : ''}` +
+        `${trapCheck.riskLevel === 'high' ? 'Trap risk present. ' : ''}` +
+        `Wait until conditions improve.`;
     }
 
     const now = new Date();

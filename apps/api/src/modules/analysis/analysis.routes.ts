@@ -58,7 +58,7 @@ export default async function analysisRoutes(app: FastifyInstance) {
       const data = await analysisEngine.getMarketPulse();
 
       // Get AI insight
-      const aiPrompt = `You are a crypto market analyst. Based on this data, give a brief 2-3 sentence market summary in Turkish:
+      const aiPrompt = `You are a crypto market analyst. Based on this data, give a brief 2-3 sentence market summary in English:
 - BTC Dominance: ${data.btcDominance}% (${data.btcDominanceTrend})
 - Fear & Greed: ${data.fearGreedIndex} (${data.fearGreedLabel})
 - Market Regime: ${data.marketRegime}
@@ -110,7 +110,7 @@ Be concise and actionable.`;
     try {
       const data = await analysisEngine.scanAsset(body.symbol);
 
-      const aiPrompt = `You are a crypto analyst. Give a brief 2-3 sentence analysis for ${body.symbol} in Turkish:
+      const aiPrompt = `You are a crypto analyst. Give a brief 2-3 sentence analysis for ${body.symbol} in English:
 - Price: $${data.currentPrice}
 - RSI: ${data.indicators.rsi}
 - MACD Histogram: ${data.indicators.macd.histogram > 0 ? 'Positive' : 'Negative'}
@@ -161,7 +161,7 @@ Be concise and give a trading perspective.`;
     try {
       const data = await analysisEngine.safetyCheck(body.symbol);
 
-      const aiPrompt = `You are a crypto risk analyst. Analyze this safety data for ${body.symbol} and give 2-3 sentences in Turkish:
+      const aiPrompt = `You are a crypto risk analyst. Analyze this safety data for ${body.symbol} and give 2-3 sentences in English:
 - Risk Level: ${data.riskLevel}
 - Pump/Dump Risk: ${data.manipulation.pumpDumpRisk}
 - Whale Activity: ${data.whaleActivity.bias} (Net flow: $${Math.round(data.whaleActivity.netFlowUsd).toLocaleString()})
@@ -215,13 +215,13 @@ Focus on risk assessment and trading implications.`;
       const data = await analysisEngine.timingAnalysis(body.symbol);
 
       const bestZone = data.entryZones[0];
-      const aiPrompt = `You are a crypto timing analyst. Give brief entry advice for ${body.symbol} in Turkish (2-3 sentences):
+      const aiPrompt = `You are a crypto timing analyst. Give brief entry advice for ${body.symbol} in English (2-3 sentences):
 - Current Price: $${data.currentPrice}
 - Optimal Entry: $${data.optimalEntry}
 - Trade Now: ${data.tradeNow ? 'Yes' : 'No'}
-- Best Entry Zone: $${bestZone?.priceLow || data.optimalEntry} - $${bestZone?.priceHigh || data.optimalEntry} (${bestZone?.eta || 'Şimdi'})
+- Best Entry Zone: $${bestZone?.priceLow || data.optimalEntry} - $${bestZone?.priceHigh || data.optimalEntry} (${bestZone?.eta || 'Now'})
 - Conditions Met: ${data.conditions.filter(c => c.met).length}/${data.conditions.length}
-- Wait For: ${data.waitFor?.event || 'Hazır'}
+- Wait For: ${data.waitFor?.event || 'Ready'}
 
 Be specific about when to enter.`;
 
@@ -273,7 +273,7 @@ Be specific about when to enter.`;
       const data = await analysisEngine.tradePlan(body.symbol, body.accountSize);
 
       const tpPrices = data.takeProfits.map(tp => `$${tp.price}`).join(', ');
-      const aiPrompt = `You are a crypto trade planner. Summarize this trade plan for ${body.symbol} in Turkish (2-3 sentences):
+      const aiPrompt = `You are a crypto trade planner. Summarize this trade plan for ${body.symbol} in English (2-3 sentences):
 - Direction: ${data.direction.toUpperCase()}
 - Entry Type: ${data.type}
 - Average Entry: $${data.averageEntry}
@@ -329,7 +329,7 @@ Give practical trading advice.`;
     try {
       const data = await analysisEngine.trapCheck(body.symbol);
 
-      const aiPrompt = `You are a crypto trap analyst. Analyze trap risk for ${body.symbol} in Turkish (2-3 sentences):
+      const aiPrompt = `You are a crypto trap analyst. Analyze trap risk for ${body.symbol} in English (2-3 sentences):
 - Risk Level: ${data.riskLevel}
 - Bull Trap: ${data.traps.bullTrap ? `Yes at $${data.traps.bullTrapZone}` : 'No'}
 - Bear Trap: ${data.traps.bearTrap ? `Yes at $${data.traps.bearTrapZone}` : 'No'}
@@ -406,7 +406,7 @@ Warn about potential traps and give protective advice.`;
       });
 
       // Get comprehensive AI summary with updated property names
-      const aiPrompt = `You are a senior crypto analyst. Give a comprehensive trading recommendation for ${body.symbol} in Turkish (4-5 sentences):
+      const aiPrompt = `You are a senior crypto analyst. Give a comprehensive trading recommendation for ${body.symbol} in English (4-5 sentences):
 
 Market Analysis:
 - Fear & Greed: ${marketPulse.fearGreedIndex} (${marketPulse.fearGreedLabel})
