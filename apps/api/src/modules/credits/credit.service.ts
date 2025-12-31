@@ -6,7 +6,20 @@ import { prisma } from '../../core/database';
 import { cache, cacheKeys, cacheTTL } from '../../core/cache';
 import { CREDIT_COSTS, type CreditBalance, type CreditTransaction } from '@tradepath/types';
 
+// Admin emails with free unlimited access
+const ADMIN_EMAILS = ['contact@yukselarslan.com'];
+
 export class CreditService {
+  /**
+   * Check if user is admin with unlimited access
+   */
+  private async isAdmin(userId: string): Promise<boolean> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    return user ? ADMIN_EMAILS.includes(user.email) : false;
+  }
   /**
    * Get user's credit balance
    */
@@ -61,14 +74,20 @@ export class CreditService {
 
   /**
    * Check if user has enough credits
+   * Admins always have unlimited credits
    */
   async hasEnough(userId: string, amount: number): Promise<boolean> {
+    // Admins have unlimited access
+    if (await this.isAdmin(userId)) {
+      return true;
+    }
     const balance = await this.getBalance(userId);
     return balance.balance >= amount;
   }
 
   /**
    * Charge credits for a service
+   * Admins are not charged - they have free access
    */
   async charge(
     userId: string,
@@ -76,6 +95,12 @@ export class CreditService {
     source: string,
     metadata?: Record<string, unknown>
   ): Promise<{ success: boolean; newBalance: number }> {
+    // Admins have free access - don't charge
+    if (await this.isAdmin(userId)) {
+      const balance = await this.getBalance(userId);
+      return { success: true, newBalance: balance.balance };
+    }
+
     const balance = await this.getBalance(userId);
 
     if (balance.balance < amount) {

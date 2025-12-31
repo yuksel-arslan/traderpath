@@ -5,6 +5,9 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../database';
 
+// Admin emails with free unlimited access
+const ADMIN_EMAILS = ['contact@yukselarslan.com'];
+
 // Extend FastifyRequest to include user
 declare module 'fastify' {
   interface FastifyRequest {
@@ -65,8 +68,11 @@ export async function authenticate(
       });
     }
 
+    // Check if user is admin
+    const isAdmin = ADMIN_EMAILS.includes(user.email);
+
     // Attach user to request
-    request.user = user;
+    request.user = { ...user, isAdmin };
   } catch (error) {
     return reply.status(401).send({
       success: false,
@@ -105,7 +111,8 @@ export async function optionalAuth(
     });
 
     if (user) {
-      request.user = user;
+      const isAdmin = ADMIN_EMAILS.includes(user.email);
+      request.user = { ...user, isAdmin };
     }
   } catch {
     // Ignore errors for optional auth

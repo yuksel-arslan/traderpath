@@ -8,6 +8,9 @@ import bcrypt from 'bcrypt';
 import { nanoid } from 'nanoid';
 import { prisma } from '../../core/database';
 
+// Admin emails with free unlimited access
+const ADMIN_EMAILS = ['contact@yukselarslan.com'];
+
 export default async function authRoutes(app: FastifyInstance) {
   /**
    * POST /api/auth/register
@@ -101,6 +104,8 @@ export default async function authRoutes(app: FastifyInstance) {
     // Generate JWT
     const token = app.jwt.sign({ id: user.id });
 
+    const isAdmin = ADMIN_EMAILS.includes(user.email);
+
     return reply.status(201).send({
       success: true,
       data: {
@@ -109,9 +114,10 @@ export default async function authRoutes(app: FastifyInstance) {
           email: user.email,
           name: user.name,
           level: user.level,
+          isAdmin,
         },
         token,
-        credits: 25 + (referredById ? 20 : 0),
+        credits: isAdmin ? 999999 : 25 + (referredById ? 20 : 0),
       },
     });
   });
@@ -164,6 +170,8 @@ export default async function authRoutes(app: FastifyInstance) {
     // Generate JWT
     const token = app.jwt.sign({ id: user.id });
 
+    const isAdmin = ADMIN_EMAILS.includes(user.email);
+
     return reply.send({
       success: true,
       data: {
@@ -172,6 +180,7 @@ export default async function authRoutes(app: FastifyInstance) {
           email: user.email,
           name: user.name,
           level: user.level,
+          isAdmin,
         },
         token,
       },
@@ -224,6 +233,8 @@ export default async function authRoutes(app: FastifyInstance) {
       });
     }
 
+    const isAdmin = ADMIN_EMAILS.includes(user.email);
+
     return reply.send({
       success: true,
       data: {
@@ -238,8 +249,11 @@ export default async function authRoutes(app: FastifyInstance) {
           preferredCoins: user.preferredCoins,
           referralCode: user.referralCode,
           createdAt: user.createdAt,
+          isAdmin,
         },
-        credits: user.creditBalance,
+        credits: isAdmin
+          ? { ...user.creditBalance, balance: 999999 }
+          : user.creditBalance,
       },
     });
   });
