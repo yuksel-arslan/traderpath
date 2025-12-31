@@ -16,6 +16,7 @@ import {
   FileText,
   AlertTriangle
 } from 'lucide-react';
+import { ThemeToggle } from '../../components/common/ThemeToggle';
 
 const FEATURES = [
   {
@@ -114,6 +115,7 @@ export default function LandingPage() {
             </a>
           </nav>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <Link
               href="/login"
               className="px-4 py-2 text-muted-foreground hover:text-foreground transition"

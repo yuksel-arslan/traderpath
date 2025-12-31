@@ -10,8 +10,6 @@ import {
   CreditCard,
   LogOut,
   ChevronRight,
-  Moon,
-  Sun,
   Smartphone,
   Mail,
   Key,
@@ -20,10 +18,10 @@ import {
   Check,
   Copy
 } from 'lucide-react';
+import { ThemeToggle } from '../../../components/common/ThemeToggle';
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('profile');
-  const [darkMode, setDarkMode] = useState(true);
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
@@ -355,30 +353,7 @@ export default function SettingsPage() {
                   {/* Theme */}
                   <div>
                     <h3 className="font-medium mb-4">Theme</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <button
-                        onClick={() => setDarkMode(false)}
-                        className={`p-4 rounded-lg border-2 transition ${
-                          !darkMode
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <Sun className="w-8 h-8 mx-auto mb-2 text-amber-500" />
-                        <p className="font-medium">Light</p>
-                      </button>
-                      <button
-                        onClick={() => setDarkMode(true)}
-                        className={`p-4 rounded-lg border-2 transition ${
-                          darkMode
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <Moon className="w-8 h-8 mx-auto mb-2 text-blue-500" />
-                        <p className="font-medium">Dark</p>
-                      </button>
-                    </div>
+                    <ThemeToggle variant="buttons" />
                   </div>
 
                   {/* Language */}
