@@ -88,6 +88,7 @@ export function AnalysisFlow({ symbol, onComplete }: AnalysisFlowProps) {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [loading, setLoading] = useState<number | null>(null);
+  const [isRunningFull, setIsRunningFull] = useState(false);
   const [results, setResults] = useState<Record<number, unknown>>({});
 
   const handleStepClick = async (stepId: number) => {
@@ -118,6 +119,36 @@ export function AnalysisFlow({ symbol, onComplete }: AnalysisFlowProps) {
       console.error('Analysis failed:', error);
     } finally {
       setLoading(null);
+    }
+  };
+
+  const handleRunFullAnalysis = async () => {
+    setIsRunningFull(true);
+
+    try {
+      // Run all 7 steps sequentially
+      for (let stepId = 1; stepId <= 7; stepId++) {
+        setLoading(stepId);
+        setActiveStep(stepId);
+
+        // Simulate API call for each step
+        await new Promise((resolve) => setTimeout(resolve, 800));
+
+        setCompletedSteps((prev) => [...prev, stepId]);
+        setResults((prev) => ({
+          ...prev,
+          [stepId]: { /* mock result */ },
+        }));
+      }
+
+      // Show final verdict when complete
+      setActiveStep(7);
+      onComplete?.();
+    } catch (error) {
+      console.error('Full analysis failed:', error);
+    } finally {
+      setLoading(null);
+      setIsRunningFull(false);
     }
   };
 
@@ -229,8 +260,13 @@ export function AnalysisFlow({ symbol, onComplete }: AnalysisFlowProps) {
                 Get all 7 steps at once and save 25%
               </p>
             </div>
-            <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-medium hover:opacity-90 transition">
-              Run Full Analysis (15 credits)
+            <button
+              onClick={handleRunFullAnalysis}
+              disabled={isRunningFull}
+              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2"
+            >
+              {isRunningFull && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isRunningFull ? 'Running Analysis...' : 'Run Full Analysis (15 credits)'}
             </button>
           </div>
         </div>
