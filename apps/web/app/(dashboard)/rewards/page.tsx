@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Trophy,
   Flame,
@@ -17,22 +17,16 @@ import {
   ChevronRight,
   Loader2,
   Play,
-  HelpCircle
+  HelpCircle,
+  Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  useDailyRewards,
-  useClaimLogin,
-  useSpin,
-  useAnswerQuiz,
-  useAchievements,
-  useUserLevel
-} from '../../../hooks/useRewards';
-import {
   LEVEL_THRESHOLDS,
   STREAK_MILESTONES,
-  SPIN_WHEEL_PRIZES,
-  DAILY_REWARD_SCHEDULE
+  DAILY_REWARD_SCHEDULE,
+  DEFAULT_ACHIEVEMENTS,
+  QUIZ_POOL
 } from '@tradepath/types';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -56,89 +50,98 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   globe: Star,
 };
 
+// Mock data for demo
+const MOCK_USER = {
+  xp: 450,
+  level: 3,
+  streakDays: 12,
+  referralCode: 'TRADE-ABC123',
+};
+
+const MOCK_DAILY = {
+  login: { claimed: false, credits: 3 },
+  spin: { used: false, result: null as number | null },
+  quiz: { completed: false },
+  streak: { days: 12, nextBonus: 20 },
+};
+
 export default function RewardsPage() {
   const [activeTab, setActiveTab] = useState<'daily' | 'achievements' | 'levels'>('daily');
-  const [showSpinWheel, setShowSpinWheel] = useState(false);
-  const [spinResult, setSpinResult] = useState<number | null>(null);
+  const [dailyState, setDailyState] = useState(MOCK_DAILY);
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedQuizAnswer, setSelectedQuizAnswer] = useState<number | null>(null);
   const [quizResult, setQuizResult] = useState<{ correct: boolean; explanation: string } | null>(null);
-
-  // API Hooks
-  const { data: dailyData, isLoading: isLoadingDaily } = useDailyRewards();
-  const { data: achievementsData, isLoading: isLoadingAchievements } = useAchievements();
-  const { data: userData } = useUserLevel();
-
-  const claimLoginMutation = useClaimLogin();
-  const spinMutation = useSpin();
-  const answerQuizMutation = useAnswerQuiz();
+  const [currentQuiz] = useState(QUIZ_POOL[Math.floor(Math.random() * QUIZ_POOL.length)]);
+  const [copied, setCopied] = useState(false);
 
   // Calculate level info
-  const userXp = userData?.xp || 0;
+  const userXp = MOCK_USER.xp;
   const currentLevelInfo = LEVEL_THRESHOLDS.filter(l => l.xp <= userXp).pop() || LEVEL_THRESHOLDS[0];
   const nextLevelInfo = LEVEL_THRESHOLDS.find(l => l.xp > userXp);
   const xpProgress = nextLevelInfo
     ? ((userXp - currentLevelInfo.xp) / (nextLevelInfo.xp - currentLevelInfo.xp)) * 100
     : 100;
 
-  const handleClaimLogin = async () => {
-    try {
-      await claimLoginMutation.mutateAsync();
-    } catch (error) {
-      console.error('Failed to claim login reward:', error);
-    }
+  const handleClaimLogin = () => {
+    setDailyState(prev => ({
+      ...prev,
+      login: { claimed: true, credits: 3 },
+      streak: { ...prev.streak, days: prev.streak.days + 1 },
+    }));
   };
 
-  const handleSpin = async () => {
-    if (dailyData?.spin.used) return;
+  const handleSpin = () => {
+    if (dailyState.spin.used) return;
 
     setIsSpinning(true);
-    setShowSpinWheel(true);
 
-    try {
-      const result = await spinMutation.mutateAsync();
-      // Wait for animation
-      setTimeout(() => {
-        setSpinResult(result.result);
-        setIsSpinning(false);
-      }, 3000);
-    } catch (error) {
-      console.error('Failed to spin:', error);
+    // Generate random result
+    const random = Math.random();
+    let result = 1;
+    if (random < 0.03) result = 10;
+    else if (random < 0.10) result = 7;
+    else if (random < 0.25) result = 5;
+    else if (random < 0.45) result = 3;
+    else if (random < 0.70) result = 2;
+
+    setTimeout(() => {
+      setDailyState(prev => ({
+        ...prev,
+        spin: { used: true, result },
+      }));
       setIsSpinning(false);
-    }
+    }, 2000);
   };
 
-  const handleQuizAnswer = async (answerIndex: number) => {
-    if (dailyData?.quiz.completed) return;
+  const handleQuizAnswer = (answerIndex: number) => {
+    if (dailyState.quiz.completed) return;
 
     setSelectedQuizAnswer(answerIndex);
+    const isCorrect = answerIndex === currentQuiz.correctIndex;
 
-    try {
-      const result = await answerQuizMutation.mutateAsync(answerIndex);
-      setQuizResult({
-        correct: result.correct,
-        explanation: result.explanation,
-      });
-    } catch (error) {
-      console.error('Failed to answer quiz:', error);
-    }
+    setQuizResult({
+      correct: isCorrect,
+      explanation: currentQuiz.explanation,
+    });
+
+    setDailyState(prev => ({
+      ...prev,
+      quiz: { completed: true },
+    }));
   };
 
-  // Get achievement icon component
+  const handleCopyReferral = () => {
+    navigator.clipboard.writeText(MOCK_USER.referralCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const getAchievementIcon = (iconName: string) => {
     return ICON_MAP[iconName] || Star;
   };
 
-  const unlockedCount = achievementsData?.unlocked?.length || 0;
-  const totalAchievements = achievementsData?.achievements?.length || 0;
-
-  if (isLoadingDaily || isLoadingAchievements) {
-    return (
-      <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // Mock unlocked achievements (first 3)
+  const unlockedCodes = ['FIRST_ANALYSIS', 'STREAK_7', 'ANALYST_10'];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -188,15 +191,11 @@ export default function RewardsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Current Streak</p>
-              <p className="text-2xl font-bold">{dailyData?.streak.days || 0} Days</p>
+              <p className="text-2xl font-bold">{dailyState.streak.days} Days</p>
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
-            {dailyData?.streak.nextBonus ? (
-              <>Next bonus: +{dailyData.streak.nextBonus} credits</>
-            ) : (
-              'Keep it up!'
-            )}
+            Next bonus at 14 days: +30 credits
           </p>
         </div>
 
@@ -208,11 +207,11 @@ export default function RewardsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Achievements</p>
-              <p className="text-2xl font-bold">{unlockedCount}/{totalAchievements}</p>
+              <p className="text-2xl font-bold">{unlockedCodes.length}/{DEFAULT_ACHIEVEMENTS.length}</p>
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
-            {totalAchievements - unlockedCount} more to unlock!
+            {DEFAULT_ACHIEVEMENTS.length - unlockedCodes.length} more to unlock!
           </p>
         </div>
       </div>
@@ -268,16 +267,14 @@ export default function RewardsPage() {
                 </div>
                 <button
                   onClick={handleClaimLogin}
-                  disabled={dailyData?.login.claimed || claimLoginMutation.isPending}
+                  disabled={dailyState.login.claimed}
                   className={`w-full py-3 rounded-lg font-semibold transition ${
-                    dailyData?.login.claimed
+                    dailyState.login.claimed
                       ? 'bg-green-500/20 text-green-500 cursor-not-allowed'
                       : 'bg-primary text-primary-foreground hover:bg-primary/90'
                   }`}
                 >
-                  {claimLoginMutation.isPending ? (
-                    <Loader2 className="w-5 h-5 animate-spin mx-auto" />
-                  ) : dailyData?.login.claimed ? (
+                  {dailyState.login.claimed ? (
                     <>
                       <Check className="w-5 h-5 inline mr-2" />
                       Claimed!
@@ -304,15 +301,17 @@ export default function RewardsPage() {
                 </div>
                 <button
                   onClick={handleSpin}
-                  disabled={dailyData?.spin.used || spinMutation.isPending}
+                  disabled={dailyState.spin.used || isSpinning}
                   className={`w-full py-3 rounded-lg font-semibold transition ${
-                    dailyData?.spin.used
+                    dailyState.spin.used
                       ? 'bg-purple-500/20 text-purple-500 cursor-not-allowed'
                       : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90'
                   }`}
                 >
-                  {dailyData?.spin.used ? (
-                    <>Won +{dailyData.spin.result} credits!</>
+                  {isSpinning ? (
+                    <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                  ) : dailyState.spin.used ? (
+                    <>Won +{dailyState.spin.result} credits!</>
                   ) : (
                     <>
                       <Play className="w-5 h-5 inline mr-2" />
@@ -336,26 +335,24 @@ export default function RewardsPage() {
                   </div>
                 </div>
 
-                {dailyData?.quiz.completed ? (
+                {dailyState.quiz.completed && quizResult ? (
                   <div className={`p-4 rounded-lg ${
-                    quizResult?.correct ? 'bg-green-500/10' : 'bg-red-500/10'
+                    quizResult.correct ? 'bg-green-500/10' : 'bg-red-500/10'
                   }`}>
                     <p className="font-medium mb-2">
-                      {quizResult?.correct ? '✅ Correct! +5 credits' : '❌ Incorrect'}
+                      {quizResult.correct ? '✅ Correct! +5 credits' : '❌ Incorrect'}
                     </p>
-                    {quizResult?.explanation && (
-                      <p className="text-sm text-muted-foreground">{quizResult.explanation}</p>
-                    )}
+                    <p className="text-sm text-muted-foreground">{quizResult.explanation}</p>
                   </div>
-                ) : dailyData?.quiz.question ? (
+                ) : (
                   <div>
-                    <p className="font-medium mb-4">{dailyData.quiz.question.question}</p>
+                    <p className="font-medium mb-4">{currentQuiz.question}</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {dailyData.quiz.question.options.map((option, index) => (
+                      {currentQuiz.options.map((option, index) => (
                         <button
                           key={index}
                           onClick={() => handleQuizAnswer(index)}
-                          disabled={answerQuizMutation.isPending || selectedQuizAnswer !== null}
+                          disabled={selectedQuizAnswer !== null}
                           className={`p-3 text-left rounded-lg border transition ${
                             selectedQuizAnswer === index
                               ? quizResult?.correct
@@ -368,16 +365,7 @@ export default function RewardsPage() {
                         </button>
                       ))}
                     </div>
-                    {quizResult && (
-                      <div className={`mt-4 p-3 rounded-lg ${
-                        quizResult.correct ? 'bg-green-500/10' : 'bg-red-500/10'
-                      }`}>
-                        <p className="text-sm">{quizResult.explanation}</p>
-                      </div>
-                    )}
                   </div>
-                ) : (
-                  <p className="text-muted-foreground">No quiz available today</p>
                 )}
               </div>
 
@@ -386,7 +374,7 @@ export default function RewardsPage() {
                 <h3 className="font-semibold mb-4">Weekly Login Rewards</h3>
                 <div className="grid grid-cols-7 gap-2">
                   {DAILY_REWARD_SCHEDULE.map((reward, index) => {
-                    const streakDay = (dailyData?.streak.days || 0) % 7;
+                    const streakDay = dailyState.streak.days % 7;
                     const isClaimed = index < streakDay;
                     const isToday = index === streakDay;
 
@@ -399,7 +387,7 @@ export default function RewardsPage() {
                             : isToday
                             ? 'bg-amber-500/10 border-amber-500'
                             : 'bg-card border-border'
-                        } ${reward.bonus ? 'ring-2 ring-amber-500 ring-offset-2' : ''}`}
+                        } ${reward.bonus ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-background' : ''}`}
                       >
                         {reward.bonus && (
                           <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">
@@ -431,18 +419,15 @@ export default function RewardsPage() {
             exit={{ opacity: 0, y: -10 }}
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
-            {achievementsData?.achievements?.map((achievement) => {
-              const userProgress = achievementsData.unlocked?.find(
-                (ua) => ua.achievementId === achievement.id
-              );
-              const isUnlocked = userProgress?.isUnlocked;
-              const progress = userProgress?.progress || 0;
+            {DEFAULT_ACHIEVEMENTS.map((achievement, index) => {
+              const isUnlocked = unlockedCodes.includes(achievement.code);
+              const progress = isUnlocked ? achievement.requirementValue : Math.floor(Math.random() * achievement.requirementValue * 0.7);
               const progressPercent = (progress / achievement.requirementValue) * 100;
               const IconComponent = getAchievementIcon(achievement.icon || 'star');
 
               return (
                 <div
-                  key={achievement.id}
+                  key={achievement.code}
                   className={`p-4 rounded-lg border ${
                     isUnlocked
                       ? 'bg-green-500/5 border-green-500/20'
@@ -485,7 +470,7 @@ export default function RewardsPage() {
                               className="h-full bg-primary rounded-full"
                               initial={{ width: 0 }}
                               animate={{ width: `${Math.min(progressPercent, 100)}%` }}
-                              transition={{ duration: 0.5 }}
+                              transition={{ duration: 0.5, delay: index * 0.05 }}
                             />
                           </div>
                           <p className="text-xs text-muted-foreground">
@@ -586,7 +571,7 @@ export default function RewardsPage() {
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
           {STREAK_MILESTONES.map((milestone) => {
-            const isReached = (dailyData?.streak.days || 0) >= milestone.days;
+            const isReached = dailyState.streak.days >= milestone.days;
             return (
               <div
                 key={milestone.days}
@@ -611,21 +596,33 @@ export default function RewardsPage() {
 
       {/* Referral Section */}
       <div className="mt-8 p-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold mb-1">Invite Friends, Earn Rewards</h3>
             <p className="text-sm text-muted-foreground">
               Get 20 credits for each friend who signs up with your referral code
             </p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition">
-            Share Code
-            <ChevronRight className="w-4 h-4" />
+          <button
+            onClick={handleCopyReferral}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition"
+          >
+            {copied ? (
+              <>
+                <Check className="w-4 h-4" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4" />
+                Copy Code
+              </>
+            )}
           </button>
         </div>
         <div className="mt-4 p-3 bg-background rounded-lg">
           <p className="text-sm text-muted-foreground mb-1">Your Referral Code</p>
-          <p className="font-mono font-bold text-lg">{userData?.referralCode || 'TRADE-XXXXX'}</p>
+          <p className="font-mono font-bold text-lg">{MOCK_USER.referralCode}</p>
         </div>
       </div>
     </div>
