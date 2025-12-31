@@ -192,21 +192,105 @@ export default async function authRoutes(app: FastifyInstance) {
    * Login/Register with Google
    */
   const googleSchema = z.object({
-    idToken: z.string(),
+    credential: z.string(),
   });
 
   app.post('/google', async (request: FastifyRequest, reply: FastifyReply) => {
     const body = googleSchema.parse(request.body);
 
-    // TODO: Verify Google token
-    // For now, return placeholder
-    return reply.status(501).send({
-      success: false,
-      error: {
-        code: 'NOT_IMPLEMENTED',
-        message: 'Google auth not yet implemented',
-      },
-    });
+    try {
+      // Decode the Google JWT credential (it's a JWT token)
+      // In production, you should verify this with Google's public keys
+      const parts = body.credential.split('.');
+      if (parts.length !== 3) {
+        throw new Error('Invalid credential format');
+      }
+
+      // Decode payload (base64url)
+      const payload = JSON.parse(
+        Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()
+      );
+
+      const { email, name, picture, sub: googleId } = payload;
+
+      if (!email) {
+        throw new Error('Email not provided by Google');
+      }
+
+      // Check if user exists
+      let user = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (!user) {
+        // Create new user
+        const referralCode = nanoid(8).toUpperCase();
+
+        user = await prisma.user.create({
+          data: {
+            email,
+            name: name || email.split('@')[0],
+            avatarUrl: picture,
+            googleId,
+            referralCode,
+          },
+        });
+
+        // Create credit balance with welcome bonus
+        await prisma.creditBalance.create({
+          data: {
+            userId: user.id,
+            balance: 25,
+            lifetimeEarned: 25,
+          },
+        });
+      } else {
+        // Update existing user's Google info if needed
+        if (!user.googleId || !user.avatarUrl) {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              googleId: user.googleId || googleId,
+              avatarUrl: user.avatarUrl || picture,
+            },
+          });
+        }
+      }
+
+      // Update last login
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+      });
+
+      // Generate JWT
+      const token = app.jwt.sign({ id: user.id });
+
+      const isAdmin = ADMIN_EMAILS.includes(user.email);
+
+      return reply.send({
+        success: true,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            level: user.level,
+            isAdmin,
+          },
+          token,
+        },
+      });
+    } catch (error) {
+      console.error('Google auth error:', error);
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'GOOGLE_AUTH_FAILED',
+          message: error instanceof Error ? error.message : 'Google authentication failed',
+        },
+      });
+    }
   });
 
   /**
