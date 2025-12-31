@@ -162,12 +162,15 @@ Be concise and give a trading perspective.`;
       const data = await analysisEngine.safetyCheck(body.symbol);
 
       const aiPrompt = `You are a crypto risk analyst. Analyze this safety data for ${body.symbol} and give 2-3 sentences in Turkish:
-- Manipulation Risk: ${data.manipulationRisk}
-- Whale Activity: ${data.whaleActivity}
-- Volume Anomaly: ${data.volumeAnomaly ? 'Yes' : 'No'}
+- Risk Level: ${data.riskLevel}
+- Pump/Dump Risk: ${data.manipulation.pumpDumpRisk}
+- Whale Activity: ${data.whaleActivity.bias} (Net flow: $${Math.round(data.whaleActivity.netFlowUsd).toLocaleString()})
+- Spoofing Detected: ${data.manipulation.spoofingDetected ? 'Yes' : 'No'}
+- Wash Trading: ${data.manipulation.washTrading ? 'Yes' : 'No'}
+- Smart Money: ${data.smartMoney.positioning}
 - Warnings: ${data.warnings.join(', ') || 'None'}
 
-Focus on risk assessment.`;
+Focus on risk assessment and trading implications.`;
 
       const aiInsight = await getGeminiInsight(aiPrompt);
 
@@ -211,12 +214,14 @@ Focus on risk assessment.`;
     try {
       const data = await analysisEngine.timingAnalysis(body.symbol);
 
+      const bestZone = data.entryZones[0];
       const aiPrompt = `You are a crypto timing analyst. Give brief entry advice for ${body.symbol} in Turkish (2-3 sentences):
 - Current Price: $${data.currentPrice}
 - Optimal Entry: $${data.optimalEntry}
-- Entry Zone: $${data.entryZone.low} - $${data.entryZone.high}
-- Recommendation: ${data.recommendation}
-- Time Window: ${data.timeWindow}
+- Trade Now: ${data.tradeNow ? 'Yes' : 'No'}
+- Best Entry Zone: $${bestZone?.priceLow || data.optimalEntry} - $${bestZone?.priceHigh || data.optimalEntry} (${bestZone?.eta || 'Şimdi'})
+- Conditions Met: ${data.conditions.filter(c => c.met).length}/${data.conditions.length}
+- Wait For: ${data.waitFor?.event || 'Hazır'}
 
 Be specific about when to enter.`;
 
@@ -267,13 +272,18 @@ Be specific about when to enter.`;
     try {
       const data = await analysisEngine.tradePlan(body.symbol, body.accountSize);
 
+      const tpPrices = data.takeProfits.map(tp => `$${tp.price}`).join(', ');
       const aiPrompt = `You are a crypto trade planner. Summarize this trade plan for ${body.symbol} in Turkish (2-3 sentences):
-- Direction: ${data.direction}
-- Entry: $${data.entry}
-- Stop Loss: $${data.stopLoss}
-- Take Profits: $${data.takeProfit.join(', $')}
+- Direction: ${data.direction.toUpperCase()}
+- Entry Type: ${data.type}
+- Average Entry: $${data.averageEntry}
+- Entry Levels: ${data.entries.map(e => `$${e.price} (${e.percentage}%)`).join(', ')}
+- Stop Loss: $${data.stopLoss.price} (${data.stopLoss.percentage}% risk)
+- Take Profits: ${tpPrices}
 - Risk/Reward: ${data.riskReward}:1
-- Position Size: ${data.positionSize}
+- Win Rate Estimate: ${data.winRateEstimate}%
+- Position Size: ${data.positionSizePercent}% of portfolio
+- Risk Amount: $${data.riskAmount}
 
 Give practical trading advice.`;
 
@@ -320,11 +330,15 @@ Give practical trading advice.`;
       const data = await analysisEngine.trapCheck(body.symbol);
 
       const aiPrompt = `You are a crypto trap analyst. Analyze trap risk for ${body.symbol} in Turkish (2-3 sentences):
-- Liquidation Risk: ${data.liquidationRisk}
-- Trap Probability: ${data.trapProbability}%
-- Warnings: ${data.warnings.join(', ') || 'None'}
+- Risk Level: ${data.riskLevel}
+- Bull Trap: ${data.traps.bullTrap ? `Yes at $${data.traps.bullTrapZone}` : 'No'}
+- Bear Trap: ${data.traps.bearTrap ? `Yes at $${data.traps.bearTrapZone}` : 'No'}
+- Fakeout Risk: ${data.traps.fakeoutRisk}
+- Liquidity Grab Zones: ${data.traps.liquidityGrab.zones.map(z => `$${z}`).join(', ') || 'None'}
+- Stop Hunt Zones: ${data.traps.stopHuntZones.map(z => `$${z}`).join(', ') || 'None'}
+- Counter Strategies: ${data.counterStrategy.join('; ')}
 
-Warn about potential traps.`;
+Warn about potential traps and give protective advice.`;
 
       const aiInsight = await getGeminiInsight(aiPrompt);
 
@@ -371,13 +385,15 @@ Warn about potential traps.`;
     }
 
     try {
-      // Run all analysis steps
-      const marketPulse = await analysisEngine.getMarketPulse();
-      const assetScan = await analysisEngine.scanAsset(body.symbol);
-      const safetyCheck = await analysisEngine.safetyCheck(body.symbol);
-      const timing = await analysisEngine.timingAnalysis(body.symbol);
-      const tradePlan = await analysisEngine.tradePlan(body.symbol, body.accountSize);
-      const trapCheck = await analysisEngine.trapCheck(body.symbol);
+      // Run all analysis steps in parallel for better performance
+      const [marketPulse, assetScan, safetyCheck, timing, tradePlan, trapCheck] = await Promise.all([
+        analysisEngine.getMarketPulse(),
+        analysisEngine.scanAsset(body.symbol),
+        analysisEngine.safetyCheck(body.symbol),
+        analysisEngine.timingAnalysis(body.symbol),
+        analysisEngine.tradePlan(body.symbol, body.accountSize),
+        analysisEngine.trapCheck(body.symbol),
+      ]);
 
       // Generate final verdict
       const verdict = await analysisEngine.finalVerdict(body.symbol, {
@@ -389,40 +405,53 @@ Warn about potential traps.`;
         trapCheck,
       });
 
-      // Get comprehensive AI summary
+      // Get comprehensive AI summary with updated property names
       const aiPrompt = `You are a senior crypto analyst. Give a comprehensive trading recommendation for ${body.symbol} in Turkish (4-5 sentences):
 
 Market Analysis:
-- Fear & Greed: ${marketPulse.fearGreedIndex}
+- Fear & Greed: ${marketPulse.fearGreedIndex} (${marketPulse.fearGreedLabel})
 - Market Regime: ${marketPulse.marketRegime}
+- BTC Dominance: ${marketPulse.btcDominance}%
+- Trend: ${marketPulse.trend.direction} (${marketPulse.trend.strength}% strength)
 
 Asset Analysis:
 - Price: $${assetScan.currentPrice}
-- Trend: ${assetScan.timeframes[0]?.trend}
+- 24h Change: ${assetScan.priceChange24h.toFixed(2)}%
+- Multi-TF Trend: ${assetScan.timeframes.map(t => `${t.tf}:${t.trend}`).join(', ')}
 - RSI: ${assetScan.indicators.rsi}
+- MACD: ${assetScan.indicators.macd.histogram > 0 ? 'Positive' : 'Negative'}
 
 Risk Assessment:
-- Manipulation Risk: ${safetyCheck.manipulationRisk}
-- Trap Probability: ${trapCheck.trapProbability}%
+- Safety Risk Level: ${safetyCheck.riskLevel}
+- Manipulation Risk: ${safetyCheck.manipulation.pumpDumpRisk}
+- Whale Bias: ${safetyCheck.whaleActivity.bias}
+- Trap Risk: ${trapCheck.riskLevel}
+- Bull/Bear Trap: ${trapCheck.traps.bullTrap ? 'Bull Trap Warning' : trapCheck.traps.bearTrap ? 'Bear Trap Warning' : 'None'}
 
 Trade Plan:
-- Direction: ${tradePlan.direction}
-- Entry: $${tradePlan.entry}
-- Stop Loss: $${tradePlan.stopLoss}
-- Target: $${tradePlan.takeProfit[0]}
+- Direction: ${tradePlan.direction.toUpperCase()}
+- Average Entry: $${tradePlan.averageEntry}
+- Stop Loss: $${tradePlan.stopLoss.price} (${tradePlan.stopLoss.percentage}% risk)
+- Take Profit 1: $${tradePlan.takeProfits[0]?.price ?? tradePlan.averageEntry}
+- Risk/Reward: ${tradePlan.riskReward}:1
+- Win Rate: ${tradePlan.winRateEstimate}%
 
-Final Verdict: ${verdict.verdict} (${verdict.confidence}% confidence)
+Final Verdict: ${verdict.verdict.toUpperCase()} (Score: ${verdict.overallScore}/10)
+Recommendation: ${verdict.recommendation}
 
-Give a clear BUY/SELL/HOLD recommendation with reasoning.`;
+Give a clear, actionable trading recommendation with specific entry, stop loss, and target prices.`;
 
       const aiVerdict = await getGeminiInsight(aiPrompt);
 
       return reply.send({
         success: true,
         data: {
-          analysisId: `analysis_${Date.now()}_${body.symbol}`,
+          analysisId: verdict.analysisId,
           symbol: body.symbol,
-          timestamp: new Date().toISOString(),
+          timestamp: verdict.createdAt,
+          expiresAt: verdict.expiresAt,
+          overallScore: verdict.overallScore,
+          verdict: verdict.verdict,
           steps: {
             marketPulse,
             assetScan,

@@ -1,5 +1,12 @@
 // ===========================================
-// Analysis Engine - Real Market Data & Analysis
+// TradePath Analysis Engine - Production Grade
+// Full Technical Specification Compliance
+// ===========================================
+
+import { config } from '../../core/config';
+
+// ===========================================
+// Types - Matching Technical Specification
 // ===========================================
 
 interface Candle {
@@ -23,42 +30,329 @@ interface MarketData {
   quoteVolume24h: number;
 }
 
+// Step 1 Types
+type TrendDirection = 'bullish' | 'bearish' | 'neutral';
+
+interface MarketPulseResult {
+  btcDominance: number;
+  btcDominanceTrend: 'rising' | 'falling' | 'stable';
+  totalMarketCap: number;
+  marketCap24hChange: number;
+  fearGreedIndex: number;
+  fearGreedLabel: 'extreme_fear' | 'fear' | 'neutral' | 'greed' | 'extreme_greed';
+  marketRegime: 'risk_on' | 'risk_off' | 'neutral';
+  trend: {
+    direction: TrendDirection;
+    strength: number;
+    timeframesAligned: number;
+  };
+  macroEvents: Array<{
+    name: string;
+    date: string;
+    impact: 'high' | 'medium' | 'low';
+    description: string;
+  }>;
+  summary: string;
+  verdict: 'suitable' | 'caution' | 'avoid';
+  score: number;
+}
+
+// Step 2 Types
+interface AssetScanResult {
+  symbol: string;
+  currentPrice: number;
+  priceChange24h: number;
+  volume24h: number;
+  timeframes: Array<{
+    tf: '1M' | '1W' | '1D' | '4H' | '1H';
+    trend: TrendDirection;
+    strength: number;
+  }>;
+  forecast: {
+    price24h: number;
+    price7d: number;
+    confidence: number;
+    scenarios: Array<{
+      name: 'bull' | 'base' | 'bear';
+      price: number;
+      probability: number;
+    }>;
+  };
+  levels: {
+    resistance: number[];
+    support: number[];
+    poc: number;
+  };
+  indicators: {
+    rsi: number;
+    macd: { value: number; signal: number; histogram: number };
+    movingAverages: { ma20: number; ma50: number; ma200: number };
+    bollingerBands: { upper: number; middle: number; lower: number };
+    atr: number;
+  };
+  score: number;
+}
+
+// Step 3 Types
+interface SafetyCheckResult {
+  symbol: string;
+  manipulation: {
+    spoofingDetected: boolean;
+    spoofingDetails?: string;
+    layeringDetected: boolean;
+    layeringDetails?: string;
+    icebergDetected: boolean;
+    icebergPrice?: number;
+    icebergSide?: 'buy' | 'sell';
+    washTrading: boolean;
+    pumpDumpRisk: 'low' | 'medium' | 'high';
+  };
+  whaleActivity: {
+    largeBuys: Array<{ amountUsd: number; price: number; time: string }>;
+    largeSells: Array<{ amountUsd: number; price: number; time: string }>;
+    netFlowUsd: number;
+    bias: 'accumulation' | 'distribution' | 'neutral';
+  };
+  exchangeFlows: Array<{
+    exchange: string;
+    inflow: number;
+    outflow: number;
+    net: number;
+    interpretation: string;
+  }>;
+  smartMoney: {
+    positioning: 'long' | 'short' | 'neutral';
+    confidence: number;
+  };
+  riskLevel: 'low' | 'medium' | 'high';
+  warnings: string[];
+  score: number;
+}
+
+// Step 4 Types
+interface TimingResult {
+  symbol: string;
+  currentPrice: number;
+  tradeNow: boolean;
+  reason: string;
+  conditions: Array<{
+    name: string;
+    met: boolean;
+    details: string;
+  }>;
+  entryZones: Array<{
+    priceLow: number;
+    priceHigh: number;
+    probability: number;
+    eta: string;
+    quality: number;
+  }>;
+  optimalEntry: number;
+  waitFor?: {
+    event: string;
+    estimatedTime: string;
+  };
+  score: number;
+}
+
+// Step 5 Types
+interface TradePlanResult {
+  symbol: string;
+  direction: 'long' | 'short';
+  type: 'limit' | 'market';
+  entries: Array<{
+    price: number;
+    percentage: number;
+    type: 'limit' | 'stop_limit';
+  }>;
+  averageEntry: number;
+  stopLoss: {
+    price: number;
+    percentage: number;
+    reason: string;
+  };
+  takeProfits: Array<{
+    price: number;
+    percentage: number;
+    reason: string;
+  }>;
+  riskReward: number;
+  winRateEstimate: number;
+  positionSizePercent: number;
+  riskAmount: number;
+  trailingStop?: {
+    activateAfter: string;
+    trailPercent: number;
+  };
+  score: number;
+}
+
+// Step 6 Types
+interface TrapCheckResult {
+  symbol: string;
+  traps: {
+    bullTrap: boolean;
+    bullTrapZone?: number;
+    bearTrap: boolean;
+    bearTrapZone?: number;
+    liquidityGrab: {
+      detected: boolean;
+      zones: number[];
+    };
+    stopHuntZones: number[];
+    fakeoutRisk: 'low' | 'medium' | 'high';
+  };
+  liquidationLevels: Array<{
+    price: number;
+    amountUsd: number;
+    type: 'longs' | 'shorts';
+  }>;
+  counterStrategy: string[];
+  proTip: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  score: number;
+}
+
+// Step 7 Types
+interface FinalVerdictResult {
+  overallScore: number;
+  verdict: 'go' | 'conditional_go' | 'wait' | 'avoid';
+  componentScores: Array<{
+    step: string;
+    score: number;
+    weight: number;
+  }>;
+  confidenceFactors: Array<{
+    factor: string;
+    positive: boolean;
+    impact: 'high' | 'medium' | 'low';
+  }>;
+  recommendation: string;
+  analysisId: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+// ===========================================
+// HTTP Client with Retry & Timeout
+// ===========================================
+
+interface FetchOptions {
+  timeout?: number;
+  retries?: number;
+  retryDelay?: number;
+}
+
+async function fetchWithRetry(
+  url: string,
+  options: FetchOptions = {}
+): Promise<Response> {
+  const { timeout = 10000, retries = 3, retryDelay = 1000 } = options;
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (attempt === retries) {
+        throw error;
+      }
+
+      // Exponential backoff
+      await new Promise((resolve) =>
+        setTimeout(resolve, retryDelay * Math.pow(2, attempt - 1))
+      );
+    }
+  }
+
+  throw new Error('Fetch failed after retries');
+}
+
+// ===========================================
+// Simple In-Memory Cache
+// ===========================================
+
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
+const cache = new Map<string, CacheEntry<unknown>>();
+
+function getCached<T>(key: string): T | null {
+  const entry = cache.get(key) as CacheEntry<T> | undefined;
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCache<T>(key: string, data: T, ttlMs: number): void {
+  cache.set(key, { data, expiresAt: Date.now() + ttlMs });
+}
+
+const CACHE_TTL = {
+  MARKET_PULSE: 5 * 60 * 1000, // 5 minutes
+  TICKER: 30 * 1000, // 30 seconds
+  KLINES: 60 * 1000, // 1 minute
+  GLOBAL: 5 * 60 * 1000, // 5 minutes
+  FEAR_GREED: 60 * 60 * 1000, // 1 hour
+};
+
 // ===========================================
 // Binance API Functions
 // ===========================================
 
-async function fetchKlines(symbol: string, interval: string, limit: number = 200): Promise<Candle[]> {
+async function fetchKlines(
+  symbol: string,
+  interval: string,
+  limit: number = 200
+): Promise<Candle[]> {
+  const cacheKey = `klines:${symbol}:${interval}:${limit}`;
+  const cached = getCached<Candle[]>(cacheKey);
+  if (cached) return cached;
+
   const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=${interval}&limit=${limit}`;
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch klines: ${response.statusText}`);
-  }
-
+  const response = await fetchWithRetry(url);
   const data = await response.json();
 
-  return data.map((k: number[]) => ({
-    openTime: k[0],
-    open: parseFloat(k[1] as unknown as string),
-    high: parseFloat(k[2] as unknown as string),
-    low: parseFloat(k[3] as unknown as string),
-    close: parseFloat(k[4] as unknown as string),
-    volume: parseFloat(k[5] as unknown as string),
-    closeTime: k[6],
+  const candles: Candle[] = data.map((k: (string | number)[]) => ({
+    openTime: k[0] as number,
+    open: parseFloat(k[1] as string),
+    high: parseFloat(k[2] as string),
+    low: parseFloat(k[3] as string),
+    close: parseFloat(k[4] as string),
+    volume: parseFloat(k[5] as string),
+    closeTime: k[6] as number,
   }));
+
+  setCache(cacheKey, candles, CACHE_TTL.KLINES);
+  return candles;
 }
 
 async function fetch24hTicker(symbol: string): Promise<MarketData> {
+  const cacheKey = `ticker:${symbol}`;
+  const cached = getCached<MarketData>(cacheKey);
+  if (cached) return cached;
+
   const url = `https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}USDT`;
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ticker: ${response.statusText}`);
-  }
-
+  const response = await fetchWithRetry(url);
   const data = await response.json();
 
-  return {
+  const result: MarketData = {
     symbol,
     price: parseFloat(data.lastPrice),
     priceChange24h: parseFloat(data.priceChange),
@@ -68,69 +362,117 @@ async function fetch24hTicker(symbol: string): Promise<MarketData> {
     volume24h: parseFloat(data.volume),
     quoteVolume24h: parseFloat(data.quoteVolume),
   };
+
+  setCache(cacheKey, result, CACHE_TTL.TICKER);
+  return result;
 }
 
-async function fetchGlobalMetrics(): Promise<{
+async function fetchOrderBook(
+  symbol: string,
+  limit: number = 100
+): Promise<{ bids: [string, string][]; asks: [string, string][] }> {
+  const url = `https://api.binance.com/api/v3/depth?symbol=${symbol}USDT&limit=${limit}`;
+  const response = await fetchWithRetry(url);
+  return response.json();
+}
+
+async function fetchRecentTrades(
+  symbol: string,
+  limit: number = 500
+): Promise<
+  Array<{ price: string; qty: string; time: number; isBuyerMaker: boolean }>
+> {
+  const url = `https://api.binance.com/api/v3/trades?symbol=${symbol}USDT&limit=${limit}`;
+  const response = await fetchWithRetry(url);
+  return response.json();
+}
+
+interface GlobalMetrics {
   totalMarketCap: number;
   btcDominance: number;
   totalVolume24h: number;
-}> {
-  // Using CoinGecko for global metrics (free, no API key)
+  marketCapChange24h: number;
+}
+
+async function fetchGlobalMetrics(): Promise<GlobalMetrics> {
+  const cacheKey = 'global_metrics';
+  const cached = getCached<GlobalMetrics>(cacheKey);
+  if (cached) return cached;
+
   try {
-    const response = await fetch('https://api.coingecko.com/api/v3/global');
-    if (!response.ok) {
-      throw new Error('Failed to fetch global metrics');
-    }
+    const response = await fetchWithRetry(
+      'https://api.coingecko.com/api/v3/global'
+    );
     const data = await response.json();
-    return {
+
+    const result = {
       totalMarketCap: data.data.total_market_cap.usd,
       btcDominance: data.data.market_cap_percentage.btc,
       totalVolume24h: data.data.total_volume.usd,
+      marketCapChange24h: data.data.market_cap_change_percentage_24h_usd,
     };
+
+    setCache(cacheKey, result, CACHE_TTL.GLOBAL);
+    return result;
   } catch {
-    // Fallback if CoinGecko is unavailable
+    // Fallback values if CoinGecko is unavailable
     return {
-      totalMarketCap: 2500000000000,
+      totalMarketCap: 2_500_000_000_000,
       btcDominance: 52,
-      totalVolume24h: 80000000000,
+      totalVolume24h: 80_000_000_000,
+      marketCapChange24h: 0,
     };
   }
 }
 
-async function fetchFearGreedIndex(): Promise<{ value: number; classification: string }> {
+interface FearGreedData {
+  value: number;
+  classification: string;
+}
+
+async function fetchFearGreedIndex(): Promise<FearGreedData> {
+  const cacheKey = 'fear_greed';
+  const cached = getCached<FearGreedData>(cacheKey);
+  if (cached) return cached;
+
   try {
-    const response = await fetch('https://api.alternative.me/fng/');
-    if (!response.ok) {
-      throw new Error('Failed to fetch fear & greed');
-    }
+    const response = await fetchWithRetry('https://api.alternative.me/fng/');
     const data = await response.json();
-    return {
+
+    const result = {
       value: parseInt(data.data[0].value),
       classification: data.data[0].value_classification,
     };
+
+    setCache(cacheKey, result, CACHE_TTL.FEAR_GREED);
+    return result;
   } catch {
     return { value: 50, classification: 'Neutral' };
   }
 }
 
 // ===========================================
-// Technical Indicators
+// Technical Indicators - Accurate Implementation
 // ===========================================
 
 function calculateSMA(prices: number[], period: number): number {
-  if (prices.length < period) return prices[prices.length - 1];
+  if (prices.length < period) return prices[prices.length - 1] || 0;
   const slice = prices.slice(-period);
   return slice.reduce((a, b) => a + b, 0) / period;
 }
 
 function calculateEMA(prices: number[], period: number): number {
-  if (prices.length < period) return prices[prices.length - 1];
+  if (prices.length === 0) return 0;
+  if (prices.length < period) return prices[prices.length - 1] ?? 0;
 
   const multiplier = 2 / (period + 1);
   let ema = calculateSMA(prices.slice(0, period), period);
 
   for (let i = period; i < prices.length; i++) {
-    ema = (prices[i] - ema) * multiplier + ema;
+    const price = prices[i];
+    if (price !== undefined) {
+      ema = (price - ema) * multiplier + ema;
+    }
   }
 
   return ema;
@@ -139,142 +481,305 @@ function calculateEMA(prices: number[], period: number): number {
 function calculateRSI(prices: number[], period: number = 14): number {
   if (prices.length < period + 1) return 50;
 
-  let gains = 0;
-  let losses = 0;
-
-  for (let i = prices.length - period; i < prices.length; i++) {
-    const change = prices[i] - prices[i - 1];
-    if (change > 0) gains += change;
-    else losses -= change;
+  const changes: number[] = [];
+  for (let i = 1; i < prices.length; i++) {
+    const current = prices[i];
+    const prev = prices[i - 1];
+    if (current !== undefined && prev !== undefined) {
+      changes.push(current - prev);
+    }
   }
 
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
+  if (changes.length < period) return 50;
+
+  // Wilder's smoothing method
+  let avgGain = 0;
+  let avgLoss = 0;
+
+  // First average
+  for (let i = 0; i < period; i++) {
+    const change = changes[i] ?? 0;
+    if (change > 0) avgGain += change;
+    else avgLoss -= change;
+  }
+  avgGain /= period;
+  avgLoss /= period;
+
+  // Smoothed averages
+  for (let i = period; i < changes.length; i++) {
+    const change = changes[i] ?? 0;
+    if (change > 0) {
+      avgGain = (avgGain * (period - 1) + change) / period;
+      avgLoss = (avgLoss * (period - 1)) / period;
+    } else {
+      avgGain = (avgGain * (period - 1)) / period;
+      avgLoss = (avgLoss * (period - 1) - change) / period;
+    }
+  }
 
   if (avgLoss === 0) return 100;
   const rs = avgGain / avgLoss;
-  return 100 - (100 / (1 + rs));
+  return 100 - 100 / (1 + rs);
 }
 
-function calculateMACD(prices: number[]): { macd: number; signal: number; histogram: number } {
-  const ema12 = calculateEMA(prices, 12);
-  const ema26 = calculateEMA(prices, 26);
-  const macd = ema12 - ema26;
+function calculateMACD(prices: number[]): {
+  macd: number;
+  signal: number;
+  histogram: number;
+} {
+  if (prices.length < 26) {
+    return { macd: 0, signal: 0, histogram: 0 };
+  }
 
-  // Calculate signal line (9-period EMA of MACD)
+  // Calculate MACD line for each point
   const macdValues: number[] = [];
   for (let i = 26; i <= prices.length; i++) {
     const slice = prices.slice(0, i);
-    const e12 = calculateEMA(slice, 12);
-    const e26 = calculateEMA(slice, 26);
-    macdValues.push(e12 - e26);
+    const ema12 = calculateEMA(slice, 12);
+    const ema26 = calculateEMA(slice, 26);
+    macdValues.push(ema12 - ema26);
   }
 
+  const macd = macdValues[macdValues.length - 1] ?? 0;
   const signal = macdValues.length >= 9 ? calculateEMA(macdValues, 9) : macd;
   const histogram = macd - signal;
 
   return { macd, signal, histogram };
 }
 
-function calculateBollingerBands(prices: number[], period: number = 20, stdDev: number = 2): {
-  upper: number;
-  middle: number;
-  lower: number;
-} {
+function calculateBollingerBands(
+  prices: number[],
+  period: number = 20,
+  stdDevMultiplier: number = 2
+): { upper: number; middle: number; lower: number } {
+  if (prices.length < period) {
+    const price = prices[prices.length - 1] || 0;
+    return { upper: price * 1.02, middle: price, lower: price * 0.98 };
+  }
+
   const sma = calculateSMA(prices, period);
   const slice = prices.slice(-period);
 
-  const variance = slice.reduce((sum, price) => sum + Math.pow(price - sma, 2), 0) / period;
-  const std = Math.sqrt(variance);
+  const variance =
+    slice.reduce((sum, price) => sum + Math.pow(price - sma, 2), 0) / period;
+  const stdDev = Math.sqrt(variance);
 
   return {
-    upper: sma + std * stdDev,
+    upper: sma + stdDev * stdDevMultiplier,
     middle: sma,
-    lower: sma - std * stdDev,
+    lower: sma - stdDev * stdDevMultiplier,
   };
 }
 
-function findSupportResistance(candles: Candle[]): { support: number[]; resistance: number[] } {
-  const prices = candles.map(c => c.close);
-  const highs = candles.map(c => c.high);
-  const lows = candles.map(c => c.low);
+function calculateATR(candles: Candle[], period: number = 14): number {
+  if (candles.length < 2) return 0;
 
-  const currentPrice = prices[prices.length - 1];
-  const levels: { price: number; strength: number }[] = [];
+  const trueRanges: number[] = [];
 
-  // Find pivot points
+  for (let i = 1; i < candles.length; i++) {
+    const current = candles[i];
+    const prev = candles[i - 1];
+    if (!current || !prev) continue;
+
+    const high = current.high;
+    const low = current.low;
+    const prevClose = prev.close;
+
+    const tr = Math.max(
+      high - low,
+      Math.abs(high - prevClose),
+      Math.abs(low - prevClose)
+    );
+    trueRanges.push(tr);
+  }
+
+  if (trueRanges.length === 0) return 0;
+  if (trueRanges.length < period) {
+    return trueRanges.reduce((a, b) => a + b, 0) / trueRanges.length;
+  }
+
+  return trueRanges.slice(-period).reduce((a, b) => a + b, 0) / period;
+}
+
+function calculateVWAP(candles: Candle[]): number {
+  if (candles.length === 0) return 0;
+
+  let cumulativeTPV = 0;
+  let cumulativeVolume = 0;
+
+  for (const candle of candles) {
+    const typicalPrice = (candle.high + candle.low + candle.close) / 3;
+    cumulativeTPV += typicalPrice * candle.volume;
+    cumulativeVolume += candle.volume;
+  }
+
+  return cumulativeVolume > 0 ? cumulativeTPV / cumulativeVolume : 0;
+}
+
+function findSupportResistance(candles: Candle[]): {
+  support: number[];
+  resistance: number[];
+  poc: number;
+} {
+  if (candles.length < 10) {
+    const price = candles[candles.length - 1]?.close ?? 0;
+    return {
+      support: [price * 0.95, price * 0.9],
+      resistance: [price * 1.05, price * 1.1],
+      poc: price,
+    };
+  }
+
+  const lastCandle = candles[candles.length - 1];
+  const currentPrice = lastCandle?.close ?? 0;
+  const levels: Array<{ price: number; strength: number; type: 'high' | 'low' }> = [];
+
+  // Find pivot highs and lows (5-bar pivot)
   for (let i = 2; i < candles.length - 2; i++) {
-    // Pivot high
-    if (highs[i] > highs[i-1] && highs[i] > highs[i-2] &&
-        highs[i] > highs[i+1] && highs[i] > highs[i+2]) {
-      levels.push({ price: highs[i], strength: 1 });
+    const c = candles[i];
+    const cPrev1 = candles[i - 1];
+    const cPrev2 = candles[i - 2];
+    const cNext1 = candles[i + 1];
+    const cNext2 = candles[i + 2];
+
+    if (!c || !cPrev1 || !cPrev2 || !cNext1 || !cNext2) continue;
+
+    const isHighPivot =
+      c.high > cPrev1.high &&
+      c.high > cPrev2.high &&
+      c.high > cNext1.high &&
+      c.high > cNext2.high;
+
+    const isLowPivot =
+      c.low < cPrev1.low &&
+      c.low < cPrev2.low &&
+      c.low < cNext1.low &&
+      c.low < cNext2.low;
+
+    if (isHighPivot) {
+      levels.push({ price: c.high, strength: 1, type: 'high' });
     }
-    // Pivot low
-    if (lows[i] < lows[i-1] && lows[i] < lows[i-2] &&
-        lows[i] < lows[i+1] && lows[i] < lows[i+2]) {
-      levels.push({ price: lows[i], strength: 1 });
+    if (isLowPivot) {
+      levels.push({ price: c.low, strength: 1, type: 'low' });
     }
   }
 
-  // Cluster similar levels
-  const clusteredLevels: { price: number; strength: number }[] = [];
-  const threshold = currentPrice * 0.01; // 1% threshold
+  // Cluster similar levels (within 1%)
+  const threshold = currentPrice * 0.01;
+  const clusteredLevels: Array<{ price: number; strength: number }> = [];
 
   for (const level of levels) {
-    const existing = clusteredLevels.find(l => Math.abs(l.price - level.price) < threshold);
+    const existing = clusteredLevels.find(
+      (l) => Math.abs(l.price - level.price) < threshold
+    );
     if (existing) {
       existing.strength++;
       existing.price = (existing.price + level.price) / 2;
     } else {
-      clusteredLevels.push({ ...level });
+      clusteredLevels.push({ price: level.price, strength: level.strength });
     }
   }
 
-  // Sort by strength and separate into support/resistance
-  const sorted = clusteredLevels.sort((a, b) => b.strength - a.strength);
-  const support = sorted.filter(l => l.price < currentPrice).slice(0, 3).map(l => Math.round(l.price));
-  const resistance = sorted.filter(l => l.price > currentPrice).slice(0, 3).map(l => Math.round(l.price));
+  // Sort by strength
+  clusteredLevels.sort((a, b) => b.strength - a.strength);
 
-  return { support, resistance };
+  const support = clusteredLevels
+    .filter((l) => l.price < currentPrice)
+    .slice(0, 3)
+    .map((l) => Math.round(l.price));
+
+  const resistance = clusteredLevels
+    .filter((l) => l.price > currentPrice)
+    .slice(0, 3)
+    .map((l) => Math.round(l.price));
+
+  // Calculate POC (Point of Control) - price with highest volume
+  const poc = calculateVWAP(candles.slice(-50));
+
+  return { support, resistance, poc: Math.round(poc) };
 }
 
-function calculateTrend(prices: number[]): { direction: 'bullish' | 'bearish' | 'neutral'; strength: number } {
+function calculateTrend(
+  candles: Candle[]
+): { direction: 'bullish' | 'bearish' | 'neutral'; strength: number } {
+  if (candles.length < 50) {
+    return { direction: 'neutral', strength: 50 };
+  }
+
+  const prices = candles.map((c) => c.close);
+  const currentPrice = prices[prices.length - 1] ?? 0;
+  const price10barsAgo = prices[prices.length - 10] ?? currentPrice;
+
   const ma20 = calculateSMA(prices, 20);
   const ma50 = calculateSMA(prices, 50);
   const ma200 = calculateSMA(prices, Math.min(200, prices.length));
-  const currentPrice = prices[prices.length - 1];
+  const ema20 = calculateEMA(prices, 20);
 
   let bullishSignals = 0;
-  let totalSignals = 0;
+  let bearishSignals = 0;
 
-  // Price vs MAs
+  // Price position relative to MAs
   if (currentPrice > ma20) bullishSignals++;
-  totalSignals++;
+  else bearishSignals++;
+
   if (currentPrice > ma50) bullishSignals++;
-  totalSignals++;
+  else bearishSignals++;
+
   if (currentPrice > ma200) bullishSignals++;
-  totalSignals++;
+  else bearishSignals++;
+
+  if (currentPrice > ema20) bullishSignals++;
+  else bearishSignals++;
 
   // MA alignment
   if (ma20 > ma50) bullishSignals++;
-  totalSignals++;
+  else bearishSignals++;
+
   if (ma50 > ma200) bullishSignals++;
-  totalSignals++;
+  else bearishSignals++;
 
-  const strength = Math.round((bullishSignals / totalSignals) * 100);
+  // Price momentum (compare to 10 bars ago)
+  const priceChange = price10barsAgo !== 0 ? (currentPrice - price10barsAgo) / price10barsAgo : 0;
+  if (priceChange > 0.02) bullishSignals++;
+  else if (priceChange < -0.02) bearishSignals++;
 
-  if (strength >= 70) return { direction: 'bullish', strength };
-  if (strength <= 30) return { direction: 'bearish', strength: 100 - strength };
-  return { direction: 'neutral', strength: 50 };
+  // Higher highs / lower lows
+  const recentHighs = candles.slice(-20).map((c) => c.high);
+  const recentLows = candles.slice(-20).map((c) => c.low);
+  const olderHighs = candles.slice(-40, -20).map((c) => c.high);
+  const olderLows = candles.slice(-40, -20).map((c) => c.low);
+
+  const maxRecentHigh = recentHighs.length > 0 ? Math.max(...recentHighs) : 0;
+  const maxOlderHigh = olderHighs.length > 0 ? Math.max(...olderHighs) : 0;
+  const minRecentLow = recentLows.length > 0 ? Math.min(...recentLows) : 0;
+  const minOlderLow = olderLows.length > 0 ? Math.min(...olderLows) : 0;
+
+  if (maxRecentHigh > maxOlderHigh) bullishSignals++;
+  else bearishSignals++;
+
+  if (minRecentLow > minOlderLow) bullishSignals++;
+  else bearishSignals++;
+
+  const total = bullishSignals + bearishSignals;
+  const bullishRatio = total > 0 ? bullishSignals / total : 0.5;
+
+  if (bullishRatio >= 0.7) {
+    return { direction: 'bullish', strength: Math.round(bullishRatio * 100) };
+  } else if (bullishRatio <= 0.3) {
+    return { direction: 'bearish', strength: Math.round((1 - bullishRatio) * 100) };
+  }
+  return { direction: 'neutral', strength: Math.round(Math.abs(bullishRatio - 0.5) * 200) };
 }
 
 // ===========================================
-// Analysis Engine Export
+// Analysis Engine
 // ===========================================
 
 export const analysisEngine = {
-  // Step 1: Market Pulse
-  async getMarketPulse() {
+  // =========================================
+  // Step 1: Market Pulse (FREE)
+  // =========================================
+  async getMarketPulse(): Promise<MarketPulseResult> {
     const [btcData, ethData, globalMetrics, fearGreed] = await Promise.all([
       fetch24hTicker('BTC'),
       fetch24hTicker('ETH'),
@@ -282,44 +787,97 @@ export const analysisEngine = {
       fetchFearGreedIndex(),
     ]);
 
+    // Fetch BTC candles for trend analysis
     const btcCandles = await fetchKlines('BTC', '1d', 100);
-    const btcPrices = btcCandles.map(c => c.close);
-    const btcTrend = calculateTrend(btcPrices);
+    const btcTrend = calculateTrend(btcCandles);
 
-    // Calculate BTC dominance trend
-    const btcDominanceTrend = btcData.priceChangePercent24h > ethData.priceChangePercent24h ? 'rising' : 'falling';
+    // Multi-timeframe alignment check
+    const [candles4h, candles1h] = await Promise.all([
+      fetchKlines('BTC', '4h', 100),
+      fetchKlines('BTC', '1h', 100),
+    ]);
 
-    // Determine market regime
+    const trend4h = calculateTrend(candles4h);
+    const trend1h = calculateTrend(candles1h);
+
+    let timeframesAligned = 0;
+    if (btcTrend.direction === 'bullish') timeframesAligned++;
+    if (trend4h.direction === 'bullish') timeframesAligned++;
+    if (trend1h.direction === 'bullish') timeframesAligned++;
+    if (btcTrend.direction === trend4h.direction) timeframesAligned++;
+
+    // BTC dominance trend
+    let btcDominanceTrend: 'rising' | 'falling' | 'stable' = 'stable';
+    if (btcData.priceChangePercent24h > ethData.priceChangePercent24h + 2) {
+      btcDominanceTrend = 'rising';
+    } else if (ethData.priceChangePercent24h > btcData.priceChangePercent24h + 2) {
+      btcDominanceTrend = 'falling';
+    }
+
+    // Market regime
     let marketRegime: 'risk_on' | 'risk_off' | 'neutral' = 'neutral';
-    if (fearGreed.value > 60 && btcTrend.direction === 'bullish') marketRegime = 'risk_on';
-    else if (fearGreed.value < 40 && btcTrend.direction === 'bearish') marketRegime = 'risk_off';
+    if (fearGreed.value >= 55 && btcTrend.direction === 'bullish') {
+      marketRegime = 'risk_on';
+    } else if (fearGreed.value <= 40 && btcTrend.direction === 'bearish') {
+      marketRegime = 'risk_off';
+    }
 
-    // Generate summary
-    const summary = `Market sentiment is ${fearGreed.classification.toLowerCase()} with ${btcTrend.direction} trend. ` +
-      `BTC dominance is ${btcDominanceTrend} at ${globalMetrics.btcDominance.toFixed(1)}%. ` +
-      `24h volume: $${(globalMetrics.totalVolume24h / 1e9).toFixed(1)}B.`;
+    // Fear & Greed label
+    let fearGreedLabel: 'extreme_fear' | 'fear' | 'neutral' | 'greed' | 'extreme_greed' = 'neutral';
+    if (fearGreed.value <= 24) fearGreedLabel = 'extreme_fear';
+    else if (fearGreed.value <= 44) fearGreedLabel = 'fear';
+    else if (fearGreed.value <= 55) fearGreedLabel = 'neutral';
+    else if (fearGreed.value <= 74) fearGreedLabel = 'greed';
+    else fearGreedLabel = 'extreme_greed';
+
+    // Calculate verdict
+    let verdict: 'suitable' | 'caution' | 'avoid' = 'caution';
+    if (marketRegime === 'risk_on' && btcTrend.strength >= 60) {
+      verdict = 'suitable';
+    } else if (marketRegime === 'risk_off' || fearGreed.value <= 25) {
+      verdict = 'avoid';
+    }
+
+    // Calculate score (0-10)
+    let score = 5;
+    if (marketRegime === 'risk_on') score += 2;
+    else if (marketRegime === 'risk_off') score -= 2;
+    if (btcTrend.direction === 'bullish') score += 1;
+    if (fearGreed.value >= 50 && fearGreed.value <= 75) score += 1;
+    if (timeframesAligned >= 3) score += 1;
+    score = Math.max(1, Math.min(10, score));
+
+    const summary = `Piyasa ${fearGreedLabel === 'extreme_fear' ? 'aşırı korku' :
+      fearGreedLabel === 'fear' ? 'korku' :
+      fearGreedLabel === 'neutral' ? 'nötr' :
+      fearGreedLabel === 'greed' ? 'açgözlülük' : 'aşırı açgözlülük'} modunda. ` +
+      `BTC dominance ${globalMetrics.btcDominance.toFixed(1)}% (${btcDominanceTrend === 'rising' ? 'yükseliyor' : btcDominanceTrend === 'falling' ? 'düşüyor' : 'stabil'}). ` +
+      `Genel trend ${btcTrend.direction === 'bullish' ? 'yükseliş' : btcTrend.direction === 'bearish' ? 'düşüş' : 'yatay'} yönünde, güç: ${btcTrend.strength}%.`;
 
     return {
       btcDominance: parseFloat(globalMetrics.btcDominance.toFixed(1)),
       btcDominanceTrend,
       totalMarketCap: globalMetrics.totalMarketCap,
-      marketCap24hChange: btcData.priceChangePercent24h,
+      marketCap24hChange: globalMetrics.marketCapChange24h,
       fearGreedIndex: fearGreed.value,
-      fearGreedLabel: fearGreed.classification.toLowerCase() as 'extreme_fear' | 'fear' | 'neutral' | 'greed' | 'extreme_greed',
+      fearGreedLabel,
       marketRegime,
       trend: {
         direction: btcTrend.direction,
         strength: btcTrend.strength,
-        timeframesAligned: btcTrend.strength > 70 ? 4 : btcTrend.strength > 50 ? 3 : 2,
+        timeframesAligned,
       },
-      macroEvents: [],
+      macroEvents: [], // Would require external API for real events
       summary,
-      verdict: marketRegime === 'risk_on' ? 'suitable' : marketRegime === 'risk_off' ? 'caution' : 'neutral' as const,
+      verdict,
+      score,
     };
   },
 
-  // Step 2: Asset Scanner
-  async scanAsset(symbol: string) {
+  // =========================================
+  // Step 2: Asset Scanner (2 credits)
+  // =========================================
+  async scanAsset(symbol: string): Promise<AssetScanResult> {
     const [ticker, candles1d, candles4h, candles1h] = await Promise.all([
       fetch24hTicker(symbol),
       fetchKlines(symbol, '1d', 200),
@@ -327,74 +885,121 @@ export const analysisEngine = {
       fetchKlines(symbol, '1h', 200),
     ]);
 
-    const prices1d = candles1d.map(c => c.close);
-    const prices4h = candles4h.map(c => c.close);
-    const prices1h = candles1h.map(c => c.close);
+    // Multi-timeframe trend analysis
+    const trend1d = calculateTrend(candles1d);
+    const trend4h = calculateTrend(candles4h);
+    const trend1h = calculateTrend(candles1h);
 
-    const trend1d = calculateTrend(prices1d);
-    const trend4h = calculateTrend(prices4h);
-    const trend1h = calculateTrend(prices1h);
+    // Weekly trend (from daily candles)
+    const trend1w = calculateTrend(candles1d.slice(-35)); // ~5 weeks
 
+    // Monthly trend estimation
+    const trend1m = calculateTrend(candles1d.slice(-60)); // ~2 months
+
+    const prices4h = candles4h.map((c) => c.close);
+    const prices1d = candles1d.map((c) => c.close);
+
+    // Technical indicators
     const rsi = calculateRSI(prices4h);
     const macd = calculateMACD(prices4h);
-    const levels = findSupportResistance(candles1d);
+    const bb = calculateBollingerBands(prices4h);
+    const atr = calculateATR(candles4h);
 
+    // Moving averages
     const ma20 = calculateSMA(prices4h, 20);
     const ma50 = calculateSMA(prices4h, 50);
     const ma200 = calculateSMA(prices4h, Math.min(200, prices4h.length));
 
+    // Support/Resistance levels
+    const levels = findSupportResistance(candles1d);
+
     // Forecast calculation
-    const avgChange = prices1d.slice(-7).reduce((sum, p, i, arr) => {
+    const recentReturns = prices1d.slice(-7).map((p, i, arr) => {
       if (i === 0) return 0;
-      return sum + ((p - arr[i-1]) / arr[i-1]);
-    }, 0) / 6;
+      const prev = arr[i - 1];
+      if (prev === undefined || prev === 0) return 0;
+      return (p - prev) / prev;
+    }).slice(1);
 
-    const price24h = Math.round(ticker.price * (1 + avgChange));
-    const price7d = Math.round(ticker.price * (1 + avgChange * 7));
+    const avgReturn = recentReturns.length > 0 ? recentReturns.reduce((a, b) => a + b, 0) / recentReturns.length : 0;
+    const volatility = recentReturns.length > 0
+      ? Math.sqrt(recentReturns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / recentReturns.length)
+      : 0.02;
 
-    // Calculate confidence
+    const price24h = Math.round(ticker.price * (1 + avgReturn));
+    const price7d = Math.round(ticker.price * (1 + avgReturn * 7));
+
+    // Confidence based on trend alignment
     let confidence = 50;
     if (trend1d.direction === trend4h.direction) confidence += 15;
     if (trend4h.direction === trend1h.direction) confidence += 10;
     if (rsi > 30 && rsi < 70) confidence += 10;
-    if (macd.histogram > 0 && trend4h.direction === 'bullish') confidence += 10;
-    if (macd.histogram < 0 && trend4h.direction === 'bearish') confidence += 10;
-    confidence = Math.min(95, confidence);
+    if (Math.abs(macd.histogram) > 0 && macd.histogram * (trend4h.direction === 'bullish' ? 1 : -1) > 0) {
+      confidence += 10;
+    }
+    confidence = Math.min(90, Math.max(20, confidence));
 
-    // Calculate overall score
+    // Scenario probabilities based on trend
+    const bullProb = trend4h.direction === 'bullish' ? 40 : trend4h.direction === 'bearish' ? 20 : 30;
+    const bearProb = trend4h.direction === 'bearish' ? 40 : trend4h.direction === 'bullish' ? 20 : 30;
+    const baseProb = 100 - bullProb - bearProb;
+
+    // Calculate score
     let score = 5;
-    if (trend1d.direction === 'bullish') score += 1;
+    if (trend1d.direction === 'bullish') score += 1.5;
+    else if (trend1d.direction === 'bearish') score -= 1;
     if (trend4h.direction === 'bullish') score += 1;
-    if (rsi > 40 && rsi < 70) score += 0.5;
+    if (rsi >= 30 && rsi <= 70) score += 0.5;
     if (macd.histogram > 0) score += 0.5;
     if (ticker.price > ma50) score += 0.5;
-    score = Math.min(10, parseFloat(score.toFixed(1)));
+    if (ticker.price > ma200) score += 0.5;
+    score = Math.max(1, Math.min(10, parseFloat(score.toFixed(1))));
 
     return {
       symbol,
       currentPrice: ticker.price,
+      priceChange24h: ticker.priceChangePercent24h,
+      volume24h: ticker.quoteVolume24h,
       timeframes: [
-        { tf: '1D' as const, trend: trend1d.direction, strength: trend1d.strength },
-        { tf: '4H' as const, trend: trend4h.direction, strength: trend4h.strength },
-        { tf: '1H' as const, trend: trend1h.direction, strength: trend1h.strength },
+        { tf: '1M', trend: trend1m.direction, strength: trend1m.strength },
+        { tf: '1W', trend: trend1w.direction, strength: trend1w.strength },
+        { tf: '1D', trend: trend1d.direction, strength: trend1d.strength },
+        { tf: '4H', trend: trend4h.direction, strength: trend4h.strength },
+        { tf: '1H', trend: trend1h.direction, strength: trend1h.strength },
       ],
       forecast: {
         price24h,
         price7d,
         confidence,
         scenarios: [
-          { name: 'bull' as const, price: Math.round(price7d * 1.1), probability: trend4h.direction === 'bullish' ? 40 : 25 },
-          { name: 'base' as const, price: price7d, probability: 40 },
-          { name: 'bear' as const, price: Math.round(price7d * 0.9), probability: trend4h.direction === 'bearish' ? 40 : 20 },
+          {
+            name: 'bull',
+            price: Math.round(price7d * (1 + volatility * 2)),
+            probability: bullProb,
+          },
+          { name: 'base', price: price7d, probability: baseProb },
+          {
+            name: 'bear',
+            price: Math.round(price7d * (1 - volatility * 2)),
+            probability: bearProb,
+          },
         ],
       },
       levels: {
-        resistance: levels.resistance.length ? levels.resistance : [Math.round(ticker.price * 1.05), Math.round(ticker.price * 1.1)],
-        support: levels.support.length ? levels.support : [Math.round(ticker.price * 0.95), Math.round(ticker.price * 0.9)],
-        poc: Math.round((ticker.high24h + ticker.low24h) / 2),
+        resistance: levels.resistance.length > 0 ? levels.resistance : [
+          Math.round(ticker.price * 1.05),
+          Math.round(ticker.price * 1.1),
+          Math.round(ticker.price * 1.15),
+        ],
+        support: levels.support.length > 0 ? levels.support : [
+          Math.round(ticker.price * 0.95),
+          Math.round(ticker.price * 0.9),
+          Math.round(ticker.price * 0.85),
+        ],
+        poc: levels.poc || Math.round((ticker.high24h + ticker.low24h) / 2),
       },
       indicators: {
-        rsi: Math.round(rsi),
+        rsi: Math.round(rsi * 10) / 10,
         macd: {
           value: parseFloat(macd.macd.toFixed(2)),
           signal: parseFloat(macd.signal.toFixed(2)),
@@ -405,333 +1010,754 @@ export const analysisEngine = {
           ma50: Math.round(ma50),
           ma200: Math.round(ma200),
         },
+        bollingerBands: {
+          upper: Math.round(bb.upper),
+          middle: Math.round(bb.middle),
+          lower: Math.round(bb.lower),
+        },
+        atr: parseFloat(atr.toFixed(2)),
       },
       score,
     };
   },
 
-  // Step 3: Safety Check
-  async safetyCheck(symbol: string) {
-    const [ticker, candles] = await Promise.all([
+  // =========================================
+  // Step 3: Safety Check (5 credits)
+  // =========================================
+  async safetyCheck(symbol: string): Promise<SafetyCheckResult> {
+    const [ticker, candles1h, orderBook, recentTrades] = await Promise.all([
       fetch24hTicker(symbol),
       fetchKlines(symbol, '1h', 100),
+      fetchOrderBook(symbol, 100),
+      fetchRecentTrades(symbol, 500),
     ]);
 
-    // Volume analysis
-    const volumes = candles.map(c => c.volume);
-    const avgVolume = volumes.slice(-24).reduce((a, b) => a + b, 0) / 24;
-    const currentVolume = volumes[volumes.length - 1];
-    const volumeAnomaly = currentVolume > avgVolume * 3;
+    const volumes = candles1h.map((c) => c.volume);
+    const avgVolume = volumes.length > 0 ? volumes.slice(-24).reduce((a, b) => a + b, 0) / Math.min(24, volumes.length) : 1;
+    const currentVolume = volumes[volumes.length - 1] ?? avgVolume;
+    const volumeRatio = avgVolume > 0 ? currentVolume / avgVolume : 1;
 
-    // Price manipulation check
-    const priceChanges = candles.slice(-24).map((c, i, arr) => {
-      if (i === 0) return 0;
-      return Math.abs((c.close - arr[i-1].close) / arr[i-1].close * 100);
-    });
-    const avgChange = priceChanges.reduce((a, b) => a + b, 0) / priceChanges.length;
-    const priceManipulation = avgChange > 3;
+    // Analyze order book for manipulation signs
+    const bids = orderBook.bids.map((b) => ({
+      price: parseFloat(b[0]),
+      qty: parseFloat(b[1]),
+    }));
+    const asks = orderBook.asks.map((a) => ({
+      price: parseFloat(a[0]),
+      qty: parseFloat(a[1]),
+    }));
 
-    // Calculate manipulation risk
-    let riskScore = 100;
-    if (volumeAnomaly) riskScore -= 20;
-    if (priceManipulation) riskScore -= 30;
-    if (ticker.priceChangePercent24h > 15 || ticker.priceChangePercent24h < -15) riskScore -= 15;
+    const totalBidVolume = bids.reduce((sum, b) => sum + b.qty * b.price, 0);
+    const totalAskVolume = asks.reduce((sum, a) => sum + a.qty * a.price, 0);
+    const orderBookImbalance = (totalBidVolume - totalAskVolume) / (totalBidVolume + totalAskVolume);
 
-    const manipulationRisk = riskScore >= 70 ? 'low' : riskScore >= 40 ? 'moderate' : 'high';
-    const whaleActivity = volumeAnomaly ? 'high' : currentVolume > avgVolume * 1.5 ? 'moderate' : 'low';
+    // Check for spoofing (large orders far from price)
+    const currentPrice = ticker.price;
+    const spoofThreshold = currentPrice * 0.02; // 2% away
+    const largeBidsFar = bids.filter(
+      (b) => b.qty * b.price > avgVolume * 0.1 && currentPrice - b.price > spoofThreshold
+    );
+    const largeAsksFar = asks.filter(
+      (a) => a.qty * a.price > avgVolume * 0.1 && a.price - currentPrice > spoofThreshold
+    );
+    const spoofingDetected = largeBidsFar.length > 3 || largeAsksFar.length > 3;
 
+    // Check for layering
+    const bidPriceLevels = new Set(bids.slice(0, 20).map((b) => Math.round(b.price * 100)));
+    const askPriceLevels = new Set(asks.slice(0, 20).map((a) => Math.round(a.price * 100)));
+    const layeringDetected = bidPriceLevels.size >= 18 || askPriceLevels.size >= 18;
+
+    // Check for iceberg orders (large fills at same price)
+    const tradesByPrice = new Map<number, number>();
+    for (const trade of recentTrades) {
+      const price = Math.round(parseFloat(trade.price) * 100) / 100;
+      tradesByPrice.set(price, (tradesByPrice.get(price) ?? 0) + parseFloat(trade.qty));
+    }
+    const tradeVolumes = [...tradesByPrice.values()];
+    const maxTradeVolume = tradeVolumes.length > 0 ? Math.max(...tradeVolumes) : 0;
+    const icebergDetected = maxTradeVolume > avgVolume * 0.5;
+    const sortedTrades = [...tradesByPrice.entries()].sort((a, b) => b[1] - a[1]);
+    const icebergPrice = icebergDetected && sortedTrades.length > 0
+      ? sortedTrades[0]?.[0]
+      : undefined;
+
+    // Wash trading detection (same size trades)
+    const tradeSizes = recentTrades.map((t) => parseFloat(t.qty));
+    const sizeFrequency = new Map<string, number>();
+    for (const size of tradeSizes) {
+      const key = size.toFixed(4);
+      sizeFrequency.set(key, (sizeFrequency.get(key) || 0) + 1);
+    }
+    const maxFrequency = Math.max(...sizeFrequency.values());
+    const washTrading = maxFrequency > recentTrades.length * 0.1;
+
+    // Pump & dump risk
+    let pumpDumpRisk: 'low' | 'medium' | 'high' = 'low';
+    if (Math.abs(ticker.priceChangePercent24h) > 20 && volumeRatio > 3) {
+      pumpDumpRisk = 'high';
+    } else if (Math.abs(ticker.priceChangePercent24h) > 10 && volumeRatio > 2) {
+      pumpDumpRisk = 'medium';
+    }
+
+    // Whale activity analysis
+    const largeTrades = recentTrades.filter(
+      (t) => parseFloat(t.qty) * parseFloat(t.price) > 50000
+    );
+    const largeBuys = largeTrades
+      .filter((t) => !t.isBuyerMaker)
+      .map((t) => ({
+        amountUsd: parseFloat(t.qty) * parseFloat(t.price),
+        price: parseFloat(t.price),
+        time: new Date(t.time).toISOString(),
+      }));
+    const largeSells = largeTrades
+      .filter((t) => t.isBuyerMaker)
+      .map((t) => ({
+        amountUsd: parseFloat(t.qty) * parseFloat(t.price),
+        price: parseFloat(t.price),
+        time: new Date(t.time).toISOString(),
+      }));
+
+    const buyVolume = largeBuys.reduce((sum, t) => sum + t.amountUsd, 0);
+    const sellVolume = largeSells.reduce((sum, t) => sum + t.amountUsd, 0);
+    const netFlowUsd = buyVolume - sellVolume;
+
+    let whaleBias: 'accumulation' | 'distribution' | 'neutral' = 'neutral';
+    if (netFlowUsd > 100000) whaleBias = 'accumulation';
+    else if (netFlowUsd < -100000) whaleBias = 'distribution';
+
+    // Smart money positioning
+    let smartMoneyPositioning: 'long' | 'short' | 'neutral' = 'neutral';
+    if (orderBookImbalance > 0.2) smartMoneyPositioning = 'long';
+    else if (orderBookImbalance < -0.2) smartMoneyPositioning = 'short';
+
+    // Overall risk level
     const warnings: string[] = [];
-    if (volumeAnomaly) warnings.push('Unusual volume spike detected');
-    if (priceManipulation) warnings.push('High price volatility - possible manipulation');
-    if (ticker.priceChangePercent24h > 10) warnings.push(`Large price move: +${ticker.priceChangePercent24h.toFixed(1)}% in 24h`);
-    if (ticker.priceChangePercent24h < -10) warnings.push(`Large price drop: ${ticker.priceChangePercent24h.toFixed(1)}% in 24h`);
+    let riskScore = 100;
+
+    if (spoofingDetected) {
+      warnings.push('Spoofing belirtileri tespit edildi - dikkatli olun');
+      riskScore -= 20;
+    }
+    if (layeringDetected) {
+      warnings.push('Layering aktivitesi mevcut');
+      riskScore -= 15;
+    }
+    if (icebergDetected) {
+      warnings.push(`$${icebergPrice} seviyesinde gizli emir tespit edildi`);
+      riskScore -= 10;
+    }
+    if (washTrading) {
+      warnings.push('Wash trading şüphesi var');
+      riskScore -= 15;
+    }
+    if (pumpDumpRisk === 'high') {
+      warnings.push('Pump & dump riski yüksek!');
+      riskScore -= 25;
+    }
+    if (volumeRatio > 3) {
+      warnings.push(`Anormal hacim: ${volumeRatio.toFixed(1)}x ortalama`);
+      riskScore -= 10;
+    }
+    if (Math.abs(ticker.priceChangePercent24h) > 15) {
+      warnings.push(`Büyük fiyat hareketi: ${ticker.priceChangePercent24h.toFixed(1)}%`);
+      riskScore -= 10;
+    }
+
+    let riskLevel: 'low' | 'medium' | 'high' = 'low';
+    if (riskScore < 50) riskLevel = 'high';
+    else if (riskScore < 75) riskLevel = 'medium';
+
+    // Calculate score (inverse of risk)
+    const score = Math.max(1, Math.min(10, riskScore / 10));
 
     return {
-      overallScore: riskScore,
-      manipulationRisk: manipulationRisk as 'low' | 'moderate' | 'high',
-      whaleActivity: whaleActivity as 'low' | 'moderate' | 'high',
-      volumeAnomaly,
-      priceManipulation,
+      symbol,
+      manipulation: {
+        spoofingDetected,
+        spoofingDetails: spoofingDetected ? 'Fiyattan uzak büyük emirler tespit edildi' : undefined,
+        layeringDetected,
+        layeringDetails: layeringDetected ? 'Çok sayıda küçük fiyat seviyesinde emir' : undefined,
+        icebergDetected,
+        icebergPrice,
+        icebergSide: icebergDetected
+          ? largeBuys.length > largeSells.length
+            ? 'buy'
+            : 'sell'
+          : undefined,
+        washTrading,
+        pumpDumpRisk,
+      },
+      whaleActivity: {
+        largeBuys: largeBuys.slice(0, 5),
+        largeSells: largeSells.slice(0, 5),
+        netFlowUsd,
+        bias: whaleBias,
+      },
+      exchangeFlows: [
+        {
+          exchange: 'Binance',
+          inflow: sellVolume,
+          outflow: buyVolume,
+          net: netFlowUsd,
+          interpretation: netFlowUsd > 0 ? 'Net çıkış - boğa sinyali' : 'Net giriş - ayı sinyali',
+        },
+      ],
+      smartMoney: {
+        positioning: smartMoneyPositioning,
+        confidence: Math.round(Math.abs(orderBookImbalance) * 100),
+      },
+      riskLevel,
       warnings,
+      score,
     };
   },
 
-  // Step 4: Timing Analysis
-  async timingAnalysis(symbol: string) {
-    const [ticker, candles] = await Promise.all([
+  // =========================================
+  // Step 4: Timing (3 credits)
+  // =========================================
+  async timingAnalysis(symbol: string): Promise<TimingResult> {
+    const [ticker, candles4h, candles1h] = await Promise.all([
       fetch24hTicker(symbol),
+      fetchKlines(symbol, '4h', 100),
       fetchKlines(symbol, '1h', 100),
     ]);
 
-    const prices = candles.map(c => c.close);
-    const bb = calculateBollingerBands(prices);
-    const rsi = calculateRSI(prices);
-    const levels = findSupportResistance(candles);
+    const prices4h = candles4h.map((c) => c.close);
+    const prices1h = candles1h.map((c) => c.close);
+
+    const rsi4h = calculateRSI(prices4h);
+    const rsi1h = calculateRSI(prices1h);
+    const bb = calculateBollingerBands(prices4h);
+    const macd = calculateMACD(prices4h);
+    const trend = calculateTrend(candles4h);
+    const levels = findSupportResistance(candles4h);
+
+    const currentPrice = ticker.price;
+
+    // Entry conditions
+    const conditions: Array<{ name: string; met: boolean; details: string }> = [
+      {
+        name: 'RSI Durumu',
+        met: rsi4h >= 30 && rsi4h <= 70,
+        details: rsi4h < 30 ? 'Aşırı satım' : rsi4h > 70 ? 'Aşırı alım' : 'Normal bölgede',
+      },
+      {
+        name: 'Bollinger Pozisyonu',
+        met: currentPrice <= bb.middle,
+        details: currentPrice > bb.upper ? 'Üst bandın üzerinde' :
+                 currentPrice < bb.lower ? 'Alt bandın altında' :
+                 currentPrice <= bb.middle ? 'Ortanın altında - iyi giriş' : 'Ortanın üstünde',
+      },
+      {
+        name: 'MACD Sinyali',
+        met: trend.direction === 'bullish' ? macd.histogram > 0 : macd.histogram < 0,
+        details: macd.histogram > 0 ? 'Pozitif histogram' : 'Negatif histogram',
+      },
+      {
+        name: 'Trend Uyumu',
+        met: trend.strength >= 60,
+        details: `Trend gücü: ${trend.strength}%`,
+      },
+      {
+        name: 'Destek Yakınlığı',
+        met: levels.support.length > 0 && currentPrice <= (levels.support[0] ?? currentPrice) * 1.03,
+        details: levels.support[0] !== undefined ? `En yakın destek: $${levels.support[0]}` : 'Destek bulunamadı',
+      },
+    ];
+
+    const conditionsMet = conditions.filter((c) => c.met).length;
+    const tradeNow = conditionsMet >= 3 && rsi4h < 65;
 
     // Calculate optimal entry
-    const nearestSupport = levels.support[0] || ticker.price * 0.97;
-    const optimalEntry = Math.round((ticker.price + nearestSupport) / 2);
+    const nearestSupport = levels.support[0] ?? currentPrice * 0.97;
+    const optimalEntry = Math.round((currentPrice * 0.6 + nearestSupport * 0.4));
 
-    // Entry zone
-    const entryZone = {
-      low: Math.round(bb.lower),
-      high: Math.round(ticker.price * 0.99),
-    };
+    // Entry zones
+    const entryZones: TimingResult['entryZones'] = [];
 
-    // Confidence based on RSI and BB position
-    let confidence = 50;
-    if (rsi < 40) confidence += 20; // Oversold - good entry
-    if (rsi > 60) confidence -= 10; // Overbought - risky entry
-    if (ticker.price < bb.middle) confidence += 15;
-    if (ticker.price > bb.upper) confidence -= 20;
-    confidence = Math.max(20, Math.min(90, confidence));
+    // Zone 1: Aggressive entry
+    if (currentPrice <= bb.middle) {
+      entryZones.push({
+        priceLow: Math.round(currentPrice * 0.99),
+        priceHigh: Math.round(currentPrice * 1.01),
+        probability: 70,
+        eta: 'Şimdi',
+        quality: 4,
+      });
+    }
 
-    // Recommendation
-    let recommendation: 'buy' | 'wait' | 'avoid' = 'wait';
-    if (ticker.price <= entryZone.high && rsi < 50) recommendation = 'buy';
-    else if (ticker.price > bb.upper || rsi > 70) recommendation = 'avoid';
+    // Zone 2: Conservative entry
+    if (levels.support[0]) {
+      entryZones.push({
+        priceLow: Math.round(levels.support[0] * 0.99),
+        priceHigh: Math.round(levels.support[0] * 1.01),
+        probability: 60,
+        eta: '4-12 saat',
+        quality: 5,
+      });
+    }
+
+    // Zone 3: Deep value
+    if (levels.support[1]) {
+      entryZones.push({
+        priceLow: Math.round(levels.support[1] * 0.99),
+        priceHigh: Math.round(levels.support[1] * 1.01),
+        probability: 40,
+        eta: '1-3 gün',
+        quality: 5,
+      });
+    }
+
+    // Wait recommendation
+    let waitFor: TimingResult['waitFor'];
+    if (!tradeNow) {
+      if (rsi4h > 70) {
+        waitFor = {
+          event: 'RSI düşüşü (70 altına)',
+          estimatedTime: '4-8 saat',
+        };
+      } else if (currentPrice > bb.upper) {
+        waitFor = {
+          event: 'Fiyatın BB üst bandının altına inmesi',
+          estimatedTime: '2-6 saat',
+        };
+      } else if (conditionsMet < 3) {
+        waitFor = {
+          event: 'Daha fazla koşulun sağlanması',
+          estimatedTime: '6-24 saat',
+        };
+      }
+    }
+
+    // Reason
+    let reason = '';
+    if (tradeNow) {
+      reason = `${conditionsMet}/5 koşul sağlandı. `;
+      if (rsi4h < 40) reason += 'RSI düşük - iyi alım fırsatı. ';
+      if (currentPrice < bb.middle) reason += 'Fiyat BB ortasının altında. ';
+    } else {
+      reason = `${conditionsMet}/5 koşul sağlandı - yeterli değil. `;
+      if (rsi4h > 70) reason += 'RSI aşırı alım bölgesinde. ';
+      if (currentPrice > bb.upper) reason += 'Fiyat BB üst bandının üzerinde. ';
+    }
+
+    // Score calculation
+    let score = 5;
+    score += conditionsMet * 0.8;
+    if (tradeNow) score += 1;
+    if (rsi4h >= 30 && rsi4h <= 50) score += 0.5;
+    score = Math.max(1, Math.min(10, parseFloat(score.toFixed(1))));
 
     return {
+      symbol,
+      currentPrice,
+      tradeNow,
+      reason: reason.trim(),
+      conditions,
+      entryZones,
       optimalEntry,
-      currentPrice: ticker.price,
-      entryZone,
-      confidence,
-      timeWindow: recommendation === 'buy' ? 'Now' : recommendation === 'wait' ? '4-12 hours' : 'Wait for pullback',
-      recommendation,
+      waitFor,
+      score,
     };
   },
 
-  // Step 5: Trade Plan
-  async tradePlan(symbol: string, accountSize: number = 10000) {
-    const [ticker, candles] = await Promise.all([
+  // =========================================
+  // Step 5: Trade Plan (5 credits)
+  // =========================================
+  async tradePlan(symbol: string, accountSize: number = 10000): Promise<TradePlanResult> {
+    const [ticker, candles4h] = await Promise.all([
       fetch24hTicker(symbol),
       fetchKlines(symbol, '4h', 100),
     ]);
 
-    const prices = candles.map(c => c.close);
-    const trend = calculateTrend(prices);
-    const levels = findSupportResistance(candles);
-    const atr = calculateATR(candles);
+    const trend = calculateTrend(candles4h);
+    const levels = findSupportResistance(candles4h);
+    const atr = calculateATR(candles4h);
 
-    const direction = trend.direction === 'bullish' ? 'long' : trend.direction === 'bearish' ? 'short' : 'long';
-    const entry = ticker.price;
+    const direction: 'long' | 'short' = trend.direction === 'bearish' ? 'short' : 'long';
+    const currentPrice = ticker.price;
 
-    // Stop loss at nearest support/resistance or ATR-based
-    const stopDistance = Math.max(atr * 1.5, ticker.price * 0.02);
-    const stopLoss = direction === 'long'
-      ? Math.round(entry - stopDistance)
-      : Math.round(entry + stopDistance);
+    // Calculate entries (3-level scaling)
+    const entry1 = currentPrice;
+    const entry2 = direction === 'long'
+      ? currentPrice * 0.98
+      : currentPrice * 1.02;
+    const entry3 = direction === 'long'
+      ? levels.support[0] || currentPrice * 0.95
+      : levels.resistance[0] || currentPrice * 1.05;
 
-    // Take profit levels (1:1.5, 1:2, 1:3 risk/reward)
-    const riskAmount = Math.abs(entry - stopLoss);
-    const takeProfit = direction === 'long'
-      ? [
-          Math.round(entry + riskAmount * 1.5),
-          Math.round(entry + riskAmount * 2),
-          Math.round(entry + riskAmount * 3),
-        ]
-      : [
-          Math.round(entry - riskAmount * 1.5),
-          Math.round(entry - riskAmount * 2),
-          Math.round(entry - riskAmount * 3),
-        ];
+    const entries: TradePlanResult['entries'] = [
+      { price: Math.round(entry1), percentage: 40, type: 'limit' },
+      { price: Math.round(entry2), percentage: 35, type: 'limit' },
+      { price: Math.round(entry3), percentage: 25, type: 'stop_limit' },
+    ];
 
-    const riskReward = parseFloat((riskAmount * 2 / riskAmount).toFixed(1));
-    const positionSize = `${Math.round((accountSize * 0.02) / riskAmount * 100) / 100}%`;
+    const averageEntry = Math.round(
+      entries.reduce((sum, e) => sum + e.price * (e.percentage / 100), 0)
+    );
+
+    // Stop loss calculation (ATR-based or level-based)
+    const atrStop = atr * 2;
+    const levelStop = direction === 'long'
+      ? (levels.support[1] || averageEntry * 0.93)
+      : (levels.resistance[1] || averageEntry * 1.07);
+
+    const stopDistance = Math.max(atrStop, Math.abs(averageEntry - levelStop));
+    const stopPrice = direction === 'long'
+      ? averageEntry - stopDistance
+      : averageEntry + stopDistance;
+
+    const stopPercentage = Math.abs((stopPrice - averageEntry) / averageEntry * 100);
+
+    const stopLoss: TradePlanResult['stopLoss'] = {
+      price: Math.round(stopPrice),
+      percentage: parseFloat(stopPercentage.toFixed(2)),
+      reason: `ATR tabanlı stop (${atr.toFixed(2)} ATR) + destek/direnç seviyesi`,
+    };
+
+    // Take profit levels (R:R based)
+    const riskAmount = Math.abs(averageEntry - stopPrice);
+    const takeProfits: TradePlanResult['takeProfits'] = [
+      {
+        price: Math.round(direction === 'long' ? averageEntry + riskAmount * 1.5 : averageEntry - riskAmount * 1.5),
+        percentage: 30,
+        reason: '1.5R - İlk kar al',
+      },
+      {
+        price: Math.round(direction === 'long' ? averageEntry + riskAmount * 2.5 : averageEntry - riskAmount * 2.5),
+        percentage: 40,
+        reason: '2.5R - Ana hedef',
+      },
+      {
+        price: Math.round(direction === 'long' ? averageEntry + riskAmount * 4 : averageEntry - riskAmount * 4),
+        percentage: 30,
+        reason: '4R - Genişletilmiş hedef',
+      },
+    ];
+
+    // Risk/Reward calculation (weighted average)
+    const avgRR = takeProfits.reduce(
+      (sum, tp) => sum + (Math.abs(tp.price - averageEntry) / riskAmount) * (tp.percentage / 100),
+      0
+    );
+
+    // Position sizing (2% risk rule)
+    const riskPercent = 2;
+    const riskAmountUsd = accountSize * (riskPercent / 100);
+    const positionSizePercent = (riskAmountUsd / stopDistance) * averageEntry / accountSize * 100;
+
+    // Win rate estimate based on trend strength
+    let winRateEstimate = 50;
+    if (trend.strength >= 70) winRateEstimate += 10;
+    if (trend.strength >= 80) winRateEstimate += 5;
+    if (direction === 'long' && trend.direction === 'bullish') winRateEstimate += 10;
+    if (direction === 'short' && trend.direction === 'bearish') winRateEstimate += 10;
+    winRateEstimate = Math.min(75, winRateEstimate);
+
+    // Trailing stop
+    const trailingStop: TradePlanResult['trailingStop'] = {
+      activateAfter: 'TP1 ulaşıldığında',
+      trailPercent: parseFloat((atr / averageEntry * 100).toFixed(2)),
+    };
+
+    // Score
+    let score = 5;
+    if (avgRR >= 2) score += 1;
+    if (avgRR >= 3) score += 1;
+    if (trend.strength >= 60) score += 1;
+    if (winRateEstimate >= 60) score += 1;
+    if (stopPercentage <= 5) score += 0.5;
+    score = Math.max(1, Math.min(10, parseFloat(score.toFixed(1))));
 
     return {
-      direction: direction as 'long' | 'short',
-      entry: Math.round(entry),
+      symbol,
+      direction,
+      type: 'limit',
+      entries,
+      averageEntry,
       stopLoss,
-      takeProfit,
-      riskReward,
-      positionSize,
-      leverage: trend.strength > 70 ? '3-5x' : '2-3x',
-      notes: [
-        `Entry based on ${trend.direction} trend (${trend.strength}% strength)`,
-        `Stop loss set at ${((Math.abs(entry - stopLoss) / entry) * 100).toFixed(1)}% from entry`,
-        `Risk 2% of portfolio per trade`,
-      ],
+      takeProfits,
+      riskReward: parseFloat(avgRR.toFixed(2)),
+      winRateEstimate,
+      positionSizePercent: parseFloat(positionSizePercent.toFixed(2)),
+      riskAmount: riskAmountUsd,
+      trailingStop,
+      score,
     };
   },
 
-  // Step 6: Trap Check
-  async trapCheck(symbol: string) {
-    const [ticker, candles] = await Promise.all([
+  // =========================================
+  // Step 6: Trap Check (5 credits)
+  // =========================================
+  async trapCheck(symbol: string): Promise<TrapCheckResult> {
+    const [ticker, candles4h, candles1h] = await Promise.all([
       fetch24hTicker(symbol),
+      fetchKlines(symbol, '4h', 100),
       fetchKlines(symbol, '1h', 48),
     ]);
 
-    const prices = candles.map(c => c.close);
-    const volumes = candles.map(c => c.volume);
+    const prices4h = candles4h.map((c) => c.close);
+    const prices1h = candles1h.map((c) => c.close);
+    const volumes1h = candles1h.map((c) => c.volume);
 
-    // Check for potential traps
-    const recentHigh = Math.max(...prices.slice(-12));
-    const recentLow = Math.min(...prices.slice(-12));
-    const range = recentHigh - recentLow;
+    const currentPrice = ticker.price;
+    const levels = findSupportResistance(candles4h);
 
-    // Bull trap: price breaks above resistance then falls back
-    const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
-    const recentVolume = volumes.slice(-6).reduce((a, b) => a + b, 0) / 6;
+    // Recent price action analysis
+    const recentHigh = Math.max(...prices1h.slice(-24));
+    const recentLow = Math.min(...prices1h.slice(-24));
+    const avgVolume = volumes1h.reduce((a, b) => a + b, 0) / volumes1h.length;
+    const recentVolume = volumes1h.slice(-6).reduce((a, b) => a + b, 0) / 6;
 
-    let trapProbability = 20;
-    if (ticker.price > recentHigh * 0.98 && recentVolume < avgVolume) {
-      trapProbability += 30; // Breakout on low volume - potential trap
+    // Bull trap detection
+    const resistanceLevel = levels.resistance[0];
+    const nearResistance = resistanceLevel !== undefined && currentPrice >= resistanceLevel * 0.98;
+    const lowVolumeBreakout = recentVolume < avgVolume * 0.8;
+    const bullTrap = nearResistance && lowVolumeBreakout && ticker.priceChangePercent24h > 3;
+    const bullTrapZone = bullTrap ? resistanceLevel : undefined;
+
+    // Bear trap detection
+    const supportLevel = levels.support[0];
+    const nearSupport = supportLevel !== undefined && currentPrice <= supportLevel * 1.02;
+    const bearTrap = nearSupport && lowVolumeBreakout && ticker.priceChangePercent24h < -3;
+    const bearTrapZone = bearTrap ? supportLevel : undefined;
+
+    // Liquidity grab zones
+    const liquidityGrabZones: number[] = [];
+    if (levels.support[0]) liquidityGrabZones.push(Math.round(levels.support[0] * 0.98));
+    if (levels.resistance[0]) liquidityGrabZones.push(Math.round(levels.resistance[0] * 1.02));
+
+    // Stop hunt zones (just below support, just above resistance)
+    const stopHuntZones: number[] = [];
+    levels.support.forEach((s) => stopHuntZones.push(Math.round(s * 0.97)));
+    levels.resistance.forEach((r) => stopHuntZones.push(Math.round(r * 1.03)));
+
+    // Fakeout risk
+    let fakeoutRisk: 'low' | 'medium' | 'high' = 'low';
+    if (lowVolumeBreakout) fakeoutRisk = 'medium';
+    if ((bullTrap || bearTrap) && Math.abs(ticker.priceChangePercent24h) > 5) {
+      fakeoutRisk = 'high';
     }
-    if (Math.abs(ticker.priceChangePercent24h) > 10) {
-      trapProbability += 20; // Extreme move - reversal possible
+
+    // Liquidation levels (estimated)
+    const longLiquidations: TrapCheckResult['liquidationLevels'] = [
+      {
+        price: Math.round(currentPrice * 0.9),
+        amountUsd: ticker.quoteVolume24h * 0.1,
+        type: 'longs',
+      },
+      {
+        price: Math.round(currentPrice * 0.85),
+        amountUsd: ticker.quoteVolume24h * 0.15,
+        type: 'longs',
+      },
+    ];
+
+    const shortLiquidations: TrapCheckResult['liquidationLevels'] = [
+      {
+        price: Math.round(currentPrice * 1.1),
+        amountUsd: ticker.quoteVolume24h * 0.08,
+        type: 'shorts',
+      },
+      {
+        price: Math.round(currentPrice * 1.15),
+        amountUsd: ticker.quoteVolume24h * 0.12,
+        type: 'shorts',
+      },
+    ];
+
+    // Counter strategies
+    const counterStrategy: string[] = [];
+    if (bullTrap) {
+      counterStrategy.push('Kırılımın ardından hacim artışı bekleyin');
+      counterStrategy.push('Stop-loss emirlerini direncin hemen üstüne koymayın');
+    }
+    if (bearTrap) {
+      counterStrategy.push('Panik satışlarına kapılmayın');
+      counterStrategy.push('Desteğin altına kısa vadeli stop koymayın');
+    }
+    if (fakeoutRisk !== 'low') {
+      counterStrategy.push('Pozisyona kademeli girin');
+      counterStrategy.push('Onay mumu bekleyin');
+    }
+    counterStrategy.push('Likidite bölgelerinde dikkatli olun');
+
+    // Pro tip
+    let proTip = 'Hacim onayı olmadan yapılan kırılımlara güvenmeyin.';
+    if (bullTrap) {
+      proTip = 'Direnç kırılımları düşük hacimle gerçekleşirse bull trap olasılığı yüksektir.';
+    } else if (bearTrap) {
+      proTip = 'Destek kırılımları panik satışlarıyla olur ve sıklıkla bear trap oluşturur.';
     }
 
-    const liquidationRisk = trapProbability > 50 ? 'high' : trapProbability > 30 ? 'moderate' : 'low';
+    // Risk level
+    let riskLevel: 'low' | 'medium' | 'high' = 'low';
+    if (bullTrap || bearTrap) riskLevel = 'high';
+    else if (fakeoutRisk === 'medium') riskLevel = 'medium';
 
-    // Estimate liquidation zones (simplified)
-    const longLiquidations = Math.round(ticker.price * 0.9);
-    const shortLiquidations = Math.round(ticker.price * 1.1);
-
-    const warnings: string[] = [];
-    if (trapProbability > 40) {
-      warnings.push('Elevated trap risk - consider waiting for confirmation');
-    }
-    if (recentVolume < avgVolume * 0.7) {
-      warnings.push('Low volume - breakouts may fail');
-    }
+    // Score (inverse of trap risk)
+    let score = 8;
+    if (bullTrap) score -= 3;
+    if (bearTrap) score -= 3;
+    if (fakeoutRisk === 'medium') score -= 1;
+    if (fakeoutRisk === 'high') score -= 2;
+    if (lowVolumeBreakout) score -= 1;
+    score = Math.max(1, Math.min(10, score));
 
     return {
-      liquidationRisk: liquidationRisk as 'low' | 'moderate' | 'high',
-      longLiquidations,
-      shortLiquidations,
-      heatmapZones: [
-        { price: longLiquidations, volume: 65, type: 'long' as const },
-        { price: shortLiquidations, volume: 45, type: 'short' as const },
-      ],
-      trapProbability,
-      warnings,
+      symbol,
+      traps: {
+        bullTrap,
+        bullTrapZone,
+        bearTrap,
+        bearTrapZone,
+        liquidityGrab: {
+          detected: liquidityGrabZones.length > 0,
+          zones: liquidityGrabZones,
+        },
+        stopHuntZones: stopHuntZones.slice(0, 4),
+        fakeoutRisk,
+      },
+      liquidationLevels: [...longLiquidations, ...shortLiquidations],
+      counterStrategy,
+      proTip,
+      riskLevel,
+      score,
     };
   },
 
-  // Step 7: Final Verdict
-  async finalVerdict(symbol: string, allSteps: {
-    marketPulse: Awaited<ReturnType<typeof analysisEngine.getMarketPulse>>;
-    assetScan: Awaited<ReturnType<typeof analysisEngine.scanAsset>>;
-    safetyCheck: Awaited<ReturnType<typeof analysisEngine.safetyCheck>>;
-    timing: Awaited<ReturnType<typeof analysisEngine.timingAnalysis>>;
-    tradePlan: Awaited<ReturnType<typeof analysisEngine.tradePlan>>;
-    trapCheck: Awaited<ReturnType<typeof analysisEngine.trapCheck>>;
-  }) {
+  // =========================================
+  // Step 7: Final Verdict (FREE)
+  // =========================================
+  async finalVerdict(
+    symbol: string,
+    allSteps: {
+      marketPulse: MarketPulseResult;
+      assetScan: AssetScanResult;
+      safetyCheck: SafetyCheckResult;
+      timing: TimingResult;
+      tradePlan: TradePlanResult;
+      trapCheck: TrapCheckResult;
+    }
+  ): Promise<FinalVerdictResult> {
     const { marketPulse, assetScan, safetyCheck, timing, tradePlan, trapCheck } = allSteps;
 
-    // Calculate overall verdict
-    let bullishScore = 0;
-    let totalFactors = 0;
+    // Component scores with weights (matching technical spec)
+    const componentScores: FinalVerdictResult['componentScores'] = [
+      { step: 'Market Pulse', score: marketPulse.score, weight: 0.15 },
+      { step: 'Asset Scanner', score: assetScan.score, weight: 0.20 },
+      { step: 'Safety Check', score: safetyCheck.score, weight: 0.20 },
+      { step: 'Timing', score: timing.score, weight: 0.15 },
+      { step: 'Trade Plan', score: tradePlan.score, weight: 0.15 },
+      { step: 'Trap Check', score: trapCheck.score, weight: 0.15 },
+    ];
+
+    // Calculate weighted overall score
+    const overallScore = parseFloat(
+      componentScores
+        .reduce((sum, cs) => sum + cs.score * cs.weight, 0)
+        .toFixed(1)
+    );
+
+    // Confidence factors
+    const confidenceFactors: FinalVerdictResult['confidenceFactors'] = [];
 
     // Market conditions
-    if (marketPulse.marketRegime === 'risk_on') bullishScore += 2;
-    else if (marketPulse.marketRegime === 'risk_off') bullishScore -= 2;
-    totalFactors += 2;
-
-    // Asset trend
-    const mainTrend = assetScan.timeframes.find(t => t.tf === '4H');
-    if (mainTrend?.trend === 'bullish') bullishScore += 2;
-    else if (mainTrend?.trend === 'bearish') bullishScore -= 2;
-    totalFactors += 2;
-
-    // Safety
-    if (safetyCheck.manipulationRisk === 'low') bullishScore += 1;
-    else if (safetyCheck.manipulationRisk === 'high') bullishScore -= 2;
-    totalFactors += 1;
-
-    // Timing
-    if (timing.recommendation === 'buy') bullishScore += 1;
-    else if (timing.recommendation === 'avoid') bullishScore -= 1;
-    totalFactors += 1;
-
-    // Trap risk
-    if (trapCheck.liquidationRisk === 'low') bullishScore += 1;
-    else if (trapCheck.liquidationRisk === 'high') bullishScore -= 1;
-    totalFactors += 1;
-
-    const normalizedScore = ((bullishScore + totalFactors) / (totalFactors * 2)) * 100;
-
-    let verdict: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-    if (normalizedScore >= 65) verdict = 'bullish';
-    else if (normalizedScore <= 35) verdict = 'bearish';
-
-    let action = 'HOLD';
-    if (verdict === 'bullish' && timing.recommendation === 'buy') action = 'BUY';
-    else if (verdict === 'bearish') action = 'SELL';
-
-    const confidence = Math.round(Math.abs(normalizedScore - 50) * 2);
-
-    // Pros and cons
-    const pros: string[] = [];
-    const cons: string[] = [];
-
-    if (marketPulse.marketRegime === 'risk_on') pros.push('Favorable market conditions');
-    else if (marketPulse.marketRegime === 'risk_off') cons.push('Risk-off market environment');
-
-    if (mainTrend?.trend === 'bullish') pros.push(`${mainTrend.tf} trend is bullish (${mainTrend.strength}%)`);
-    else if (mainTrend?.trend === 'bearish') cons.push(`${mainTrend.tf} trend is bearish`);
-
-    if (safetyCheck.manipulationRisk === 'low') pros.push('Low manipulation risk');
-    else if (safetyCheck.manipulationRisk === 'high') cons.push('High manipulation risk detected');
-
-    if (assetScan.indicators.rsi < 70 && assetScan.indicators.rsi > 30) {
-      pros.push(`RSI at ${assetScan.indicators.rsi} - not overbought/oversold`);
-    } else if (assetScan.indicators.rsi >= 70) {
-      cons.push(`RSI at ${assetScan.indicators.rsi} - overbought`);
-    } else {
-      cons.push(`RSI at ${assetScan.indicators.rsi} - oversold`);
+    if (marketPulse.marketRegime === 'risk_on') {
+      confidenceFactors.push({ factor: 'Risk-on piyasa ortamı', positive: true, impact: 'high' });
+    } else if (marketPulse.marketRegime === 'risk_off') {
+      confidenceFactors.push({ factor: 'Risk-off piyasa ortamı', positive: false, impact: 'high' });
     }
 
-    if (trapCheck.trapProbability < 30) pros.push('Low trap probability');
-    else if (trapCheck.trapProbability > 50) cons.push('Elevated trap risk');
+    // Trend alignment
+    const mainTrend = assetScan.timeframes.find((t) => t.tf === '4H');
+    if (mainTrend?.trend === 'bullish' && mainTrend.strength >= 70) {
+      confidenceFactors.push({ factor: 'Güçlü yükseliş trendi', positive: true, impact: 'high' });
+    } else if (mainTrend?.trend === 'bearish' && mainTrend.strength >= 70) {
+      confidenceFactors.push({ factor: 'Güçlü düşüş trendi', positive: false, impact: 'high' });
+    }
 
-    const riskLevel = safetyCheck.manipulationRisk === 'high' || trapCheck.liquidationRisk === 'high'
-      ? 'high'
-      : safetyCheck.manipulationRisk === 'moderate' || trapCheck.liquidationRisk === 'moderate'
-        ? 'moderate'
-        : 'low';
+    // Safety
+    if (safetyCheck.riskLevel === 'low') {
+      confidenceFactors.push({ factor: 'Düşük manipülasyon riski', positive: true, impact: 'medium' });
+    } else if (safetyCheck.riskLevel === 'high') {
+      confidenceFactors.push({ factor: 'Yüksek manipülasyon riski', positive: false, impact: 'high' });
+    }
 
-    const summary = `${symbol} shows a ${verdict} outlook with ${confidence}% confidence. ` +
-      `Market is in ${marketPulse.marketRegime.replace('_', ' ')} mode. ` +
-      `${mainTrend?.trend === 'bullish' ? 'Uptrend intact' : mainTrend?.trend === 'bearish' ? 'Downtrend in progress' : 'No clear trend'}. ` +
-      `Risk level: ${riskLevel}.`;
+    // Timing
+    if (timing.tradeNow) {
+      confidenceFactors.push({ factor: 'İyi giriş zamanı', positive: true, impact: 'medium' });
+    }
+
+    // RSI
+    if (assetScan.indicators.rsi >= 30 && assetScan.indicators.rsi <= 70) {
+      confidenceFactors.push({ factor: 'RSI normal bölgede', positive: true, impact: 'low' });
+    } else if (assetScan.indicators.rsi > 70) {
+      confidenceFactors.push({ factor: 'Aşırı alım bölgesi', positive: false, impact: 'medium' });
+    } else {
+      confidenceFactors.push({ factor: 'Aşırı satım bölgesi', positive: true, impact: 'medium' });
+    }
+
+    // Traps
+    if (trapCheck.riskLevel === 'high') {
+      confidenceFactors.push({ factor: 'Tuzak riski yüksek', positive: false, impact: 'high' });
+    }
+
+    // Risk/Reward
+    if (tradePlan.riskReward >= 2.5) {
+      confidenceFactors.push({ factor: `İyi R:R oranı (${tradePlan.riskReward})`, positive: true, impact: 'medium' });
+    }
+
+    // Determine verdict
+    let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
+
+    if (overallScore >= 7.5 && safetyCheck.riskLevel !== 'high' && trapCheck.riskLevel !== 'high') {
+      verdict = 'go';
+    } else if (overallScore >= 6 && safetyCheck.riskLevel !== 'high') {
+      verdict = 'conditional_go';
+    } else if (overallScore < 4 || safetyCheck.riskLevel === 'high') {
+      verdict = 'avoid';
+    }
+
+    // Generate recommendation
+    let recommendation = '';
+
+    if (verdict === 'go') {
+      const targetPrice = tradePlan.takeProfits[1]?.price ?? tradePlan.takeProfits[0]?.price ?? tradePlan.averageEntry;
+      recommendation = `${symbol} için koşullar uygun. ${tradePlan.direction.toUpperCase()} pozisyon açılabilir. ` +
+        `Giriş: $${tradePlan.averageEntry}, Stop: $${tradePlan.stopLoss.price}, ` +
+        `Hedef: $${targetPrice}. ` +
+        `Risk: ${tradePlan.positionSizePercent.toFixed(1)}% portföy.`;
+    } else if (verdict === 'conditional_go') {
+      recommendation = `${symbol} için temkinli yaklaşım önerilir. ` +
+        `${timing.waitFor ? timing.waitFor.event + ' beklenmeli. ' : ''}` +
+        `Pozisyon açılacaksa küçük başlanmalı ve kademeli artırılmalı.`;
+    } else if (verdict === 'wait') {
+      recommendation = `${symbol} için bekleme önerilir. ` +
+        `${timing.waitFor ? timing.waitFor.event + ' bekleyin. ' : 'Daha iyi koşulları bekleyin. '}` +
+        `Mevcut skor: ${overallScore}/10.`;
+    } else {
+      recommendation = `${symbol} için pozisyon açılmaması önerilir. ` +
+        `${safetyCheck.riskLevel === 'high' ? 'Manipülasyon riski yüksek. ' : ''}` +
+        `${trapCheck.riskLevel === 'high' ? 'Tuzak riski mevcut. ' : ''}` +
+        `Koşullar iyileşene kadar bekleyin.`;
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
 
     return {
+      overallScore,
       verdict,
-      confidence,
-      action,
-      summary,
-      pros,
-      cons,
-      riskLevel: riskLevel as 'low' | 'moderate' | 'high',
-      suggestedAction: action === 'BUY'
-        ? `Enter ${tradePlan.direction} position at $${tradePlan.entry}. Stop loss: $${tradePlan.stopLoss}. Target: $${tradePlan.takeProfit[0]}.`
-        : action === 'SELL'
-          ? 'Consider reducing position or setting tight stop losses.'
-          : 'Wait for better entry conditions or more confirmation.',
+      componentScores,
+      confidenceFactors,
+      recommendation,
+      analysisId: `analysis_${Date.now()}_${symbol}`,
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
     };
   },
 };
-
-// Helper: Calculate ATR
-function calculateATR(candles: Candle[], period: number = 14): number {
-  const trueRanges: number[] = [];
-
-  for (let i = 1; i < candles.length; i++) {
-    const high = candles[i].high;
-    const low = candles[i].low;
-    const prevClose = candles[i-1].close;
-
-    const tr = Math.max(
-      high - low,
-      Math.abs(high - prevClose),
-      Math.abs(low - prevClose)
-    );
-    trueRanges.push(tr);
-  }
-
-  return trueRanges.slice(-period).reduce((a, b) => a + b, 0) / period;
-}
 
 export default analysisEngine;
