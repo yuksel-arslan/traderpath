@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Trophy,
   Flame,
@@ -14,148 +14,131 @@ import {
   Award,
   Lock,
   Check,
-  ChevronRight
+  ChevronRight,
+  Loader2,
+  Play,
+  HelpCircle
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  useDailyRewards,
+  useClaimLogin,
+  useSpin,
+  useAnswerQuiz,
+  useAchievements,
+  useUserLevel
+} from '../../../hooks/useRewards';
+import {
+  LEVEL_THRESHOLDS,
+  STREAK_MILESTONES,
+  SPIN_WHEEL_PRIZES,
+  DAILY_REWARD_SCHEDULE
+} from '@tradepath/types';
 
-// Achievement categories
-const ACHIEVEMENTS = [
-  {
-    id: 'first-analysis',
-    name: 'First Steps',
-    description: 'Complete your first analysis',
-    icon: Star,
-    xp: 50,
-    unlocked: true,
-    progress: 1,
-    target: 1,
-  },
-  {
-    id: 'streak-7',
-    name: 'Week Warrior',
-    description: 'Maintain a 7-day login streak',
-    icon: Flame,
-    xp: 100,
-    unlocked: true,
-    progress: 7,
-    target: 7,
-  },
-  {
-    id: 'streak-30',
-    name: 'Monthly Master',
-    description: 'Maintain a 30-day login streak',
-    icon: Crown,
-    xp: 500,
-    unlocked: false,
-    progress: 12,
-    target: 30,
-  },
-  {
-    id: 'analyses-10',
-    name: 'Analyst',
-    description: 'Complete 10 analyses',
-    icon: Target,
-    xp: 150,
-    unlocked: true,
-    progress: 10,
-    target: 10,
-  },
-  {
-    id: 'analyses-50',
-    name: 'Expert Analyst',
-    description: 'Complete 50 analyses',
-    icon: Medal,
-    xp: 300,
-    unlocked: false,
-    progress: 23,
-    target: 50,
-  },
-  {
-    id: 'analyses-100',
-    name: 'Master Analyst',
-    description: 'Complete 100 analyses',
-    icon: Trophy,
-    xp: 500,
-    unlocked: false,
-    progress: 23,
-    target: 100,
-  },
-  {
-    id: 'safety-5',
-    name: 'Safety First',
-    description: 'Run 5 Safety Check analyses',
-    icon: Shield,
-    xp: 100,
-    unlocked: false,
-    progress: 3,
-    target: 5,
-  },
-  {
-    id: 'trap-detect',
-    name: 'Trap Detector',
-    description: 'Detect your first manipulation trap',
-    icon: Zap,
-    xp: 200,
-    unlocked: false,
-    progress: 0,
-    target: 1,
-  },
-  {
-    id: 'referral-1',
-    name: 'Networker',
-    description: 'Refer your first friend',
-    icon: Gift,
-    xp: 100,
-    unlocked: false,
-    progress: 0,
-    target: 1,
-  },
-  {
-    id: 'referral-5',
-    name: 'Ambassador',
-    description: 'Refer 5 friends',
-    icon: Award,
-    xp: 500,
-    unlocked: false,
-    progress: 0,
-    target: 5,
-  },
-];
-
-const DAILY_REWARDS = [
-  { day: 1, credits: 5, claimed: true },
-  { day: 2, credits: 5, claimed: true },
-  { day: 3, credits: 10, claimed: true },
-  { day: 4, credits: 10, claimed: false, today: true },
-  { day: 5, credits: 15, claimed: false },
-  { day: 6, credits: 15, claimed: false },
-  { day: 7, credits: 25, claimed: false, bonus: true },
-];
-
-const LEVELS = [
-  { level: 1, name: 'Rookie', minXp: 0 },
-  { level: 2, name: 'Apprentice', minXp: 100 },
-  { level: 3, name: 'Trader', minXp: 300 },
-  { level: 4, name: 'Analyst', minXp: 600 },
-  { level: 5, name: 'Expert', minXp: 1000 },
-  { level: 6, name: 'Master', minXp: 1500 },
-  { level: 7, name: 'Grandmaster', minXp: 2500 },
-  { level: 8, name: 'Legend', minXp: 4000 },
-  { level: 9, name: 'Mythic', minXp: 6000 },
-  { level: 10, name: 'TradePath Elite', minXp: 10000 },
-];
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  star: Star,
+  target: Target,
+  medal: Medal,
+  trophy: Trophy,
+  'check-circle': Check,
+  flame: Flame,
+  crown: Crown,
+  award: Award,
+  eye: Target,
+  'alert-triangle': Shield,
+  shield: Shield,
+  users: Gift,
+  gift: Gift,
+  book: HelpCircle,
+  'graduation-cap': Award,
+  zap: Zap,
+  layers: Target,
+  globe: Star,
+};
 
 export default function RewardsPage() {
-  const [activeTab, setActiveTab] = useState<'achievements' | 'daily' | 'levels'>('achievements');
+  const [activeTab, setActiveTab] = useState<'daily' | 'achievements' | 'levels'>('daily');
+  const [showSpinWheel, setShowSpinWheel] = useState(false);
+  const [spinResult, setSpinResult] = useState<number | null>(null);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [selectedQuizAnswer, setSelectedQuizAnswer] = useState<number | null>(null);
+  const [quizResult, setQuizResult] = useState<{ correct: boolean; explanation: string } | null>(null);
 
-  // Mock user data
-  const userXp = 450;
-  const currentLevel = LEVELS.filter(l => l.minXp <= userXp).pop() || LEVELS[0];
-  const nextLevel = LEVELS.find(l => l.minXp > userXp);
-  const xpProgress = nextLevel
-    ? ((userXp - currentLevel.minXp) / (nextLevel.minXp - currentLevel.minXp)) * 100
+  // API Hooks
+  const { data: dailyData, isLoading: isLoadingDaily } = useDailyRewards();
+  const { data: achievementsData, isLoading: isLoadingAchievements } = useAchievements();
+  const { data: userData } = useUserLevel();
+
+  const claimLoginMutation = useClaimLogin();
+  const spinMutation = useSpin();
+  const answerQuizMutation = useAnswerQuiz();
+
+  // Calculate level info
+  const userXp = userData?.xp || 0;
+  const currentLevelInfo = LEVEL_THRESHOLDS.filter(l => l.xp <= userXp).pop() || LEVEL_THRESHOLDS[0];
+  const nextLevelInfo = LEVEL_THRESHOLDS.find(l => l.xp > userXp);
+  const xpProgress = nextLevelInfo
+    ? ((userXp - currentLevelInfo.xp) / (nextLevelInfo.xp - currentLevelInfo.xp)) * 100
     : 100;
 
-  const unlockedCount = ACHIEVEMENTS.filter(a => a.unlocked).length;
+  const handleClaimLogin = async () => {
+    try {
+      await claimLoginMutation.mutateAsync();
+    } catch (error) {
+      console.error('Failed to claim login reward:', error);
+    }
+  };
+
+  const handleSpin = async () => {
+    if (dailyData?.spin.used) return;
+
+    setIsSpinning(true);
+    setShowSpinWheel(true);
+
+    try {
+      const result = await spinMutation.mutateAsync();
+      // Wait for animation
+      setTimeout(() => {
+        setSpinResult(result.result);
+        setIsSpinning(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Failed to spin:', error);
+      setIsSpinning(false);
+    }
+  };
+
+  const handleQuizAnswer = async (answerIndex: number) => {
+    if (dailyData?.quiz.completed) return;
+
+    setSelectedQuizAnswer(answerIndex);
+
+    try {
+      const result = await answerQuizMutation.mutateAsync(answerIndex);
+      setQuizResult({
+        correct: result.correct,
+        explanation: result.explanation,
+      });
+    } catch (error) {
+      console.error('Failed to answer quiz:', error);
+    }
+  };
+
+  // Get achievement icon component
+  const getAchievementIcon = (iconName: string) => {
+    return ICON_MAP[iconName] || Star;
+  };
+
+  const unlockedCount = achievementsData?.unlocked?.length || 0;
+  const totalAchievements = achievementsData?.achievements?.length || 0;
+
+  if (isLoadingDaily || isLoadingAchievements) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -177,20 +160,21 @@ export default function RewardsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Current Level</p>
-              <p className="text-2xl font-bold">{currentLevel.level}</p>
+              <p className="text-2xl font-bold">{currentLevelInfo.level}</p>
             </div>
           </div>
-          <p className="text-lg font-medium mb-2">{currentLevel.name}</p>
-          {nextLevel && (
+          {nextLevelInfo && (
             <>
-              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
-                <div
-                  className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all"
-                  style={{ width: `${xpProgress}%` }}
+              <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-2">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${xpProgress}%` }}
+                  transition={{ duration: 0.5 }}
                 />
               </div>
               <p className="text-sm text-muted-foreground">
-                {userXp} / {nextLevel.minXp} XP to {nextLevel.name}
+                {userXp.toLocaleString()} / {nextLevelInfo.xp.toLocaleString()} XP
               </p>
             </>
           )}
@@ -204,11 +188,15 @@ export default function RewardsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Current Streak</p>
-              <p className="text-2xl font-bold">12 Days</p>
+              <p className="text-2xl font-bold">{dailyData?.streak.days || 0} Days</p>
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
-            Keep it up! 18 days until next milestone.
+            {dailyData?.streak.nextBonus ? (
+              <>Next bonus: +{dailyData.streak.nextBonus} credits</>
+            ) : (
+              'Keep it up!'
+            )}
           </p>
         </div>
 
@@ -220,11 +208,11 @@ export default function RewardsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Achievements</p>
-              <p className="text-2xl font-bold">{unlockedCount}/{ACHIEVEMENTS.length}</p>
+              <p className="text-2xl font-bold">{unlockedCount}/{totalAchievements}</p>
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
-            {ACHIEVEMENTS.length - unlockedCount} more to unlock!
+            {totalAchievements - unlockedCount} more to unlock!
           </p>
         </div>
       </div>
@@ -232,8 +220,8 @@ export default function RewardsPage() {
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b">
         {[
-          { id: 'achievements', label: 'Achievements', icon: Trophy },
           { id: 'daily', label: 'Daily Rewards', icon: Gift },
+          { id: 'achievements', label: 'Achievements', icon: Trophy },
           { id: 'levels', label: 'Levels', icon: Crown },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -255,174 +243,371 @@ export default function RewardsPage() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'achievements' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {ACHIEVEMENTS.map((achievement) => {
-            const Icon = achievement.icon;
-            const progress = (achievement.progress / achievement.target) * 100;
+      <AnimatePresence mode="wait">
+        {activeTab === 'daily' && (
+          <motion.div
+            key="daily"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Daily Login */}
+              <div className="bg-card border rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-green-500/20 rounded-full">
+                      <Check className="w-6 h-6 text-green-500" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Daily Login</h3>
+                      <p className="text-sm text-muted-foreground">Claim your daily credits</p>
+                    </div>
+                  </div>
+                  <span className="text-lg font-bold text-green-500">+3</span>
+                </div>
+                <button
+                  onClick={handleClaimLogin}
+                  disabled={dailyData?.login.claimed || claimLoginMutation.isPending}
+                  className={`w-full py-3 rounded-lg font-semibold transition ${
+                    dailyData?.login.claimed
+                      ? 'bg-green-500/20 text-green-500 cursor-not-allowed'
+                      : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  }`}
+                >
+                  {claimLoginMutation.isPending ? (
+                    <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                  ) : dailyData?.login.claimed ? (
+                    <>
+                      <Check className="w-5 h-5 inline mr-2" />
+                      Claimed!
+                    </>
+                  ) : (
+                    'Claim Reward'
+                  )}
+                </button>
+              </div>
 
-            return (
-              <div
-                key={achievement.id}
-                className={`p-4 rounded-lg border ${
-                  achievement.unlocked
-                    ? 'bg-green-500/5 border-green-500/20'
-                    : 'bg-card'
-                }`}
-              >
-                <div className="flex items-start gap-4">
-                  <div
-                    className={`p-3 rounded-full ${
-                      achievement.unlocked
-                        ? 'bg-green-500/20 text-green-500'
-                        : 'bg-gray-100 text-gray-400'
-                    }`}
-                  >
-                    {achievement.unlocked ? (
-                      <Icon className="w-6 h-6" />
-                    ) : (
-                      <Lock className="w-6 h-6" />
+              {/* Daily Spin */}
+              <div className="bg-card border rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-purple-500/20 rounded-full">
+                      <Star className="w-6 h-6 text-purple-500" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Lucky Spin</h3>
+                      <p className="text-sm text-muted-foreground">Win 1-10 credits</p>
+                    </div>
+                  </div>
+                  <span className="text-lg font-bold text-purple-500">1-10</span>
+                </div>
+                <button
+                  onClick={handleSpin}
+                  disabled={dailyData?.spin.used || spinMutation.isPending}
+                  className={`w-full py-3 rounded-lg font-semibold transition ${
+                    dailyData?.spin.used
+                      ? 'bg-purple-500/20 text-purple-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90'
+                  }`}
+                >
+                  {dailyData?.spin.used ? (
+                    <>Won +{dailyData.spin.result} credits!</>
+                  ) : (
+                    <>
+                      <Play className="w-5 h-5 inline mr-2" />
+                      Spin the Wheel
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Daily Quiz */}
+              <div className="bg-card border rounded-lg p-6 md:col-span-2">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-blue-500/20 rounded-full">
+                    <HelpCircle className="w-6 h-6 text-blue-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Daily Quiz</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Answer correctly to earn +5 credits
+                    </p>
+                  </div>
+                </div>
+
+                {dailyData?.quiz.completed ? (
+                  <div className={`p-4 rounded-lg ${
+                    quizResult?.correct ? 'bg-green-500/10' : 'bg-red-500/10'
+                  }`}>
+                    <p className="font-medium mb-2">
+                      {quizResult?.correct ? '✅ Correct! +5 credits' : '❌ Incorrect'}
+                    </p>
+                    {quizResult?.explanation && (
+                      <p className="text-sm text-muted-foreground">{quizResult.explanation}</p>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold">{achievement.name}</h3>
-                      <span className="text-sm text-amber-500 font-medium">
-                        +{achievement.xp} XP
-                      </span>
+                ) : dailyData?.quiz.question ? (
+                  <div>
+                    <p className="font-medium mb-4">{dailyData.quiz.question.question}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {dailyData.quiz.question.options.map((option, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleQuizAnswer(index)}
+                          disabled={answerQuizMutation.isPending || selectedQuizAnswer !== null}
+                          className={`p-3 text-left rounded-lg border transition ${
+                            selectedQuizAnswer === index
+                              ? quizResult?.correct
+                                ? 'bg-green-500/20 border-green-500'
+                                : 'bg-red-500/20 border-red-500'
+                              : 'hover:bg-accent hover:border-primary/50'
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      ))}
                     </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {achievement.description}
-                    </p>
-                    {!achievement.unlocked && (
-                      <>
-                        <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden mb-1">
-                          <div
-                            className="h-full bg-primary rounded-full transition-all"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {achievement.progress}/{achievement.target}
-                        </p>
-                      </>
-                    )}
-                    {achievement.unlocked && (
-                      <div className="flex items-center gap-1 text-green-500 text-sm">
-                        <Check className="w-4 h-4" />
-                        Unlocked!
+                    {quizResult && (
+                      <div className={`mt-4 p-3 rounded-lg ${
+                        quizResult.correct ? 'bg-green-500/10' : 'bg-red-500/10'
+                      }`}>
+                        <p className="text-sm">{quizResult.explanation}</p>
                       </div>
                     )}
                   </div>
+                ) : (
+                  <p className="text-muted-foreground">No quiz available today</p>
+                )}
+              </div>
+
+              {/* Weekly Progress */}
+              <div className="bg-card border rounded-lg p-6 md:col-span-2">
+                <h3 className="font-semibold mb-4">Weekly Login Rewards</h3>
+                <div className="grid grid-cols-7 gap-2">
+                  {DAILY_REWARD_SCHEDULE.map((reward, index) => {
+                    const streakDay = (dailyData?.streak.days || 0) % 7;
+                    const isClaimed = index < streakDay;
+                    const isToday = index === streakDay;
+
+                    return (
+                      <div
+                        key={reward.day}
+                        className={`relative p-3 rounded-lg border-2 text-center transition ${
+                          isClaimed
+                            ? 'bg-green-500/10 border-green-500'
+                            : isToday
+                            ? 'bg-amber-500/10 border-amber-500'
+                            : 'bg-card border-border'
+                        } ${reward.bonus ? 'ring-2 ring-amber-500 ring-offset-2' : ''}`}
+                      >
+                        {reward.bonus && (
+                          <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                            BONUS
+                          </span>
+                        )}
+                        <p className="text-xs text-muted-foreground mb-1">Day {reward.day}</p>
+                        <Gift className={`w-5 h-5 mx-auto mb-1 ${
+                          isClaimed ? 'text-green-500' : isToday ? 'text-amber-500' : 'text-muted-foreground'
+                        }`} />
+                        <p className="font-bold text-sm">{reward.credits}</p>
+                        {isClaimed && (
+                          <Check className="w-3 h-3 text-green-500 absolute top-1 right-1" />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
-
-      {activeTab === 'daily' && (
-        <div>
-          <div className="bg-card border rounded-lg p-6 mb-6">
-            <h3 className="font-semibold mb-4">Weekly Login Rewards</h3>
-            <div className="grid grid-cols-7 gap-2">
-              {DAILY_REWARDS.map((reward) => (
-                <div
-                  key={reward.day}
-                  className={`relative p-4 rounded-lg border-2 text-center transition ${
-                    reward.claimed
-                      ? 'bg-green-500/10 border-green-500'
-                      : reward.today
-                      ? 'bg-amber-500/10 border-amber-500 animate-pulse'
-                      : 'bg-card border-border'
-                  } ${reward.bonus ? 'ring-2 ring-amber-500 ring-offset-2' : ''}`}
-                >
-                  {reward.bonus && (
-                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
-                      BONUS
-                    </span>
-                  )}
-                  <p className="text-sm text-muted-foreground mb-1">Day {reward.day}</p>
-                  <Gift
-                    className={`w-6 h-6 mx-auto mb-1 ${
-                      reward.claimed
-                        ? 'text-green-500'
-                        : reward.today
-                        ? 'text-amber-500'
-                        : 'text-muted-foreground'
-                    }`}
-                  />
-                  <p className="font-bold">{reward.credits}</p>
-                  <p className="text-xs text-muted-foreground">credits</p>
-                  {reward.claimed && (
-                    <Check className="w-4 h-4 text-green-500 absolute top-1 right-1" />
-                  )}
-                </div>
-              ))}
             </div>
-          </div>
+          </motion.div>
+        )}
 
-          {/* Claim Button */}
-          <div className="text-center">
-            <button className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-semibold hover:opacity-90 transition">
-              Claim Day 4 Reward (10 credits)
-            </button>
-          </div>
-        </div>
-      )}
+        {activeTab === 'achievements' && (
+          <motion.div
+            key="achievements"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          >
+            {achievementsData?.achievements?.map((achievement) => {
+              const userProgress = achievementsData.unlocked?.find(
+                (ua) => ua.achievementId === achievement.id
+              );
+              const isUnlocked = userProgress?.isUnlocked;
+              const progress = userProgress?.progress || 0;
+              const progressPercent = (progress / achievement.requirementValue) * 100;
+              const IconComponent = getAchievementIcon(achievement.icon || 'star');
 
-      {activeTab === 'levels' && (
-        <div className="space-y-2">
-          {LEVELS.map((level, index) => {
-            const isCurrentLevel = level.level === currentLevel.level;
-            const isUnlocked = userXp >= level.minXp;
-            const nextLevelData = LEVELS[index + 1];
-
-            return (
-              <div
-                key={level.level}
-                className={`flex items-center gap-4 p-4 rounded-lg border ${
-                  isCurrentLevel
-                    ? 'bg-primary/5 border-primary'
-                    : isUnlocked
-                    ? 'bg-green-500/5 border-green-500/20'
-                    : 'bg-card'
-                }`}
-              >
+              return (
                 <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
+                  key={achievement.id}
+                  className={`p-4 rounded-lg border ${
                     isUnlocked
-                      ? 'bg-gradient-to-br from-purple-500 to-blue-500 text-white'
-                      : 'bg-gray-100 text-gray-400'
+                      ? 'bg-green-500/5 border-green-500/20'
+                      : 'bg-card'
                   }`}
                 >
-                  {level.level}
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={`p-3 rounded-full ${
+                        isUnlocked
+                          ? 'bg-green-500/20 text-green-500'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
+                      }`}
+                    >
+                      {isUnlocked ? (
+                        <IconComponent className="w-6 h-6" />
+                      ) : (
+                        <Lock className="w-6 h-6" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="font-semibold">{achievement.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-amber-500 font-medium">
+                            +{achievement.xpReward} XP
+                          </span>
+                          <span className="text-sm text-green-500 font-medium">
+                            +{achievement.creditReward}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {achievement.description}
+                      </p>
+                      {!isUnlocked && (
+                        <>
+                          <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-1">
+                            <motion.div
+                              className="h-full bg-primary rounded-full"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.min(progressPercent, 100)}%` }}
+                              transition={{ duration: 0.5 }}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {progress}/{achievement.requirementValue}
+                          </p>
+                        </>
+                      )}
+                      {isUnlocked && (
+                        <div className="flex items-center gap-1 text-green-500 text-sm">
+                          <Check className="w-4 h-4" />
+                          Unlocked!
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold">{level.name}</h3>
-                    {isCurrentLevel && (
-                      <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
-                        CURRENT
+              );
+            })}
+          </motion.div>
+        )}
+
+        {activeTab === 'levels' && (
+          <motion.div
+            key="levels"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-2"
+          >
+            {LEVEL_THRESHOLDS.map((level) => {
+              const isCurrentLevel = level.level === currentLevelInfo.level;
+              const isUnlocked = userXp >= level.xp;
+
+              return (
+                <div
+                  key={level.level}
+                  className={`flex items-center gap-4 p-4 rounded-lg border ${
+                    isCurrentLevel
+                      ? 'bg-primary/5 border-primary'
+                      : isUnlocked
+                      ? 'bg-green-500/5 border-green-500/20'
+                      : 'bg-card'
+                  }`}
+                >
+                  <div
+                    className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
+                      isUnlocked
+                        ? 'bg-gradient-to-br from-purple-500 to-blue-500 text-white'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
+                    }`}
+                  >
+                    {level.level}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">Level {level.level}</h3>
+                      {isCurrentLevel && (
+                        <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
+                          CURRENT
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      <span className="text-xs bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full">
+                        {level.xp.toLocaleString()} XP
                       </span>
+                      {level.dailyBonus > 0 && (
+                        <span className="text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full">
+                          +{level.dailyBonus} daily
+                        </span>
+                      )}
+                      {level.discount > 0 && (
+                        <span className="text-xs bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full">
+                          {level.discount}% off
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {isUnlocked ? (
+                      <Check className="w-6 h-6 text-green-500" />
+                    ) : (
+                      <Lock className="w-6 h-6 text-gray-400" />
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {level.minXp.toLocaleString()} XP required
-                  </p>
                 </div>
-                <div className="text-right">
-                  {isUnlocked ? (
-                    <Check className="w-6 h-6 text-green-500" />
-                  ) : (
-                    <Lock className="w-6 h-6 text-gray-400" />
-                  )}
-                </div>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Streak Milestones */}
+      <div className="mt-8 p-6 bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-lg">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Flame className="w-5 h-5 text-orange-500" />
+          Streak Milestones
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          {STREAK_MILESTONES.map((milestone) => {
+            const isReached = (dailyData?.streak.days || 0) >= milestone.days;
+            return (
+              <div
+                key={milestone.days}
+                className={`p-3 rounded-lg text-center border ${
+                  isReached
+                    ? 'bg-orange-500/20 border-orange-500'
+                    : 'bg-card border-border'
+                }`}
+              >
+                <p className="text-2xl font-bold">{milestone.days}</p>
+                <p className="text-xs text-muted-foreground">days</p>
+                <p className={`text-sm font-semibold mt-1 ${
+                  isReached ? 'text-orange-500' : 'text-muted-foreground'
+                }`}>
+                  +{milestone.bonus}
+                </p>
               </div>
             );
           })}
         </div>
-      )}
+      </div>
 
       {/* Referral Section */}
       <div className="mt-8 p-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg">
@@ -430,7 +615,7 @@ export default function RewardsPage() {
           <div>
             <h3 className="text-lg font-semibold mb-1">Invite Friends, Earn Rewards</h3>
             <p className="text-sm text-muted-foreground">
-              Get 50 credits for each friend who signs up with your referral code
+              Get 20 credits for each friend who signs up with your referral code
             </p>
           </div>
           <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition">
@@ -440,7 +625,7 @@ export default function RewardsPage() {
         </div>
         <div className="mt-4 p-3 bg-background rounded-lg">
           <p className="text-sm text-muted-foreground mb-1">Your Referral Code</p>
-          <p className="font-mono font-bold text-lg">TRADE-ABC123</p>
+          <p className="font-mono font-bold text-lg">{userData?.referralCode || 'TRADE-XXXXX'}</p>
         </div>
       </div>
     </div>
