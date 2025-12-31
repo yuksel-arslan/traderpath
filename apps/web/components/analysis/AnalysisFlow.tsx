@@ -4,7 +4,7 @@
 // 7-Step Analysis Flow Component
 // ===========================================
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Globe,
@@ -29,8 +29,21 @@ import { FinalVerdict } from './FinalVerdict';
 
 interface AnalysisFlowProps {
   symbol: string;
+  accountSize?: number;
   onComplete?: () => void;
+  onCreditsUpdate?: (remaining: number) => void;
 }
+
+// API endpoints for each step
+const STEP_ENDPOINTS: Record<number, { url: string; method: string }> = {
+  1: { url: '/api/analysis/market-pulse', method: 'GET' },
+  2: { url: '/api/analysis/asset-scan', method: 'POST' },
+  3: { url: '/api/analysis/safety-check', method: 'POST' },
+  4: { url: '/api/analysis/timing', method: 'POST' },
+  5: { url: '/api/analysis/trade-plan', method: 'POST' },
+  6: { url: '/api/analysis/trap-check', method: 'POST' },
+  7: { url: '/api/analysis/full', method: 'POST' }, // Final verdict comes from full analysis
+};
 
 const STEPS = [
   {
@@ -84,12 +97,54 @@ const STEPS = [
   },
 ];
 
-export function AnalysisFlow({ symbol, onComplete }: AnalysisFlowProps) {
+export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCreditsUpdate }: AnalysisFlowProps) {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [loading, setLoading] = useState<number | null>(null);
   const [isRunningFull, setIsRunningFull] = useState(false);
   const [results, setResults] = useState<Record<number, unknown>>({});
+  const [error, setError] = useState<string | null>(null);
+
+  // Get auth token from localStorage
+  const getAuthHeaders = useCallback(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }, []);
+
+  // Call individual step API
+  const callStepAPI = useCallback(async (stepId: number) => {
+    const endpoint = STEP_ENDPOINTS[stepId];
+    if (!endpoint) throw new Error('Invalid step');
+
+    const options: RequestInit = {
+      method: endpoint.method,
+      headers: getAuthHeaders(),
+    };
+
+    if (endpoint.method === 'POST') {
+      options.body = JSON.stringify({ symbol, accountSize });
+    }
+
+    const response = await fetch(endpoint.url, options);
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 402) {
+        throw new Error('Yetersiz kredi. Lütfen kredi satın alın.');
+      }
+      throw new Error(data.error?.message || 'Analiz başarısız');
+    }
+
+    // Update remaining credits if provided
+    if (data.remainingCredits !== undefined && onCreditsUpdate) {
+      onCreditsUpdate(data.remainingCredits);
+    }
+
+    return data.data;
+  }, [symbol, accountSize, getAuthHeaders, onCreditsUpdate]);
 
   const handleStepClick = async (stepId: number) => {
     // Check if step is unlocked
@@ -105,18 +160,20 @@ export function AnalysisFlow({ symbol, onComplete }: AnalysisFlowProps) {
 
     // Run analysis for this step
     setLoading(stepId);
+    setError(null);
+
     try {
-      // TODO: Call API to run analysis step
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate API call
+      const data = await callStepAPI(stepId);
 
       setCompletedSteps((prev) => [...prev, stepId]);
       setResults((prev) => ({
         ...prev,
-        [stepId]: { /* mock result */ },
+        [stepId]: data,
       }));
       setActiveStep(stepId);
-    } catch (error) {
-      console.error('Analysis failed:', error);
+    } catch (err) {
+      console.error('Analysis failed:', err);
+      setError(err instanceof Error ? err.message : 'Analiz başarısız');
     } finally {
       setLoading(null);
     }
@@ -124,28 +181,66 @@ export function AnalysisFlow({ symbol, onComplete }: AnalysisFlowProps) {
 
   const handleRunFullAnalysis = async () => {
     setIsRunningFull(true);
+    setError(null);
+    setLoading(1);
 
     try {
-      // Run all 7 steps sequentially
+      // Call the full analysis endpoint
+      const response = await fetch('/api/analysis/full', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ symbol, accountSize }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 402) {
+          throw new Error('Yetersiz kredi (15 kredi gerekli). Lütfen kredi satın alın.');
+        }
+        throw new Error(data.error?.message || 'Tam analiz başarısız');
+      }
+
+      // Update credits
+      if (data.remainingCredits !== undefined && onCreditsUpdate) {
+        onCreditsUpdate(data.remainingCredits);
+      }
+
+      const analysisData = data.data;
+      const steps = analysisData.steps;
+
+      // Populate all steps from the full analysis result
+      const allResults: Record<number, unknown> = {
+        1: steps.marketPulse,
+        2: steps.assetScan,
+        3: steps.safetyCheck,
+        4: steps.timing,
+        5: steps.tradePlan,
+        6: steps.trapCheck,
+        7: steps.verdict,
+      };
+
+      // Animate through steps
       for (let stepId = 1; stepId <= 7; stepId++) {
         setLoading(stepId);
         setActiveStep(stepId);
 
-        // Simulate API call for each step
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        // Small delay for animation effect
+        await new Promise((resolve) => setTimeout(resolve, 400));
 
         setCompletedSteps((prev) => [...prev, stepId]);
         setResults((prev) => ({
           ...prev,
-          [stepId]: { /* mock result */ },
+          [stepId]: allResults[stepId],
         }));
       }
 
       // Show final verdict when complete
       setActiveStep(7);
       onComplete?.();
-    } catch (error) {
-      console.error('Full analysis failed:', error);
+    } catch (err) {
+      console.error('Full analysis failed:', err);
+      setError(err instanceof Error ? err.message : 'Tam analiz başarısız');
     } finally {
       setLoading(null);
       setIsRunningFull(false);
@@ -228,6 +323,14 @@ export function AnalysisFlow({ symbol, onComplete }: AnalysisFlowProps) {
           </div>
         ))}
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Active Step Content */}
       <AnimatePresence mode="wait">

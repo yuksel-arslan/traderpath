@@ -1,92 +1,113 @@
 'use client';
 
-import { FileText, Target, AlertCircle, TrendingUp } from 'lucide-react';
+import { FileText, Target, TrendingUp, TrendingDown, Brain } from 'lucide-react';
+import { cn } from '../../lib/utils';
+
+interface TradePlanData {
+  symbol: string;
+  direction: string;
+  entry: number;
+  stopLoss: number;
+  takeProfit: number[];
+  riskReward: number;
+  positionSize: string;
+  riskPercent: number;
+  aiInsight?: string;
+}
 
 interface TradePlanProps {
-  data: unknown;
+  data?: TradePlanData;
   symbol: string;
 }
 
 export function TradePlan({ data, symbol }: TradePlanProps) {
-  // Mock data for demo
-  const mockData = {
-    direction: 'long' as const,
-    entry: 42850,
-    stopLoss: 41500,
-    takeProfit: [44500, 46000, 48000],
-    riskReward: 2.8,
-    positionSize: '2-3%',
-    leverage: '3-5x',
-    notes: [
-      'Wait for confirmation candle above $43,000',
-      'Consider scaling in at multiple levels',
-      'Set alerts at key levels',
-    ],
-  };
+  if (!data) {
+    return (
+      <div className="p-4">
+        <h3 className="flex items-center gap-2 text-lg font-semibold mb-4">
+          <FileText className="w-5 h-5 text-indigo-500" />
+          Trade Plan - {symbol}
+        </h3>
+        <p className="text-muted-foreground">Yükleniyor...</p>
+      </div>
+    );
+  }
 
-  const riskPercent = ((mockData.entry - mockData.stopLoss) / mockData.entry * 100).toFixed(2);
+  const isLong = data.direction.toUpperCase() === 'LONG';
+  const riskPercent = ((data.entry - data.stopLoss) / data.entry * 100);
 
   return (
-    <div>
-      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+    <div className="space-y-6">
+      <h3 className="flex items-center gap-2 text-lg font-semibold">
         <FileText className="w-5 h-5 text-indigo-500" />
         Trade Plan - {symbol}
       </h3>
 
-      <div className={`p-4 rounded-lg mb-4 ${
-        mockData.direction === 'long' ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'
-      }`}>
+      {/* Direction Card */}
+      <div className={cn(
+        "p-4 rounded-lg border",
+        isLong ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'
+      )}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <TrendingUp className={`w-5 h-5 ${mockData.direction === 'long' ? 'text-green-500' : 'text-red-500 rotate-180'}`} />
-            <span className={`font-bold text-lg uppercase ${mockData.direction === 'long' ? 'text-green-500' : 'text-red-500'}`}>
-              {mockData.direction}
+            {isLong ? (
+              <TrendingUp className="w-6 h-6 text-green-500" />
+            ) : (
+              <TrendingDown className="w-6 h-6 text-red-500" />
+            )}
+            <span className={cn(
+              "font-bold text-xl uppercase",
+              isLong ? 'text-green-500' : 'text-red-500'
+            )}>
+              {data.direction}
             </span>
           </div>
           <div className="text-right">
-            <p className="text-sm text-muted-foreground">Risk/Reward</p>
-            <p className="font-bold">{mockData.riskReward}:1</p>
+            <p className="text-sm text-muted-foreground">Risk/Ödül</p>
+            <p className="font-bold text-lg">{data.riskReward.toFixed(1)}:1</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="p-4 bg-accent/50 rounded-lg">
-          <p className="text-sm text-muted-foreground">Entry</p>
-          <p className="text-xl font-bold">${mockData.entry.toLocaleString()}</p>
+      {/* Key Levels */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-background rounded-lg p-4 border">
+          <p className="text-sm text-muted-foreground">Giriş</p>
+          <p className="text-xl font-bold">${data.entry.toLocaleString()}</p>
         </div>
 
-        <div className="p-4 bg-red-500/10 rounded-lg">
+        <div className="bg-red-500/10 rounded-lg p-4 border border-red-500/20">
           <p className="text-sm text-red-500">Stop Loss</p>
-          <p className="text-xl font-bold text-red-500">${mockData.stopLoss.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground">-{riskPercent}%</p>
+          <p className="text-xl font-bold text-red-500">${data.stopLoss.toLocaleString()}</p>
+          <p className="text-xs text-muted-foreground">-{Math.abs(riskPercent).toFixed(2)}%</p>
         </div>
 
-        <div className="p-4 bg-accent/50 rounded-lg">
-          <p className="text-sm text-muted-foreground">Position Size</p>
-          <p className="text-xl font-bold">{mockData.positionSize}</p>
+        <div className="bg-background rounded-lg p-4 border">
+          <p className="text-sm text-muted-foreground">Pozisyon Büyüklüğü</p>
+          <p className="text-xl font-bold">{data.positionSize}</p>
         </div>
 
-        <div className="p-4 bg-accent/50 rounded-lg">
-          <p className="text-sm text-muted-foreground">Leverage</p>
-          <p className="text-xl font-bold">{mockData.leverage}</p>
+        <div className="bg-background rounded-lg p-4 border">
+          <p className="text-sm text-muted-foreground">Risk</p>
+          <p className="text-xl font-bold">{data.riskPercent}%</p>
         </div>
       </div>
 
-      <div className="p-4 bg-accent/50 rounded-lg mb-4">
-        <p className="text-sm text-muted-foreground mb-3">Take Profit Levels</p>
+      {/* Take Profit Levels */}
+      <div className="bg-background rounded-lg p-4 border">
+        <p className="text-sm font-medium mb-3">Kar Al Seviyeleri</p>
         <div className="space-y-2">
-          {mockData.takeProfit.map((tp, i) => {
-            const profitPercent = ((tp - mockData.entry) / mockData.entry * 100).toFixed(2);
+          {data.takeProfit.map((tp, i) => {
+            const profitPercent = ((tp - data.entry) / data.entry * 100);
             return (
-              <div key={i} className="flex items-center justify-between p-2 bg-green-500/10 rounded">
+              <div key={i} className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
                 <div className="flex items-center gap-2">
                   <Target className="w-4 h-4 text-green-500" />
                   <span className="font-medium">TP{i + 1}</span>
                 </div>
                 <div className="text-right">
                   <span className="font-bold text-green-500">${tp.toLocaleString()}</span>
-                  <span className="text-sm text-muted-foreground ml-2">+{profitPercent}%</span>
+                  <span className="text-sm text-muted-foreground ml-2">+{profitPercent.toFixed(2)}%</span>
                 </div>
               </div>
             );
@@ -94,17 +115,18 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
         </div>
       </div>
 
-      <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-        <h4 className="font-medium text-blue-500 flex items-center gap-2 mb-2">
-          <AlertCircle className="w-4 h-4" />
-          Notes
-        </h4>
-        <ul className="space-y-1 text-sm text-muted-foreground">
-          {mockData.notes.map((note, i) => (
-            <li key={i}>• {note}</li>
-          ))}
-        </ul>
-      </div>
+      {/* AI Insight */}
+      {data.aiInsight && (
+        <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg p-4 border border-blue-500/20">
+          <div className="flex items-start gap-3">
+            <Brain className="w-5 h-5 text-purple-500 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-purple-500 mb-1">AI Trade Önerisi</p>
+              <p className="text-sm">{data.aiInsight}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
