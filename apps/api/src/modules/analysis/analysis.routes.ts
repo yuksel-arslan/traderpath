@@ -6,16 +6,32 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { authenticate, optionalAuth } from '../../core/auth/middleware';
 import { creditService } from '../credits/credit.service';
+import { costService } from '../costs/cost.service';
 import { CREDIT_COSTS } from '@tradepath/types';
 import { analysisEngine } from './analysis.engine';
 import { config } from '../../core/config';
 
-// Gemini AI for generating insights
-async function getGeminiInsight(prompt: string): Promise<string> {
+// Gemini response with usage data
+interface GeminiResult {
+  text: string;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+}
+
+// Gemini AI for generating insights with cost tracking
+async function getGeminiInsight(
+  prompt: string,
+  operation: string,
+  userId?: string,
+  symbol?: string
+): Promise<GeminiResult> {
   const apiKey = config.gemini.apiKey;
   if (!apiKey) {
-    return 'AI insights not available';
+    return { text: 'AI insights not available', inputTokens: 0, outputTokens: 0, costUsd: 0 };
   }
+
+  const startTime = Date.now();
 
   try {
     const response = await fetch(
@@ -35,14 +51,38 @@ async function getGeminiInsight(prompt: string): Promise<string> {
 
     if (!response.ok) {
       console.error('Gemini API error:', response.statusText);
-      return 'AI analysis temporarily unavailable';
+      return { text: 'AI analysis temporarily unavailable', inputTokens: 0, outputTokens: 0, costUsd: 0 };
     }
 
     const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No insight generated';
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No insight generated';
+
+    // Extract token usage from response
+    const usageMetadata = data.usageMetadata || {};
+    const inputTokens = usageMetadata.promptTokenCount || Math.ceil(prompt.length / 4);
+    const outputTokens = usageMetadata.candidatesTokenCount || Math.ceil(text.length / 4);
+
+    // Calculate cost using costService
+    const costUsd = costService.calculateGeminiCost(inputTokens, outputTokens);
+    const durationMs = Date.now() - startTime;
+
+    // Log the cost asynchronously (don't block the response)
+    costService.logCost({
+      service: 'gemini',
+      operation,
+      inputTokens,
+      outputTokens,
+      costUsd,
+      userId,
+      symbol,
+      durationMs,
+      metadata: { model: 'gemini-2.0-flash' },
+    }).catch(err => console.error('Failed to log cost:', err));
+
+    return { text, inputTokens, outputTokens, costUsd };
   } catch (error) {
     console.error('Gemini error:', error);
-    return 'AI analysis temporarily unavailable';
+    return { text: 'AI analysis temporarily unavailable', inputTokens: 0, outputTokens: 0, costUsd: 0 };
   }
 }
 
@@ -66,7 +106,8 @@ export default async function analysisRoutes(app: FastifyInstance) {
 
 Be concise and actionable.`;
 
-      const aiSummary = await getGeminiInsight(aiPrompt);
+      const aiResult = await getGeminiInsight(aiPrompt, 'market_pulse');
+      const aiSummary = aiResult.text;
 
       return reply.send({
         success: true,
@@ -119,7 +160,8 @@ Be concise and actionable.`;
 
 Be concise and give a trading perspective.`;
 
-      const aiInsight = await getGeminiInsight(aiPrompt);
+      const aiResult = await getGeminiInsight(aiPrompt, 'asset_scan', userId, body.symbol);
+      const aiInsight = aiResult.text;
 
       return reply.send({
         success: true,
@@ -172,7 +214,8 @@ Be concise and give a trading perspective.`;
 
 Focus on risk assessment and trading implications.`;
 
-      const aiInsight = await getGeminiInsight(aiPrompt);
+      const aiResult = await getGeminiInsight(aiPrompt, 'safety_check', userId, body.symbol);
+      const aiInsight = aiResult.text;
 
       return reply.send({
         success: true,
@@ -225,7 +268,8 @@ Focus on risk assessment and trading implications.`;
 
 Be specific about when to enter.`;
 
-      const aiInsight = await getGeminiInsight(aiPrompt);
+      const aiResult = await getGeminiInsight(aiPrompt, 'timing', userId, body.symbol);
+      const aiInsight = aiResult.text;
 
       return reply.send({
         success: true,
@@ -287,7 +331,8 @@ Be specific about when to enter.`;
 
 Give practical trading advice.`;
 
-      const aiInsight = await getGeminiInsight(aiPrompt);
+      const aiResult = await getGeminiInsight(aiPrompt, 'trade_plan', userId, body.symbol);
+      const aiInsight = aiResult.text;
 
       return reply.send({
         success: true,
@@ -340,7 +385,8 @@ Give practical trading advice.`;
 
 Warn about potential traps and give protective advice.`;
 
-      const aiInsight = await getGeminiInsight(aiPrompt);
+      const aiResult = await getGeminiInsight(aiPrompt, 'trap_check', userId, body.symbol);
+      const aiInsight = aiResult.text;
 
       return reply.send({
         success: true,
@@ -441,7 +487,8 @@ Recommendation: ${verdict.recommendation}
 
 Give a clear, actionable trading recommendation with specific entry, stop loss, and target prices.`;
 
-      const aiVerdict = await getGeminiInsight(aiPrompt);
+      const aiResult = await getGeminiInsight(aiPrompt, 'analysis_full', userId, body.symbol);
+      const aiVerdict = aiResult.text;
 
       return reply.send({
         success: true,
