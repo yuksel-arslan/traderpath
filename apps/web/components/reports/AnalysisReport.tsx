@@ -3,6 +3,7 @@
 // ===========================================
 // Analysis Report PDF Generator
 // Professional AI-based trading report
+// Each analysis step on separate page with AI commentary
 // ===========================================
 
 import {
@@ -21,6 +22,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     backgroundColor: '#ffffff',
     padding: 40,
+    paddingBottom: 80,
     fontFamily: 'Helvetica',
   },
   // Cover Page
@@ -92,17 +94,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
   },
+  stepBadge: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  stepBadgeText: {
+    fontSize: 10,
+    fontWeight: 600,
+    color: '#ffffff',
+  },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 700,
     color: '#111827',
-    marginBottom: 15,
-    marginTop: 20,
+    marginBottom: 8,
   },
   sectionSubtitle: {
     fontSize: 12,
     color: '#6b7280',
-    marginBottom: 10,
+    marginBottom: 20,
   },
   card: {
     backgroundColor: '#f9fafb',
@@ -161,6 +174,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     marginBottom: 10,
   },
+  gridItemFourth: {
+    width: '25%',
+    paddingHorizontal: 5,
+    marginBottom: 10,
+  },
   miniCard: {
     backgroundColor: '#f9fafb',
     borderRadius: 6,
@@ -176,25 +194,44 @@ const styles = StyleSheet.create({
     fontWeight: 600,
     color: '#111827',
   },
-  // AI Summary
-  aiSummary: {
+  // AI Commentary - prominent section
+  aiCommentary: {
     backgroundColor: '#eff6ff',
     borderRadius: 8,
     padding: 15,
-    marginTop: 10,
+    marginTop: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#3b82f6',
   },
   aiTitle: {
     fontSize: 12,
-    fontWeight: 600,
-    color: '#3b82f6',
+    fontWeight: 700,
+    color: '#1d4ed8',
     marginBottom: 8,
+  },
+  aiIcon: {
+    fontSize: 14,
+    marginRight: 5,
   },
   aiText: {
     fontSize: 10,
     color: '#374151',
     lineHeight: 1.6,
   },
-  // Trade Plan
+  // Trade Plan visual
+  tradePlanVisual: {
+    backgroundColor: '#f0fdf4',
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 15,
+  },
+  levelBar: {
+    height: 30,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 4,
+    marginVertical: 10,
+    position: 'relative',
+  },
   entryRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -264,15 +301,15 @@ const styles = StyleSheet.create({
   poweredBy: {
     fontSize: 10,
     color: '#6b7280',
-    marginTop: 20,
+    marginTop: 30,
   },
   geminiLogo: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 700,
     color: '#4285F4',
   },
   disclaimer: {
-    marginTop: 30,
+    marginTop: 20,
     padding: 15,
     backgroundColor: '#fef3c7',
     borderRadius: 8,
@@ -301,6 +338,24 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 10,
     color: '#374151',
+  },
+  // Key insight box
+  keyInsight: {
+    backgroundColor: '#fef3c7',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 10,
+  },
+  keyInsightTitle: {
+    fontSize: 10,
+    fontWeight: 600,
+    color: '#92400e',
+    marginBottom: 5,
+  },
+  keyInsightText: {
+    fontSize: 9,
+    color: '#78350f',
+    lineHeight: 1.5,
   },
 });
 
@@ -382,7 +437,276 @@ interface AnalysisReportData {
 }
 
 // Disclaimer text constant
-const DISCLAIMER_TEXT = "Bu rapor yatırım tavsiyesi değildir. Kripto paralar yüksek risk içerir. Yatırım kararlarınızı kendi araştırmanıza dayandırın.";
+const DISCLAIMER_TEXT = "Bu rapor yatirim tavsiyesi degildir. Kripto paralar yuksek risk icerir. Yatirim kararlarinizi kendi arastirmaniza dayandiriniz.";
+
+// AI Educational Commentary Generator Functions
+function generateMarketPulseEducation(data: AnalysisReportData): string {
+  const fg = data.marketPulse.fearGreedIndex;
+  const btcDom = data.marketPulse.btcDominance;
+  const trend = data.marketPulse.trend?.direction || 'neutral';
+
+  let commentary = '';
+
+  if (fg <= 25) {
+    commentary += `Piyasa asiri korku bolgesinde (${fg}). Tarihsel olarak bu seviyeler, uzun vadeli alicilar icin iyi firsatlar olusturabilir. Ancak dusus devam edebilir, kademeli giris stratejisi onerilir. `;
+  } else if (fg >= 75) {
+    commentary += `Piyasa asiri ac gozluluk bolgesinde (${fg}). Bu seviyeler genellikle duzeltme oncesi gozlenir. Yeni pozisyon acmak yerine kar realizasyonu dusunulebilir. `;
+  } else {
+    commentary += `Piyasa duygusu dengeli seviyelerde (${fg}). Ne asiri korku ne de ac gozluluk hakim. `;
+  }
+
+  if (btcDom > 55) {
+    commentary += `Bitcoin dominansi yuksek (%${btcDom?.toFixed(1)}), bu altcoinlerin BTC'ye karsi zayif performans gosterdigi bir donem. `;
+  } else if (btcDom < 45) {
+    commentary += `Bitcoin dominansi dusuk (%${btcDom?.toFixed(1)}), altcoin sezonu olabilir. `;
+  }
+
+  if (trend === 'bullish') {
+    commentary += `Genel trend yukari yonlu. Trend ile islem yapmak risk/getiri acisindan avantajlidir.`;
+  } else if (trend === 'bearish') {
+    commentary += `Genel trend asagi yonlu. Short pozisyonlar veya kenarda beklemek dusunulebilir.`;
+  }
+
+  return commentary;
+}
+
+function generateAssetScanEducation(data: AnalysisReportData): string {
+  const rsi = data.assetScan.indicators?.rsi || 50;
+  const price = data.assetScan.currentPrice;
+  const change = data.assetScan.priceChange24h || 0;
+  const supports = data.assetScan.levels?.support || [];
+  const resistances = data.assetScan.levels?.resistance || [];
+
+  let commentary = '';
+
+  if (rsi > 70) {
+    commentary += `RSI asiri alim bolgesinde (${rsi.toFixed(1)}). Fiyat kisa vadede duzeltme yapabilir. Yeni alimlarda dikkatli olunmali. `;
+  } else if (rsi < 30) {
+    commentary += `RSI asiri satim bolgesinde (${rsi.toFixed(1)}). Potansiyel dipten donus sinyali. Kademeli alim stratejisi uygulanabilir. `;
+  } else if (rsi > 50 && rsi < 70) {
+    commentary += `RSI (${rsi.toFixed(1)}) yukari momentum gosteriyor ancak henuz asiri alim bolgesinde degil. `;
+  } else {
+    commentary += `RSI (${rsi.toFixed(1)}) notr bolgelerde seyrediyor. `;
+  }
+
+  if (supports.length > 0) {
+    const nearestSupport = supports[0];
+    const distToSupport = ((price - nearestSupport) / price) * 100;
+    commentary += `En yakin destek ${formatPrice(nearestSupport)} seviyesinde, fiyattan %${distToSupport.toFixed(1)} uzaklikta. `;
+  }
+
+  if (resistances.length > 0) {
+    const nearestResistance = resistances[0];
+    const distToResistance = ((nearestResistance - price) / price) * 100;
+    commentary += `En yakin direnc ${formatPrice(nearestResistance)} seviyesinde, fiyattan %${distToResistance.toFixed(1)} yukarda.`;
+  }
+
+  return commentary;
+}
+
+function generateSafetyCheckEducation(data: AnalysisReportData): string {
+  const risk = data.safetyCheck.riskLevel;
+  const pumpDump = data.safetyCheck.manipulation?.pumpDumpRisk;
+  const whale = data.safetyCheck.whaleActivity?.bias;
+  const smartMoney = data.safetyCheck.smartMoney?.positioning;
+
+  let commentary = '';
+
+  if (risk === 'high') {
+    commentary += `Risk seviyesi YUKSEK. Pozisyon boyutunu normalin %50'sine dusurmeniz, stop-loss seviyelerini daha siki tutmaniz onerilir. `;
+  } else if (risk === 'medium') {
+    commentary += `Risk seviyesi ORTA. Normal pozisyon boyutu ile islem yapilabilir, ancak stop-loss mutlaka kullanilmali. `;
+  } else {
+    commentary += `Risk seviyesi DUSUK. Uygun kosullar islem icin elverisli gorunuyor. `;
+  }
+
+  if (pumpDump === 'high') {
+    commentary += `Pump-dump riski yuksek! Ani fiyat hareketlerine karsi dikkatli olun. Limit emirler kullanin. `;
+  }
+
+  if (whale === 'accumulating') {
+    commentary += `Balinalar biriktirme yapiyor - potansiyel yukselis sinyali. `;
+  } else if (whale === 'distributing') {
+    commentary += `Balinalar dagitim yapiyor - potansiyel dusus riski. `;
+  }
+
+  if (smartMoney === 'long') {
+    commentary += `Akilli para long pozisyonda. Kurumsal ilgi pozitif.`;
+  } else if (smartMoney === 'short') {
+    commentary += `Akilli para short pozisyonda. Dikkatli olun.`;
+  }
+
+  return commentary;
+}
+
+function generateTimingEducation(data: AnalysisReportData): string {
+  const tradeNow = data.timing.tradeNow;
+  const zones = data.timing.entryZones || [];
+  const conditions = data.timing.conditions || [];
+
+  let commentary = '';
+
+  if (tradeNow) {
+    commentary += `Simdi islem icin uygun kosullar mevcut. `;
+  } else {
+    commentary += `Simdi islem onerilmiyor. Daha iyi giris seviyeleri icin beklemek mantikli. `;
+  }
+
+  const metConditions = conditions.filter(c => c.met).length;
+  const totalConditions = conditions.length;
+
+  if (totalConditions > 0) {
+    commentary += `Giris kosullarindan ${metConditions}/${totalConditions} karsilaniyor. `;
+    if (metConditions < totalConditions / 2) {
+      commentary += `Kosullarin cogunlugu henuz karsilanmadi, sabir onerilir. `;
+    }
+  }
+
+  if (zones.length > 0) {
+    const bestZone = zones[0];
+    commentary += `En iyi giris bolgesi ${formatPrice(bestZone.priceLow)} - ${formatPrice(bestZone.priceHigh)} araliginda, ${bestZone.probability}% olasilikla.`;
+  }
+
+  return commentary;
+}
+
+function generateTradePlanEducation(data: AnalysisReportData): string {
+  const plan = data.tradePlan;
+  const direction = plan.direction;
+  const entries = plan.entries || [];
+  const stopLoss = plan.stopLoss;
+  const takeProfits = plan.takeProfits || [];
+  const rr = plan.riskReward || 0;
+
+  let commentary = '';
+
+  commentary += `**NEDEN BU SEVIYELER SECILDI?**\n\n`;
+
+  // Entry explanation
+  if (entries.length > 0) {
+    commentary += `GIRIS SEVIYELERI: `;
+    if (entries.length > 1) {
+      commentary += `${entries.length} kademeli giris onerilmektedir. Bu strateji (DCA), tek seferde tum pozisyonu almak yerine farkli seviyelerde bolusturur. `;
+      commentary += `Ortalama giris fiyati ${formatPrice(plan.averageEntry)} olarak hesaplanmistir. `;
+    } else {
+      commentary += `Tek giris noktasi ${formatPrice(entries[0].price)} olarak belirlenmistir. `;
+    }
+    commentary += `Bu seviyeler teknik destek/direnc, momentum ve hacim analizine dayanmaktadir.\n\n`;
+  }
+
+  // Stop loss explanation
+  if (stopLoss) {
+    const slPercent = Math.abs(stopLoss.percentage || 0);
+    commentary += `STOP LOSS: ${formatPrice(stopLoss.price)} (-%${slPercent.toFixed(2)}) - `;
+    if (stopLoss.reason) {
+      commentary += `${stopLoss.reason} `;
+    } else {
+      if (direction === 'long') {
+        commentary += `Bu seviye, en yakin guclu destegin altindadir. Bu seviyenin kirilmasi, trend degisimi anlamina gelebilir. `;
+      } else {
+        commentary += `Bu seviye, en yakin guclu direncin ustundedir. `;
+      }
+    }
+    commentary += `Sermayenin korunmasi icin stop-loss kullanmak ZORUNLUDUR.\n\n`;
+  }
+
+  // Take profit explanation
+  if (takeProfits.length > 0) {
+    commentary += `KAR HEDEFLERI: `;
+    takeProfits.forEach((tp, i) => {
+      commentary += `TP${i+1}: ${formatPrice(tp.price)} (+%${tp.percentage?.toFixed(1)}) `;
+    });
+    commentary += `\nKademeli kar realizasyonu onerilir: her hedefte pozisyonun bir kismini kapatin.\n\n`;
+  }
+
+  // Risk/Reward explanation
+  commentary += `RISK/GETIRI ORANI: ${rr.toFixed(2)}:1 - `;
+  if (rr >= 3) {
+    commentary += `Mukemmel risk/getiri orani! Bu islem yuksek pozitif beklentiye sahip.`;
+  } else if (rr >= 2) {
+    commentary += `Iyi risk/getiri orani. Profesyonel traderlar genellikle en az 2:1 oran ararlar.`;
+  } else if (rr >= 1) {
+    commentary += `Kabul edilebilir risk/getiri orani ancak ideal degil.`;
+  } else {
+    commentary += `Dusuk risk/getiri orani. Bu islem onerilmeyebilir.`;
+  }
+
+  return commentary;
+}
+
+function generateTrapCheckEducation(data: AnalysisReportData): string {
+  const traps = data.trapCheck.traps;
+  const strategies = data.trapCheck.counterStrategy || [];
+
+  let commentary = '';
+
+  commentary += `TUZAK ANALIZI: `;
+
+  if (traps?.bullTrap) {
+    commentary += `BULL TRAP RISKI TESPIT EDILDI! Fiyat yukari kirilmis gibi gorunebilir ancak bu sahte olabilir. Onay bekleyin. `;
+  }
+
+  if (traps?.bearTrap) {
+    commentary += `BEAR TRAP RISKI TESPIT EDILDI! Fiyat asagi kirilmis gibi gorunebilir ancak bu sahte olabilir. Panik satisi yapmayin. `;
+  }
+
+  if (traps?.fakeoutRisk === 'high') {
+    commentary += `Fakeout (sahte kirilim) riski yuksek. Kirilislarda hemen islem acmak yerine, en az 4 saatlik mum kapanisini bekleyin. `;
+  }
+
+  if (!traps?.bullTrap && !traps?.bearTrap && traps?.fakeoutRisk !== 'high') {
+    commentary += `Belirgin bir tuzak riski tespit edilmedi. Normal dikkatle islem yapilabilir. `;
+  }
+
+  if (strategies.length > 0) {
+    commentary += `\n\nKORUNMA STRATEJILERI:\n`;
+    strategies.forEach((s, i) => {
+      commentary += `${i+1}. ${s}\n`;
+    });
+  }
+
+  return commentary;
+}
+
+function generateVerdictEducation(data: AnalysisReportData): string {
+  const verdict = data.verdict;
+  const score = verdict.overallScore || 0;
+  const action = verdict.action?.toLowerCase() || '';
+  const positives = (verdict.confidenceFactors || []).filter(f => f.positive);
+  const negatives = (verdict.confidenceFactors || []).filter(f => !f.positive);
+
+  let commentary = '';
+
+  commentary += `GENEL DEGERLENDIRME: `;
+
+  if (score >= 8) {
+    commentary += `Cok guclu sinyal (${score}/10). Cogu gosterge ayni yonde isaret ediyor. `;
+  } else if (score >= 6) {
+    commentary += `Iyi sinyal (${score}/10). Pozitif faktorler baskinda ancak bazi riskler var. `;
+  } else if (score >= 4) {
+    commentary += `Notr sinyal (${score}/10). Net bir yon belirgin degil. Beklemek akillica olabilir. `;
+  } else {
+    commentary += `Zayif veya negatif sinyal (${score}/10). Islem onerilmiyor. `;
+  }
+
+  if (positives.length > 0) {
+    commentary += `\n\nGUCLU YANLAR: `;
+    positives.forEach(p => {
+      commentary += `${p.factor}; `;
+    });
+  }
+
+  if (negatives.length > 0) {
+    commentary += `\n\nRISK FAKTORLERI: `;
+    negatives.forEach(n => {
+      commentary += `${n.factor}; `;
+    });
+  }
+
+  commentary += `\n\nSONUC: ${verdict.action}`;
+
+  return commentary;
+}
 
 // Reusable Footer Component
 const PageFooter = ({ pageNumber }: { pageNumber: number }) => (
@@ -390,13 +714,21 @@ const PageFooter = ({ pageNumber }: { pageNumber: number }) => (
     <View style={styles.footerRow}>
       <Text style={styles.footerText}>TradePath Analysis Report</Text>
       <Text style={styles.footerText}>Powered by Gemini 2.5 Flash</Text>
-      <Text style={styles.footerText}>Page {pageNumber}</Text>
+      <Text style={styles.footerText}>Sayfa {pageNumber}</Text>
     </View>
     <Text style={styles.footerDisclaimer}>{DISCLAIMER_TEXT}</Text>
   </View>
 );
 
-// PDF Document Component
+// AI Commentary Section Component
+const AICommentary = ({ title, content }: { title: string; content: string }) => (
+  <View style={styles.aiCommentary}>
+    <Text style={styles.aiTitle}>AI Analizi - {title}</Text>
+    <Text style={styles.aiText}>{content}</Text>
+  </View>
+);
+
+// PDF Document Component - Each step on separate page
 const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
   const getVerdictColor = () => {
     const action = data.verdict.action?.toLowerCase() || '';
@@ -407,58 +739,60 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
 
   return (
     <Document>
-      {/* Cover Page */}
+      {/* Page 1: Cover Page */}
       <Page size="A4" style={styles.page}>
         <View style={styles.coverPage}>
           <Text style={styles.logo}>TradePath</Text>
-          <Text style={styles.subtitle}>AI-Powered Trading Analysis</Text>
+          <Text style={styles.subtitle}>AI Destekli Trading Analizi</Text>
 
-          <Text style={styles.coverTitle}>7-Step Analysis Report</Text>
+          <Text style={styles.coverTitle}>7 Adimli Analiz Raporu</Text>
           <Text style={styles.coverSymbol}>{data.symbol}/USDT</Text>
 
-          <Text style={styles.coverMeta}>Generated: {data.generatedAt}</Text>
-          <Text style={styles.coverMeta}>Analysis ID: {data.analysisId}</Text>
+          <Text style={styles.coverMeta}>Olusturulma: {data.generatedAt}</Text>
+          <Text style={styles.coverMeta}>Analiz ID: {data.analysisId}</Text>
 
           <View style={[styles.verdictBadge, { backgroundColor: getVerdictColor() }]}>
             <Text style={styles.verdictText}>{data.verdict.action}</Text>
-            <Text style={styles.scoreText}>Score: {data.verdict.overallScore}/10</Text>
+            <Text style={styles.scoreText}>Skor: {data.verdict.overallScore}/10</Text>
           </View>
 
           {/* Powered by Gemini */}
-          <Text style={styles.poweredBy}>Powered by</Text>
+          <Text style={styles.poweredBy}>Yapay Zeka Destegi</Text>
           <Text style={styles.geminiLogo}>Google Gemini 2.5 Flash</Text>
         </View>
 
         <PageFooter pageNumber={1} />
       </Page>
 
-      {/* Market Pulse & Asset Scan */}
+      {/* Page 2: Step 1 - Market Pulse */}
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <Text style={styles.headerLogo}>TradePath</Text>
-          <Text style={styles.headerSymbol}>{data.symbol} Analysis Report</Text>
+          <Text style={styles.headerSymbol}>{data.symbol} Analiz Raporu</Text>
         </View>
 
-        {/* Step 1: Market Pulse */}
-        <Text style={styles.sectionTitle}>Step 1: Market Pulse</Text>
-        <Text style={styles.sectionSubtitle}>Overall market conditions and sentiment</Text>
+        <View style={styles.stepBadge}>
+          <Text style={styles.stepBadgeText}>ADIM 1 / 7</Text>
+        </View>
+        <Text style={styles.sectionTitle}>Piyasa Nabzi</Text>
+        <Text style={styles.sectionSubtitle}>Genel piyasa kosullari ve yatirimci duygusu</Text>
 
         <View style={styles.grid}>
           <View style={styles.gridItem}>
             <View style={styles.miniCard}>
-              <Text style={styles.miniCardLabel}>BTC Dominance</Text>
+              <Text style={styles.miniCardLabel}>BTC Dominansi</Text>
               <Text style={styles.miniCardValue}>{data.marketPulse.btcDominance?.toFixed(1) || 0}%</Text>
             </View>
           </View>
           <View style={styles.gridItem}>
             <View style={styles.miniCard}>
-              <Text style={styles.miniCardLabel}>Fear & Greed</Text>
+              <Text style={styles.miniCardLabel}>Korku & Ac Gozluluk</Text>
               <Text style={styles.miniCardValue}>{data.marketPulse.fearGreedIndex || 0} ({data.marketPulse.fearGreedLabel || 'N/A'})</Text>
             </View>
           </View>
           <View style={styles.gridItem}>
             <View style={styles.miniCard}>
-              <Text style={styles.miniCardLabel}>Market Regime</Text>
+              <Text style={styles.miniCardLabel}>Piyasa Rejimi</Text>
               <Text style={styles.miniCardValue}>{data.marketPulse.marketRegime || 'N/A'}</Text>
             </View>
           </View>
@@ -470,83 +804,93 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </View>
         </View>
 
-        {data.marketPulse.aiSummary && (
-          <View style={styles.aiSummary}>
-            <Text style={styles.aiTitle}>AI Analysis</Text>
-            <Text style={styles.aiText}>{data.marketPulse.aiSummary}</Text>
-          </View>
-        )}
+        <AICommentary
+          title="Piyasa Durumu Degerlendirmesi"
+          content={data.marketPulse.aiSummary || generateMarketPulseEducation(data)}
+        />
 
-        {/* Step 2: Asset Scan */}
-        <Text style={styles.sectionTitle}>Step 2: Asset Scanner</Text>
-        <Text style={styles.sectionSubtitle}>Technical analysis for {data.symbol}</Text>
+        <PageFooter pageNumber={2} />
+      </Page>
+
+      {/* Page 3: Step 2 - Asset Scan */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Text style={styles.headerLogo}>TradePath</Text>
+          <Text style={styles.headerSymbol}>{data.symbol} Analiz Raporu</Text>
+        </View>
+
+        <View style={styles.stepBadge}>
+          <Text style={styles.stepBadgeText}>ADIM 2 / 7</Text>
+        </View>
+        <Text style={styles.sectionTitle}>Varlik Taramasi</Text>
+        <Text style={styles.sectionSubtitle}>{data.symbol} icin teknik analiz</Text>
 
         <View style={styles.grid}>
-          <View style={styles.gridItem}>
+          <View style={styles.gridItemFourth}>
             <View style={styles.miniCard}>
-              <Text style={styles.miniCardLabel}>Current Price</Text>
+              <Text style={styles.miniCardLabel}>Guncel Fiyat</Text>
               <Text style={styles.miniCardValue}>{formatPrice(data.assetScan.currentPrice)}</Text>
             </View>
           </View>
-          <View style={styles.gridItem}>
+          <View style={styles.gridItemFourth}>
             <View style={styles.miniCard}>
-              <Text style={styles.miniCardLabel}>24h Change</Text>
+              <Text style={styles.miniCardLabel}>24s Degisim</Text>
               <Text style={[styles.miniCardValue, { color: (data.assetScan.priceChange24h || 0) >= 0 ? '#10b981' : '#ef4444' }]}>
                 {(data.assetScan.priceChange24h || 0) >= 0 ? '+' : ''}{(data.assetScan.priceChange24h || 0).toFixed(2)}%
               </Text>
             </View>
           </View>
-          <View style={styles.gridItem}>
+          <View style={styles.gridItemFourth}>
             <View style={styles.miniCard}>
               <Text style={styles.miniCardLabel}>RSI (14)</Text>
               <Text style={styles.miniCardValue}>{data.assetScan.indicators?.rsi?.toFixed(1) || 'N/A'}</Text>
             </View>
           </View>
-          <View style={styles.gridItem}>
+          <View style={styles.gridItemFourth}>
             <View style={styles.miniCard}>
               <Text style={styles.miniCardLabel}>MACD</Text>
-              <Text style={styles.miniCardValue}>{(data.assetScan.indicators?.macd?.histogram || 0) > 0 ? 'Positive' : 'Negative'}</Text>
+              <Text style={styles.miniCardValue}>{(data.assetScan.indicators?.macd?.histogram || 0) > 0 ? 'Pozitif' : 'Negatif'}</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Support & Resistance Levels</Text>
+          <Text style={styles.cardTitle}>Destek ve Direnc Seviyeleri</Text>
           <View style={styles.row}>
-            <Text style={styles.label}>Support</Text>
+            <Text style={styles.label}>Destek</Text>
             <Text style={styles.valueGreen}>{data.assetScan.levels?.support?.slice(0, 3).map(s => formatPrice(s)).join(' / ') || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>Resistance</Text>
+            <Text style={styles.label}>Direnc</Text>
             <Text style={styles.valueRed}>{data.assetScan.levels?.resistance?.slice(0, 3).map(r => formatPrice(r)).join(' / ') || 'N/A'}</Text>
           </View>
         </View>
 
-        {data.assetScan.aiInsight && (
-          <View style={styles.aiSummary}>
-            <Text style={styles.aiTitle}>AI Analysis</Text>
-            <Text style={styles.aiText}>{data.assetScan.aiInsight}</Text>
-          </View>
-        )}
+        <AICommentary
+          title="Teknik Analiz Yorumu"
+          content={data.assetScan.aiInsight || generateAssetScanEducation(data)}
+        />
 
-        <PageFooter pageNumber={2} />
+        <PageFooter pageNumber={3} />
       </Page>
 
-      {/* Safety Check & Timing */}
+      {/* Page 4: Step 3 - Safety Check */}
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <Text style={styles.headerLogo}>TradePath</Text>
-          <Text style={styles.headerSymbol}>{data.symbol} Analysis Report</Text>
+          <Text style={styles.headerSymbol}>{data.symbol} Analiz Raporu</Text>
         </View>
 
-        {/* Step 3: Safety Check */}
-        <Text style={styles.sectionTitle}>Step 3: Safety Check</Text>
-        <Text style={styles.sectionSubtitle}>Risk assessment and manipulation detection</Text>
+        <View style={styles.stepBadge}>
+          <Text style={styles.stepBadgeText}>ADIM 3 / 7</Text>
+        </View>
+        <Text style={styles.sectionTitle}>Guvenlik Kontrolu</Text>
+        <Text style={styles.sectionSubtitle}>Risk degerlendirmesi ve manipulasyon tespiti</Text>
 
         <View style={styles.grid}>
           <View style={styles.gridItem}>
             <View style={styles.miniCard}>
-              <Text style={styles.miniCardLabel}>Risk Level</Text>
+              <Text style={styles.miniCardLabel}>Risk Seviyesi</Text>
               <Text style={[styles.miniCardValue, {
                 color: data.safetyCheck.riskLevel === 'high' ? '#ef4444' :
                        data.safetyCheck.riskLevel === 'medium' ? '#f59e0b' : '#10b981'
@@ -555,19 +899,19 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </View>
           <View style={styles.gridItem}>
             <View style={styles.miniCard}>
-              <Text style={styles.miniCardLabel}>Pump/Dump Risk</Text>
+              <Text style={styles.miniCardLabel}>Pump/Dump Riski</Text>
               <Text style={styles.miniCardValue}>{(data.safetyCheck.manipulation?.pumpDumpRisk || 'N/A').toUpperCase()}</Text>
             </View>
           </View>
           <View style={styles.gridItem}>
             <View style={styles.miniCard}>
-              <Text style={styles.miniCardLabel}>Whale Activity</Text>
+              <Text style={styles.miniCardLabel}>Balina Aktivitesi</Text>
               <Text style={styles.miniCardValue}>{(data.safetyCheck.whaleActivity?.bias || 'N/A').toUpperCase()}</Text>
             </View>
           </View>
           <View style={styles.gridItem}>
             <View style={styles.miniCard}>
-              <Text style={styles.miniCardLabel}>Smart Money</Text>
+              <Text style={styles.miniCardLabel}>Akilli Para</Text>
               <Text style={styles.miniCardValue}>{(data.safetyCheck.smartMoney?.positioning || 'N/A').toUpperCase()}</Text>
             </View>
           </View>
@@ -575,7 +919,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
 
         {data.safetyCheck.warnings && data.safetyCheck.warnings.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Warnings</Text>
+            <Text style={styles.cardTitle}>Uyarilar</Text>
             {data.safetyCheck.warnings.map((warning, i) => (
               <View key={i} style={styles.bullet}>
                 <Text style={styles.bulletPoint}>!</Text>
@@ -585,22 +929,39 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </View>
         )}
 
-        {/* Step 4: Timing */}
-        <Text style={styles.sectionTitle}>Step 4: Timing Analysis</Text>
-        <Text style={styles.sectionSubtitle}>Optimal entry timing and conditions</Text>
+        <AICommentary
+          title="Guvenlik Degerlendirmesi"
+          content={data.safetyCheck.aiInsight || generateSafetyCheckEducation(data)}
+        />
+
+        <PageFooter pageNumber={4} />
+      </Page>
+
+      {/* Page 5: Step 4 - Timing */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Text style={styles.headerLogo}>TradePath</Text>
+          <Text style={styles.headerSymbol}>{data.symbol} Analiz Raporu</Text>
+        </View>
+
+        <View style={styles.stepBadge}>
+          <Text style={styles.stepBadgeText}>ADIM 4 / 7</Text>
+        </View>
+        <Text style={styles.sectionTitle}>Zamanlama Analizi</Text>
+        <Text style={styles.sectionSubtitle}>Optimal giris zamani ve kosullar</Text>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Trade Now: {data.timing.tradeNow ? 'YES' : 'NO'}</Text>
-          <Text style={styles.aiText}>{data.timing.reason || 'No specific reason provided'}</Text>
+          <Text style={styles.cardTitle}>Simdi Islem Yap: {data.timing.tradeNow ? 'EVET' : 'HAYIR'}</Text>
+          <Text style={styles.aiText}>{data.timing.reason || 'Ozel bir neden belirtilmedi'}</Text>
         </View>
 
         {data.timing.entryZones && data.timing.entryZones.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Entry Zones</Text>
+            <Text style={styles.cardTitle}>Giris Bolgeleri</Text>
             {data.timing.entryZones.map((zone, i) => (
               <View key={i} style={styles.row}>
-                <Text style={styles.label}>Zone {i + 1} ({zone.eta || 'N/A'})</Text>
-                <Text style={styles.value}>{formatPrice(zone.priceLow)} - {formatPrice(zone.priceHigh)} ({zone.probability || 0}%)</Text>
+                <Text style={styles.label}>Bolge {i + 1} ({zone.eta || 'N/A'})</Text>
+                <Text style={styles.value}>{formatPrice(zone.priceLow)} - {formatPrice(zone.priceHigh)} (%{zone.probability || 0})</Text>
               </View>
             ))}
           </View>
@@ -608,61 +969,68 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
 
         {data.timing.conditions && data.timing.conditions.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Entry Conditions</Text>
+            <Text style={styles.cardTitle}>Giris Kosullari</Text>
             {data.timing.conditions.map((cond, i) => (
               <View key={i} style={styles.row}>
                 <Text style={styles.label}>{cond.name}</Text>
-                <Text style={cond.met ? styles.valueGreen : styles.valueRed}>{cond.met ? 'MET' : 'NOT MET'}</Text>
+                <Text style={cond.met ? styles.valueGreen : styles.valueRed}>{cond.met ? 'KARSILANDI' : 'KARSILANMADI'}</Text>
               </View>
             ))}
           </View>
         )}
 
-        <PageFooter pageNumber={3} />
+        <AICommentary
+          title="Zamanlama Onerisi"
+          content={data.timing.aiInsight || generateTimingEducation(data)}
+        />
+
+        <PageFooter pageNumber={5} />
       </Page>
 
-      {/* Trade Plan */}
+      {/* Page 6: Step 5 - Trade Plan (DETAILED) */}
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <Text style={styles.headerLogo}>TradePath</Text>
-          <Text style={styles.headerSymbol}>{data.symbol} Analysis Report</Text>
+          <Text style={styles.headerSymbol}>{data.symbol} Analiz Raporu</Text>
         </View>
 
-        {/* Step 5: Trade Plan */}
-        <Text style={styles.sectionTitle}>Step 5: Trade Plan</Text>
-        <Text style={styles.sectionSubtitle}>Complete execution strategy</Text>
+        <View style={styles.stepBadge}>
+          <Text style={styles.stepBadgeText}>ADIM 5 / 7</Text>
+        </View>
+        <Text style={styles.sectionTitle}>Islem Plani</Text>
+        <Text style={styles.sectionSubtitle}>Detayli uygulama stratejisi</Text>
 
         <View style={styles.grid}>
-          <View style={styles.gridItem}>
+          <View style={styles.gridItemFourth}>
             <View style={styles.miniCard}>
-              <Text style={styles.miniCardLabel}>Direction</Text>
+              <Text style={styles.miniCardLabel}>Yon</Text>
               <Text style={[styles.miniCardValue, { color: data.tradePlan.direction === 'long' ? '#10b981' : '#ef4444' }]}>
                 {(data.tradePlan.direction || 'N/A').toUpperCase()}
               </Text>
             </View>
           </View>
-          <View style={styles.gridItem}>
+          <View style={styles.gridItemFourth}>
             <View style={styles.miniCard}>
-              <Text style={styles.miniCardLabel}>Risk/Reward</Text>
+              <Text style={styles.miniCardLabel}>Risk/Getiri</Text>
               <Text style={styles.miniCardValue}>{(data.tradePlan.riskReward || 0).toFixed(1)}:1</Text>
             </View>
           </View>
-          <View style={styles.gridItem}>
+          <View style={styles.gridItemFourth}>
             <View style={styles.miniCard}>
-              <Text style={styles.miniCardLabel}>Win Rate Est.</Text>
+              <Text style={styles.miniCardLabel}>Kazanma Oran</Text>
               <Text style={styles.miniCardValue}>{data.tradePlan.winRateEstimate || 0}%</Text>
             </View>
           </View>
-          <View style={styles.gridItem}>
+          <View style={styles.gridItemFourth}>
             <View style={styles.miniCard}>
-              <Text style={styles.miniCardLabel}>Position Size</Text>
+              <Text style={styles.miniCardLabel}>Pozisyon</Text>
               <Text style={styles.miniCardValue}>{(data.tradePlan.positionSizePercent || 0).toFixed(1)}%</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Entry Levels</Text>
+          <Text style={styles.cardTitle}>Giris Seviyeleri</Text>
           {data.tradePlan.entries?.map((entry, i) => (
             <View key={i} style={styles.entryRow}>
               <Text style={styles.entryLabel}>E{i + 1}</Text>
@@ -671,7 +1039,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             </View>
           ))}
           <View style={styles.row}>
-            <Text style={styles.label}>Average Entry</Text>
+            <Text style={styles.label}>Ortalama Giris</Text>
             <Text style={styles.value}>{formatPrice(data.tradePlan.averageEntry)}</Text>
           </View>
         </View>
@@ -683,40 +1051,70 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             <Text style={styles.entryPrice}>{formatPrice(data.tradePlan.stopLoss?.price)}</Text>
             <Text style={styles.entryPercent}>-{(data.tradePlan.stopLoss?.percentage || 0).toFixed(2)}%</Text>
           </View>
-          <Text style={styles.aiText}>{data.tradePlan.stopLoss?.reason || ''}</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Take Profit Targets</Text>
+          <Text style={styles.cardTitle}>Kar Hedefleri</Text>
           {data.tradePlan.takeProfits?.map((tp, i) => (
             <View key={i} style={styles.tpRow}>
               <Text style={[styles.entryLabel, { color: '#10b981' }]}>TP{i + 1}</Text>
               <Text style={styles.entryPrice}>{formatPrice(tp.price)}</Text>
-              <Text style={styles.entryPercent}>{tp.percentage}%</Text>
+              <Text style={styles.entryPercent}>+{tp.percentage?.toFixed(1)}%</Text>
             </View>
           ))}
         </View>
 
-        <PageFooter pageNumber={4} />
+        <PageFooter pageNumber={6} />
       </Page>
 
-      {/* Trap Check & Final Verdict */}
+      {/* Page 7: Trade Plan - AI Explanation */}
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <Text style={styles.headerLogo}>TradePath</Text>
-          <Text style={styles.headerSymbol}>{data.symbol} Analysis Report</Text>
+          <Text style={styles.headerSymbol}>{data.symbol} Analiz Raporu</Text>
         </View>
 
-        {/* Step 6: Trap Check */}
-        <Text style={styles.sectionTitle}>Step 6: Trap Check</Text>
-        <Text style={styles.sectionSubtitle}>Trap detection and liquidation zones</Text>
+        <View style={styles.stepBadge}>
+          <Text style={styles.stepBadgeText}>ADIM 5 / 7 - DEVAM</Text>
+        </View>
+        <Text style={styles.sectionTitle}>Islem Plani Aciklamasi</Text>
+        <Text style={styles.sectionSubtitle}>Neden bu seviyeler secildi?</Text>
+
+        <AICommentary
+          title="Seviye Secimi Mantigi"
+          content={data.tradePlan.aiInsight || generateTradePlanEducation(data)}
+        />
+
+        <View style={styles.keyInsight}>
+          <Text style={styles.keyInsightTitle}>ONEMLI HATIRLATMA</Text>
+          <Text style={styles.keyInsightText}>
+            Bu islem planinda onerilen seviyelere kati bir sekilde baglanmayiniz. Piyasa dinamik bir yapidir ve seviyeler degisebilir.
+            Stop-loss kullanmak sermaye korumasi icin kritiktir. Hicbir zaman tek bir islemde portfoyunuzun %2-3'unden fazlasini riske atmayin.
+          </Text>
+        </View>
+
+        <PageFooter pageNumber={7} />
+      </Page>
+
+      {/* Page 8: Step 6 - Trap Check */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Text style={styles.headerLogo}>TradePath</Text>
+          <Text style={styles.headerSymbol}>{data.symbol} Analiz Raporu</Text>
+        </View>
+
+        <View style={styles.stepBadge}>
+          <Text style={styles.stepBadgeText}>ADIM 6 / 7</Text>
+        </View>
+        <Text style={styles.sectionTitle}>Tuzak Kontrolu</Text>
+        <Text style={styles.sectionSubtitle}>Tuzak tespiti ve likidasyon bolgeleri</Text>
 
         <View style={styles.grid}>
           <View style={styles.gridItemThird}>
             <View style={styles.miniCard}>
               <Text style={styles.miniCardLabel}>Bull Trap</Text>
               <Text style={[styles.miniCardValue, { color: data.trapCheck.traps?.bullTrap ? '#ef4444' : '#10b981' }]}>
-                {data.trapCheck.traps?.bullTrap ? 'DETECTED' : 'NONE'}
+                {data.trapCheck.traps?.bullTrap ? 'TESPIT EDILDI' : 'YOK'}
               </Text>
             </View>
           </View>
@@ -724,13 +1122,13 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             <View style={styles.miniCard}>
               <Text style={styles.miniCardLabel}>Bear Trap</Text>
               <Text style={[styles.miniCardValue, { color: data.trapCheck.traps?.bearTrap ? '#ef4444' : '#10b981' }]}>
-                {data.trapCheck.traps?.bearTrap ? 'DETECTED' : 'NONE'}
+                {data.trapCheck.traps?.bearTrap ? 'TESPIT EDILDI' : 'YOK'}
               </Text>
             </View>
           </View>
           <View style={styles.gridItemThird}>
             <View style={styles.miniCard}>
-              <Text style={styles.miniCardLabel}>Fakeout Risk</Text>
+              <Text style={styles.miniCardLabel}>Fakeout Riski</Text>
               <Text style={[styles.miniCardValue, {
                 color: data.trapCheck.traps?.fakeoutRisk === 'high' ? '#ef4444' :
                        data.trapCheck.traps?.fakeoutRisk === 'medium' ? '#f59e0b' : '#10b981'
@@ -741,7 +1139,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
 
         {data.trapCheck.counterStrategy && data.trapCheck.counterStrategy.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Counter Strategies</Text>
+            <Text style={styles.cardTitle}>Korunma Stratejileri</Text>
             {data.trapCheck.counterStrategy.map((strategy, i) => (
               <View key={i} style={styles.bullet}>
                 <Text style={styles.bulletPoint}>-</Text>
@@ -751,14 +1149,31 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </View>
         )}
 
-        {/* Step 7: Final Verdict */}
-        <Text style={styles.sectionTitle}>Step 7: Final Verdict</Text>
-        <Text style={styles.sectionSubtitle}>AI-powered recommendation</Text>
+        <AICommentary
+          title="Tuzak Analizi"
+          content={data.trapCheck.aiInsight || generateTrapCheckEducation(data)}
+        />
+
+        <PageFooter pageNumber={8} />
+      </Page>
+
+      {/* Page 9: Step 7 - Final Verdict */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Text style={styles.headerLogo}>TradePath</Text>
+          <Text style={styles.headerSymbol}>{data.symbol} Analiz Raporu</Text>
+        </View>
+
+        <View style={styles.stepBadge}>
+          <Text style={styles.stepBadgeText}>ADIM 7 / 7</Text>
+        </View>
+        <Text style={styles.sectionTitle}>Nihai Karar</Text>
+        <Text style={styles.sectionSubtitle}>AI destekli oneri</Text>
 
         <View style={[styles.card, { backgroundColor: getVerdictColor() + '15' }]}>
           <View style={styles.row}>
-            <Text style={[styles.cardTitle, { color: getVerdictColor() }]}>{data.verdict.action}</Text>
-            <Text style={[styles.miniCardValue, { color: getVerdictColor() }]}>{data.verdict.overallScore}/10</Text>
+            <Text style={[styles.cardTitle, { color: getVerdictColor(), fontSize: 18 }]}>{data.verdict.action}</Text>
+            <Text style={[styles.miniCardValue, { color: getVerdictColor(), fontSize: 24 }]}>{data.verdict.overallScore}/10</Text>
           </View>
         </View>
 
@@ -766,7 +1181,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           <View style={styles.grid}>
             <View style={styles.gridItem}>
               <View style={styles.card}>
-                <Text style={styles.cardTitle}>Bullish Factors</Text>
+                <Text style={styles.cardTitle}>Pozitif Faktorler</Text>
                 {data.verdict.confidenceFactors.filter(f => f.positive).map((f, i) => (
                   <View key={i} style={styles.bullet}>
                     <Text style={styles.bulletPoint}>+</Text>
@@ -774,13 +1189,13 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
                   </View>
                 ))}
                 {data.verdict.confidenceFactors.filter(f => f.positive).length === 0 && (
-                  <Text style={styles.aiText}>No bullish factors identified</Text>
+                  <Text style={styles.aiText}>Pozitif faktor bulunamadi</Text>
                 )}
               </View>
             </View>
             <View style={styles.gridItem}>
               <View style={styles.card}>
-                <Text style={styles.cardTitle}>Risk Factors</Text>
+                <Text style={styles.cardTitle}>Risk Faktorleri</Text>
                 {data.verdict.confidenceFactors.filter(f => !f.positive).map((f, i) => (
                   <View key={i} style={styles.bullet}>
                     <Text style={styles.bulletPoint}>-</Text>
@@ -788,30 +1203,29 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
                   </View>
                 ))}
                 {data.verdict.confidenceFactors.filter(f => !f.positive).length === 0 && (
-                  <Text style={styles.aiText}>No risk factors identified</Text>
+                  <Text style={styles.aiText}>Risk faktoru bulunamadi</Text>
                 )}
               </View>
             </View>
           </View>
         )}
 
-        {data.verdict.aiSummary && (
-          <View style={styles.aiSummary}>
-            <Text style={styles.aiTitle}>AI Summary</Text>
-            <Text style={styles.aiText}>{data.verdict.aiSummary}</Text>
-          </View>
-        )}
+        <AICommentary
+          title="Sonuc Degerlendirmesi"
+          content={data.verdict.aiSummary || generateVerdictEducation(data)}
+        />
 
         <View style={styles.disclaimer}>
-          <Text style={styles.disclaimerTitle}>Disclaimer</Text>
+          <Text style={styles.disclaimerTitle}>YASAL UYARI</Text>
           <Text style={styles.disclaimerText}>
-            This analysis is for informational purposes only and should not be considered financial advice.
-            Trading cryptocurrencies involves substantial risk of loss and is not suitable for all investors.
-            Past performance is not indicative of future results. Always do your own research before making any investment decisions.
+            Bu analiz yalnizca bilgilendirme amacidir ve finansal tavsiye olarak degerlendirilmemelidir.
+            Kripto para ticareti onemli kayip riski tasir ve tum yatirimcilar icin uygun degildir.
+            Gecmis performans gelecekteki sonuclarin gostergesi degildir. Herhangi bir yatirim karari vermeden once kendi arastirmanizi yapin.
+            TradePath, bu rapora dayanilarak yapilan islemlerden kaynaklanan zararlardan sorumlu tutulamaz.
           </Text>
         </View>
 
-        <PageFooter pageNumber={5} />
+        <PageFooter pageNumber={9} />
       </Page>
     </Document>
   );
@@ -820,7 +1234,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
 // Export function to generate and download PDF
 export async function generateAnalysisReport(data: AnalysisReportData): Promise<void> {
   const blob = await pdf(<AnalysisReportDocument data={data} />).toBlob();
-  const filename = `TradePath_${data.symbol}_Analysis_${new Date().toISOString().split('T')[0]}.pdf`;
+  const filename = `TradePath_${data.symbol}_Analiz_${new Date().toISOString().split('T')[0]}.pdf`;
   saveAs(blob, filename);
 }
 
