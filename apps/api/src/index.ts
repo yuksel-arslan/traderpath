@@ -1,5 +1,6 @@
 // ===========================================
 // TradePath API Server
+// Production-grade with comprehensive monitoring
 // ===========================================
 
 import Fastify from 'fastify';
@@ -12,6 +13,8 @@ import { config } from './core/config';
 import { prisma } from './core/database';
 import { redis } from './core/cache';
 import { logger } from './core/logger';
+import { errorHandler, TradepathError } from './core/errors';
+import { healthRoutes, trackRequest } from './core/health';
 
 // Import routes
 import authRoutes from './modules/users/auth.routes';
@@ -25,45 +28,104 @@ import adminRoutes from './modules/admin/admin.routes';
 import costRoutes from './modules/costs/cost.routes';
 import { translationRoutes } from './modules/translation/translation.routes';
 
+// ===========================================
+// Server Configuration
+// ===========================================
+
 const app = Fastify({
   logger: {
     level: config.logLevel,
-    transport: {
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-      },
-    },
+    transport: process.env.NODE_ENV !== 'production'
+      ? {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'SYS:standard',
+            ignore: 'pid,hostname',
+          },
+        }
+      : undefined, // Use default JSON logging in production
   },
+  trustProxy: true, // Trust reverse proxy headers
+  requestIdHeader: 'x-request-id',
+  requestIdLogLabel: 'requestId',
 });
 
 // ===========================================
 // Plugins
 // ===========================================
 
-// Security
-await app.register(helmet);
+// Security headers
+await app.register(helmet, {
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow embedding
+});
+
+// CORS
 await app.register(cors, {
   origin: config.corsOrigins,
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+  exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],
 });
 
-// Rate Limiting
+// Rate Limiting - Global
 await app.register(rateLimit, {
   max: config.rateLimitMax,
   timeWindow: config.rateLimitWindow,
+  errorResponseBuilder: (request, context) => {
+    return {
+      success: false,
+      error: {
+        code: 'RATE_001',
+        message: `Rate limit exceeded. Retry after ${Math.ceil(context.ttl / 1000)} seconds.`,
+        details: {
+          retryAfter: Math.ceil(context.ttl / 1000),
+        },
+      },
+    };
+  },
+  keyGenerator: (request) => {
+    // Use user ID if authenticated, otherwise use IP
+    return (request as any).user?.id || request.ip;
+  },
+  addHeadersOnExceeding: {
+    'X-RateLimit-Limit': true,
+    'X-RateLimit-Remaining': true,
+  },
+  addHeaders: {
+    'X-RateLimit-Limit': true,
+    'X-RateLimit-Remaining': true,
+    'Retry-After': true,
+  },
 });
 
-// JWT
+// JWT Authentication
 await app.register(jwt, {
   secret: config.jwtSecret,
   sign: {
     expiresIn: config.jwtExpiresIn,
   },
+  verify: {
+    maxAge: config.jwtExpiresIn,
+  },
 });
 
-// WebSocket
-await app.register(websocket);
+// WebSocket support
+await app.register(websocket, {
+  options: {
+    maxPayload: 1048576, // 1MB
+    clientTracking: true,
+  },
+});
 
 // ===========================================
 // Decorators
@@ -76,88 +138,118 @@ app.decorate('redis', redis);
 // Hooks
 // ===========================================
 
+// Request start time tracking
 app.addHook('onRequest', async (request) => {
   request.startTime = Date.now();
+
+  // Add request ID if not present
+  if (!request.headers['x-request-id']) {
+    (request.headers as any)['x-request-id'] = crypto.randomUUID();
+  }
 });
 
+// Response logging and metrics
 app.addHook('onResponse', async (request, reply) => {
   const duration = Date.now() - (request.startTime || Date.now());
-  logger.info({
+  const isError = reply.statusCode >= 400;
+
+  // Track metrics
+  trackRequest(duration, isError);
+
+  // Log request
+  const logData = {
     method: request.method,
     url: request.url,
     statusCode: reply.statusCode,
     duration: `${duration}ms`,
-  });
-});
-
-// ===========================================
-// Routes
-// ===========================================
-
-// Health check
-app.get('/health', async () => {
-  return {
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0',
+    requestId: request.headers['x-request-id'],
+    userId: (request as any).user?.id,
+    ip: request.ip,
   };
-});
 
-// Readiness check
-app.get('/ready', async () => {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    await redis.ping();
-    return { ready: true };
-  } catch (error) {
-    return { ready: false, error: String(error) };
+  if (isError) {
+    logger.warn(logData, 'Request completed with error');
+  } else if (duration > 1000) {
+    logger.warn(logData, 'Slow request detected');
+  } else {
+    logger.info(logData, 'Request completed');
   }
 });
 
-// API routes
-app.register(authRoutes, { prefix: '/api/auth' });
-app.register(userRoutes, { prefix: '/api/user' });
-app.register(analysisRoutes, { prefix: '/api/analysis' });
-app.register(creditRoutes, { prefix: '/api/credits' });
-app.register(rewardRoutes, { prefix: '/api/rewards' });
-app.register(alertRoutes, { prefix: '/api/alerts' });
+// Error logging
+app.addHook('onError', async (request, reply, error) => {
+  logger.error({
+    error: error.message,
+    code: (error as TradepathError).code,
+    url: request.url,
+    method: request.method,
+    requestId: request.headers['x-request-id'],
+    userId: (request as any).user?.id,
+  }, 'Request error');
+});
+
+// ===========================================
+// Health & Metrics Routes (no auth required)
+// ===========================================
+
+await app.register(healthRoutes);
+
+// ===========================================
+// API Routes (v1)
+// ===========================================
+
+// Auth routes (some public, some protected)
+app.register(authRoutes, { prefix: '/api/v1/auth' });
+app.register(authRoutes, { prefix: '/api/auth' }); // Legacy support
+
+// Protected routes
+app.register(userRoutes, { prefix: '/api/v1/user' });
+app.register(userRoutes, { prefix: '/api/user' }); // Legacy
+
+app.register(analysisRoutes, { prefix: '/api/v1/analysis' });
+app.register(analysisRoutes, { prefix: '/api/analysis' }); // Legacy
+
+app.register(creditRoutes, { prefix: '/api/v1/credits' });
+app.register(creditRoutes, { prefix: '/api/credits' }); // Legacy
+
+app.register(rewardRoutes, { prefix: '/api/v1/rewards' });
+app.register(rewardRoutes, { prefix: '/api/rewards' }); // Legacy
+
+app.register(alertRoutes, { prefix: '/api/v1/alerts' });
+app.register(alertRoutes, { prefix: '/api/alerts' }); // Legacy
+
 app.register(reportRoutes);
-app.register(adminRoutes, { prefix: '/api/admin' });
-app.register(costRoutes, { prefix: '/api/costs' });
+
+// Admin routes
+app.register(adminRoutes, { prefix: '/api/v1/admin' });
+app.register(adminRoutes, { prefix: '/api/admin' }); // Legacy
+
+// Cost management
+app.register(costRoutes, { prefix: '/api/v1/costs' });
+app.register(costRoutes, { prefix: '/api/costs' }); // Legacy
+
+// Translation
 app.register(translationRoutes);
+
+// ===========================================
+// 404 Handler
+// ===========================================
+
+app.setNotFoundHandler((request, reply) => {
+  reply.status(404).send({
+    success: false,
+    error: {
+      code: 'RESOURCE_001',
+      message: `Route ${request.method} ${request.url} not found`,
+    },
+  });
+});
 
 // ===========================================
 // Error Handler
 // ===========================================
 
-app.setErrorHandler((error, request, reply) => {
-  logger.error({
-    error: error.message,
-    stack: error.stack,
-    url: request.url,
-    method: request.method,
-  });
-
-  // Known errors
-  if (error.statusCode) {
-    return reply.status(error.statusCode).send({
-      success: false,
-      error: {
-        code: error.code || 'ERROR',
-        message: error.message,
-      },
-    });
-  }
-
-  // Unknown errors
-  return reply.status(500).send({
-    success: false,
-    error: {
-      code: 'INTERNAL_ERROR',
-      message: 'An unexpected error occurred',
-    },
-  });
-});
+app.setErrorHandler(errorHandler);
 
 // ===========================================
 // Startup
@@ -167,7 +259,11 @@ const start = async () => {
   try {
     // Connect to database
     await prisma.$connect();
-    logger.info('Database connected');
+    logger.info('✓ Database connected');
+
+    // Test Redis connection
+    await redis.ping();
+    logger.info('✓ Redis connected');
 
     // Start server
     await app.listen({
@@ -175,30 +271,78 @@ const start = async () => {
       host: '0.0.0.0',
     });
 
-    logger.info(`Server running on port ${config.port}`);
+    logger.info('===========================================');
+    logger.info(`   TradePath API Server v1.0.0`);
+    logger.info(`   Port: ${config.port}`);
+    logger.info(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.info('===========================================');
+    logger.info('');
+    logger.info('Endpoints:');
+    logger.info(`   Health:    http://localhost:${config.port}/health`);
+    logger.info(`   Metrics:   http://localhost:${config.port}/metrics`);
+    logger.info(`   API:       http://localhost:${config.port}/api/v1`);
+    logger.info('');
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1);
   }
 };
 
-// Graceful shutdown
-const shutdown = async () => {
-  logger.info('Shutting down...');
-  await app.close();
-  await prisma.$disconnect();
-  await redis.quit();
-  process.exit(0);
+// ===========================================
+// Graceful Shutdown
+// ===========================================
+
+const shutdown = async (signal: string) => {
+  logger.info(`${signal} received, starting graceful shutdown...`);
+
+  try {
+    // Stop accepting new connections
+    await app.close();
+    logger.info('✓ Server closed');
+
+    // Close database connection
+    await prisma.$disconnect();
+    logger.info('✓ Database disconnected');
+
+    // Close Redis connection
+    await redis.quit();
+    logger.info('✓ Redis disconnected');
+
+    logger.info('Graceful shutdown completed');
+    process.exit(0);
+  } catch (error) {
+    logger.error('Error during shutdown:', error);
+    process.exit(1);
+  }
 };
 
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+// Handle shutdown signals
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  logger.error({ error }, 'Uncaught exception');
+  shutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error({ reason, promise }, 'Unhandled rejection');
+});
+
+// Start the server
 start();
 
-// Type declarations
+// ===========================================
+// Type Declarations
+// ===========================================
+
 declare module 'fastify' {
   interface FastifyRequest {
     startTime?: number;
+    user?: {
+      id: string;
+      email: string;
+    };
   }
 }
