@@ -79,6 +79,14 @@ interface MarketPulseResult {
     impact: 'high' | 'medium' | 'low';
     description: string;
   }>;
+  newsSentiment?: {
+    overall: 'bullish' | 'bearish' | 'neutral';
+    score: number;
+    newsCount: number;
+    positiveCount: number;
+    negativeCount: number;
+    topHeadlines: Array<{ title: string; source: string; sentiment: string }>;
+  };
   summary: string;
   verdict: 'suitable' | 'caution' | 'avoid';
   score: number;
@@ -139,6 +147,27 @@ interface SafetyCheckResult {
     largeSells: Array<{ amountUsd: number; price: number; time: string }>;
     netFlowUsd: number;
     bias: 'accumulation' | 'distribution' | 'neutral';
+    orderFlowImbalance?: number;
+    orderFlowBias?: 'buying' | 'selling' | 'neutral';
+  };
+  advancedMetrics?: {
+    volumeSpike: boolean;
+    volumeSpikeFactor: number;
+    relativeVolume: number;
+    pvt: number;
+    pvtTrend: 'bullish' | 'bearish' | 'neutral';
+    pvtMomentum: number;
+    historicalVolatility: number;
+    liquidityScore: number;
+    bidAskSpread: number;
+  };
+  newsSentiment?: {
+    overall: 'bullish' | 'bearish' | 'neutral';
+    score: number;
+    newsCount: number;
+    positiveCount: number;
+    negativeCount: number;
+    topHeadlines: Array<{ title: string; source: string; sentiment: string }>;
   };
   exchangeFlows: Array<{
     exchange: string;
@@ -644,7 +673,7 @@ async function fetchNewsSentiment(symbol: string): Promise<NewsSentimentResult> 
     setCache(cacheKey, result, 15 * 60 * 1000);
     return result;
   } catch (error) {
-    logger.warn(`Failed to fetch news sentiment for ${symbol}:`, error);
+    console.warn(`Failed to fetch news sentiment for ${symbol}:`, error);
     return defaultResult;
   }
 }
