@@ -29,36 +29,20 @@ import {
 import { useState } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 
-// TradePath Logo Component with Teal Theme
+// TradePath Logo Component - Orange icon like Trader AI
 function TradePathLogo({ className = '', size = 'default' }: { className?: string; size?: 'small' | 'default' | 'large' }) {
   const sizes = {
-    small: { wrapper: 'w-8 h-8', arrow: 'w-4 h-4' },
-    default: { wrapper: 'w-10 h-10', arrow: 'w-5 h-5' },
-    large: { wrapper: 'w-16 h-16', arrow: 'w-8 h-8' }
+    small: { wrapper: 'w-8 h-8', icon: 'w-5 h-5' },
+    default: { wrapper: 'w-10 h-10', icon: 'w-6 h-6' },
+    large: { wrapper: 'w-16 h-16', icon: 'w-10 h-10' }
   };
   const s = sizes[size];
 
   return (
-    <div className={`relative ${s.wrapper} ${className}`}>
-      <svg viewBox="0 0 40 40" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="tealGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#0d9488" />
-            <stop offset="50%" stopColor="#14b8a6" />
-            <stop offset="100%" stopColor="#06b6d4" />
-          </linearGradient>
-        </defs>
-        {/* Path/Road shape */}
-        <path
-          d="M20 4 L32 36 L26 36 L20 16 L14 36 L8 36 Z"
-          fill="url(#tealGradient)"
-        />
-        {/* Arrow overlay */}
-        <path
-          d="M20 8 L26 18 L22 18 L22 28 L18 28 L18 18 L14 18 Z"
-          fill="white"
-          fillOpacity="0.9"
-        />
+    <div className={`${s.wrapper} bg-gradient-to-br from-orange-500 via-amber-500 to-orange-400 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/25 ${className}`}>
+      <svg viewBox="0 0 24 24" className={s.icon} fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 17L9 11L13 15L21 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M17 7H21V11" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     </div>
   );
@@ -224,7 +208,7 @@ export default function LandingPage() {
           <Link href="/" className="flex items-center gap-2">
             <TradePathLogo size="small" />
             <div className="flex flex-col">
-              <span className="text-xl font-bold bg-gradient-to-r from-teal-500 via-cyan-400 to-teal-400 bg-clip-text text-transparent">
+              <span className="text-xl font-bold text-teal-500">
                 TradePath
               </span>
               <span className="text-[10px] text-muted-foreground -mt-1 hidden sm:block">From Charts to Clarity</span>
@@ -595,8 +579,8 @@ export default function LandingPage() {
               <div className="bg-accent/50 p-4 border-b flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-teal-600 via-teal-500 to-cyan-500 rounded-lg"></div>
-                    <span className="font-bold">TradePath</span>
+                    <div className="w-8 h-8 bg-gradient-to-br from-orange-500 via-amber-500 to-orange-400 rounded-xl"></div>
+                    <span className="font-bold text-teal-500">TradePath</span>
                   </div>
                   <nav className="hidden md:flex items-center gap-4 ml-8">
                     <span className="text-sm font-medium text-primary">Dashboard</span>
@@ -609,7 +593,7 @@ export default function LandingPage() {
                   <div className="px-3 py-1 bg-teal-500/20 text-teal-500 rounded-full text-sm font-medium">
                     125 Credits
                   </div>
-                  <div className="w-8 h-8 bg-gradient-to-br from-teal-600 via-teal-500 to-cyan-500 rounded-full"></div>
+                  <div className="w-8 h-8 bg-gradient-to-br from-orange-500 via-amber-500 to-orange-400 rounded-full"></div>
                 </div>
               </div>
 
