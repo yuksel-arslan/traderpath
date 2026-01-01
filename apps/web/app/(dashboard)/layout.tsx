@@ -78,11 +78,11 @@ export default function DashboardLayout({
           >
             <div className="flex items-center justify-between h-16 px-6 border-b border-border">
               <Link href="/dashboard" className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-lg flex items-center justify-center shadow-lg shadow-green-500/25">
+                <div className="w-8 h-8 bg-gradient-to-br from-teal-600 via-teal-500 to-cyan-500 rounded-lg flex items-center justify-center shadow-lg shadow-teal-500/25">
                   <TrendingUp className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-lg font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">TradePath</span>
+                  <span className="text-lg font-bold bg-gradient-to-r from-teal-500 via-cyan-400 to-teal-400 bg-clip-text text-transparent">TradePath</span>
                   <span className="text-[9px] text-muted-foreground -mt-1">From Charts to Clarity</span>
                 </div>
               </Link>
@@ -175,7 +175,7 @@ export default function DashboardLayout({
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent"
               >
-                <div className="w-8 h-8 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-teal-600 via-teal-500 to-cyan-500 rounded-full flex items-center justify-center">
                   <User className="w-4 h-4 text-white" />
                 </div>
                 <ChevronDown className="w-4 h-4 text-muted-foreground" />
