@@ -61,9 +61,10 @@ export default function LoginPage() {
         throw new Error(data.error?.message || 'Google login failed');
       }
 
-      // Store token
+      // Store token in both localStorage and cookie
       if (data.data?.token) {
-        localStorage.setItem('token', data.data.token);
+        localStorage.setItem('accessToken', data.data.token);
+        document.cookie = `accessToken=${data.data.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
       }
 
       router.push('/dashboard');
@@ -114,9 +115,10 @@ export default function LoginPage() {
         throw new Error(data.error?.message || 'Login failed');
       }
 
-      // Store token
+      // Store token in both localStorage and cookie
       if (data.data?.token) {
-        localStorage.setItem('token', data.data.token);
+        localStorage.setItem('accessToken', data.data.token);
+        document.cookie = `accessToken=${data.data.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
       }
 
       router.push('/dashboard');

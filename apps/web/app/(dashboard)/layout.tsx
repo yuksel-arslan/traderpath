@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -34,8 +34,18 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const handleLogout = useCallback(() => {
+    // Clear localStorage
+    localStorage.removeItem('accessToken');
+    // Clear cookie
+    document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    // Redirect to login
+    router.push('/login');
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -186,7 +196,7 @@ export default function DashboardLayout({
                         <button
                           onClick={() => {
                             setUserMenuOpen(false);
-                            // Handle logout
+                            handleLogout();
                           }}
                           className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent text-sm w-full text-left text-destructive"
                         >
