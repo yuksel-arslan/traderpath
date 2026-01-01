@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Gem, Plus, History } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '../../lib/utils';
+import Link from 'next/link';
 
 interface CreditBalanceData {
   balance: number;
@@ -15,11 +16,42 @@ interface CreditBalanceData {
 }
 
 async function fetchBalance(): Promise<CreditBalanceData> {
-  // TODO: Replace with actual API call
-  return {
-    balance: 156,
-    dailyFreeRemaining: 3,
-  };
+  const token = localStorage.getItem('accessToken');
+
+  if (!token) {
+    return {
+      balance: 0,
+      dailyFreeRemaining: 5,
+    };
+  }
+
+  try {
+    const response = await fetch('/api/credits/balance', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      return {
+        balance: result.data?.balance || 0,
+        dailyFreeRemaining: result.data?.dailyFreeRemaining ?? 5,
+      };
+    }
+
+    // If unauthorized or error, return defaults
+    return {
+      balance: 0,
+      dailyFreeRemaining: 5,
+    };
+  } catch (error) {
+    console.error('Failed to fetch credit balance:', error);
+    return {
+      balance: 0,
+      dailyFreeRemaining: 5,
+    };
+  }
 }
 
 export function CreditBalance() {
@@ -29,6 +61,7 @@ export function CreditBalance() {
     queryKey: ['credits'],
     queryFn: fetchBalance,
     refetchInterval: 60000, // Refetch every minute
+    staleTime: 30000, // Consider data stale after 30 seconds
   });
 
   return (
@@ -69,13 +102,21 @@ export function CreditBalance() {
             </div>
 
             <div className="space-y-2">
-              <button className="w-full py-2 px-4 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg font-medium hover:opacity-90 transition">
+              <Link
+                href="/credits"
+                onClick={() => setShowDropdown(false)}
+                className="block w-full py-2 px-4 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg font-medium hover:opacity-90 transition text-center"
+              >
                 Buy Credits
-              </button>
-              <button className="w-full py-2 px-4 bg-secondary text-secondary-foreground rounded-lg font-medium hover:bg-secondary/80 transition flex items-center justify-center gap-2">
+              </Link>
+              <Link
+                href="/credits?tab=history"
+                onClick={() => setShowDropdown(false)}
+                className="w-full py-2 px-4 bg-secondary text-secondary-foreground rounded-lg font-medium hover:bg-secondary/80 transition flex items-center justify-center gap-2"
+              >
                 <History className="w-4 h-4" />
                 View History
-              </button>
+              </Link>
             </div>
           </div>
         </>
