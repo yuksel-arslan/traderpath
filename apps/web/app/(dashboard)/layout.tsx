@@ -17,6 +17,7 @@ import {
   User,
   ChevronDown,
   FileText,
+  Server,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 
@@ -28,6 +29,7 @@ const navigation = [
   { name: 'Credits', href: '/credits', icon: Coins },
   { name: 'Alerts', href: '/alerts', icon: Bell },
   { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Admin', href: '/admin', icon: Server },
 ];
 
 export default function DashboardLayout({
