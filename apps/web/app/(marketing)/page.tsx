@@ -75,22 +75,22 @@ const TESTIMONIALS = [
 const PRICING = [
   {
     name: 'Starter',
-    credits: 50,
-    price: 7.99,
-    features: ['50 analysis credits', 'All 7 analysis steps', 'Price alerts', 'Basic support'],
+    credits: 25,
+    price: 14.99,
+    features: ['25 analysis credits', 'All 7 analysis steps', 'PDF reports', 'Email support'],
   },
   {
-    name: 'Trader',
-    credits: 150,
-    price: 19.99,
+    name: 'Popular',
+    credits: 60,
+    price: 29.99,
     popular: true,
-    features: ['150 + 15 bonus credits', 'All 7 analysis steps', 'Unlimited alerts', 'Priority support'],
+    features: ['60 + 5 bonus credits', 'All 7 analysis steps', 'Priority analysis queue', 'Priority support'],
   },
   {
     name: 'Pro',
-    credits: 400,
-    price: 44.99,
-    features: ['400 + 60 bonus credits', 'All 7 analysis steps', 'AI chat support', 'API access'],
+    credits: 150,
+    price: 59.99,
+    features: ['150 + 20 bonus credits', 'All 7 analysis steps', 'AI chat support', 'API access'],
   },
 ];
 
@@ -140,14 +140,14 @@ export default function LandingPage() {
             AI-Powered Trading Analysis
           </div>
           <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-            Trade Smarter with{' '}
+            From Analysis to Action{' '}
             <span className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-              7-Step Analysis
+              in 60 Seconds
             </span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Get comprehensive trading insights with our unique 7-step analysis system.
-            Detect manipulation, find optimal entries, and trade with confidence.
+            Stop drowning in charts. Our AI-powered 7-step analysis gives you clear
+            buy/sell decisions with exact entry points, targets, and stop-losses.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -223,8 +223,65 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Why TradePath Section */}
+      <section className="py-20 bg-accent/50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Why Choose TradePath?
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              See how TradePath compares to traditional analysis tools
+            </p>
+          </div>
+          <div className="max-w-4xl mx-auto">
+            <div className="overflow-x-auto">
+              <table className="w-full bg-card border rounded-lg overflow-hidden">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-4 font-semibold">Feature</th>
+                    <th className="text-center p-4 font-semibold text-muted-foreground">Traditional Tools</th>
+                    <th className="text-center p-4 font-semibold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">TradePath</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { feature: 'Time to Decision', traditional: 'Hours of chart analysis', tradepath: '60 seconds' },
+                    { feature: 'Manipulation Detection', traditional: 'Manual research required', tradepath: 'AI-powered auto-detection' },
+                    { feature: 'Entry/Exit Points', traditional: 'Self-calculated', tradepath: 'Precise levels provided' },
+                    { feature: 'Risk Management', traditional: 'DIY stop-loss', tradepath: 'Complete trade plan included' },
+                    { feature: 'Learning Curve', traditional: 'Months to master', tradepath: 'Start immediately' },
+                    { feature: 'Pricing', traditional: '$50-300/month subscriptions', tradepath: 'Pay per analysis' },
+                  ].map((row, index) => (
+                    <tr key={index} className="border-b last:border-b-0">
+                      <td className="p-4 font-medium">{row.feature}</td>
+                      <td className="p-4 text-center text-muted-foreground">{row.traditional}</td>
+                      <td className="p-4 text-center text-green-500 font-medium">{row.tradepath}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-4 bg-card border rounded-lg text-center">
+                <div className="text-3xl font-bold text-blue-500 mb-2">7</div>
+                <p className="text-muted-foreground">Analysis steps in one click</p>
+              </div>
+              <div className="p-4 bg-card border rounded-lg text-center">
+                <div className="text-3xl font-bold text-green-500 mb-2">60s</div>
+                <p className="text-muted-foreground">From question to trade plan</p>
+              </div>
+              <div className="p-4 bg-card border rounded-lg text-center">
+                <div className="text-3xl font-bold text-purple-500 mb-2">$0.50</div>
+                <p className="text-muted-foreground">Per comprehensive analysis</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* How It Works */}
-      <section id="how-it-works" className="py-20 bg-accent/50">
+      <section id="how-it-works" className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">How TradePath Works</h2>
@@ -408,7 +465,7 @@ export default function LandingPage() {
           </div>
           <div className="pt-8 border-t flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-muted-foreground text-sm">
-              © 2024 TradePath. All rights reserved.
+              © 2025 TradePath. All rights reserved.
             </p>
             <p className="text-muted-foreground text-sm">
               Trading involves risk. Not financial advice.
