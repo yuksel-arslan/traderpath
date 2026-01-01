@@ -12,12 +12,23 @@ import { LevelProgress } from '../../../components/rewards/LevelProgress';
 import { RecentAnalyses } from '../../../components/analysis/RecentAnalyses';
 import { AnalysisStats } from '../../../components/dashboard/AnalysisStats';
 import { PerformanceMetrics } from '../../../components/dashboard/PerformanceMetrics';
-import { ChevronDown, Gift, ArrowRight } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronDown, Gift, ArrowRight, RefreshCw } from 'lucide-react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 
 export default function DashboardPage() {
   const [showRewards, setShowRewards] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    // Increment key to force all children to remount and refetch
+    setRefreshKey(prev => prev + 1);
+    // Wait a bit for visual feedback
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setIsRefreshing(false);
+  }, []);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -30,6 +41,15 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-4">
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
+            title="Refresh data"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
           <Link
             href="/analyze"
             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
@@ -37,25 +57,25 @@ export default function DashboardPage() {
             New Analysis
             <ArrowRight className="w-4 h-4" />
           </Link>
-          <CreditBalance />
+          <CreditBalance key={`credit-${refreshKey}`} />
         </div>
       </div>
 
       {/* PRIMARY: Analysis Performance Stats */}
       <div className="mb-8">
-        <AnalysisStats />
+        <AnalysisStats key={`stats-${refreshKey}`} />
       </div>
 
       {/* Performance Metrics - Detailed Stats */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4">Detailed Performance</h2>
-        <PerformanceMetrics />
+        <PerformanceMetrics key={`perf-${refreshKey}`} />
       </div>
 
       {/* Recent Analyses */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4">Recent Analyses</h2>
-        <RecentAnalyses />
+        <RecentAnalyses key={`recent-${refreshKey}`} />
       </div>
 
       {/* SECONDARY: Gamification/Rewards - Collapsible */}
@@ -78,9 +98,9 @@ export default function DashboardPage() {
         {showRewards && (
           <div className="p-4 pt-0 border-t">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <StreakDisplay />
-              <LevelProgress />
-              <DailyRewards />
+              <StreakDisplay key={`streak-${refreshKey}`} />
+              <LevelProgress key={`level-${refreshKey}`} />
+              <DailyRewards key={`rewards-${refreshKey}`} />
             </div>
           </div>
         )}
