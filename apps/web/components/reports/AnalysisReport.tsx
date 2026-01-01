@@ -235,16 +235,41 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 8,
   },
-  // Footer
+  // Footer with disclaimer
   footer: {
     position: 'absolute',
     bottom: 20,
     left: 40,
     right: 40,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    fontSize: 9,
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  footerText: {
+    fontSize: 8,
     color: '#9ca3af',
+  },
+  footerDisclaimer: {
+    fontSize: 7,
+    color: '#9ca3af',
+    lineHeight: 1.4,
+    textAlign: 'center',
+  },
+  poweredBy: {
+    fontSize: 10,
+    color: '#6b7280',
+    marginTop: 20,
+  },
+  geminiLogo: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: '#4285F4',
   },
   disclaimer: {
     marginTop: 30,
@@ -356,6 +381,21 @@ interface AnalysisReportData {
   };
 }
 
+// Disclaimer text constant
+const DISCLAIMER_TEXT = "Bu rapor yatırım tavsiyesi değildir. Kripto paralar yüksek risk içerir. Yatırım kararlarınızı kendi araştırmanıza dayandırın.";
+
+// Reusable Footer Component
+const PageFooter = ({ pageNumber }: { pageNumber: number }) => (
+  <View style={styles.footer}>
+    <View style={styles.footerRow}>
+      <Text style={styles.footerText}>TradePath Analysis Report</Text>
+      <Text style={styles.footerText}>Powered by Gemini 2.5 Flash</Text>
+      <Text style={styles.footerText}>Page {pageNumber}</Text>
+    </View>
+    <Text style={styles.footerDisclaimer}>{DISCLAIMER_TEXT}</Text>
+  </View>
+);
+
 // PDF Document Component
 const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
   const getVerdictColor = () => {
@@ -374,7 +414,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           <Text style={styles.subtitle}>AI-Powered Trading Analysis</Text>
 
           <Text style={styles.coverTitle}>7-Step Analysis Report</Text>
-          <Text style={styles.coverSymbol}>{data.symbol}</Text>
+          <Text style={styles.coverSymbol}>{data.symbol}/USDT</Text>
 
           <Text style={styles.coverMeta}>Generated: {data.generatedAt}</Text>
           <Text style={styles.coverMeta}>Analysis ID: {data.analysisId}</Text>
@@ -383,12 +423,13 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             <Text style={styles.verdictText}>{data.verdict.action}</Text>
             <Text style={styles.scoreText}>Score: {data.verdict.overallScore}/10</Text>
           </View>
+
+          {/* Powered by Gemini */}
+          <Text style={styles.poweredBy}>Powered by</Text>
+          <Text style={styles.geminiLogo}>Google Gemini 2.5 Flash</Text>
         </View>
 
-        <View style={styles.footer}>
-          <Text>TradePath Analysis Report</Text>
-          <Text>Page 1</Text>
-        </View>
+        <PageFooter pageNumber={1} />
       </Page>
 
       {/* Market Pulse & Asset Scan */}
@@ -488,10 +529,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </View>
         )}
 
-        <View style={styles.footer}>
-          <Text>TradePath Analysis Report</Text>
-          <Text>Page 2</Text>
-        </View>
+        <PageFooter pageNumber={2} />
       </Page>
 
       {/* Safety Check & Timing */}
@@ -580,10 +618,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </View>
         )}
 
-        <View style={styles.footer}>
-          <Text>TradePath Analysis Report</Text>
-          <Text>Page 3</Text>
-        </View>
+        <PageFooter pageNumber={3} />
       </Page>
 
       {/* Trade Plan */}
@@ -662,10 +697,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           ))}
         </View>
 
-        <View style={styles.footer}>
-          <Text>TradePath Analysis Report</Text>
-          <Text>Page 4</Text>
-        </View>
+        <PageFooter pageNumber={4} />
       </Page>
 
       {/* Trap Check & Final Verdict */}
@@ -779,10 +811,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </Text>
         </View>
 
-        <View style={styles.footer}>
-          <Text>TradePath Analysis Report</Text>
-          <Text>Page 5</Text>
-        </View>
+        <PageFooter pageNumber={5} />
       </Page>
     </Document>
   );
