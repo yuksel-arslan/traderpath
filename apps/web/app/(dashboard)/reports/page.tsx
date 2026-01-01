@@ -80,7 +80,7 @@ export default function ReportsPage() {
   }, [pagination.offset]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Bu raporu silmek istediğinize emin misiniz?')) return;
+    if (!confirm('Are you sure you want to delete this report?')) return;
 
     try {
       const token = localStorage.getItem('accessToken');
@@ -119,7 +119,7 @@ export default function ReportsPage() {
       }
     } catch (error) {
       console.error('Failed to download report:', error);
-      alert('Rapor indirilemedi');
+      alert('Failed to download report');
     }
   };
 
@@ -141,9 +141,9 @@ export default function ReportsPage() {
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
 
-    if (days > 0) return `${days} gün kaldı`;
-    if (hours > 0) return `${hours} saat kaldı`;
-    return 'Yakında sona erecek';
+    if (days > 0) return `${days} days remaining`;
+    if (hours > 0) return `${hours} hours remaining`;
+    return 'Expiring soon';
   };
 
   const filteredReports = reports
@@ -157,8 +157,8 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Raporlarım</h1>
-          <p className="text-muted-foreground">Kayıtlı analiz raporlarınız</p>
+          <h1 className="text-3xl font-bold">My Reports</h1>
+          <p className="text-muted-foreground">Your saved analysis reports</p>
         </div>
         <button
           onClick={fetchReports}
@@ -166,7 +166,7 @@ export default function ReportsPage() {
           className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition disabled:opacity-50"
         >
           <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
-          Yenile
+          Refresh
         </button>
       </div>
 
@@ -176,7 +176,7 @@ export default function ReportsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Coin ara..."
+            placeholder="Search coin..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-card border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
@@ -184,7 +184,7 @@ export default function ReportsPage() {
         </div>
         <div className="flex gap-2">
           {[
-            { value: 'all', label: 'Tümü' },
+            { value: 'all', label: 'All' },
             { value: 'long', label: 'Long' },
             { value: 'short', label: 'Short' },
           ].map((f) => (
@@ -212,15 +212,15 @@ export default function ReportsPage() {
       ) : filteredReports.length === 0 ? (
         <div className="text-center py-20">
           <FileText className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-          <h3 className="text-xl font-semibold mb-2">Henüz rapor yok</h3>
+          <h3 className="text-xl font-semibold mb-2">No reports yet</h3>
           <p className="text-muted-foreground mb-4">
-            Analiz sayfasından rapor oluşturabilirsiniz
+            You can create reports from the analysis page
           </p>
           <button
             onClick={() => router.push('/analyze')}
             className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition"
           >
-            Analiz Yap
+            Start Analysis
           </button>
         </div>
       ) : (
@@ -256,7 +256,7 @@ export default function ReportsPage() {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {new Date(report.generatedAt).toLocaleDateString('tr-TR', {
+                      {new Date(report.generatedAt).toLocaleDateString('en-US', {
                         day: 'numeric',
                         month: 'long',
                         year: 'numeric',
@@ -276,7 +276,7 @@ export default function ReportsPage() {
                     )}>
                       {report.verdict}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">Karar</p>
+                    <p className="text-xs text-muted-foreground mt-1">Verdict</p>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold">{report.score}</div>
@@ -301,14 +301,14 @@ export default function ReportsPage() {
                   <button
                     onClick={() => handleDownload(report)}
                     className="p-2 rounded-lg hover:bg-accent transition"
-                    title="İndir"
+                    title="Download"
                   >
                     <Download className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => handleDelete(report.id)}
                     className="p-2 rounded-lg hover:bg-red-500/10 text-red-500 transition"
-                    title="Sil"
+                    title="Delete"
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
@@ -318,7 +318,7 @@ export default function ReportsPage() {
               {/* Download count */}
               {report.downloadCount > 0 && (
                 <div className="mt-3 pt-3 border-t text-sm text-muted-foreground">
-                  {report.downloadCount} kez indirildi
+                  Downloaded {report.downloadCount} times
                 </div>
               )}
             </div>
@@ -334,7 +334,7 @@ export default function ReportsPage() {
             disabled={pagination.offset === 0}
             className="px-4 py-2 bg-card border rounded-lg hover:bg-accent transition disabled:opacity-50"
           >
-            Önceki
+            Previous
           </button>
           <span className="px-4 py-2 text-muted-foreground">
             {Math.floor(pagination.offset / pagination.limit) + 1} / {Math.ceil(pagination.total / pagination.limit)}
@@ -344,7 +344,7 @@ export default function ReportsPage() {
             disabled={pagination.offset + pagination.limit >= pagination.total}
             className="px-4 py-2 bg-card border rounded-lg hover:bg-accent transition disabled:opacity-50"
           >
-            Sonraki
+            Next
           </button>
         </div>
       )}
@@ -354,10 +354,10 @@ export default function ReportsPage() {
         <div className="flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-blue-500 mt-0.5" />
           <div className="text-sm text-blue-400">
-            <p className="font-medium text-blue-500 mb-1">Rapor Geçerliliği</p>
+            <p className="font-medium text-blue-500 mb-1">Report Validity</p>
             <p>
-              Raporlar, ayarlarınızda belirlediğiniz süre sonunda otomatik olarak silinir.
-              Varsayılan geçerlilik süresi 50 periyottur (4 saatlik grafik için yaklaşık 8 gün).
+              Reports are automatically deleted after the period you set in your settings.
+              Default validity period is 50 periods (approximately 8 days for 4-hour chart).
             </p>
           </div>
         </div>

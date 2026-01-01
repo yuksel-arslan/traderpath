@@ -59,47 +59,47 @@ function generateLevelExplanation(data: TradePlanData): string {
   let explanation = '';
 
   // Entry explanation
-  explanation += `📍 GİRİŞ SEVİYELERİ: `;
+  explanation += `📍 ENTRY LEVELS: `;
   if (entryCount > 1) {
-    explanation += `${entryCount} kademeli giriş (DCA) stratejisi planlandı. `;
+    explanation += `${entryCount} staged entry (DCA) strategy planned. `;
     explanation += isLong
-      ? `Fiyat düştükçe daha düşük fiyattan alım yaparak ortalama maliyetinizi optimize edebilirsiniz.`
-      : `Fiyat yükseldikçe daha yüksek fiyattan short açarak ortalama giriş fiyatınızı iyileştirebilirsiniz.`;
+      ? `As price drops, you can optimize your average cost by buying at lower prices.`
+      : `As price rises, you can improve your average entry by opening shorts at higher prices.`;
   } else {
-    explanation += `Tek noktadan giriş öneriliyor. Mevcut fiyat teknik açıdan uygun bir giriş noktası sunuyor.`;
+    explanation += `Single point entry recommended. Current price offers a technically suitable entry point.`;
   }
 
   // Stop loss explanation
-  explanation += `\n\n🛑 STOP LOSS SEVİYESİ: `;
+  explanation += `\n\n🛑 STOP LOSS LEVEL: `;
   if (data.stopLoss?.reason) {
     explanation += data.stopLoss.reason;
   } else {
     explanation += isLong
-      ? `Önemli destek seviyesinin altına yerleştirildi. Bu seviye kırılırsa trend yapısı bozulmuş sayılır ve pozisyondan çıkılmalıdır.`
-      : `Önemli direnç seviyesinin üstüne yerleştirildi. Bu seviye kırılırsa düşüş trendi geçersiz olur.`;
+      ? `Placed below significant support level. If this level breaks, trend structure is considered damaged and position should be exited.`
+      : `Placed above significant resistance level. If this level breaks, downtrend becomes invalid.`;
   }
 
   // Take profit explanation
   if (tpCount > 0) {
-    explanation += `\n\n🎯 KÂR ALMA HEDEFLERİ: ${tpCount} hedef belirlendi. `;
+    explanation += `\n\n🎯 TAKE PROFIT TARGETS: ${tpCount} targets set. `;
     if (tpCount >= 2) {
-      explanation += `Kademeli çıkış stratejisi: İlk hedefte pozisyonun bir kısmını kapatarak kârı realize edin, stop loss'u başabaşa çekin ve kalan pozisyonla daha yüksek hedefleri bekleyin.`;
+      explanation += `Staged exit strategy: Realize profit by closing part of position at first target, move stop loss to breakeven, and wait for higher targets with remaining position.`;
     } else {
-      explanation += `Hedef seviyesi önceki swing noktası veya Fibonacci uzantısına göre belirlendi.`;
+      explanation += `Target level determined based on previous swing point or Fibonacci extension.`;
     }
   }
 
   // Risk/Reward analysis
   if (data.riskReward > 0) {
-    explanation += `\n\n📊 RİSK/ÖDÜL ANALİZİ: ${data.riskReward.toFixed(1)}:1 oranı `;
+    explanation += `\n\n📊 RISK/REWARD ANALYSIS: ${data.riskReward.toFixed(1)}:1 ratio is `;
     if (data.riskReward >= 3) {
-      explanation += `mükemmel - her 1 birim risk için ${data.riskReward.toFixed(1)} birim potansiyel kazanç. Bu setup yüksek kaliteli.`;
+      explanation += `excellent - ${data.riskReward.toFixed(1)} units potential gain for every 1 unit of risk. This is a high quality setup.`;
     } else if (data.riskReward >= 2) {
-      explanation += `çok iyi - profesyonel trader'ların tercih ettiği oran.`;
+      explanation += `very good - the ratio preferred by professional traders.`;
     } else if (data.riskReward >= 1.5) {
-      explanation += `kabul edilebilir - disiplinli risk yönetimi şart.`;
+      explanation += `acceptable - disciplined risk management is essential.`;
     } else {
-      explanation += `düşük - yalnızca çok yüksek olasılıklı setuplarda değerlendirilmeli.`;
+      explanation += `low - should only be considered for very high probability setups.`;
     }
   }
 
@@ -148,7 +148,7 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-xl font-bold">
           <FileText className="w-6 h-6 text-indigo-500" />
-          İşlem Planı - {symbol}/USDT
+          Trade Plan - {symbol}/USDT
         </h3>
         <div className={cn(
           "px-4 py-2 rounded-lg font-bold text-lg",
@@ -179,15 +179,15 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
           </div>
           <div className="flex gap-8">
             <div className="text-center">
-              <p className="text-sm text-muted-foreground">Risk/Ödül</p>
+              <p className="text-sm text-muted-foreground">Risk/Reward</p>
               <p className="font-bold text-2xl">{(data.riskReward ?? 0).toFixed(1)}:1</p>
             </div>
             <div className="text-center">
-              <p className="text-sm text-muted-foreground">Kazanma %</p>
+              <p className="text-sm text-muted-foreground">Win Rate %</p>
               <p className="font-bold text-2xl text-blue-500">{data.winRateEstimate ?? 0}%</p>
             </div>
             <div className="text-center">
-              <p className="text-sm text-muted-foreground">Pozisyon</p>
+              <p className="text-sm text-muted-foreground">Position</p>
               <p className="font-bold text-2xl">{data.positionSizePercent ?? 0}%</p>
             </div>
           </div>
@@ -199,10 +199,10 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
         <div className="bg-indigo-500/10 px-4 py-3 border-b border-indigo-500/20">
           <h4 className="font-semibold flex items-center gap-2">
             <Target className="w-5 h-5 text-indigo-500" />
-            📊 Görsel İşlem Planı
+            📊 Visual Trade Plan
           </h4>
           <p className="text-xs text-muted-foreground mt-1">
-            Giriş (mavi), Stop Loss (kırmızı) ve Take Profit (yeşil) seviyeleri grafik üzerinde gösterilmektedir
+            Entry (blue), Stop Loss (red) and Take Profit (green) levels are shown on the chart
           </p>
         </div>
         <TradePlanChart
@@ -225,7 +225,7 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
           </div>
           <div className="flex-1">
             <h4 className="font-bold text-lg mb-3 text-indigo-400">
-              🤖 AI Açıklaması: Bu Seviyeler Neden Seçildi?
+              🤖 AI Explanation: Why Were These Levels Selected?
             </h4>
             <div className="text-sm leading-relaxed whitespace-pre-line">
               {levelExplanation}
@@ -237,7 +237,7 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-cyan-500/10 rounded-xl p-4 border border-cyan-500/20">
-          <p className="text-sm text-cyan-500 font-medium">Ort. Giriş</p>
+          <p className="text-sm text-cyan-500 font-medium">Avg. Entry</p>
           <p className="text-2xl font-bold">${averageEntry.toLocaleString()}</p>
         </div>
         <div className="bg-red-500/10 rounded-xl p-4 border border-red-500/20">
@@ -246,14 +246,14 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
           <p className="text-xs text-red-400">-{riskPercent.toFixed(2)}%</p>
         </div>
         <div className="bg-green-500/10 rounded-xl p-4 border border-green-500/20">
-          <p className="text-sm text-green-500 font-medium">İlk Hedef</p>
+          <p className="text-sm text-green-500 font-medium">First Target</p>
           <p className="text-2xl font-bold">${data.takeProfits?.[0]?.price?.toLocaleString() || '-'}</p>
           <p className="text-xs text-green-400">{(data.takeProfits?.[0]?.riskReward ?? 0).toFixed(1)}R</p>
         </div>
         <div className="bg-background rounded-xl p-4 border">
           <p className="text-sm text-muted-foreground font-medium">Risk</p>
           <p className="text-2xl font-bold">${data.riskAmount?.toLocaleString() || '-'}</p>
-          <p className="text-xs text-muted-foreground">%{data.positionSizePercent ?? 0} portföy</p>
+          <p className="text-xs text-muted-foreground">{data.positionSizePercent ?? 0}% portfolio</p>
         </div>
       </div>
 
@@ -262,7 +262,7 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
         onClick={() => setShowDetails(!showDetails)}
         className="w-full flex items-center justify-between p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors"
       >
-        <span className="font-semibold">📋 Detaylı Giriş & Çıkış Seviyeleri</span>
+        <span className="font-semibold">📋 Detailed Entry & Exit Levels</span>
         {showDetails ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
       </button>
 
@@ -271,7 +271,7 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
           {/* Entry Levels */}
           {data.entries && data.entries.length > 0 && (
             <div className="bg-cyan-500/5 rounded-xl p-4 border border-cyan-500/20">
-              <p className="text-sm font-semibold mb-3 text-cyan-500">Giriş Seviyeleri (DCA)</p>
+              <p className="text-sm font-semibold mb-3 text-cyan-500">Entry Levels (DCA)</p>
               <div className="space-y-2">
                 {data.entries.map((entry, i) => (
                   <div key={i} className="flex items-center justify-between p-3 bg-cyan-500/10 rounded-lg">
@@ -279,7 +279,7 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
                       <span className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center text-sm font-bold text-cyan-500">
                         {i + 1}
                       </span>
-                      <span className="text-sm text-muted-foreground">{entry.type || `Giriş ${i + 1}`}</span>
+                      <span className="text-sm text-muted-foreground">{entry.type || `Entry ${i + 1}`}</span>
                     </div>
                     <div className="text-right">
                       <span className="font-bold text-cyan-500 text-lg">${(entry.price ?? 0).toLocaleString()}</span>
@@ -323,7 +323,7 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
           <div className="bg-red-500/5 rounded-xl p-4 border border-red-500/20">
             <p className="text-sm font-semibold mb-3 text-red-500 flex items-center gap-2">
               <AlertCircle className="w-4 h-4" />
-              Stop Loss Detayı
+              Stop Loss Details
             </p>
             <div className="p-3 bg-red-500/10 rounded-lg">
               <div className="flex items-center justify-between">
@@ -346,7 +346,7 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
           <div className="flex items-start gap-4">
             <Brain className="w-6 h-6 text-purple-500 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="font-semibold text-purple-500 mb-2">🧠 AI İşlem Analizi</p>
+              <p className="font-semibold text-purple-500 mb-2">🧠 AI Trade Analysis</p>
               <p className="text-sm leading-relaxed">{data.aiInsight}</p>
             </div>
           </div>
@@ -358,7 +358,7 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
         <div className="flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-muted-foreground">
-            <strong className="text-yellow-500">Risk Uyarısı:</strong> Bu analiz Gemini 2.5 Flash ile hazırlanmıştır ve yatırım tavsiyesi değildir. Kripto para piyasaları yüksek risk içerir. Kaybetmeyi göze alabileceğiniz miktardan fazlasını yatırmayın.
+            <strong className="text-yellow-500">Risk Warning:</strong> This analysis was prepared with Gemini 2.5 Flash and is not investment advice. Cryptocurrency markets carry high risk. Do not invest more than you can afford to lose.
           </p>
         </div>
       </div>
