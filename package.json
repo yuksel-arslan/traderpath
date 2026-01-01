@@ -10,15 +10,10 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "docker compose up -d && turbo run dev",
-    "dev:no-docker": "turbo run dev",
+    "dev": "turbo run dev",
+    "dev:docker": "docker compose up -d && turbo run dev",
     "build": "turbo run build",
-    "start": "docker compose up -d && turbo run start",
-    "stop": "docker compose down",
-    "services:start": "docker compose up -d",
-    "services:stop": "docker compose down",
-    "services:logs": "docker compose logs -f",
-    "services:reset": "docker compose down -v && docker compose up -d",
+    "start": "turbo run start",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "clean": "turbo run clean && rm -rf node_modules",
