@@ -4,7 +4,7 @@
 // ===========================================
 
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { prisma } from '../../lib/prisma';
+import { prisma } from '../../core/database';
 import { authenticate } from '../../middleware/auth';
 
 interface SaveReportBody {
