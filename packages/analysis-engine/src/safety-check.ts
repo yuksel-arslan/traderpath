@@ -1,6 +1,6 @@
 // Step 3: Safety Check (5 credits)
 
-import type { RiskLevel, AnalysisResult, AnalysisConfig } from './types';
+import type { RiskLevel, AnalysisResult, AnalysisConfig, NewsSentimentResult } from './types';
 
 export interface SafetyCheckResult {
   manipulation: {
@@ -44,6 +44,7 @@ export interface SafetyCheckResult {
     positioning: 'long' | 'short' | 'neutral';
     confidence: number;
   };
+  newsSentiment?: NewsSentimentResult;
   riskLevel: RiskLevel;
   warnings: string[];
   score: number;

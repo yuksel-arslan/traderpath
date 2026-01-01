@@ -1,6 +1,6 @@
 // Step 1: Market Pulse Analysis (FREE)
 
-import type { MarketRegime, TrendDirection, AnalysisResult } from './types';
+import type { MarketRegime, TrendDirection, AnalysisResult, NewsSentimentResult } from './types';
 
 export interface MarketPulseResult {
   btcDominance: number;
@@ -21,6 +21,7 @@ export interface MarketPulseResult {
     impact: 'high' | 'medium' | 'low';
     description: string;
   }>;
+  btcNewsSentiment?: NewsSentimentResult;
   summary: string;
   verdict: 'suitable' | 'caution' | 'avoid';
 }

@@ -479,6 +479,224 @@ async function fetchFearGreedIndex(): Promise<FearGreedData> {
 }
 
 // ===========================================
+// News Sentiment Analysis
+// ===========================================
+
+interface NewsItem {
+  title: string;
+  source: string;
+  publishedAt: string;
+  sentiment: 'positive' | 'negative' | 'neutral';
+  relevance: number;
+  url?: string;
+}
+
+interface NewsSentimentResult {
+  overallSentiment: 'bullish' | 'bearish' | 'neutral';
+  sentimentScore: number; // -100 to +100
+  newsCount: number;
+  positiveCount: number;
+  negativeCount: number;
+  neutralCount: number;
+  topNews: NewsItem[];
+  lastUpdated: string;
+}
+
+// Simple sentiment keywords for crypto news
+const BULLISH_KEYWORDS = [
+  'surge', 'rally', 'bullish', 'breakout', 'ath', 'all-time high', 'soars',
+  'pumps', 'moon', 'adoption', 'institutional', 'etf approved', 'partnership',
+  'upgrade', 'halving', 'accumulation', 'whales buying', 'buy signal',
+  'outperform', 'breakthrough', 'milestone', 'record', 'boom', 'growth',
+];
+
+const BEARISH_KEYWORDS = [
+  'crash', 'dump', 'bearish', 'plunge', 'sell-off', 'selloff', 'collapse',
+  'fear', 'hack', 'exploit', 'scam', 'fraud', 'ban', 'regulation', 'lawsuit',
+  'sec', 'investigation', 'warning', 'risk', 'bubble', 'correction',
+  'capitulation', 'liquidation', 'bankrupt', 'insolvent', 'loss', 'decline',
+];
+
+/**
+ * Analyze sentiment of a news title using keyword matching
+ */
+function analyzeNewsSentiment(title: string): {
+  sentiment: 'positive' | 'negative' | 'neutral';
+  score: number;
+} {
+  const lowerTitle = title.toLowerCase();
+
+  let bullishScore = 0;
+  let bearishScore = 0;
+
+  for (const keyword of BULLISH_KEYWORDS) {
+    if (lowerTitle.includes(keyword)) {
+      bullishScore += 1;
+    }
+  }
+
+  for (const keyword of BEARISH_KEYWORDS) {
+    if (lowerTitle.includes(keyword)) {
+      bearishScore += 1;
+    }
+  }
+
+  const netScore = bullishScore - bearishScore;
+
+  if (netScore > 0) {
+    return { sentiment: 'positive', score: Math.min(100, netScore * 25) };
+  } else if (netScore < 0) {
+    return { sentiment: 'negative', score: Math.max(-100, netScore * 25) };
+  }
+
+  return { sentiment: 'neutral', score: 0 };
+}
+
+/**
+ * Fetch and analyze crypto news for a specific symbol
+ * Supports CryptoPanic API format
+ */
+async function fetchNewsSentiment(symbol: string): Promise<NewsSentimentResult> {
+  const cacheKey = `news_sentiment_${symbol}`;
+  const cached = getCached<NewsSentimentResult>(cacheKey);
+  if (cached) return cached;
+
+  const NEWS_API_KEY = process.env.NEWS_API_KEY;
+  const NEWS_API_URL = process.env.NEWS_API_URL || 'https://cryptopanic.com/api/v1';
+
+  // Default result if no API key or error
+  const defaultResult: NewsSentimentResult = {
+    overallSentiment: 'neutral',
+    sentimentScore: 0,
+    newsCount: 0,
+    positiveCount: 0,
+    negativeCount: 0,
+    neutralCount: 0,
+    topNews: [],
+    lastUpdated: new Date().toISOString(),
+  };
+
+  if (!NEWS_API_KEY) {
+    return defaultResult;
+  }
+
+  try {
+    // CryptoPanic API format
+    const url = `${NEWS_API_URL}/posts/?auth_token=${NEWS_API_KEY}&currencies=${symbol}&kind=news&filter=important`;
+
+    const response = await fetchWithRetry(url, { timeout: 8000 });
+    const data = await response.json();
+
+    if (!data.results || !Array.isArray(data.results)) {
+      return defaultResult;
+    }
+
+    const newsItems: NewsItem[] = [];
+    let totalScore = 0;
+    let positiveCount = 0;
+    let negativeCount = 0;
+    let neutralCount = 0;
+
+    for (const item of data.results.slice(0, 20)) {
+      const { sentiment, score } = analyzeNewsSentiment(item.title);
+
+      // Also use CryptoPanic's own sentiment if available
+      let finalSentiment = sentiment;
+      if (item.votes) {
+        const netVotes = (item.votes.positive || 0) - (item.votes.negative || 0);
+        if (netVotes > 2) finalSentiment = 'positive';
+        else if (netVotes < -2) finalSentiment = 'negative';
+      }
+
+      newsItems.push({
+        title: item.title,
+        source: item.source?.title || 'Unknown',
+        publishedAt: item.published_at,
+        sentiment: finalSentiment,
+        relevance: item.votes?.important || 0,
+        url: item.url,
+      });
+
+      totalScore += score;
+      if (finalSentiment === 'positive') positiveCount++;
+      else if (finalSentiment === 'negative') negativeCount++;
+      else neutralCount++;
+    }
+
+    const avgScore = newsItems.length > 0 ? totalScore / newsItems.length : 0;
+
+    let overallSentiment: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+    if (avgScore > 15) overallSentiment = 'bullish';
+    else if (avgScore < -15) overallSentiment = 'bearish';
+
+    const result: NewsSentimentResult = {
+      overallSentiment,
+      sentimentScore: Math.round(avgScore),
+      newsCount: newsItems.length,
+      positiveCount,
+      negativeCount,
+      neutralCount,
+      topNews: newsItems.slice(0, 5),
+      lastUpdated: new Date().toISOString(),
+    };
+
+    // Cache for 15 minutes
+    setCache(cacheKey, result, 15 * 60 * 1000);
+    return result;
+  } catch (error) {
+    logger.warn(`Failed to fetch news sentiment for ${symbol}:`, error);
+    return defaultResult;
+  }
+}
+
+/**
+ * Get Gemini AI enhanced sentiment analysis
+ */
+async function getAISentimentAnalysis(
+  symbol: string,
+  newsItems: NewsItem[],
+  priceChange24h: number
+): Promise<string> {
+  if (newsItems.length === 0) {
+    return 'No recent news available for sentiment analysis.';
+  }
+
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  if (!GEMINI_API_KEY) {
+    return `Based on ${newsItems.length} news items: ${newsItems.filter(n => n.sentiment === 'positive').length} positive, ${newsItems.filter(n => n.sentiment === 'negative').length} negative.`;
+  }
+
+  const headlines = newsItems.slice(0, 10).map(n => `- ${n.title} (${n.sentiment})`).join('\n');
+
+  const prompt = `Analyze these recent ${symbol} crypto news headlines and provide a brief (2-3 sentences) market sentiment summary. Consider the 24h price change of ${priceChange24h.toFixed(2)}%.
+
+Headlines:
+${headlines}
+
+Focus on: What's driving sentiment? Any notable events? Is news aligned with price action?`;
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 200 },
+        }),
+      }
+    );
+
+    const data = await response.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text ||
+           `${newsItems.length} news items analyzed. Sentiment: ${newsItems.filter(n => n.sentiment === 'positive').length > newsItems.filter(n => n.sentiment === 'negative').length ? 'positive' : 'mixed'}.`;
+  } catch {
+    return `${newsItems.length} recent news items. ${newsItems.filter(n => n.sentiment === 'positive').length} positive, ${newsItems.filter(n => n.sentiment === 'negative').length} negative signals detected.`;
+  }
+}
+
+// ===========================================
 // Technical Indicators - Accurate Implementation
 // ===========================================
 
@@ -972,11 +1190,12 @@ export const analysisEngine = {
   // Step 1: Market Pulse (FREE)
   // =========================================
   async getMarketPulse(): Promise<MarketPulseResult> {
-    const [btcData, ethData, globalMetrics, fearGreed] = await Promise.all([
+    const [btcData, ethData, globalMetrics, fearGreed, btcNewsSentiment] = await Promise.all([
       fetch24hTicker('BTC'),
       fetch24hTicker('ETH'),
       fetchGlobalMetrics(),
       fetchFearGreedIndex(),
+      fetchNewsSentiment('BTC'),
     ]);
 
     // Fetch BTC candles for trend analysis
@@ -1037,7 +1256,10 @@ export const analysisEngine = {
     if (btcTrend.direction === 'bullish') score += 1;
     if (fearGreed.value >= 50 && fearGreed.value <= 75) score += 1;
     if (timeframesAligned >= 3) score += 1;
-    score = Math.max(1, Math.min(10, score));
+    // News sentiment bonus/penalty
+    if (btcNewsSentiment.overallSentiment === 'bullish') score += 0.5;
+    else if (btcNewsSentiment.overallSentiment === 'bearish') score -= 0.5;
+    score = Math.max(1, Math.min(10, parseFloat(score.toFixed(1))));
 
     const summary = `Piyasa ${fearGreedLabel === 'extreme_fear' ? 'aşırı korku' :
       fearGreedLabel === 'fear' ? 'korku' :
@@ -1058,6 +1280,18 @@ export const analysisEngine = {
         direction: btcTrend.direction,
         strength: btcTrend.strength,
         timeframesAligned,
+      },
+      newsSentiment: {
+        overall: btcNewsSentiment.overallSentiment,
+        score: btcNewsSentiment.sentimentScore,
+        newsCount: btcNewsSentiment.newsCount,
+        positiveCount: btcNewsSentiment.positiveCount,
+        negativeCount: btcNewsSentiment.negativeCount,
+        topHeadlines: btcNewsSentiment.topNews.slice(0, 3).map(n => ({
+          title: n.title,
+          source: n.source,
+          sentiment: n.sentiment,
+        })),
       },
       macroEvents: [], // Would require external API for real events
       summary,
@@ -1217,11 +1451,12 @@ export const analysisEngine = {
   // Step 3: Safety Check (5 credits)
   // =========================================
   async safetyCheck(symbol: string): Promise<SafetyCheckResult> {
-    const [ticker, candles1h, orderBook, recentTrades] = await Promise.all([
+    const [ticker, candles1h, orderBook, recentTrades, newsSentiment] = await Promise.all([
       fetch24hTicker(symbol),
       fetchKlines(symbol, '1h', 100),
       fetchOrderBook(symbol, 100),
       fetchRecentTrades(symbol, 500),
+      fetchNewsSentiment(symbol),
     ]);
 
     const volumes = candles1h.map((c) => c.volume);
@@ -1388,6 +1623,15 @@ export const analysisEngine = {
       warnings.push(`High volatility: ${historicalVol.toFixed(0)}% annualized`);
       riskScore -= 5;
     }
+    // News sentiment warnings
+    if (newsSentiment.overallSentiment === 'bearish' && newsSentiment.newsCount > 0) {
+      warnings.push(`Negative news sentiment: ${newsSentiment.negativeCount}/${newsSentiment.newsCount} bearish headlines`);
+      riskScore -= 8;
+    }
+    if (newsSentiment.sentimentScore < -30) {
+      warnings.push(`Strong negative sentiment in news (score: ${newsSentiment.sentimentScore})`);
+      riskScore -= 5;
+    }
 
     let riskLevel: 'low' | 'medium' | 'high' = 'low';
     if (riskScore < 50) riskLevel = 'high';
@@ -1431,6 +1675,18 @@ export const analysisEngine = {
         historicalVolatility: historicalVol,
         liquidityScore,
         bidAskSpread: Math.round(bidAskSpread * 10000) / 10000,
+      },
+      newsSentiment: {
+        overall: newsSentiment.overallSentiment,
+        score: newsSentiment.sentimentScore,
+        newsCount: newsSentiment.newsCount,
+        positiveCount: newsSentiment.positiveCount,
+        negativeCount: newsSentiment.negativeCount,
+        topHeadlines: newsSentiment.topNews.slice(0, 3).map(n => ({
+          title: n.title,
+          source: n.source,
+          sentiment: n.sentiment,
+        })),
       },
       exchangeFlows: [
         {
