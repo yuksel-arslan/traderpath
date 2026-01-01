@@ -8,55 +8,55 @@
 import { CoinSelector } from '../../../components/common/CoinSelector';
 import { RecentAnalyses } from '../../../components/analysis/RecentAnalyses';
 import { CreditBalance } from '../../../components/credits/CreditBalance';
-import { TrendingUp, BarChart3, Shield, Clock, Target, AlertTriangle, CheckCircle } from 'lucide-react';
+import { TrendingUp, BarChart3, Shield, Clock, Target, AlertTriangle, CheckCircle, Sparkles } from 'lucide-react';
 
 const ANALYSIS_STEPS = [
   {
     icon: TrendingUp,
     title: 'Market Pulse',
-    description: 'Overall crypto market sentiment and conditions',
+    description: 'Market sentiment & conditions',
     color: 'text-blue-500',
     bgColor: 'bg-blue-500/10',
   },
   {
     icon: BarChart3,
     title: 'Asset Scanner',
-    description: 'Technical analysis and price levels',
+    description: 'Technical analysis & levels',
     color: 'text-green-500',
     bgColor: 'bg-green-500/10',
   },
   {
     icon: Shield,
     title: 'Safety Check',
-    description: 'Risk assessment and whale activity',
+    description: 'Risk & whale detection',
     color: 'text-yellow-500',
     bgColor: 'bg-yellow-500/10',
   },
   {
     icon: Clock,
-    title: 'Timing Analysis',
-    description: 'Optimal entry timing and conditions',
+    title: 'Timing',
+    description: 'Entry timing analysis',
     color: 'text-purple-500',
     bgColor: 'bg-purple-500/10',
   },
   {
     icon: Target,
     title: 'Trade Plan',
-    description: 'Entry, targets, and stop-loss levels',
+    description: 'Entry, TP & SL levels',
     color: 'text-cyan-500',
     bgColor: 'bg-cyan-500/10',
   },
   {
     icon: AlertTriangle,
     title: 'Trap Check',
-    description: 'Bull/bear trap and liquidity analysis',
+    description: 'Trap & liquidity analysis',
     color: 'text-orange-500',
     bgColor: 'bg-orange-500/10',
   },
   {
     icon: CheckCircle,
-    title: 'Final Verdict',
-    description: 'AI-powered trade recommendation',
+    title: 'Verdict',
+    description: 'AI recommendation',
     color: 'text-emerald-500',
     bgColor: 'bg-emerald-500/10',
   },
@@ -64,62 +64,79 @@ const ANALYSIS_STEPS = [
 
 export default function AnalyzePage() {
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-start mb-8">
         <div>
-          <h1 className="text-3xl font-bold">New Analysis</h1>
-          <p className="text-muted-foreground">
-            Get AI-powered trading insights in 7 comprehensive steps
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Sparkles className="w-8 h-8 text-primary" />
+            New Analysis
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            AI-powered trading insights in 7 steps
           </p>
         </div>
         <CreditBalance />
       </div>
 
-      {/* Coin Selector - Primary Focus */}
-      <div className="mb-10">
-        <div className="bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-cyan-500/10 rounded-xl p-6 border border-blue-500/20">
-          <h2 className="text-xl font-semibold mb-2">Select a Coin to Analyze</h2>
-          <p className="text-muted-foreground text-sm mb-4">
-            Enter a symbol or search from popular cryptocurrencies
-          </p>
-          <CoinSelector />
-        </div>
-      </div>
+      {/* Main Content - Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        {/* Left: Coin Selector */}
+        <div className="lg:col-span-3">
+          <div className="bg-card border rounded-2xl p-6">
+            <h2 className="text-lg font-semibold mb-4">Select Trading Pair</h2>
+            <CoinSelector />
+          </div>
 
-      {/* Analysis Steps Overview */}
-      <div className="mb-10">
-        <h2 className="text-xl font-semibold mb-4">What You'll Get</h2>
-        <p className="text-muted-foreground mb-6">
-          Each analysis includes 7 comprehensive steps powered by AI
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {ANALYSIS_STEPS.map((step, index) => (
-            <div
-              key={step.title}
-              className="relative p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-            >
-              <div className="flex items-start gap-3">
+          {/* Recent Analyses - Mobile */}
+          <div className="mt-6 lg:hidden">
+            <h2 className="text-lg font-semibold mb-4">Recent Analyses</h2>
+            <RecentAnalyses />
+          </div>
+        </div>
+
+        {/* Right: Analysis Steps Preview */}
+        <div className="lg:col-span-2">
+          <div className="bg-card border rounded-2xl p-5">
+            <h3 className="text-sm font-semibold text-muted-foreground mb-4">
+              7-STEP ANALYSIS INCLUDES
+            </h3>
+            <div className="space-y-3">
+              {ANALYSIS_STEPS.map((step, index) => (
                 <div
-                  className={`w-10 h-10 rounded-lg ${step.bgColor} flex items-center justify-center flex-shrink-0`}
+                  key={step.title}
+                  className="flex items-center gap-3"
                 >
-                  <step.icon className={`w-5 h-5 ${step.color}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs text-muted-foreground">Step {index + 1}</span>
+                  <div className={`w-8 h-8 rounded-lg ${step.bgColor} flex items-center justify-center flex-shrink-0`}>
+                    <step.icon className={`w-4 h-4 ${step.color}`} />
                   </div>
-                  <h3 className="font-medium text-sm">{step.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-1">{step.description}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{index + 1}.</span>
+                      <span className="font-medium text-sm">{step.title}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{step.description}</p>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          ))}
+
+            {/* Credit Cost Info */}
+            <div className="mt-5 pt-4 border-t">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Analysis cost</span>
+                <span className="font-semibold text-amber-500">5 credits</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                or use 1 of your daily free analyses
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Recent Analyses */}
-      <div>
+      {/* Recent Analyses - Desktop */}
+      <div className="hidden lg:block mt-10">
         <h2 className="text-xl font-semibold mb-4">Recent Analyses</h2>
         <RecentAnalyses />
       </div>
