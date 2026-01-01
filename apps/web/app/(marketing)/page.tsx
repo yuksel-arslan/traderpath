@@ -21,8 +21,12 @@ import {
   BarChart3,
   Activity,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  HelpCircle,
+  ChevronDown,
+  Play
 } from 'lucide-react';
+import { useState } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 
 // TradePath Logo Component with Trading Colors
@@ -136,9 +140,84 @@ const PRICING = [
   },
 ];
 
+const FAQS = [
+  {
+    question: 'What is TradePath and how does it work?',
+    answer: 'TradePath is an AI-powered trading analysis platform that runs your chosen cryptocurrency through 7 specialized analysis steps. In about 60 seconds, you get a complete trade plan with entry points, targets, stop-losses, and a final verdict on whether to trade or wait.',
+  },
+  {
+    question: 'Do I need to connect my exchange or wallet?',
+    answer: 'No! TradePath is purely an analysis tool. We never ask for your trading keys, wallet addresses, or exchange credentials. Your funds stay safe in your own accounts.',
+  },
+  {
+    question: 'How accurate is the analysis?',
+    answer: 'Our backtesting shows an 87% accuracy rate on trade direction predictions. However, we always recommend using our analysis as one input in your trading decisions, not as financial advice.',
+  },
+  {
+    question: 'What cryptocurrencies can I analyze?',
+    answer: 'We support 50+ major cryptocurrencies including BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, and many more. We continuously add new coins based on user demand.',
+  },
+  {
+    question: 'How does the credit system work?',
+    answer: 'You purchase credits upfront and spend them as you analyze. A full 7-step analysis costs 15 credits (or 20 if done step-by-step). You can also earn free credits daily through login bonuses, quizzes, and other activities.',
+  },
+  {
+    question: 'Can I get a refund if I\'m not satisfied?',
+    answer: 'Yes! We offer a 7-day money-back guarantee on your first credit purchase. If TradePath doesn\'t meet your expectations, contact support for a full refund.',
+  },
+];
+
+const LIVE_PRICES = [
+  { symbol: 'BTC', price: '67,234', change: '+2.4%', up: true },
+  { symbol: 'ETH', price: '3,521', change: '+1.8%', up: true },
+  { symbol: 'SOL', price: '142.50', change: '-0.5%', up: false },
+  { symbol: 'BNB', price: '612.30', change: '+3.1%', up: true },
+  { symbol: 'XRP', price: '0.542', change: '+0.8%', up: true },
+  { symbol: 'ADA', price: '0.451', change: '-1.2%', up: false },
+];
+
+// FAQ Accordion Component
+function FAQItem({ question, answer }: { question: string; answer: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full p-4 text-left flex items-center justify-between hover:bg-accent/50 transition"
+      >
+        <span className="font-semibold flex items-center gap-2">
+          <HelpCircle className="w-5 h-5 text-primary" />
+          {question}
+        </span>
+        <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="px-4 pb-4 text-muted-foreground">
+          {answer}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
+      {/* Live Price Ticker */}
+      <div className="bg-accent/50 border-b py-2 overflow-hidden">
+        <div className="flex gap-8 ticker-scroll whitespace-nowrap">
+          {[...LIVE_PRICES, ...LIVE_PRICES].map((coin, index) => (
+            <div key={index} className="flex items-center gap-2 text-sm">
+              <span className="font-medium">{coin.symbol}</span>
+              <span className="text-muted-foreground">${coin.price}</span>
+              <span className={coin.up ? 'text-green-500' : 'text-red-500'}>
+                {coin.change}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Header */}
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -181,18 +260,24 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 md:py-32">
-        <div className="container mx-auto px-4 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-full text-green-500 text-sm mb-6">
+      <section className="py-20 md:py-32 relative overflow-hidden">
+        {/* Background gradient orbs */}
+        <div className="absolute top-20 left-1/4 w-96 h-96 bg-green-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-red-500/10 rounded-full blur-3xl"></div>
+
+        <div className="container mx-auto px-4 text-center relative z-10">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-full text-green-500 text-sm mb-6 shimmer">
             <Zap className="w-4 h-4" />
             AI-Powered Trading Analysis
           </div>
           <div className="flex justify-center mb-8">
-            <TradePathLogo size="large" />
+            <div className="float">
+              <TradePathLogo size="large" />
+            </div>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
             From Analysis to Action{' '}
-            <span className="bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">
+            <span className="gradient-text-animate">
               in 60 Seconds
             </span>
           </h1>
@@ -203,16 +288,17 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/register"
-              className="px-8 py-4 bg-gradient-to-r from-red-500 via-amber-500 to-green-500 text-white rounded-lg font-semibold hover:opacity-90 transition flex items-center justify-center gap-2 shadow-lg shadow-green-500/25"
+              className="px-8 py-4 gradient-animate text-white rounded-lg font-semibold hover:scale-105 transition-transform flex items-center justify-center gap-2 shadow-lg pulse-glow"
             >
               Start Free Analysis
               <ArrowRight className="w-5 h-5" />
             </Link>
             <a
-              href="#how-it-works"
-              className="px-8 py-4 border rounded-lg font-semibold hover:bg-accent transition"
+              href="#see-it-in-action"
+              className="px-8 py-4 border rounded-lg font-semibold hover:bg-accent transition flex items-center justify-center gap-2"
             >
-              See How It Works
+              <Play className="w-5 h-5" />
+              See It In Action
             </a>
           </div>
           <p className="text-sm text-muted-foreground mt-4">
@@ -371,7 +457,7 @@ export default function LandingPage() {
       </section>
 
       {/* Live Analysis Preview */}
-      <section className="py-20 bg-accent/50">
+      <section id="see-it-in-action" className="py-20 bg-accent/50 scroll-mt-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -722,24 +808,74 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20">
+      {/* FAQ Section */}
+      <section id="faq" className="py-20">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center p-8 bg-gradient-to-r from-red-500/10 via-amber-500/10 to-green-500/10 border border-green-500/20 rounded-2xl">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Ready to Trade Smarter?
+              Frequently Asked Questions
             </h2>
-            <p className="text-muted-foreground mb-6">
-              Join thousands of traders using TradePath to make informed decisions.
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Everything you need to know about TradePath
+            </p>
+          </div>
+          <div className="max-w-3xl mx-auto space-y-4">
+            {FAQS.map((faq, index) => (
+              <FAQItem key={index} question={faq.question} answer={faq.answer} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* As Seen On / Media */}
+      <section className="py-16 bg-accent/50">
+        <div className="container mx-auto px-4">
+          <p className="text-center text-muted-foreground text-sm mb-8">TRUSTED BY TRADERS FROM</p>
+          <div className="flex flex-wrap items-center justify-center gap-8 md:gap-16 opacity-60">
+            {/* Placeholder logos - replace with actual partner/media logos */}
+            <div className="text-2xl font-bold text-muted-foreground">Binance</div>
+            <div className="text-2xl font-bold text-muted-foreground">Coinbase</div>
+            <div className="text-2xl font-bold text-muted-foreground">Kraken</div>
+            <div className="text-2xl font-bold text-muted-foreground">KuCoin</div>
+            <div className="text-2xl font-bold text-muted-foreground">Bybit</div>
+          </div>
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            *Users from these platforms trust TradePath for their trading analysis
+          </p>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 relative overflow-hidden">
+        {/* Background effects */}
+        <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-amber-500/5 to-green-500/5"></div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-3xl mx-auto text-center p-8 md:p-12 bg-card border rounded-2xl shadow-2xl">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-full text-green-500 text-sm mb-6">
+              <Zap className="w-4 h-4" />
+              Limited Time: 25 Free Credits
+            </div>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">
+              Ready to Trade{' '}
+              <span className="gradient-text-animate">Smarter?</span>
+            </h2>
+            <p className="text-xl text-muted-foreground mb-8">
+              Join 12,000+ traders who already use TradePath to make informed decisions.
               Start with 25 free credits today.
             </p>
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-red-500 via-amber-500 to-green-500 text-white rounded-lg font-semibold hover:opacity-90 transition shadow-lg shadow-green-500/25"
-            >
-              Create Free Account
-              <ChevronRight className="w-5 h-5" />
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/register"
+                className="px-8 py-4 gradient-animate text-white rounded-lg font-semibold hover:scale-105 transition-transform flex items-center justify-center gap-2 shadow-lg pulse-glow text-lg"
+              >
+                Start Free Analysis
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            </div>
+            <p className="text-sm text-muted-foreground mt-6">
+              No credit card required • 7-day money-back guarantee
+            </p>
           </div>
         </div>
       </section>
