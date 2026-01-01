@@ -43,8 +43,8 @@ export default function DashboardLayout({
     localStorage.removeItem('accessToken');
     // Clear cookie
     document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    // Redirect to login
-    router.push('/login');
+    // Redirect to welcome page
+    router.push('/');
   }, [router]);
 
   return (

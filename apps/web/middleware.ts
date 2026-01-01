@@ -1,6 +1,6 @@
 // ===========================================
 // Next.js Middleware
-// Protects dashboard routes - redirects to login if not authenticated
+// Protects dashboard routes - redirects to welcome page if not authenticated
 // ===========================================
 
 import { NextResponse } from 'next/server';
@@ -36,11 +36,9 @@ export function middleware(request: NextRequest) {
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 
-  // Redirect to login if accessing protected route without token
+  // Redirect to welcome page if accessing protected route without token
   if (isProtectedRoute && !accessToken) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   // Redirect to dashboard if accessing auth route with token
