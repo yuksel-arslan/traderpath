@@ -15,6 +15,7 @@ import {
   ISeriesApi,
   CandlestickData,
   Time,
+  IPriceLine,
 } from 'lightweight-charts';
 import { Loader2, TrendingUp, TrendingDown, Target, AlertTriangle } from 'lucide-react';
 
@@ -51,6 +52,7 @@ export function TradePlanChart({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const priceLinesRef = useRef<IPriceLine[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -143,11 +145,25 @@ export function TradePlanChart({
 
     const series = candleSeriesRef.current;
 
-    // Clear existing price lines
-    // Note: lightweight-charts doesn't have a clear method, so we recreate
+    // Clear existing price lines first
+    priceLinesRef.current.forEach((line) => {
+      try {
+        series.removePriceLine(line);
+      } catch (e) {
+        // Line may already be removed
+      }
+    });
+    priceLinesRef.current = [];
+
+    // Helper to create and track price lines
+    const addPriceLine = (options: Parameters<typeof series.createPriceLine>[0]) => {
+      const line = series.createPriceLine(options);
+      priceLinesRef.current.push(line);
+      return line;
+    };
 
     // Current price line
-    series.createPriceLine({
+    addPriceLine({
       price: currentPrice,
       color: '#3b82f6',
       lineWidth: 2,
@@ -159,7 +175,7 @@ export function TradePlanChart({
     // Entry levels (cyan/blue)
     entries?.forEach((entry, index) => {
       if (entry?.price) {
-        series.createPriceLine({
+        addPriceLine({
           price: entry.price,
           color: '#06b6d4',
           lineWidth: 2,
@@ -172,7 +188,7 @@ export function TradePlanChart({
 
     // Stop Loss (red)
     if (stopLoss?.price) {
-      series.createPriceLine({
+      addPriceLine({
         price: stopLoss.price,
         color: '#ef4444',
         lineWidth: 2,
@@ -186,7 +202,7 @@ export function TradePlanChart({
     const tpColors = ['#22c55e', '#16a34a', '#15803d'];
     takeProfits?.forEach((tp, index) => {
       if (tp?.price) {
-        series.createPriceLine({
+        addPriceLine({
           price: tp.price,
           color: tpColors[index] || '#22c55e',
           lineWidth: 2,
@@ -199,7 +215,7 @@ export function TradePlanChart({
 
     // Support levels (orange, subtle)
     support.slice(0, 2).forEach((level) => {
-      series.createPriceLine({
+      addPriceLine({
         price: level,
         color: 'rgba(251, 146, 60, 0.5)',
         lineWidth: 1,
@@ -211,7 +227,7 @@ export function TradePlanChart({
 
     // Resistance levels (purple, subtle)
     resistance.slice(0, 2).forEach((level) => {
-      series.createPriceLine({
+      addPriceLine({
         price: level,
         color: 'rgba(168, 85, 247, 0.5)',
         lineWidth: 1,
