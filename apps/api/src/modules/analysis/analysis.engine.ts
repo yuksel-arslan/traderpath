@@ -643,6 +643,171 @@ function calculateVWAP(candles: Candle[]): number {
   return cumulativeVolume > 0 ? cumulativeTPV / cumulativeVolume : 0;
 }
 
+// ===========================================
+// Advanced Indicators (from Python metrics)
+// ===========================================
+
+/**
+ * Detects volume spikes that could indicate unusual activity
+ * Returns spike factor (1.0 = normal, 2.0+ = spike)
+ */
+function detectVolumeSpike(
+  candles: Candle[],
+  period: number = 15,
+  spikeFactor: number = 2.0
+): { isSpike: boolean; factor: number; avgVolume: number } {
+  if (candles.length < period) {
+    return { isSpike: false, factor: 1, avgVolume: 0 };
+  }
+
+  const volumes = candles.slice(-period - 1, -1).map((c) => c.volume);
+  const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+  const stdDev = Math.sqrt(
+    volumes.reduce((sum, v) => sum + Math.pow(v - avgVolume, 2), 0) / volumes.length
+  );
+
+  const currentVolume = candles[candles.length - 1]?.volume ?? 0;
+  const threshold = avgVolume + spikeFactor * stdDev;
+  const factor = currentVolume / (avgVolume || 1);
+
+  return {
+    isSpike: currentVolume > threshold,
+    factor: Math.round(factor * 100) / 100,
+    avgVolume: Math.round(avgVolume),
+  };
+}
+
+/**
+ * Calculates relative volume compared to recent average
+ */
+function calculateRelativeVolume(candles: Candle[], period: number = 20): number {
+  if (candles.length < period + 1) return 1;
+
+  const historicalVolumes = candles.slice(-period - 1, -1).map((c) => c.volume);
+  const avgVolume = historicalVolumes.reduce((a, b) => a + b, 0) / historicalVolumes.length;
+  const currentVolume = candles[candles.length - 1]?.volume ?? 0;
+
+  return avgVolume > 0 ? Math.round((currentVolume / avgVolume) * 100) / 100 : 1;
+}
+
+/**
+ * Price-Volume Trend (PVT) - cumulative indicator
+ * Shows buying/selling pressure based on price changes and volume
+ */
+function calculatePVT(candles: Candle[]): {
+  pvt: number;
+  trend: 'bullish' | 'bearish' | 'neutral';
+  momentum: number;
+} {
+  if (candles.length < 2) {
+    return { pvt: 0, trend: 'neutral', momentum: 0 };
+  }
+
+  let pvt = 0;
+  const pvtValues: number[] = [];
+
+  for (let i = 1; i < candles.length; i++) {
+    const current = candles[i];
+    const prev = candles[i - 1];
+    if (!current || !prev || prev.close === 0) continue;
+
+    const priceChange = (current.close - prev.close) / prev.close;
+    pvt += priceChange * current.volume;
+    pvtValues.push(pvt);
+  }
+
+  // Normalize PVT relative to first price for comparison
+  const firstPrice = candles[0]?.close ?? 1;
+  const normalizedPVT = pvt / firstPrice;
+
+  // Calculate momentum (recent PVT change)
+  const recentPVT = pvtValues.slice(-10);
+  const momentum =
+    recentPVT.length >= 2
+      ? (recentPVT[recentPVT.length - 1]! - recentPVT[0]!) / firstPrice
+      : 0;
+
+  // Determine trend based on PVT direction
+  const trend: 'bullish' | 'bearish' | 'neutral' =
+    momentum > 0.01 ? 'bullish' : momentum < -0.01 ? 'bearish' : 'neutral';
+
+  return {
+    pvt: Math.round(normalizedPVT * 10000) / 10000,
+    trend,
+    momentum: Math.round(momentum * 10000) / 10000,
+  };
+}
+
+/**
+ * Order Flow Imbalance from taker buy/sell volume
+ * Positive = more buying, Negative = more selling
+ */
+function calculateOrderFlowImbalance(
+  takerBuyVolume: number,
+  takerSellVolume: number
+): { imbalance: number; bias: 'buying' | 'selling' | 'neutral' } {
+  const total = takerBuyVolume + takerSellVolume;
+  if (total === 0) return { imbalance: 0, bias: 'neutral' };
+
+  const imbalance = (takerBuyVolume - takerSellVolume) / total;
+  const bias: 'buying' | 'selling' | 'neutral' =
+    imbalance > 0.1 ? 'buying' : imbalance < -0.1 ? 'selling' : 'neutral';
+
+  return {
+    imbalance: Math.round(imbalance * 100) / 100,
+    bias,
+  };
+}
+
+/**
+ * Historical Volatility (annualized)
+ */
+function calculateHistoricalVolatility(candles: Candle[], period: number = 20): number {
+  if (candles.length < period + 1) return 0;
+
+  const closes = candles.slice(-period - 1).map((c) => c.close);
+  const logReturns: number[] = [];
+
+  for (let i = 1; i < closes.length; i++) {
+    const current = closes[i];
+    const prev = closes[i - 1];
+    if (current && prev && prev > 0) {
+      logReturns.push(Math.log(current / prev));
+    }
+  }
+
+  if (logReturns.length === 0) return 0;
+
+  const mean = logReturns.reduce((a, b) => a + b, 0) / logReturns.length;
+  const variance =
+    logReturns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / logReturns.length;
+  const dailyVol = Math.sqrt(variance);
+
+  // Annualize (crypto trades 365 days)
+  return Math.round(dailyVol * Math.sqrt(365) * 10000) / 100; // Returns as percentage
+}
+
+/**
+ * Liquidity Score based on volume and spread
+ * Higher = more liquid
+ */
+function calculateLiquidityScore(
+  volume: number,
+  price: number,
+  bidAskSpread: number
+): number {
+  if (bidAskSpread <= 0 || price <= 0) return 100;
+
+  const spreadPercent = (bidAskSpread / price) * 100;
+  const volumeUSD = volume * price;
+
+  // Score formula: high volume + low spread = high score
+  const volumeScore = Math.min(100, Math.log10(volumeUSD + 1) * 10);
+  const spreadScore = Math.max(0, 100 - spreadPercent * 1000);
+
+  return Math.round((volumeScore * 0.6 + spreadScore * 0.4) * 100) / 100;
+}
+
 function findSupportResistance(candles: Candle[]): {
   support: number[];
   resistance: number[];
@@ -1064,6 +1229,12 @@ export const analysisEngine = {
     const currentVolume = volumes[volumes.length - 1] ?? avgVolume;
     const volumeRatio = avgVolume > 0 ? currentVolume / avgVolume : 1;
 
+    // Advanced indicators from Python metrics
+    const volumeSpike = detectVolumeSpike(candles1h, 15, 2.0);
+    const relativeVolume = calculateRelativeVolume(candles1h, 20);
+    const pvt = calculatePVT(candles1h);
+    const historicalVol = calculateHistoricalVolatility(candles1h, 20);
+
     // Analyze order book for manipulation signs
     const bids = orderBook.bids.map((b) => ({
       price: parseFloat(b[0]),
@@ -1149,6 +1320,21 @@ export const analysisEngine = {
     const sellVolume = largeSells.reduce((sum, t) => sum + t.amountUsd, 0);
     const netFlowUsd = buyVolume - sellVolume;
 
+    // Calculate order flow imbalance from all trades
+    const takerBuyVolume = recentTrades
+      .filter((t) => !t.isBuyerMaker)
+      .reduce((sum, t) => sum + parseFloat(t.qty), 0);
+    const takerSellVolume = recentTrades
+      .filter((t) => t.isBuyerMaker)
+      .reduce((sum, t) => sum + parseFloat(t.qty), 0);
+    const orderFlowImbalance = calculateOrderFlowImbalance(takerBuyVolume, takerSellVolume);
+
+    // Calculate liquidity score
+    const bestBid = bids[0]?.price ?? 0;
+    const bestAsk = asks[0]?.price ?? 0;
+    const bidAskSpread = bestAsk - bestBid;
+    const liquidityScore = calculateLiquidityScore(ticker.volume24h, currentPrice, bidAskSpread);
+
     let whaleBias: 'accumulation' | 'distribution' | 'neutral' = 'neutral';
     if (netFlowUsd > 100000) whaleBias = 'accumulation';
     else if (netFlowUsd < -100000) whaleBias = 'distribution';
@@ -1186,9 +1372,21 @@ export const analysisEngine = {
       warnings.push(`Abnormal volume: ${volumeRatio.toFixed(1)}x average`);
       riskScore -= 10;
     }
+    if (volumeSpike.isSpike) {
+      warnings.push(`Volume spike detected: ${volumeSpike.factor.toFixed(1)}x normal`);
+      riskScore -= 8;
+    }
     if (Math.abs(ticker.priceChangePercent24h) > 15) {
       warnings.push(`Large price movement: ${ticker.priceChangePercent24h.toFixed(1)}%`);
       riskScore -= 10;
+    }
+    if (liquidityScore < 50) {
+      warnings.push(`Low liquidity score: ${liquidityScore.toFixed(0)}/100`);
+      riskScore -= 10;
+    }
+    if (historicalVol > 100) {
+      warnings.push(`High volatility: ${historicalVol.toFixed(0)}% annualized`);
+      riskScore -= 5;
     }
 
     let riskLevel: 'low' | 'medium' | 'high' = 'low';
@@ -1220,6 +1418,19 @@ export const analysisEngine = {
         largeSells: largeSells.slice(0, 5),
         netFlowUsd,
         bias: whaleBias,
+        orderFlowImbalance: orderFlowImbalance.imbalance,
+        orderFlowBias: orderFlowImbalance.bias,
+      },
+      advancedMetrics: {
+        volumeSpike: volumeSpike.isSpike,
+        volumeSpikeFactor: volumeSpike.factor,
+        relativeVolume,
+        pvt: pvt.pvt,
+        pvtTrend: pvt.trend,
+        pvtMomentum: pvt.momentum,
+        historicalVolatility: historicalVol,
+        liquidityScore,
+        bidAskSpread: Math.round(bidAskSpread * 10000) / 10000,
       },
       exchangeFlows: [
         {
@@ -1260,6 +1471,11 @@ export const analysisEngine = {
     const trend = calculateTrend(candles4h);
     const levels = findSupportResistance(candles4h);
 
+    // Advanced metrics for timing
+    const relativeVolume = calculateRelativeVolume(candles1h, 20);
+    const pvt = calculatePVT(candles4h);
+    const volumeSpike = detectVolumeSpike(candles1h, 15, 2.0);
+
     const currentPrice = ticker.price;
 
     // Entry conditions
@@ -1291,10 +1507,24 @@ export const analysisEngine = {
         met: levels.support.length > 0 && currentPrice <= (levels.support[0] ?? currentPrice) * 1.03,
         details: levels.support[0] !== undefined ? `Nearest support: $${levels.support[0]}` : 'No support found',
       },
+      {
+        name: 'Volume Quality',
+        met: relativeVolume >= 0.8 && relativeVolume <= 2.0 && !volumeSpike.isSpike,
+        details: volumeSpike.isSpike
+          ? `Volume spike: ${volumeSpike.factor.toFixed(1)}x - wait for calm`
+          : `Relative volume: ${relativeVolume.toFixed(1)}x`,
+      },
+      {
+        name: 'PVT Confirmation',
+        met: (trend.direction === 'bullish' && pvt.trend === 'bullish') ||
+             (trend.direction === 'bearish' && pvt.trend === 'bearish'),
+        details: `PVT trend: ${pvt.trend}, momentum: ${pvt.momentum > 0 ? '+' : ''}${(pvt.momentum * 100).toFixed(2)}%`,
+      },
     ];
 
     const conditionsMet = conditions.filter((c) => c.met).length;
-    const tradeNow = conditionsMet >= 3 && rsi4h < 65;
+    // Need at least 4 out of 7 conditions met, RSI not overbought, and no volume spike
+    const tradeNow = conditionsMet >= 4 && rsi4h < 65 && !volumeSpike.isSpike;
 
     // Calculate optimal entry
     const nearestSupport = levels.support[0] ?? currentPrice * 0.97;

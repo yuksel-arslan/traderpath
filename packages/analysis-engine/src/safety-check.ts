@@ -19,6 +19,19 @@ export interface SafetyCheckResult {
     largeSells: Array<{ amountUsd: number; price: number; time: string }>;
     netFlowUsd: number;
     bias: 'accumulation' | 'distribution' | 'neutral';
+    orderFlowImbalance?: number;
+    orderFlowBias?: 'buying' | 'selling' | 'neutral';
+  };
+  advancedMetrics?: {
+    volumeSpike: boolean;
+    volumeSpikeFactor: number;
+    relativeVolume: number;
+    pvt: number;
+    pvtTrend: 'bullish' | 'bearish' | 'neutral';
+    pvtMomentum: number;
+    historicalVolatility: number;
+    liquidityScore: number;
+    bidAskSpread: number;
   };
   exchangeFlows: Array<{
     exchange: string;
