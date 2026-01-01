@@ -400,3 +400,64 @@ model MarketData {
   @@index([symbol, dataType])
   @@map("market_data")
 }
+
+// ===========================================
+// Cost Tracking & Pricing
+// ===========================================
+
+model ApiCostLog {
+  id           String   @id @default(uuid()) @db.Uuid
+
+  // What service was used
+  service      String   @db.VarChar(50) // 'gemini', 'binance', 'coingecko', 'internal'
+  operation    String   @db.VarChar(100) // 'analysis_full', 'market_pulse', etc.
+
+  // Cost details
+  inputTokens  Int      @default(0) @map("input_tokens")
+  outputTokens Int      @default(0) @map("output_tokens")
+  costUsd      Decimal  @map("cost_usd") @db.Decimal(10, 6) // Actual cost in USD
+
+  // Request metadata
+  userId       String?  @map("user_id") @db.Uuid
+  symbol       String?  @db.VarChar(20)
+  metadata     Json     @default("{}")
+
+  // Timing
+  durationMs   Int      @default(0) @map("duration_ms")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([service])
+  @@index([operation])
+  @@index([createdAt(sort: Desc)])
+  @@index([userId])
+  @@map("api_cost_logs")
+}
+
+model CostSettings {
+  id                    String   @id @default("default") @db.VarChar(50)
+
+  // API Costs (per 1M tokens or per request)
+  geminiInputCostPer1M  Decimal  @default(0.075) @map("gemini_input_cost_per_1m") @db.Decimal(10, 6)  // Gemini Flash input
+  geminiOutputCostPer1M Decimal  @default(0.30) @map("gemini_output_cost_per_1m") @db.Decimal(10, 6)  // Gemini Flash output
+  binanceCostPerRequest Decimal  @default(0) @map("binance_cost_per_request") @db.Decimal(10, 6)     // Free
+  coingeckoCostPerRequest Decimal @default(0) @map("coingecko_cost_per_request") @db.Decimal(10, 6) // Free tier
+
+  // Operational Costs (estimated per analysis)
+  serverCostPerAnalysis Decimal  @default(0.001) @map("server_cost_per_analysis") @db.Decimal(10, 6)
+  databaseCostPerQuery  Decimal  @default(0.00001) @map("database_cost_per_query") @db.Decimal(10, 6)
+
+  // Pricing Configuration
+  targetProfitMargin    Decimal  @default(50) @map("target_profit_margin") @db.Decimal(5, 2) // 50% profit margin
+  creditPriceUsd        Decimal  @default(0.10) @map("credit_price_usd") @db.Decimal(10, 4)  // Current price per credit
+  minCreditPriceUsd     Decimal  @default(0.05) @map("min_credit_price_usd") @db.Decimal(10, 4)
+  maxCreditPriceUsd     Decimal  @default(0.50) @map("max_credit_price_usd") @db.Decimal(10, 4)
+
+  // Auto-pricing settings
+  autoPricingEnabled    Boolean  @default(false) @map("auto_pricing_enabled")
+  autoPricingInterval   Int      @default(24) @map("auto_pricing_interval") // hours
+  lastPriceUpdate       DateTime @default(now()) @map("last_price_update")
+
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("cost_settings")
+}
