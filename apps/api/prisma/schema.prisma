@@ -32,6 +32,7 @@ model User {
   // Settings
   preferredCoins String[] @default(["BTC", "ETH", "SOL"]) @map("preferred_coins")
   notificationSettings Json @default("{}") @map("notification_settings")
+  reportValidityPeriods Int @default(50) @map("report_validity_periods") // Number of periods before report expires
 
   // Referral
   referralCode  String?  @unique @map("referral_code") @db.VarChar(20)
@@ -54,6 +55,7 @@ model User {
   referralsMade    Referral[] @relation("ReferrerReferrals")
   referralReceived Referral?  @relation("ReferredReferrals")
   quizAnswers      QuizAnswer[]
+  reports          Report[]
 
   @@map("users")
 }
@@ -347,6 +349,37 @@ model QuizAnswer {
   answeredAt   DateTime @default(now()) @map("answered_at")
 
   @@map("quiz_answers")
+}
+
+// ===========================================
+// Reports
+// ===========================================
+
+model Report {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysisId   String?  @map("analysis_id") @db.Uuid
+  symbol       String   @db.VarChar(20)
+
+  // Report content stored as JSON (can regenerate PDF from this)
+  reportData   Json     @map("report_data")
+
+  // Verdict summary for quick display
+  verdict      String   @db.VarChar(50)
+  score        Decimal  @db.Decimal(3, 1)
+  direction    String?  @db.VarChar(10) // 'long' or 'short'
+
+  // Metadata
+  generatedAt  DateTime @default(now()) @map("generated_at")
+  expiresAt    DateTime @map("expires_at")
+  downloadCount Int     @default(0) @map("download_count")
+
+  @@index([userId])
+  @@index([symbol])
+  @@index([generatedAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("reports")
 }
 
 // ===========================================

@@ -16,12 +16,14 @@ import {
   LogOut,
   User,
   ChevronDown,
+  FileText,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
+  { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'Rewards', href: '/rewards', icon: Gift },
   { name: 'Credits', href: '/credits', icon: Coins },
   { name: 'Alerts', href: '/alerts', icon: Bell },

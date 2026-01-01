@@ -87,6 +87,11 @@ export default async function userRoutes(app: FastifyInstance) {
     notificationSettings: z.record(z.boolean()).optional(),
   });
 
+  const settingsSchema = z.object({
+    reportValidityPeriods: z.number().min(10).max(500).optional(),
+    notificationSettings: z.record(z.boolean()).optional(),
+  });
+
   app.patch('/profile', async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.user!.id;
     const body = updateSchema.parse(request.body);
@@ -107,6 +112,57 @@ export default async function userRoutes(app: FastifyInstance) {
           preferredCoins: user.preferredCoins,
         },
       },
+    });
+  });
+
+  /**
+   * PATCH /api/user/settings
+   * Update user settings (report validity, notifications, etc.)
+   */
+  app.patch('/settings', async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = request.user!.id;
+    const body = settingsSchema.parse(request.body);
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: body,
+    });
+
+    return reply.send({
+      success: true,
+      data: {
+        reportValidityPeriods: user.reportValidityPeriods,
+        notificationSettings: user.notificationSettings,
+      },
+    });
+  });
+
+  /**
+   * GET /api/user/settings
+   * Get user settings
+   */
+  app.get('/settings', async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = request.user!.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        reportValidityPeriods: true,
+        notificationSettings: true,
+        preferredCoins: true,
+      },
+    });
+
+    if (!user) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: 'USER_NOT_FOUND', message: 'User not found' },
+      });
+    }
+
+    return reply.send({
+      success: true,
+      data: user,
     });
   });
 

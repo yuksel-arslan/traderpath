@@ -2,11 +2,11 @@
 
 // ===========================================
 // Download Report Button
-// Generates and downloads PDF analysis report
+// Generates, saves, and downloads PDF analysis report
 // ===========================================
 
 import { useState } from 'react';
-import { FileDown, Loader2 } from 'lucide-react';
+import { FileDown, Loader2, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 // Define the report data type inline to avoid import issues
@@ -80,20 +80,54 @@ interface AnalysisReportData {
 interface DownloadReportButtonProps {
   analysisData: Record<number, unknown>;
   symbol: string;
+  interval?: string;
   className?: string;
+}
+
+// Save report to database
+async function saveReportToDatabase(reportData: AnalysisReportData, interval: string = '4h'): Promise<boolean> {
+  try {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return false;
+
+    const response = await fetch('/api/reports', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        symbol: reportData.symbol,
+        analysisId: reportData.analysisId,
+        reportData: reportData,
+        verdict: reportData.verdict.action,
+        score: reportData.verdict.overallScore,
+        direction: reportData.tradePlan.direction,
+        interval: interval,
+      }),
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error('Failed to save report:', error);
+    return false;
+  }
 }
 
 export function DownloadReportButton({
   analysisData,
   symbol,
+  interval = '4h',
   className,
 }: DownloadReportButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   const handleDownload = async () => {
     if (isGenerating) return;
 
     setIsGenerating(true);
+    setIsSaved(false);
 
     try {
       // Dynamic import to ensure client-side only loading
@@ -102,7 +136,7 @@ export function DownloadReportButton({
       // Transform analysis data to report format
       const reportData: AnalysisReportData = {
         symbol,
-        generatedAt: new Date().toLocaleString(),
+        generatedAt: new Date().toLocaleString('tr-TR'),
         analysisId: `analysis_${Date.now()}_${symbol}`,
         marketPulse: (analysisData[1] as AnalysisReportData['marketPulse']) || {
           btcDominance: 0,
@@ -153,7 +187,17 @@ export function DownloadReportButton({
         },
       };
 
+      // Generate and download PDF
       await generateAnalysisReport(reportData);
+
+      // Save to database with interval for expiration calculation
+      const saved = await saveReportToDatabase(reportData, interval);
+      setIsSaved(saved);
+
+      // Reset saved indicator after a few seconds
+      if (saved) {
+        setTimeout(() => setIsSaved(false), 3000);
+      }
     } catch (error) {
       console.error('Failed to generate report:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -186,6 +230,11 @@ export function DownloadReportButton({
         <>
           <Loader2 className="w-4 h-4 animate-spin" />
           Generating PDF...
+        </>
+      ) : isSaved ? (
+        <>
+          <Check className="w-4 h-4" />
+          Saved & Downloaded
         </>
       ) : (
         <>

@@ -10,6 +10,7 @@ import type { NextRequest } from 'next/server';
 const protectedRoutes = [
   '/dashboard',
   '/analyze',
+  '/reports',
   '/rewards',
   '/credits',
   '/alerts',

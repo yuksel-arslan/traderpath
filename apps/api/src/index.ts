@@ -20,6 +20,7 @@ import analysisRoutes from './modules/analysis/analysis.routes';
 import creditRoutes from './modules/credits/credit.routes';
 import rewardRoutes from './modules/rewards/reward.routes';
 import alertRoutes from './modules/notifications/alert.routes';
+import { reportRoutes } from './modules/reports/report.routes';
 
 const app = Fastify({
   logger: {
@@ -117,6 +118,7 @@ app.register(analysisRoutes, { prefix: '/api/analysis' });
 app.register(creditRoutes, { prefix: '/api/credits' });
 app.register(rewardRoutes, { prefix: '/api/rewards' });
 app.register(alertRoutes, { prefix: '/api/alerts' });
+app.register(reportRoutes);
 
 // ===========================================
 // Error Handler
