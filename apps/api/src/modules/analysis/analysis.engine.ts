@@ -1261,12 +1261,12 @@ export const analysisEngine = {
     else if (btcNewsSentiment.overallSentiment === 'bearish') score -= 0.5;
     score = Math.max(1, Math.min(10, parseFloat(score.toFixed(1))));
 
-    const summary = `Piyasa ${fearGreedLabel === 'extreme_fear' ? 'aşırı korku' :
-      fearGreedLabel === 'fear' ? 'korku' :
-      fearGreedLabel === 'neutral' ? 'nötr' :
-      fearGreedLabel === 'greed' ? 'açgözlülük' : 'aşırı açgözlülük'} modunda. ` +
-      `BTC dominance ${globalMetrics.btcDominance.toFixed(1)}% (${btcDominanceTrend === 'rising' ? 'yükseliyor' : btcDominanceTrend === 'falling' ? 'düşüyor' : 'stabil'}). ` +
-      `Genel trend ${btcTrend.direction === 'bullish' ? 'yükseliş' : btcTrend.direction === 'bearish' ? 'düşüş' : 'yatay'} yönünde, güç: ${btcTrend.strength}%.`;
+    const summary = `Market is in ${fearGreedLabel === 'extreme_fear' ? 'extreme fear' :
+      fearGreedLabel === 'fear' ? 'fear' :
+      fearGreedLabel === 'neutral' ? 'neutral' :
+      fearGreedLabel === 'greed' ? 'greed' : 'extreme greed'} mode. ` +
+      `BTC dominance ${globalMetrics.btcDominance.toFixed(1)}% (${btcDominanceTrend === 'rising' ? 'rising' : btcDominanceTrend === 'falling' ? 'falling' : 'stable'}). ` +
+      `Overall trend is ${btcTrend.direction}, strength: ${btcTrend.strength}%.`;
 
     return {
       btcDominance: parseFloat(globalMetrics.btcDominance.toFixed(1)),

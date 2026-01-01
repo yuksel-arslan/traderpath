@@ -447,23 +447,23 @@ function generateMarketPulseEducation(data: AnalysisReportData): string {
   let commentary = '';
 
   if (fg <= 25) {
-    commentary += `Piyasa asiri korku bolgesinde (${fg}). Tarihsel olarak bu seviyeler, uzun vadeli alicilar icin iyi firsatlar olusturabilir. Ancak dusus devam edebilir, kademeli giris stratejisi onerilir. `;
+    commentary += `Market is in extreme fear zone (${fg}). Historically, these levels can create good opportunities for long-term buyers. However, the decline may continue, a gradual entry strategy is recommended. `;
   } else if (fg >= 75) {
-    commentary += `Piyasa asiri ac gozluluk bolgesinde (${fg}). Bu seviyeler genellikle duzeltme oncesi gozlenir. Yeni pozisyon acmak yerine kar realizasyonu dusunulebilir. `;
+    commentary += `Market is in extreme greed zone (${fg}). These levels are often observed before corrections. Consider profit-taking rather than opening new positions. `;
   } else {
-    commentary += `Piyasa duygusu dengeli seviyelerde (${fg}). Ne asiri korku ne de ac gozluluk hakim. `;
+    commentary += `Market sentiment is at balanced levels (${fg}). Neither extreme fear nor greed is dominant. `;
   }
 
   if (btcDom > 55) {
-    commentary += `Bitcoin dominansi yuksek (%${btcDom?.toFixed(1)}), bu altcoinlerin BTC'ye karsi zayif performans gosterdigi bir donem. `;
+    commentary += `Bitcoin dominance is high (${btcDom?.toFixed(1)}%), this is a period when altcoins show weak performance against BTC. `;
   } else if (btcDom < 45) {
-    commentary += `Bitcoin dominansi dusuk (%${btcDom?.toFixed(1)}), altcoin sezonu olabilir. `;
+    commentary += `Bitcoin dominance is low (${btcDom?.toFixed(1)}%), could be altcoin season. `;
   }
 
   if (trend === 'bullish') {
-    commentary += `Genel trend yukari yonlu. Trend ile islem yapmak risk/getiri acisindan avantajlidir.`;
+    commentary += `Overall trend is bullish. Trading with the trend is advantageous in terms of risk/reward.`;
   } else if (trend === 'bearish') {
-    commentary += `Genel trend asagi yonlu. Short pozisyonlar veya kenarda beklemek dusunulebilir.`;
+    commentary += `Overall trend is bearish. Short positions or staying on the sidelines could be considered.`;
   }
 
   return commentary;
@@ -479,25 +479,25 @@ function generateAssetScanEducation(data: AnalysisReportData): string {
   let commentary = '';
 
   if (rsi > 70) {
-    commentary += `RSI asiri alim bolgesinde (${rsi.toFixed(1)}). Fiyat kisa vadede duzeltme yapabilir. Yeni alimlarda dikkatli olunmali. `;
+    commentary += `RSI is in overbought zone (${rsi.toFixed(1)}). Price may correct in the short term. Be cautious with new purchases. `;
   } else if (rsi < 30) {
-    commentary += `RSI asiri satim bolgesinde (${rsi.toFixed(1)}). Potansiyel dipten donus sinyali. Kademeli alim stratejisi uygulanabilir. `;
+    commentary += `RSI is in oversold zone (${rsi.toFixed(1)}). Potential bottom reversal signal. Gradual buying strategy can be applied. `;
   } else if (rsi > 50 && rsi < 70) {
-    commentary += `RSI (${rsi.toFixed(1)}) yukari momentum gosteriyor ancak henuz asiri alim bolgesinde degil. `;
+    commentary += `RSI (${rsi.toFixed(1)}) shows upward momentum but not yet in overbought zone. `;
   } else {
-    commentary += `RSI (${rsi.toFixed(1)}) notr bolgelerde seyrediyor. `;
+    commentary += `RSI (${rsi.toFixed(1)}) is trading in neutral zones. `;
   }
 
   if (supports.length > 0) {
     const nearestSupport = supports[0];
     const distToSupport = ((price - nearestSupport) / price) * 100;
-    commentary += `En yakin destek ${formatPrice(nearestSupport)} seviyesinde, fiyattan %${distToSupport.toFixed(1)} uzaklikta. `;
+    commentary += `Nearest support is at ${formatPrice(nearestSupport)}, ${distToSupport.toFixed(1)}% away from price. `;
   }
 
   if (resistances.length > 0) {
     const nearestResistance = resistances[0];
     const distToResistance = ((nearestResistance - price) / price) * 100;
-    commentary += `En yakin direnc ${formatPrice(nearestResistance)} seviyesinde, fiyattan %${distToResistance.toFixed(1)} yukarda.`;
+    commentary += `Nearest resistance is at ${formatPrice(nearestResistance)}, ${distToResistance.toFixed(1)}% above price.`;
   }
 
   return commentary;
@@ -512,27 +512,27 @@ function generateSafetyCheckEducation(data: AnalysisReportData): string {
   let commentary = '';
 
   if (risk === 'high') {
-    commentary += `Risk seviyesi YUKSEK. Pozisyon boyutunu normalin %50'sine dusurmeniz, stop-loss seviyelerini daha siki tutmaniz onerilir. `;
+    commentary += `Risk level is HIGH. It is recommended to reduce position size to 50% of normal and keep stop-loss levels tighter. `;
   } else if (risk === 'medium') {
-    commentary += `Risk seviyesi ORTA. Normal pozisyon boyutu ile islem yapilabilir, ancak stop-loss mutlaka kullanilmali. `;
+    commentary += `Risk level is MEDIUM. Trading with normal position size is possible, but stop-loss must be used. `;
   } else {
-    commentary += `Risk seviyesi DUSUK. Uygun kosullar islem icin elverisli gorunuyor. `;
+    commentary += `Risk level is LOW. Conditions appear favorable for trading. `;
   }
 
   if (pumpDump === 'high') {
-    commentary += `Pump-dump riski yuksek! Ani fiyat hareketlerine karsi dikkatli olun. Limit emirler kullanin. `;
+    commentary += `Pump-dump risk is high! Be careful of sudden price movements. Use limit orders. `;
   }
 
   if (whale === 'accumulating') {
-    commentary += `Balinalar biriktirme yapiyor - potansiyel yukselis sinyali. `;
+    commentary += `Whales are accumulating - potential bullish signal. `;
   } else if (whale === 'distributing') {
-    commentary += `Balinalar dagitim yapiyor - potansiyel dusus riski. `;
+    commentary += `Whales are distributing - potential bearish risk. `;
   }
 
   if (smartMoney === 'long') {
-    commentary += `Akilli para long pozisyonda. Kurumsal ilgi pozitif.`;
+    commentary += `Smart money is in long position. Institutional interest is positive.`;
   } else if (smartMoney === 'short') {
-    commentary += `Akilli para short pozisyonda. Dikkatli olun.`;
+    commentary += `Smart money is in short position. Be cautious.`;
   }
 
   return commentary;
@@ -546,24 +546,24 @@ function generateTimingEducation(data: AnalysisReportData): string {
   let commentary = '';
 
   if (tradeNow) {
-    commentary += `Simdi islem icin uygun kosullar mevcut. `;
+    commentary += `Suitable conditions for trading now exist. `;
   } else {
-    commentary += `Simdi islem onerilmiyor. Daha iyi giris seviyeleri icin beklemek mantikli. `;
+    commentary += `Trading is not recommended now. Waiting for better entry levels makes sense. `;
   }
 
   const metConditions = conditions.filter(c => c.met).length;
   const totalConditions = conditions.length;
 
   if (totalConditions > 0) {
-    commentary += `Giris kosullarindan ${metConditions}/${totalConditions} karsilaniyor. `;
+    commentary += `${metConditions}/${totalConditions} entry conditions are met. `;
     if (metConditions < totalConditions / 2) {
-      commentary += `Kosullarin cogunlugu henuz karsilanmadi, sabir onerilir. `;
+      commentary += `Most conditions are not yet met, patience is recommended. `;
     }
   }
 
   if (zones.length > 0) {
     const bestZone = zones[0];
-    commentary += `En iyi giris bolgesi ${formatPrice(bestZone.priceLow)} - ${formatPrice(bestZone.priceHigh)} araliginda, ${bestZone.probability}% olasilikla.`;
+    commentary += `Best entry zone is in the range of ${formatPrice(bestZone.priceLow)} - ${formatPrice(bestZone.priceHigh)}, with ${bestZone.probability}% probability.`;
   }
 
   return commentary;
@@ -579,55 +579,55 @@ function generateTradePlanEducation(data: AnalysisReportData): string {
 
   let commentary = '';
 
-  commentary += `**NEDEN BU SEVIYELER SECILDI?**\n\n`;
+  commentary += `**WHY WERE THESE LEVELS SELECTED?**\n\n`;
 
   // Entry explanation
   if (entries.length > 0) {
-    commentary += `GIRIS SEVIYELERI: `;
+    commentary += `ENTRY LEVELS: `;
     if (entries.length > 1) {
-      commentary += `${entries.length} kademeli giris onerilmektedir. Bu strateji (DCA), tek seferde tum pozisyonu almak yerine farkli seviyelerde bolusturur. `;
-      commentary += `Ortalama giris fiyati ${formatPrice(plan.averageEntry)} olarak hesaplanmistir. `;
+      commentary += `${entries.length} staged entries are recommended. This strategy (DCA) divides the position at different levels rather than taking the entire position at once. `;
+      commentary += `Average entry price is calculated as ${formatPrice(plan.averageEntry)}. `;
     } else {
-      commentary += `Tek giris noktasi ${formatPrice(entries[0].price)} olarak belirlenmistir. `;
+      commentary += `Single entry point is set at ${formatPrice(entries[0].price)}. `;
     }
-    commentary += `Bu seviyeler teknik destek/direnc, momentum ve hacim analizine dayanmaktadir.\n\n`;
+    commentary += `These levels are based on technical support/resistance, momentum and volume analysis.\n\n`;
   }
 
   // Stop loss explanation
   if (stopLoss) {
     const slPercent = Math.abs(stopLoss.percentage || 0);
-    commentary += `STOP LOSS: ${formatPrice(stopLoss.price)} (-%${slPercent.toFixed(2)}) - `;
+    commentary += `STOP LOSS: ${formatPrice(stopLoss.price)} (-${slPercent.toFixed(2)}%) - `;
     if (stopLoss.reason) {
       commentary += `${stopLoss.reason} `;
     } else {
       if (direction === 'long') {
-        commentary += `Bu seviye, en yakin guclu destegin altindadir. Bu seviyenin kirilmasi, trend degisimi anlamina gelebilir. `;
+        commentary += `This level is below the nearest strong support. Breaking this level could signal a trend reversal. `;
       } else {
-        commentary += `Bu seviye, en yakin guclu direncin ustundedir. `;
+        commentary += `This level is above the nearest strong resistance. `;
       }
     }
-    commentary += `Sermayenin korunmasi icin stop-loss kullanmak ZORUNLUDUR.\n\n`;
+    commentary += `Using stop-loss is MANDATORY to protect capital.\n\n`;
   }
 
   // Take profit explanation
   if (takeProfits.length > 0) {
-    commentary += `KAR HEDEFLERI: `;
+    commentary += `TAKE PROFIT TARGETS: `;
     takeProfits.forEach((tp, i) => {
-      commentary += `TP${i+1}: ${formatPrice(tp.price)} (+%${tp.percentage?.toFixed(1)}) `;
+      commentary += `TP${i+1}: ${formatPrice(tp.price)} (+${tp.percentage?.toFixed(1)}%) `;
     });
-    commentary += `\nKademeli kar realizasyonu onerilir: her hedefte pozisyonun bir kismini kapatin.\n\n`;
+    commentary += `\nGradual profit-taking is recommended: close part of your position at each target.\n\n`;
   }
 
   // Risk/Reward explanation
-  commentary += `RISK/GETIRI ORANI: ${rr.toFixed(2)}:1 - `;
+  commentary += `RISK/REWARD RATIO: ${rr.toFixed(2)}:1 - `;
   if (rr >= 3) {
-    commentary += `Mukemmel risk/getiri orani! Bu islem yuksek pozitif beklentiye sahip.`;
+    commentary += `Excellent risk/reward ratio! This trade has high positive expectancy.`;
   } else if (rr >= 2) {
-    commentary += `Iyi risk/getiri orani. Profesyonel traderlar genellikle en az 2:1 oran ararlar.`;
+    commentary += `Good risk/reward ratio. Professional traders typically look for at least 2:1 ratio.`;
   } else if (rr >= 1) {
-    commentary += `Kabul edilebilir risk/getiri orani ancak ideal degil.`;
+    commentary += `Acceptable risk/reward ratio but not ideal.`;
   } else {
-    commentary += `Dusuk risk/getiri orani. Bu islem onerilmeyebilir.`;
+    commentary += `Low risk/reward ratio. This trade may not be recommended.`;
   }
 
   return commentary;
@@ -639,26 +639,26 @@ function generateTrapCheckEducation(data: AnalysisReportData): string {
 
   let commentary = '';
 
-  commentary += `TUZAK ANALIZI: `;
+  commentary += `TRAP ANALYSIS: `;
 
   if (traps?.bullTrap) {
-    commentary += `BULL TRAP RISKI TESPIT EDILDI! Fiyat yukari kirilmis gibi gorunebilir ancak bu sahte olabilir. Onay bekleyin. `;
+    commentary += `BULL TRAP RISK DETECTED! Price may appear to have broken upward but this could be fake. Wait for confirmation. `;
   }
 
   if (traps?.bearTrap) {
-    commentary += `BEAR TRAP RISKI TESPIT EDILDI! Fiyat asagi kirilmis gibi gorunebilir ancak bu sahte olabilir. Panik satisi yapmayin. `;
+    commentary += `BEAR TRAP RISK DETECTED! Price may appear to have broken downward but this could be fake. Don't panic sell. `;
   }
 
   if (traps?.fakeoutRisk === 'high') {
-    commentary += `Fakeout (sahte kirilim) riski yuksek. Kirilislarda hemen islem acmak yerine, en az 4 saatlik mum kapanisini bekleyin. `;
+    commentary += `Fakeout risk is high. Instead of immediately trading on breakouts, wait for at least a 4-hour candle close. `;
   }
 
   if (!traps?.bullTrap && !traps?.bearTrap && traps?.fakeoutRisk !== 'high') {
-    commentary += `Belirgin bir tuzak riski tespit edilmedi. Normal dikkatle islem yapilabilir. `;
+    commentary += `No significant trap risk detected. Trading with normal caution is possible. `;
   }
 
   if (strategies.length > 0) {
-    commentary += `\n\nKORUNMA STRATEJILERI:\n`;
+    commentary += `\n\nPROTECTION STRATEGIES:\n`;
     strategies.forEach((s, i) => {
       commentary += `${i+1}. ${s}\n`;
     });
@@ -676,33 +676,33 @@ function generateVerdictEducation(data: AnalysisReportData): string {
 
   let commentary = '';
 
-  commentary += `GENEL DEGERLENDIRME: `;
+  commentary += `OVERALL ASSESSMENT: `;
 
   if (score >= 8) {
-    commentary += `Cok guclu sinyal (${score}/10). Cogu gosterge ayni yonde isaret ediyor. `;
+    commentary += `Very strong signal (${score}/10). Most indicators are pointing in the same direction. `;
   } else if (score >= 6) {
-    commentary += `Iyi sinyal (${score}/10). Pozitif faktorler baskinda ancak bazi riskler var. `;
+    commentary += `Good signal (${score}/10). Positive factors dominate but there are some risks. `;
   } else if (score >= 4) {
-    commentary += `Notr sinyal (${score}/10). Net bir yon belirgin degil. Beklemek akillica olabilir. `;
+    commentary += `Neutral signal (${score}/10). No clear direction is evident. Waiting might be wise. `;
   } else {
-    commentary += `Zayif veya negatif sinyal (${score}/10). Islem onerilmiyor. `;
+    commentary += `Weak or negative signal (${score}/10). Trading is not recommended. `;
   }
 
   if (positives.length > 0) {
-    commentary += `\n\nGUCLU YANLAR: `;
+    commentary += `\n\nSTRENGTHS: `;
     positives.forEach(p => {
       commentary += `${p.factor}; `;
     });
   }
 
   if (negatives.length > 0) {
-    commentary += `\n\nRISK FAKTORLERI: `;
+    commentary += `\n\nRISK FACTORS: `;
     negatives.forEach(n => {
       commentary += `${n.factor}; `;
     });
   }
 
-  commentary += `\n\nSONUC: ${verdict.action}`;
+  commentary += `\n\nRESULT: ${verdict.action}`;
 
   return commentary;
 }
