@@ -22,7 +22,9 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  DollarSign,
 } from 'lucide-react';
+import Link from 'next/link';
 
 interface HealthCheck {
   status: 'healthy' | 'degraded' | 'down';
@@ -362,6 +364,13 @@ export default function AdminPage() {
             {tab.label}
           </button>
         ))}
+        <Link
+          href="/admin/costs"
+          className="flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-muted-foreground hover:text-foreground transition"
+        >
+          <DollarSign className="w-4 h-4" />
+          Costs & Pricing
+        </Link>
       </div>
 
       {activeTab === 'overview' && (
