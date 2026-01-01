@@ -5,7 +5,7 @@
 
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { prisma } from '../../core/database';
-import { authenticate } from '../../middleware/auth';
+import { authenticate } from '../../core/auth/middleware';
 
 interface SaveReportBody {
   symbol: string;
