@@ -3,11 +3,28 @@
 // ===========================================
 // Download Report Button
 // Generates, saves, and downloads PDF analysis report
+// With optional language translation (costs credits)
 // ===========================================
 
 import { useState } from 'react';
-import { FileDown, Loader2, Check } from 'lucide-react';
+import { FileDown, Loader2, Check, Globe, ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
+
+// Available languages for PDF reports
+const REPORT_LANGUAGES = {
+  en: 'English',
+  tr: 'Türkçe',
+  es: 'Español',
+  de: 'Deutsch',
+  fr: 'Français',
+  pt: 'Português',
+  ru: 'Русский',
+  zh: '中文',
+  ja: '日本語',
+  ko: '한국어',
+} as const;
+
+const TRANSLATION_CREDIT_COST = 3;
 
 // Define the report data type inline to avoid import issues
 interface AnalysisReportData {
@@ -82,6 +99,7 @@ interface DownloadReportButtonProps {
   symbol: string;
   interval?: string;
   className?: string;
+  defaultLanguage?: string;
 }
 
 // Save report to database
@@ -114,14 +132,54 @@ async function saveReportToDatabase(reportData: AnalysisReportData, interval: st
   }
 }
 
+// Translate AI commentary using API
+async function translateReportContent(
+  texts: Record<string, string>,
+  targetLanguage: string
+): Promise<Record<string, string> | null> {
+  try {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return null;
+
+    const response = await fetch('/api/translation/translate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ texts, targetLanguage }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      if (error.error?.code === 'INSUFFICIENT_CREDITS') {
+        throw new Error('Insufficient credits for translation');
+      }
+      return null;
+    }
+
+    const data = await response.json();
+    return data.data.translations;
+  } catch (error) {
+    console.error('Translation failed:', error);
+    throw error;
+  }
+}
+
 export function DownloadReportButton({
   analysisData,
   symbol,
   interval = '4h',
   className,
+  defaultLanguage = 'en',
 }: DownloadReportButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState(defaultLanguage);
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+
+  // Check if translation is needed (not English)
+  const needsTranslation = selectedLanguage !== 'en';
 
   const handleDownload = async () => {
     if (isGenerating) return;
@@ -187,8 +245,43 @@ export function DownloadReportButton({
         },
       };
 
-      // Generate and download PDF
-      await generateAnalysisReport(reportData);
+      // Translate AI commentary if not English
+      if (needsTranslation) {
+        try {
+          // Collect all AI texts to translate
+          const textsToTranslate: Record<string, string> = {};
+          if (reportData.marketPulse.aiSummary) textsToTranslate.marketPulseAi = reportData.marketPulse.aiSummary;
+          if (reportData.assetScan.aiInsight) textsToTranslate.assetScanAi = reportData.assetScan.aiInsight;
+          if (reportData.safetyCheck.aiInsight) textsToTranslate.safetyCheckAi = reportData.safetyCheck.aiInsight;
+          if (reportData.timing.aiInsight) textsToTranslate.timingAi = reportData.timing.aiInsight;
+          if (reportData.tradePlan.aiInsight) textsToTranslate.tradePlanAi = reportData.tradePlan.aiInsight;
+          if (reportData.trapCheck.aiInsight) textsToTranslate.trapCheckAi = reportData.trapCheck.aiInsight;
+          if (reportData.verdict.aiSummary) textsToTranslate.verdictAi = reportData.verdict.aiSummary;
+
+          if (Object.keys(textsToTranslate).length > 0) {
+            const translations = await translateReportContent(textsToTranslate, selectedLanguage);
+            if (translations) {
+              // Apply translations back to reportData
+              if (translations.marketPulseAi) reportData.marketPulse.aiSummary = translations.marketPulseAi;
+              if (translations.assetScanAi) reportData.assetScan.aiInsight = translations.assetScanAi;
+              if (translations.safetyCheckAi) reportData.safetyCheck.aiInsight = translations.safetyCheckAi;
+              if (translations.timingAi) reportData.timing.aiInsight = translations.timingAi;
+              if (translations.tradePlanAi) reportData.tradePlan.aiInsight = translations.tradePlanAi;
+              if (translations.trapCheckAi) reportData.trapCheck.aiInsight = translations.trapCheckAi;
+              if (translations.verdictAi) reportData.verdict.aiSummary = translations.verdictAi;
+            }
+          }
+        } catch (translationError) {
+          const errorMsg = translationError instanceof Error ? translationError.message : 'Translation failed';
+          if (errorMsg.includes('Insufficient credits')) {
+            alert('Insufficient credits for translation. Report will be generated in English.');
+          }
+          // Continue with English version
+        }
+      }
+
+      // Generate and download PDF with selected language
+      await generateAnalysisReport(reportData, selectedLanguage);
 
       // Save to database with interval for expiration calculation
       const saved = await saveReportToDatabase(reportData, interval);
@@ -215,33 +308,81 @@ export function DownloadReportButton({
   }
 
   return (
-    <button
-      onClick={handleDownload}
-      disabled={isGenerating}
-      className={cn(
-        'flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all',
-        'bg-gradient-to-r from-blue-500 to-purple-600 text-white',
-        'hover:shadow-lg hover:scale-105',
-        'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
-        className
-      )}
-    >
-      {isGenerating ? (
-        <>
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Generating PDF...
-        </>
-      ) : isSaved ? (
-        <>
-          <Check className="w-4 h-4" />
-          Saved & Downloaded
-        </>
-      ) : (
-        <>
-          <FileDown className="w-4 h-4" />
-          Download Report
-        </>
-      )}
-    </button>
+    <div className={cn('flex items-center gap-2', className)}>
+      {/* Language Selector */}
+      <div className="relative">
+        <button
+          onClick={() => setShowLanguageMenu(!showLanguageMenu)}
+          disabled={isGenerating}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all',
+            'bg-card border border-border text-foreground',
+            'hover:bg-muted',
+            'disabled:opacity-50 disabled:cursor-not-allowed'
+          )}
+        >
+          <Globe className="w-4 h-4" />
+          <span>{REPORT_LANGUAGES[selectedLanguage as keyof typeof REPORT_LANGUAGES] || 'English'}</span>
+          <ChevronDown className="w-3 h-3" />
+          {needsTranslation && (
+            <span className="ml-1 px-1.5 py-0.5 text-xs bg-amber-500/20 text-amber-500 rounded">
+              +{TRANSLATION_CREDIT_COST}
+            </span>
+          )}
+        </button>
+
+        {showLanguageMenu && (
+          <div className="absolute top-full left-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+            {Object.entries(REPORT_LANGUAGES).map(([code, name]) => (
+              <button
+                key={code}
+                onClick={() => {
+                  setSelectedLanguage(code);
+                  setShowLanguageMenu(false);
+                }}
+                className={cn(
+                  'w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-muted transition',
+                  selectedLanguage === code && 'bg-primary/10 text-primary'
+                )}
+              >
+                <span>{name}</span>
+                {code !== 'en' && (
+                  <span className="text-xs text-muted-foreground">+{TRANSLATION_CREDIT_COST}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Download Button */}
+      <button
+        onClick={handleDownload}
+        disabled={isGenerating}
+        className={cn(
+          'flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all',
+          'bg-gradient-to-r from-blue-500 to-purple-600 text-white',
+          'hover:shadow-lg hover:scale-105',
+          'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
+        )}
+      >
+        {isGenerating ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            {needsTranslation ? 'Translating...' : 'Generating...'}
+          </>
+        ) : isSaved ? (
+          <>
+            <Check className="w-4 h-4" />
+            Downloaded
+          </>
+        ) : (
+          <>
+            <FileDown className="w-4 h-4" />
+            Download PDF
+          </>
+        )}
+      </button>
+    </div>
   );
 }

@@ -97,6 +97,7 @@ export const CREDIT_COSTS = {
   PRICE_ALERT: 1,
   AI_CHAT_QUESTION: 2,
   PDF_REPORT: 8,
+  REPORT_TRANSLATION: 3,  // Translate PDF to user's language
   WATCHLIST_SLOT: 3,
   AUTO_REFRESH_HOUR: 5,
 } as const;

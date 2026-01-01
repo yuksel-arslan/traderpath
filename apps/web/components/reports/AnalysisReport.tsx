@@ -15,6 +15,7 @@ import {
   pdf,
 } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
+import { getPDFTranslations, type PDFTranslations } from './pdf-translations';
 
 // Styles - using Helvetica (built-in PDF font)
 const styles = StyleSheet.create({
@@ -709,14 +710,14 @@ function generateVerdictEducation(data: AnalysisReportData): string {
 }
 
 // Reusable Footer Component
-const PageFooter = ({ pageNumber }: { pageNumber: number }) => (
+const PageFooter = ({ pageNumber, t }: { pageNumber: number; t?: PDFTranslations }) => (
   <View style={styles.footer}>
     <View style={styles.footerRow}>
-      <Text style={styles.footerText}>TradePath Analysis Report</Text>
-      <Text style={styles.footerText}>Powered by Gemini 2.5 Flash</Text>
-      <Text style={styles.footerText}>Sayfa {pageNumber}</Text>
+      <Text style={styles.footerText}>{t?.footerTitle || 'TradePath Analysis Report'}</Text>
+      <Text style={styles.footerText}>{t?.footerPowered || 'Powered by Gemini 2.5 Flash'}</Text>
+      <Text style={styles.footerText}>{t?.page || 'Page'} {pageNumber}</Text>
     </View>
-    <Text style={styles.footerDisclaimer}>{DISCLAIMER_TEXT}</Text>
+    <Text style={styles.footerDisclaimer}>{t?.disclaimer || DISCLAIMER_TEXT}</Text>
   </View>
 );
 
@@ -729,7 +730,7 @@ const AICommentary = ({ title, content }: { title: string; content: string }) =>
 );
 
 // PDF Document Component - Each step on separate page
-const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
+const AnalysisReportDocument = ({ data, t }: { data: AnalysisReportData; t: PDFTranslations }) => {
   const getVerdictColor = () => {
     const action = data.verdict.action?.toLowerCase() || '';
     if (action.includes('go') && !action.includes('avoid')) return '#10b981';
@@ -742,26 +743,26 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
       {/* Page 1: Cover Page */}
       <Page size="A4" style={styles.page}>
         <View style={styles.coverPage}>
-          <Text style={styles.logo}>TradePath</Text>
-          <Text style={styles.subtitle}>AI Destekli Trading Analizi</Text>
+          <Text style={styles.logo}>{t.title}</Text>
+          <Text style={styles.subtitle}>{t.subtitle}</Text>
 
-          <Text style={styles.coverTitle}>7 Adimli Analiz Raporu</Text>
+          <Text style={styles.coverTitle}>{t.reportTitle}</Text>
           <Text style={styles.coverSymbol}>{data.symbol}/USDT</Text>
 
-          <Text style={styles.coverMeta}>Olusturulma: {data.generatedAt}</Text>
-          <Text style={styles.coverMeta}>Analiz ID: {data.analysisId}</Text>
+          <Text style={styles.coverMeta}>{t.generatedAt} {data.generatedAt}</Text>
+          <Text style={styles.coverMeta}>{t.analysisId} {data.analysisId}</Text>
 
           <View style={[styles.verdictBadge, { backgroundColor: getVerdictColor() }]}>
             <Text style={styles.verdictText}>{data.verdict.action}</Text>
-            <Text style={styles.scoreText}>Skor: {data.verdict.overallScore}/10</Text>
+            <Text style={styles.scoreText}>{t.score} {data.verdict.overallScore}/10</Text>
           </View>
 
           {/* Powered by Gemini */}
-          <Text style={styles.poweredBy}>Yapay Zeka Destegi</Text>
+          <Text style={styles.poweredBy}>{t.poweredBy}</Text>
           <Text style={styles.geminiLogo}>Google Gemini 2.5 Flash</Text>
         </View>
 
-        <PageFooter pageNumber={1} />
+        <PageFooter pageNumber={1} t={t} />
       </Page>
 
       {/* Page 2: Step 1 - Market Pulse */}
@@ -809,7 +810,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           content={data.marketPulse.aiSummary || generateMarketPulseEducation(data)}
         />
 
-        <PageFooter pageNumber={2} />
+        <PageFooter pageNumber={2} t={t} />
       </Page>
 
       {/* Page 3: Step 2 - Asset Scan */}
@@ -871,7 +872,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           content={data.assetScan.aiInsight || generateAssetScanEducation(data)}
         />
 
-        <PageFooter pageNumber={3} />
+        <PageFooter pageNumber={3} t={t} />
       </Page>
 
       {/* Page 4: Step 3 - Safety Check */}
@@ -934,7 +935,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           content={data.safetyCheck.aiInsight || generateSafetyCheckEducation(data)}
         />
 
-        <PageFooter pageNumber={4} />
+        <PageFooter pageNumber={4} t={t} />
       </Page>
 
       {/* Page 5: Step 4 - Timing */}
@@ -984,7 +985,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           content={data.timing.aiInsight || generateTimingEducation(data)}
         />
 
-        <PageFooter pageNumber={5} />
+        <PageFooter pageNumber={5} t={t} />
       </Page>
 
       {/* Page 6: Step 5 - Trade Plan (DETAILED) */}
@@ -1064,7 +1065,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           ))}
         </View>
 
-        <PageFooter pageNumber={6} />
+        <PageFooter pageNumber={6} t={t} />
       </Page>
 
       {/* Page 7: Trade Plan - AI Explanation */}
@@ -1093,7 +1094,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </Text>
         </View>
 
-        <PageFooter pageNumber={7} />
+        <PageFooter pageNumber={7} t={t} />
       </Page>
 
       {/* Page 8: Step 6 - Trap Check */}
@@ -1154,7 +1155,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           content={data.trapCheck.aiInsight || generateTrapCheckEducation(data)}
         />
 
-        <PageFooter pageNumber={8} />
+        <PageFooter pageNumber={8} t={t} />
       </Page>
 
       {/* Page 9: Step 7 - Final Verdict */}
@@ -1225,16 +1226,18 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </Text>
         </View>
 
-        <PageFooter pageNumber={9} />
+        <PageFooter pageNumber={9} t={t} />
       </Page>
     </Document>
   );
 };
 
 // Export function to generate and download PDF
-export async function generateAnalysisReport(data: AnalysisReportData): Promise<void> {
-  const blob = await pdf(<AnalysisReportDocument data={data} />).toBlob();
-  const filename = `TradePath_${data.symbol}_Analiz_${new Date().toISOString().split('T')[0]}.pdf`;
+export async function generateAnalysisReport(data: AnalysisReportData, language: string = 'en'): Promise<void> {
+  const t = getPDFTranslations(language);
+  const blob = await pdf(<AnalysisReportDocument data={data} t={t} />).toBlob();
+  const langSuffix = language === 'en' ? 'Report' : 'Rapor';
+  const filename = `TradePath_${data.symbol}_${langSuffix}_${new Date().toISOString().split('T')[0]}.pdf`;
   saveAs(blob, filename);
 }
 

@@ -23,6 +23,7 @@ import alertRoutes from './modules/notifications/alert.routes';
 import { reportRoutes } from './modules/reports/report.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import costRoutes from './modules/costs/cost.routes';
+import { translationRoutes } from './modules/translation/translation.routes';
 
 const app = Fastify({
   logger: {
@@ -123,6 +124,7 @@ app.register(alertRoutes, { prefix: '/api/alerts' });
 app.register(reportRoutes);
 app.register(adminRoutes, { prefix: '/api/admin' });
 app.register(costRoutes, { prefix: '/api/costs' });
+app.register(translationRoutes);
 
 // ===========================================
 // Error Handler
