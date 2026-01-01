@@ -16,6 +16,30 @@ const nextConfig = {
   images: {
     domains: ['lh3.googleusercontent.com', 'avatars.githubusercontent.com'],
   },
+
+  // Webpack configuration for @react-pdf/renderer
+  webpack: (config, { isServer }) => {
+    // Fix for @react-pdf/renderer in Next.js
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        stream: false,
+        zlib: false,
+      };
+    }
+
+    // Handle canvas module (used by react-pdf)
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      canvas: false,
+    };
+
+    return config;
+  },
+
+  // Transpile @react-pdf packages
+  transpilePackages: ['@react-pdf/renderer', '@react-pdf/layout', '@react-pdf/pdfkit'],
 };
 
 module.exports = nextConfig;

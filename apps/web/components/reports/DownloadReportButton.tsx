@@ -7,8 +7,75 @@
 
 import { useState } from 'react';
 import { FileDown, Loader2 } from 'lucide-react';
-import { generateAnalysisReport, type AnalysisReportData } from './AnalysisReport';
 import { cn } from '../../lib/utils';
+
+// Define the report data type inline to avoid import issues
+interface AnalysisReportData {
+  symbol: string;
+  generatedAt: string;
+  analysisId: string;
+  marketPulse: {
+    btcDominance: number;
+    fearGreedIndex: number;
+    fearGreedLabel: string;
+    marketRegime: string;
+    trend: { direction: string; strength: number };
+    aiSummary?: string;
+  };
+  assetScan: {
+    currentPrice: number;
+    priceChange24h: number;
+    timeframes: Array<{ tf: string; trend: string; strength: number }>;
+    levels: { support: number[]; resistance: number[] };
+    indicators: {
+      rsi: number;
+      macd: { histogram: number };
+    };
+    aiInsight?: string;
+  };
+  safetyCheck: {
+    riskLevel: string;
+    manipulation: { pumpDumpRisk: string };
+    whaleActivity: { bias: string };
+    smartMoney: { positioning: string };
+    warnings: string[];
+    aiInsight?: string;
+  };
+  timing: {
+    tradeNow: boolean;
+    reason: string;
+    entryZones: Array<{ priceLow: number; priceHigh: number; probability: number; eta: string }>;
+    conditions: Array<{ name: string; met: boolean }>;
+    aiInsight?: string;
+  };
+  tradePlan: {
+    direction: string;
+    entries: Array<{ price: number; percentage: number; type: string }>;
+    averageEntry: number;
+    stopLoss: { price: number; percentage: number; reason: string };
+    takeProfits: Array<{ price: number; percentage: number; reason: string }>;
+    riskReward: number;
+    winRateEstimate: number;
+    positionSizePercent: number;
+    aiInsight?: string;
+  };
+  trapCheck: {
+    traps: {
+      bullTrap: boolean;
+      bearTrap: boolean;
+      fakeoutRisk: string;
+    };
+    liquidityGrab: { zones: number[] };
+    counterStrategy: string[];
+    aiInsight?: string;
+  };
+  verdict: {
+    action: string;
+    overallScore: number;
+    confidenceFactors: Array<{ factor: string; positive: boolean }>;
+    aiSummary?: string;
+  };
+}
 
 interface DownloadReportButtonProps {
   analysisData: Record<number, unknown>;
@@ -29,6 +96,9 @@ export function DownloadReportButton({
     setIsGenerating(true);
 
     try {
+      // Dynamic import to ensure client-side only loading
+      const { generateAnalysisReport } = await import('./AnalysisReport');
+
       // Transform analysis data to report format
       const reportData: AnalysisReportData = {
         symbol,
