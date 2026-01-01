@@ -255,7 +255,7 @@ export function CoinSelector() {
       <button
         onClick={handleAnalyze}
         disabled={!selectedCoin}
-        className="w-full py-3.5 px-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:scale-[1.02] transition-all"
+        className="w-full py-3.5 px-4 bg-gradient-to-r from-red-500 via-amber-500 to-green-500 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:scale-[1.02] transition-all shadow-lg shadow-green-500/25"
       >
         {selectedCoin ? (
           <span className="flex items-center justify-center gap-2">

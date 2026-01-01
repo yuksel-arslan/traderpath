@@ -10,7 +10,7 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    --primary: 142.1 76.2% 36.3%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -22,7 +22,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 142.1 76.2% 36.3%;
     --radius: 0.5rem;
 
     /* Custom colors */
@@ -38,7 +38,7 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 142.1 70.6% 45.3%;
     --primary-foreground: 222.2 47.4% 11.2%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -50,7 +50,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --ring: 142.1 70.6% 45.3%;
   }
 }
 
@@ -66,7 +66,11 @@
 /* Custom utilities */
 @layer utilities {
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-red-500 via-amber-500 to-green-500;
+  }
+
+  .gradient-trading {
+    @apply bg-gradient-to-r from-red-500 via-amber-500 to-green-500;
   }
 
   .glass {
@@ -74,6 +78,18 @@
   }
 
   .glow {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+  }
+
+  .glow-trading {
+    box-shadow: 0 0 30px rgba(34, 197, 94, 0.3), 0 0 60px rgba(245, 158, 11, 0.2), 0 0 90px rgba(239, 68, 68, 0.1);
+  }
+
+  .trading-border {
+    @apply border-transparent bg-clip-padding;
+    background-image: linear-gradient(var(--background), var(--background)),
+                      linear-gradient(135deg, #ef4444, #f59e0b, #22c55e);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
   }
 }

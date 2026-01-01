@@ -486,7 +486,7 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
                       disabled={loading || isRunningFull}
                       className={cn(
                         'px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all',
-                        'bg-gradient-to-r from-blue-500 to-purple-600 text-white',
+                        'bg-gradient-to-r from-red-500 via-amber-500 to-green-500 text-white',
                         'hover:shadow-lg hover:scale-105',
                         'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
                       )}
@@ -556,11 +556,11 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="mt-8 p-6 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 rounded-xl border border-blue-500/20"
+          className="mt-8 p-6 bg-gradient-to-r from-red-500/10 via-amber-500/10 to-green-500/10 rounded-xl border border-green-500/20"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 via-amber-500 to-green-500 flex items-center justify-center">
                 <Brain className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -573,7 +573,7 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
             <button
               onClick={handleRunFullAnalysis}
               disabled={isRunningFull}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all flex items-center gap-2"
+              className="px-6 py-3 bg-gradient-to-r from-red-500 via-amber-500 to-green-500 text-white rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all flex items-center gap-2"
             >
               <TrendingUp className="w-5 h-5" />
               Run Full Analysis (15 credits)

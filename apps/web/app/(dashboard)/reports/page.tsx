@@ -233,7 +233,7 @@ export default function ReportsPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 {/* Report Info */}
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 via-amber-500 to-green-500 flex items-center justify-center text-white font-bold">
                     {report.symbol.slice(0, 2)}
                   </div>
                   <div>

@@ -78,10 +78,13 @@ export default function DashboardLayout({
           >
             <div className="flex items-center justify-between h-16 px-6 border-b border-border">
               <Link href="/dashboard" className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-lg flex items-center justify-center shadow-lg shadow-green-500/25">
                   <TrendingUp className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold">TradePath</span>
+                <div className="flex flex-col">
+                  <span className="text-lg font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">TradePath</span>
+                  <span className="text-[9px] text-muted-foreground -mt-1">From Charts to Clarity</span>
+                </div>
               </Link>
               <button
                 onClick={() => setSidebarOpen(false)}
@@ -118,10 +121,13 @@ export default function DashboardLayout({
       <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-72 lg:bg-card lg:border-r lg:border-border">
         <div className="flex items-center h-16 px-6 border-b border-border">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-lg flex items-center justify-center shadow-lg shadow-green-500/25">
               <TrendingUp className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold">TradePath</span>
+            <div className="flex flex-col">
+              <span className="text-lg font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">TradePath</span>
+              <span className="text-[9px] text-muted-foreground -mt-1">From Charts to Clarity</span>
+            </div>
           </Link>
         </div>
         <nav className="p-4 space-y-1">
@@ -169,7 +175,7 @@ export default function DashboardLayout({
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent"
               >
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-full flex items-center justify-center">
                   <User className="w-4 h-4 text-white" />
                 </div>
                 <ChevronDown className="w-4 h-4 text-muted-foreground" />

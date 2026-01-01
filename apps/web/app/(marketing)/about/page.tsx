@@ -79,7 +79,7 @@ export default function AboutPage() {
       {/* Header */}
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+          <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">
             TradePath
           </Link>
           <nav className="hidden md:flex items-center gap-6">
@@ -110,7 +110,7 @@ export default function AboutPage() {
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">
             Empowering Traders with{' '}
-            <span className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">
               Intelligent Analysis
             </span>
           </h1>
@@ -167,7 +167,7 @@ export default function AboutPage() {
               const Icon = value.icon;
               return (
                 <div key={index} className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-gradient-to-br from-red-500/20 via-amber-500/20 to-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Icon className="w-8 h-8 text-primary" />
                   </div>
                   <h3 className="font-semibold text-lg mb-2">{value.title}</h3>
@@ -190,7 +190,7 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {TEAM.map((member, index) => (
               <div key={index} className="bg-card rounded-lg border p-6 text-center">
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-20 h-20 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-white text-2xl font-bold">{member.avatar}</span>
                 </div>
                 <h3 className="font-semibold text-lg">{member.name}</h3>
@@ -226,14 +226,14 @@ export default function AboutPage() {
       {/* CTA */}
       <section className="py-16 bg-accent/50">
         <div className="container mx-auto px-4">
-          <div className="max-w-2xl mx-auto text-center p-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-2xl">
+          <div className="max-w-2xl mx-auto text-center p-8 bg-gradient-to-r from-red-500/10 via-amber-500/10 to-green-500/10 border border-green-500/20 rounded-2xl">
             <h2 className="text-2xl font-bold mb-4">Join Our Community</h2>
             <p className="text-muted-foreground mb-6">
               Be part of a growing community of traders making smarter decisions every day.
             </p>
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:opacity-90 transition"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-red-500 via-amber-500 to-green-500 text-white rounded-lg font-semibold hover:opacity-90 transition"
             >
               Get Started Free
               <ArrowRight className="w-5 h-5" />

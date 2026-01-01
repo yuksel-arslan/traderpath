@@ -141,7 +141,7 @@ export default function SettingsPage() {
 
                 {/* Avatar */}
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                  <div className="w-20 h-20 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
                     JD
                   </div>
                   <div>

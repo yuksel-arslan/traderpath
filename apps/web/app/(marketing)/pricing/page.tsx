@@ -116,7 +116,7 @@ export default function PricingPage() {
       {/* Header */}
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+          <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">
             TradePath
           </Link>
           <nav className="hidden md:flex items-center gap-6">
@@ -333,14 +333,14 @@ export default function PricingPage() {
       {/* CTA */}
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <div className="max-w-2xl mx-auto text-center p-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-2xl">
+          <div className="max-w-2xl mx-auto text-center p-8 bg-gradient-to-r from-red-500/10 via-amber-500/10 to-green-500/10 border border-green-500/20 rounded-2xl">
             <h2 className="text-2xl font-bold mb-4">Ready to Start Trading Smarter?</h2>
             <p className="text-muted-foreground mb-6">
               Create your free account and get 25 credits to start analyzing.
             </p>
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:opacity-90 transition"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-red-500 via-amber-500 to-green-500 text-white rounded-lg font-semibold hover:opacity-90 transition"
             >
               Create Free Account
               <ArrowRight className="w-5 h-5" />
