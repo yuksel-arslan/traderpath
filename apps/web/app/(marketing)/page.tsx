@@ -15,7 +15,13 @@ import {
   Globe,
   FileText,
   AlertTriangle,
-  TrendingDown
+  TrendingDown,
+  Lock,
+  Eye,
+  BarChart3,
+  Activity,
+  ArrowUpRight,
+  ArrowDownRight
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 
@@ -360,6 +366,273 @@ export default function LandingPage() {
                 <p className="text-muted-foreground">{item.description}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Live Analysis Preview */}
+      <section className="py-20 bg-accent/50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              See TradePath in Action
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Here's a real example of our 7-step analysis for Bitcoin
+            </p>
+          </div>
+
+          {/* Sample Analysis Card */}
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-card border rounded-2xl overflow-hidden shadow-2xl">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-red-500/10 via-amber-500/10 to-green-500/10 p-4 border-b flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold">
+                    ₿
+                  </div>
+                  <div>
+                    <h3 className="font-bold">BTC/USDT Analysis</h3>
+                    <p className="text-sm text-muted-foreground">Live sample • Updated hourly</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 bg-green-500/20 text-green-500 rounded-full text-sm font-medium flex items-center gap-1">
+                    <TrendingUp className="w-4 h-4" />
+                    BULLISH
+                  </span>
+                  <span className="text-2xl font-bold">87/100</span>
+                </div>
+              </div>
+
+              {/* Analysis Steps Preview */}
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {/* Market Pulse */}
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Globe className="w-5 h-5 text-green-500" />
+                      <span className="font-semibold">Market Pulse</span>
+                      <span className="ml-auto text-green-500 text-sm">Bullish</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">Fear & Greed: 72 (Greed) • BTC Dominance: 54.2%</p>
+                  </div>
+
+                  {/* Safety Check */}
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Shield className="w-5 h-5 text-green-500" />
+                      <span className="font-semibold">Safety Check</span>
+                      <span className="ml-auto text-green-500 text-sm">Safe</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">No manipulation detected • Whale activity: Normal</p>
+                  </div>
+
+                  {/* Timing */}
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="w-5 h-5 text-amber-500" />
+                      <span className="font-semibold">Timing Analysis</span>
+                      <span className="ml-auto text-amber-500 text-sm">Good</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">RSI: 58 • MACD: Bullish crossover forming</p>
+                  </div>
+
+                  {/* Trade Plan */}
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Target className="w-5 h-5 text-green-500" />
+                      <span className="font-semibold">Trade Plan</span>
+                      <span className="ml-auto text-green-500 text-sm">Ready</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">Entry: $67,250 • TP: $72,800 • SL: $64,500</p>
+                  </div>
+                </div>
+
+                {/* Verdict */}
+                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white flex-shrink-0">
+                      <CheckCircle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-green-500 mb-1">Final Verdict: LONG Recommended</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Market conditions favor bullish continuation. Entry zone $67,000-$67,500 with 3:1 risk-reward ratio.
+                        Set stop-loss at $64,500 to protect against downside.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Blur overlay for full report */}
+                <div className="mt-6 relative">
+                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent z-10 flex items-end justify-center pb-4">
+                    <Link
+                      href="/register"
+                      className="px-6 py-3 bg-gradient-to-r from-red-500 via-amber-500 to-green-500 text-white rounded-lg font-semibold flex items-center gap-2 shadow-lg"
+                    >
+                      <Eye className="w-5 h-5" />
+                      Get Full Analysis Free
+                    </Link>
+                  </div>
+                  <div className="blur-sm pointer-events-none opacity-50">
+                    <div className="grid grid-cols-3 gap-4 p-4 bg-accent/30 rounded-lg">
+                      <div className="h-20 bg-accent rounded"></div>
+                      <div className="h-20 bg-accent rounded"></div>
+                      <div className="h-20 bg-accent rounded"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Dashboard Preview */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Your Trading Command Center
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              A clean, intuitive dashboard designed for traders who want results, not complexity
+            </p>
+          </div>
+
+          {/* Dashboard Mockup */}
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-card border rounded-2xl overflow-hidden shadow-2xl">
+              {/* Dashboard Header */}
+              <div className="bg-accent/50 p-4 border-b flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-lg"></div>
+                    <span className="font-bold">TradePath</span>
+                  </div>
+                  <nav className="hidden md:flex items-center gap-4 ml-8">
+                    <span className="text-sm font-medium text-primary">Dashboard</span>
+                    <span className="text-sm text-muted-foreground">Analyze</span>
+                    <span className="text-sm text-muted-foreground">Reports</span>
+                    <span className="text-sm text-muted-foreground">Alerts</span>
+                  </nav>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="px-3 py-1 bg-green-500/20 text-green-500 rounded-full text-sm font-medium">
+                    125 Credits
+                  </div>
+                  <div className="w-8 h-8 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-full"></div>
+                </div>
+              </div>
+
+              {/* Dashboard Content */}
+              <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Quick Stats */}
+                <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-1">Total Analyses</p>
+                    <p className="text-2xl font-bold">147</p>
+                  </div>
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-1">Win Rate</p>
+                    <p className="text-2xl font-bold text-green-500">73%</p>
+                  </div>
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-1">Active Alerts</p>
+                    <p className="text-2xl font-bold text-amber-500">5</p>
+                  </div>
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-1">Credits Left</p>
+                    <p className="text-2xl font-bold">125</p>
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="p-4 bg-gradient-to-br from-red-500/10 via-amber-500/10 to-green-500/10 rounded-lg border border-green-500/20">
+                  <h4 className="font-semibold mb-3">Quick Analysis</h4>
+                  <div className="flex gap-2 flex-wrap">
+                    <span className="px-3 py-1 bg-background border rounded-full text-sm cursor-pointer hover:bg-accent">BTC</span>
+                    <span className="px-3 py-1 bg-background border rounded-full text-sm cursor-pointer hover:bg-accent">ETH</span>
+                    <span className="px-3 py-1 bg-background border rounded-full text-sm cursor-pointer hover:bg-accent">SOL</span>
+                    <span className="px-3 py-1 bg-background border rounded-full text-sm cursor-pointer hover:bg-accent">+50</span>
+                  </div>
+                </div>
+
+                {/* Recent Analyses */}
+                <div className="md:col-span-3">
+                  <h4 className="font-semibold mb-4">Recent Analyses</h4>
+                  <div className="space-y-3">
+                    {[
+                      { coin: 'BTC', verdict: 'LONG', score: 87, time: '2 hours ago', profit: '+4.2%' },
+                      { coin: 'ETH', verdict: 'SHORT', score: 72, time: '5 hours ago', profit: '+2.8%' },
+                      { coin: 'SOL', verdict: 'WAIT', score: 55, time: '1 day ago', profit: '—' },
+                    ].map((item, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-accent/50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-amber-500/20 rounded-full flex items-center justify-center font-bold text-sm">
+                            {item.coin.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-medium">{item.coin}/USDT</p>
+                            <p className="text-xs text-muted-foreground">{item.time}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            item.verdict === 'LONG' ? 'bg-green-500/20 text-green-500' :
+                            item.verdict === 'SHORT' ? 'bg-red-500/20 text-red-500' :
+                            'bg-gray-500/20 text-gray-500'
+                          }`}>
+                            {item.verdict}
+                          </span>
+                          <span className="font-bold">{item.score}/100</span>
+                          <span className={`font-medium ${item.profit.startsWith('+') ? 'text-green-500' : 'text-muted-foreground'}`}>
+                            {item.profit}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* CTA under dashboard */}
+            <div className="text-center mt-8">
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-red-500 via-amber-500 to-green-500 text-white rounded-lg font-semibold hover:opacity-90 transition shadow-lg shadow-green-500/25"
+              >
+                Start Your Free Dashboard
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Badges */}
+      <section className="py-12 bg-accent/50">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-wrap items-center justify-center gap-8 md:gap-16">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Lock className="w-5 h-5" />
+              <span className="text-sm font-medium">256-bit SSL Encryption</span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Shield className="w-5 h-5" />
+              <span className="text-sm font-medium">No Trading Keys Required</span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Users className="w-5 h-5" />
+              <span className="text-sm font-medium">12,000+ Active Traders</span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Activity className="w-5 h-5" />
+              <span className="text-sm font-medium">99.9% Uptime</span>
+            </div>
           </div>
         </div>
       </section>
