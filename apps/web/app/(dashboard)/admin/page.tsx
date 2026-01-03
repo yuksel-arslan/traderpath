@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Server,
   Database,
@@ -25,6 +26,9 @@ import {
   DollarSign,
 } from 'lucide-react';
 import Link from 'next/link';
+
+// API URL configuration
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 interface HealthCheck {
   status: 'healthy' | 'degraded' | 'down';
@@ -114,13 +118,14 @@ interface ActivityItem {
   id: string;
   type: string;
   amount: number;
-  reason: string;
+  source: string;
   user: string;
   metadata: Record<string, unknown>;
   createdAt: string;
 }
 
 export default function AdminPage() {
+  const router = useRouter();
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [system, setSystem] = useState<SystemMetrics | null>(null);
   const [stats, setStats] = useState<AppStats | null>(null);
@@ -142,17 +147,18 @@ export default function AdminPage() {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
-        setError('Authentication required');
+        setError('Authentication required. Please log in.');
+        router.push('/login');
         return;
       }
 
       const headers = { 'Authorization': `Bearer ${token}` };
 
       const [healthRes, systemRes, statsRes, activityRes] = await Promise.all([
-        fetch('/api/admin/health', { headers }),
-        fetch('/api/admin/system', { headers }),
-        fetch('/api/admin/stats', { headers }),
-        fetch('/api/admin/activity', { headers }),
+        fetch(`${API_URL}/api/admin/health`, { headers }),
+        fetch(`${API_URL}/api/admin/system`, { headers }),
+        fetch(`${API_URL}/api/admin/stats`, { headers }),
+        fetch(`${API_URL}/api/admin/activity`, { headers }),
       ]);
 
       if (healthRes.status === 403) {
@@ -183,7 +189,7 @@ export default function AdminPage() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [router]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -196,7 +202,7 @@ export default function AdminPage() {
         search: userSearch,
       });
 
-      const response = await fetch(`/api/admin/users?${params}`, {
+      const response = await fetch(`${API_URL}/api/admin/users?${params}`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
@@ -229,7 +235,7 @@ export default function AdminPage() {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/admin/maintenance/cleanup', {
+      const response = await fetch(`${API_URL}/api/admin/maintenance/cleanup`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
       });
@@ -252,7 +258,7 @@ export default function AdminPage() {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/admin/cache/clear', {
+      const response = await fetch(`${API_URL}/api/admin/cache/clear`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -696,7 +702,7 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <p className="font-medium">{item.user}</p>
-                      <p className="text-sm text-muted-foreground">{item.reason}</p>
+                      <p className="text-sm text-muted-foreground">{item.source}</p>
                     </div>
                   </div>
                   <div className="text-right">

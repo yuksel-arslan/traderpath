@@ -22,11 +22,43 @@ const protectedRoutes = [
 // Routes that should redirect to dashboard if already authenticated
 const authRoutes = ['/login', '/register', '/forgot-password'];
 
+// Helper to check if token is present (basic validation)
+function hasValidToken(request: NextRequest): boolean {
+  const accessToken = request.cookies.get('accessToken')?.value;
+
+  if (!accessToken) {
+    return false;
+  }
+
+  // Basic JWT format validation (should have 3 parts separated by dots)
+  const parts = accessToken.split('.');
+  if (parts.length !== 3) {
+    return false;
+  }
+
+  // Check if token is not expired (basic check)
+  try {
+    // Decode the payload part (middle section)
+    const payload = JSON.parse(
+      Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()
+    );
+
+    // Check expiration
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Check for access token in cookies (set by auth flow)
-  const accessToken = request.cookies.get('accessToken')?.value;
+  // Get token validity
+  const isAuthenticated = hasValidToken(request);
 
   // Check if current path is protected
   const isProtectedRoute = protectedRoutes.some(
@@ -38,13 +70,16 @@ export function middleware(request: NextRequest) {
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 
-  // Redirect to welcome page if accessing protected route without token
-  if (isProtectedRoute && !accessToken) {
-    return NextResponse.redirect(new URL('/', request.url));
+  // Redirect to welcome page if accessing protected route without valid token
+  if (isProtectedRoute && !isAuthenticated) {
+    // Clear invalid token cookie
+    const response = NextResponse.redirect(new URL('/', request.url));
+    response.cookies.delete('accessToken');
+    return response;
   }
 
-  // Redirect to dashboard if accessing auth route with token
-  if (isAuthRoute && accessToken) {
+  // Redirect to dashboard if accessing auth route with valid token
+  if (isAuthRoute && isAuthenticated) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 

@@ -157,12 +157,12 @@ export default async function adminRoutes(app: FastifyInstance) {
 
     // Analysis statistics
     const [totalAnalyses, analysesToday, analysesWeek] = await Promise.all([
-      prisma.creditTransaction.count({ where: { reason: { startsWith: 'analysis_' } } }),
+      prisma.creditTransaction.count({ where: { source: { startsWith: 'analysis_' } } }),
       prisma.creditTransaction.count({
-        where: { reason: { startsWith: 'analysis_' }, createdAt: { gte: today } },
+        where: { source: { startsWith: 'analysis_' }, createdAt: { gte: today } },
       }),
       prisma.creditTransaction.count({
-        where: { reason: { startsWith: 'analysis_' }, createdAt: { gte: thisWeek } },
+        where: { source: { startsWith: 'analysis_' }, createdAt: { gte: thisWeek } },
       }),
     ]);
 
@@ -191,7 +191,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     // Top analyzed coins
     const topCoins = await prisma.creditTransaction.groupBy({
       by: ['metadata'],
-      where: { reason: 'analysis_full' },
+      where: { source: 'analysis_full' },
       _count: true,
       orderBy: { _count: { id: 'desc' } },
       take: 10,
@@ -394,7 +394,7 @@ export default async function adminRoutes(app: FastifyInstance) {
       id: t.id,
       type: t.type,
       amount: t.amount,
-      reason: t.reason,
+      source: t.source,
       user: t.user.name || t.user.email,
       metadata: t.metadata,
       createdAt: t.createdAt,

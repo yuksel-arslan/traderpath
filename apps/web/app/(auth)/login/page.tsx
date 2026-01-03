@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
 import Script from 'next/script';
 
-// Google Client ID - should be in env variable
+// API URL configuration
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
 declare global {
@@ -35,21 +36,45 @@ declare global {
   }
 }
 
+// Helper to store auth token securely
+function storeAuthToken(token: string) {
+  localStorage.setItem('accessToken', token);
+  // Set cookie with secure flags
+  const isSecure = window.location.protocol === 'https:';
+  document.cookie = `accessToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax${isSecure ? '; Secure' : ''}`;
+}
+
+// Helper to store user data
+function storeUserData(user: Record<string, unknown>) {
+  localStorage.setItem('user', JSON.stringify(user));
+}
+
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [googleLoaded, setGoogleLoaded] = useState(false);
 
-  const handleGoogleCredential = async (credential: string) => {
+  // Check for success messages from registration
+  useEffect(() => {
+    if (searchParams.get('registered') === 'true') {
+      setSuccessMessage('Account created successfully! Please sign in.');
+    }
+  }, [searchParams]);
+
+  // Handle Google Sign-In callback
+  const handleGoogleCredential = useCallback(async (credential: string) => {
     setIsGoogleLoading(true);
     setError('');
 
     try {
-      const res = await fetch('/api/auth/google', {
+      const res = await fetch(`${API_URL}/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ credential }),
@@ -58,55 +83,63 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error?.message || 'Google login failed');
+        throw new Error(data.error?.message || 'Google sign-in failed');
       }
 
-      // Store token in both localStorage and cookie
       if (data.data?.token) {
-        localStorage.setItem('accessToken', data.data.token);
-        document.cookie = `accessToken=${data.data.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+        storeAuthToken(data.data.token);
+        storeUserData(data.data.user);
       }
 
       router.push('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Google login failed');
+      console.error('Google auth error:', err);
+      setError(err instanceof Error ? err.message : 'Google sign-in failed. Please try again.');
     } finally {
       setIsGoogleLoading(false);
     }
-  };
+  }, [router]);
 
+  // Initialize Google Sign-In
   useEffect(() => {
-    // Initialize Google Sign-In when the script loads
-    if (window.google && GOOGLE_CLIENT_ID) {
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: (response) => {
-          handleGoogleCredential(response.credential);
-        },
-      });
-
-      const buttonDiv = document.getElementById('google-signin-button');
-      if (buttonDiv) {
-        window.google.accounts.id.renderButton(buttonDiv, {
-          theme: 'outline',
-          size: 'large',
-          text: 'continue_with',
-          width: 384,
+    if (googleLoaded && window.google && GOOGLE_CLIENT_ID) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: (response) => {
+            if (response.credential) {
+              handleGoogleCredential(response.credential);
+            }
+          },
         });
+
+        const buttonDiv = document.getElementById('google-signin-button');
+        if (buttonDiv) {
+          window.google.accounts.id.renderButton(buttonDiv, {
+            theme: 'outline',
+            size: 'large',
+            text: 'continue_with',
+            width: 384,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to initialize Google Sign-In:', err);
       }
     }
-  }, []);
+  }, [googleLoaded, handleGoogleCredential]);
 
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setSuccessMessage('');
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
 
       const data = await res.json();
@@ -115,30 +148,31 @@ export default function LoginPage() {
         throw new Error(data.error?.message || 'Login failed');
       }
 
-      // Store token in both localStorage and cookie
       if (data.data?.token) {
-        localStorage.setItem('accessToken', data.data.token);
-        document.cookie = `accessToken=${data.data.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+        storeAuthToken(data.data.token);
+        storeUserData(data.data.user);
       }
 
       router.push('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      console.error('Login error:', err);
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Handle Google button click
   const handleGoogleClick = () => {
     if (!GOOGLE_CLIENT_ID) {
-      setError('Google login is not configured. Please use email/password.');
+      setError('Google Sign-In is not configured. Please use email and password.');
       return;
     }
 
     if (window.google) {
       window.google.accounts.id.prompt();
     } else {
-      setError('Google Sign-In is loading. Please try again.');
+      setError('Google Sign-In is still loading. Please wait a moment and try again.');
     }
   };
 
@@ -148,16 +182,8 @@ export default function LoginPage() {
         <Script
           src="https://accounts.google.com/gsi/client"
           strategy="afterInteractive"
-          onLoad={() => {
-            if (window.google) {
-              window.google.accounts.id.initialize({
-                client_id: GOOGLE_CLIENT_ID,
-                callback: (response) => {
-                  handleGoogleCredential(response.credential);
-                },
-              });
-            }
-          }}
+          onLoad={() => setGoogleLoaded(true)}
+          onError={() => console.error('Failed to load Google Sign-In script')}
         />
       )}
 
@@ -172,6 +198,15 @@ export default function LoginPage() {
 
           <div className="bg-card border rounded-lg p-6 shadow-lg">
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Success Message */}
+              {successMessage && (
+                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-600 text-sm flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                  {successMessage}
+                </div>
+              )}
+
+              {/* Error Message */}
               {error && (
                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
                   {error}
@@ -188,6 +223,7 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     required
+                    autoComplete="email"
                     className="w-full pl-10 pr-4 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   />
                 </div>
@@ -203,6 +239,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     required
+                    autoComplete="current-password"
                     className="w-full pl-10 pr-10 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   />
                   <button
@@ -252,7 +289,7 @@ export default function LoginPage() {
                   <div id="google-signin-button" className="hidden" />
                 )}
 
-                {/* Custom styled Google button - always visible */}
+                {/* Custom styled Google button */}
                 <button
                   type="button"
                   onClick={handleGoogleClick}
