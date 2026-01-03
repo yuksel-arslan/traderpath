@@ -29,11 +29,16 @@ import {
   Lightbulb,
   ChevronDown,
   ChevronUp,
+  Rocket,
+  Copy,
+  Check,
+  ExternalLink,
+  ChevronRight,
 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { cn } from '../../../../lib/utils';
 
-// AI Expert definitions
+// AI Expert definitions with 10 smart questions each
 const AI_EXPERTS = {
   aria: {
     id: 'aria',
@@ -43,10 +48,18 @@ const AI_EXPERTS = {
     icon: LineChart,
     gradient: 'from-blue-500 to-cyan-500',
     bgGradient: 'from-blue-500/5 to-cyan-500/5',
+    relatedStep: 2, // Asset Scanner
     exampleQuestions: [
-      'What is RSI divergence and how to interpret it?',
-      'How to identify support/resistance levels for BTC?',
-      'How to use the MACD indicator?',
+      'RSI divergence nedir ve nasıl yorumlanır?',
+      'BTC için destek/direnç seviyeleri nasıl belirlenir?',
+      'MACD göstergesi nasıl kullanılır?',
+      'Çoklu zaman dilimi analizi nasıl yapılır?',
+      'Bollinger Bantları ile işlem stratejisi nedir?',
+      'Hareketli ortalama kesişimleri ne sinyali verir?',
+      'Trend yönünü nasıl belirleyebilirim?',
+      'Hacim Profili ve POC nedir?',
+      'Omuz baş omuz formasyonunu nasıl tespit ederim?',
+      'Day trading ve swing trading için hangi zaman dilimi?',
     ],
   },
   nexus: {
@@ -57,10 +70,18 @@ const AI_EXPERTS = {
     icon: Target,
     gradient: 'from-amber-500 to-orange-500',
     bgGradient: 'from-amber-500/5 to-orange-500/5',
+    relatedStep: 5, // Trade Plan
     exampleQuestions: [
-      'How to calculate position size?',
-      'Where should I place my stop loss?',
-      'How to determine risk/reward ratio?',
+      'Pozisyon boyutu nasıl hesaplanır?',
+      'Stop loss nereye konulmalı?',
+      'Risk/ödül oranı nasıl belirlenir?',
+      'İşlem başına ne kadar risk almalıyım?',
+      'Düşüş dönemlerinde sermayemi nasıl korurum?',
+      'Sabit ve takip eden stop-loss farkı nedir?',
+      'Aşırı kaldıraçtan nasıl kaçınırım?',
+      'DCA mı yoksa tek seferde giriş mi?',
+      'Aynı anda kaç pozisyon açık tutmalıyım?',
+      'Maksimum drawdown nedir ve nasıl yönetilir?',
     ],
   },
   oracle: {
@@ -71,10 +92,18 @@ const AI_EXPERTS = {
     icon: Eye,
     gradient: 'from-purple-500 to-pink-500',
     bgGradient: 'from-purple-500/5 to-pink-500/5',
+    relatedStep: 3, // Safety Check
     exampleQuestions: [
-      'How to detect whale accumulation?',
-      'What does exchange outflow mean?',
-      'What is smart money doing?',
+      'Balina birikimi nasıl tespit edilir?',
+      'Exchange outflow ne anlama gelir?',
+      'Smart money ne yapıyor?',
+      'Akıllı paranın ne yaptığını nasıl takip ederim?',
+      'Birikim ve dağıtım arasındaki fark nedir?',
+      'Kurumsal para akışını nasıl takip ederim?',
+      'Borsalardan negatif net akış ne gösterir?',
+      'Balinalar piyasayı nasıl manipüle eder?',
+      'Emir akışı dengesizliği nedir?',
+      'Akıllı paranın çıkış yaptığının işaretleri neler?',
     ],
   },
   sentinel: {
@@ -85,10 +114,18 @@ const AI_EXPERTS = {
     icon: ShieldAlert,
     gradient: 'from-red-500 to-rose-500',
     bgGradient: 'from-red-500/5 to-rose-500/5',
+    relatedStep: 6, // Trap Check
     exampleQuestions: [
-      'How to detect a pump and dump?',
-      'What are the signs of a rug pull?',
-      'Is this token contract safe?',
+      'Pump and dump nasıl tespit edilir?',
+      'Rug pull işaretleri nelerdir?',
+      'Token kontratı güvenli mi?',
+      'Bull trap nedir ve nasıl kaçınırım?',
+      'Bear trap nasıl tespit edilir?',
+      'Likidite avı (liquidity grab) nedir?',
+      'Stop hunt nasıl çalışır?',
+      'Sahte kırılımları nasıl anlarım?',
+      'Likidite seviyeleri neden önemli?',
+      'Spoofing ve layering nedir?',
     ],
   },
 };
@@ -122,6 +159,122 @@ interface ChatResponse {
   };
 }
 
+// Answer Footer Component - Beautiful styled response sections
+function AnswerFooter({ expert }: { expert: typeof AI_EXPERTS.aria }) {
+  const [copied, setCopied] = useState(false);
+
+  const exampleCommands: Record<string, string> = {
+    aria: 'BTCUSDT için teknik analiz yap ve raporu hazırla, epostama gönder',
+    nexus: 'BTCUSDT için $5000 hesapla işlem planı oluştur, raporu hazırla',
+    oracle: 'BTCUSDT için Safety Check yap ve raporu hazırla, epostama gönder',
+    sentinel: 'BTCUSDT için tuzak kontrolü yap ve raporu hazırla',
+  };
+
+  const stepNames: Record<number, string> = {
+    2: 'Asset Scanner',
+    3: 'Safety Check',
+    5: 'Trade Plan',
+    6: 'Trap Check',
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(exampleCommands[expert.id] || '');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="space-y-3 mt-4">
+      {/* TradePath Feature */}
+      <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <ExternalLink className="w-4 h-4 text-blue-500" />
+          <span className="font-semibold text-sm">TradePath&apos;te Bul</span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Bu verileri <strong className="text-foreground">Analyze → {stepNames[expert.relatedStep]} (Adım {expert.relatedStep})</strong> altında bulabilirsin.
+        </p>
+      </div>
+
+      {/* Learned Summary */}
+      <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <BookOpen className="w-4 h-4 text-amber-500" />
+          <span className="font-semibold text-sm text-amber-600 dark:text-amber-400">
+            📚 Bu bilgiyi öğrendin!
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Bu konuyu daha derinlemesine öğrenmek için TradePath eğitim kütüphanesini kullanabilirsin.
+        </p>
+      </div>
+
+      {/* CTA */}
+      <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Rocket className="w-4 h-4 text-green-500" />
+          <span className="font-semibold text-sm text-green-600 dark:text-green-400">
+            🚀 Şimdi gerçek verilerle dene!
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground mb-2">
+          İstediğin coin için bu analizi yapmak ister misin? 3 kredi ile gerçek verilerle hesaplama yapabilirim.
+        </p>
+      </div>
+
+      {/* Report Tip */}
+      <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Lightbulb className="w-4 h-4 text-purple-500" />
+          <span className="font-semibold text-sm text-purple-600 dark:text-purple-400">
+            💡 Raporuna ekle
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Bu analizi seçtiğin coin için yaptığında, sonuçları trading raporuna ekleyebilir ve daha güçlü kararlar alabilirsin!
+        </p>
+      </div>
+
+      {/* Example Command */}
+      <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles className="w-4 h-4 text-cyan-500" />
+          <span className="font-semibold text-sm text-cyan-600 dark:text-cyan-400">
+            🚀 Bu bilgiyi gerçek bir coin için uygulamak ister misin?
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground mb-3">
+          Herhangi bir coin sembolü gönder ve gerçek analiz yap. Sonucu raporuna ekleyebilirsin!
+        </p>
+        <div className="bg-background/50 rounded-lg p-3 border">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] text-muted-foreground">Örnek talimat:</span>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3 h-3" />
+                  Kopyalandı
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3 h-3" />
+                  Kopyala
+                </>
+              )}
+            </button>
+          </div>
+          <code className="text-xs font-medium text-foreground">
+            &quot;{exampleCommands[expert.id]}&quot;
+          </code>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Example card component
 function ExampleCard({ example }: { example: Example }) {
   const [expanded, setExpanded] = useState(false);
@@ -132,14 +285,14 @@ function ExampleCard({ example }: { example: Example }) {
       color: 'text-green-500',
       bg: 'bg-green-500/10',
       border: 'border-green-500/20',
-      label: 'Real Analysis',
+      label: 'Gerçek Analiz',
     },
     quiz: {
       icon: GraduationCap,
       color: 'text-amber-500',
       bg: 'bg-amber-500/10',
       border: 'border-amber-500/20',
-      label: 'Education',
+      label: 'Eğitim',
     },
     pattern: {
       icon: Lightbulb,
@@ -182,7 +335,7 @@ function ExampleCard({ example }: { example: Example }) {
                 onClick={() => setExpanded(!expanded)}
                 className="flex items-center gap-1 text-xs text-primary hover:underline"
               >
-                {expanded ? 'Hide' : 'Show details'}
+                {expanded ? 'Gizle' : 'Detayları gör'}
                 {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </button>
               <AnimatePresence>
@@ -358,7 +511,7 @@ export default function AIExpertChatPage() {
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full border border-amber-500/20">
                 <Gem className="w-4 h-4 text-amber-500" />
                 <span className="text-sm font-semibold text-amber-600">
-                  {credits?.balance || 0} credits
+                  {credits?.balance || 0} kredi
                 </span>
               </div>
             </div>
@@ -382,7 +535,7 @@ export default function AIExpertChatPage() {
               )}>
                 <Icon className="w-14 h-14 text-white" />
               </div>
-              <h2 className="text-2xl font-bold mb-2">Chat with {expert.name}</h2>
+              <h2 className="text-2xl font-bold mb-2">{expert.name} ile Sohbet</h2>
               <p className="text-muted-foreground mb-8 max-w-md mx-auto">
                 {expert.description}
               </p>
@@ -391,35 +544,62 @@ export default function AIExpertChatPage() {
               <div className="flex items-center justify-center gap-3 mb-8">
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 rounded-full text-green-600 text-sm">
                   <BookOpen className="w-4 h-4" />
-                  Real examples
+                  Gerçek örneklerle
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full text-amber-600 text-sm">
                   <Zap className="w-4 h-4" />
-                  3 credits/message
+                  3 kredi/mesaj
                 </div>
               </div>
 
-              {/* Example questions */}
-              <div className="space-y-3 max-w-lg mx-auto">
-                <p className="text-sm text-muted-foreground mb-4">Example questions:</p>
-                {expert.exampleQuestions.map((question, i) => (
-                  <motion.button
-                    key={i}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.1 }}
-                    onClick={() => handleExampleClick(question)}
-                    className={cn(
-                      'block w-full text-left px-5 py-4 rounded-xl transition text-sm',
-                      'bg-gradient-to-r hover:shadow-lg',
-                      expert.bgGradient,
-                      'border border-border/50 hover:border-primary/30'
-                    )}
-                  >
-                    <Sparkles className="w-4 h-4 inline mr-2 text-amber-500" />
-                    {question}
-                  </motion.button>
-                ))}
+              {/* Example questions - 10 smart questions with scroll */}
+              <div className="max-w-2xl mx-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm text-muted-foreground">10 Akıllı Soru:</p>
+                  <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                    Tıkla ve sor
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-2">
+                  {expert.exampleQuestions.map((question, i) => (
+                    <motion.button
+                      key={i}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      onClick={() => handleExampleClick(question)}
+                      className={cn(
+                        'flex items-start gap-3 text-left px-4 py-3 rounded-xl transition text-sm',
+                        'bg-gradient-to-r hover:shadow-lg hover:scale-[1.02]',
+                        expert.bgGradient,
+                        'border border-border/50 hover:border-primary/30'
+                      )}
+                    >
+                      <span className={cn(
+                        'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0',
+                        `bg-gradient-to-br ${expert.gradient} text-white`
+                      )}>
+                        {i + 1}
+                      </span>
+                      <span className="flex-1">{question}</span>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                    </motion.button>
+                  ))}
+                </div>
+
+                {/* TradePath Feature Link */}
+                <div className="mt-6 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl border border-blue-500/20">
+                  <div className="flex items-center gap-2 text-sm">
+                    <ExternalLink className="w-4 h-4 text-blue-500" />
+                    <span className="text-muted-foreground">
+                      Bu bilgileri TradePath&apos;te{' '}
+                      <Link href="/analyze" className="text-primary font-medium hover:underline">
+                        Analyze → Step {expert.relatedStep}
+                      </Link>
+                      {' '}altında gerçek verilerle test edebilirsin.
+                    </span>
+                  </div>
+                </div>
               </div>
             </motion.div>
           ) : (
@@ -464,7 +644,7 @@ export default function AIExpertChatPage() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <BookOpen className="w-3 h-3" />
-                          TradePath Examples
+                          TradePath Örnekleri
                         </div>
                         <div className="grid gap-2">
                           {message.examples.map((example, i) => (
@@ -472,6 +652,11 @@ export default function AIExpertChatPage() {
                           ))}
                         </div>
                       </div>
+                    )}
+
+                    {/* Answer Footer with CTA sections */}
+                    {message.role === 'assistant' && (
+                      <AnswerFooter expert={expert} />
                     )}
                   </div>
                   {message.role === 'user' && (
@@ -498,7 +683,7 @@ export default function AIExpertChatPage() {
                   <div className="bg-muted rounded-2xl px-5 py-4 flex items-center gap-3">
                     <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
-                      {expert.name} is thinking...
+                      {expert.name} düşünüyor...
                     </span>
                   </div>
                 </motion.div>
@@ -520,9 +705,9 @@ export default function AIExpertChatPage() {
               className="flex items-center gap-2 mb-3 p-4 bg-destructive/10 text-destructive rounded-xl text-sm border border-destructive/20"
             >
               <AlertCircle className="w-5 h-5" />
-              <span>You need at least 3 credits to chat with this expert.</span>
+              <span>Bu uzmanla sohbet için en az 3 kredi gerekiyor.</span>
               <Link href="/credits" className="underline font-semibold ml-auto">
-                Get Credits
+                Kredi Al
               </Link>
             </motion.div>
           )}
@@ -549,7 +734,7 @@ export default function AIExpertChatPage() {
                   handleSubmit(e);
                 }
               }}
-              placeholder={`Ask ${expert.name} a question...`}
+              placeholder={`${expert.name}'a sorunuzu yazın...`}
               className="flex-1 resize-none rounded-xl border bg-background px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[56px] max-h-[150px]"
               rows={1}
               disabled={!hasEnoughCredits || chatMutation.isPending}
@@ -569,7 +754,7 @@ export default function AIExpertChatPage() {
               ) : (
                 <>
                   <Send className="w-5 h-5" />
-                  <span className="hidden sm:inline">Send</span>
+                  <span className="hidden sm:inline">Gönder</span>
                 </>
               )}
             </button>
@@ -577,10 +762,10 @@ export default function AIExpertChatPage() {
           <div className="flex items-center justify-center gap-4 mt-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Zap className="w-3 h-3 text-amber-500" />
-              3 credits/message
+              3 kredi/mesaj
             </span>
             <span>•</span>
-            <span>Shift+Enter for new line</span>
+            <span>Shift+Enter ile yeni satır</span>
           </div>
         </div>
       </div>
