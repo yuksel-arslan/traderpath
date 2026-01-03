@@ -24,8 +24,6 @@ import {
   Sparkles,
   Zap,
   BookOpen,
-  Lightbulb,
-  Rocket,
   Copy,
   Check,
   ExternalLink,
@@ -146,15 +144,15 @@ interface ChatResponse {
   };
 }
 
-// Answer Footer Component - Beautiful styled response sections
+// Answer Footer Component - Sadeleştirilmiş ve akışa uygun
 function AnswerFooter({ expert }: { expert: typeof AI_EXPERTS.aria }) {
   const [copied, setCopied] = useState(false);
 
   const exampleCommands: Record<string, string> = {
-    aria: 'BTCUSDT için RSI ve MACD durumunu analiz et',
-    nexus: 'ETHUSDT için $1000 sermaye ile pozisyon boyutu hesapla',
+    aria: 'BTCUSDT için teknik analiz yap',
+    nexus: 'ETHUSDT için pozisyon boyutu hesapla',
     oracle: 'SOLUSDT için balina aktivitesini kontrol et',
-    sentinel: 'Bu token güvenli mi? Contract adresini kontrol et',
+    sentinel: 'Bu token güvenli mi kontrol et',
   };
 
   const stepNames: Record<number, string> = {
@@ -172,18 +170,18 @@ function AnswerFooter({ expert }: { expert: typeof AI_EXPERTS.aria }) {
 
   return (
     <div className="space-y-3 mt-4">
-      {/* TradePath Feature */}
+      {/* TradePath'te Bul */}
       <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-2">
           <ExternalLink className="w-4 h-4 text-blue-500" />
-          <span className="font-semibold text-sm">TradePath&apos;te Bul</span>
+          <span className="font-semibold text-sm">📍 TradePath&apos;te Bul</span>
         </div>
         <p className="text-xs text-muted-foreground">
-          Bu verileri <strong className="text-foreground">Analyze → {stepNames[expert.relatedStep]} (Adım {expert.relatedStep})</strong> altında bulabilirsin.
+          Bu verileri <strong className="text-foreground">Analyze → {stepNames[expert.relatedStep]} (Adım {expert.relatedStep})</strong> altında gerçek verilerle görebilirsin.
         </p>
       </div>
 
-      {/* Learned Summary */}
+      {/* Bu bilgiyi öğrendin */}
       <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-2">
           <BookOpen className="w-4 h-4 text-amber-500" />
@@ -192,50 +190,24 @@ function AnswerFooter({ expert }: { expert: typeof AI_EXPERTS.aria }) {
           </span>
         </div>
         <p className="text-xs text-muted-foreground">
-          Bu konuyu daha derinlemesine öğrenmek için TradePath eğitim kütüphanesini kullanabilirsin.
+          Eğitim kütüphanesinde daha fazla bilgi bulabilirsin.
         </p>
       </div>
 
-      {/* CTA */}
+      {/* Örnek Talimat */}
       <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-2">
-          <Rocket className="w-4 h-4 text-green-500" />
+          <Sparkles className="w-4 h-4 text-green-500" />
           <span className="font-semibold text-sm text-green-600 dark:text-green-400">
-            🚀 Şimdi gerçek verilerle dene!
-          </span>
-        </div>
-        <p className="text-xs text-muted-foreground mb-2">
-          İstediğin coin için bu analizi yapmak ister misin? 3 kredi ile gerçek verilerle hesaplama yapabilirim.
-        </p>
-      </div>
-
-      {/* Report Tip */}
-      <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Lightbulb className="w-4 h-4 text-purple-500" />
-          <span className="font-semibold text-sm text-purple-600 dark:text-purple-400">
-            💡 Raporuna ekle
-          </span>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Bu analizi seçtiğin coin için yaptığında, sonuçları trading raporuna ekleyebilir ve daha güçlü kararlar alabilirsin!
-        </p>
-      </div>
-
-      {/* Example Command */}
-      <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Sparkles className="w-4 h-4 text-cyan-500" />
-          <span className="font-semibold text-sm text-cyan-600 dark:text-cyan-400">
-            🚀 Bu bilgiyi gerçek bir coin için uygulamak ister misin?
+            🚀 Gerçek coin ile dene
           </span>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Herhangi bir coin sembolü gönder ve gerçek analiz yap. Sonucu raporuna ekleyebilirsin!
+          Coin sembolü gönder, gerçek verilerle analiz yapayım.
         </p>
         <div className="bg-background/50 rounded-lg p-3 border">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] text-muted-foreground">Örnek talimat:</span>
+            <span className="text-[10px] text-muted-foreground">Örnek:</span>
             <button
               onClick={handleCopy}
               className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition"
@@ -500,49 +472,93 @@ export default function AIExpertChatPage() {
             </motion.div>
           ) : (
             /* Message list */
-            <div className="space-y-6">
+            <div className="space-y-4">
               {messages.map((message) => (
                 <motion.div
                   key={message.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={cn(
-                    'flex gap-4',
+                    'flex gap-3',
                     message.role === 'user' ? 'justify-end' : 'justify-start'
                   )}
                 >
+                  {/* AI Avatar */}
                   {message.role === 'assistant' && (
                     <div className={cn(
-                      'w-10 h-10 bg-gradient-to-br rounded-xl flex items-center justify-center flex-shrink-0',
+                      'w-9 h-9 bg-gradient-to-br rounded-full flex items-center justify-center flex-shrink-0 shadow-md',
                       expert.gradient
                     )}>
-                      <Bot className="w-5 h-5 text-white" />
+                      <Bot className="w-4 h-4 text-white" />
                     </div>
                   )}
+
                   <div className={cn(
-                    'max-w-[85%] space-y-3',
+                    'max-w-[80%] space-y-2',
                     message.role === 'user' ? 'order-first' : ''
                   )}>
+                    {/* Sender name for AI */}
+                    {message.role === 'assistant' && (
+                      <span className={cn(
+                        'text-xs font-semibold bg-gradient-to-r bg-clip-text text-transparent',
+                        expert.gradient
+                      )}>
+                        {expert.name}
+                      </span>
+                    )}
+
                     {/* Message bubble */}
                     <div
                       className={cn(
-                        'rounded-2xl px-5 py-4',
+                        'px-4 py-3 shadow-sm',
                         message.role === 'user'
-                          ? `bg-gradient-to-r ${expert.gradient} text-white`
-                          : 'bg-muted'
+                          ? `bg-gradient-to-r ${expert.gradient} text-white rounded-2xl rounded-br-md`
+                          : 'bg-card border border-border rounded-2xl rounded-tl-md'
                       )}
                     >
-                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                      <div className={cn(
+                        'text-sm leading-relaxed',
+                        message.role === 'assistant' && 'prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0'
+                      )}>
+                        {message.role === 'assistant' ? (
+                          <div
+                            dangerouslySetInnerHTML={{
+                              __html: message.content
+                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                .replace(/^• /gm, '<span class="text-primary">•</span> ')
+                                .replace(/^- /gm, '<span class="text-primary">•</span> ')
+                                .replace(/📍|📊|📌|📚|🚀|💡|✅|⚠️|🔥|🐋|🔐|🎯|📈|📐/g, '<span class="text-base">$&</span>')
+                                .replace(/\n/g, '<br/>')
+                            }}
+                          />
+                        ) : (
+                          <p className="whitespace-pre-wrap">{message.content}</p>
+                        )}
+                      </div>
                     </div>
 
+                    {/* Timestamp */}
+                    <span className={cn(
+                      'text-[10px] text-muted-foreground',
+                      message.role === 'user' ? 'text-right block' : ''
+                    )}>
+                      {message.timestamp.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+
                     {/* Answer Footer - only show if not waiting for approval */}
-                    {message.role === 'assistant' && !message.content.includes('Onaylıyor musun?') && (
+                    {message.role === 'assistant' &&
+                     !message.content.includes('Onaylıyor musun?') &&
+                     !message.content.includes('ister misin?') &&
+                     !message.content.includes('İster misin?') && (
                       <AnswerFooter expert={expert} />
                     )}
                   </div>
+
+                  {/* User Avatar */}
                   {message.role === 'user' && (
-                    <div className="w-10 h-10 bg-muted rounded-xl flex items-center justify-center flex-shrink-0">
-                      <User className="w-5 h-5" />
+                    <div className="w-9 h-9 bg-gradient-to-br from-slate-500 to-slate-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
+                      <User className="w-4 h-4 text-white" />
                     </div>
                   )}
                 </motion.div>
@@ -553,19 +569,31 @@ export default function AIExpertChatPage() {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="flex gap-4"
+                  className="flex gap-3"
                 >
                   <div className={cn(
-                    'w-10 h-10 bg-gradient-to-br rounded-xl flex items-center justify-center flex-shrink-0',
+                    'w-9 h-9 bg-gradient-to-br rounded-full flex items-center justify-center flex-shrink-0 shadow-md',
                     expert.gradient
                   )}>
-                    <Bot className="w-5 h-5 text-white" />
+                    <Bot className="w-4 h-4 text-white" />
                   </div>
-                  <div className="bg-muted rounded-2xl px-5 py-4 flex items-center gap-3">
-                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {expert.name} düşünüyor...
+                  <div className="space-y-2">
+                    <span className={cn(
+                      'text-xs font-semibold bg-gradient-to-r bg-clip-text text-transparent',
+                      expert.gradient
+                    )}>
+                      {expert.name}
                     </span>
+                    <div className="bg-card border border-border rounded-2xl rounded-tl-md px-4 py-3 flex items-center gap-3 shadow-sm">
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        düşünüyor...
+                      </span>
+                    </div>
                   </div>
                 </motion.div>
               )}
