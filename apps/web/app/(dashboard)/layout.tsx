@@ -18,12 +18,14 @@ import {
   ChevronDown,
   FileText,
   Server,
+  Brain,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
+  { name: 'AI Expert', href: '/ai-expert', icon: Brain },
   { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'Rewards', href: '/rewards', icon: Gift },
   { name: 'Credits', href: '/credits', icon: Coins },
