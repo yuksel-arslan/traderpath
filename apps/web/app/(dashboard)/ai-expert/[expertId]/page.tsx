@@ -164,10 +164,10 @@ function AnswerFooter({ expert }: { expert: typeof AI_EXPERTS.aria }) {
   const [copied, setCopied] = useState(false);
 
   const exampleCommands: Record<string, string> = {
-    aria: 'BTCUSDT için teknik analiz yap ve raporu hazırla, epostama gönder',
-    nexus: 'BTCUSDT için $5000 hesapla işlem planı oluştur, raporu hazırla',
-    oracle: 'BTCUSDT için Safety Check yap ve raporu hazırla, epostama gönder',
-    sentinel: 'BTCUSDT için tuzak kontrolü yap ve raporu hazırla',
+    aria: 'BTCUSDT için RSI ve MACD durumunu analiz et',
+    nexus: 'ETHUSDT için $1000 sermaye ile pozisyon boyutu hesapla',
+    oracle: 'SOLUSDT için balina aktivitesini kontrol et',
+    sentinel: 'Bu token güvenli mi? Contract adresini kontrol et',
   };
 
   const stepNames: Record<number, string> = {
