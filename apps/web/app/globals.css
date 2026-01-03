@@ -455,3 +455,58 @@ html {
   50% { transform: scale(1.1); }
   100% { transform: scale(1); opacity: 1; }
 }
+
+/* ===========================================
+   AI Expert Message Styling
+   =========================================== */
+
+/* AI mesaj içeriği temel stili */
+.ai-message-content {
+  @apply text-foreground/90;
+}
+
+.ai-message-content strong {
+  @apply font-semibold text-foreground;
+}
+
+.ai-message-content em {
+  @apply text-foreground/80 not-italic;
+}
+
+/* Bölüm başlıkları (emoji ile başlayanlar) */
+.ai-section-title {
+  @apply font-semibold text-foreground flex items-center gap-1.5;
+  margin-top: 0.875rem;
+  margin-bottom: 0.375rem;
+}
+
+.ai-section-title:first-child {
+  margin-top: 0;
+}
+
+.ai-emoji {
+  @apply text-base flex-shrink-0;
+}
+
+/* Madde işaretli listeler */
+.ai-bullet {
+  @apply flex items-start gap-2 py-0.5;
+}
+
+.ai-bullet-dot {
+  @apply text-primary text-[8px] mt-[7px] flex-shrink-0;
+}
+
+/* Numaralı listeler */
+.ai-numbered {
+  @apply flex items-start gap-2.5 py-1;
+}
+
+.ai-number {
+  @apply bg-primary/10 text-primary text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0;
+}
+
+/* Paragraf arası boşluk */
+.ai-paragraph-break {
+  @apply h-3;
+}

@@ -131,6 +131,32 @@ interface Message {
   timestamp: Date;
 }
 
+// AI mesajlarını stilize etmek için formatlama fonksiyonu
+function formatAIMessage(content: string): string {
+  let formatted = content
+    // Fazla boş satırları temizle (3+ satır boşluk -> 2 satır)
+    .replace(/\n{3,}/g, '\n\n')
+    // Başlıkları stilize et (emoji ile başlayan satırlar)
+    .replace(/^(📍|📊|📌|📚|🚀|💡|✅|⚠️|🔥|🐋|🔐|🎯|📈|📐)\s*(.+?)$/gm,
+      '<div class="ai-section-title"><span class="ai-emoji">$1</span> $2</div>')
+    // Kalın metinleri stilize et
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    // İtalik metinleri stilize et
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    // Madde işaretlerini stilize et
+    .replace(/^[•]\s+(.+)$/gm, '<div class="ai-bullet"><span class="ai-bullet-dot">●</span><span>$1</span></div>')
+    .replace(/^[-]\s+(.+)$/gm, '<div class="ai-bullet"><span class="ai-bullet-dot">●</span><span>$1</span></div>')
+    // Numaralı listeleri stilize et (1. 2. 3.)
+    .replace(/^(\d+)\.\s+(.+)$/gm,
+      '<div class="ai-numbered"><span class="ai-number">$1</span><span>$2</span></div>')
+    // Çift satır sonu -> paragraf arası boşluk
+    .replace(/\n\n/g, '<div class="ai-paragraph-break"></div>')
+    // Tek satır sonu -> br
+    .replace(/\n/g, '<br/>');
+
+  return formatted;
+}
+
 interface ChatResponse {
   success: boolean;
   data?: {
@@ -516,20 +542,12 @@ export default function AIExpertChatPage() {
                           : 'bg-card border border-border rounded-2xl rounded-tl-md'
                       )}
                     >
-                      <div className={cn(
-                        'text-sm leading-relaxed',
-                        message.role === 'assistant' && 'prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0'
-                      )}>
+                      <div className="text-sm leading-[1.7] text-foreground/90">
                         {message.role === 'assistant' ? (
                           <div
+                            className="ai-message-content"
                             dangerouslySetInnerHTML={{
-                              __html: message.content
-                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                                .replace(/^• /gm, '<span class="text-primary">•</span> ')
-                                .replace(/^- /gm, '<span class="text-primary">•</span> ')
-                                .replace(/📍|📊|📌|📚|🚀|💡|✅|⚠️|🔥|🐋|🔐|🎯|📈|📐/g, '<span class="text-base">$&</span>')
-                                .replace(/\n/g, '<br/>')
+                              __html: formatAIMessage(message.content)
                             }}
                           />
                         ) : (
