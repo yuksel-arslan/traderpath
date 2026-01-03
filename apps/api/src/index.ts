@@ -27,6 +27,9 @@ import { reportRoutes } from './modules/reports/report.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import costRoutes from './modules/costs/cost.routes';
 import { translationRoutes } from './modules/translation/translation.routes';
+import aiExpertRoutes from './modules/ai-expert/ai-expert.routes';
+import expertRoutes from './modules/expert/expert.routes';
+import contractSecurityRoutes from './modules/security/contract-security.routes';
 
 // ===========================================
 // Server Configuration
@@ -230,6 +233,17 @@ app.register(costRoutes, { prefix: '/api/costs' }); // Legacy
 
 // Translation
 app.register(translationRoutes);
+
+// AI Expert routes (uses full paths internally)
+app.register(aiExpertRoutes);
+
+// Expert routes
+app.register(expertRoutes, { prefix: '/api/v1/expert' });
+app.register(expertRoutes, { prefix: '/api/expert' }); // Legacy
+
+// Contract Security routes
+app.register(contractSecurityRoutes, { prefix: '/api/v1/security' });
+app.register(contractSecurityRoutes, { prefix: '/api/security' }); // Legacy
 
 // ===========================================
 // 404 Handler
