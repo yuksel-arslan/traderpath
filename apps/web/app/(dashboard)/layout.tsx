@@ -25,7 +25,7 @@ import { ThemeToggle } from '../../components/common/ThemeToggle';
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
-  { name: 'AI Expert', href: '/ai-expert', icon: Brain },
+  { name: 'AI Experts', href: '/ai-expert', icon: Brain },
   { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'Rewards', href: '/rewards', icon: Gift },
   { name: 'Credits', href: '/credits', icon: Coins },

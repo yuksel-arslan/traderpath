@@ -44,9 +44,9 @@ const AI_EXPERTS = {
     gradient: 'from-blue-500 to-cyan-500',
     bgGradient: 'from-blue-500/5 to-cyan-500/5',
     exampleQuestions: [
-      'RSI divergence nedir ve nasıl yorumlanır?',
-      'BTC için destek/direnç seviyeleri nasıl belirlenir?',
-      'MACD göstergesi nasıl kullanılır?',
+      'What is RSI divergence and how to interpret it?',
+      'How to identify support/resistance levels for BTC?',
+      'How to use the MACD indicator?',
     ],
   },
   nexus: {
@@ -58,9 +58,9 @@ const AI_EXPERTS = {
     gradient: 'from-amber-500 to-orange-500',
     bgGradient: 'from-amber-500/5 to-orange-500/5',
     exampleQuestions: [
-      'Pozisyon boyutu nasıl hesaplanır?',
-      'Stop loss nereye konulmalı?',
-      'Risk/ödül oranı nasıl belirlenir?',
+      'How to calculate position size?',
+      'Where should I place my stop loss?',
+      'How to determine risk/reward ratio?',
     ],
   },
   oracle: {
@@ -72,9 +72,9 @@ const AI_EXPERTS = {
     gradient: 'from-purple-500 to-pink-500',
     bgGradient: 'from-purple-500/5 to-pink-500/5',
     exampleQuestions: [
-      'Balina birikimi nasıl tespit edilir?',
-      'Exchange outflow ne anlama gelir?',
-      'Smart money ne yapıyor?',
+      'How to detect whale accumulation?',
+      'What does exchange outflow mean?',
+      'What is smart money doing?',
     ],
   },
   sentinel: {
@@ -86,9 +86,9 @@ const AI_EXPERTS = {
     gradient: 'from-red-500 to-rose-500',
     bgGradient: 'from-red-500/5 to-rose-500/5',
     exampleQuestions: [
-      'Pump and dump nasıl tespit edilir?',
-      'Rug pull işaretleri nelerdir?',
-      'Token kontratı güvenli mi?',
+      'How to detect a pump and dump?',
+      'What are the signs of a rug pull?',
+      'Is this token contract safe?',
     ],
   },
 };
@@ -132,14 +132,14 @@ function ExampleCard({ example }: { example: Example }) {
       color: 'text-green-500',
       bg: 'bg-green-500/10',
       border: 'border-green-500/20',
-      label: 'Gerçek Analiz',
+      label: 'Real Analysis',
     },
     quiz: {
       icon: GraduationCap,
       color: 'text-amber-500',
       bg: 'bg-amber-500/10',
       border: 'border-amber-500/20',
-      label: 'Eğitim',
+      label: 'Education',
     },
     pattern: {
       icon: Lightbulb,
@@ -182,7 +182,7 @@ function ExampleCard({ example }: { example: Example }) {
                 onClick={() => setExpanded(!expanded)}
                 className="flex items-center gap-1 text-xs text-primary hover:underline"
               >
-                {expanded ? 'Gizle' : 'Detayları gör'}
+                {expanded ? 'Hide' : 'Show details'}
                 {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </button>
               <AnimatePresence>
@@ -358,7 +358,7 @@ export default function AIExpertChatPage() {
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full border border-amber-500/20">
                 <Gem className="w-4 h-4 text-amber-500" />
                 <span className="text-sm font-semibold text-amber-600">
-                  {credits?.balance || 0} kredi
+                  {credits?.balance || 0} credits
                 </span>
               </div>
             </div>
@@ -382,7 +382,7 @@ export default function AIExpertChatPage() {
               )}>
                 <Icon className="w-14 h-14 text-white" />
               </div>
-              <h2 className="text-2xl font-bold mb-2">{expert.name} ile Sohbet</h2>
+              <h2 className="text-2xl font-bold mb-2">Chat with {expert.name}</h2>
               <p className="text-muted-foreground mb-8 max-w-md mx-auto">
                 {expert.description}
               </p>
@@ -391,17 +391,17 @@ export default function AIExpertChatPage() {
               <div className="flex items-center justify-center gap-3 mb-8">
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 rounded-full text-green-600 text-sm">
                   <BookOpen className="w-4 h-4" />
-                  Gerçek örneklerle
+                  Real examples
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full text-amber-600 text-sm">
                   <Zap className="w-4 h-4" />
-                  3 kredi/mesaj
+                  3 credits/message
                 </div>
               </div>
 
               {/* Example questions */}
               <div className="space-y-3 max-w-lg mx-auto">
-                <p className="text-sm text-muted-foreground mb-4">Örnek sorular:</p>
+                <p className="text-sm text-muted-foreground mb-4">Example questions:</p>
                 {expert.exampleQuestions.map((question, i) => (
                   <motion.button
                     key={i}
@@ -464,7 +464,7 @@ export default function AIExpertChatPage() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <BookOpen className="w-3 h-3" />
-                          TradePath Örnekleri
+                          TradePath Examples
                         </div>
                         <div className="grid gap-2">
                           {message.examples.map((example, i) => (
@@ -498,7 +498,7 @@ export default function AIExpertChatPage() {
                   <div className="bg-muted rounded-2xl px-5 py-4 flex items-center gap-3">
                     <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
-                      {expert.name} düşünüyor...
+                      {expert.name} is thinking...
                     </span>
                   </div>
                 </motion.div>
@@ -520,9 +520,9 @@ export default function AIExpertChatPage() {
               className="flex items-center gap-2 mb-3 p-4 bg-destructive/10 text-destructive rounded-xl text-sm border border-destructive/20"
             >
               <AlertCircle className="w-5 h-5" />
-              <span>Bu uzmanla sohbet için en az 3 kredi gerekiyor.</span>
+              <span>You need at least 3 credits to chat with this expert.</span>
               <Link href="/credits" className="underline font-semibold ml-auto">
-                Kredi Al
+                Get Credits
               </Link>
             </motion.div>
           )}
@@ -549,7 +549,7 @@ export default function AIExpertChatPage() {
                   handleSubmit(e);
                 }
               }}
-              placeholder={`${expert.name}'a sorunuzu yazın...`}
+              placeholder={`Ask ${expert.name} a question...`}
               className="flex-1 resize-none rounded-xl border bg-background px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[56px] max-h-[150px]"
               rows={1}
               disabled={!hasEnoughCredits || chatMutation.isPending}
@@ -569,7 +569,7 @@ export default function AIExpertChatPage() {
               ) : (
                 <>
                   <Send className="w-5 h-5" />
-                  <span className="hidden sm:inline">Gönder</span>
+                  <span className="hidden sm:inline">Send</span>
                 </>
               )}
             </button>
@@ -577,10 +577,10 @@ export default function AIExpertChatPage() {
           <div className="flex items-center justify-center gap-4 mt-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Zap className="w-3 h-3 text-amber-500" />
-              3 kredi/mesaj
+              3 credits/message
             </span>
             <span>•</span>
-            <span>Shift+Enter ile yeni satır</span>
+            <span>Shift+Enter for new line</span>
           </div>
         </div>
       </div>

@@ -125,13 +125,13 @@ export default function AIExpertsPage() {
         {/* Title */}
         <h1 className="text-4xl font-bold mb-4">
           <span className="bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 text-transparent bg-clip-text">
-            Uzman AI Ekibi
+            AI Expert Team
           </span>
         </h1>
         <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-          Dört uzman AI, her biri kendi alanında uzmanlaşmış.
+          Four specialized AI experts, each mastering their own domain.
           <br />
-          <span className="text-primary font-medium">TradePath örnekleriyle</span> zenginleştirilmiş yanıtlar alın.
+          Get responses enriched with <span className="text-primary font-medium">real TradePath examples</span>.
         </p>
 
         {/* Credits & Info */}
@@ -139,13 +139,13 @@ export default function AIExpertsPage() {
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 rounded-full border border-amber-500/20">
             <Gem className="w-4 h-4 text-amber-500" />
             <span className="text-sm font-semibold text-amber-600">
-              {credits?.balance || 0} kredi mevcut
+              {credits?.balance || 0} credits available
             </span>
           </div>
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 rounded-full border border-green-500/20">
             <BookOpen className="w-4 h-4 text-green-500" />
             <span className="text-sm font-medium text-green-600">
-              Gerçek örneklerle öğren
+              Learn with real examples
             </span>
           </div>
         </div>
@@ -203,12 +203,12 @@ export default function AIExpertsPage() {
                     <div className="flex items-center justify-between">
                       <div className={`inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r ${expert.gradient} text-white rounded-xl font-semibold text-sm shadow-lg group-hover:shadow-xl transition-shadow`}>
                         <MessageCircle className="w-4 h-4" />
-                        Sohbet Başlat
+                        Start Chat
                         <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       </div>
                       <div className="flex items-center gap-1.5 text-amber-500">
                         <Zap className="w-4 h-4" />
-                        <span className="text-sm font-bold">{expert.creditCost} kredi</span>
+                        <span className="text-sm font-bold">{expert.creditCost} credits</span>
                       </div>
                     </div>
                   </div>
@@ -229,13 +229,13 @@ export default function AIExpertsPage() {
         <div className="inline-flex flex-col items-center gap-2 p-6 bg-gradient-to-r from-purple-500/5 via-blue-500/5 to-cyan-500/5 rounded-2xl border border-purple-500/10">
           <div className="flex items-center gap-2 text-sm">
             <Sparkles className="w-4 h-4 text-amber-500" />
-            <span className="font-medium">Her mesaj <span className="text-amber-500 font-bold">3 kredi</span> - TradePath örnekleriyle desteklenir</span>
+            <span className="font-medium">Each message costs <span className="text-amber-500 font-bold">3 credits</span> - powered by TradePath examples</span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Uzman AI'lar, gerçek TradePath analizlerinizden ve quiz sorularından örnekler kullanarak size özel yanıtlar verir.
+            AI Experts use real examples from your TradePath analyses and quiz questions to give you personalized answers.
           </p>
           <Link href="/credits" className="text-primary hover:underline text-sm font-medium mt-2 flex items-center gap-1">
-            Kredi satın al
+            Buy credits
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
