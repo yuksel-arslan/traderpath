@@ -16,33 +16,55 @@ const GEMINI_MODEL = 'gemini-2.0-flash';
 function sanitizeAIResponse(text: string): string {
   let cleaned = text;
 
-  // "---" ile başlayan bölümleri ve sonrasını sil
-  const dashIndex = cleaned.indexOf('\n---');
-  if (dashIndex !== -1) {
-    cleaned = cleaned.substring(0, dashIndex);
+  // "---" içeren satırları ve sonrasını sil (tüm varyasyonlar)
+  const dashPatterns = [/\n---.*$/s, /^---.*$/s, /\n-{3,}.*$/s];
+  for (const pattern of dashPatterns) {
+    cleaned = cleaned.replace(pattern, '');
   }
 
-  // 🚀 ile başlayan satırları ve sonrasını sil
-  const rocketIndex = cleaned.indexOf('\n🚀');
-  if (rocketIndex !== -1) {
-    cleaned = cleaned.substring(0, rocketIndex);
+  // 🚀 içeren satırları ve sonrasını sil
+  const rocketPatterns = [/\n🚀.*$/s, /^🚀.*$/s, /\n\n🚀.*$/s];
+  for (const pattern of rocketPatterns) {
+    cleaned = cleaned.replace(pattern, '');
   }
 
-  // Yasaklı kalıpları içeren son paragrafları sil
+  // Yasaklı kelimeler içeren paragrafları sil
   const forbiddenPatterns = [
-    /\n\n.*ister misin\?.*$/is,
-    /\n\n.*yapayım mı\?.*$/is,
-    /\n\n.*kredi ile.*$/is,
-    /\n\n.*raporuna ekle.*$/is,
-    /\n\n.*gerçek analiz.*$/is,
+    /\n\n[^\n]*ister misin[^\n]*$/is,
+    /\n\n[^\n]*yapayım mı[^\n]*$/is,
+    /\n\n[^\n]*kredi[^\n]*$/is,
+    /\n\n[^\n]*raporuna ekle[^\n]*$/is,
+    /\n\n[^\n]*gerçek analiz[^\n]*$/is,
+    /\n\n[^\n]*gerçek bir coin[^\n]*$/is,
+    /\n[^\n]*ister misin\?[^\n]*$/is,
+    /\n[^\n]*yapayım mı\?[^\n]*$/is,
   ];
 
   for (const pattern of forbiddenPatterns) {
     cleaned = cleaned.replace(pattern, '');
   }
 
-  // Sondaki boşlukları temizle
-  cleaned = cleaned.trim();
+  // Son satırlarda kalan yasaklı ifadeleri temizle
+  const lines = cleaned.split('\n');
+  while (lines.length > 0) {
+    const lastLine = lines[lines.length - 1].toLowerCase();
+    if (
+      lastLine.includes('ister misin') ||
+      lastLine.includes('yapayım mı') ||
+      lastLine.includes('kredi') ||
+      lastLine.includes('raporuna ekle') ||
+      lastLine.includes('gerçek analiz') ||
+      lastLine.includes('🚀') ||
+      lastLine.trim() === '---' ||
+      lastLine.trim() === ''
+    ) {
+      lines.pop();
+    } else {
+      break;
+    }
+  }
+
+  cleaned = lines.join('\n').trim();
 
   return cleaned;
 }
