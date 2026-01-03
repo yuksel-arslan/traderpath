@@ -2,13 +2,13 @@
 
 // ===========================================
 // AI Expert Chat Page
-// Beautiful chat interface with TradePath examples
+// Smart chat interface with approval flow
 // ===========================================
 
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Send,
   ArrowLeft,
@@ -24,11 +24,7 @@ import {
   Sparkles,
   Zap,
   BookOpen,
-  TrendingUp,
-  GraduationCap,
   Lightbulb,
-  ChevronDown,
-  ChevronUp,
   Rocket,
   Copy,
   Check,
@@ -130,18 +126,10 @@ const AI_EXPERTS = {
   },
 };
 
-interface Example {
-  type: 'analysis' | 'quiz' | 'pattern';
-  title: string;
-  description: string;
-  details: Record<string, unknown>;
-}
-
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  examples?: Example[];
   timestamp: Date;
 }
 
@@ -149,7 +137,6 @@ interface ChatResponse {
   success: boolean;
   data?: {
     response: string;
-    examples: Example[];
     creditsUsed: number;
     newBalance: number;
   };
@@ -275,96 +262,6 @@ function AnswerFooter({ expert }: { expert: typeof AI_EXPERTS.aria }) {
   );
 }
 
-// Example card component
-function ExampleCard({ example }: { example: Example }) {
-  const [expanded, setExpanded] = useState(false);
-
-  const typeConfig = {
-    analysis: {
-      icon: TrendingUp,
-      color: 'text-green-500',
-      bg: 'bg-green-500/10',
-      border: 'border-green-500/20',
-      label: 'Gerçek Analiz',
-    },
-    quiz: {
-      icon: GraduationCap,
-      color: 'text-amber-500',
-      bg: 'bg-amber-500/10',
-      border: 'border-amber-500/20',
-      label: 'Eğitim',
-    },
-    pattern: {
-      icon: Lightbulb,
-      color: 'text-blue-500',
-      bg: 'bg-blue-500/10',
-      border: 'border-blue-500/20',
-      label: 'Pattern',
-    },
-  };
-
-  const config = typeConfig[example.type];
-  const Icon = config.icon;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className={cn(
-        'rounded-xl border p-3',
-        config.bg,
-        config.border
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', config.bg)}>
-          <Icon className={cn('w-4 h-4', config.color)} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={cn('text-xs px-2 py-0.5 rounded font-medium', config.bg, config.color)}>
-              {config.label}
-            </span>
-            <span className="font-medium text-sm truncate">{example.title}</span>
-          </div>
-          <p className="text-xs text-muted-foreground mb-2">{example.description}</p>
-
-          {Object.keys(example.details).length > 0 && (
-            <>
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="flex items-center gap-1 text-xs text-primary hover:underline"
-              >
-                {expanded ? 'Gizle' : 'Detayları gör'}
-                {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              </button>
-              <AnimatePresence>
-                {expanded && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mt-2 pt-2 border-t border-border/50 grid gap-1">
-                      {Object.entries(example.details).map(([key, value]) => (
-                        <div key={key} className="flex items-center gap-2 text-xs">
-                          <span className="text-muted-foreground capitalize">{key}:</span>
-                          <span className="font-medium">{String(value)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </>
-          )}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 export default function AIExpertChatPage() {
   const params = useParams();
   const router = useRouter();
@@ -441,7 +338,6 @@ export default function AIExpertChatPage() {
             id: `assistant-${Date.now()}`,
             role: 'assistant',
             content: data.data!.response,
-            examples: data.data!.examples,
             timestamp: new Date(),
           },
         ]);
@@ -639,23 +535,8 @@ export default function AIExpertChatPage() {
                       <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
                     </div>
 
-                    {/* Examples for assistant messages */}
-                    {message.role === 'assistant' && message.examples && message.examples.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <BookOpen className="w-3 h-3" />
-                          TradePath Örnekleri
-                        </div>
-                        <div className="grid gap-2">
-                          {message.examples.map((example, i) => (
-                            <ExampleCard key={i} example={example} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Answer Footer with CTA sections */}
-                    {message.role === 'assistant' && (
+                    {/* Answer Footer - only show if not waiting for approval */}
+                    {message.role === 'assistant' && !message.content.includes('Onaylıyor musun?') && (
                       <AnswerFooter expert={expert} />
                     )}
                   </div>
