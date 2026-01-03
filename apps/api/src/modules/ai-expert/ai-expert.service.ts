@@ -12,40 +12,68 @@ import { prisma } from '../../core/database';
 const GEMINI_API_KEY = config.gemini.apiKey;
 const GEMINI_MODEL = 'gemini-2.0-flash';
 
+// Yasaklı içeriği temizleyen fonksiyon
+function sanitizeAIResponse(text: string): string {
+  let cleaned = text;
+
+  // "---" ile başlayan bölümleri ve sonrasını sil
+  const dashIndex = cleaned.indexOf('\n---');
+  if (dashIndex !== -1) {
+    cleaned = cleaned.substring(0, dashIndex);
+  }
+
+  // 🚀 ile başlayan satırları ve sonrasını sil
+  const rocketIndex = cleaned.indexOf('\n🚀');
+  if (rocketIndex !== -1) {
+    cleaned = cleaned.substring(0, rocketIndex);
+  }
+
+  // Yasaklı kalıpları içeren son paragrafları sil
+  const forbiddenPatterns = [
+    /\n\n.*ister misin\?.*$/is,
+    /\n\n.*yapayım mı\?.*$/is,
+    /\n\n.*kredi ile.*$/is,
+    /\n\n.*raporuna ekle.*$/is,
+    /\n\n.*gerçek analiz.*$/is,
+  ];
+
+  for (const pattern of forbiddenPatterns) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+
+  // Sondaki boşlukları temizle
+  cleaned = cleaned.trim();
+
+  return cleaned;
+}
+
 // TradePath system knowledge (shared across all experts)
 const TRADEPATH_CONTEXT = `
-[KİMLİĞİN]
-TradePath'in AI eğitim uzmanısın. Trading kavramlarını öğretir, kullanıcıları TradePath'in Analyze özelliğine yönlendirirsin.
+⛔ KRİTİK YASAKLAR - HER YANIT ÖNCESİ OKU ⛔
+Aşağıdakileri ASLA yazma (tek bir kelime bile yasak):
+❌ "ister misin" / "yapmamı ister misin" / "yapayım mı"
+❌ "kredi" / "3 kredi" / "5 kredi"
+❌ "raporuna ekle" / "rapora ekleyebilirsin"
+❌ "gerçek analiz yapayım" / "gerçek bir coin için"
+❌ "---" (yatay çizgi)
+❌ "🚀 Bu bilgiyi" ile başlayan CTA
+❌ Yanıt sonunda herhangi bir soru
 
-[TradePath SİSTEMİ]
-TradePath, 7 adımlı analiz sistemi sunar: Market Pulse, Asset Scan, Safety Check, Timing, Trade Plan, Trap Check, Final Verdict.
-Kullanıcı Analyze sayfasından coin seçip bu analizleri çalıştırabilir.
+[KİMLİĞİN]
+TradePath'in AI eğitim uzmanısın. Trading kavramlarını öğretir, TradePath özelliklerini tanıtırsın.
 
 [TEMEL İLKELER]
-1. Soruyu anla, mantıklı ve doğal cevap ver
-2. Kısa tut (60-80 kelime), gereksiz uzatma
-3. Bağlama göre adapte ol, her soruya aynı şablonu uygulama
-4. Doğal konuş, robot gibi değil
-5. Konuyla ilgili TradePath özelliğini uygun yerde bahset
+1. Soruyu anla, kısa ve öz cevap ver (50-70 kelime)
+2. Doğal konuş, robot gibi değil
+3. TradePath özelliğini SADECE konuyla ilgiliyse bahset
 
-[YANITIN SONU]
-Yanıtını bitirdiğinde DUR. Ekstra teklif, CTA, soru EKLEME.
-Frontend zaten footer ekliyor, senin ekleme yapman çift içerik oluşturur.
+[YANITIN YAPISI]
+- Direkt konuya gir, selamlama yapma
+- Bilgiyi ver, bir cümleyle TradePath'te nerede bulunacağını söyle
+- YANITI BİTİR - ek teklif, soru, CTA EKLEME
 
-[KESİN YASAKLAR - BUNLARI ASLA YAZMA]
-- "ister misin", "yapmamı ister misin", "yapayım mı"
-- "kredi", "3 kredi", "5 kredi" (ücretlendirme frontend'de)
-- "raporuna ekle", "rapora ekleyebilirsin"
-- "gerçek analiz yapayım", "BTCUSDT için yapayım"
-- "---" yatay çizgi
-- "🚀 Bu bilgiyi gerçek bir coin için" CTA'sı
-- Yanıt sonunda soru sormak
-
-[AKILLI OL]
-- "Sadece X yapabilir misin?" → Mantıklı cevap ver, "hayır yapamam" deme
-- Sistem hakkında soru → Doğru bilgi ver
-- Kavram sorusu → Öğret ve TradePath'te nerede bulacağını söyle
-- Takip sorusu → Bağlamı hatırla, tutarlı ol
+⚠️ HATIRLATMA: Frontend otomatik olarak "Gerçek coin ile dene" butonu ekliyor.
+Sen bu teklifi yapma, çift içerik oluşur.
 `;
 
 // AI Expert definitions with specialized system prompts
@@ -60,7 +88,9 @@ ${TRADEPATH_CONTEXT}
 
 [Uzmanlık Alanın]
 RSI, MACD, Bollinger Bands, Moving Averages, Volume Profile, Pattern Recognition, Fibonacci, destek/direnç.
-Bu konularda sorulara cevap ver. TradePath'te Asset Scan (Adım 2) bu verileri gösterir.`,
+TradePath'te Asset Scan (Adım 2) bu verileri gösterir.
+
+SON KONTROL: Yanıtında "ister misin", "kredi", "---", "🚀" var mı? Varsa SİL.`,
   },
   nexus: {
     id: 'nexus',
@@ -72,7 +102,9 @@ ${TRADEPATH_CONTEXT}
 
 [Uzmanlık Alanın]
 Position sizing, Stop Loss, Take Profit, Risk/Reward oranı, DCA stratejisi, portföy yönetimi.
-Bu konularda sorulara cevap ver. TradePath'te Trade Plan (Adım 5) bu hesaplamaları yapar.`,
+TradePath'te Trade Plan (Adım 5) bu hesaplamaları yapar.
+
+SON KONTROL: Yanıtında "ister misin", "kredi", "---", "🚀" var mı? Varsa SİL.`,
   },
   oracle: {
     id: 'oracle',
@@ -84,7 +116,9 @@ ${TRADEPATH_CONTEXT}
 
 [Uzmanlık Alanın]
 Whale activity, exchange flow, smart money positioning, order flow, birikim/dağıtım.
-Bu konularda sorulara cevap ver. TradePath'te Safety Check (Adım 3) bu verileri gösterir.`,
+TradePath'te Safety Check (Adım 3) bu verileri gösterir.
+
+SON KONTROL: Yanıtında "ister misin", "kredi", "---", "🚀" var mı? Varsa SİL.`,
   },
   sentinel: {
     id: 'sentinel',
@@ -96,7 +130,9 @@ ${TRADEPATH_CONTEXT}
 
 [Uzmanlık Alanın]
 Pump/dump tespiti, honeypot, rug pull, contract güvenliği, bull/bear trap, likidite avcılığı.
-Bu konularda sorulara cevap ver. TradePath'te Safety Check (Adım 3) ve Trap Check (Adım 6) bu kontrolleri yapar.`,
+TradePath'te Safety Check (Adım 3) ve Trap Check (Adım 6) bu kontrolleri yapar.
+
+SON KONTROL: Yanıtında "ister misin", "kredi", "---", "🚀" var mı? Varsa SİL.`,
   },
 } as const;
 
@@ -812,7 +848,9 @@ export class AIExpertService {
       }
 
       const data = await response.json();
-      const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt oluşturulamadı.';
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt oluşturulamadı.';
+      // Yasaklı içeriği programatik olarak temizle
+      const responseText = sanitizeAIResponse(rawText);
 
       // Extract token usage
       const usageMetadata = data.usageMetadata || {};
