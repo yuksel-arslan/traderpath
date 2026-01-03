@@ -80,6 +80,12 @@ export default function LoginPage() {
         body: JSON.stringify({ credential }),
       });
 
+      // Handle non-JSON responses gracefully
+      const contentType = res.headers.get('content-type');
+      if (!contentType?.includes('application/json')) {
+        throw new Error('Sunucu hatası. Lütfen tekrar deneyin.');
+      }
+
       const data = await res.json();
 
       if (!res.ok) {
@@ -141,6 +147,12 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
+
+      // Handle non-JSON responses gracefully
+      const contentType = res.headers.get('content-type');
+      if (!contentType?.includes('application/json')) {
+        throw new Error('Sunucu hatası. Lütfen tekrar deneyin.');
+      }
 
       const data = await res.json();
 

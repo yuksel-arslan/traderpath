@@ -3,7 +3,7 @@
 // Production-grade with comprehensive monitoring
 // ===========================================
 
-import Fastify from 'fastify';
+import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -136,6 +136,49 @@ await app.register(websocket, {
 
 app.decorate('prisma', prisma);
 app.decorate('redis', redis);
+
+// Authenticate decorator for protected routes
+app.decorate('authenticate', async function(request: FastifyRequest, reply: FastifyReply) {
+  try {
+    const decoded = await request.jwtVerify<{ id: string }>();
+
+    // Get user from database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        level: true,
+      },
+    });
+
+    if (!user) {
+      return reply.status(401).send({
+        success: false,
+        error: {
+          code: 'AUTH_002',
+          message: 'User not found',
+        },
+      });
+    }
+
+    // Check if admin
+    const ADMIN_EMAILS = ['contact@yukselarslan.com'];
+    const isAdmin = ADMIN_EMAILS.includes(user.email);
+
+    // Attach user to request
+    request.user = { ...user, isAdmin };
+  } catch (err) {
+    reply.status(401).send({
+      success: false,
+      error: {
+        code: 'AUTH_001',
+        message: 'Authentication required',
+      },
+    });
+  }
+});
 
 // ===========================================
 // Hooks
@@ -352,11 +395,17 @@ start();
 // ===========================================
 
 declare module 'fastify' {
+  interface FastifyInstance {
+    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+  }
   interface FastifyRequest {
     startTime?: number;
     user?: {
       id: string;
       email: string;
+      name?: string;
+      level?: number;
+      isAdmin?: boolean;
     };
   }
 }
