@@ -196,7 +196,7 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
   const [error, setError] = useState<string | null>(null);
 
   const getAuthHeaders = useCallback(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     return {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

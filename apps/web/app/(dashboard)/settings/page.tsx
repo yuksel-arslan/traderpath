@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   User,
   Bell,
@@ -19,12 +20,29 @@ import {
   Copy,
   FileText,
   Clock,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 
+interface UserProfile {
+  id: string;
+  email: string;
+  name: string | null;
+  avatarUrl: string | null;
+  level: number;
+  xp: number;
+  streakDays: number;
+  referralCode: string;
+  credits: number;
+  isAdmin: boolean;
+}
+
 export default function SettingsPage() {
+  const router = useRouter();
   const [activeSection, setActiveSection] = useState('profile');
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
@@ -37,35 +55,89 @@ export default function SettingsPage() {
   const [reportValidityPeriods, setReportValidityPeriods] = useState(50);
   const [isSavingReportSettings, setIsSavingReportSettings] = useState(false);
 
-  // Fetch user settings on mount
+  // Fetch user profile and settings on mount
   useEffect(() => {
-    const fetchSettings = async () => {
+    const fetchUserData = async () => {
       try {
         const token = localStorage.getItem('accessToken');
-        if (!token) return;
+        if (!token) {
+          router.push('/login');
+          return;
+        }
 
-        const response = await fetch('/api/user/settings', {
+        // Fetch user profile
+        const userResponse = await fetch('/api/auth/me', {
           headers: { 'Authorization': `Bearer ${token}` },
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.data.reportValidityPeriods) {
-            setReportValidityPeriods(data.data.reportValidityPeriods);
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          if (userData.success && userData.data) {
+            // Combine user and credits data
+            const profileData: UserProfile = {
+              ...userData.data.user,
+              credits: userData.data.credits?.balance ?? 0,
+            };
+            setUser(profileData);
+          }
+        } else if (userResponse.status === 401) {
+          // Token expired or invalid
+          localStorage.removeItem('accessToken');
+          router.push('/login');
+          return;
+        }
+
+        // Fetch settings
+        const settingsResponse = await fetch('/api/user/settings', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (settingsResponse.ok) {
+          const settingsData = await settingsResponse.json();
+          if (settingsData.success && settingsData.data.reportValidityPeriods) {
+            setReportValidityPeriods(settingsData.data.reportValidityPeriods);
           }
         }
       } catch (error) {
-        console.error('Failed to fetch settings:', error);
+        console.error('Failed to fetch user data:', error);
+      } finally {
+        setIsLoadingUser(false);
       }
     };
 
-    fetchSettings();
-  }, []);
+    fetchUserData();
+  }, [router]);
 
   const handleCopyReferral = () => {
-    navigator.clipboard.writeText('TRADE-ABC123');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (user?.referralCode) {
+      navigator.clipboard.writeText(user.referralCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    router.push('/');
+  };
+
+  const getInitials = (name: string | null, email: string) => {
+    if (name) {
+      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    return email.slice(0, 2).toUpperCase();
+  };
+
+  const getFirstName = (name: string | null) => {
+    if (!name) return '';
+    return name.split(' ')[0] || '';
+  };
+
+  const getLastName = (name: string | null) => {
+    if (!name) return '';
+    const parts = name.split(' ');
+    return parts.length > 1 ? parts.slice(1).join(' ') : '';
   };
 
   const sections = [
@@ -124,7 +196,10 @@ export default function SettingsPage() {
               );
             })}
             <hr className="my-4" />
-            <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-500 hover:bg-red-500/10 transition">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-500 hover:bg-red-500/10 transition"
+            >
               <LogOut className="w-5 h-5" />
               Sign Out
             </button>
@@ -139,82 +214,130 @@ export default function SettingsPage() {
               <div>
                 <h2 className="text-xl font-semibold mb-6">Profile Settings</h2>
 
-                {/* Avatar */}
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-20 h-20 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                    JD
+                {isLoadingUser ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   </div>
-                  <div>
-                    <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition">
-                      Change Avatar
-                    </button>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      JPG, PNG or GIF. Max 2MB.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">First Name</label>
-                      <input
-                        type="text"
-                        defaultValue="John"
-                        className="w-full px-4 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                      />
+                ) : user ? (
+                  <>
+                    {/* Avatar */}
+                    <div className="flex items-center gap-4 mb-6">
+                      {user.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt={user.name || user.email}
+                          className="w-20 h-20 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 bg-gradient-to-br from-primary via-primary/80 to-primary/60 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                          {getInitials(user.name, user.email)}
+                        </div>
+                      )}
+                      <div>
+                        <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition">
+                          Change Avatar
+                        </button>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          JPG, PNG or GIF. Max 2MB.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Last Name</label>
-                      <input
-                        type="text"
-                        defaultValue="Doe"
-                        className="w-full px-4 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                      />
-                    </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Email</label>
-                    <input
-                      type="email"
-                      defaultValue="john@example.com"
-                      className="w-full px-4 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                    />
-                  </div>
+                    {/* Admin Badge */}
+                    {user.isAdmin && (
+                      <div className="mb-6 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-center gap-2">
+                        <Shield className="w-5 h-5 text-amber-500" />
+                        <span className="text-amber-500 font-medium">Admin Account</span>
+                      </div>
+                    )}
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Referral Code</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value="TRADE-ABC123"
-                        readOnly
-                        className="flex-1 px-4 py-2 bg-background border rounded-lg font-mono"
-                      />
-                      <button
-                        onClick={handleCopyReferral}
-                        className="px-4 py-2 bg-accent rounded-lg hover:bg-accent/80 transition flex items-center gap-2"
-                      >
-                        {copied ? (
-                          <>
-                            <Check className="w-4 h-4 text-green-500" />
-                            Copied
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4" />
-                            Copy
-                          </>
-                        )}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">First Name</label>
+                          <input
+                            type="text"
+                            defaultValue={getFirstName(user.name)}
+                            placeholder="Enter first name"
+                            className="w-full px-4 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Last Name</label>
+                          <input
+                            type="text"
+                            defaultValue={getLastName(user.name)}
+                            placeholder="Enter last name"
+                            className="w-full px-4 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Email</label>
+                        <input
+                          type="email"
+                          value={user.email}
+                          readOnly
+                          className="w-full px-4 py-2 bg-muted border rounded-lg text-muted-foreground cursor-not-allowed"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Email cannot be changed</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Referral Code</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={user.referralCode}
+                            readOnly
+                            className="flex-1 px-4 py-2 bg-background border rounded-lg font-mono"
+                          />
+                          <button
+                            onClick={handleCopyReferral}
+                            className="px-4 py-2 bg-accent rounded-lg hover:bg-accent/80 transition flex items-center gap-2"
+                          >
+                            {copied ? (
+                              <>
+                                <Check className="w-4 h-4 text-green-500" />
+                                Copied
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-4 h-4" />
+                                Copy
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* User Stats */}
+                      <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                        <div className="text-center p-3 bg-background rounded-lg">
+                          <p className="text-2xl font-bold text-primary">{user.level}</p>
+                          <p className="text-sm text-muted-foreground">Level</p>
+                        </div>
+                        <div className="text-center p-3 bg-background rounded-lg">
+                          <p className="text-2xl font-bold text-primary">{user.credits}</p>
+                          <p className="text-sm text-muted-foreground">Credits</p>
+                        </div>
+                        <div className="text-center p-3 bg-background rounded-lg">
+                          <p className="text-2xl font-bold text-primary">{user.streakDays}</p>
+                          <p className="text-sm text-muted-foreground">Day Streak</p>
+                        </div>
+                      </div>
+
+                      <button className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition">
+                        Save Changes
                       </button>
                     </div>
+                  </>
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    Failed to load user profile. Please try again.
                   </div>
-
-                  <button className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition">
-                    Save Changes
-                  </button>
-                </div>
+                )}
               </div>
             )}
 
@@ -529,7 +652,7 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-muted-foreground">Credit Balance</p>
-                        <p className="text-2xl font-bold">156 Credits</p>
+                        <p className="text-2xl font-bold">{user?.credits ?? 0} Credits</p>
                       </div>
                       <button className="px-4 py-2 border rounded-lg hover:bg-accent transition">
                         Buy Credits
