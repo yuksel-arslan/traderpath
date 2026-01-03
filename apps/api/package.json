@@ -27,7 +27,7 @@
     "@tradepath/analysis-engine": "workspace:*",
     "@tradepath/types": "workspace:*",
     "axios": "^1.6.2",
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.3",
     "bullmq": "^4.15.1",
     "date-fns": "^2.30.0",
     "dotenv": "^16.3.1",
@@ -44,6 +44,7 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20.10.0",
     "@types/ws": "^8.5.10",
     "eslint": "^8.55.0",

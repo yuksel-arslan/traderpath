@@ -5,7 +5,7 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
 import { OAuth2Client } from 'google-auth-library';
 import { prisma } from '../../core/database';
