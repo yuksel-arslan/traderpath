@@ -4,6 +4,7 @@
 // ===========================================
 
 import { config } from '../../core/config';
+import { contractSecurityService } from '../security/contract-security.service';
 
 // ===========================================
 // Price Formatting Utility
@@ -179,6 +180,21 @@ interface SafetyCheckResult {
   smartMoney: {
     positioning: 'long' | 'short' | 'neutral';
     confidence: number;
+  };
+  contractSecurity?: {
+    isVerified: boolean;
+    isHoneypot: boolean;
+    isMintable: boolean;
+    liquidityLocked: boolean;
+    liquidityLockPercent: number;
+    liquidityLockEndDate: string | null;
+    buyTax: number;
+    sellTax: number;
+    riskScore: number;
+    riskLevel: 'low' | 'medium' | 'high' | 'critical';
+    warnings: string[];
+    contractAddress?: string;
+    chain?: string;
   };
   riskLevel: 'low' | 'medium' | 'high';
   warnings: string[];
@@ -1662,6 +1678,53 @@ export const analysisEngine = {
       riskScore -= 5;
     }
 
+    // Contract Security Check (on-chain)
+    let contractSecurity: SafetyCheckResult['contractSecurity'];
+    try {
+      const securityData = await contractSecurityService.analyzeContract(symbol);
+      if (securityData) {
+        contractSecurity = {
+          isVerified: securityData.isVerified,
+          isHoneypot: securityData.isHoneypot,
+          isMintable: securityData.isMintable,
+          liquidityLocked: securityData.liquidityLocked,
+          liquidityLockPercent: securityData.liquidityLockPercent,
+          liquidityLockEndDate: securityData.liquidityLockEndDate,
+          buyTax: securityData.buyTax,
+          sellTax: securityData.sellTax,
+          riskScore: securityData.riskScore,
+          riskLevel: securityData.riskLevel,
+          warnings: securityData.warnings,
+          contractAddress: securityData.contractAddress,
+          chain: securityData.chain,
+        };
+
+        // Add contract security warnings
+        if (securityData.isHoneypot) {
+          warnings.push('🚨 HONEYPOT: Token cannot be sold!');
+          riskScore -= 50;
+        }
+        if (!securityData.isVerified) {
+          warnings.push('⚠️ Contract source code is NOT verified');
+          riskScore -= 15;
+        }
+        if (securityData.isMintable) {
+          warnings.push('⚠️ Token is MINTABLE - Owner can create unlimited tokens');
+          riskScore -= 20;
+        }
+        if (!securityData.liquidityLocked) {
+          warnings.push('⚠️ Liquidity is NOT locked - RUG PULL risk!');
+          riskScore -= 15;
+        }
+        if (securityData.sellTax > 10) {
+          warnings.push(`⚠️ High sell tax: ${securityData.sellTax}%`);
+          riskScore -= 10;
+        }
+      }
+    } catch (error) {
+      console.log('Contract security check not available for', symbol);
+    }
+
     let riskLevel: 'low' | 'medium' | 'high' = 'low';
     if (riskScore < 50) riskLevel = 'high';
     else if (riskScore < 75) riskLevel = 'medium';
@@ -1730,6 +1793,7 @@ export const analysisEngine = {
         positioning: smartMoneyPositioning,
         confidence: Math.round(Math.abs(orderBookImbalance) * 100),
       },
+      contractSecurity,
       riskLevel,
       warnings,
       score,
