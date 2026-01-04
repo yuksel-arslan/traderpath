@@ -212,6 +212,31 @@
     stroke: url(#gradient-rg) !important;
   }
 
+  /* Animated Gradient Text - Green to Red (Reverse, Ultra Smooth) */
+  .gradient-text-gr-animate {
+    background: linear-gradient(
+      90deg,
+      #22c55e 0%,
+      #4ade80 10%,
+      #a3e635 20%,
+      #fcd34d 30%,
+      #fca5a5 40%,
+      #f87171 50%,
+      #ef4444 60%,
+      #f87171 70%,
+      #fca5a5 80%,
+      #fcd34d 90%,
+      #a3e635 95%,
+      #22c55e 100%
+    );
+    background-size: 200% 100%;
+    animation: gradient-shift-smooth 16s linear infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+  }
+
   .gradient-text-animate {
     background: linear-gradient(-45deg, #ef4444, #f59e0b, #22c55e, #f59e0b, #ef4444);
     background-size: 400% 400%;

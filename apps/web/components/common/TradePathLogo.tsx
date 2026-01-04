@@ -1,6 +1,5 @@
 'use client';
 
-import { TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 
 interface TradePathLogoProps {
@@ -12,10 +11,10 @@ interface TradePathLogoProps {
 }
 
 const sizes = {
-  sm: { wrapper: 'w-7 h-7', icon: 'w-4 h-4', text: 'text-base', tagline: 'text-[8px]' },
-  md: { wrapper: 'w-8 h-8', icon: 'w-5 h-5', text: 'text-lg', tagline: 'text-[9px]' },
-  lg: { wrapper: 'w-10 h-10', icon: 'w-6 h-6', text: 'text-xl', tagline: 'text-[10px]' },
-  xl: { wrapper: 'w-14 h-14', icon: 'w-8 h-8', text: 'text-2xl', tagline: 'text-xs' },
+  sm: { wrapper: 'w-7 h-7', letter: 'text-xl', text: 'text-base', tagline: 'text-[8px]' },
+  md: { wrapper: 'w-8 h-8', letter: 'text-2xl', text: 'text-lg', tagline: 'text-[9px]' },
+  lg: { wrapper: 'w-10 h-10', letter: 'text-3xl', text: 'text-xl', tagline: 'text-[10px]' },
+  xl: { wrapper: 'w-14 h-14', letter: 'text-4xl', text: 'text-2xl', tagline: 'text-xs' },
 };
 
 export function TradePathLogo({
@@ -29,17 +28,34 @@ export function TradePathLogo({
 
   const LogoContent = (
     <div className={`flex items-center gap-2 ${className}`}>
-      {/* Logo Icon - Animated Gradient */}
+      {/* Logo Icon - Overlapping T and P */}
       <div
-        className={`${s.wrapper} rounded-lg flex items-center justify-center shadow-lg overflow-hidden`}
+        className={`${s.wrapper} rounded-lg flex items-center justify-center shadow-lg overflow-hidden relative`}
         style={{
           boxShadow: '0 4px 14px rgba(245, 158, 11, 0.25)',
-          background: 'linear-gradient(135deg, #ef4444 0%, #f87171 15%, #fcd34d 30%, #a3e635 45%, #22c55e 60%, #4ade80 75%, #fcd34d 90%, #ef4444 100%)',
-          backgroundSize: '200% 200%',
-          animation: 'gradient-shift-smooth 16s linear infinite'
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.95))',
         }}
       >
-        <TrendingUp className={`${s.icon} text-white`} strokeWidth={2.5} />
+        {/* T letter - Red to Green */}
+        <span
+          className={`${s.letter} font-black absolute gradient-text-rg-animate`}
+          style={{
+            transform: 'translateX(-15%) translateY(-5%)',
+            opacity: 0.9,
+          }}
+        >
+          T
+        </span>
+        {/* P letter - Green to Red */}
+        <span
+          className={`${s.letter} font-black absolute gradient-text-gr-animate`}
+          style={{
+            transform: 'translateX(15%) translateY(5%)',
+            opacity: 0.9,
+          }}
+        >
+          P
+        </span>
       </div>
 
       {/* Logo Text */}
@@ -47,7 +63,7 @@ export function TradePathLogo({
         <div className="flex flex-col">
           <span className={`${s.text} font-bold`}>
             <span className="gradient-text-rg-animate">Trade</span>
-            <span className="text-green-500">Path</span>
+            <span className="gradient-text-gr-animate">Path</span>
           </span>
           {showTagline && (
             <span className={`${s.tagline} text-muted-foreground -mt-0.5`}>
