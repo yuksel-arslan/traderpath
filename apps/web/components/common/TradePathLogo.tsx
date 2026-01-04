@@ -40,8 +40,11 @@ export function TradePathLogo({
         <span className={`${s.letter} font-black absolute gradient-text-rg-animate`}>
           T
         </span>
-        {/* P letter - Green to Red */}
-        <span className={`${s.letter} font-black absolute gradient-text-gr-animate`}>
+        {/* P letter - Green to Red, aligned with T's vertical stem */}
+        <span
+          className={`${s.letter} font-black absolute gradient-text-gr-animate`}
+          style={{ transform: 'translateX(-18%)' }}
+        >
           P
         </span>
       </div>
