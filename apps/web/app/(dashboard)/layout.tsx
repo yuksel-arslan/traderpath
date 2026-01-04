@@ -82,13 +82,12 @@ export default function DashboardLayout({
                   href={item.href}
                   prefetch={true}
                   className={cn(
-                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                     isActive(item.href)
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                   )}
                 >
-                  <item.icon className="w-4 h-4" />
                   {item.name}
                 </Link>
               ))}

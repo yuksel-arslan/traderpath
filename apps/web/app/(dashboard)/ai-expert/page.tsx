@@ -5,8 +5,15 @@
 // Choose which AI expert to chat with (3 credits each)
 // ===========================================
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+
+// Lazy load PriceTicker
+const PriceTicker = dynamic(
+  () => import('../../../components/common/PriceTicker').then(mod => ({ default: mod.PriceTicker })),
+  { ssr: false, loading: () => <div className="w-full h-10 bg-card/50 border-b border-border/50" /> }
+);
 import {
   Bot,
   MessageCircle,
@@ -106,7 +113,9 @@ export default function AIExpertsPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen">
+      <PriceTicker />
+      <div className="container mx-auto px-4 py-8">
       {/* Hero Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -240,6 +249,7 @@ export default function AIExpertsPage() {
           </Link>
         </div>
       </motion.div>
+      </div>
     </div>
   );
 }

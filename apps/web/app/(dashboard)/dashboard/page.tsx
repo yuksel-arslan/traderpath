@@ -5,6 +5,7 @@
 // Pro trader focused - Statistics and performance tracking
 // ===========================================
 
+import dynamic from 'next/dynamic';
 import { CreditBalance } from '../../../components/credits/CreditBalance';
 import { DailyRewards } from '../../../components/rewards/DailyRewards';
 import { StreakDisplay } from '../../../components/rewards/StreakDisplay';
@@ -15,6 +16,12 @@ import { PerformanceMetrics } from '../../../components/dashboard/PerformanceMet
 import { ChevronDown, Gift, ArrowRight, RefreshCw } from 'lucide-react';
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
+
+// Lazy load PriceTicker
+const PriceTicker = dynamic(
+  () => import('../../../components/common/PriceTicker').then(mod => ({ default: mod.PriceTicker })),
+  { ssr: false, loading: () => <div className="w-full h-10 bg-card/50 border-b border-border/50" /> }
+);
 
 export default function DashboardPage() {
   const [showRewards, setShowRewards] = useState(false);
@@ -31,7 +38,9 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen">
+      <PriceTicker />
+      <div className="container mx-auto px-4 py-8">
       {/* Header with Credits */}
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -104,6 +113,7 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
