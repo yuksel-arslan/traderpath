@@ -8,7 +8,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import {
   Send,
   ArrowLeft,
@@ -40,6 +39,7 @@ const AI_EXPERTS = {
     role: 'Market Analysis AI',
     description: 'Expert in technical analysis, price patterns, and market trends.',
     icon: LineChart,
+    color: 'text-blue-500',
     gradient: 'from-blue-500 to-cyan-500',
     bgGradient: 'from-blue-500/5 to-cyan-500/5',
     relatedStep: 2, // Asset Scanner
@@ -62,6 +62,7 @@ const AI_EXPERTS = {
     role: 'Risk Assessment AI',
     description: 'Calculates risk/reward ratios, position sizing, and portfolio risk.',
     icon: Target,
+    color: 'text-amber-500',
     gradient: 'from-amber-500 to-orange-500',
     bgGradient: 'from-amber-500/5 to-orange-500/5',
     relatedStep: 5, // Trade Plan
@@ -84,6 +85,7 @@ const AI_EXPERTS = {
     role: 'Whale Detection AI',
     description: 'Tracks large wallet movements, exchange flows, and smart money.',
     icon: Eye,
+    color: 'text-purple-500',
     gradient: 'from-purple-500 to-pink-500',
     bgGradient: 'from-purple-500/5 to-pink-500/5',
     relatedStep: 3, // Safety Check
@@ -106,6 +108,7 @@ const AI_EXPERTS = {
     role: 'Security & Scam AI',
     description: 'Detects pump & dump schemes, rug pulls, and market manipulation.',
     icon: ShieldAlert,
+    color: 'text-red-500',
     gradient: 'from-red-500 to-rose-500',
     bgGradient: 'from-red-500/5 to-rose-500/5',
     relatedStep: 6, // Trap Check
@@ -418,11 +421,7 @@ export default function AIExpertChatPage() {
         <div className="container mx-auto px-4 py-6 max-w-4xl">
           {messages.length === 0 ? (
             /* Empty state */
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center py-12"
-            >
+            <div className="text-center py-12">
               <div className={cn(
                 'w-28 h-28 bg-gradient-to-br rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl',
                 expert.gradient
@@ -456,28 +455,21 @@ export default function AIExpertChatPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-2">
                   {expert.exampleQuestions.map((question, i) => (
-                    <motion.button
+                    <button
                       key={i}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.05 }}
                       onClick={() => handleExampleClick(question)}
-                      className={cn(
-                        'flex items-start gap-3 text-left px-4 py-3 rounded-xl transition text-sm',
-                        'bg-gradient-to-r hover:shadow-lg hover:scale-[1.02]',
-                        expert.bgGradient,
-                        'border border-border/50 hover:border-primary/30'
-                      )}
+                      className="flex items-start gap-3 text-left px-4 py-3 rounded-xl transition text-sm bg-card border hover:shadow-lg hover:scale-[1.02]"
                     >
                       <span className={cn(
                         'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0',
-                        `bg-gradient-to-br ${expert.gradient} text-white`
+                        expert.color.replace('text-', 'bg-').replace('-500', '-500/20'),
+                        expert.color
                       )}>
                         {i + 1}
                       </span>
                       <span className="flex-1">{question}</span>
                       <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    </motion.button>
+                    </button>
                   ))}
                 </div>
 
@@ -495,15 +487,13 @@ export default function AIExpertChatPage() {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
           ) : (
             /* Message list */
             <div className="space-y-4">
               {messages.map((message) => (
-                <motion.div
+                <div
                   key={message.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
                   className={cn(
                     'flex gap-3',
                     message.role === 'user' ? 'justify-end' : 'justify-start'
@@ -579,16 +569,12 @@ export default function AIExpertChatPage() {
                       <User className="w-4 h-4 text-white" />
                     </div>
                   )}
-                </motion.div>
+                </div>
               ))}
 
               {/* Loading indicator */}
               {chatMutation.isPending && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex gap-3"
-                >
+                <div className="flex gap-3">
                   <div className={cn(
                     'w-9 h-9 bg-gradient-to-br rounded-full flex items-center justify-center flex-shrink-0 shadow-md',
                     expert.gradient
@@ -613,7 +599,7 @@ export default function AIExpertChatPage() {
                       </span>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               )}
 
               <div ref={messagesEndRef} />
@@ -623,31 +609,23 @@ export default function AIExpertChatPage() {
       </div>
 
       {/* Input */}
-      <div className={cn('border-t', expert.bgGradient)}>
+      <div className="border-t bg-card">
         <div className="container mx-auto px-4 py-4 max-w-4xl">
           {!hasEnoughCredits && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 mb-3 p-4 bg-destructive/10 text-destructive rounded-xl text-sm border border-destructive/20"
-            >
+            <div className="flex items-center gap-2 mb-3 p-4 bg-destructive/10 text-destructive rounded-xl text-sm border border-destructive/20">
               <AlertCircle className="w-5 h-5" />
               <span>Bu uzmanla sohbet için en az 3 kredi gerekiyor.</span>
               <Link href="/credits" className="underline font-semibold ml-auto">
                 Kredi Al
               </Link>
-            </motion.div>
+            </div>
           )}
 
           {chatMutation.isError && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 mb-3 p-4 bg-destructive/10 text-destructive rounded-xl text-sm border border-destructive/20"
-            >
+            <div className="flex items-center gap-2 mb-3 p-4 bg-destructive/10 text-destructive rounded-xl text-sm border border-destructive/20">
               <AlertCircle className="w-5 h-5" />
               <span>{chatMutation.error.message}</span>
-            </motion.div>
+            </div>
           )}
 
           <form onSubmit={handleSubmit} className="flex gap-3">

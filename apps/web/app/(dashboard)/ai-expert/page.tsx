@@ -6,7 +6,6 @@
 // ===========================================
 
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import {
   Bot,
   MessageCircle,
@@ -17,7 +16,6 @@ import {
   Sparkles,
   Gem,
   Zap,
-  BookOpen,
   ChevronRight,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -31,9 +29,9 @@ const AI_EXPERTS = [
     description: 'Expert in technical analysis, price patterns, and market trends. Analyzes charts across multiple timeframes.',
     specialty: ['Technical Analysis', 'Chart Patterns', 'Trend Detection'],
     icon: LineChart,
-    gradient: 'from-blue-500 to-cyan-500',
-    bgGradient: 'from-blue-500/10 to-cyan-500/10',
-    borderColor: 'border-blue-500/30',
+    color: 'text-blue-500',
+    bg: 'bg-blue-500/10',
+    border: 'border-blue-500/30',
     creditCost: 3,
   },
   {
@@ -43,9 +41,9 @@ const AI_EXPERTS = [
     description: 'Calculates risk/reward ratios, position sizing, and portfolio risk. Helps optimize your trading strategy.',
     specialty: ['Risk Management', 'Position Sizing', 'Portfolio Analysis'],
     icon: Target,
-    gradient: 'from-amber-500 to-orange-500',
-    bgGradient: 'from-amber-500/10 to-orange-500/10',
-    borderColor: 'border-amber-500/30',
+    color: 'text-amber-500',
+    bg: 'bg-amber-500/10',
+    border: 'border-amber-500/30',
     creditCost: 3,
   },
   {
@@ -55,9 +53,9 @@ const AI_EXPERTS = [
     description: 'Tracks large wallet movements, exchange flows, and smart money positioning. Spots accumulation and distribution.',
     specialty: ['Whale Tracking', 'Exchange Flows', 'Smart Money'],
     icon: Eye,
-    gradient: 'from-purple-500 to-pink-500',
-    bgGradient: 'from-purple-500/10 to-pink-500/10',
-    borderColor: 'border-purple-500/30',
+    color: 'text-purple-500',
+    bg: 'bg-purple-500/10',
+    border: 'border-purple-500/30',
     creditCost: 3,
   },
   {
@@ -67,27 +65,12 @@ const AI_EXPERTS = [
     description: 'Detects pump & dump schemes, rug pulls, and market manipulation. Your guard against crypto scams.',
     specialty: ['Scam Detection', 'Manipulation Alerts', 'Safety Checks'],
     icon: ShieldAlert,
-    gradient: 'from-red-500 to-rose-500',
-    bgGradient: 'from-red-500/10 to-rose-500/10',
-    borderColor: 'border-red-500/30',
+    color: 'text-red-500',
+    bg: 'bg-red-500/10',
+    border: 'border-red-500/30',
     creditCost: 3,
   },
 ];
-
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 },
-};
 
 export default function AIExpertsPage() {
   // Fetch credit balance
@@ -107,139 +90,102 @@ export default function AIExpertsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Hero Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-12"
-      >
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-cyan-500/10 rounded-full border border-purple-500/20 text-sm font-medium mb-6">
-          <Bot className="w-4 h-4 text-purple-500" />
-          <span className="bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 text-transparent bg-clip-text">
-            AI Expert Team
-          </span>
-          <span className="px-2 py-0.5 bg-green-500/10 text-green-500 rounded text-xs font-bold">NEW</span>
-        </div>
-
-        {/* Title */}
-        <h1 className="text-4xl font-bold mb-4">
-          <span className="bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 text-transparent bg-clip-text">
-            AI Expert Team
-          </span>
-        </h1>
-        <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-          Four specialized AI experts, each mastering their own domain.
-          <br />
-          Get responses enriched with <span className="text-primary font-medium">real TradePath examples</span>.
-        </p>
-
-        {/* Credits & Info */}
-        <div className="flex items-center justify-center gap-4 mt-6">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 rounded-full border border-amber-500/20">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Bot className="w-6 h-6 text-amber-500" />
+              <h1 className="text-2xl font-bold">AI Expert Team</h1>
+              <span className="px-2 py-0.5 bg-green-500/10 text-green-500 rounded text-xs font-bold">NEW</span>
+            </div>
+            <p className="text-muted-foreground">
+              Four specialized AI experts, each mastering their own domain
+            </p>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 bg-card border rounded-lg">
             <Gem className="w-4 h-4 text-amber-500" />
-            <span className="text-sm font-semibold text-amber-600">
-              {credits?.balance || 0} credits available
-            </span>
-          </div>
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 rounded-full border border-green-500/20">
-            <BookOpen className="w-4 h-4 text-green-500" />
-            <span className="text-sm font-medium text-green-600">
-              Learn with real examples
+            <span className="text-sm font-semibold">
+              {credits?.balance || 0} credits
             </span>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Expert Cards */}
-      <motion.div
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto"
-      >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl">
         {AI_EXPERTS.map((expert) => {
           const Icon = expert.icon;
           return (
-            <motion.div key={expert.id} variants={item}>
-              <Link
-                href={`/ai-expert/${expert.id}`}
-                className={`block bg-gradient-to-br ${expert.bgGradient} rounded-2xl border ${expert.borderColor} p-6 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 group`}
-              >
-                <div className="flex items-start gap-5">
-                  {/* AI Avatar */}
-                  <div className={`w-20 h-20 bg-gradient-to-br ${expert.gradient} rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                    <Icon className="w-10 h-10 text-white" />
+            <Link
+              key={expert.id}
+              href={`/ai-expert/${expert.id}`}
+              className={`block bg-card border rounded-lg p-6 hover:shadow-lg hover:border-border/80 transition-all group`}
+            >
+              <div className="flex items-start gap-4">
+                {/* AI Avatar */}
+                <div className={`w-14 h-14 ${expert.bg} rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform`}>
+                  <Icon className={`w-7 h-7 ${expert.color}`} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  {/* Name & Role */}
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-xl">{expert.name}</h3>
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <p className={`text-sm mb-2 ${expert.color} font-medium`}>
+                    {expert.role}
+                  </p>
+
+                  {/* Description */}
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {expert.description}
+                  </p>
+
+                  {/* Specialties */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {expert.specialty.map((spec) => (
+                      <span
+                        key={spec}
+                        className="text-xs px-2 py-1 bg-accent rounded-full text-muted-foreground"
+                      >
+                        {spec}
+                      </span>
+                    ))}
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    {/* Name & Role */}
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-2xl">{expert.name}</h3>
-                      <Sparkles className="w-5 h-5 text-amber-500" />
+                  {/* Chat Button */}
+                  <div className="flex items-center justify-between">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg font-semibold text-sm border border-slate-300 dark:border-slate-600 group-hover:shadow-md transition-shadow">
+                      <MessageCircle className="w-4 h-4 gradient-text-rg-animate" />
+                      <span className="gradient-text-rg-animate">Start Chat</span>
+                      <ChevronRight className="w-4 h-4 gradient-text-rg-animate group-hover:translate-x-1 transition-transform" />
                     </div>
-                    <p className={`text-sm mb-3 bg-gradient-to-r ${expert.gradient} bg-clip-text text-transparent font-semibold`}>
-                      {expert.role}
-                    </p>
-
-                    {/* Description */}
-                    <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-                      {expert.description}
-                    </p>
-
-                    {/* Specialties */}
-                    <div className="flex flex-wrap gap-2 mb-5">
-                      {expert.specialty.map((spec) => (
-                        <span
-                          key={spec}
-                          className="text-xs px-3 py-1.5 bg-background/80 rounded-full text-muted-foreground border border-border/50"
-                        >
-                          {spec}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Chat Button */}
-                    <div className="flex items-center justify-between">
-                      <div className={`inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r ${expert.gradient} text-white rounded-xl font-semibold text-sm shadow-lg group-hover:shadow-xl transition-shadow`}>
-                        <MessageCircle className="w-4 h-4" />
-                        Start Chat
-                        <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                      <div className="flex items-center gap-1.5 text-amber-500">
-                        <Zap className="w-4 h-4" />
-                        <span className="text-sm font-bold">{expert.creditCost} credits</span>
-                      </div>
+                    <div className="flex items-center gap-1.5 text-amber-500">
+                      <Zap className="w-4 h-4" />
+                      <span className="text-sm font-bold">{expert.creditCost} credits</span>
                     </div>
                   </div>
                 </div>
-              </Link>
-            </motion.div>
+              </div>
+            </Link>
           );
         })}
-      </motion.div>
+      </div>
 
       {/* Bottom Info */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="text-center mt-12"
-      >
-        <div className="inline-flex flex-col items-center gap-2 p-6 bg-gradient-to-r from-purple-500/5 via-blue-500/5 to-cyan-500/5 rounded-2xl border border-purple-500/10">
+      <div className="mt-8 max-w-5xl">
+        <div className="bg-card border rounded-lg p-4">
           <div className="flex items-center gap-2 text-sm">
             <Sparkles className="w-4 h-4 text-amber-500" />
-            <span className="font-medium">Each message costs <span className="text-amber-500 font-bold">3 credits</span> - powered by TradePath examples</span>
+            <span>Each message costs <span className="text-amber-500 font-bold">3 credits</span> - powered by TradePath examples</span>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground mt-1">
             AI Experts use real examples from your TradePath analyses and quiz questions to give you personalized answers.
           </p>
-          <Link href="/credits" className="text-primary hover:underline text-sm font-medium mt-2 flex items-center gap-1">
-            Buy credits
-            <ChevronRight className="w-4 h-4" />
-          </Link>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

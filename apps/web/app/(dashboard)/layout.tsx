@@ -21,6 +21,7 @@ import {
   Brain,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
+import { TradePathLogo } from '../../components/common/TradePathLogo';
 import { cn } from '../../lib/utils';
 
 // Lazy load PriceTicker
@@ -74,15 +75,8 @@ export default function DashboardLayout({
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link href="/dashboard" className="flex items-center gap-2 flex-shrink-0">
-              <div className="w-8 h-8 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-white" />
-              </div>
-              <div className="hidden sm:flex flex-col">
-                <span className="text-lg font-bold gradient-text">TradePath</span>
-                <span className="text-[9px] text-muted-foreground -mt-1">From Charts to Clarity</span>
-              </div>
-            </Link>
+            <TradePathLogo size="md" showText showTagline href="/dashboard" className="hidden sm:flex" />
+            <TradePathLogo size="md" showText={false} href="/dashboard" className="sm:hidden" />
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-1">

@@ -28,25 +28,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
-
-// TradePath Logo Component - Orange icon like Trader AI
-function TradePathLogo({ className = '', size = 'default' }: { className?: string; size?: 'small' | 'default' | 'large' }) {
-  const sizes = {
-    small: { wrapper: 'w-8 h-8', icon: 'w-5 h-5' },
-    default: { wrapper: 'w-10 h-10', icon: 'w-6 h-6' },
-    large: { wrapper: 'w-16 h-16', icon: 'w-10 h-10' }
-  };
-  const s = sizes[size];
-
-  return (
-    <div className={`${s.wrapper} bg-gradient-to-br from-orange-500 via-amber-500 to-orange-400 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/25 ${className}`}>
-      <svg viewBox="0 0 24 24" className={s.icon} fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M3 17L9 11L13 15L21 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M17 7H21V11" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    </div>
-  );
-}
+import { TradePathLogo } from '../../components/common/TradePathLogo';
 
 const FEATURES = [
   {
@@ -210,15 +192,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <TradePathLogo size="small" />
-            <div className="flex flex-col">
-              <span className="text-xl font-bold text-teal-500">
-                TradePath
-              </span>
-              <span className="text-[10px] text-muted-foreground -mt-1 hidden sm:block">From Charts to Clarity</span>
-            </div>
-          </Link>
+          <TradePathLogo size="md" showText showTagline href="/" />
           <nav className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-muted-foreground hover:text-foreground transition">
               Features
@@ -251,17 +225,17 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="py-20 md:py-32 relative overflow-hidden">
         {/* Background gradient orbs */}
-        <div className="absolute top-20 left-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-20 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-green-500/10 rounded-full blur-3xl"></div>
 
         <div className="container mx-auto px-4 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-teal-500/10 border border-teal-500/20 rounded-full text-teal-500 text-sm mb-6 shimmer">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-500 text-sm mb-6 shimmer">
             <Zap className="w-4 h-4" />
             AI-Powered Trading Analysis
           </div>
           <div className="flex justify-center mb-8">
             <div className="float">
-              <TradePathLogo size="large" />
+              <TradePathLogo size="xl" showText={false} />
             </div>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
@@ -307,7 +281,7 @@ export default function LandingPage() {
               { value: '24/7', label: 'Market Monitoring' },
             ].map((stat, index) => (
               <div key={index} className="text-center">
-                <p className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-teal-500 via-cyan-400 to-teal-400 bg-clip-text text-transparent">
+                <p className="text-3xl md:text-4xl font-bold gradient-text">
                   {stat.value}
                 </p>
                 <p className="text-muted-foreground">{stat.label}</p>
@@ -394,7 +368,7 @@ export default function LandingPage() {
                   <tr className="border-b">
                     <th className="text-left p-4 font-semibold">Feature</th>
                     <th className="text-center p-4 font-semibold text-muted-foreground">Traditional Tools</th>
-                    <th className="text-center p-4 font-semibold bg-gradient-to-r from-teal-500 via-cyan-400 to-teal-400 bg-clip-text text-transparent">TradePath</th>
+                    <th className="text-center p-4 font-semibold gradient-text">TradePath</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -409,7 +383,7 @@ export default function LandingPage() {
                     <tr key={index} className="border-b last:border-b-0">
                       <td className="p-4 font-medium">{row.feature}</td>
                       <td className="p-4 text-center text-muted-foreground">{row.traditional}</td>
-                      <td className="p-4 text-center text-teal-500 font-medium">{row.tradepath}</td>
+                      <td className="p-4 text-center text-green-500 font-medium">{row.tradepath}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -417,15 +391,15 @@ export default function LandingPage() {
             </div>
             <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-4 bg-card border rounded-lg text-center">
-                <div className="text-3xl font-bold text-teal-600 mb-2">7</div>
+                <div className="text-3xl font-bold text-red-500 mb-2">7</div>
                 <p className="text-muted-foreground">Analysis steps in one click</p>
               </div>
               <div className="p-4 bg-card border rounded-lg text-center">
-                <div className="text-3xl font-bold text-teal-500 mb-2">60s</div>
+                <div className="text-3xl font-bold text-amber-500 mb-2">60s</div>
                 <p className="text-muted-foreground">From question to trade plan</p>
               </div>
               <div className="p-4 bg-card border rounded-lg text-center">
-                <div className="text-3xl font-bold text-cyan-500 mb-2">$0.50</div>
+                <div className="text-3xl font-bold text-green-500 mb-2">$0.50</div>
                 <p className="text-muted-foreground">Per comprehensive analysis</p>
               </div>
             </div>
@@ -461,7 +435,7 @@ export default function LandingPage() {
               },
             ].map((item) => (
               <div key={item.step} className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-teal-600 via-teal-500 to-cyan-500 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4 shadow-lg shadow-teal-500/25">
+                <div className="w-16 h-16 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4 shadow-lg shadow-amber-500/25">
                   {item.step}
                 </div>
                 <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
@@ -488,9 +462,9 @@ export default function LandingPage() {
           <div className="max-w-4xl mx-auto">
             <div className="bg-card border rounded-2xl overflow-hidden shadow-2xl">
               {/* Header */}
-              <div className="bg-gradient-to-r from-teal-500/10 via-cyan-500/10 to-teal-400/10 p-4 border-b flex items-center justify-between">
+              <div className="bg-gradient-to-r from-red-500/10 via-amber-500/10 to-green-500/10 p-4 border-b flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-teal-500 rounded-full flex items-center justify-center text-white font-bold">
+                  <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center text-white font-bold">
                     ₿
                   </div>
                   <div>
@@ -499,7 +473,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 bg-teal-500/20 text-teal-500 rounded-full text-sm font-medium flex items-center gap-1">
+                  <span className="px-3 py-1 bg-green-500/20 text-green-500 rounded-full text-sm font-medium flex items-center gap-1">
                     <TrendingUp className="w-4 h-4" />
                     BULLISH
                   </span>
@@ -513,7 +487,7 @@ export default function LandingPage() {
                   {/* Market Pulse */}
                   <div className="p-4 bg-accent/50 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <Globe className="w-5 h-5 text-teal-500" />
+                      <Globe className="w-5 h-5 text-amber-500" />
                       <span className="font-semibold">Market Pulse</span>
                       <span className="ml-auto text-green-500 text-sm">Bullish</span>
                     </div>
@@ -523,7 +497,7 @@ export default function LandingPage() {
                   {/* Safety Check */}
                   <div className="p-4 bg-accent/50 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <Shield className="w-5 h-5 text-teal-500" />
+                      <Shield className="w-5 h-5 text-amber-500" />
                       <span className="font-semibold">Safety Check</span>
                       <span className="ml-auto text-green-500 text-sm">Safe</span>
                     </div>
@@ -543,7 +517,7 @@ export default function LandingPage() {
                   {/* Trade Plan */}
                   <div className="p-4 bg-accent/50 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <Target className="w-5 h-5 text-teal-500" />
+                      <Target className="w-5 h-5 text-amber-500" />
                       <span className="font-semibold">Trade Plan</span>
                       <span className="ml-auto text-green-500 text-sm">Ready</span>
                     </div>
@@ -552,13 +526,13 @@ export default function LandingPage() {
                 </div>
 
                 {/* Verdict */}
-                <div className="p-4 bg-teal-500/10 border border-teal-500/20 rounded-lg">
+                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-teal-500 rounded-full flex items-center justify-center text-white flex-shrink-0">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white flex-shrink-0">
                       <CheckCircle className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-teal-500 mb-1">Final Verdict: LONG Recommended</h4>
+                      <h4 className="font-bold text-green-500 mb-1">Final Verdict: LONG Recommended</h4>
                       <p className="text-sm text-muted-foreground">
                         Market conditions favor bullish continuation. Entry zone $67,000-$67,500 with 3:1 risk-reward ratio.
                         Set stop-loss at $64,500 to protect against downside.
@@ -572,10 +546,10 @@ export default function LandingPage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent z-10 flex items-end justify-center pb-4">
                     <Link
                       href="/register"
-                      className="px-6 py-3 bg-gradient-to-r from-teal-600 via-teal-500 to-cyan-500 text-white rounded-lg font-semibold flex items-center gap-2 shadow-lg"
+                      className="px-6 py-3 bg-slate-200 dark:bg-slate-700 rounded-lg font-semibold flex items-center gap-2 shadow-lg border border-slate-300 dark:border-slate-600"
                     >
-                      <Eye className="w-5 h-5" />
-                      Get Full Analysis Free
+                      <Eye className="w-5 h-5 gradient-text-rg-animate" />
+                      <span className="gradient-text-rg-animate">Get Full Analysis Free</span>
                     </Link>
                   </div>
                   <div className="blur-sm pointer-events-none opacity-50">
@@ -611,8 +585,8 @@ export default function LandingPage() {
               <div className="bg-accent/50 p-4 border-b flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-orange-500 via-amber-500 to-orange-400 rounded-xl"></div>
-                    <span className="font-bold text-teal-500">TradePath</span>
+                    <div className="w-8 h-8 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-lg"></div>
+                    <span className="font-bold gradient-text">TradePath</span>
                   </div>
                   <nav className="hidden md:flex items-center gap-4 ml-8">
                     <span className="text-sm font-medium text-primary">Dashboard</span>
@@ -622,10 +596,10 @@ export default function LandingPage() {
                   </nav>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="px-3 py-1 bg-teal-500/20 text-teal-500 rounded-full text-sm font-medium">
+                  <div className="px-3 py-1 bg-amber-500/20 text-amber-500 rounded-full text-sm font-medium">
                     125 Credits
                   </div>
-                  <div className="w-8 h-8 bg-gradient-to-br from-orange-500 via-amber-500 to-orange-400 rounded-full"></div>
+                  <div className="w-8 h-8 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-full"></div>
                 </div>
               </div>
 
@@ -652,7 +626,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="p-4 bg-gradient-to-br from-teal-500/10 via-cyan-500/10 to-teal-400/10 rounded-lg border border-teal-500/20">
+                <div className="p-4 bg-gradient-to-br from-red-500/10 via-amber-500/10 to-green-500/10 rounded-lg border border-amber-500/20">
                   <h4 className="font-semibold mb-3">Quick Analysis</h4>
                   <div className="flex gap-2 flex-wrap">
                     <span className="px-3 py-1 bg-background border rounded-full text-sm cursor-pointer hover:bg-accent">BTC</span>
@@ -673,7 +647,7 @@ export default function LandingPage() {
                     ].map((item, index) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-accent/50 rounded-lg">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-teal-500/20 rounded-full flex items-center justify-center font-bold text-sm">
+                          <div className="w-8 h-8 bg-amber-500/20 rounded-full flex items-center justify-center font-bold text-sm">
                             {item.coin.charAt(0)}
                           </div>
                           <div>
@@ -705,10 +679,10 @@ export default function LandingPage() {
             <div className="text-center mt-8">
               <Link
                 href="/register"
-                className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-teal-600 via-teal-500 to-cyan-500 text-white rounded-lg font-semibold hover:opacity-90 transition shadow-lg shadow-teal-500/25"
+                className="inline-flex items-center gap-2 px-8 py-4 bg-slate-200 dark:bg-slate-700 rounded-lg font-semibold hover:scale-[1.02] transition shadow-lg border border-slate-300 dark:border-slate-600"
               >
-                Start Your Free Dashboard
-                <ArrowRight className="w-5 h-5" />
+                <span className="gradient-text-rg-animate">Start Your Free Dashboard</span>
+                <ArrowRight className="w-5 h-5 gradient-text-rg-animate" />
               </Link>
             </div>
           </div>
@@ -755,7 +729,7 @@ export default function LandingPage() {
               <div key={index} className="p-6 bg-card border rounded-lg">
                 <div className="flex gap-1 mb-4">
                   {Array.from({ length: testimonial.rating }).map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-teal-500 text-teal-500" />
+                    <Star key={i} className="w-5 h-5 fill-amber-500 text-amber-500" />
                   ))}
                 </div>
                 <p className="text-muted-foreground mb-4">&ldquo;{testimonial.content}&rdquo;</p>
@@ -803,7 +777,7 @@ export default function LandingPage() {
                 <ul className="space-y-3 mb-6">
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-teal-500 flex-shrink-0" />
+                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
                       <span className="text-muted-foreground">{feature}</span>
                     </li>
                   ))}
@@ -864,11 +838,11 @@ export default function LandingPage() {
       {/* CTA Section */}
       <section className="py-20 relative overflow-hidden">
         {/* Background effects */}
-        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-cyan-500/5 to-teal-400/5"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-amber-500/5 to-green-500/5"></div>
 
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-3xl mx-auto text-center p-8 md:p-12 bg-card border rounded-2xl shadow-2xl">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-teal-500/10 border border-teal-500/20 rounded-full text-teal-500 text-sm mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-500 text-sm mb-6">
               <Zap className="w-4 h-4" />
               Limited Time: 25 Free Credits
             </div>
