@@ -56,7 +56,7 @@ export default async function contractSecurityRoutes(fastify: FastifyInstance) {
           success: false,
           error: {
             code: 'INSUFFICIENT_CREDITS',
-            message: 'Yetersiz kredi',
+            message: 'Insufficient credits',
             required: creditCost,
           },
         });

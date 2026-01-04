@@ -39,45 +39,35 @@ interface ExpertResponse {
 const TOPIC_KEYWORDS: Record<TopicCategory, string[]> = {
   TECHNICAL_ANALYSIS: [
     'rsi', 'macd', 'bollinger', 'moving average', 'ma', 'ema', 'sma',
-    'trend', 'destek', 'direnç', 'support', 'resistance', 'indicator',
-    'gösterge', 'indikatör', 'teknik', 'technical', 'chart', 'grafik',
-    'fibonacci', 'fib', 'pivot', 'atr', 'volume', 'hacim'
+    'trend', 'support', 'resistance', 'indicator',
+    'technical', 'chart', 'fibonacci', 'fib', 'pivot', 'atr', 'volume'
   ],
   WHALE_BEHAVIOR: [
-    'whale', 'balina', 'büyük alıcı', 'büyük satıcı', 'akümülasyon',
-    'accumulation', 'distribution', 'dağıtım', 'smart money', 'akıllı para',
-    'exchange flow', 'borsa akışı', 'inflow', 'outflow', 'giriş', 'çıkış'
+    'whale', 'big buyer', 'big seller', 'accumulation',
+    'distribution', 'smart money', 'exchange flow', 'inflow', 'outflow'
   ],
   RISK_MANAGEMENT: [
-    'risk', 'stop loss', 'zarar durdur', 'position size', 'pozisyon boyutu',
-    'risk/reward', 'risk ödül', 'sermaye', 'capital', 'kayıp', 'loss',
-    'yönetim', 'management', 'portföy', 'portfolio', 'diversification'
+    'risk', 'stop loss', 'position size', 'risk/reward', 'capital', 'loss',
+    'management', 'portfolio', 'diversification'
   ],
   MARKET_STRUCTURE: [
-    'btc dominance', 'dominans', 'market cap', 'piyasa değeri',
-    'fear greed', 'korku açgözlülük', 'bull', 'bear', 'boğa', 'ayı',
-    'market cycle', 'piyasa döngüsü', 'trend', 'regime', 'rejim',
-    'altcoin season', 'altcoin sezonu'
+    'btc dominance', 'dominance', 'market cap', 'fear greed', 'bull', 'bear',
+    'market cycle', 'trend', 'regime', 'altcoin season'
   ],
   MANIPULATION: [
-    'manipülasyon', 'manipulation', 'pump', 'dump', 'spoofing',
-    'wash trading', 'fake volume', 'sahte hacim', 'iceberg',
-    'layering', 'front running', 'hile', 'scam', 'dolandırıcılık'
+    'manipulation', 'pump', 'dump', 'spoofing', 'wash trading', 'fake volume',
+    'iceberg', 'layering', 'front running', 'scam'
   ],
   PSYCHOLOGY: [
-    'fomo', 'fud', 'korku', 'fear', 'açgözlülük', 'greed', 'panik',
-    'panic', 'sabır', 'patience', 'disiplin', 'discipline', 'duygu',
-    'emotion', 'psikoloji', 'psychology', 'mental', 'zihinsel'
+    'fomo', 'fud', 'fear', 'greed', 'panic', 'patience', 'discipline',
+    'emotion', 'psychology', 'mental'
   ],
   TRADE_PLAN: [
-    'trade plan', 'işlem planı', 'strateji', 'strategy', 'entry',
-    'giriş', 'exit', 'çıkış', 'take profit', 'kar al', 'hedef',
-    'target', 'dca', 'average', 'ortalama', 'trailing', 'takip'
+    'trade plan', 'strategy', 'entry', 'exit', 'take profit', 'target',
+    'dca', 'average', 'trailing'
   ],
   ENTRY_EXIT: [
-    'ne zaman', 'when', 'entry', 'giriş', 'exit', 'çıkış',
-    'timing', 'zamanlama', 'alım', 'buy', 'satım', 'sell',
-    'bekle', 'wait', 'şimdi', 'now', 'optimal', 'en iyi'
+    'when', 'entry', 'exit', 'timing', 'buy', 'sell', 'wait', 'now', 'optimal', 'best'
   ],
   GENERAL: []
 };
@@ -127,7 +117,7 @@ export class ExpertService {
         const options = quiz.options as string[];
         examples.push({
           type: 'quiz',
-          title: 'Eğitim Örneği',
+          title: 'Educational Example',
           description: quiz.question,
           details: {
             correctAnswer: options[quiz.correctIndex],
@@ -164,8 +154,8 @@ export class ExpertService {
           if (verdict) {
             examples.push({
               type: 'analysis',
-              title: `${analysis.symbol} Analizi`,
-              description: `Gerçek analiz örneği: ${(verdict.verdict as string || 'N/A').toUpperCase()} sinyali`,
+              title: `${analysis.symbol} Analysis`,
+              description: `Real analysis example: ${(verdict.verdict as string || 'N/A').toUpperCase()} signal`,
               details: {
                 symbol: analysis.symbol,
                 verdict: verdict.verdict,
@@ -198,111 +188,111 @@ export class ExpertService {
       TECHNICAL_ANALYSIS: [
         {
           type: 'pattern',
-          title: 'RSI Aşırı Satım Örneği',
-          description: 'RSI 30 altına düştüğünde potansiyel alım fırsatı',
+          title: 'RSI Oversold Example',
+          description: 'When RSI drops below 30, potential buy opportunity',
           details: {
             indicator: 'RSI',
             condition: 'RSI < 30',
-            action: 'Alım fırsatı değerlendir',
-            note: 'Tek başına yeterli değil, trend ve hacim ile doğrula',
+            action: 'Consider buying opportunity',
+            note: 'Not sufficient alone, confirm with trend and volume',
           },
         },
         {
           type: 'pattern',
-          title: 'MACD Kesişim Örneği',
-          description: 'MACD çizgisi sinyal çizgisini yukarı keserse alım sinyali',
+          title: 'MACD Crossover Example',
+          description: 'When MACD line crosses above signal line, buy signal',
           details: {
             indicator: 'MACD',
             condition: 'MACD > Signal',
             action: 'Bullish momentum',
-            note: 'Histogram pozitife döndüğünde güç artıyor demektir',
+            note: 'When histogram turns positive, strength is increasing',
           },
         },
       ],
       WHALE_BEHAVIOR: [
         {
           type: 'pattern',
-          title: 'Balina Akümülasyonu Örneği',
-          description: 'Borsalardan büyük çıkışlar akümülasyon işareti',
+          title: 'Whale Accumulation Example',
+          description: 'Large exchange outflows indicate accumulation',
           details: {
             signal: 'Exchange Outflow',
-            meaning: 'Büyük yatırımcılar soğuk cüzdana çekiyor',
-            action: 'Bullish sinyal olabilir',
-            note: 'Net outflow > $100M güçlü sinyal',
+            meaning: 'Large investors moving to cold wallets',
+            action: 'Could be bullish signal',
+            note: 'Net outflow > $100M is strong signal',
           },
         },
       ],
       MANIPULATION: [
         {
           type: 'pattern',
-          title: 'Pump & Dump Tespiti',
-          description: 'Ani fiyat artışı + yüksek hacim = dikkat!',
+          title: 'Pump & Dump Detection',
+          description: 'Sudden price spike + high volume = caution!',
           details: {
-            warning: 'Fiyat %20+ artış + hacim 5x normal',
-            risk: 'Pump & dump olasılığı yüksek',
-            action: 'FOMO\'ya kapılma, bekle ve izle',
-            note: 'Özellikle düşük piyasa değerli coinlerde dikkat',
+            warning: 'Price +20% increase + 5x normal volume',
+            risk: 'High pump & dump probability',
+            action: 'Avoid FOMO, wait and observe',
+            note: 'Especially watch low market cap coins',
           },
         },
       ],
       RISK_MANAGEMENT: [
         {
           type: 'pattern',
-          title: 'Pozisyon Boyutlandırma Örneği',
-          description: '1% kuralı: Her işlemde maksimum %1 risk',
+          title: 'Position Sizing Example',
+          description: '1% rule: Maximum 1% risk per trade',
           details: {
-            example: '10,000$ portföy = 100$ maksimum risk',
-            stopLoss: '%5 stop loss ile 2,000$ pozisyon',
-            note: 'Risk/Ödül en az 1:2 olmalı',
+            example: '$10,000 portfolio = $100 maximum risk',
+            stopLoss: '5% stop loss = $2,000 position',
+            note: 'Risk/Reward should be at least 1:2',
           },
         },
       ],
       TRADE_PLAN: [
         {
           type: 'pattern',
-          title: 'DCA Giriş Stratejisi',
-          description: 'Kademeli alım ile ortalama maliyet düşürme',
+          title: 'DCA Entry Strategy',
+          description: 'Gradual buying to reduce average cost',
           details: {
-            entry1: '%40 - İlk giriş (mevcut fiyat)',
-            entry2: '%30 - İkinci giriş (%3-5 düşüşte)',
-            entry3: '%30 - Üçüncü giriş (%7-10 düşüşte)',
-            note: 'Stop loss ortalama girişe göre ayarla',
+            entry1: '40% - First entry (current price)',
+            entry2: '30% - Second entry (3-5% drop)',
+            entry3: '30% - Third entry (7-10% drop)',
+            note: 'Set stop loss based on average entry',
           },
         },
       ],
       MARKET_STRUCTURE: [
         {
           type: 'pattern',
-          title: 'BTC Dominans Etkisi',
-          description: 'BTC dominans yükselirse altcoinler genelde düşer',
+          title: 'BTC Dominance Effect',
+          description: 'When BTC dominance rises, altcoins usually fall',
           details: {
-            scenario1: 'BTC dominans ↑ + BTC fiyat ↑ = Altcoin satışı',
-            scenario2: 'BTC dominans ↓ + BTC fiyat ↑ = Altcoin sezonu',
-            action: 'Dominans trendini takip et',
+            scenario1: 'BTC dominance ↑ + BTC price ↑ = Altcoin selling',
+            scenario2: 'BTC dominance ↓ + BTC price ↑ = Altcoin season',
+            action: 'Follow dominance trend',
           },
         },
       ],
       PSYCHOLOGY: [
         {
           type: 'pattern',
-          title: 'FOMO Kontrolü',
-          description: 'Pump gören coine atlama, planına sadık kal',
+          title: 'FOMO Control',
+          description: 'Don\'t chase pumping coins, stick to your plan',
           details: {
-            rule: 'Yeşil mumlar gördüğünde değil, kırmızı mumlar gördüğünde al',
-            mindset: 'Kaçırdığın işlem değil, koruduğun sermaye önemli',
-            tip: 'İşlem yapmamak da bir stratejidir',
+            rule: 'Buy on red candles, not green candles',
+            mindset: 'Missed trades don\'t matter, capital protection does',
+            tip: 'Not trading is also a strategy',
           },
         },
       ],
       ENTRY_EXIT: [
         {
           type: 'pattern',
-          title: 'Optimal Giriş Zamanlaması',
-          description: 'Destek seviyesine yakın al, dirençte sat',
+          title: 'Optimal Entry Timing',
+          description: 'Buy near support, sell near resistance',
           details: {
-            entry: 'Fiyat desteğe yakınsa ve RSI < 40',
-            exit: 'Fiyat dirence yakınsa veya RSI > 70',
-            confirmation: 'Hacim artışı ile doğrula',
+            entry: 'Price near support and RSI < 40',
+            exit: 'Price near resistance or RSI > 70',
+            confirmation: 'Confirm with volume increase',
           },
         },
       ],
@@ -328,36 +318,36 @@ export class ExpertService {
       const detailsStr = Object.entries(ex.details)
         .map(([k, v]) => `  - ${k}: ${JSON.stringify(v)}`)
         .join('\n');
-      return `Örnek ${i + 1} (${ex.type}): ${ex.title}\n${ex.description}\n${detailsStr}`;
+      return `Example ${i + 1} (${ex.type}): ${ex.title}\n${ex.description}\n${detailsStr}`;
     }).join('\n\n');
 
-    const prompt = `Sen TradePath platformunun uzman trading eğitmenisin. Kullanıcılara kripto trading konusunda yardımcı oluyorsun.
+    const prompt = `You are TradePath's expert trading educator. You help users learn about crypto trading.
 
-KULLANICI SORUSU:
+USER QUESTION:
 ${question}
 
-TESPİT EDİLEN KONU: ${topic}
+DETECTED TOPIC: ${topic}
 
-TradePath'TEN GERÇEK ÖRNEKLER:
-${examplesText || 'Henüz ilgili örnek yok'}
+REAL EXAMPLES FROM TradePath:
+${examplesText || 'No relevant examples yet'}
 
-ÖNEMLİ TALİMATLAR:
-1. Soruyu TÜRKÇE olarak cevapla (profesyonel ama anlaşılır dil)
-2. Eğer örnekler varsa, bunları cevabına dahil et ve "TradePath'te gördüğümüz gibi..." şeklinde referans ver
-3. Pratik ve uygulanabilir tavsiyeler ver
-4. Riskler hakkında uyar ama aşırı korku yaratma
-5. Cevabın 3-5 paragraf uzunluğunda olsun
-6. Her zaman "Bu finansal tavsiye değildir" uyarısı ekle
+IMPORTANT INSTRUCTIONS:
+1. Answer in ENGLISH (professional but understandable language)
+2. If examples are available, include them in your answer and reference them like "As we see in TradePath..."
+3. Give practical and actionable advice
+4. Warn about risks but don't create excessive fear
+5. Keep your answer 3-5 paragraphs
+6. Always include "This is not financial advice" disclaimer
 
-CEVAP FORMAT:
-- Önce soruyu doğrudan cevapla
-- Sonra örneklerle açıkla
-- En son pratik bir tavsiye ver`;
+RESPONSE FORMAT:
+- First, answer the question directly
+- Then, explain with examples
+- Finally, give practical advice`;
 
     const apiKey = config.gemini.apiKey;
     if (!apiKey) {
       return {
-        answer: 'Uzman AI şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.',
+        answer: 'Expert AI is currently unavailable. Please try again later.',
         examples,
         relatedTopics: [],
         inputTokens: 0,
@@ -385,7 +375,7 @@ CEVAP FORMAT:
       if (!response.ok) {
         console.error('Gemini API error:', response.statusText);
         return {
-          answer: 'Uzman AI yanıt oluşturamadı. Lütfen tekrar deneyin.',
+          answer: 'Expert AI could not generate a response. Please try again.',
           examples,
           relatedTopics: [],
           inputTokens: 0,
@@ -395,7 +385,7 @@ CEVAP FORMAT:
       }
 
       const data = await response.json();
-      const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt oluşturulamadı';
+      const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not generate response';
 
       // Extract token usage
       const usageMetadata = data.usageMetadata || {};
@@ -432,7 +422,7 @@ CEVAP FORMAT:
     } catch (error) {
       console.error('Expert AI error:', error);
       return {
-        answer: 'Bir hata oluştu. Lütfen tekrar deneyin.',
+        answer: 'An error occurred. Please try again.',
         examples,
         relatedTopics: [],
         inputTokens: 0,
@@ -447,15 +437,15 @@ CEVAP FORMAT:
    */
   private getRelatedTopics(topic: TopicCategory): string[] {
     const relatedMap: Record<TopicCategory, string[]> = {
-      TECHNICAL_ANALYSIS: ['Destek/Direnç Seviyeleri', 'RSI Stratejileri', 'Trend Analizi'],
-      WHALE_BEHAVIOR: ['Exchange Flow Analizi', 'Smart Money Takibi', 'Order Book Okuma'],
-      RISK_MANAGEMENT: ['Pozisyon Boyutlandırma', 'Stop Loss Stratejileri', 'Portföy Çeşitlendirme'],
-      MARKET_STRUCTURE: ['BTC Dominans', 'Altcoin Sezonları', 'Market Döngüleri'],
-      MANIPULATION: ['Pump & Dump Tespiti', 'Wash Trading', 'Spoofing'],
-      PSYCHOLOGY: ['FOMO Kontrolü', 'Disiplin', 'Trading Planı'],
-      TRADE_PLAN: ['Entry Stratejileri', 'Take Profit Ayarlama', 'DCA Yöntemi'],
-      ENTRY_EXIT: ['Zamanlama', 'Hacim Analizi', 'Momentum Trading'],
-      GENERAL: ['Teknik Analiz Temelleri', 'Risk Yönetimi', 'Psikoloji'],
+      TECHNICAL_ANALYSIS: ['Support/Resistance Levels', 'RSI Strategies', 'Trend Analysis'],
+      WHALE_BEHAVIOR: ['Exchange Flow Analysis', 'Smart Money Tracking', 'Order Book Reading'],
+      RISK_MANAGEMENT: ['Position Sizing', 'Stop Loss Strategies', 'Portfolio Diversification'],
+      MARKET_STRUCTURE: ['BTC Dominance', 'Altcoin Seasons', 'Market Cycles'],
+      MANIPULATION: ['Pump & Dump Detection', 'Wash Trading', 'Spoofing'],
+      PSYCHOLOGY: ['FOMO Control', 'Discipline', 'Trading Plan'],
+      TRADE_PLAN: ['Entry Strategies', 'Take Profit Setting', 'DCA Method'],
+      ENTRY_EXIT: ['Timing', 'Volume Analysis', 'Momentum Trading'],
+      GENERAL: ['Technical Analysis Basics', 'Risk Management', 'Psychology'],
     };
 
     return relatedMap[topic] || relatedMap.GENERAL;

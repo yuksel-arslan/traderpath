@@ -16,7 +16,7 @@ export default async function expertRoutes(app: FastifyInstance) {
    * Ask the expert AI a question (3 credits)
    */
   const askSchema = z.object({
-    question: z.string().min(10, 'Soru en az 10 karakter olmalı').max(500, 'Soru en fazla 500 karakter olabilir'),
+    question: z.string().min(10, 'Question must be at least 10 characters').max(500, 'Question cannot exceed 500 characters'),
   });
 
   app.post('/ask', {
@@ -37,7 +37,7 @@ export default async function expertRoutes(app: FastifyInstance) {
         success: false,
         error: {
           code: 'CREDIT_001',
-          message: 'Yetersiz kredi. Uzman AI için 3 kredi gereklidir.',
+          message: 'Insufficient credits. Expert AI requires 3 credits.',
           required: cost,
         },
       });
@@ -69,7 +69,7 @@ export default async function expertRoutes(app: FastifyInstance) {
         success: false,
         error: {
           code: 'EXPERT_ERROR',
-          message: 'Uzman AI yanıt veremedi. Krediniz iade edildi.',
+          message: 'Expert AI failed to respond. Your credits have been refunded.',
         },
       });
     }
@@ -84,51 +84,51 @@ export default async function expertRoutes(app: FastifyInstance) {
   }, async (_request: FastifyRequest, reply: FastifyReply) => {
     const suggestedQuestions = [
       {
-        category: 'Teknik Analiz',
+        category: 'Technical Analysis',
         questions: [
-          'RSI göstergesi nasıl yorumlanır?',
-          'Destek ve direnç seviyeleri nasıl belirlenir?',
-          'MACD indikatörü nedir ve nasıl kullanılır?',
+          'How to interpret the RSI indicator?',
+          'How to identify support and resistance levels?',
+          'What is MACD and how to use it?',
         ],
       },
       {
-        category: 'Risk Yönetimi',
+        category: 'Risk Management',
         questions: [
-          'Pozisyon boyutlandırma nasıl yapılır?',
-          'Stop loss nereye konulmalı?',
-          'Risk/ödül oranı neden önemlidir?',
+          'How to calculate position size?',
+          'Where to place stop loss?',
+          'Why is risk/reward ratio important?',
         ],
       },
       {
-        category: 'Balina Davranışları',
+        category: 'Whale Behavior',
         questions: [
-          'Balina hareketleri nasıl tespit edilir?',
-          'Exchange flow nedir ve ne anlama gelir?',
-          'Smart money nereye bakıyor?',
+          'How to detect whale movements?',
+          'What is exchange flow and what does it mean?',
+          'Where is smart money looking?',
         ],
       },
       {
-        category: 'Piyasa Yapısı',
+        category: 'Market Structure',
         questions: [
-          'BTC dominansı altcoinleri nasıl etkiler?',
-          'Fear & Greed endeksi ne anlama gelir?',
-          'Bull ve bear piyasası nasıl anlaşılır?',
+          'How does BTC dominance affect altcoins?',
+          'What does Fear & Greed index mean?',
+          'How to identify bull and bear markets?',
         ],
       },
       {
-        category: 'Manipülasyon',
+        category: 'Manipulation',
         questions: [
-          'Pump and dump nasıl tespit edilir?',
-          'Wash trading nedir?',
-          'Spoofing nasıl anlaşılır?',
+          'How to detect pump and dump schemes?',
+          'What is wash trading?',
+          'How to identify spoofing?',
         ],
       },
       {
-        category: 'Trading Psikolojisi',
+        category: 'Trading Psychology',
         questions: [
-          'FOMO ile nasıl başa çıkılır?',
-          'Kayıplardan sonra nasıl toparlanılır?',
-          'Trading disiplini nasıl kazanılır?',
+          'How to deal with FOMO?',
+          'How to recover after losses?',
+          'How to develop trading discipline?',
         ],
       },
     ];
@@ -168,7 +168,7 @@ export default async function expertRoutes(app: FastifyInstance) {
         const meta = q.metadata as { questionPreview?: string } | null;
         return {
           id: q.id,
-          preview: meta?.questionPreview || 'Soru',
+          preview: meta?.questionPreview || 'Question',
           date: q.createdAt,
         };
       });
@@ -181,7 +181,7 @@ export default async function expertRoutes(app: FastifyInstance) {
       console.error('Recent questions error:', error);
       return reply.status(500).send({
         success: false,
-        error: { code: 'RECENT_ERROR', message: 'Son sorular yüklenemedi' },
+        error: { code: 'RECENT_ERROR', message: 'Failed to load recent questions' },
       });
     }
   });

@@ -50,12 +50,12 @@ interface ExpertAIProps {
 }
 
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
-  'Teknik Analiz': TrendingUp,
-  'Risk Yönetimi': Shield,
-  'Balina Davranışları': Target,
-  'Piyasa Yapısı': Brain,
-  'Manipülasyon': AlertTriangle,
-  'Trading Psikolojisi': Lightbulb,
+  'Technical Analysis': TrendingUp,
+  'Risk Management': Shield,
+  'Whale Behavior': Target,
+  'Market Structure': Brain,
+  'Manipulation': AlertTriangle,
+  'Trading Psychology': Lightbulb,
 };
 
 export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
@@ -122,9 +122,9 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
 
       if (!res.ok) {
         if (res.status === 402) {
-          setError('Yetersiz kredi. Uzman AI için 3 kredi gereklidir.');
+          setError('Insufficient credits. Expert AI requires 3 credits.');
         } else {
-          setError(data.error?.message || 'Bir hata oluştu');
+          setError(data.error?.message || 'An error occurred');
         }
         return;
       }
@@ -135,7 +135,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
       }
     } catch (err) {
       console.error('Expert AI error:', err);
-      setError('Bağlantı hatası. Lütfen tekrar deneyin.');
+      setError('Connection error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -180,17 +180,17 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 text-transparent bg-clip-text">
-                    Uzman AI
+                    Expert AI
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    TradePath örnekleriyle zenginleştirilmiş cevaplar
+                    Answers enriched with TradePath examples
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-lg border border-amber-500/20">
                   <Coins className="w-4 h-4 text-amber-500" />
-                  <span className="text-sm font-medium text-amber-500">3 Kredi</span>
+                  <span className="text-sm font-medium text-amber-500">3 Credits</span>
                 </div>
                 <button
                   onClick={onClose}
@@ -230,7 +230,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                       <Sparkles className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-purple-500 mb-3">Uzman Yanıtı</h3>
+                      <h3 className="font-semibold text-purple-500 mb-3">Expert Answer</h3>
                       <div className="prose prose-sm dark:prose-invert max-w-none">
                         {response.answer.split('\n').map((paragraph, i) => (
                           <p key={i} className="mb-3 last:mb-0 leading-relaxed">
@@ -247,7 +247,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                   <div>
                     <h4 className="font-semibold mb-4 flex items-center gap-2">
                       <BookOpen className="w-5 h-5 text-amber-500" />
-                      TradePath Örnekleri
+                      TradePath Examples
                     </h4>
                     <div className="grid gap-4">
                       {response.examples.map((example, i) => (
@@ -283,8 +283,8 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                                     example.type === 'pattern' && 'bg-blue-500/10 text-blue-500'
                                   )}
                                 >
-                                  {example.type === 'analysis' && 'Gerçek Analiz'}
-                                  {example.type === 'quiz' && 'Eğitim'}
+                                  {example.type === 'analysis' && 'Real Analysis'}
+                                  {example.type === 'quiz' && 'Education'}
                                   {example.type === 'pattern' && 'Pattern'}
                                 </span>
                                 <span className="font-medium text-sm">{example.title}</span>
@@ -316,7 +316,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                 {response.relatedTopics.length > 0 && (
                   <div>
                     <h4 className="font-semibold mb-3 text-sm text-muted-foreground">
-                      İlgili Konular
+                      Related Topics
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {response.relatedTopics.map((topic, i) => (
@@ -340,7 +340,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                     className="px-6 py-3 bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 text-white rounded-xl font-semibold hover:opacity-90 transition flex items-center gap-2"
                   >
                     <Sparkles className="w-5 h-5" />
-                    Yeni Soru Sor
+                    Ask New Question
                   </button>
                 </div>
               </motion.div>
@@ -350,9 +350,9 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
             {showSuggestions && !response && !loading && (
               <div className="space-y-6">
                 <div className="text-center mb-6">
-                  <h3 className="text-lg font-semibold mb-2">Uzman AI'ye Ne Sormak İstersiniz?</h3>
+                  <h3 className="text-lg font-semibold mb-2">What would you like to ask Expert AI?</h3>
                   <p className="text-sm text-muted-foreground">
-                    Aşağıdaki önerilerden seçin veya kendi sorunuzu yazın
+                    Choose from suggestions below or write your own question
                   </p>
                 </div>
 
@@ -390,9 +390,9 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                 <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center mb-4 animate-pulse">
                   <Brain className="w-8 h-8 text-white animate-bounce" />
                 </div>
-                <p className="text-lg font-medium">Uzman yanıt hazırlıyor...</p>
+                <p className="text-lg font-medium">Expert is preparing response...</p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  TradePath örnekleri araştırılıyor
+                  Searching TradePath examples
                 </p>
               </div>
             )}
@@ -412,7 +412,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                       handleAsk();
                     }
                   }}
-                  placeholder="Sorunuzu yazın... (En az 10 karakter)"
+                  placeholder="Write your question... (Min 10 characters)"
                   className="flex-1 bg-background border border-border rounded-xl px-4 py-3 resize-none max-h-32 focus:outline-none focus:ring-2 focus:ring-primary/50"
                   rows={1}
                   disabled={loading}
@@ -432,13 +432,13 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                   ) : (
                     <>
                       <Send className="w-5 h-5" />
-                      <span className="hidden sm:inline">Sor (3 Kredi)</span>
+                      <span className="hidden sm:inline">Ask (3 Credits)</span>
                     </>
                   )}
                 </button>
               </div>
               <p className="text-xs text-muted-foreground mt-2 text-center">
-                Shift+Enter ile yeni satır ekleyebilirsiniz
+                Use Shift+Enter for new line
               </p>
             </div>
           )}
@@ -468,10 +468,10 @@ export function ExpertAITrigger({ onClick, className }: ExpertAITriggerProps) {
     >
       <Brain className="w-5 h-5 text-purple-500" />
       <span className="bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 text-transparent bg-clip-text">
-        Uzman AI
+        Expert AI
       </span>
       <span className="text-xs px-1.5 py-0.5 bg-amber-500/10 text-amber-500 rounded ml-1">
-        3 Kredi
+        3 Credits
       </span>
     </button>
   );
