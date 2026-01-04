@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -21,6 +22,12 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { cn } from '../../lib/utils';
+
+// Lazy load PriceTicker
+const PriceTicker = dynamic(
+  () => import('../../components/common/PriceTicker').then(mod => ({ default: mod.PriceTicker })),
+  { ssr: false, loading: () => <div className="w-full h-10 bg-card/50 border-b border-border/50" /> }
+);
 
 // Ana navigasyon öğeleri
 const mainNav = [
@@ -59,6 +66,9 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Price Ticker - En üstte */}
+      <PriceTicker />
+
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 border-b border-border">
         <div className="container mx-auto px-4">

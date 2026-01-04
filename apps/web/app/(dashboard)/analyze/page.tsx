@@ -26,11 +26,6 @@ import {
 } from 'lucide-react';
 
 // Lazy load heavy components
-const PriceTicker = dynamic(
-  () => import('../../../components/common/PriceTicker').then(mod => ({ default: mod.PriceTicker })),
-  { ssr: false, loading: () => <div className="w-full h-10 bg-card/50 border-b border-border/50" /> }
-);
-
 const RecentAnalyses = dynamic(
   () => import('../../../components/analysis/RecentAnalyses').then(mod => ({ default: mod.RecentAnalyses })),
   { ssr: false, loading: () => <div className="h-40 bg-muted/30 rounded-2xl animate-pulse" /> }
@@ -99,9 +94,6 @@ const STATS = [
 export default function AnalyzePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
-      {/* Price Ticker */}
-      <PriceTicker />
-
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         {/* Background decorations */}

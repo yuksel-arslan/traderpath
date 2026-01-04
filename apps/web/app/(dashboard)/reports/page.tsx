@@ -1,14 +1,7 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-
-// Lazy load PriceTicker
-const PriceTicker = dynamic(
-  () => import('../../../components/common/PriceTicker').then(mod => ({ default: mod.PriceTicker })),
-  { ssr: false, loading: () => <div className="w-full h-10 bg-card/50 border-b border-border/50" /> }
-);
 import {
   FileText,
   Download,
@@ -160,9 +153,7 @@ export default function ReportsPage() {
     );
 
   return (
-    <div className="min-h-screen">
-      <PriceTicker />
-      <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
@@ -370,7 +361,6 @@ export default function ReportsPage() {
             </p>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );
