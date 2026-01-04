@@ -72,7 +72,7 @@ export default function DashboardLayout({
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
 
   // Fetch alerts for notification
-  const { data: alerts = [] } = useQuery<PriceAlert[]>({
+  const { data: alertsData } = useQuery<PriceAlert[]>({
     queryKey: ['alerts-notifications'],
     queryFn: async () => {
       const token = localStorage.getItem('accessToken');
@@ -84,7 +84,9 @@ export default function DashboardLayout({
         });
         if (!res.ok) return [];
         const result = await res.json();
-        return result.data || [];
+        // Handle both array and object responses
+        const data = result.data;
+        return Array.isArray(data) ? data : [];
       } catch {
         return [];
       }
@@ -92,6 +94,8 @@ export default function DashboardLayout({
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
+  // Ensure alerts is always an array
+  const alerts = Array.isArray(alertsData) ? alertsData : [];
   const triggeredAlerts = alerts.filter((a: PriceAlert) => a.triggered);
   const activeAlerts = alerts.filter((a: PriceAlert) => !a.triggered);
 
