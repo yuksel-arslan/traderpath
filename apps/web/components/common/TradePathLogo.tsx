@@ -11,10 +11,10 @@ interface TradePathLogoProps {
 }
 
 const sizes = {
-  sm: { wrapper: 'w-7 h-7', letter: 'text-xl', text: 'text-base', tagline: 'text-[8px]' },
-  md: { wrapper: 'w-8 h-8', letter: 'text-2xl', text: 'text-lg', tagline: 'text-[9px]' },
-  lg: { wrapper: 'w-10 h-10', letter: 'text-3xl', text: 'text-xl', tagline: 'text-[10px]' },
-  xl: { wrapper: 'w-14 h-14', letter: 'text-4xl', text: 'text-2xl', tagline: 'text-xs' },
+  sm: { wrapper: 'h-7 px-1', letter: 'text-base', text: 'text-base', tagline: 'text-[8px]' },
+  md: { wrapper: 'h-8 px-1.5', letter: 'text-lg', text: 'text-lg', tagline: 'text-[9px]' },
+  lg: { wrapper: 'h-10 px-2', letter: 'text-xl', text: 'text-xl', tagline: 'text-[10px]' },
+  xl: { wrapper: 'h-14 px-2.5', letter: 'text-2xl', text: 'text-2xl', tagline: 'text-xs' },
 };
 
 export function TradePathLogo({
@@ -28,25 +28,16 @@ export function TradePathLogo({
 
   const LogoContent = (
     <div className={`flex items-center gap-2 ${className}`}>
-      {/* Logo Icon - Overlapping T and P */}
+      {/* Logo Icon - T and P side by side */}
       <div
-        className={`${s.wrapper} rounded-lg flex items-center justify-center shadow-lg overflow-hidden relative`}
+        className={`${s.wrapper} rounded-lg flex items-center justify-center shadow-lg`}
         style={{
           boxShadow: '0 4px 14px rgba(245, 158, 11, 0.25)',
           background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.95))',
         }}
       >
-        {/* T letter - Red to Green */}
-        <span className={`${s.letter} font-black absolute gradient-text-rg-animate`}>
-          T
-        </span>
-        {/* P letter - Green to Red, aligned with T's vertical stem */}
-        <span
-          className={`${s.letter} font-black absolute gradient-text-gr-animate`}
-          style={{ transform: 'translateX(-18%)' }}
-        >
-          P
-        </span>
+        <span className={`${s.letter} font-black gradient-text-rg-animate`}>T</span>
+        <span className={`${s.letter} font-black gradient-text-gr-animate -ml-0.5`}>P</span>
       </div>
 
       {/* Logo Text */}
