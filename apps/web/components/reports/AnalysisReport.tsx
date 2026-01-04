@@ -551,6 +551,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Market Trend</Text><Text style={[styles.metricValue, { color: getStatusColor(marketStatus) }]}>{data.marketPulse.trend?.direction?.toUpperCase()}</Text></View>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Trend Strength</Text><Text style={styles.metricValue}>{data.marketPulse.trend?.strength}%</Text></View>
           </View>
+          <Text style={styles.stepDescription}>Analyzes global crypto sentiment via Fear & Greed Index, BTC dominance shifts, and altcoin correlation patterns. Cross-references social media trends, funding rates, and institutional flow data.</Text>
         </View>
 
         {/* Step 2: Asset Scan */}
@@ -568,6 +569,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>RSI (14)</Text><Text style={styles.metricValue}>{data.assetScan.indicators?.rsi?.toFixed(0) || 'N/A'}</Text></View>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>MACD</Text><Text style={[styles.metricValue, { color: (data.assetScan.indicators?.macd?.histogram || 0) > 0 ? BRAND.success : BRAND.danger }]}>{(data.assetScan.indicators?.macd?.histogram || 0) > 0 ? 'Bullish' : 'Bearish'}</Text></View>
           </View>
+          <Text style={styles.stepDescription}>Performs multi-timeframe technical analysis using RSI, MACD, Bollinger Bands, and volume profiles. Identifies key support/resistance levels through order book depth and historical price action.</Text>
         </View>
 
         {/* Step 3: Safety Check */}
@@ -585,6 +587,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Whale Activity</Text><Text style={styles.metricValue}>{(data.safetyCheck.whaleActivity?.bias || 'neutral').toUpperCase()}</Text></View>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Smart Money</Text><Text style={styles.metricValue}>{(data.safetyCheck.smartMoney?.positioning || 'neutral').toUpperCase()}</Text></View>
           </View>
+          <Text style={styles.stepDescription}>Monitors whale wallet movements, exchange inflows/outflows, and unusual volume spikes for manipulation detection. Analyzes smart money positioning via derivatives data and large transaction patterns.</Text>
         </View>
 
         {/* Step 4: Timing */}
@@ -600,6 +603,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Trade Now?</Text><Text style={[styles.metricValue, { color: data.timing.tradeNow ? BRAND.success : BRAND.warning }]}>{data.timing.tradeNow ? 'YES' : 'WAIT'}</Text></View>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>RSI Zone</Text><Text style={styles.metricValue}>{(data.assetScan.indicators?.rsi || 50) > 70 ? 'Overbought' : (data.assetScan.indicators?.rsi || 50) < 30 ? 'Oversold' : 'Neutral'}</Text></View>
           </View>
+          <Text style={styles.stepDescription}>Evaluates optimal entry timing using momentum oscillators, volatility cycles, and market session analysis. Considers upcoming economic events, funding rate resets, and liquidity conditions.</Text>
         </View>
 
         <PageFooter pageNum={1} totalPages={2} />
@@ -624,6 +628,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             </View>
             <Text style={[styles.stepStatus, { backgroundColor: getStatusBg(planStatus), color: getStatusColor(planStatus) }]}>{planStatus}</Text>
           </View>
+          <Text style={styles.stepDescription}>Calculates optimal entry zones using Fibonacci retracements, pivot points, and liquidity clusters. Sets stop-loss below key support and take-profits at resistance levels with dynamic R:R optimization.</Text>
           <View style={styles.stepContent}>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Direction</Text><Text style={[styles.metricValue, { color: isLong ? BRAND.success : BRAND.danger }]}>{(data.tradePlan.direction || 'N/A').toUpperCase()}</Text></View>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Risk/Reward</Text><Text style={styles.metricValue}>{(data.tradePlan.riskReward || 0).toFixed(1)}:1</Text></View>
@@ -665,6 +670,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Bear Trap</Text><Text style={[styles.metricValue, { color: data.trapCheck?.traps?.bearTrap ? BRAND.danger : BRAND.success }]}>{data.trapCheck?.traps?.bearTrap ? 'DETECTED' : 'NONE'}</Text></View>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Fakeout Risk</Text><Text style={[styles.metricValue, { color: getStatusColor(data.trapCheck?.traps?.fakeoutRisk || 'low') }]}>{(data.trapCheck?.traps?.fakeoutRisk || 'LOW').toUpperCase()}</Text></View>
           </View>
+          <Text style={styles.stepDescription}>Detects potential bull/bear traps by analyzing breakout volume, liquidation heatmaps, and order book imbalances. Validates price movements against historical fakeout patterns at key levels.</Text>
         </View>
 
         {/* Step 7: Final Verdict with Trade Summary */}
