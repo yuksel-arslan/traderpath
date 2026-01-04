@@ -92,7 +92,7 @@ const STEPS = [
   },
   {
     id: 4,
-    name: 'Timing',
+    name: 'Timing Analysis',
     icon: Clock,
     color: 'purple',
     cost: CREDIT_COSTS.STEP_TIMING,

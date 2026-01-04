@@ -30,7 +30,7 @@ const ANALYSIS_STEPS = [
   { icon: TrendingUp, title: 'Market Pulse', description: 'Sentiment & conditions', color: 'text-blue-500', bg: 'bg-blue-500/10' },
   { icon: BarChart3, title: 'Asset Scanner', description: 'Technical analysis', color: 'text-green-500', bg: 'bg-green-500/10' },
   { icon: Shield, title: 'Safety Check', description: 'Whale detection', color: 'text-amber-500', bg: 'bg-amber-500/10' },
-  { icon: Clock, title: 'Timing', description: 'Entry windows', color: 'text-purple-500', bg: 'bg-purple-500/10' },
+  { icon: Clock, title: 'Timing Analysis', description: 'Entry windows', color: 'text-purple-500', bg: 'bg-purple-500/10' },
   { icon: Target, title: 'Trade Plan', description: 'TP/SL levels', color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
   { icon: AlertTriangle, title: 'Trap Check', description: 'Liquidity traps', color: 'text-orange-500', bg: 'bg-orange-500/10' },
   { icon: CheckCircle, title: 'Final', description: 'AI recommendation', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
