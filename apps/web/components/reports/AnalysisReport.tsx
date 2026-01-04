@@ -2,8 +2,7 @@
 
 // ===========================================
 // Analysis Report PDF Generator
-// Professional Light Theme with Cover Page
-// 3 steps per page format
+// Professional format with TradingView chart
 // ===========================================
 
 import {
@@ -16,150 +15,215 @@ import {
   pdf,
 } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
+import html2canvas from 'html2canvas';
 
-// Professional light theme styles
+// TradePath brand colors
+const BRAND = {
+  primary: '#3b82f6',
+  primaryDark: '#2563eb',
+  success: '#22c55e',
+  danger: '#ef4444',
+  warning: '#f59e0b',
+  text: '#111827',
+  textMuted: '#6b7280',
+  border: '#e5e7eb',
+  bgLight: '#f9fafb',
+};
+
+// Professional styles
 const styles = StyleSheet.create({
   // Cover Page
   coverPage: {
     flex: 1,
     backgroundColor: '#ffffff',
-    padding: 50,
-    justifyContent: 'center',
+    padding: 60,
+    justifyContent: 'space-between',
+  },
+  coverHeader: {
     alignItems: 'center',
   },
-  coverLogo: {
-    fontSize: 42,
+  coverLogoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  coverLogoT: {
+    fontSize: 36,
     fontWeight: 'bold',
-    color: '#3b82f6',
-    marginBottom: 5,
+    color: BRAND.danger,
+  },
+  coverLogoP: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: BRAND.success,
   },
   coverTagline: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginBottom: 60,
+    fontSize: 11,
+    color: BRAND.textMuted,
+    letterSpacing: 1,
+  },
+  coverMain: {
+    alignItems: 'center',
   },
   coverSymbolBadge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#f59e0b',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: BRAND.warning,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 25,
   },
   coverSymbolLetter: {
-    fontSize: 36,
+    fontSize: 48,
     fontWeight: 'bold',
     color: '#ffffff',
   },
   coverTitle: {
-    fontSize: 28,
+    fontSize: 36,
     fontWeight: 'bold',
-    color: '#111827',
+    color: BRAND.text,
     marginBottom: 8,
   },
   coverSubtitle: {
     fontSize: 14,
-    color: '#6b7280',
+    color: BRAND.textMuted,
     marginBottom: 40,
   },
   coverVerdictBadge: {
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-    marginBottom: 15,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderRadius: 30,
+    marginBottom: 20,
   },
   coverVerdictText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#ffffff',
   },
+  coverScoreContainer: {
+    alignItems: 'center',
+  },
   coverScore: {
-    fontSize: 48,
+    fontSize: 64,
     fontWeight: 'bold',
-    color: '#111827',
+    color: BRAND.text,
   },
   coverScoreLabel: {
     fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 60,
+    color: BRAND.textMuted,
+  },
+  coverFooter: {
+    alignItems: 'center',
   },
   coverMeta: {
     fontSize: 10,
-    color: '#9ca3af',
-    marginBottom: 3,
+    color: BRAND.textMuted,
+    marginBottom: 4,
   },
   coverPowered: {
-    marginTop: 40,
-    fontSize: 10,
-    color: '#9ca3af',
+    marginTop: 20,
+    fontSize: 9,
+    color: BRAND.textMuted,
   },
 
   // Content Pages
   page: {
     backgroundColor: '#ffffff',
     padding: 40,
-    paddingBottom: 70,
+    paddingBottom: 60,
     fontFamily: 'Helvetica',
   },
   pageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 25,
-    paddingBottom: 15,
+    marginBottom: 20,
+    paddingBottom: 12,
     borderBottomWidth: 2,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: BRAND.border,
   },
-  pageHeaderLogo: {
-    fontSize: 18,
+  pageHeaderLogoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pageHeaderLogoT: {
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#3b82f6',
+    color: BRAND.danger,
+  },
+  pageHeaderLogoP: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: BRAND.success,
   },
   pageHeaderSymbol: {
-    fontSize: 12,
-    color: '#6b7280',
+    fontSize: 11,
+    color: BRAND.textMuted,
   },
 
-  // Step Card (fits 3 per page)
-  stepCard: {
-    backgroundColor: '#f9fafb',
+  // Chart section
+  chartSection: {
+    backgroundColor: '#ffffff',
     borderRadius: 8,
-    padding: 15,
-    marginBottom: 15,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: BRAND.border,
+    overflow: 'hidden',
+  },
+  chartImage: {
+    width: '100%',
+    height: 280,
+  },
+  chartTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: BRAND.text,
+    padding: 10,
+    backgroundColor: BRAND.bgLight,
+    borderBottomWidth: 1,
+    borderBottomColor: BRAND.border,
+  },
+
+  // Step Card
+  stepCard: {
+    backgroundColor: BRAND.bgLight,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
     borderLeftWidth: 4,
   },
   stepHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   stepTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   stepNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#3b82f6',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: BRAND.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
   stepNumberText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
     color: '#ffffff',
   },
   stepTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
-    color: '#111827',
+    color: BRAND.text,
   },
   stepStatus: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
     paddingVertical: 3,
     paddingHorizontal: 10,
@@ -171,39 +235,39 @@ const styles = StyleSheet.create({
   },
   stepMetric: {
     width: '25%',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   metricLabel: {
     fontSize: 8,
-    color: '#6b7280',
+    color: BRAND.textMuted,
     marginBottom: 2,
   },
   metricValue: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
-    color: '#111827',
+    color: BRAND.text,
   },
   stepDescription: {
     fontSize: 9,
-    color: '#6b7280',
-    lineHeight: 1.5,
-    marginTop: 8,
+    color: BRAND.textMuted,
+    lineHeight: 1.4,
+    marginTop: 6,
     fontStyle: 'italic',
   },
 
   // Trade Levels
   levelsGrid: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 10,
+    gap: 8,
+    marginTop: 8,
   },
   levelBox: {
     flex: 1,
     backgroundColor: '#ffffff',
     borderRadius: 6,
-    padding: 10,
+    padding: 8,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: BRAND.border,
   },
   levelTitle: {
     fontSize: 9,
@@ -213,22 +277,22 @@ const styles = StyleSheet.create({
   levelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 3,
+    paddingVertical: 2,
   },
   levelLabel: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: 'bold',
   },
   levelPrice: {
-    fontSize: 9,
-    color: '#111827',
+    fontSize: 8,
+    color: BRAND.text,
   },
 
   // Final Verdict
   verdictCard: {
     borderRadius: 10,
     padding: 20,
-    marginBottom: 20,
+    marginBottom: 15,
   },
   verdictTitle: {
     fontSize: 16,
@@ -236,63 +300,81 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   verdictText: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#374151',
     lineHeight: 1.6,
   },
 
-  // Chart section
-  chartSection: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 15,
-    height: 180,
-  },
-  chartImage: {
-    width: '100%',
-    height: '100%',
-  },
-
-  // Footer
-  footer: {
-    position: 'absolute',
-    bottom: 25,
-    left: 40,
-    right: 40,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-  },
-  footerText: {
-    fontSize: 8,
-    color: '#9ca3af',
-  },
-
-  // Disclaimer
-  disclaimer: {
-    backgroundColor: '#fef3c7',
+  // Trade Summary
+  summaryCard: {
+    backgroundColor: BRAND.bgLight,
     borderRadius: 8,
     padding: 15,
-    marginTop: 20,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: BRAND.border,
   },
-  disclaimerTitle: {
-    fontSize: 10,
+  summaryTitle: {
+    fontSize: 12,
     fontWeight: 'bold',
-    color: '#92400e',
-    marginBottom: 5,
+    color: BRAND.text,
+    marginBottom: 10,
   },
-  disclaimerText: {
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  summaryItem: {
+    width: '25%',
+  },
+  summaryLabel: {
     fontSize: 8,
-    color: '#92400e',
-    lineHeight: 1.5,
+    color: BRAND.textMuted,
+  },
+  summaryValue: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: BRAND.text,
+  },
+
+  // Footer with disclaimer
+  footer: {
+    position: 'absolute',
+    bottom: 15,
+    left: 40,
+    right: 40,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: BRAND.border,
+  },
+  footerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  footerLeft: {
+    flex: 1,
+  },
+  footerRight: {
+    alignItems: 'flex-end',
+  },
+  footerText: {
+    fontSize: 7,
+    color: BRAND.textMuted,
+  },
+  footerDisclaimer: {
+    fontSize: 6,
+    color: '#9ca3af',
+    lineHeight: 1.3,
+    marginTop: 4,
+  },
+  pageNumber: {
+    fontSize: 8,
+    color: BRAND.textMuted,
   },
 });
 
-// Helper function to format price
+// Helper function
 function formatPrice(price: number): string {
   if (!price) return '$0';
   if (price >= 1000) return `$${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
@@ -301,11 +383,12 @@ function formatPrice(price: number): string {
   return `$${price.toFixed(6)}`;
 }
 
-// Analysis data types
+// Data types
 interface AnalysisReportData {
   symbol: string;
   generatedAt: string;
   analysisId: string;
+  chartImage?: string;
   marketPulse: {
     btcDominance: number;
     fearGreedIndex: number;
@@ -347,46 +430,13 @@ interface AnalysisReportData {
   };
 }
 
-// Generate chart URL - Light theme
-function generateChartUrl(data: AnalysisReportData): string {
-  const entry = data.tradePlan.averageEntry || 0;
-  const sl = data.tradePlan.stopLoss?.price || 0;
-  const tp1 = data.tradePlan.takeProfits?.[0]?.price || 0;
-  const tp2 = data.tradePlan.takeProfits?.[1]?.price || 0;
-  const current = data.assetScan.currentPrice || entry;
-  const isLong = data.tradePlan.direction === 'long';
-
-  const prices = [sl, entry, current, tp1, tp2].filter(p => p > 0);
-  const minPrice = Math.min(...prices) * 0.97;
-  const maxPrice = Math.max(...prices) * 1.03;
-
-  const annotations: any = {
-    current: { type: 'line', yMin: current, yMax: current, borderColor: '#f59e0b', borderWidth: 2, borderDash: [5, 5], label: { display: true, content: `Current: ${formatPrice(current)}`, position: 'start', backgroundColor: '#f59e0b', font: { size: 10 } } },
-    entry: { type: 'line', yMin: entry, yMax: entry, borderColor: '#3b82f6', borderWidth: 2, label: { display: true, content: `Entry: ${formatPrice(entry)}`, position: 'start', backgroundColor: '#3b82f6', color: '#fff', font: { size: 10 } } },
-    sl: { type: 'line', yMin: sl, yMax: sl, borderColor: '#ef4444', borderWidth: 2, label: { display: true, content: `SL: ${formatPrice(sl)}`, position: 'start', backgroundColor: '#ef4444', color: '#fff', font: { size: 10 } } },
-  };
-  if (tp1) annotations.tp1 = { type: 'line', yMin: tp1, yMax: tp1, borderColor: '#22c55e', borderWidth: 2, label: { display: true, content: `TP1: ${formatPrice(tp1)}`, position: 'end', backgroundColor: '#22c55e', font: { size: 10 } } };
-  if (tp2) annotations.tp2 = { type: 'line', yMin: tp2, yMax: tp2, borderColor: '#10b981', borderWidth: 2, label: { display: true, content: `TP2: ${formatPrice(tp2)}`, position: 'end', backgroundColor: '#10b981', font: { size: 10 } } };
-
-  const chartConfig = {
-    type: 'line',
-    data: { labels: ['', '', '', '', ''], datasets: [{ data: [current, current, current, current, current], borderColor: 'transparent', pointRadius: 0 }] },
-    options: {
-      plugins: { legend: { display: false }, title: { display: true, text: `${data.symbol}/USDT - ${isLong ? 'LONG' : 'SHORT'} Trade Plan`, font: { size: 14, weight: 'bold' } }, annotation: { annotations } },
-      scales: { x: { display: false }, y: { min: minPrice, max: maxPrice, grid: { color: '#e5e7eb' }, ticks: { font: { size: 10 }, callback: (v: number) => '$' + v.toLocaleString() } } }
-    }
-  };
-
-  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}&backgroundColor=%23f3f4f6&width=550&height=200`;
-}
-
 // Status helpers
 const getStatusColor = (status: string) => {
   const positive = ['Bullish', 'Safe', 'Good', 'Ready', 'Clear', 'Stable', 'Low'];
   const negative = ['Bearish', 'Risky', 'Warning', 'Declining', 'High'];
-  if (positive.some(p => status.toLowerCase().includes(p.toLowerCase()))) return '#16a34a';
-  if (negative.some(n => status.toLowerCase().includes(n.toLowerCase()))) return '#dc2626';
-  return '#ca8a04';
+  if (positive.some(p => status.toLowerCase().includes(p.toLowerCase()))) return BRAND.success;
+  if (negative.some(n => status.toLowerCase().includes(n.toLowerCase()))) return BRAND.danger;
+  return BRAND.warning;
 };
 
 const getStatusBg = (status: string) => {
@@ -400,17 +450,36 @@ const getStatusBg = (status: string) => {
 const getBorderColor = (status: string) => {
   const positive = ['Bullish', 'Safe', 'Good', 'Ready', 'Clear', 'Stable', 'Low'];
   const negative = ['Bearish', 'Risky', 'Warning', 'Declining', 'High'];
-  if (positive.some(p => status.toLowerCase().includes(p.toLowerCase()))) return '#22c55e';
-  if (negative.some(n => status.toLowerCase().includes(n.toLowerCase()))) return '#ef4444';
-  return '#f59e0b';
+  if (positive.some(p => status.toLowerCase().includes(p.toLowerCase()))) return BRAND.success;
+  if (negative.some(n => status.toLowerCase().includes(n.toLowerCase()))) return BRAND.danger;
+  return BRAND.warning;
+};
+
+// Logo Component
+const Logo = ({ size = 'small' }: { size?: 'small' | 'large' }) => {
+  const fontSize = size === 'large' ? 36 : 16;
+  return (
+    <View style={{ flexDirection: 'row' }}>
+      <Text style={{ fontSize, fontWeight: 'bold', color: BRAND.danger }}>Trade</Text>
+      <Text style={{ fontSize, fontWeight: 'bold', color: BRAND.success }}>Path</Text>
+    </View>
+  );
 };
 
 // Footer Component
 const PageFooter = ({ pageNum, totalPages }: { pageNum: number; totalPages: number }) => (
   <View style={styles.footer}>
-    <Text style={styles.footerText}>TradePath AI Analysis Report</Text>
-    <Text style={styles.footerText}>Confidential</Text>
-    <Text style={styles.footerText}>Page {pageNum} of {totalPages}</Text>
+    <View style={styles.footerContent}>
+      <View style={styles.footerLeft}>
+        <Text style={styles.footerText}>TradePath AI Analysis Report • Confidential</Text>
+        <Text style={styles.footerDisclaimer}>
+          Disclaimer: This report is for educational purposes only and does not constitute financial advice. Crypto trading involves substantial risk. Always DYOR.
+        </Text>
+      </View>
+      <View style={styles.footerRight}>
+        <Text style={styles.pageNumber}>Page {pageNum} of {totalPages}</Text>
+      </View>
+    </View>
   </View>
 );
 
@@ -426,46 +495,59 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
   const planStatus = data.tradePlan.averageEntry ? 'Ready' : 'Pending';
   const trapStatus = data.trapCheck?.traps?.bullTrap || data.trapCheck?.traps?.bearTrap ? 'Warning' : 'Clear';
 
-  const chartUrl = generateChartUrl(data);
-
   return (
     <Document>
-      {/* PAGE 1: Cover Page */}
+      {/* COVER PAGE */}
       <Page size="A4" style={styles.coverPage}>
-        <Text style={styles.coverLogo}>TradePath</Text>
-        <Text style={styles.coverTagline}>AI-Powered Trading Analysis</Text>
-
-        <View style={styles.coverSymbolBadge}>
-          <Text style={styles.coverSymbolLetter}>{data.symbol.charAt(0)}</Text>
+        <View style={styles.coverHeader}>
+          <View style={styles.coverLogoContainer}>
+            <Text style={styles.coverLogoT}>Trade</Text>
+            <Text style={styles.coverLogoP}>Path</Text>
+          </View>
+          <Text style={styles.coverTagline}>FROM CHARTS TO CLARITY</Text>
         </View>
 
-        <Text style={styles.coverTitle}>{data.symbol}/USDT</Text>
-        <Text style={styles.coverSubtitle}>Comprehensive Analysis Report</Text>
+        <View style={styles.coverMain}>
+          <View style={styles.coverSymbolBadge}>
+            <Text style={styles.coverSymbolLetter}>{data.symbol.charAt(0)}</Text>
+          </View>
+          <Text style={styles.coverTitle}>{data.symbol}/USDT</Text>
+          <Text style={styles.coverSubtitle}>7-Step AI Trading Analysis Report</Text>
 
-        <View style={[styles.coverVerdictBadge, { backgroundColor: isLong ? '#16a34a' : '#dc2626' }]}>
-          <Text style={styles.coverVerdictText}>{isLong ? '↗ LONG' : '↘ SHORT'} RECOMMENDED</Text>
+          <View style={[styles.coverVerdictBadge, { backgroundColor: isLong ? BRAND.success : BRAND.danger }]}>
+            <Text style={styles.coverVerdictText}>{isLong ? '↗ LONG' : '↘ SHORT'} RECOMMENDED</Text>
+          </View>
+
+          <View style={styles.coverScoreContainer}>
+            <Text style={styles.coverScore}>{score}</Text>
+            <Text style={styles.coverScoreLabel}>out of 100</Text>
+          </View>
         </View>
 
-        <Text style={styles.coverScore}>{score}/100</Text>
-        <Text style={styles.coverScoreLabel}>Overall Score</Text>
-
-        <Text style={styles.coverMeta}>Generated: {data.generatedAt}</Text>
-        <Text style={styles.coverMeta}>Report ID: {data.analysisId?.slice(-12)}</Text>
-
-        <Text style={styles.coverPowered}>Powered by Google Gemini AI</Text>
+        <View style={styles.coverFooter}>
+          <Text style={styles.coverMeta}>Generated: {data.generatedAt}</Text>
+          <Text style={styles.coverMeta}>Report ID: {data.analysisId?.slice(-12) || 'N/A'}</Text>
+          <Text style={styles.coverPowered}>Powered by Google Gemini AI • TradePath © 2024</Text>
+        </View>
       </Page>
 
-      {/* PAGE 2: Steps 1-3 + Chart */}
+      {/* PAGE 2: Chart + Steps 1-2 */}
       <Page size="A4" style={styles.page}>
         <View style={styles.pageHeader}>
-          <Text style={styles.pageHeaderLogo}>TradePath</Text>
-          <Text style={styles.pageHeaderSymbol}>{data.symbol}/USDT Analysis</Text>
+          <View style={styles.pageHeaderLogoContainer}>
+            <Text style={styles.pageHeaderLogoT}>Trade</Text>
+            <Text style={styles.pageHeaderLogoP}>Path</Text>
+          </View>
+          <Text style={styles.pageHeaderSymbol}>{data.symbol}/USDT Analysis Report</Text>
         </View>
 
         {/* Chart */}
-        <View style={styles.chartSection}>
-          <Image src={chartUrl} style={styles.chartImage} />
-        </View>
+        {data.chartImage ? (
+          <View style={styles.chartSection}>
+            <Text style={styles.chartTitle}>{data.symbol}/USDT Trade Plan Chart</Text>
+            <Image src={data.chartImage} style={styles.chartImage} />
+          </View>
+        ) : null}
 
         {/* Step 1: Market Pulse */}
         <View style={[styles.stepCard, { borderLeftColor: getBorderColor(marketStatus) }]}>
@@ -479,8 +561,8 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           <View style={styles.stepContent}>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Fear & Greed</Text><Text style={styles.metricValue}>{data.marketPulse.fearGreedIndex} ({data.marketPulse.fearGreedLabel})</Text></View>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>BTC Dominance</Text><Text style={styles.metricValue}>{data.marketPulse.btcDominance?.toFixed(1)}%</Text></View>
-            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Trend</Text><Text style={[styles.metricValue, { color: getStatusColor(marketStatus) }]}>{data.marketPulse.trend?.direction?.toUpperCase()}</Text></View>
-            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Strength</Text><Text style={styles.metricValue}>{data.marketPulse.trend?.strength}%</Text></View>
+            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Market Trend</Text><Text style={[styles.metricValue, { color: getStatusColor(marketStatus) }]}>{data.marketPulse.trend?.direction?.toUpperCase()}</Text></View>
+            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Trend Strength</Text><Text style={styles.metricValue}>{data.marketPulse.trend?.strength}%</Text></View>
           </View>
         </View>
 
@@ -495,10 +577,23 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </View>
           <View style={styles.stepContent}>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Current Price</Text><Text style={styles.metricValue}>{formatPrice(data.assetScan.currentPrice)}</Text></View>
-            <View style={styles.stepMetric}><Text style={styles.metricLabel}>24h Change</Text><Text style={[styles.metricValue, { color: (data.assetScan.priceChange24h || 0) >= 0 ? '#16a34a' : '#dc2626' }]}>{(data.assetScan.priceChange24h || 0) >= 0 ? '+' : ''}{(data.assetScan.priceChange24h || 0).toFixed(2)}%</Text></View>
+            <View style={styles.stepMetric}><Text style={styles.metricLabel}>24h Change</Text><Text style={[styles.metricValue, { color: (data.assetScan.priceChange24h || 0) >= 0 ? BRAND.success : BRAND.danger }]}>{(data.assetScan.priceChange24h || 0) >= 0 ? '+' : ''}{(data.assetScan.priceChange24h || 0).toFixed(2)}%</Text></View>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>RSI (14)</Text><Text style={styles.metricValue}>{data.assetScan.indicators?.rsi?.toFixed(0) || 'N/A'}</Text></View>
-            <View style={styles.stepMetric}><Text style={styles.metricLabel}>MACD</Text><Text style={[styles.metricValue, { color: (data.assetScan.indicators?.macd?.histogram || 0) > 0 ? '#16a34a' : '#dc2626' }]}>{(data.assetScan.indicators?.macd?.histogram || 0) > 0 ? 'Bullish' : 'Bearish'}</Text></View>
+            <View style={styles.stepMetric}><Text style={styles.metricLabel}>MACD</Text><Text style={[styles.metricValue, { color: (data.assetScan.indicators?.macd?.histogram || 0) > 0 ? BRAND.success : BRAND.danger }]}>{(data.assetScan.indicators?.macd?.histogram || 0) > 0 ? 'Bullish' : 'Bearish'}</Text></View>
           </View>
+        </View>
+
+        <PageFooter pageNum={2} totalPages={4} />
+      </Page>
+
+      {/* PAGE 3: Steps 3-5 */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.pageHeader}>
+          <View style={styles.pageHeaderLogoContainer}>
+            <Text style={styles.pageHeaderLogoT}>Trade</Text>
+            <Text style={styles.pageHeaderLogoP}>Path</Text>
+          </View>
+          <Text style={styles.pageHeaderSymbol}>{data.symbol}/USDT Analysis Report</Text>
         </View>
 
         {/* Step 3: Safety Check */}
@@ -512,20 +607,10 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </View>
           <View style={styles.stepContent}>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Risk Level</Text><Text style={[styles.metricValue, { color: getStatusColor(safetyStatus) }]}>{(data.safetyCheck.riskLevel || 'N/A').toUpperCase()}</Text></View>
-            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Pump/Dump Risk</Text><Text style={styles.metricValue}>{(data.safetyCheck.manipulation?.pumpDumpRisk || 'N/A').toUpperCase()}</Text></View>
+            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Pump/Dump</Text><Text style={styles.metricValue}>{(data.safetyCheck.manipulation?.pumpDumpRisk || 'N/A').toUpperCase()}</Text></View>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Whale Activity</Text><Text style={styles.metricValue}>{(data.safetyCheck.whaleActivity?.bias || 'neutral').toUpperCase()}</Text></View>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Smart Money</Text><Text style={styles.metricValue}>{(data.safetyCheck.smartMoney?.positioning || 'neutral').toUpperCase()}</Text></View>
           </View>
-        </View>
-
-        <PageFooter pageNum={2} totalPages={4} />
-      </Page>
-
-      {/* PAGE 3: Steps 4-6 */}
-      <Page size="A4" style={styles.page}>
-        <View style={styles.pageHeader}>
-          <Text style={styles.pageHeaderLogo}>TradePath</Text>
-          <Text style={styles.pageHeaderSymbol}>{data.symbol}/USDT Analysis</Text>
         </View>
 
         {/* Step 4: Timing */}
@@ -538,10 +623,10 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             <Text style={[styles.stepStatus, { backgroundColor: getStatusBg(timingStatus), color: getStatusColor(timingStatus) }]}>{timingStatus}</Text>
           </View>
           <View style={styles.stepContent}>
-            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Trade Now?</Text><Text style={[styles.metricValue, { color: data.timing.tradeNow ? '#16a34a' : '#ca8a04' }]}>{data.timing.tradeNow ? 'YES' : 'WAIT'}</Text></View>
+            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Trade Now?</Text><Text style={[styles.metricValue, { color: data.timing.tradeNow ? BRAND.success : BRAND.warning }]}>{data.timing.tradeNow ? 'YES' : 'WAIT'}</Text></View>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>RSI Zone</Text><Text style={styles.metricValue}>{(data.assetScan.indicators?.rsi || 50) > 70 ? 'Overbought' : (data.assetScan.indicators?.rsi || 50) < 30 ? 'Oversold' : 'Neutral'}</Text></View>
           </View>
-          <Text style={styles.stepDescription}>{data.timing.reason || 'Entry timing based on technical indicators and market conditions.'}</Text>
+          <Text style={styles.stepDescription}>{data.timing.reason || 'Optimal entry timing based on technical indicators.'}</Text>
         </View>
 
         {/* Step 5: Trade Plan */}
@@ -554,29 +639,43 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             <Text style={[styles.stepStatus, { backgroundColor: getStatusBg(planStatus), color: getStatusColor(planStatus) }]}>{planStatus}</Text>
           </View>
           <View style={styles.stepContent}>
-            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Direction</Text><Text style={[styles.metricValue, { color: isLong ? '#16a34a' : '#dc2626' }]}>{(data.tradePlan.direction || 'N/A').toUpperCase()}</Text></View>
+            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Direction</Text><Text style={[styles.metricValue, { color: isLong ? BRAND.success : BRAND.danger }]}>{(data.tradePlan.direction || 'N/A').toUpperCase()}</Text></View>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Risk/Reward</Text><Text style={styles.metricValue}>{(data.tradePlan.riskReward || 0).toFixed(1)}:1</Text></View>
-            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Win Rate Est.</Text><Text style={styles.metricValue}>{data.tradePlan.winRateEstimate || 50}%</Text></View>
+            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Win Rate</Text><Text style={styles.metricValue}>{data.tradePlan.winRateEstimate || 50}%</Text></View>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Avg Entry</Text><Text style={styles.metricValue}>{formatPrice(data.tradePlan.averageEntry)}</Text></View>
           </View>
           <View style={styles.levelsGrid}>
             <View style={styles.levelBox}>
-              <Text style={[styles.levelTitle, { color: '#3b82f6' }]}>Entry Levels</Text>
-              {data.tradePlan.entries?.slice(0, 2).map((e, i) => (
-                <View key={i} style={styles.levelRow}><Text style={[styles.levelLabel, { color: '#3b82f6' }]}>E{i + 1}</Text><Text style={styles.levelPrice}>{formatPrice(e.price)} ({e.percentage}%)</Text></View>
+              <Text style={[styles.levelTitle, { color: BRAND.primary }]}>Entry Levels</Text>
+              {data.tradePlan.entries?.slice(0, 3).map((e, i) => (
+                <View key={i} style={styles.levelRow}><Text style={[styles.levelLabel, { color: BRAND.primary }]}>E{i + 1}</Text><Text style={styles.levelPrice}>{formatPrice(e.price)} ({e.percentage}%)</Text></View>
               ))}
             </View>
             <View style={styles.levelBox}>
-              <Text style={[styles.levelTitle, { color: '#dc2626' }]}>Stop Loss</Text>
-              <View style={styles.levelRow}><Text style={[styles.levelLabel, { color: '#dc2626' }]}>SL</Text><Text style={styles.levelPrice}>{formatPrice(data.tradePlan.stopLoss?.price)} (-{(data.tradePlan.stopLoss?.percentage || 0).toFixed(1)}%)</Text></View>
+              <Text style={[styles.levelTitle, { color: BRAND.danger }]}>Stop Loss</Text>
+              <View style={styles.levelRow}><Text style={[styles.levelLabel, { color: BRAND.danger }]}>SL</Text><Text style={styles.levelPrice}>{formatPrice(data.tradePlan.stopLoss?.price)}</Text></View>
+              <View style={styles.levelRow}><Text style={styles.levelLabel}>Risk</Text><Text style={styles.levelPrice}>-{(data.tradePlan.stopLoss?.percentage || 0).toFixed(2)}%</Text></View>
             </View>
             <View style={styles.levelBox}>
-              <Text style={[styles.levelTitle, { color: '#16a34a' }]}>Take Profits</Text>
-              {data.tradePlan.takeProfits?.slice(0, 2).map((tp, i) => (
-                <View key={i} style={styles.levelRow}><Text style={[styles.levelLabel, { color: '#16a34a' }]}>TP{i + 1}</Text><Text style={styles.levelPrice}>{formatPrice(tp.price)} (+{(tp.percentage || 0).toFixed(1)}%)</Text></View>
+              <Text style={[styles.levelTitle, { color: BRAND.success }]}>Take Profits</Text>
+              {data.tradePlan.takeProfits?.slice(0, 3).map((tp, i) => (
+                <View key={i} style={styles.levelRow}><Text style={[styles.levelLabel, { color: BRAND.success }]}>TP{i + 1}</Text><Text style={styles.levelPrice}>{formatPrice(tp.price)} (+{(tp.percentage || 0).toFixed(1)}%)</Text></View>
               ))}
             </View>
           </View>
+        </View>
+
+        <PageFooter pageNum={3} totalPages={4} />
+      </Page>
+
+      {/* PAGE 4: Steps 6-7 + Summary */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.pageHeader}>
+          <View style={styles.pageHeaderLogoContainer}>
+            <Text style={styles.pageHeaderLogoT}>Trade</Text>
+            <Text style={styles.pageHeaderLogoP}>Path</Text>
+          </View>
+          <Text style={styles.pageHeaderSymbol}>{data.symbol}/USDT Analysis Report</Text>
         </View>
 
         {/* Step 6: Trap Check */}
@@ -589,57 +688,38 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             <Text style={[styles.stepStatus, { backgroundColor: getStatusBg(trapStatus), color: getStatusColor(trapStatus) }]}>{trapStatus}</Text>
           </View>
           <View style={styles.stepContent}>
-            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Bull Trap</Text><Text style={[styles.metricValue, { color: data.trapCheck?.traps?.bullTrap ? '#dc2626' : '#16a34a' }]}>{data.trapCheck?.traps?.bullTrap ? 'DETECTED' : 'NONE'}</Text></View>
-            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Bear Trap</Text><Text style={[styles.metricValue, { color: data.trapCheck?.traps?.bearTrap ? '#dc2626' : '#16a34a' }]}>{data.trapCheck?.traps?.bearTrap ? 'DETECTED' : 'NONE'}</Text></View>
+            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Bull Trap</Text><Text style={[styles.metricValue, { color: data.trapCheck?.traps?.bullTrap ? BRAND.danger : BRAND.success }]}>{data.trapCheck?.traps?.bullTrap ? 'DETECTED' : 'NONE'}</Text></View>
+            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Bear Trap</Text><Text style={[styles.metricValue, { color: data.trapCheck?.traps?.bearTrap ? BRAND.danger : BRAND.success }]}>{data.trapCheck?.traps?.bearTrap ? 'DETECTED' : 'NONE'}</Text></View>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Fakeout Risk</Text><Text style={[styles.metricValue, { color: getStatusColor(data.trapCheck?.traps?.fakeoutRisk || 'low') }]}>{(data.trapCheck?.traps?.fakeoutRisk || 'LOW').toUpperCase()}</Text></View>
           </View>
-          <Text style={styles.stepDescription}>Analysis of potential market traps. Wait for confirmation if risk is elevated.</Text>
-        </View>
-
-        <PageFooter pageNum={3} totalPages={4} />
-      </Page>
-
-      {/* PAGE 4: Final Verdict + Disclaimer */}
-      <Page size="A4" style={styles.page}>
-        <View style={styles.pageHeader}>
-          <Text style={styles.pageHeaderLogo}>TradePath</Text>
-          <Text style={styles.pageHeaderSymbol}>{data.symbol}/USDT Analysis</Text>
         </View>
 
         {/* Step 7: Final Verdict */}
         <View style={[styles.verdictCard, { backgroundColor: isLong ? '#dcfce7' : '#fee2e2' }]}>
           <View style={styles.stepHeader}>
             <View style={styles.stepTitleRow}>
-              <View style={[styles.stepNumber, { backgroundColor: isLong ? '#16a34a' : '#dc2626' }]}><Text style={styles.stepNumberText}>7</Text></View>
+              <View style={[styles.stepNumber, { backgroundColor: isLong ? BRAND.success : BRAND.danger }]}><Text style={styles.stepNumberText}>7</Text></View>
               <Text style={styles.stepTitle}>Final Verdict</Text>
             </View>
-            <Text style={[styles.stepStatus, { backgroundColor: isLong ? '#16a34a' : '#dc2626', color: '#ffffff' }]}>{score}/100</Text>
+            <Text style={[styles.stepStatus, { backgroundColor: isLong ? BRAND.success : BRAND.danger, color: '#ffffff' }]}>{score}/100</Text>
           </View>
-          <Text style={[styles.verdictTitle, { color: isLong ? '#16a34a' : '#dc2626' }]}>
+          <Text style={[styles.verdictTitle, { color: isLong ? BRAND.success : BRAND.danger }]}>
             ✓ {(data.tradePlan.direction || '').toUpperCase()} Position Recommended
           </Text>
           <Text style={styles.verdictText}>
-            {data.verdict.aiSummary || `Based on comprehensive 7-step analysis, market conditions favor a ${isLong ? 'bullish' : 'bearish'} position on ${data.symbol}/USDT. Recommended entry zone around ${formatPrice(data.tradePlan.averageEntry)} with a ${(data.tradePlan.riskReward || 0).toFixed(1)}:1 risk-reward ratio. Set stop-loss at ${formatPrice(data.tradePlan.stopLoss?.price)} to manage risk. Take profits gradually at designated TP levels.`}
+            {data.verdict.aiSummary || `Based on comprehensive 7-step analysis, market conditions favor a ${isLong ? 'bullish' : 'bearish'} position on ${data.symbol}/USDT. Recommended entry zone around ${formatPrice(data.tradePlan.averageEntry)} with a ${(data.tradePlan.riskReward || 0).toFixed(1)}:1 risk-reward ratio. Set stop-loss at ${formatPrice(data.tradePlan.stopLoss?.price)} to manage risk.`}
           </Text>
         </View>
 
-        {/* Summary Box */}
-        <View style={[styles.stepCard, { borderLeftColor: '#3b82f6' }]}>
-          <Text style={[styles.stepTitle, { marginBottom: 10 }]}>Trade Summary</Text>
-          <View style={styles.stepContent}>
-            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Direction</Text><Text style={[styles.metricValue, { color: isLong ? '#16a34a' : '#dc2626' }]}>{isLong ? 'LONG' : 'SHORT'}</Text></View>
-            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Entry</Text><Text style={styles.metricValue}>{formatPrice(data.tradePlan.averageEntry)}</Text></View>
-            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Stop Loss</Text><Text style={[styles.metricValue, { color: '#dc2626' }]}>{formatPrice(data.tradePlan.stopLoss?.price)}</Text></View>
-            <View style={styles.stepMetric}><Text style={styles.metricLabel}>Take Profit</Text><Text style={[styles.metricValue, { color: '#16a34a' }]}>{formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</Text></View>
+        {/* Trade Summary */}
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Trade Summary</Text>
+          <View style={styles.summaryGrid}>
+            <View style={styles.summaryItem}><Text style={styles.summaryLabel}>Direction</Text><Text style={[styles.summaryValue, { color: isLong ? BRAND.success : BRAND.danger }]}>{isLong ? 'LONG' : 'SHORT'}</Text></View>
+            <View style={styles.summaryItem}><Text style={styles.summaryLabel}>Entry Price</Text><Text style={styles.summaryValue}>{formatPrice(data.tradePlan.averageEntry)}</Text></View>
+            <View style={styles.summaryItem}><Text style={styles.summaryLabel}>Stop Loss</Text><Text style={[styles.summaryValue, { color: BRAND.danger }]}>{formatPrice(data.tradePlan.stopLoss?.price)}</Text></View>
+            <View style={styles.summaryItem}><Text style={styles.summaryLabel}>Take Profit</Text><Text style={[styles.summaryValue, { color: BRAND.success }]}>{formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</Text></View>
           </View>
-        </View>
-
-        {/* Disclaimer */}
-        <View style={styles.disclaimer}>
-          <Text style={styles.disclaimerTitle}>⚠ Important Disclaimer</Text>
-          <Text style={styles.disclaimerText}>
-            This report is for educational and informational purposes only and does not constitute financial, investment, or trading advice. Cryptocurrency trading involves substantial risk of loss and is not suitable for all investors. Past performance does not guarantee future results. The analysis provided is based on AI algorithms and historical data, which may not accurately predict future market movements. Always conduct your own research (DYOR) and consult with a qualified financial advisor before making any investment decisions. Never invest more than you can afford to lose. TradePath and its affiliates are not responsible for any losses incurred as a result of using this report.
-          </Text>
         </View>
 
         <PageFooter pageNum={4} totalPages={4} />
@@ -648,8 +728,39 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
   );
 };
 
+// Capture chart element as image
+export async function captureChartAsImage(elementId: string = 'trade-plan-chart'): Promise<string | null> {
+  try {
+    const element = document.getElementById(elementId);
+    if (!element) {
+      console.warn('Chart element not found:', elementId);
+      return null;
+    }
+
+    const canvas = await html2canvas(element, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      logging: false,
+      useCORS: true,
+    });
+
+    return canvas.toDataURL('image/png');
+  } catch (error) {
+    console.error('Failed to capture chart:', error);
+    return null;
+  }
+}
+
 // Export function
-export async function generateAnalysisReport(data: AnalysisReportData): Promise<void> {
+export async function generateAnalysisReport(data: AnalysisReportData, captureChart: boolean = true): Promise<void> {
+  // Try to capture chart if requested
+  if (captureChart && !data.chartImage) {
+    const chartImage = await captureChartAsImage();
+    if (chartImage) {
+      data.chartImage = chartImage;
+    }
+  }
+
   const blob = await pdf(<AnalysisReportDocument data={data} />).toBlob();
   const filename = `TradePath_${data.symbol}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
   saveAs(blob, filename);

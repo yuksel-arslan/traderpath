@@ -325,7 +325,7 @@ export function TradePlanChart({
     : 0;
 
   return (
-    <div className="bg-card rounded-lg border overflow-hidden">
+    <div id="trade-plan-chart" className="bg-card rounded-lg border overflow-hidden">
       {/* Chart Header */}
       <div className="p-4 border-b bg-gradient-to-r from-card to-muted/20">
         <div className="flex items-center justify-between">
