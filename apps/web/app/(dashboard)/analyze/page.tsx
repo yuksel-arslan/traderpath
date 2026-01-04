@@ -6,6 +6,7 @@
 // ===========================================
 
 import { CoinSelector } from '../../../components/common/CoinSelector';
+import { PriceTicker } from '../../../components/common/PriceTicker';
 import { RecentAnalyses } from '../../../components/analysis/RecentAnalyses';
 import { CreditBalance } from '../../../components/credits/CreditBalance';
 import { TrendingUp, BarChart3, Shield, Clock, Target, AlertTriangle, CheckCircle, Sparkles } from 'lucide-react';
@@ -64,7 +65,11 @@ const ANALYSIS_STEPS = [
 
 export default function AnalyzePage() {
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="min-h-screen">
+      {/* Price Ticker */}
+      <PriceTicker />
+
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Header */}
       <div className="flex justify-between items-start mb-8">
         <div>
@@ -139,6 +144,7 @@ export default function AnalyzePage() {
       <div className="hidden lg:block mt-10">
         <h2 className="text-xl font-semibold mb-4">Recent Analyses</h2>
         <RecentAnalyses />
+      </div>
       </div>
     </div>
   );
