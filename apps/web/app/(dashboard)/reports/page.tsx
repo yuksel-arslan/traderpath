@@ -163,10 +163,10 @@ export default function ReportsPage() {
         <button
           onClick={fetchReports}
           disabled={isLoading}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2.5 bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:shadow-md transition disabled:opacity-50"
         >
-          <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
-          Refresh
+          <RefreshCw className={cn("w-4 h-4 gradient-text-rg-animate", isLoading && "animate-spin")} />
+          <span className="gradient-text-rg-animate">Refresh</span>
         </button>
       </div>
 
@@ -218,9 +218,9 @@ export default function ReportsPage() {
           </p>
           <button
             onClick={() => router.push('/analyze')}
-            className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition"
+            className="px-6 py-2.5 bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:shadow-md transition"
           >
-            Start Analysis
+            <span className="gradient-text-rg-animate font-semibold">Start Analysis</span>
           </button>
         </div>
       ) : (

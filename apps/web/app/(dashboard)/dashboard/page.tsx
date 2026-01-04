@@ -52,10 +52,10 @@ export default function DashboardPage() {
           </button>
           <Link
             href="/analyze"
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:shadow-md transition-all font-semibold"
           >
-            New Analysis
-            <ArrowRight className="w-4 h-4" />
+            <span className="gradient-text-rg-animate">New Analysis</span>
+            <ArrowRight className="w-4 h-4 gradient-text-rg-animate" />
           </Link>
           <CreditBalance key={`credit-${refreshKey}`} />
         </div>

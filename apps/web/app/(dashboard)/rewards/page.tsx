@@ -605,17 +605,17 @@ export default function RewardsPage() {
           </div>
           <button
             onClick={handleCopyReferral}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition"
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg font-semibold hover:shadow-md transition"
           >
             {copied ? (
               <>
-                <Check className="w-4 h-4" />
-                Copied!
+                <Check className="w-4 h-4 text-green-500" />
+                <span className="text-green-500">Copied!</span>
               </>
             ) : (
               <>
-                <Copy className="w-4 h-4" />
-                Copy Code
+                <Copy className="w-4 h-4 gradient-text-rg-animate" />
+                <span className="gradient-text-rg-animate">Copy Code</span>
               </>
             )}
           </button>

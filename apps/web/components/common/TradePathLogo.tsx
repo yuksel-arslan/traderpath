@@ -40,7 +40,7 @@ export function TradePathLogo({
       {/* Logo Text */}
       {showText && (
         <div className="flex flex-col">
-          <span className={`${s.text} font-bold gradient-text`}>TradePath</span>
+          <span className={`${s.text} font-bold gradient-text-rg-animate`}>TradePath</span>
           {showTagline && (
             <span className={`${s.tagline} text-muted-foreground -mt-0.5`}>
               From Charts to Clarity

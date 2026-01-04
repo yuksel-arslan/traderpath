@@ -132,10 +132,10 @@ export default function AlertsPage() {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition"
+          className="flex items-center gap-2 px-4 py-2.5 bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg font-semibold hover:shadow-md transition"
         >
-          <Plus className="w-4 h-4" />
-          New Alert
+          <Plus className="w-4 h-4 gradient-text-rg-animate" />
+          <span className="gradient-text-rg-animate">New Alert</span>
         </button>
       </div>
 
@@ -211,9 +211,9 @@ export default function AlertsPage() {
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition"
+            className="px-4 py-2.5 bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg font-semibold hover:shadow-md transition"
           >
-            Create Your First Alert
+            <span className="gradient-text-rg-animate">Create Your First Alert</span>
           </button>
         </div>
       ) : (
@@ -384,9 +384,9 @@ export default function AlertsPage() {
               <button
                 onClick={handleCreateAlert}
                 disabled={!newPrice}
-                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg font-semibold hover:shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Create Alert
+                <span className="gradient-text-rg-animate">Create Alert</span>
               </button>
             </div>
           </div>
