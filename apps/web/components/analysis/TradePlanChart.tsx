@@ -377,7 +377,7 @@ export function TradePlanChart({
         )}
         <div
           ref={chartContainerRef}
-          className="w-full h-[400px]"
+          className="w-full h-[500px]"
         />
       </div>
 
