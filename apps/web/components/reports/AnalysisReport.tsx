@@ -126,19 +126,19 @@ const styles = StyleSheet.create({
     color: BRAND.textMuted,
   },
 
-  // Content Pages - Compact
+  // Content Pages - Ultra Compact
   page: {
     backgroundColor: '#ffffff',
-    padding: 30,
-    paddingBottom: 50,
+    padding: 20,
+    paddingBottom: 40,
     fontFamily: 'Helvetica',
   },
   pageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingBottom: 8,
+    marginBottom: 8,
+    paddingBottom: 6,
     borderBottomWidth: 1,
     borderBottomColor: BRAND.border,
   },
@@ -147,86 +147,86 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pageHeaderLogoT: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: BRAND.danger,
   },
   pageHeaderLogoP: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: BRAND.success,
   },
   pageHeaderSymbol: {
-    fontSize: 11,
+    fontSize: 10,
     color: BRAND.textMuted,
   },
 
-  // Chart section - Compact
+  // Chart section - Ultra Compact
   chartSection: {
     backgroundColor: '#ffffff',
-    borderRadius: 6,
-    marginBottom: 10,
+    borderRadius: 4,
+    marginBottom: 6,
     borderWidth: 1,
     borderColor: BRAND.border,
     overflow: 'hidden',
   },
   chartImage: {
     width: '100%',
-    height: 180,
+    height: 140,
   },
   chartTitle: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
     color: BRAND.text,
-    padding: 6,
+    padding: 4,
     backgroundColor: BRAND.bgLight,
     borderBottomWidth: 1,
     borderBottomColor: BRAND.border,
   },
 
-  // Step Card - Compact
+  // Step Card - Ultra Compact
   stepCard: {
     backgroundColor: BRAND.bgLight,
-    borderRadius: 6,
-    padding: 10,
-    marginBottom: 8,
-    borderLeftWidth: 4,
+    borderRadius: 4,
+    padding: 8,
+    marginBottom: 5,
+    borderLeftWidth: 3,
   },
   stepHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   stepTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   stepNumber: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: BRAND.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 6,
   },
   stepNumberText: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: 'bold',
     color: '#ffffff',
   },
   stepTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
     color: BRAND.text,
   },
   stepStatus: {
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: 'bold',
     paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    borderRadius: 6,
   },
   stepContent: {
     flexDirection: 'row',
@@ -234,80 +234,80 @@ const styles = StyleSheet.create({
   },
   stepMetric: {
     width: '25%',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   metricLabel: {
-    fontSize: 7,
+    fontSize: 6,
     color: BRAND.textMuted,
-    marginBottom: 1,
+    marginBottom: 0,
   },
   metricValue: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: 'bold',
     color: BRAND.text,
   },
   stepDescription: {
-    fontSize: 8,
+    fontSize: 7,
     color: BRAND.textMuted,
-    lineHeight: 1.3,
-    marginTop: 4,
+    lineHeight: 1.2,
+    marginTop: 3,
     fontStyle: 'italic',
   },
 
-  // Trade Levels - Compact
+  // Trade Levels - Ultra Compact
   levelsGrid: {
     flexDirection: 'row',
-    gap: 6,
-    marginTop: 6,
+    gap: 4,
+    marginTop: 4,
   },
   levelBox: {
     flex: 1,
     backgroundColor: '#ffffff',
-    borderRadius: 4,
-    padding: 6,
+    borderRadius: 3,
+    padding: 4,
     borderWidth: 1,
     borderColor: BRAND.border,
   },
   levelTitle: {
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   levelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 1,
+    paddingVertical: 0,
   },
   levelLabel: {
-    fontSize: 7,
+    fontSize: 6,
     fontWeight: 'bold',
   },
   levelPrice: {
-    fontSize: 7,
+    fontSize: 6,
     color: BRAND.text,
   },
 
-  // Final Verdict with Summary
+  // Final Verdict with Summary - Compact
   verdictCard: {
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 0,
   },
   verdictTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   verdictText: {
-    fontSize: 9,
+    fontSize: 8,
     color: '#374151',
-    lineHeight: 1.5,
-    marginBottom: 10,
+    lineHeight: 1.4,
+    marginBottom: 6,
   },
   verdictSummary: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingTop: 10,
+    paddingTop: 6,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.1)',
   },
@@ -315,11 +315,11 @@ const styles = StyleSheet.create({
     width: '25%',
   },
   verdictSummaryLabel: {
-    fontSize: 7,
+    fontSize: 6,
     color: '#6b7280',
   },
   verdictSummaryValue: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
     color: BRAND.text,
   },
@@ -327,10 +327,10 @@ const styles = StyleSheet.create({
   // Footer with disclaimer
   footer: {
     position: 'absolute',
-    bottom: 12,
-    left: 30,
-    right: 30,
-    paddingTop: 6,
+    bottom: 8,
+    left: 20,
+    right: 20,
+    paddingTop: 4,
     borderTopWidth: 1,
     borderTopColor: BRAND.border,
   },
