@@ -3,7 +3,6 @@
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { AnimatePresence, motion } from 'framer-motion';
 import {
   LayoutDashboard,
   TrendingUp,
@@ -114,53 +113,46 @@ export default function DashboardLayout({
                   )} />
                 </button>
 
-                <AnimatePresence>
-                  {userMenuOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-                      <motion.div
-                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden"
+                {userMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                    {/* Secondary Nav Items */}
+                    <div className="p-2 border-b border-border">
+                      {secondaryNav.map((item) => (
+                        <Link
+                          key={item.name}
+                          href={item.href}
+                          prefetch={true}
+                          onClick={() => setUserMenuOpen(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+                            isActive(item.href)
+                              ? 'bg-primary/10 text-primary'
+                              : 'hover:bg-accent'
+                          )}
+                        >
+                          <item.icon className="w-4 h-4" />
+                          {item.name}
+                        </Link>
+                      ))}
+                    </div>
+                    {/* Logout */}
+                    <div className="p-2">
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          handleLogout();
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm w-full text-left text-destructive hover:bg-destructive/10 transition-colors"
                       >
-                        {/* Secondary Nav Items */}
-                        <div className="p-2 border-b border-border">
-                          {secondaryNav.map((item) => (
-                            <Link
-                              key={item.name}
-                              href={item.href}
-                              onClick={() => setUserMenuOpen(false)}
-                              className={cn(
-                                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
-                                isActive(item.href)
-                                  ? 'bg-primary/10 text-primary'
-                                  : 'hover:bg-accent'
-                              )}
-                            >
-                              <item.icon className="w-4 h-4" />
-                              {item.name}
-                            </Link>
-                          ))}
-                        </div>
-                        {/* Logout */}
-                        <div className="p-2">
-                          <button
-                            onClick={() => {
-                              setUserMenuOpen(false);
-                              handleLogout();
-                            }}
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm w-full text-left text-destructive hover:bg-destructive/10 transition-colors"
-                          >
-                            <LogOut className="w-4 h-4" />
-                            Log out
-                          </button>
-                        </div>
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
+                        <LogOut className="w-4 h-4" />
+                        Log out
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
               </div>
 
               {/* Mobile Menu Button */}
@@ -174,36 +166,29 @@ export default function DashboardLayout({
           </div>
 
           {/* Mobile Navigation */}
-          <AnimatePresence>
-            {mobileMenuOpen && (
-              <motion.nav
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="md:hidden overflow-hidden border-t border-border"
-              >
-                <div className="py-3 space-y-1">
-                  {[...mainNav, ...secondaryNav].map((item) => (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={cn(
-                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                        isActive(item.href)
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                      )}
-                    >
-                      <item.icon className="w-4 h-4" />
-                      {item.name}
-                    </Link>
-                  ))}
-                </div>
-              </motion.nav>
-            )}
-          </AnimatePresence>
+          {mobileMenuOpen && (
+            <nav className="md:hidden border-t border-border animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="py-3 space-y-1">
+                {[...mainNav, ...secondaryNav].map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    prefetch={true}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                      isActive(item.href)
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                    )}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
+            </nav>
+          )}
         </div>
       </header>
 

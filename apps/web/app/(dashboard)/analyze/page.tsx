@@ -5,11 +5,21 @@
 // Main entry point for starting new analyses
 // ===========================================
 
+import dynamic from 'next/dynamic';
 import { CoinSelector } from '../../../components/common/CoinSelector';
-import { PriceTicker } from '../../../components/common/PriceTicker';
-import { RecentAnalyses } from '../../../components/analysis/RecentAnalyses';
 import { CreditBalance } from '../../../components/credits/CreditBalance';
 import { TrendingUp, BarChart3, Shield, Clock, Target, AlertTriangle, CheckCircle, Sparkles } from 'lucide-react';
+
+// Lazy load heavy components
+const PriceTicker = dynamic(
+  () => import('../../../components/common/PriceTicker').then(mod => ({ default: mod.PriceTicker })),
+  { ssr: false, loading: () => <div className="w-full h-10 bg-card/50 border-b border-border/50" /> }
+);
+
+const RecentAnalyses = dynamic(
+  () => import('../../../components/analysis/RecentAnalyses').then(mod => ({ default: mod.RecentAnalyses })),
+  { ssr: false, loading: () => <div className="h-32 bg-muted/50 rounded-xl animate-pulse" /> }
+);
 
 const ANALYSIS_STEPS = [
   {
