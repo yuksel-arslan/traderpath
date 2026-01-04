@@ -33,7 +33,7 @@ const ANALYSIS_STEPS = [
   { icon: Clock, title: 'Timing Analysis', description: 'Entry windows', color: 'text-purple-500', bg: 'bg-purple-500/10' },
   { icon: Target, title: 'Trade Plan', description: 'TP/SL levels', color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
   { icon: AlertTriangle, title: 'Trap Check', description: 'Liquidity traps', color: 'text-orange-500', bg: 'bg-orange-500/10' },
-  { icon: CheckCircle, title: 'Final', description: 'AI recommendation', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+  { icon: CheckCircle, title: 'Final Verdict', description: 'AI recommendation', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
 ];
 
 export default function AnalyzePage() {
