@@ -57,7 +57,7 @@ const FEATURES = [
   {
     icon: Target,
     title: 'Asset Scanner',
-    description: 'Deep-dive analysis of specific cryptocurrencies',
+    description: 'Deep-dive technical analysis of specific cryptocurrencies',
   },
   {
     icon: Shield,
@@ -78,6 +78,11 @@ const FEATURES = [
     icon: AlertTriangle,
     title: 'Trap Check',
     description: 'Identify liquidation zones and avoid common trading traps',
+  },
+  {
+    icon: CheckCircle,
+    title: 'Verdict (Summary)',
+    description: 'AI-powered final recommendation with GO/WAIT/AVOID decision',
   },
 ];
 
@@ -272,10 +277,10 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/register"
-              className="px-8 py-4 gradient-animate text-white rounded-lg font-semibold hover:scale-105 transition-transform flex items-center justify-center gap-2 shadow-lg pulse-glow"
+              className="px-8 py-4 bg-slate-200 dark:bg-slate-700 rounded-lg font-semibold hover:scale-105 hover:shadow-lg transition-all flex items-center justify-center gap-2 border border-slate-300 dark:border-slate-600"
             >
-              Start Free Analysis
-              <ArrowRight className="w-5 h-5" />
+              <span className="gradient-text-rg-animate">Start Free Analysis</span>
+              <ArrowRight className="w-5 h-5 gradient-text-rg-animate" />
             </Link>
             <a
               href="#see-it-in-action"
@@ -317,29 +322,56 @@ export default function LandingPage() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Complete Trading Analysis Suite
+              7-Step Analysis Suite
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Our 7-step analysis system covers every aspect of trading, from market
-              conditions to specific entry points.
+              Complete trading analysis covering every aspect, from market conditions to final verdict.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {FEATURES.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <div
-                  key={index}
-                  className="p-6 bg-card border rounded-lg hover:shadow-lg transition group"
-                >
-                  <div className="w-12 h-12 bg-gradient-to-br from-teal-500/20 via-cyan-500/20 to-teal-400/20 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition">
-                    <Icon className="w-6 h-6 text-teal-500" />
+          <div className="max-w-5xl mx-auto">
+            {/* Steps 1-4 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              {FEATURES.slice(0, 4).map((feature, index) => {
+                const Icon = feature.icon;
+                return (
+                  <div
+                    key={index}
+                    className="p-5 bg-card border rounded-lg hover:border-primary/50 transition group"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
+                        <Icon className="w-5 h-5 text-primary" />
+                      </div>
+                      <span className="text-xs text-muted-foreground font-medium">Step {index + 1}</span>
+                    </div>
+                    <h3 className="font-semibold mb-1">{feature.title}</h3>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            {/* Steps 5-7 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {FEATURES.slice(4).map((feature, index) => {
+                const Icon = feature.icon;
+                const isVerdict = index === 2;
+                return (
+                  <div
+                    key={index}
+                    className={`p-5 bg-card border rounded-lg hover:border-primary/50 transition group ${isVerdict ? 'ring-2 ring-green-500/20 border-green-500/30' : ''}`}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-110 transition ${isVerdict ? 'bg-green-500/10' : 'bg-primary/10'}`}>
+                        <Icon className={`w-5 h-5 ${isVerdict ? 'text-green-500' : 'text-primary'}`} />
+                      </div>
+                      <span className="text-xs text-muted-foreground font-medium">Step {index + 5}</span>
+                    </div>
+                    <h3 className="font-semibold mb-1">{feature.title}</h3>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>
@@ -851,10 +883,10 @@ export default function LandingPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/register"
-                className="px-8 py-4 gradient-animate text-white rounded-lg font-semibold hover:scale-105 transition-transform flex items-center justify-center gap-2 shadow-lg pulse-glow text-lg"
+                className="px-8 py-4 bg-slate-200 dark:bg-slate-700 rounded-lg font-semibold hover:scale-105 hover:shadow-lg transition-all flex items-center justify-center gap-2 border border-slate-300 dark:border-slate-600 text-lg"
               >
-                Start Free Analysis
-                <ArrowRight className="w-5 h-5" />
+                <span className="gradient-text-rg-animate">Start Free Analysis</span>
+                <ArrowRight className="w-5 h-5 gradient-text-rg-animate" />
               </Link>
             </div>
             <p className="text-sm text-muted-foreground mt-6">

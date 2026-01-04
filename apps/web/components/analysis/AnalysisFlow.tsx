@@ -128,7 +128,7 @@ const STEPS = [
   },
   {
     id: 7,
-    name: 'Final Verdict',
+    name: 'Verdict (Summary)',
     icon: CheckCircle,
     color: 'green',
     cost: CREDIT_COSTS.STEP_FINAL_VERDICT,
