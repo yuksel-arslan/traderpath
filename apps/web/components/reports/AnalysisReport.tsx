@@ -712,6 +712,12 @@ export async function captureChartAsImage(elementId: string = 'trade-plan-chart'
       return null;
     }
 
+    // Scroll element into view to ensure it's rendered
+    element.scrollIntoView({ behavior: 'instant', block: 'center' });
+
+    // Wait for any animations/rendering to complete
+    await new Promise(resolve => setTimeout(resolve, 300));
+
     // Dynamic import to avoid SSR issues
     const html2canvas = (await import('html2canvas')).default;
 
@@ -720,6 +726,10 @@ export async function captureChartAsImage(elementId: string = 'trade-plan-chart'
       scale: 2,
       logging: false,
       useCORS: true,
+      allowTaint: true,
+      foreignObjectRendering: false,
+      windowWidth: element.scrollWidth,
+      windowHeight: element.scrollHeight,
     });
 
     return canvas.toDataURL('image/png');

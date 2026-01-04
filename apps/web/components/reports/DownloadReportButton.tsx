@@ -280,8 +280,11 @@ export function DownloadReportButton({
         }
       }
 
-      // Generate and download PDF with selected language
-      await generateAnalysisReport(reportData, selectedLanguage);
+      // Wait for chart to be fully rendered before capture
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Generate and download PDF (true = capture chart)
+      await generateAnalysisReport(reportData, true);
 
       // Save to database with interval for expiration calculation
       const saved = await saveReportToDatabase(reportData, interval);
