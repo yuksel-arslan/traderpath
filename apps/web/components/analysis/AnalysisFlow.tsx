@@ -5,7 +5,7 @@
 // Clean, Dashboard-consistent design
 // ===========================================
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Globe,
   Target,
@@ -158,6 +158,8 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
   const [isRunningFull, setIsRunningFull] = useState(false);
   const [results, setResults] = useState<Record<number, unknown>>({});
   const [error, setError] = useState<string | null>(null);
+  const [reportSaved, setReportSaved] = useState(false);
+  const saveAttemptedRef = useRef(false);
 
   const getAuthHeaders = useCallback(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
@@ -196,6 +198,65 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
 
     return data.data;
   }, [symbol, accountSize, getAuthHeaders, onCreditsUpdate]);
+
+  // Auto-save report when all 7 steps are completed
+  const saveReportToDatabase = useCallback(async () => {
+    if (completedSteps.length !== 7 || saveAttemptedRef.current || reportSaved) return;
+
+    saveAttemptedRef.current = true;
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      // Build report data from results
+      const verdict = results[7] as { action?: string; verdict?: string; overallScore?: number } | undefined;
+      const tradePlan = results[5] as { direction?: string } | undefined;
+
+      const reportData = {
+        symbol,
+        generatedAt: new Date().toISOString(),
+        analysisId: `analysis_${Date.now()}_${symbol}`,
+        marketPulse: results[1],
+        assetScan: results[2],
+        safetyCheck: results[3],
+        timing: results[4],
+        tradePlan: results[5],
+        trapCheck: results[6],
+        verdict: results[7],
+      };
+
+      const response = await fetch('/api/reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          symbol,
+          reportData,
+          verdict: verdict?.action || verdict?.verdict || 'N/A',
+          score: verdict?.overallScore || 0,
+          direction: tradePlan?.direction || null,
+          interval: '4h',
+        }),
+      });
+
+      if (response.ok) {
+        setReportSaved(true);
+        console.log('Report auto-saved successfully');
+      }
+    } catch (error) {
+      console.error('Failed to auto-save report:', error);
+    }
+  }, [completedSteps.length, results, symbol, reportSaved]);
+
+  // Effect to trigger auto-save when analysis completes
+  useEffect(() => {
+    if (completedSteps.length === 7 && !saveAttemptedRef.current) {
+      saveReportToDatabase();
+    }
+  }, [completedSteps.length, saveReportToDatabase]);
 
   const handleRunStep = async () => {
     if (loading) return;
@@ -454,7 +515,13 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
 
               {/* Download Report Button */}
               {activeStep === 7 && isStepCompleted && completedSteps.length === 7 && (
-                <div className="flex justify-center pt-5 border-t">
+                <div className="flex flex-col items-center gap-3 pt-5 border-t">
+                  {reportSaved && (
+                    <div className="flex items-center gap-2 text-sm text-green-500">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Report saved - View in Reports page</span>
+                    </div>
+                  )}
                   <DownloadReportButton analysisData={results} symbol={symbol} />
                 </div>
               )}

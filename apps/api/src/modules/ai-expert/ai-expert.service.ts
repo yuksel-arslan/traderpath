@@ -12,24 +12,24 @@ import { prisma } from '../../core/database';
 const GEMINI_API_KEY = config.gemini.apiKey;
 const GEMINI_MODEL = 'gemini-2.0-flash';
 
-// Yasaklı içeriği temizleyen fonksiyon
+// Sanitize AI response - remove forbidden content
 function sanitizeAIResponse(text: string): string {
   let cleaned = text;
 
-  // "---" içeren satırları ve sonrasını sil (tüm varyasyonlar)
+  // Remove "---" lines and everything after (all variations)
   const dashPatterns = [/\n---.*$/s, /^---.*$/s, /\n-{3,}.*$/s];
   for (const pattern of dashPatterns) {
     cleaned = cleaned.replace(pattern, '');
   }
 
-  // 🚀 içeren satırları ve sonrasını sil
+  // Remove 🚀 lines and everything after
   const rocketPatterns = [/\n🚀.*$/s, /^🚀.*$/s, /\n\n🚀.*$/s];
   for (const pattern of rocketPatterns) {
     cleaned = cleaned.replace(pattern, '');
   }
 
-  // Yasaklı kelimeler içeren paragrafları sil
-  const forbiddenPatterns = [
+  // Remove paragraphs containing forbidden phrases (Turkish)
+  const forbiddenPatternsTR = [
     /\n\n[^\n]*ister misin[^\n]*$/is,
     /\n\n[^\n]*yapayım mı[^\n]*$/is,
     /\n\n[^\n]*kredi[^\n]*$/is,
@@ -40,20 +40,41 @@ function sanitizeAIResponse(text: string): string {
     /\n[^\n]*yapayım mı\?[^\n]*$/is,
   ];
 
-  for (const pattern of forbiddenPatterns) {
+  // Remove paragraphs containing forbidden phrases (English)
+  const forbiddenPatternsEN = [
+    /\n\n[^\n]*want me to[^\n]*$/is,
+    /\n\n[^\n]*shall I[^\n]*$/is,
+    /\n\n[^\n]*would you like me to[^\n]*$/is,
+    /\n\n[^\n]*credits[^\n]*$/is,
+    /\n\n[^\n]*add to.*report[^\n]*$/is,
+    /\n\n[^\n]*real analysis[^\n]*$/is,
+    /\n[^\n]*want me to\?[^\n]*$/is,
+    /\n[^\n]*shall I\?[^\n]*$/is,
+  ];
+
+  for (const pattern of [...forbiddenPatternsTR, ...forbiddenPatternsEN]) {
     cleaned = cleaned.replace(pattern, '');
   }
 
-  // Son satırlarda kalan yasaklı ifadeleri temizle
+  // Clean forbidden phrases from last lines
   const lines = cleaned.split('\n');
   while (lines.length > 0) {
     const lastLine = lines[lines.length - 1].toLowerCase();
     if (
+      // Turkish
       lastLine.includes('ister misin') ||
       lastLine.includes('yapayım mı') ||
       lastLine.includes('kredi') ||
       lastLine.includes('raporuna ekle') ||
       lastLine.includes('gerçek analiz') ||
+      // English
+      lastLine.includes('want me to') ||
+      lastLine.includes('shall i') ||
+      lastLine.includes('would you like me to') ||
+      lastLine.includes('credits') ||
+      lastLine.includes('add to your report') ||
+      lastLine.includes('real analysis') ||
+      // Symbols
       lastLine.includes('🚀') ||
       lastLine.trim() === '---' ||
       lastLine.trim() === ''
@@ -268,11 +289,11 @@ export class AIExpertService {
         const options = quiz.options as string[];
         examples.push({
           type: 'quiz',
-          title: 'TradePath Eğitim',
+          title: 'TradePath Education',
           description: quiz.question,
           details: {
-            dogruCevap: options[quiz.correctIndex],
-            aciklama: quiz.explanation || '',
+            correctAnswer: options[quiz.correctIndex],
+            explanation: quiz.explanation || '',
           },
         });
       }
@@ -303,13 +324,13 @@ export class AIExpertService {
         if (verdict) {
           examples.push({
             type: 'analysis',
-            title: `${analysis.symbol} TradePath Analizi`,
-            description: `Gerçek analiz: ${(verdict.verdict as string || 'N/A').toUpperCase()} sinyali`,
+            title: `${analysis.symbol} TradePath Analysis`,
+            description: `Real analysis: ${(verdict.verdict as string || 'N/A').toUpperCase()} signal`,
             details: {
-              sembol: analysis.symbol,
-              karar: verdict.verdict,
-              skor: verdict.overallScore,
-              yon: tradePlan?.direction || 'N/A',
+              symbol: analysis.symbol,
+              verdict: verdict.verdict,
+              score: verdict.overallScore,
+              direction: tradePlan?.direction || 'N/A',
               risk: safety?.riskLevel || 'N/A',
             },
           });
@@ -818,8 +839,8 @@ export class AIExpertService {
 
     // Format examples for the prompt
     const examplesText = examples.length > 0
-      ? `\n\n[TradePath'ten Gerçek Örnekler - Yanıtında bunlara referans ver]\n${examples.map((ex, i) =>
-          `${i + 1}. ${ex.title}: ${ex.description}\n   Detay: ${JSON.stringify(ex.details)}`
+      ? `\n\n[Real Examples from TradePath - Reference these in your response]\n${examples.map((ex, i) =>
+          `${i + 1}. ${ex.title}: ${ex.description}\n   Details: ${JSON.stringify(ex.details)}`
         ).join('\n')}`
       : '';
 
@@ -833,7 +854,7 @@ export class AIExpertService {
       },
       {
         role: 'model' as const,
-        parts: [{ text: `Ben ${expert.name}, TradePath'in uzman AI'siyim. Size TradePath'teki gerçek örneklerle desteklenmiş yanıtlar vereceğim. Nasıl yardımcı olabilirim?` }],
+        parts: [{ text: `I'm ${expert.name}, TradePath's expert AI. I'll provide answers backed by real examples from TradePath. How can I help you?` }],
       },
     ];
 
@@ -883,8 +904,8 @@ export class AIExpertService {
       }
 
       const data = await response.json();
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt oluşturulamadı.';
-      // Yasaklı içeriği programatik olarak temizle
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not generate response.';
+      // Programmatically sanitize forbidden content
       const responseText = sanitizeAIResponse(rawText);
 
       // Extract token usage
