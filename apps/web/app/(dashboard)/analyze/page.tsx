@@ -59,16 +59,18 @@ export default function AnalyzePage() {
             <CoinSelector />
           </div>
 
-          {/* Recent Analyses - pushed to bottom */}
-          <div className="mt-auto pt-6">
+          {/* Recent Analyses - stretches to align bottom with right card */}
+          <div className="flex flex-col flex-1 pt-6">
             <h2 className="text-xl font-semibold mb-4">Recent Analyses</h2>
-            <RecentAnalyses />
+            <div className="flex-1">
+              <RecentAnalyses />
+            </div>
           </div>
         </div>
 
         {/* Right: Analysis Steps */}
-        <div className="lg:col-span-1 flex flex-col">
-          <div className="bg-card border rounded-lg p-5 mt-auto">
+        <div className="lg:col-span-1">
+          <div className="bg-card border rounded-lg p-5 h-full">
             <h3 className="text-sm font-semibold text-muted-foreground mb-4">
               7-STEP ANALYSIS INCLUDES
             </h3>
