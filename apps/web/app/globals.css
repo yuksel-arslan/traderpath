@@ -556,7 +556,7 @@ html {
    AI Expert Message Styling
    =========================================== */
 
-/* AI mesaj içeriği temel stili */
+/* AI message content base style */
 .ai-message-content {
   @apply text-foreground/90;
 }
@@ -569,7 +569,7 @@ html {
   @apply text-foreground/80 not-italic;
 }
 
-/* Bölüm başlıkları (emoji ile başlayanlar) */
+/* Section titles (lines starting with emoji) */
 .ai-section-title {
   @apply font-semibold text-foreground flex items-center gap-1.5;
   margin-top: 0.875rem;
@@ -584,7 +584,7 @@ html {
   @apply text-base flex-shrink-0;
 }
 
-/* Madde işaretli listeler */
+/* Bullet point lists */
 .ai-bullet {
   @apply flex items-start gap-2 py-0.5;
 }
@@ -593,7 +593,7 @@ html {
   @apply text-primary text-[8px] mt-[7px] flex-shrink-0;
 }
 
-/* Numaralı listeler */
+/* Numbered lists */
 .ai-numbered {
   @apply flex items-start gap-2.5 py-1;
 }
@@ -602,7 +602,7 @@ html {
   @apply bg-primary/10 text-primary text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0;
 }
 
-/* Paragraf arası boşluk */
+/* Paragraph spacing */
 .ai-paragraph-break {
   @apply h-3;
 }

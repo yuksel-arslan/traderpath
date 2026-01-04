@@ -294,7 +294,7 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
           {/* Take Profit Levels */}
           {data.takeProfits && data.takeProfits.length > 0 && (
             <div className="bg-green-500/5 rounded-xl p-4 border border-green-500/20">
-              <p className="text-sm font-semibold mb-3 text-green-500">Kâr Alma Hedefleri</p>
+              <p className="text-sm font-semibold mb-3 text-green-500">Take Profit Targets</p>
               <div className="space-y-2">
                 {data.takeProfits.map((tp, i) => {
                   const tpPrice = tp.price ?? 0;
@@ -333,7 +333,7 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
             </div>
             {data.stopLoss?.reason && (
               <p className="text-sm text-muted-foreground mt-3 p-3 bg-background rounded-lg">
-                <strong>Neden bu seviye:</strong> {data.stopLoss.reason}
+                <strong>Why this level:</strong> {data.stopLoss.reason}
               </p>
             )}
           </div>

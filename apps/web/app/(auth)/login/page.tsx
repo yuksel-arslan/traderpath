@@ -83,7 +83,7 @@ export default function LoginPage() {
       // Handle non-JSON responses gracefully
       const contentType = res.headers.get('content-type');
       if (!contentType?.includes('application/json')) {
-        throw new Error('Sunucu hatası. Lütfen tekrar deneyin.');
+        throw new Error('Server error. Please try again.');
       }
 
       const data = await res.json();
@@ -151,7 +151,7 @@ export default function LoginPage() {
       // Handle non-JSON responses gracefully
       const contentType = res.headers.get('content-type');
       if (!contentType?.includes('application/json')) {
-        throw new Error('Sunucu hatası. Lütfen tekrar deneyin.');
+        throw new Error('Server error. Please try again.');
       }
 
       const data = await res.json();

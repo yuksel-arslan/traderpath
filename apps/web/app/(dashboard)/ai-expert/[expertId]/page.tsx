@@ -135,27 +135,27 @@ interface Message {
   timestamp: Date;
 }
 
-// AI mesajlarını stilize etmek için formatlama fonksiyonu
+// Formatting function to style AI messages
 function formatAIMessage(content: string): string {
   let formatted = content
-    // Fazla boş satırları temizle (3+ satır boşluk -> 2 satır)
+    // Clean excessive line breaks (3+ lines -> 2 lines)
     .replace(/\n{3,}/g, '\n\n')
-    // Başlıkları stilize et (emoji ile başlayan satırlar)
+    // Style section titles (lines starting with emoji)
     .replace(/^(📍|📊|📌|📚|🚀|💡|✅|⚠️|🔥|🐋|🔐|🎯|📈|📐)\s*(.+?)$/gm,
       '<div class="ai-section-title"><span class="ai-emoji">$1</span> $2</div>')
-    // Kalın metinleri stilize et
+    // Style bold text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    // İtalik metinleri stilize et
+    // Style italic text
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    // Madde işaretlerini stilize et
+    // Style bullet points
     .replace(/^[•]\s+(.+)$/gm, '<div class="ai-bullet"><span class="ai-bullet-dot">●</span><span>$1</span></div>')
     .replace(/^[-]\s+(.+)$/gm, '<div class="ai-bullet"><span class="ai-bullet-dot">●</span><span>$1</span></div>')
-    // Numaralı listeleri stilize et (1. 2. 3.)
+    // Style numbered lists (1. 2. 3.)
     .replace(/^(\d+)\.\s+(.+)$/gm,
       '<div class="ai-numbered"><span class="ai-number">$1</span><span>$2</span></div>')
-    // Çift satır sonu -> paragraf arası boşluk
+    // Double line break -> paragraph spacing
     .replace(/\n\n/g, '<div class="ai-paragraph-break"></div>')
-    // Tek satır sonu -> br
+    // Single line break -> br
     .replace(/\n/g, '<br/>');
 
   return formatted;
