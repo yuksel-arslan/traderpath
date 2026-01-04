@@ -90,13 +90,13 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
   },
 
-  // Chart section
+  // Chart section - Trade levels visualization
   chartSection: {
-    height: 200,
+    height: 240,
     backgroundColor: '#1e293b',
     borderRadius: 16,
     marginBottom: 25,
-    padding: 20,
+    padding: 15,
   },
   chartImage: {
     width: '100%',
@@ -324,53 +324,184 @@ interface AnalysisReportData {
   };
 }
 
-// Generate chart URL using QuickChart
+// Generate chart URL using QuickChart - Horizontal price levels visualization
 function generateChartUrl(data: AnalysisReportData): string {
   const entry = data.tradePlan.averageEntry || 0;
   const sl = data.tradePlan.stopLoss?.price || 0;
   const tp1 = data.tradePlan.takeProfits?.[0]?.price || 0;
   const tp2 = data.tradePlan.takeProfits?.[1]?.price || 0;
+  const tp3 = data.tradePlan.takeProfits?.[2]?.price || 0;
   const current = data.assetScan.currentPrice || entry;
 
   const isLong = data.tradePlan.direction === 'long';
 
+  // Create price range for y-axis
+  const prices = [sl, entry, current, tp1, tp2, tp3].filter(p => p > 0);
+  const minPrice = Math.min(...prices) * 0.97;
+  const maxPrice = Math.max(...prices) * 1.03;
+
+  // Create annotations for horizontal lines at each price level
+  const annotations: any = {
+    currentPrice: {
+      type: 'line',
+      yMin: current,
+      yMax: current,
+      borderColor: '#f59e0b',
+      borderWidth: 3,
+      borderDash: [6, 4],
+      label: {
+        display: true,
+        content: `Current: $${current.toLocaleString()}`,
+        position: 'start',
+        backgroundColor: '#f59e0b',
+        color: '#000',
+        font: { size: 11, weight: 'bold' }
+      }
+    },
+    entry: {
+      type: 'line',
+      yMin: entry,
+      yMax: entry,
+      borderColor: '#06b6d4',
+      borderWidth: 3,
+      label: {
+        display: true,
+        content: `Entry: $${entry.toLocaleString()}`,
+        position: 'start',
+        backgroundColor: '#06b6d4',
+        color: '#000',
+        font: { size: 11, weight: 'bold' }
+      }
+    },
+    stopLoss: {
+      type: 'line',
+      yMin: sl,
+      yMax: sl,
+      borderColor: '#ef4444',
+      borderWidth: 3,
+      label: {
+        display: true,
+        content: `Stop Loss: $${sl.toLocaleString()}`,
+        position: 'start',
+        backgroundColor: '#ef4444',
+        color: '#fff',
+        font: { size: 11, weight: 'bold' }
+      }
+    }
+  };
+
+  if (tp1) {
+    annotations.tp1 = {
+      type: 'line',
+      yMin: tp1,
+      yMax: tp1,
+      borderColor: '#22c55e',
+      borderWidth: 2,
+      label: {
+        display: true,
+        content: `TP1: $${tp1.toLocaleString()}`,
+        position: 'end',
+        backgroundColor: '#22c55e',
+        color: '#000',
+        font: { size: 10 }
+      }
+    };
+  }
+  if (tp2) {
+    annotations.tp2 = {
+      type: 'line',
+      yMin: tp2,
+      yMax: tp2,
+      borderColor: '#10b981',
+      borderWidth: 2,
+      label: {
+        display: true,
+        content: `TP2: $${tp2.toLocaleString()}`,
+        position: 'end',
+        backgroundColor: '#10b981',
+        color: '#000',
+        font: { size: 10 }
+      }
+    };
+  }
+  if (tp3) {
+    annotations.tp3 = {
+      type: 'line',
+      yMin: tp3,
+      yMax: tp3,
+      borderColor: '#059669',
+      borderWidth: 2,
+      label: {
+        display: true,
+        content: `TP3: $${tp3.toLocaleString()}`,
+        position: 'end',
+        backgroundColor: '#059669',
+        color: '#fff',
+        font: { size: 10 }
+      }
+    };
+  }
+
+  // Add colored zones
+  if (isLong) {
+    annotations.profitZone = {
+      type: 'box',
+      yMin: entry,
+      yMax: maxPrice,
+      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+      borderWidth: 0
+    };
+    annotations.lossZone = {
+      type: 'box',
+      yMin: minPrice,
+      yMax: entry,
+      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+      borderWidth: 0
+    };
+  }
+
   const chartConfig = {
-    type: 'bar',
+    type: 'line',
     data: {
-      labels: ['Stop Loss', 'Entry', 'Current Price', 'Take Profit 1', 'Take Profit 2'],
+      labels: ['', '', '', '', '', '', '', '', '', ''],
       datasets: [{
-        data: [sl, entry, current, tp1, tp2],
-        backgroundColor: ['#ef4444', '#06b6d4', '#f59e0b', '#22c55e', '#10b981'],
-        borderRadius: 6,
-        barThickness: 25,
+        data: Array(10).fill(current),
+        borderColor: 'transparent',
+        pointRadius: 0,
       }]
     },
     options: {
-      indexAxis: 'y',
       plugins: {
         legend: { display: false },
         title: {
           display: true,
-          text: `${data.symbol}/USDT Trade Levels - ${isLong ? 'LONG' : 'SHORT'} Position`,
+          text: `${data.symbol}/USDT - ${isLong ? 'LONG' : 'SHORT'} Trade Plan`,
           color: '#ffffff',
-          font: { size: 16, weight: 'bold' }
-        }
+          font: { size: 16, weight: 'bold' },
+          padding: { bottom: 20 }
+        },
+        annotation: { annotations }
       },
       scales: {
         x: {
-          grid: { color: '#334155' },
-          ticks: { color: '#94a3b8', callback: (v: number) => '$' + v.toLocaleString() }
+          display: false
         },
         y: {
-          grid: { display: false },
-          ticks: { color: '#ffffff', font: { size: 12 } }
+          min: minPrice,
+          max: maxPrice,
+          grid: { color: '#334155' },
+          ticks: {
+            color: '#94a3b8',
+            font: { size: 11 },
+            callback: (v: number) => '$' + v.toLocaleString()
+          }
         }
       }
     }
   };
 
   const encoded = encodeURIComponent(JSON.stringify(chartConfig));
-  return `https://quickchart.io/chart?c=${encoded}&backgroundColor=%231e293b&width=600&height=220`;
+  return `https://quickchart.io/chart?c=${encoded}&backgroundColor=%231e293b&width=600&height=280`;
 }
 
 // Status color helper
