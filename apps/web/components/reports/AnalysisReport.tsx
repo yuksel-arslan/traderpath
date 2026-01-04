@@ -147,17 +147,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pageHeaderLogoT: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: 'bold',
     color: BRAND.danger,
   },
   pageHeaderLogoP: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: 'bold',
     color: BRAND.success,
   },
   pageHeaderSymbol: {
-    fontSize: 9,
+    fontSize: 12,
     color: BRAND.textMuted,
   },
 
@@ -175,10 +175,10 @@ const styles = StyleSheet.create({
     height: 110,
   },
   chartTitle: {
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: 'bold',
     color: BRAND.text,
-    padding: 3,
+    padding: 4,
     backgroundColor: BRAND.bgLight,
     borderBottomWidth: 1,
     borderBottomColor: BRAND.border,
@@ -193,48 +193,48 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Step Card - Minimal
+  // Step Card - Readable
   stepCard: {
     backgroundColor: BRAND.bgLight,
-    borderRadius: 3,
-    padding: 5,
-    marginBottom: 4,
-    borderLeftWidth: 2,
+    borderRadius: 4,
+    padding: 6,
+    marginBottom: 5,
+    borderLeftWidth: 3,
   },
   stepHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 3,
   },
   stepTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   stepNumber: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     backgroundColor: BRAND.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 4,
+    marginRight: 5,
   },
   stepNumberText: {
-    fontSize: 7,
+    fontSize: 9,
     fontWeight: 'bold',
     color: '#ffffff',
   },
   stepTitle: {
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: 'bold',
     color: BRAND.text,
   },
   stepStatus: {
-    fontSize: 6,
+    fontSize: 8,
     fontWeight: 'bold',
-    paddingVertical: 1,
-    paddingHorizontal: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 5,
     borderRadius: 4,
   },
   stepContent: {
@@ -243,23 +243,23 @@ const styles = StyleSheet.create({
   },
   stepMetric: {
     width: '50%',
-    marginBottom: 1,
+    marginBottom: 2,
   },
   metricLabel: {
-    fontSize: 5,
+    fontSize: 8,
     color: BRAND.textMuted,
-    marginBottom: 0,
+    marginBottom: 1,
   },
   metricValue: {
-    fontSize: 7,
+    fontSize: 10,
     fontWeight: 'bold',
     color: BRAND.text,
   },
   stepDescription: {
-    fontSize: 5,
+    fontSize: 7,
     color: BRAND.textMuted,
-    lineHeight: 1.1,
-    marginTop: 2,
+    lineHeight: 1.2,
+    marginTop: 3,
   },
 
   // Trade Levels - Minimal
@@ -271,51 +271,51 @@ const styles = StyleSheet.create({
   levelBox: {
     flex: 1,
     backgroundColor: '#ffffff',
-    borderRadius: 2,
-    padding: 3,
+    borderRadius: 3,
+    padding: 4,
     borderWidth: 1,
     borderColor: BRAND.border,
   },
   levelTitle: {
-    fontSize: 6,
+    fontSize: 9,
     fontWeight: 'bold',
-    marginBottom: 1,
+    marginBottom: 2,
   },
   levelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 0,
+    paddingVertical: 1,
   },
   levelLabel: {
-    fontSize: 5,
+    fontSize: 8,
     fontWeight: 'bold',
   },
   levelPrice: {
-    fontSize: 5,
+    fontSize: 8,
     color: BRAND.text,
   },
 
-  // Final Verdict - Minimal
+  // Final Verdict - Readable
   verdictCard: {
-    borderRadius: 4,
-    padding: 6,
-    marginTop: 4,
+    borderRadius: 5,
+    padding: 8,
+    marginTop: 5,
   },
   verdictTitle: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: 'bold',
-    marginBottom: 3,
+    marginBottom: 4,
   },
   verdictText: {
-    fontSize: 6,
+    fontSize: 9,
     color: '#374151',
     lineHeight: 1.3,
-    marginBottom: 4,
+    marginBottom: 5,
   },
   verdictSummary: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingTop: 4,
+    paddingTop: 6,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.1)',
   },
@@ -323,11 +323,11 @@ const styles = StyleSheet.create({
     width: '25%',
   },
   verdictSummaryLabel: {
-    fontSize: 5,
+    fontSize: 8,
     color: '#6b7280',
   },
   verdictSummaryValue: {
-    fontSize: 7,
+    fontSize: 10,
     fontWeight: 'bold',
     color: BRAND.text,
   },
@@ -354,17 +354,17 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   footerText: {
-    fontSize: 7,
+    fontSize: 9,
     color: BRAND.textMuted,
   },
   footerDisclaimer: {
-    fontSize: 6,
+    fontSize: 8,
     color: '#9ca3af',
     lineHeight: 1.3,
     marginTop: 4,
   },
   pageNumber: {
-    fontSize: 8,
+    fontSize: 10,
     color: BRAND.textMuted,
   },
 });
