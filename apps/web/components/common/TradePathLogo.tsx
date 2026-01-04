@@ -29,10 +29,15 @@ export function TradePathLogo({
 
   const LogoContent = (
     <div className={`flex items-center gap-2 ${className}`}>
-      {/* Logo Icon - Trading Gradient */}
+      {/* Logo Icon - Animated Gradient */}
       <div
-        className={`${s.wrapper} bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-lg flex items-center justify-center shadow-lg`}
-        style={{ boxShadow: '0 4px 14px rgba(245, 158, 11, 0.25)' }}
+        className={`${s.wrapper} rounded-lg flex items-center justify-center shadow-lg overflow-hidden`}
+        style={{
+          boxShadow: '0 4px 14px rgba(245, 158, 11, 0.25)',
+          background: 'linear-gradient(135deg, #ef4444, #f87171, #4ade80, #22c55e, #ef4444)',
+          backgroundSize: '200% 200%',
+          animation: 'gradient-shift-rg 3s ease infinite'
+        }}
       >
         <TrendingUp className={`${s.icon} text-white`} strokeWidth={2.5} />
       </div>
