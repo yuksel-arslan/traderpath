@@ -2,6 +2,7 @@
 
 // ===========================================
 // Report View Page - Clean Summary Design
+// All 7 analysis steps included
 // ===========================================
 
 import { useEffect, useState } from 'react';
@@ -19,6 +20,8 @@ import {
   Target,
   AlertTriangle,
   CheckCircle,
+  Search,
+  Crosshair,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
 
@@ -36,7 +39,9 @@ interface ReportData {
   assetScan: {
     currentPrice: number;
     priceChange24h: number;
+    volume24h?: number;
     indicators: { rsi: number; macd: { histogram: number; signal: string } };
+    levels?: { support: number[]; resistance: number[] };
   };
   safetyCheck: {
     riskLevel: string;
@@ -53,6 +58,10 @@ interface ReportData {
     stopLoss: { price: number };
     takeProfits: Array<{ price: number }>;
     riskReward: number;
+  };
+  trapCheck?: {
+    traps: { bullTrap: boolean; bearTrap: boolean; fakeoutRisk: string };
+    liquidityGrab?: { zones: number[] };
   };
   verdict: {
     action: string;
@@ -146,10 +155,20 @@ export default function ReportViewPage() {
   // Determine status labels
   const marketStatus = report.marketPulse.trend?.direction === 'bullish' ? 'Bullish' :
                        report.marketPulse.trend?.direction === 'bearish' ? 'Bearish' : 'Neutral';
+
+  const assetStatus = report.assetScan.priceChange24h >= 2 ? 'Strong' :
+                      report.assetScan.priceChange24h >= 0 ? 'Stable' :
+                      report.assetScan.priceChange24h >= -2 ? 'Weak' : 'Declining';
+
   const safetyStatus = report.safetyCheck.riskLevel === 'low' ? 'Safe' :
                        report.safetyCheck.riskLevel === 'high' ? 'Risky' : 'Caution';
+
   const timingStatus = report.timing.tradeNow ? 'Good' : 'Wait';
+
   const planStatus = report.tradePlan.averageEntry ? 'Ready' : 'Pending';
+
+  const trapStatus = report.trapCheck?.traps?.bullTrap || report.trapCheck?.traps?.bearTrap ? 'Warning' :
+                     report.trapCheck?.traps?.fakeoutRisk === 'high' ? 'Caution' : 'Clear';
 
   // MACD description
   const macdDesc = report.assetScan.indicators?.macd?.histogram > 0 ? 'Bullish crossover forming' : 'Bearish momentum';
@@ -188,9 +207,9 @@ export default function ReportViewPage() {
             </div>
           </div>
 
-          {/* 4 Info Cards - 2x2 Grid */}
+          {/* 6 Info Cards - 2x3 Grid (All analysis steps) */}
           <div className="grid grid-cols-2 gap-4 mb-6">
-            {/* Market Pulse */}
+            {/* 1. Market Pulse */}
             <div className="bg-slate-700/50 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -207,7 +226,26 @@ export default function ReportViewPage() {
               </p>
             </div>
 
-            {/* Safety Check */}
+            {/* 2. Asset Scan */}
+            <div className="bg-slate-700/50 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Search className="w-4 h-4 text-purple-400" />
+                  <span className="font-medium text-white">Asset Scan</span>
+                </div>
+                <span className={cn(
+                  "text-sm font-semibold",
+                  assetStatus === 'Strong' ? 'text-green-400' :
+                  assetStatus === 'Stable' ? 'text-blue-400' :
+                  assetStatus === 'Weak' ? 'text-yellow-400' : 'text-red-400'
+                )}>{assetStatus}</span>
+              </div>
+              <p className="text-sm text-slate-400">
+                Price: {formatPrice(report.assetScan.currentPrice)} • 24h: {report.assetScan.priceChange24h >= 0 ? '+' : ''}{report.assetScan.priceChange24h?.toFixed(2)}%
+              </p>
+            </div>
+
+            {/* 3. Safety Check */}
             <div className="bg-slate-700/50 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -220,11 +258,11 @@ export default function ReportViewPage() {
                 )}>{safetyStatus}</span>
               </div>
               <p className="text-sm text-slate-400">
-                {report.safetyCheck.manipulation?.pumpDumpRisk === 'low' ? 'No manipulation detected' : 'Manipulation risk detected'} • Whale activity: {report.safetyCheck.whaleActivity?.bias || 'Normal'}
+                {report.safetyCheck.manipulation?.pumpDumpRisk === 'low' ? 'No manipulation detected' : 'Manipulation risk detected'} • Whale activity: {report.safetyCheck.whaleActivity?.bias || 'neutral'}
               </p>
             </div>
 
-            {/* Timing Analysis */}
+            {/* 4. Timing Analysis */}
             <div className="bg-slate-700/50 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -241,7 +279,7 @@ export default function ReportViewPage() {
               </p>
             </div>
 
-            {/* Trade Plan */}
+            {/* 5. Trade Plan */}
             <div className="bg-slate-700/50 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -257,9 +295,26 @@ export default function ReportViewPage() {
                 Entry: {formatPrice(report.tradePlan.averageEntry)} • TP: {formatPrice(report.tradePlan.takeProfits?.[0]?.price)} • SL: {formatPrice(report.tradePlan.stopLoss?.price)}
               </p>
             </div>
+
+            {/* 6. Trap Check */}
+            <div className="bg-slate-700/50 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Crosshair className="w-4 h-4 text-red-400" />
+                  <span className="font-medium text-white">Trap Check</span>
+                </div>
+                <span className={cn(
+                  "text-sm font-semibold",
+                  trapStatus === 'Clear' ? 'text-green-400' : trapStatus === 'Warning' ? 'text-red-400' : 'text-yellow-400'
+                )}>{trapStatus}</span>
+              </div>
+              <p className="text-sm text-slate-400">
+                Bull trap: {report.trapCheck?.traps?.bullTrap ? 'Yes' : 'No'} • Bear trap: {report.trapCheck?.traps?.bearTrap ? 'Yes' : 'No'} • Fakeout: {report.trapCheck?.traps?.fakeoutRisk || 'low'}
+              </p>
+            </div>
           </div>
 
-          {/* Final Verdict */}
+          {/* 7. Final Verdict */}
           <div className={cn(
             "rounded-xl p-4 mb-6",
             isLong ? "bg-green-500/20" : "bg-red-500/20"
