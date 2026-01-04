@@ -19,6 +19,7 @@ import {
   LineChart,
   Target,
   Eye,
+  Shield,
   ShieldAlert,
   Sparkles,
   Zap,
@@ -302,6 +303,21 @@ export default function AIExpertChatPage() {
     },
   });
 
+  // Fetch user info (for admin check)
+  const { data: user } = useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return { isAdmin: false };
+
+      const res = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = await res.json();
+      return result.data?.user || { isAdmin: false };
+    },
+  });
+
   // Chat mutation
   const chatMutation = useMutation({
     mutationFn: async (message: string): Promise<ChatResponse> => {
@@ -373,7 +389,8 @@ export default function AIExpertChatPage() {
   if (!expert) return null;
 
   const Icon = expert.icon;
-  const hasEnoughCredits = (credits?.balance || 0) >= 3;
+  const isAdmin = user?.isAdmin === true;
+  const hasEnoughCredits = isAdmin || (credits?.balance || 0) >= 3;
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
@@ -405,12 +422,21 @@ export default function AIExpertChatPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full border border-amber-500/20">
-                <Gem className="w-4 h-4 text-amber-500" />
-                <span className="text-sm font-semibold text-amber-600">
-                  {credits?.balance || 0} kredi
-                </span>
-              </div>
+              {isAdmin ? (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 rounded-full border border-green-500/20">
+                  <Shield className="w-4 h-4 text-green-500" />
+                  <span className="text-sm font-semibold text-green-600">
+                    Admin
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full border border-amber-500/20">
+                  <Gem className="w-4 h-4 text-amber-500" />
+                  <span className="text-sm font-semibold text-amber-600">
+                    {credits?.balance || 0} kredi
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -439,10 +465,17 @@ export default function AIExpertChatPage() {
                   <BookOpen className="w-4 h-4" />
                   Gerçek örneklerle
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full text-amber-600 text-sm">
-                  <Zap className="w-4 h-4" />
-                  3 kredi/mesaj
-                </div>
+                {isAdmin ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 rounded-full text-green-600 text-sm">
+                    <Shield className="w-4 h-4" />
+                    Ücretsiz (Admin)
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full text-amber-600 text-sm">
+                    <Zap className="w-4 h-4" />
+                    3 kredi/mesaj
+                  </div>
+                )}
               </div>
 
               {/* Example questions - 10 smart questions with scroll */}
@@ -665,10 +698,17 @@ export default function AIExpertChatPage() {
             </button>
           </form>
           <div className="flex items-center justify-center gap-4 mt-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Zap className="w-3 h-3 text-amber-500" />
-              3 kredi/mesaj
-            </span>
+            {isAdmin ? (
+              <span className="flex items-center gap-1">
+                <Shield className="w-3 h-3 text-green-500" />
+                Ücretsiz (Admin)
+              </span>
+            ) : (
+              <span className="flex items-center gap-1">
+                <Zap className="w-3 h-3 text-amber-500" />
+                3 kredi/mesaj
+              </span>
+            )}
             <span>•</span>
             <span>Shift+Enter ile yeni satır</span>
           </div>

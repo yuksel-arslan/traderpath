@@ -12,6 +12,7 @@ import {
   LineChart,
   Target,
   Eye,
+  Shield,
   ShieldAlert,
   Sparkles,
   Gem,
@@ -88,6 +89,23 @@ export default function AIExpertsPage() {
     },
   });
 
+  // Fetch user info (for admin check)
+  const { data: user } = useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return { isAdmin: false };
+
+      const res = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = await res.json();
+      return result.data?.user || { isAdmin: false };
+    },
+  });
+
+  const isAdmin = user?.isAdmin === true;
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
@@ -103,12 +121,21 @@ export default function AIExpertsPage() {
               Four specialized AI experts, each mastering their own domain
             </p>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-card border rounded-lg">
-            <Gem className="w-4 h-4 text-amber-500" />
-            <span className="text-sm font-semibold">
-              {credits?.balance || 0} credits
-            </span>
-          </div>
+          {isAdmin ? (
+            <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <Shield className="w-4 h-4 text-green-500" />
+              <span className="text-sm font-semibold text-green-600">
+                Admin
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-4 py-2 bg-card border rounded-lg">
+              <Gem className="w-4 h-4 text-amber-500" />
+              <span className="text-sm font-semibold">
+                {credits?.balance || 0} credits
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -162,10 +189,17 @@ export default function AIExpertsPage() {
                       <span className="gradient-text-rg-animate">Start Chat</span>
                       <ChevronRight className="w-4 h-4 gradient-text-rg-animate group-hover:translate-x-1 transition-transform" />
                     </div>
-                    <div className="flex items-center gap-1.5 text-amber-500">
-                      <Zap className="w-4 h-4" />
-                      <span className="text-sm font-bold">{expert.creditCost} credits</span>
-                    </div>
+                    {isAdmin ? (
+                      <div className="flex items-center gap-1.5 text-green-500">
+                        <Shield className="w-4 h-4" />
+                        <span className="text-sm font-bold">Free</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-amber-500">
+                        <Zap className="w-4 h-4" />
+                        <span className="text-sm font-bold">{expert.creditCost} credits</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -179,7 +213,13 @@ export default function AIExpertsPage() {
         <div className="bg-card border rounded-lg p-4">
           <div className="flex items-center gap-2 text-sm">
             <Sparkles className="w-4 h-4 text-amber-500" />
-            <span>Each message costs <span className="text-amber-500 font-bold">3 credits</span> - powered by TradePath examples</span>
+            {isAdmin ? (
+              <span>
+                <span className="text-green-500 font-bold">Admin</span> - All AI experts are free for you
+              </span>
+            ) : (
+              <span>Each message costs <span className="text-amber-500 font-bold">3 credits</span> - powered by TradePath examples</span>
+            )}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             AI Experts use real examples from your TradePath analyses and quiz questions to give you personalized answers.
