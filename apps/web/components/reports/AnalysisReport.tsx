@@ -126,20 +126,20 @@ const styles = StyleSheet.create({
     color: BRAND.textMuted,
   },
 
-  // Content Pages
+  // Content Pages - Compact
   page: {
     backgroundColor: '#ffffff',
-    padding: 40,
-    paddingBottom: 60,
+    padding: 30,
+    paddingBottom: 50,
     fontFamily: 'Helvetica',
   },
   pageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 2,
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
     borderBottomColor: BRAND.border,
   },
   pageHeaderLogoContainer: {
@@ -161,72 +161,72 @@ const styles = StyleSheet.create({
     color: BRAND.textMuted,
   },
 
-  // Chart section
+  // Chart section - Compact
   chartSection: {
     backgroundColor: '#ffffff',
-    borderRadius: 8,
-    marginBottom: 20,
+    borderRadius: 6,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: BRAND.border,
     overflow: 'hidden',
   },
   chartImage: {
     width: '100%',
-    height: 280,
+    height: 180,
   },
   chartTitle: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: 'bold',
     color: BRAND.text,
-    padding: 10,
+    padding: 6,
     backgroundColor: BRAND.bgLight,
     borderBottomWidth: 1,
     borderBottomColor: BRAND.border,
   },
 
-  // Step Card
+  // Step Card - Compact
   stepCard: {
     backgroundColor: BRAND.bgLight,
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 8,
     borderLeftWidth: 4,
   },
   stepHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 6,
   },
   stepTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   stepNumber: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: BRAND.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 8,
   },
   stepNumberText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
     color: '#ffffff',
   },
   stepTitle: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: 'bold',
     color: BRAND.text,
   },
   stepStatus: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: 'bold',
-    paddingVertical: 3,
-    paddingHorizontal: 10,
-    borderRadius: 10,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 8,
   },
   stepContent: {
     flexDirection: 'row',
@@ -234,104 +234,92 @@ const styles = StyleSheet.create({
   },
   stepMetric: {
     width: '25%',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   metricLabel: {
-    fontSize: 8,
+    fontSize: 7,
     color: BRAND.textMuted,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   metricValue: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
     color: BRAND.text,
   },
   stepDescription: {
-    fontSize: 9,
+    fontSize: 8,
     color: BRAND.textMuted,
-    lineHeight: 1.4,
-    marginTop: 6,
+    lineHeight: 1.3,
+    marginTop: 4,
     fontStyle: 'italic',
   },
 
-  // Trade Levels
+  // Trade Levels - Compact
   levelsGrid: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    gap: 6,
+    marginTop: 6,
   },
   levelBox: {
     flex: 1,
     backgroundColor: '#ffffff',
-    borderRadius: 6,
-    padding: 8,
+    borderRadius: 4,
+    padding: 6,
     borderWidth: 1,
     borderColor: BRAND.border,
   },
   levelTitle: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: 'bold',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   levelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 2,
+    paddingVertical: 1,
   },
   levelLabel: {
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: 'bold',
   },
   levelPrice: {
-    fontSize: 8,
+    fontSize: 7,
     color: BRAND.text,
   },
 
-  // Final Verdict
+  // Final Verdict with Summary
   verdictCard: {
-    borderRadius: 10,
-    padding: 20,
-    marginBottom: 15,
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 10,
   },
   verdictTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   verdictText: {
-    fontSize: 10,
+    fontSize: 9,
     color: '#374151',
-    lineHeight: 1.6,
-  },
-
-  // Trade Summary
-  summaryCard: {
-    backgroundColor: BRAND.bgLight,
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: BRAND.border,
-  },
-  summaryTitle: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: BRAND.text,
+    lineHeight: 1.5,
     marginBottom: 10,
   },
-  summaryGrid: {
+  verdictSummary: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.1)',
   },
-  summaryItem: {
+  verdictSummaryItem: {
     width: '25%',
   },
-  summaryLabel: {
-    fontSize: 8,
-    color: BRAND.textMuted,
+  verdictSummaryLabel: {
+    fontSize: 7,
+    color: '#6b7280',
   },
-  summaryValue: {
-    fontSize: 11,
+  verdictSummaryValue: {
+    fontSize: 10,
     fontWeight: 'bold',
     color: BRAND.text,
   },
@@ -339,10 +327,10 @@ const styles = StyleSheet.create({
   // Footer with disclaimer
   footer: {
     position: 'absolute',
-    bottom: 15,
-    left: 40,
-    right: 40,
-    paddingTop: 8,
+    bottom: 12,
+    left: 30,
+    right: 30,
+    paddingTop: 6,
     borderTopWidth: 1,
     borderTopColor: BRAND.border,
   },
@@ -530,7 +518,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
         </View>
       </Page>
 
-      {/* PAGE 2: Chart + Steps 1-2 */}
+      {/* PAGE 1: Chart + Steps 1-4 */}
       <Page size="A4" style={styles.page}>
         <View style={styles.pageHeader}>
           <View style={styles.pageHeaderLogoContainer}>
@@ -582,19 +570,6 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </View>
         </View>
 
-        <PageFooter pageNum={2} totalPages={4} />
-      </Page>
-
-      {/* PAGE 3: Steps 3-5 */}
-      <Page size="A4" style={styles.page}>
-        <View style={styles.pageHeader}>
-          <View style={styles.pageHeaderLogoContainer}>
-            <Text style={styles.pageHeaderLogoT}>Trade</Text>
-            <Text style={styles.pageHeaderLogoP}>Path</Text>
-          </View>
-          <Text style={styles.pageHeaderSymbol}>{data.symbol}/USDT Analysis Report</Text>
-        </View>
-
         {/* Step 3: Safety Check */}
         <View style={[styles.stepCard, { borderLeftColor: getBorderColor(safetyStatus) }]}>
           <View style={styles.stepHeader}>
@@ -625,7 +600,19 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>Trade Now?</Text><Text style={[styles.metricValue, { color: data.timing.tradeNow ? BRAND.success : BRAND.warning }]}>{data.timing.tradeNow ? 'YES' : 'WAIT'}</Text></View>
             <View style={styles.stepMetric}><Text style={styles.metricLabel}>RSI Zone</Text><Text style={styles.metricValue}>{(data.assetScan.indicators?.rsi || 50) > 70 ? 'Overbought' : (data.assetScan.indicators?.rsi || 50) < 30 ? 'Oversold' : 'Neutral'}</Text></View>
           </View>
-          <Text style={styles.stepDescription}>{data.timing.reason || 'Optimal entry timing based on technical indicators.'}</Text>
+        </View>
+
+        <PageFooter pageNum={1} totalPages={2} />
+      </Page>
+
+      {/* PAGE 2: Steps 5-7 */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.pageHeader}>
+          <View style={styles.pageHeaderLogoContainer}>
+            <Text style={styles.pageHeaderLogoT}>Trade</Text>
+            <Text style={styles.pageHeaderLogoP}>Path</Text>
+          </View>
+          <Text style={styles.pageHeaderSymbol}>{data.symbol}/USDT Analysis Report</Text>
         </View>
 
         {/* Step 5: Trade Plan */}
@@ -664,19 +651,6 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </View>
         </View>
 
-        <PageFooter pageNum={3} totalPages={4} />
-      </Page>
-
-      {/* PAGE 4: Steps 6-7 + Summary */}
-      <Page size="A4" style={styles.page}>
-        <View style={styles.pageHeader}>
-          <View style={styles.pageHeaderLogoContainer}>
-            <Text style={styles.pageHeaderLogoT}>Trade</Text>
-            <Text style={styles.pageHeaderLogoP}>Path</Text>
-          </View>
-          <Text style={styles.pageHeaderSymbol}>{data.symbol}/USDT Analysis Report</Text>
-        </View>
-
         {/* Step 6: Trap Check */}
         <View style={[styles.stepCard, { borderLeftColor: getBorderColor(trapStatus) }]}>
           <View style={styles.stepHeader}>
@@ -693,7 +667,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </View>
         </View>
 
-        {/* Step 7: Final Verdict */}
+        {/* Step 7: Final Verdict with Trade Summary */}
         <View style={[styles.verdictCard, { backgroundColor: isLong ? '#dcfce7' : '#fee2e2' }]}>
           <View style={styles.stepHeader}>
             <View style={styles.stepTitleRow}>
@@ -708,20 +682,16 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           <Text style={styles.verdictText}>
             {data.verdict.aiSummary || `Based on comprehensive 7-step analysis, market conditions favor a ${isLong ? 'bullish' : 'bearish'} position on ${data.symbol}/USDT. Recommended entry zone around ${formatPrice(data.tradePlan.averageEntry)} with a ${(data.tradePlan.riskReward || 0).toFixed(1)}:1 risk-reward ratio. Set stop-loss at ${formatPrice(data.tradePlan.stopLoss?.price)} to manage risk.`}
           </Text>
-        </View>
-
-        {/* Trade Summary */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Trade Summary</Text>
-          <View style={styles.summaryGrid}>
-            <View style={styles.summaryItem}><Text style={styles.summaryLabel}>Direction</Text><Text style={[styles.summaryValue, { color: isLong ? BRAND.success : BRAND.danger }]}>{isLong ? 'LONG' : 'SHORT'}</Text></View>
-            <View style={styles.summaryItem}><Text style={styles.summaryLabel}>Entry Price</Text><Text style={styles.summaryValue}>{formatPrice(data.tradePlan.averageEntry)}</Text></View>
-            <View style={styles.summaryItem}><Text style={styles.summaryLabel}>Stop Loss</Text><Text style={[styles.summaryValue, { color: BRAND.danger }]}>{formatPrice(data.tradePlan.stopLoss?.price)}</Text></View>
-            <View style={styles.summaryItem}><Text style={styles.summaryLabel}>Take Profit</Text><Text style={[styles.summaryValue, { color: BRAND.success }]}>{formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</Text></View>
+          {/* Trade Summary inside Verdict */}
+          <View style={styles.verdictSummary}>
+            <View style={styles.verdictSummaryItem}><Text style={styles.verdictSummaryLabel}>Direction</Text><Text style={[styles.verdictSummaryValue, { color: isLong ? BRAND.success : BRAND.danger }]}>{isLong ? 'LONG' : 'SHORT'}</Text></View>
+            <View style={styles.verdictSummaryItem}><Text style={styles.verdictSummaryLabel}>Entry Price</Text><Text style={styles.verdictSummaryValue}>{formatPrice(data.tradePlan.averageEntry)}</Text></View>
+            <View style={styles.verdictSummaryItem}><Text style={styles.verdictSummaryLabel}>Stop Loss</Text><Text style={[styles.verdictSummaryValue, { color: BRAND.danger }]}>{formatPrice(data.tradePlan.stopLoss?.price)}</Text></View>
+            <View style={styles.verdictSummaryItem}><Text style={styles.verdictSummaryLabel}>Take Profit</Text><Text style={[styles.verdictSummaryValue, { color: BRAND.success }]}>{formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</Text></View>
           </View>
         </View>
 
-        <PageFooter pageNum={4} totalPages={4} />
+        <PageFooter pageNum={2} totalPages={2} />
       </Page>
     </Document>
   );
