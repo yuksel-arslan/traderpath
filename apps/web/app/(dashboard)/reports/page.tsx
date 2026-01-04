@@ -228,7 +228,8 @@ export default function ReportsPage() {
           {filteredReports.map((report) => (
             <div
               key={report.id}
-              className="bg-card border rounded-lg p-4 hover:shadow-lg transition"
+              className="bg-card border rounded-lg p-4 hover:shadow-lg transition cursor-pointer"
+              onClick={() => router.push(`/reports/${report.id}`)}
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 {/* Report Info */}
@@ -299,14 +300,14 @@ export default function ReportsPage() {
                 {/* Actions */}
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleDownload(report)}
+                    onClick={(e) => { e.stopPropagation(); handleDownload(report); }}
                     className="p-2 rounded-lg hover:bg-accent transition"
-                    title="Download"
+                    title="Download PDF"
                   >
                     <Download className="w-5 h-5" />
                   </button>
                   <button
-                    onClick={() => handleDelete(report.id)}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(report.id); }}
                     className="p-2 rounded-lg hover:bg-red-500/10 text-red-500 transition"
                     title="Delete"
                   >
