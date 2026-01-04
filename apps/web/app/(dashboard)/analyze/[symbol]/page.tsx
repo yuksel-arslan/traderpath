@@ -47,7 +47,7 @@ export default function AnalyzePage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="w-full px-6 md:px-12 lg:px-16 py-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-4">

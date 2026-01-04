@@ -357,7 +357,7 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
   const canProceed = activeStep === 1 || completedSteps.includes(activeStep - 1);
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="w-full">
       {/* Step Progress Bar */}
       <div className="bg-card border rounded-lg p-4 mb-6">
         <div className="flex items-center justify-between mb-3">
