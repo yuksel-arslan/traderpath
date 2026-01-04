@@ -159,22 +159,50 @@
     background-image: linear-gradient(90deg, #ef4444, #22c55e);
   }
 
-  /* Animated Gradient Text - Red to Green */
+  /* Animated Gradient Text - Red to Green (Ultra Smooth) */
   .gradient-text-rg-animate {
-    background: linear-gradient(90deg, #ef4444, #f87171, #4ade80, #22c55e, #ef4444);
+    background: linear-gradient(
+      90deg,
+      #ef4444 0%,
+      #f87171 10%,
+      #fca5a5 20%,
+      #fcd34d 30%,
+      #a3e635 40%,
+      #4ade80 50%,
+      #22c55e 60%,
+      #4ade80 70%,
+      #a3e635 80%,
+      #fcd34d 90%,
+      #fca5a5 95%,
+      #ef4444 100%
+    );
     background-size: 200% 100%;
-    animation: gradient-shift-rg 3s ease infinite;
+    animation: gradient-shift-smooth 16s linear infinite;
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     font-weight: 700;
   }
 
-  /* Animated Gradient Icon - Red to Green (for SVG icons) */
+  /* Animated Gradient Icon - Red to Green (Ultra Smooth) */
   .gradient-icon-rg-animate {
-    background: linear-gradient(90deg, #ef4444, #f87171, #4ade80, #22c55e, #ef4444);
+    background: linear-gradient(
+      90deg,
+      #ef4444 0%,
+      #f87171 10%,
+      #fca5a5 20%,
+      #fcd34d 30%,
+      #a3e635 40%,
+      #4ade80 50%,
+      #22c55e 60%,
+      #4ade80 70%,
+      #a3e635 80%,
+      #fcd34d 90%,
+      #fca5a5 95%,
+      #ef4444 100%
+    );
     background-size: 200% 100%;
-    animation: gradient-shift-rg 3s ease infinite;
+    animation: gradient-shift-smooth 16s linear infinite;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -357,6 +385,13 @@
 @keyframes gradient-shift-rg {
   0% { background-position: 0% 50%; }
   100% { background-position: 100% 50%; }
+}
+
+/* Ultra smooth gradient animation - ping-pong motion for seamless loop */
+@keyframes gradient-shift-smooth {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 @keyframes pulse-glow {

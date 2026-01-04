@@ -34,9 +34,9 @@ export function TradePathLogo({
         className={`${s.wrapper} rounded-lg flex items-center justify-center shadow-lg overflow-hidden`}
         style={{
           boxShadow: '0 4px 14px rgba(245, 158, 11, 0.25)',
-          background: 'linear-gradient(135deg, #ef4444, #f87171, #4ade80, #22c55e, #ef4444)',
+          background: 'linear-gradient(135deg, #ef4444 0%, #f87171 15%, #fcd34d 30%, #a3e635 45%, #22c55e 60%, #4ade80 75%, #fcd34d 90%, #ef4444 100%)',
           backgroundSize: '200% 200%',
-          animation: 'gradient-shift-rg 3s ease infinite'
+          animation: 'gradient-shift-smooth 16s linear infinite'
         }}
       >
         <TrendingUp className={`${s.icon} text-white`} strokeWidth={2.5} />
