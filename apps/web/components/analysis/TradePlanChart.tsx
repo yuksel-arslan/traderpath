@@ -53,11 +53,15 @@ export function TradePlanChart({
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
+  const isDisposedRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
+
+    // Reset disposed state
+    isDisposedRef.current = false;
 
     // Create chart with dark theme
     const chart = createChart(chartContainerRef.current, {
@@ -124,42 +128,61 @@ export function TradePlanChart({
 
     // Handle resize
     const handleResize = () => {
-      if (chartContainerRef.current) {
-        chart.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-        });
+      if (chartContainerRef.current && !isDisposedRef.current) {
+        try {
+          chart.applyOptions({
+            width: chartContainerRef.current.clientWidth,
+          });
+        } catch {
+          // Chart may be disposed
+        }
       }
     };
 
     window.addEventListener('resize', handleResize);
 
     return () => {
+      isDisposedRef.current = true;
       window.removeEventListener('resize', handleResize);
-      chart.remove();
+      chartRef.current = null;
+      candleSeriesRef.current = null;
+      priceLinesRef.current = [];
+      try {
+        chart.remove();
+      } catch {
+        // Chart may already be disposed
+      }
     };
   }, [symbol]);
 
   // Add price lines when chart is ready
   useEffect(() => {
-    if (!candleSeriesRef.current || loading) return;
+    if (!candleSeriesRef.current || loading || isDisposedRef.current) return;
 
     const series = candleSeriesRef.current;
 
     // Clear existing price lines first
     priceLinesRef.current.forEach((line) => {
       try {
-        series.removePriceLine(line);
-      } catch (e) {
-        // Line may already be removed
+        if (!isDisposedRef.current) {
+          series.removePriceLine(line);
+        }
+      } catch {
+        // Line may already be removed or chart disposed
       }
     });
     priceLinesRef.current = [];
 
     // Helper to create and track price lines
     const addPriceLine = (options: Parameters<typeof series.createPriceLine>[0]) => {
-      const line = series.createPriceLine(options);
-      priceLinesRef.current.push(line);
-      return line;
+      if (isDisposedRef.current) return null;
+      try {
+        const line = series.createPriceLine(options);
+        priceLinesRef.current.push(line);
+        return line;
+      } catch {
+        return null;
+      }
     };
 
     // Current price line
@@ -259,6 +282,9 @@ export function TradePlanChart({
 
       const data = await response.json();
 
+      // Check if chart was disposed during async fetch
+      if (isDisposedRef.current) return;
+
       const candleData: CandlestickData<Time>[] = data.map((k: number[]) => ({
         time: (k[0] / 1000) as Time,
         open: parseFloat(k[1] as unknown as string),
@@ -267,14 +293,25 @@ export function TradePlanChart({
         close: parseFloat(k[4] as unknown as string),
       }));
 
-      series.setData(candleData);
-      chart.timeScale().fitContent();
+      // Guard chart operations with try-catch in case of disposal
+      try {
+        if (!isDisposedRef.current) {
+          series.setData(candleData);
+          chart.timeScale().fitContent();
+        }
+      } catch {
+        // Chart may be disposed
+      }
 
     } catch (err) {
-      console.error('Chart data error:', err);
-      setError('Failed to load chart data');
+      if (!isDisposedRef.current) {
+        console.error('Chart data error:', err);
+        setError('Failed to load chart data');
+      }
     } finally {
-      setLoading(false);
+      if (!isDisposedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
