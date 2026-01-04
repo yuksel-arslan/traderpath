@@ -81,7 +81,7 @@ const FEATURES = [
   },
   {
     icon: CheckCircle,
-    title: 'Verdict (Summary)',
+    title: 'Final',
     description: 'AI-powered final recommendation with GO/WAIT/AVOID decision',
   },
 ];
