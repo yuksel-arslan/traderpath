@@ -132,10 +132,8 @@ export default function CreditsPage() {
       {/* Buy Button */}
       {selectedPackage && (
         <div className="max-w-md mx-auto mb-12">
-          <button className="w-full py-3.5 bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg font-semibold hover:shadow-md transition">
-            <span className="gradient-text-rg-animate">
-              Purchase {PACKAGES.find((p) => p.id === selectedPackage)?.name} Package
-            </span>
+          <button className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition">
+            Purchase {PACKAGES.find((p) => p.id === selectedPackage)?.name} Package
           </button>
         </div>
       )}
