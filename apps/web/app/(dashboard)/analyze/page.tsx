@@ -98,7 +98,7 @@ export default function AnalyzePage() {
                   <Zap className="w-4 h-4 text-amber-500" />
                   <span>Analysis cost</span>
                 </div>
-                <span className="font-semibold text-amber-500">5 credits</span>
+                <span className="font-semibold text-amber-500">25 credits</span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 or use 1 of your daily free analyses
