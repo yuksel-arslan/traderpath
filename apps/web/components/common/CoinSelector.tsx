@@ -2,10 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, ChevronDown, Star, TrendingUp, Clock, X, Sparkles, Zap } from 'lucide-react';
+import { Search, ChevronDown, TrendingUp, Clock, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-// Coin data with more details
+// Coin data
 const ALL_COINS = [
   { symbol: 'BTC', name: 'Bitcoin', icon: '₿', popular: true },
   { symbol: 'ETH', name: 'Ethereum', icon: 'Ξ', popular: true },
@@ -113,52 +113,37 @@ export function CoinSelector() {
     <div className="space-y-4">
       {/* Dropdown Selector */}
       <div className="relative" ref={dropdownRef}>
-        {/* Trigger Button */}
         <button
           onClick={() => {
             setIsOpen(!isOpen);
             setTimeout(() => inputRef.current?.focus(), 100);
           }}
-          className={cn(
-            "w-full flex items-center justify-between gap-3 px-4 py-4 bg-muted/30 border-2 rounded-xl transition-all",
-            isOpen ? "border-primary ring-4 ring-primary/10" : "border-border/50 hover:border-primary/30 hover:bg-muted/50",
-            selectedCoin && "bg-gradient-to-r from-primary/5 to-transparent"
-          )}
+          className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-background border-2 border-border rounded-lg hover:border-primary/50 transition-colors"
         >
           {selectedCoin ? (
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center text-2xl shadow-inner">
-                {selectedCoin.icon}
-              </div>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{selectedCoin.icon}</span>
               <div className="text-left">
-                <div className="font-bold text-lg">{selectedCoin.symbol}<span className="text-muted-foreground font-normal">/USDT</span></div>
+                <div className="font-semibold">{selectedCoin.symbol}/USDT</div>
                 <div className="text-sm text-muted-foreground">{selectedCoin.name}</div>
               </div>
             </div>
           ) : (
             <div className="flex items-center gap-3 text-muted-foreground">
-              <div className="w-12 h-12 bg-muted/50 rounded-xl flex items-center justify-center">
-                <Search className="w-5 h-5" />
-              </div>
-              <div className="text-left">
-                <div className="font-medium">Search trading pair</div>
-                <div className="text-sm">Type to search 30+ coins</div>
-              </div>
+              <Search className="w-5 h-5" />
+              <span>Search coin...</span>
             </div>
           )}
-          <ChevronDown className={cn(
-            "w-5 h-5 text-muted-foreground transition-transform duration-200",
-            isOpen && "rotate-180"
-          )} />
+          <ChevronDown className={cn("w-5 h-5 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
         </button>
 
         {/* Dropdown Panel */}
         {isOpen && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border/50 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="absolute top-full left-0 right-0 mt-2 bg-card border rounded-lg shadow-xl z-50 overflow-hidden">
             {/* Search Input */}
-            <div className="p-4 border-b border-border/50 bg-muted/30">
+            <div className="p-3 border-b">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   ref={inputRef}
                   type="text"
@@ -166,13 +151,13 @@ export function CoinSelector() {
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Search by name or symbol..."
-                  className="w-full pl-11 pr-11 py-3 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-sm transition-all"
+                  className="w-full pl-10 pr-10 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm"
                   autoFocus
                 />
                 {search && (
                   <button
                     onClick={() => setSearch('')}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -183,20 +168,20 @@ export function CoinSelector() {
             <div className="max-h-80 overflow-y-auto">
               {/* Recent Searches */}
               {!search && recentCoinObjects.length > 0 && (
-                <div className="p-4 border-b border-border/50">
-                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-3">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Recently Analyzed</span>
+                <div className="p-3 border-b">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                    <Clock className="w-3 h-3" />
+                    <span>Recent</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {recentCoinObjects.map((coin) => (
                       <button
                         key={coin.symbol}
                         onClick={() => handleSelect(coin)}
-                        className="flex items-center gap-2 px-3 py-2 bg-muted/50 hover:bg-primary/10 hover:border-primary/30 border border-transparent rounded-lg text-sm transition-all group"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/50 hover:bg-muted rounded-full text-sm transition-colors"
                       >
-                        <span className="text-lg">{coin.icon}</span>
-                        <span className="font-medium group-hover:text-primary transition-colors">{coin.symbol}</span>
+                        <span>{coin.icon}</span>
+                        <span className="font-medium">{coin.symbol}</span>
                       </button>
                     ))}
                   </div>
@@ -205,10 +190,10 @@ export function CoinSelector() {
 
               {/* Popular Coins */}
               {!search && (
-                <div className="p-4 border-b border-border/50">
-                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-3">
-                    <TrendingUp className="w-3.5 h-3.5" />
-                    <span>Popular Coins</span>
+                <div className="p-3 border-b">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                    <TrendingUp className="w-3 h-3" />
+                    <span>Popular</span>
                   </div>
                   <div className="grid grid-cols-4 gap-2">
                     {POPULAR_COINS.map((coin) => (
@@ -216,14 +201,12 @@ export function CoinSelector() {
                         key={coin.symbol}
                         onClick={() => handleSelect(coin)}
                         className={cn(
-                          "flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all hover:scale-105",
-                          selectedCoin?.symbol === coin.symbol
-                            ? "bg-primary/10 ring-2 ring-primary shadow-lg"
-                            : "bg-muted/30 hover:bg-muted/60"
+                          "flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-accent transition-colors",
+                          selectedCoin?.symbol === coin.symbol && "bg-primary/10 ring-1 ring-primary"
                         )}
                       >
-                        <span className="text-2xl">{coin.icon}</span>
-                        <span className="text-xs font-semibold">{coin.symbol}</span>
+                        <span className="text-xl">{coin.icon}</span>
+                        <span className="text-xs font-medium">{coin.symbol}</span>
                       </button>
                     ))}
                   </div>
@@ -231,42 +214,31 @@ export function CoinSelector() {
               )}
 
               {/* All Coins List */}
-              <div className="p-3">
-                {!search && (
-                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground px-2 py-2 mb-1">
-                    <Star className="w-3.5 h-3.5" />
-                    <span>All Coins ({ALL_COINS.length})</span>
-                  </div>
-                )}
+              <div className="p-2">
                 {filteredCoins.length > 0 ? (
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     {filteredCoins.map((coin) => (
                       <button
                         key={coin.symbol}
                         onClick={() => handleSelect(coin)}
                         className={cn(
-                          "w-full flex items-center gap-4 px-3 py-3 rounded-xl transition-all group",
-                          selectedCoin?.symbol === coin.symbol
-                            ? "bg-primary/10 border border-primary/30"
-                            : "hover:bg-muted/50 border border-transparent"
+                          "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-accent transition-colors",
+                          selectedCoin?.symbol === coin.symbol && "bg-primary/10"
                         )}
                       >
-                        <div className="w-10 h-10 bg-muted/50 rounded-lg flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-                          {coin.icon}
-                        </div>
+                        <span className="text-xl w-8 text-center">{coin.icon}</span>
                         <div className="flex-1 text-left">
-                          <div className="font-semibold group-hover:text-primary transition-colors">{coin.symbol}</div>
+                          <div className="font-medium">{coin.symbol}</div>
                           <div className="text-xs text-muted-foreground">{coin.name}</div>
                         </div>
-                        <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">/USDT</span>
+                        <span className="text-xs text-muted-foreground">/USDT</span>
                       </button>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-10">
-                    <Search className="w-10 h-10 mx-auto mb-3 text-muted-foreground/30" />
-                    <p className="text-sm font-medium text-muted-foreground">No coins found</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">Try a different search term</p>
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No coins found for "{search}"</p>
                   </div>
                 )}
               </div>
@@ -279,26 +251,15 @@ export function CoinSelector() {
       <button
         onClick={handleAnalyze}
         disabled={!selectedCoin}
-        className={cn(
-          "w-full py-4 px-6 rounded-xl font-semibold transition-all duration-300 relative overflow-hidden group",
-          selectedCoin
-            ? "bg-gradient-to-r from-slate-200 to-slate-100 dark:from-slate-700 dark:to-slate-800 hover:shadow-xl hover:scale-[1.02] border border-slate-300 dark:border-slate-600"
-            : "bg-muted/50 text-muted-foreground cursor-not-allowed border border-border/50"
-        )}
+        className="w-full py-3.5 px-4 bg-slate-200 dark:bg-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:scale-[1.02] transition-all border border-slate-300 dark:border-slate-600"
       >
         {selectedCoin ? (
-          <span className="flex items-center justify-center gap-3">
-            <Zap className="w-5 h-5 gradient-text-rg-animate" />
-            <span className="gradient-text-rg-animate text-lg">
-              Analyze {selectedCoin.symbol}
-            </span>
-            <Sparkles className="w-5 h-5 gradient-text-rg-animate" />
+          <span className="flex items-center justify-center gap-2 gradient-text-rg-animate font-semibold">
+            <TrendingUp className="w-5 h-5" />
+            Start {selectedCoin.symbol} Analysis
           </span>
         ) : (
-          <span className="flex items-center justify-center gap-2">
-            <Search className="w-5 h-5" />
-            <span>Select a coin to analyze</span>
-          </span>
+          <span className="text-slate-500 dark:text-slate-400 font-medium">Select a coin to analyze</span>
         )}
       </button>
     </div>

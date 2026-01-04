@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Clock, TrendingUp, TrendingDown, Minus, RefreshCw, ChevronRight, Sparkles } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
-import { cn } from '../../lib/utils';
 
 interface RecentAnalysis {
   id: string;
@@ -14,38 +13,10 @@ interface RecentAnalysis {
 }
 
 const verdictConfig = {
-  go: {
-    label: 'GO',
-    color: 'text-emerald-500',
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/20',
-    gradient: 'from-emerald-500 to-green-500',
-    icon: TrendingUp
-  },
-  conditional_go: {
-    label: 'CONDITIONAL',
-    color: 'text-amber-500',
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/20',
-    gradient: 'from-amber-500 to-yellow-500',
-    icon: TrendingUp
-  },
-  wait: {
-    label: 'WAIT',
-    color: 'text-orange-500',
-    bg: 'bg-orange-500/10',
-    border: 'border-orange-500/20',
-    gradient: 'from-orange-500 to-red-400',
-    icon: Minus
-  },
-  avoid: {
-    label: 'AVOID',
-    color: 'text-red-500',
-    bg: 'bg-red-500/10',
-    border: 'border-red-500/20',
-    gradient: 'from-red-500 to-rose-500',
-    icon: TrendingDown
-  },
+  go: { label: 'GO', color: 'text-green-500', bg: 'bg-green-500/10', icon: TrendingUp },
+  conditional_go: { label: 'CONDITIONAL', color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: TrendingUp },
+  wait: { label: 'WAIT', color: 'text-orange-500', bg: 'bg-orange-500/10', icon: Minus },
+  avoid: { label: 'AVOID', color: 'text-red-500', bg: 'bg-red-500/10', icon: TrendingDown },
 };
 
 export function RecentAnalyses() {
@@ -92,27 +63,21 @@ export function RecentAnalyses() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
-          <RefreshCw className="w-6 h-6 text-primary animate-spin" />
-        </div>
-        <p className="text-sm text-muted-foreground">Loading your analyses...</p>
+      <div className="bg-card rounded-lg border p-8 text-center">
+        <RefreshCw className="w-8 h-8 mx-auto mb-4 text-muted-foreground animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading analyses...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <div className="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center mb-4">
-          <TrendingDown className="w-6 h-6 text-red-500" />
-        </div>
-        <p className="text-sm text-red-500 font-medium mb-2">{error}</p>
+      <div className="bg-card rounded-lg border p-8 text-center">
+        <p className="text-sm text-red-500 mb-2">{error}</p>
         <button
           onClick={fetchAnalyses}
-          className="text-sm text-primary hover:underline flex items-center gap-1"
+          className="text-sm text-primary hover:underline"
         >
-          <RefreshCw className="w-3 h-3" />
           Try again
         </button>
       </div>
@@ -121,21 +86,19 @@ export function RecentAnalyses() {
 
   if (analyses.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <div className="w-16 h-16 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl flex items-center justify-center mb-4">
-          <Sparkles className="w-8 h-8 text-primary" />
-        </div>
-        <h3 className="font-semibold text-lg mb-1">No analyses yet</h3>
-        <p className="text-sm text-muted-foreground text-center max-w-xs">
-          Select a coin above to start your first AI-powered analysis
+      <div className="bg-card rounded-lg border p-8 text-center">
+        <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+        <h3 className="font-semibold mb-2">No analyses yet</h3>
+        <p className="text-sm text-muted-foreground">
+          Select a coin above to start your first analysis
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
-      {analyses.map((analysis, index) => {
+    <div className="bg-card rounded-lg border divide-y">
+      {analyses.map((analysis) => {
         const config = verdictConfig[analysis.verdict];
         const Icon = config.icon;
 
@@ -143,51 +106,27 @@ export function RecentAnalyses() {
           <Link
             key={analysis.id}
             href={`/analysis/${analysis.id}`}
-            className={cn(
-              "flex items-center gap-4 p-4 rounded-xl border transition-all group",
-              "bg-muted/20 hover:bg-muted/40 border-border/50 hover:border-primary/30",
-              "hover:shadow-md hover:scale-[1.01]"
-            )}
-            style={{ animationDelay: `${index * 50}ms` }}
+            className="flex items-center justify-between p-4 hover:bg-accent transition-colors"
           >
-            {/* Coin Icon */}
-            <div className={cn(
-              "w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg",
-              "bg-gradient-to-br from-muted/80 to-muted/40 group-hover:from-primary/20 group-hover:to-primary/5",
-              "transition-all shadow-inner"
-            )}>
-              {analysis.symbol.slice(0, 2)}
-            </div>
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">{analysis.symbol}</span>
-                <span className="text-muted-foreground text-sm">/USDT</span>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold">
+                {analysis.symbol.slice(0, 2)}
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Clock className="w-3 h-3" />
-                <span>{analysis.createdAt}</span>
+              <div>
+                <div className="font-semibold">{analysis.symbol}/USDT</div>
+                <div className="text-sm text-muted-foreground">{analysis.createdAt}</div>
               </div>
             </div>
 
-            {/* Score */}
-            <div className="text-right mr-2">
-              <div className="text-xl font-bold">{analysis.score.toFixed(1)}</div>
-              <div className="text-xs text-muted-foreground">/10</div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <div className="font-semibold">{analysis.score.toFixed(1)}/10</div>
+                <div className={`text-sm flex items-center gap-1 ${config.color}`}>
+                  <Icon className="w-3 h-3" />
+                  {config.label}
+                </div>
+              </div>
             </div>
-
-            {/* Verdict Badge */}
-            <div className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold",
-              config.bg, config.color, config.border, "border"
-            )}>
-              <Icon className="w-3 h-3" />
-              <span>{config.label}</span>
-            </div>
-
-            {/* Arrow */}
-            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
           </Link>
         );
       })}
