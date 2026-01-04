@@ -51,24 +51,24 @@ export default function AnalyzePage() {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
         {/* Left: Coin Selector */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 flex flex-col">
           <div className="bg-card border rounded-lg p-6">
             <h2 className="text-lg font-semibold mb-4">Select Trading Pair</h2>
             <CoinSelector />
           </div>
 
-          {/* Recent Analyses */}
-          <div>
+          {/* Recent Analyses - pushed to bottom */}
+          <div className="mt-auto pt-6">
             <h2 className="text-xl font-semibold mb-4">Recent Analyses</h2>
             <RecentAnalyses />
           </div>
         </div>
 
         {/* Right: Analysis Steps */}
-        <div className="lg:col-span-1">
-          <div className="bg-card border rounded-lg p-5 sticky top-20">
+        <div className="lg:col-span-1 flex flex-col">
+          <div className="bg-card border rounded-lg p-5 mt-auto">
             <h3 className="text-sm font-semibold text-muted-foreground mb-4">
               7-STEP ANALYSIS INCLUDES
             </h3>
