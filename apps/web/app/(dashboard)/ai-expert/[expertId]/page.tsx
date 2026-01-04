@@ -174,40 +174,23 @@ interface ChatResponse {
   };
 }
 
-// Answer Footer Component - Simplified and flow-friendly
-function AnswerFooter({ expert }: { expert: typeof AI_EXPERTS.aria }) {
-  const stepNames: Record<number, string> = {
-    2: 'Asset Scanner',
-    3: 'Safety Check',
-    5: 'Trade Plan',
-    6: 'Trap Check',
-  };
-
+// Answer Footer Component - Single unified footer with link
+function AnswerFooter() {
   return (
-    <div className="space-y-3 mt-4">
-      {/* Find in TradePath */}
-      <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-xl p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <ExternalLink className="w-4 h-4 text-blue-500" />
-          <span className="font-semibold text-sm">📍 See in TradePath</span>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          View real data in <strong className="text-foreground">Analyze → {stepNames[expert.relatedStep]} (Step {expert.relatedStep})</strong>
-        </p>
-      </div>
-
-      {/* Run Full Analysis */}
-      <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-4">
-        <div className="flex items-center gap-2 mb-2">
+    <div className="mt-4">
+      <Link
+        href="/analyze"
+        className="flex items-center justify-between p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl hover:border-green-500/40 transition group"
+      >
+        <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-green-500" />
-          <span className="font-semibold text-sm text-green-600 dark:text-green-400">
-            🚀 Run Full Analysis
+          <span className="text-sm">
+            See in TradePath running{' '}
+            <span className="font-semibold text-green-600 dark:text-green-400">Full Analysis</span>
           </span>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Go to <strong className="text-foreground">TradePath → Analyze</strong> to run a comprehensive 7-step analysis with real market data.
-        </p>
-      </div>
+        <ChevronRight className="w-4 h-4 text-green-500 group-hover:translate-x-1 transition-transform" />
+      </Link>
     </div>
   );
 }
@@ -537,7 +520,7 @@ export default function AIExpertChatPage() {
 
                     {/* Answer Footer - show for all assistant messages */}
                     {message.role === 'assistant' && (
-                      <AnswerFooter expert={expert} />
+                      <AnswerFooter />
                     )}
                   </div>
 
