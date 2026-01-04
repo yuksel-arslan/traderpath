@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { AnalysisFlow } from '../../../../components/analysis/AnalysisFlow';
+import { CreditBalance } from '../../../../components/credits/CreditBalance';
 
 export default function AnalyzePage() {
   const params = useParams();
@@ -33,7 +34,6 @@ export default function AnalyzePage() {
 
   useEffect(() => {
     fetchCurrentPrice();
-    // Auto-refresh every 10 seconds
     const interval = setInterval(fetchCurrentPrice, 10000);
     return () => clearInterval(interval);
   }, [fetchCurrentPrice]);
@@ -49,7 +49,7 @@ export default function AnalyzePage() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-4">
           <Link
             href="/analyze"
@@ -58,30 +58,37 @@ export default function AnalyzePage() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">{symbol}/USDT Analysis</h1>
+            <h1 className="text-3xl font-bold">{symbol}/USDT</h1>
             <p className="text-muted-foreground">7-Step Trading Analysis</p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-sm text-muted-foreground">Current Price</p>
-            <div className="flex items-center gap-2">
-              <p className="text-xl font-bold">${formatPrice(currentPrice)}</p>
+          {/* Price Display */}
+          <div className="bg-card border rounded-lg px-4 py-2">
+            <div className="flex items-center gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Price</p>
+                <p className="text-lg font-bold">${formatPrice(currentPrice)}</p>
+              </div>
               {priceChange !== 0 && (
-                <span className={`text-sm font-medium ${priceChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <span className={`text-sm font-medium px-2 py-1 rounded ${
+                  priceChange >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                }`}>
                   {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}%
                 </span>
               )}
+              <button
+                onClick={fetchCurrentPrice}
+                disabled={isRefreshing}
+                className="p-1.5 hover:bg-accent rounded transition disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </button>
             </div>
           </div>
-          <button
-            onClick={fetchCurrentPrice}
-            disabled={isRefreshing}
-            className="p-2 hover:bg-accent rounded-lg transition disabled:opacity-50"
-          >
-            <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
+
+          <CreditBalance />
         </div>
       </div>
 
