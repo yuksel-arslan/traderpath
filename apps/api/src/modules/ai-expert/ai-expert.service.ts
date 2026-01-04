@@ -71,31 +71,40 @@ function sanitizeAIResponse(text: string): string {
 
 // TradePath system knowledge (shared across all experts)
 const TRADEPATH_CONTEXT = `
-⛔ KRİTİK YASAKLAR - HER YANIT ÖNCESİ OKU ⛔
-Aşağıdakileri ASLA yazma (tek bir kelime bile yasak):
-❌ "ister misin" / "yapmamı ister misin" / "yapayım mı"
-❌ "kredi" / "3 kredi" / "5 kredi"
-❌ "raporuna ekle" / "rapora ekleyebilirsin"
-❌ "gerçek analiz yapayım" / "gerçek bir coin için"
-❌ "---" (yatay çizgi)
-❌ "🚀 Bu bilgiyi" ile başlayan CTA
-❌ Yanıt sonunda herhangi bir soru
+⛔ CRITICAL RULES - READ BEFORE EVERY RESPONSE ⛔
+NEVER write any of the following (even a single word is forbidden):
+❌ "want me to" / "shall I" / "would you like me to"
+❌ "credits" / "3 credits" / "5 credits"
+❌ "add to report" / "save to your report"
+❌ "real analysis" / "analyze a real coin"
+❌ "---" (horizontal line)
+❌ "🚀" rocket emoji CTA
+❌ ANY question at the end of your response
+❌ Offering to do something for credits
 
-[KİMLİĞİN]
-TradePath'in AI eğitim uzmanısın. Trading kavramlarını öğretir, TradePath özelliklerini tanıtırsın.
+[YOUR IDENTITY]
+You are a TradePath AI education expert. You teach trading concepts and guide users to TradePath features.
 
-[TEMEL İLKELER]
-1. Soruyu anla, kısa ve öz cevap ver (50-70 kelime)
-2. Doğal konuş, robot gibi değil
-3. TradePath özelliğini SADECE konuyla ilgiliyse bahset
+[CORE PRINCIPLES]
+1. Understand the question, give a concise answer (50-80 words max)
+2. Be natural, not robotic
+3. ONLY mention TradePath features if directly relevant to the topic
 
-[YANITIN YAPISI]
-- Direkt konuya gir, selamlama yapma
-- Bilgiyi ver, bir cümleyle TradePath'te nerede bulunacağını söyle
-- YANITI BİTİR - ek teklif, soru, CTA EKLEME
+[RESPONSE STRUCTURE]
+- Jump straight to the topic, no greetings
+- Provide the information
+- End with ONE sentence: "You can see this in TradePath → Analyze → [Step Name]" (if relevant)
+- STOP - no offers, no questions, no CTAs
 
-⚠️ HATIRLATMA: Frontend otomatik olarak "Gerçek coin ile dene" butonu ekliyor.
-Sen bu teklifi yapma, çift içerik oluşur.
+[IMPORTANT GUIDANCE]
+When users ask about trading concepts:
+- Explain the concept clearly
+- If it relates to TradePath analysis, guide them to use the full 7-step analysis
+- Say: "Run a full analysis in TradePath → Analyze to see real data"
+- NEVER offer to analyze a coin yourself - direct them to the Analyze page
+
+⚠️ REMINDER: The frontend automatically adds action buttons.
+Do NOT add any call-to-action - it creates duplicate content.
 `;
 
 // AI Expert definitions with specialized system prompts
@@ -105,56 +114,72 @@ const AI_EXPERTS = {
     name: 'ARIA',
     role: 'Market Analysis AI',
     category: 'TECHNICAL_ANALYSIS',
-    systemPrompt: `Sen ARIA - TradePath'in Teknik Analiz Uzmanı.
+    systemPrompt: `You are ARIA - TradePath's Technical Analysis Expert.
 ${TRADEPATH_CONTEXT}
 
-[Uzmanlık Alanın]
-RSI, MACD, Bollinger Bands, Moving Averages, Volume Profile, Pattern Recognition, Fibonacci, destek/direnç.
-TradePath'te Asset Scan (Adım 2) bu verileri gösterir.
+[YOUR EXPERTISE]
+RSI, MACD, Bollinger Bands, Moving Averages, Volume Profile, Pattern Recognition, Fibonacci, Support/Resistance levels.
+In TradePath, Asset Scanner (Step 2) shows this data with real market values.
 
-SON KONTROL: Yanıtında "ister misin", "kredi", "---", "🚀" var mı? Varsa SİL.`,
+[GUIDANCE EXAMPLES]
+- If asked about RSI: Explain RSI, then say "See real RSI values in TradePath → Analyze → Asset Scanner"
+- If asked to analyze a coin: "Run a full 7-step analysis in TradePath → Analyze for comprehensive insights"
+
+FINAL CHECK: Does your response contain "want me to", "credits", "---", "🚀"? DELETE IT.`,
   },
   nexus: {
     id: 'nexus',
     name: 'NEXUS',
     role: 'Risk Assessment AI',
     category: 'RISK_MANAGEMENT',
-    systemPrompt: `Sen NEXUS - TradePath'in Risk Yönetimi Uzmanı.
+    systemPrompt: `You are NEXUS - TradePath's Risk Management Expert.
 ${TRADEPATH_CONTEXT}
 
-[Uzmanlık Alanın]
-Position sizing, Stop Loss, Take Profit, Risk/Reward oranı, DCA stratejisi, portföy yönetimi.
-TradePath'te Trade Plan (Adım 5) bu hesaplamaları yapar.
+[YOUR EXPERTISE]
+Position sizing, Stop Loss, Take Profit, Risk/Reward ratio, DCA strategy, portfolio management.
+In TradePath, Trade Plan (Step 5) calculates these values automatically.
 
-SON KONTROL: Yanıtında "ister misin", "kredi", "---", "🚀" var mı? Varsa SİL.`,
+[GUIDANCE EXAMPLES]
+- If asked about position sizing: Explain the formula, then say "TradePath → Analyze → Trade Plan calculates this for you"
+- If asked for specific calculations: "Run a full analysis in TradePath → Analyze to get personalized TP/SL levels"
+
+FINAL CHECK: Does your response contain "want me to", "credits", "---", "🚀"? DELETE IT.`,
   },
   oracle: {
     id: 'oracle',
     name: 'ORACLE',
     role: 'Whale Detection AI',
     category: 'WHALE_BEHAVIOR',
-    systemPrompt: `Sen ORACLE - TradePath'in Balina Takip Uzmanı.
+    systemPrompt: `You are ORACLE - TradePath's Whale Tracking Expert.
 ${TRADEPATH_CONTEXT}
 
-[Uzmanlık Alanın]
-Whale activity, exchange flow, smart money positioning, order flow, birikim/dağıtım.
-TradePath'te Safety Check (Adım 3) bu verileri gösterir.
+[YOUR EXPERTISE]
+Whale activity, exchange flow, smart money positioning, order flow, accumulation/distribution patterns.
+In TradePath, Safety Check (Step 3) shows whale and exchange flow data.
 
-SON KONTROL: Yanıtında "ister misin", "kredi", "---", "🚀" var mı? Varsa SİL.`,
+[GUIDANCE EXAMPLES]
+- If asked about whale activity: Explain the concept, then say "See whale data in TradePath → Analyze → Safety Check"
+- If asked about a specific coin's whales: "Run a full analysis in TradePath → Analyze to see whale movements"
+
+FINAL CHECK: Does your response contain "want me to", "credits", "---", "🚀"? DELETE IT.`,
   },
   sentinel: {
     id: 'sentinel',
     name: 'SENTINEL',
     role: 'Security & Scam AI',
     category: 'MANIPULATION',
-    systemPrompt: `Sen SENTINEL - TradePath'in Güvenlik Uzmanı.
+    systemPrompt: `You are SENTINEL - TradePath's Security Expert.
 ${TRADEPATH_CONTEXT}
 
-[Uzmanlık Alanın]
-Pump/dump tespiti, honeypot, rug pull, contract güvenliği, bull/bear trap, likidite avcılığı.
-TradePath'te Safety Check (Adım 3) ve Trap Check (Adım 6) bu kontrolleri yapar.
+[YOUR EXPERTISE]
+Pump/dump detection, honeypot, rug pull, contract security, bull/bear traps, liquidity hunting.
+In TradePath, Safety Check (Step 3) and Trap Check (Step 6) perform these security checks.
 
-SON KONTROL: Yanıtında "ister misin", "kredi", "---", "🚀" var mı? Varsa SİL.`,
+[GUIDANCE EXAMPLES]
+- If asked about rug pulls: Explain warning signs, then say "TradePath → Analyze → Safety Check verifies contract security"
+- If asked if a token is safe: "Run a full analysis in TradePath → Analyze for comprehensive security checks"
+
+FINAL CHECK: Does your response contain "want me to", "credits", "---", "🚀"? DELETE IT.`,
   },
 } as const;
 
@@ -305,118 +330,118 @@ export class AIExpertService {
       aria: [
         {
           type: 'pattern',
-          title: 'RSI Divergence Örneği',
-          description: 'Fiyat yeni dip yaparken RSI yapmıyorsa = bullish divergence',
+          title: 'RSI Divergence Example',
+          description: 'Price makes new low but RSI doesn\'t = bullish divergence',
           details: {
-            sinyal: 'Hidden Bullish Divergence',
-            guvenilirlik: '%72',
-            onay: '4H kapanış beklenmeli',
+            signal: 'Hidden Bullish Divergence',
+            reliability: '72%',
+            confirmation: 'Wait for 4H candle close',
           },
         },
         {
           type: 'pattern',
           title: 'MACD Crossover',
-          description: 'MACD çizgisi sinyal çizgisini yukarı keserse = alım sinyali',
+          description: 'MACD line crosses above signal line = buy signal',
           details: {
-            sinyal: 'Bullish Crossover',
-            guvenilirlik: '%68',
-            onay: 'Histogram pozitife dönmeli',
+            signal: 'Bullish Crossover',
+            reliability: '68%',
+            confirmation: 'Histogram should turn positive',
           },
         },
         {
           type: 'pattern',
           title: 'Bollinger Band Squeeze',
-          description: 'Bantlar daralıyorsa büyük hareket yakın demek',
+          description: 'When bands contract, a big move is coming',
           details: {
-            sinyal: 'Volatilite patlaması bekleniyor',
-            strateji: 'Breakout yönünü bekle, erken girme',
+            signal: 'Volatility expansion expected',
+            strategy: 'Wait for breakout direction, don\'t enter early',
           },
         },
       ],
       nexus: [
         {
           type: 'pattern',
-          title: 'Position Size Hesaplama',
-          description: '10.000$ portföy, %1 risk = 100$ maksimum kayıp',
+          title: 'Position Size Calculation',
+          description: '$10,000 portfolio, 1% risk = $100 max loss',
           details: {
-            formul: 'Pozisyon = Risk$ / (Entry - Stop)',
-            ornek: '100$ / (50.000 - 48.000) = 0.05 BTC',
+            formula: 'Position = Risk$ / (Entry - Stop)',
+            example: '$100 / (50,000 - 48,000) = 0.05 BTC',
           },
         },
         {
           type: 'pattern',
-          title: 'Risk/Reward Oranı',
-          description: 'Minimum 1:2 R/R olmadan işleme girme',
+          title: 'Risk/Reward Ratio',
+          description: 'Never enter a trade without minimum 1:2 R/R',
           details: {
-            kural: 'Potansiyel kazanç, riskten en az 2x fazla olmalı',
-            ornek: '100$ risk için 200$ hedef',
+            rule: 'Potential profit should be at least 2x the risk',
+            example: '$100 risk for $200 target',
           },
         },
         {
           type: 'pattern',
-          title: 'Kademeli Giriş (DCA)',
-          description: 'Tüm sermayeyi tek seferde koymak yerine 3 kademe',
+          title: 'Scaled Entry (DCA)',
+          description: 'Instead of all-in, enter in 3 tranches',
           details: {
-            strateji: '%40 + %30 + %30',
-            avantaj: 'Ortalama maliyeti düşürür',
+            strategy: '40% + 30% + 30%',
+            advantage: 'Lowers average entry cost',
           },
         },
       ],
       oracle: [
         {
           type: 'pattern',
-          title: 'Whale Accumulation Örneği',
-          description: 'Exchange outflow + düşük volatilite = akümülasyon',
+          title: 'Whale Accumulation Example',
+          description: 'Exchange outflow + low volatility = accumulation',
           details: {
-            sinyal: 'Smart Money Accumulation',
-            gosterge: 'OBV artışı + fiyat yatay',
+            signal: 'Smart Money Accumulation',
+            indicator: 'Rising OBV + flat price',
           },
         },
         {
           type: 'pattern',
-          title: 'Exchange Outflow Sinyali',
-          description: 'Borsalardan büyük çıkış = HODLing başlıyor',
+          title: 'Exchange Outflow Signal',
+          description: 'Large outflow from exchanges = HODLing begins',
           details: {
-            sinyal: 'Bullish uzun vadeli',
-            dikkat: 'Kısa vadede etki gecikmeli olabilir',
+            signal: 'Long-term bullish',
+            note: 'Short-term impact may be delayed',
           },
         },
         {
           type: 'pattern',
-          title: 'Whale Dump Uyarısı',
-          description: 'Büyük cüzdanlardan borsalara transfer = satış baskısı',
+          title: 'Whale Dump Warning',
+          description: 'Large wallet transfers to exchanges = selling pressure',
           details: {
-            sinyal: 'Bearish kısa vadeli',
-            aksiyon: 'Stop loss sık tut',
+            signal: 'Short-term bearish',
+            action: 'Keep stop loss tight',
           },
         },
       ],
       sentinel: [
         {
           type: 'pattern',
-          title: 'Pump & Dump Tespiti',
-          description: 'Ani %50+ artış + 10x volume = manipülasyon riski',
+          title: 'Pump & Dump Detection',
+          description: 'Sudden 50%+ surge + 10x volume = manipulation risk',
           details: {
-            uyari: 'FOMO\'ya kapılma!',
-            kural: 'İlk saatte alma, düşüşü bekle',
+            warning: 'Don\'t FOMO!',
+            rule: 'Don\'t buy in first hour, wait for pullback',
           },
         },
         {
           type: 'pattern',
-          title: 'Honeypot Tespiti',
-          description: 'Alım yapılıp satış yapılamıyorsa = HONEYPOT',
+          title: 'Honeypot Detection',
+          description: 'Can buy but can\'t sell = HONEYPOT',
           details: {
-            kontrol: 'TradePath Safety Check → contractSecurity.isHoneypot',
-            kural: 'isHoneypot = true ise ASLA ALMA',
+            check: 'TradePath Safety Check → contractSecurity.isHoneypot',
+            rule: 'If isHoneypot = true, NEVER BUY',
           },
         },
         {
           type: 'pattern',
-          title: 'Rug Pull Sinyalleri',
-          description: 'Liquidity kilitli değilse = Rug Pull riski',
+          title: 'Rug Pull Signals',
+          description: 'Liquidity not locked = Rug Pull risk',
           details: {
-            kontrol: 'contractSecurity.liquidityLocked',
-            uyari: 'Kilit süresi de önemli, 1 yıldan az tehlikeli',
+            check: 'contractSecurity.liquidityLocked',
+            warning: 'Lock duration matters too, less than 1 year is risky',
           },
         },
       ],
@@ -431,342 +456,330 @@ export class AIExpertService {
   getSuggestedQuestions(expertId: ExpertId): SuggestedQuestion[] {
     const questions: Record<ExpertId, SuggestedQuestion[]> = {
       aria: [
-        // Eğitici Sorular (Stage 1: Free education)
         {
           id: 'aria-1',
-          question: 'RSI nedir ve nasıl yorumlanır?',
+          question: 'What is RSI and how do I interpret it?',
           category: 'education',
-          stage1Preview: 'RSI (Relative Strength Index) momentum göstergesidir. 0-100 arası değer alır...',
-          stage2Action: 'Seçtiğin coin için RSI analizi yap',
+          stage1Preview: 'RSI (Relative Strength Index) is a momentum indicator ranging from 0-100...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
         {
           id: 'aria-2',
-          question: 'MACD sinyalleri nasıl okunur?',
+          question: 'How do I read MACD signals?',
           category: 'education',
-          stage1Preview: 'MACD, trend değişimlerini tespit eden güçlü bir göstergedir...',
-          stage2Action: 'Coin için MACD crossover analizi',
+          stage1Preview: 'MACD is a powerful indicator for detecting trend changes...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
         {
           id: 'aria-3',
-          question: 'Bollinger Bands squeeze ne anlama gelir?',
+          question: 'What does a Bollinger Band squeeze mean?',
           category: 'education',
-          stage1Preview: 'Bantlar daraldığında büyük bir hareket yaklaşıyor demektir...',
-          stage2Action: 'Seçtiğin coin için band analizi',
+          stage1Preview: 'When bands contract, a big move is approaching...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
         {
           id: 'aria-4',
-          question: 'Destek ve direnç seviyeleri nasıl belirlenir?',
+          question: 'How to identify support and resistance levels?',
           category: 'education',
-          stage1Preview: 'Destek/direnç, fiyatın sıkça test ettiği seviyelerdir...',
-          stage2Action: 'Coin için destek/direnç hesapla',
+          stage1Preview: 'Support/resistance are price levels frequently tested by price...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
         {
           id: 'aria-5',
-          question: 'Multi-timeframe analiz neden önemli?',
+          question: 'Why is multi-timeframe analysis important?',
           category: 'education',
-          stage1Preview: 'Farklı zaman dilimlerinde trend uyumu güvenilirliği artırır...',
-          stage2Action: '1H, 4H, 1D trend uyumu analizi',
+          stage1Preview: 'Trend alignment across timeframes increases reliability...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
-        // Strateji Soruları
         {
           id: 'aria-6',
-          question: 'Bu coin için en iyi giriş noktası neresi?',
+          question: 'How to identify trend reversals?',
           category: 'strategy',
-          stage1Preview: 'Optimal giriş için RSI, destek seviyeleri ve trend uyumu kontrol edilir...',
-          stage2Action: 'Gerçek zamanlı giriş noktası hesapla',
-          creditCost: 5,
+          stage1Preview: 'MA crossovers, divergences and volume changes signal reversals...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
         {
           id: 'aria-7',
-          question: 'Trend dönüşü nasıl anlaşılır?',
+          question: 'How to tell a breakout from a fake-out?',
           category: 'strategy',
-          stage1Preview: 'MA crossover, divergence ve hacim değişimleri trend dönüşünü işaret eder...',
-          stage2Action: 'Coin için trend analizi raporu',
-          creditCost: 5,
+          stage1Preview: 'Real breakouts are confirmed by volume increase and candle close...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
         {
           id: 'aria-8',
-          question: 'Breakout mu yoksa fake-out mu?',
+          question: 'What are the best entry signals?',
           category: 'strategy',
-          stage1Preview: 'Gerçek breakout hacim artışı ve kapanış ile onaylanır...',
-          stage2Action: 'Breakout doğrulama analizi',
-          creditCost: 5,
+          stage1Preview: 'Optimal entries combine RSI, support levels, and trend alignment...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
-        // Pratik Sorular
         {
           id: 'aria-9',
-          question: 'Şu an BTC dominansı ne durumda?',
+          question: 'How does BTC dominance affect altcoins?',
           category: 'practical',
-          stage1Preview: 'BTC dominansı altcoin performansını etkiler...',
-          stage2Action: 'Güncel BTC dominans analizi',
-          creditCost: 2,
+          stage1Preview: 'BTC dominance impacts altcoin performance inversely...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
         {
           id: 'aria-10',
-          question: 'Fear & Greed Index şu an ne?',
+          question: 'What does divergence indicate?',
           category: 'practical',
-          stage1Preview: 'Aşırı korku alım, aşırı açgözlülük satış fırsatı olabilir...',
-          stage2Action: 'Güncel piyasa duyarlılık raporu',
-          creditCost: 2,
+          stage1Preview: 'Divergence shows momentum weakening before price reverses...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
       ],
       nexus: [
-        // Eğitici Sorular
         {
           id: 'nexus-1',
-          question: 'Position size nasıl hesaplanır?',
+          question: 'How to calculate position size?',
           category: 'education',
-          stage1Preview: 'Position size = Risk tutarı / (Giriş - Stop Loss) formülü ile hesaplanır...',
-          stage2Action: 'Portföyün için position size hesapla',
+          stage1Preview: 'Position size = Risk amount / (Entry - Stop Loss)...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
         {
           id: 'nexus-2',
-          question: 'Risk/Reward oranı neden önemli?',
+          question: 'Why is risk/reward ratio important?',
           category: 'education',
-          stage1Preview: 'Her işlemde potansiyel kazanç, riskten en az 2x fazla olmalı...',
-          stage2Action: 'Trade için R/R hesaplaması',
+          stage1Preview: 'Every trade should have potential profit at least 2x the risk...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
         {
           id: 'nexus-3',
-          question: 'Stop loss nereye konmalı?',
+          question: 'Where should I place my stop loss?',
           category: 'education',
-          stage1Preview: 'Stop loss destek seviyelerinin altına veya volatilite bazlı hesaplanır...',
-          stage2Action: 'Optimal stop loss hesapla',
+          stage1Preview: 'Stop loss should be below support levels or based on volatility...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
         {
           id: 'nexus-4',
-          question: 'Kademeli giriş stratejisi nedir?',
+          question: 'What is DCA strategy?',
           category: 'education',
-          stage1Preview: 'DCA (Dollar Cost Averaging) ile riski dağıtmak...',
-          stage2Action: 'Kademe fiyatları hesapla',
+          stage1Preview: 'Dollar Cost Averaging spreads risk across multiple entries...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
         {
           id: 'nexus-5',
-          question: 'Portföy çeşitlendirme nasıl yapılır?',
+          question: 'How to diversify a crypto portfolio?',
           category: 'education',
-          stage1Preview: 'Korelasyonu düşük varlıklar seçerek risk azaltılır...',
-          stage2Action: 'Portföy korelasyon analizi',
-          creditCost: 5,
+          stage1Preview: 'Select assets with low correlation to reduce overall risk...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
-        // Strateji Soruları
         {
           id: 'nexus-6',
-          question: 'Bu trade için ne kadar risk almalıyım?',
+          question: 'How much should I risk per trade?',
           category: 'strategy',
-          stage1Preview: 'Tek bir trade için maksimum %1-2 portföy riski önerilir...',
-          stage2Action: 'Kişiselleştirilmiş risk hesabı',
-          creditCost: 5,
+          stage1Preview: 'Maximum 1-2% portfolio risk per single trade is recommended...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
         {
           id: 'nexus-7',
-          question: 'Take profit hedeflerini nasıl belirlemeliyim?',
+          question: 'How to set take profit targets?',
           category: 'strategy',
-          stage1Preview: 'Direnç seviyeleri ve Fibonacci hedefleri kullanılır...',
-          stage2Action: 'TP1, TP2, TP3 hedeflerini hesapla',
-          creditCost: 5,
+          stage1Preview: 'Use resistance levels and Fibonacci extensions for targets...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
         {
           id: 'nexus-8',
-          question: 'Ne zaman pozisyonu büyütmeliyim?',
+          question: 'When should I scale into a position?',
           category: 'strategy',
-          stage1Preview: 'Piramitleme stratejisi karlı pozisyonlarda uygulanır...',
-          stage2Action: 'Pozisyon büyütme planı',
-          creditCost: 5,
+          stage1Preview: 'Pyramiding strategy adds to winning positions only...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
-        // Pratik Sorular
         {
           id: 'nexus-9',
-          question: '1000$ ile hangi strateji?',
+          question: 'Best strategy for $1000 capital?',
           category: 'practical',
-          stage1Preview: 'Küçük sermaye için swing trading ve sıkı risk yönetimi...',
-          stage2Action: '1000$ portföy planı',
+          stage1Preview: 'Small capital suits swing trading with strict risk management...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
         {
           id: 'nexus-10',
-          question: 'Maksimum kaç pozisyon açmalıyım?',
+          question: 'How many positions should I have open?',
           category: 'practical',
-          stage1Preview: 'Portföy büyüklüğüne göre 3-10 arası pozisyon önerilir...',
-          stage2Action: 'Optimal pozisyon sayısı analizi',
+          stage1Preview: 'Based on portfolio size, 3-10 positions recommended...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
       ],
       oracle: [
-        // Eğitici Sorular
         {
           id: 'oracle-1',
-          question: 'Whale accumulation nasıl tespit edilir?',
+          question: 'How to detect whale accumulation?',
           category: 'education',
-          stage1Preview: 'Büyük cüzdanların borsalardan çekimi = biriktirme sinyali...',
-          stage2Action: 'Coin için whale analizi',
+          stage1Preview: 'Large wallet withdrawals from exchanges = accumulation signal...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
         {
           id: 'oracle-2',
-          question: 'Exchange flow neden önemli?',
+          question: 'Why is exchange flow important?',
           category: 'education',
-          stage1Preview: 'Borsaya giriş = satış baskısı, çıkış = alım sinyali...',
-          stage2Action: 'Güncel exchange flow raporu',
+          stage1Preview: 'Inflow = selling pressure, Outflow = buying signal...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
         {
           id: 'oracle-3',
-          question: 'Smart money ne demek?',
+          question: 'What is smart money?',
           category: 'education',
-          stage1Preview: 'Kurumsal yatırımcılar ve deneyimli traderların pozisyonları...',
-          stage2Action: 'Smart money positioning analizi',
+          stage1Preview: 'Institutional investors and experienced traders\' positions...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
         {
           id: 'oracle-4',
-          question: 'Order flow imbalance nasıl okunur?',
+          question: 'How to read order flow imbalance?',
           category: 'education',
-          stage1Preview: 'Alış emirlerinin satış emirlerinden fazla olması = bullish...',
-          stage2Action: 'Order flow analizi',
+          stage1Preview: 'More buy orders than sell orders = bullish signal...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
         {
           id: 'oracle-5',
-          question: 'Net flow negatif ne demek?',
+          question: 'What does negative net flow mean?',
           category: 'education',
-          stage1Preview: 'Borsalardan net çıkış = arz azalıyor = potansiyel yükseliş...',
-          stage2Action: 'Net flow detaylı rapor',
+          stage1Preview: 'Net outflow from exchanges = supply decreasing = potential rise...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
-        // Strateji Soruları
         {
           id: 'oracle-6',
-          question: 'Büyük oyuncular ne yapıyor?',
+          question: 'What are big players doing?',
           category: 'strategy',
-          stage1Preview: 'Whale aktivitesi piyasa yönünü önceden gösterebilir...',
-          stage2Action: 'Whale aktivite raporu',
-          creditCost: 5,
+          stage1Preview: 'Whale activity can predict market direction early...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
         {
           id: 'oracle-7',
-          question: 'Bu coin için birikim var mı?',
+          question: 'How to spot accumulation patterns?',
           category: 'strategy',
-          stage1Preview: 'OBV artışı ve düşük volatilite birikim işareti...',
-          stage2Action: 'Birikim/dağıtım analizi',
-          creditCost: 5,
+          stage1Preview: 'Rising OBV with low volatility indicates accumulation...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
         {
           id: 'oracle-8',
-          question: 'Whale dump riski var mı?',
+          question: 'Is there whale dump risk?',
           category: 'strategy',
-          stage1Preview: 'Büyük cüzdanlardan borsalara transfer = dump riski...',
-          stage2Action: 'Whale risk değerlendirmesi',
-          creditCost: 5,
+          stage1Preview: 'Large wallet transfers to exchanges = dump risk...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
-        // Pratik Sorular
         {
           id: 'oracle-9',
-          question: 'En çok biriktirilen coinler hangileri?',
+          question: 'Which coins are whales accumulating?',
           category: 'practical',
-          stage1Preview: 'Exchange outflow takibi ile tespit edilebilir...',
-          stage2Action: 'Top birikim listesi',
-          creditCost: 5,
+          stage1Preview: 'Track via exchange outflow metrics...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
         {
           id: 'oracle-10',
-          question: 'Kurumsal alımlar nerede?',
+          question: 'How to track institutional buying?',
           category: 'practical',
-          stage1Preview: 'OTC işlemler ve büyük cüzdan transferleri izlenir...',
-          stage2Action: 'Kurumsal aktivite raporu',
-          creditCost: 5,
+          stage1Preview: 'Monitor OTC deals and large wallet transfers...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
       ],
       sentinel: [
-        // Eğitici Sorular
         {
           id: 'sentinel-1',
-          question: 'Honeypot token nedir?',
+          question: 'What is a honeypot token?',
           category: 'education',
-          stage1Preview: 'Alım yapılıp satış yapılamayan dolandırıcılık tokenleri...',
-          stage2Action: 'Token için honeypot kontrolü',
-          creditCost: 2,
+          stage1Preview: 'Scam tokens where you can buy but cannot sell...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
         {
           id: 'sentinel-2',
-          question: 'Rug pull nasıl anlaşılır?',
+          question: 'How to identify a rug pull?',
           category: 'education',
-          stage1Preview: 'Likidite kilitsiz, anonim ekip, gerçekçi olmayan vaatler...',
-          stage2Action: 'Rug pull risk analizi',
+          stage1Preview: 'Unlocked liquidity, anonymous team, unrealistic promises...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
         {
           id: 'sentinel-3',
-          question: 'Liquidity lock neden önemli?',
+          question: 'Why is liquidity lock important?',
           category: 'education',
-          stage1Preview: 'Kilitli likidite geliştiricinin kaçmasını engeller...',
-          stage2Action: 'Liquidity lock kontrolü',
-          creditCost: 2,
+          stage1Preview: 'Locked liquidity prevents developers from running away...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
         {
           id: 'sentinel-4',
-          question: 'Mint function riski nedir?',
+          question: 'What is mint function risk?',
           category: 'education',
-          stage1Preview: 'Owner sınırsız token basabilirse = sonsuz enflasyon...',
-          stage2Action: 'Mint function kontrolü',
-          creditCost: 2,
+          stage1Preview: 'If owner can mint unlimited tokens = infinite inflation...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
         {
           id: 'sentinel-5',
-          question: 'Contract verified ne demek?',
+          question: 'What does verified contract mean?',
           category: 'education',
-          stage1Preview: 'Kaynak kodu görülebilir = şeffaflık, gizli ise tehlike...',
-          stage2Action: 'Contract doğrulama kontrolü',
-          creditCost: 1,
+          stage1Preview: 'Source code is visible = transparency, hidden = danger...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
-        // Strateji Soruları
         {
           id: 'sentinel-6',
-          question: 'Bu token güvenli mi?',
+          question: 'How to check if a token is safe?',
           category: 'strategy',
-          stage1Preview: 'Kapsamlı güvenlik kontrolü: honeypot, lock, mint, tax...',
-          stage2Action: 'Tam güvenlik raporu',
-          creditCost: 5,
+          stage1Preview: 'Comprehensive check: honeypot, lock, mint, tax...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
         {
           id: 'sentinel-7',
-          question: 'Pump & dump riski var mı?',
+          question: 'How to spot pump & dump schemes?',
           category: 'strategy',
-          stage1Preview: 'Ani fiyat ve hacim artışları manipülasyon işareti...',
-          stage2Action: 'Manipülasyon risk analizi',
+          stage1Preview: 'Sudden price and volume spikes indicate manipulation...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
         {
           id: 'sentinel-8',
-          question: 'Bu projede red flag var mı?',
+          question: 'What are common red flags in crypto projects?',
           category: 'strategy',
-          stage1Preview: 'Ekip, tokenomics, contract kontrolü ile tespit edilir...',
-          stage2Action: 'Kapsamlı red flag taraması',
-          creditCost: 5,
+          stage1Preview: 'Team, tokenomics, and contract analysis reveals red flags...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
-        // Pratik Sorular
         {
           id: 'sentinel-9',
-          question: 'Buy/sell tax ne kadar?',
+          question: 'What is buy/sell tax?',
           category: 'practical',
-          stage1Preview: 'Yüksek vergi oranları karı yok eder...',
-          stage2Action: 'Tax oranı kontrolü',
-          creditCost: 2,
+          stage1Preview: 'High tax rates eat into your profits...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
+          creditCost: 3,
         },
         {
           id: 'sentinel-10',
-          question: 'Wash trading var mı?',
+          question: 'How to detect wash trading?',
           category: 'practical',
-          stage1Preview: 'Sahte hacim ile gerçek talep yanıltılır...',
-          stage2Action: 'Wash trading tespiti',
+          stage1Preview: 'Fake volume misleads real demand perception...',
+          stage2Action: 'Run full analysis in TradePath → Analyze',
           creditCost: 3,
         },
       ],

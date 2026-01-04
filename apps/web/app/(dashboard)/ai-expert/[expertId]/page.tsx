@@ -45,16 +45,16 @@ const AI_EXPERTS = {
     bgGradient: 'from-blue-500/5 to-cyan-500/5',
     relatedStep: 2, // Asset Scanner
     exampleQuestions: [
-      'RSI divergence nedir ve nasıl yorumlanır?',
-      'BTC için destek/direnç seviyeleri nasıl belirlenir?',
-      'MACD göstergesi nasıl kullanılır?',
-      'Çoklu zaman dilimi analizi nasıl yapılır?',
-      'Bollinger Bantları ile işlem stratejisi nedir?',
-      'Hareketli ortalama kesişimleri ne sinyali verir?',
-      'Trend yönünü nasıl belirleyebilirim?',
-      'Hacim Profili ve POC nedir?',
-      'Omuz baş omuz formasyonunu nasıl tespit ederim?',
-      'Day trading ve swing trading için hangi zaman dilimi?',
+      'What is RSI divergence and how to interpret it?',
+      'How to identify support and resistance levels?',
+      'How do I read MACD signals?',
+      'Why is multi-timeframe analysis important?',
+      'What does a Bollinger Band squeeze mean?',
+      'What do moving average crossovers signal?',
+      'How to determine trend direction?',
+      'What is Volume Profile and POC?',
+      'How to spot head and shoulders pattern?',
+      'Which timeframe for day vs swing trading?',
     ],
   },
   nexus: {
@@ -68,16 +68,16 @@ const AI_EXPERTS = {
     bgGradient: 'from-amber-500/5 to-orange-500/5',
     relatedStep: 5, // Trade Plan
     exampleQuestions: [
-      'Pozisyon boyutu nasıl hesaplanır?',
-      'Stop loss nereye konulmalı?',
-      'Risk/ödül oranı nasıl belirlenir?',
-      'İşlem başına ne kadar risk almalıyım?',
-      'Düşüş dönemlerinde sermayemi nasıl korurum?',
-      'Sabit ve takip eden stop-loss farkı nedir?',
-      'Aşırı kaldıraçtan nasıl kaçınırım?',
-      'DCA mı yoksa tek seferde giriş mi?',
-      'Aynı anda kaç pozisyon açık tutmalıyım?',
-      'Maksimum drawdown nedir ve nasıl yönetilir?',
+      'How to calculate position size?',
+      'Where should I place my stop loss?',
+      'How to determine risk/reward ratio?',
+      'How much should I risk per trade?',
+      'How to protect capital during drawdowns?',
+      'Fixed vs trailing stop loss difference?',
+      'How to avoid over-leveraging?',
+      'DCA or single entry - which is better?',
+      'How many positions should I have open?',
+      'What is max drawdown and how to manage it?',
     ],
   },
   oracle: {
@@ -91,16 +91,16 @@ const AI_EXPERTS = {
     bgGradient: 'from-purple-500/5 to-pink-500/5',
     relatedStep: 3, // Safety Check
     exampleQuestions: [
-      'Balina birikimi nasıl tespit edilir?',
-      'Exchange outflow ne anlama gelir?',
-      'Smart money ne yapıyor?',
-      'Akıllı paranın ne yaptığını nasıl takip ederim?',
-      'Birikim ve dağıtım arasındaki fark nedir?',
-      'Kurumsal para akışını nasıl takip ederim?',
-      'Borsalardan negatif net akış ne gösterir?',
-      'Balinalar piyasayı nasıl manipüle eder?',
-      'Emir akışı dengesizliği nedir?',
-      'Akıllı paranın çıkış yaptığının işaretleri neler?',
+      'How to detect whale accumulation?',
+      'What does exchange outflow mean?',
+      'What is smart money doing?',
+      'How to track smart money movements?',
+      'Difference between accumulation and distribution?',
+      'How to track institutional money flow?',
+      'What does negative net flow indicate?',
+      'How do whales manipulate the market?',
+      'What is order flow imbalance?',
+      'Signs that smart money is exiting?',
     ],
   },
   sentinel: {
@@ -114,16 +114,16 @@ const AI_EXPERTS = {
     bgGradient: 'from-red-500/5 to-rose-500/5',
     relatedStep: 6, // Trap Check
     exampleQuestions: [
-      'Pump and dump nasıl tespit edilir?',
-      'Rug pull işaretleri nelerdir?',
-      'Token kontratı güvenli mi?',
-      'Bull trap nedir ve nasıl kaçınırım?',
-      'Bear trap nasıl tespit edilir?',
-      'Likidite avı (liquidity grab) nedir?',
-      'Stop hunt nasıl çalışır?',
-      'Sahte kırılımları nasıl anlarım?',
-      'Likidite seviyeleri neden önemli?',
-      'Spoofing ve layering nedir?',
+      'How to spot pump and dump schemes?',
+      'What are rug pull warning signs?',
+      'Is this token contract safe?',
+      'What is a bull trap and how to avoid it?',
+      'How to identify a bear trap?',
+      'What is liquidity hunting?',
+      'How does stop hunting work?',
+      'How to identify fake breakouts?',
+      'Why are liquidity levels important?',
+      'What is spoofing and layering?',
     ],
   },
 };
@@ -174,17 +174,8 @@ interface ChatResponse {
   };
 }
 
-// Answer Footer Component - Sadeleştirilmiş ve akışa uygun
+// Answer Footer Component - Simplified and flow-friendly
 function AnswerFooter({ expert }: { expert: typeof AI_EXPERTS.aria }) {
-  const [copied, setCopied] = useState(false);
-
-  const exampleCommands: Record<string, string> = {
-    aria: 'BTCUSDT için teknik analiz yap',
-    nexus: 'ETHUSDT için pozisyon boyutu hesapla',
-    oracle: 'SOLUSDT için balina aktivitesini kontrol et',
-    sentinel: 'Bu token güvenli mi kontrol et',
-  };
-
   const stepNames: Record<number, string> = {
     2: 'Asset Scanner',
     3: 'Safety Check',
@@ -192,73 +183,30 @@ function AnswerFooter({ expert }: { expert: typeof AI_EXPERTS.aria }) {
     6: 'Trap Check',
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(exampleCommands[expert.id] || '');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <div className="space-y-3 mt-4">
-      {/* TradePath'te Bul */}
+      {/* Find in TradePath */}
       <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-2">
           <ExternalLink className="w-4 h-4 text-blue-500" />
-          <span className="font-semibold text-sm">📍 TradePath&apos;te Bul</span>
+          <span className="font-semibold text-sm">📍 See in TradePath</span>
         </div>
         <p className="text-xs text-muted-foreground">
-          Bu verileri <strong className="text-foreground">Analyze → {stepNames[expert.relatedStep]} (Adım {expert.relatedStep})</strong> altında gerçek verilerle görebilirsin.
+          View real data in <strong className="text-foreground">Analyze → {stepNames[expert.relatedStep]} (Step {expert.relatedStep})</strong>
         </p>
       </div>
 
-      {/* Bu bilgiyi öğrendin */}
-      <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <BookOpen className="w-4 h-4 text-amber-500" />
-          <span className="font-semibold text-sm text-amber-600 dark:text-amber-400">
-            📚 Bu bilgiyi öğrendin!
-          </span>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Eğitim kütüphanesinde daha fazla bilgi bulabilirsin.
-        </p>
-      </div>
-
-      {/* Örnek Talimat */}
+      {/* Run Full Analysis */}
       <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-2">
           <Sparkles className="w-4 h-4 text-green-500" />
           <span className="font-semibold text-sm text-green-600 dark:text-green-400">
-            🚀 Gerçek coin ile dene
+            🚀 Run Full Analysis
           </span>
         </div>
-        <p className="text-xs text-muted-foreground mb-3">
-          Coin sembolü gönder, gerçek verilerle analiz yapayım.
+        <p className="text-xs text-muted-foreground">
+          Go to <strong className="text-foreground">TradePath → Analyze</strong> to run a comprehensive 7-step analysis with real market data.
         </p>
-        <div className="bg-background/50 rounded-lg p-3 border">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] text-muted-foreground">Örnek:</span>
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3 h-3" />
-                  Kopyalandı
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3 h-3" />
-                  Kopyala
-                </>
-              )}
-            </button>
-          </div>
-          <code className="text-xs font-medium text-foreground">
-            &quot;{exampleCommands[expert.id]}&quot;
-          </code>
-        </div>
       </div>
     </div>
   );
@@ -433,7 +381,7 @@ export default function AIExpertChatPage() {
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full border border-amber-500/20">
                   <Gem className="w-4 h-4 text-amber-500" />
                   <span className="text-sm font-semibold text-amber-600">
-                    {credits?.balance || 0} kredi
+                    {credits?.balance || 0} credits
                   </span>
                 </div>
               )}
@@ -454,7 +402,7 @@ export default function AIExpertChatPage() {
               )}>
                 <Icon className="w-14 h-14 text-white" />
               </div>
-              <h2 className="text-2xl font-bold mb-2">{expert.name} ile Sohbet</h2>
+              <h2 className="text-2xl font-bold mb-2">Chat with {expert.name}</h2>
               <p className="text-muted-foreground mb-8 max-w-md mx-auto">
                 {expert.description}
               </p>
@@ -463,17 +411,17 @@ export default function AIExpertChatPage() {
               <div className="flex items-center justify-center gap-3 mb-8">
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 rounded-full text-green-600 text-sm">
                   <BookOpen className="w-4 h-4" />
-                  Gerçek örneklerle
+                  With real examples
                 </div>
                 {isAdmin ? (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 rounded-full text-green-600 text-sm">
                     <Shield className="w-4 h-4" />
-                    Ücretsiz (Admin)
+                    Free (Admin)
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full text-amber-600 text-sm">
                     <Zap className="w-4 h-4" />
-                    3 kredi/mesaj
+                    3 credits/msg
                   </div>
                 )}
               </div>
@@ -481,9 +429,9 @@ export default function AIExpertChatPage() {
               {/* Example questions - 10 smart questions with scroll */}
               <div className="max-w-2xl mx-auto">
                 <div className="flex items-center justify-between mb-4">
-                  <p className="text-sm text-muted-foreground">10 Akıllı Soru:</p>
+                  <p className="text-sm text-muted-foreground">10 Smart Questions:</p>
                   <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                    Tıkla ve sor
+                    Click to ask
                   </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-2">
@@ -511,11 +459,11 @@ export default function AIExpertChatPage() {
                   <div className="flex items-center gap-2 text-sm">
                     <ExternalLink className="w-4 h-4 text-blue-500" />
                     <span className="text-muted-foreground">
-                      Bu bilgileri TradePath&apos;te{' '}
+                      Test this in TradePath{' '}
                       <Link href="/analyze" className="text-primary font-medium hover:underline">
                         Analyze → Step {expert.relatedStep}
                       </Link>
-                      {' '}altında gerçek verilerle test edebilirsin.
+                      {' '}to see real data.
                     </span>
                   </div>
                 </div>
@@ -584,14 +532,11 @@ export default function AIExpertChatPage() {
                       'text-[10px] text-muted-foreground',
                       message.role === 'user' ? 'text-right block' : ''
                     )}>
-                      {message.timestamp.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                      {message.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                     </span>
 
-                    {/* Answer Footer - only show if not waiting for approval */}
-                    {message.role === 'assistant' &&
-                     !message.content.includes('Onaylıyor musun?') &&
-                     !message.content.includes('ister misin?') &&
-                     !message.content.includes('İster misin?') && (
+                    {/* Answer Footer - show for all assistant messages */}
+                    {message.role === 'assistant' && (
                       <AnswerFooter expert={expert} />
                     )}
                   </div>
@@ -628,7 +573,7 @@ export default function AIExpertChatPage() {
                         <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                       </div>
                       <span className="text-sm text-muted-foreground">
-                        düşünüyor...
+                        thinking...
                       </span>
                     </div>
                   </div>
@@ -647,9 +592,9 @@ export default function AIExpertChatPage() {
           {!hasEnoughCredits && (
             <div className="flex items-center gap-2 mb-3 p-4 bg-destructive/10 text-destructive rounded-xl text-sm border border-destructive/20">
               <AlertCircle className="w-5 h-5" />
-              <span>Bu uzmanla sohbet için en az 3 kredi gerekiyor.</span>
+              <span>You need at least 3 credits to chat with this expert.</span>
               <Link href="/credits" className="underline font-semibold ml-auto">
-                Kredi Al
+                Buy Credits
               </Link>
             </div>
           )}
@@ -672,7 +617,7 @@ export default function AIExpertChatPage() {
                   handleSubmit(e);
                 }
               }}
-              placeholder={`${expert.name}'a sorunuzu yazın...`}
+              placeholder={`Ask ${expert.name} a question...`}
               className="flex-1 resize-none rounded-xl border bg-background px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[56px] max-h-[150px]"
               rows={1}
               disabled={!hasEnoughCredits || chatMutation.isPending}
@@ -692,7 +637,7 @@ export default function AIExpertChatPage() {
               ) : (
                 <>
                   <Send className="w-5 h-5" />
-                  <span className="hidden sm:inline">Gönder</span>
+                  <span className="hidden sm:inline">Send</span>
                 </>
               )}
             </button>
@@ -701,16 +646,16 @@ export default function AIExpertChatPage() {
             {isAdmin ? (
               <span className="flex items-center gap-1">
                 <Shield className="w-3 h-3 text-green-500" />
-                Ücretsiz (Admin)
+                Free (Admin)
               </span>
             ) : (
               <span className="flex items-center gap-1">
                 <Zap className="w-3 h-3 text-amber-500" />
-                3 kredi/mesaj
+                3 credits/msg
               </span>
             )}
             <span>•</span>
-            <span>Shift+Enter ile yeni satır</span>
+            <span>Shift+Enter for new line</span>
           </div>
         </div>
       </div>
