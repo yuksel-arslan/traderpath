@@ -209,13 +209,8 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Check if user is admin (free access)
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { isAdmin: true },
-      });
-
-      const isAdmin = user?.isAdmin === true;
+      // Check if user is admin (free access) - isAdmin is set by authenticate middleware
+      const isAdmin = (request as any).user?.isAdmin === true;
       const cost = isAdmin ? 0 : CREDIT_COSTS.AI_EXPERT_QUESTION; // 3 credits (free for admin)
 
       let chargeResult = { success: true, newBalance: 0 };
