@@ -107,7 +107,7 @@ export default function AIExpertsPage() {
   const isAdmin = user?.isAdmin === true;
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="w-full px-6 md:px-12 lg:px-16 py-8">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
@@ -140,42 +140,42 @@ export default function AIExpertsPage() {
       </div>
 
       {/* Expert Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
         {AI_EXPERTS.map((expert) => {
           const Icon = expert.icon;
           return (
             <Link
               key={expert.id}
               href={`/ai-expert/${expert.id}`}
-              className={`block bg-card border rounded-lg p-6 hover:shadow-lg hover:border-border/80 transition-all group`}
+              className={`block bg-card border rounded-xl p-6 lg:p-8 hover:shadow-lg hover:border-border/80 transition-all group`}
             >
-              <div className="flex items-start gap-4">
+              <div className="flex items-start gap-4 lg:gap-6">
                 {/* AI Avatar */}
-                <div className={`w-14 h-14 ${expert.bg} rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform`}>
-                  <Icon className={`w-7 h-7 ${expert.color}`} />
+                <div className={`w-16 h-16 lg:w-20 lg:h-20 ${expert.bg} rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform`}>
+                  <Icon className={`w-8 h-8 lg:w-10 lg:h-10 ${expert.color}`} />
                 </div>
 
                 <div className="flex-1 min-w-0">
                   {/* Name & Role */}
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-bold text-xl">{expert.name}</h3>
-                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    <h3 className="font-bold text-xl lg:text-2xl">{expert.name}</h3>
+                    <Sparkles className="w-4 h-4 lg:w-5 lg:h-5 text-amber-500" />
                   </div>
-                  <p className={`text-sm mb-2 ${expert.color} font-medium`}>
+                  <p className={`text-sm lg:text-base mb-2 lg:mb-3 ${expert.color} font-medium`}>
                     {expert.role}
                   </p>
 
                   {/* Description */}
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="text-sm lg:text-base text-muted-foreground mb-4 lg:mb-5">
                     {expert.description}
                   </p>
 
                   {/* Specialties */}
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="flex flex-wrap gap-2 lg:gap-3 mb-4 lg:mb-5">
                     {expert.specialty.map((spec) => (
                       <span
                         key={spec}
-                        className="text-xs px-2 py-1 bg-accent rounded-full text-muted-foreground"
+                        className="text-xs lg:text-sm px-2 lg:px-3 py-1 lg:py-1.5 bg-accent rounded-full text-muted-foreground"
                       >
                         {spec}
                       </span>
@@ -184,20 +184,20 @@ export default function AIExpertsPage() {
 
                   {/* Chat Button */}
                   <div className="flex items-center justify-between">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg font-semibold text-sm border border-slate-300 dark:border-slate-600 group-hover:shadow-md transition-shadow">
-                      <MessageCircle className="w-4 h-4 gradient-text-rg-animate" />
+                    <div className="inline-flex items-center gap-2 lg:gap-3 px-4 lg:px-5 py-2 lg:py-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg font-semibold text-sm lg:text-base border border-slate-300 dark:border-slate-600 group-hover:shadow-md transition-shadow">
+                      <MessageCircle className="w-4 h-4 lg:w-5 lg:h-5 gradient-text-rg-animate" />
                       <span className="gradient-text-rg-animate">Start Chat</span>
-                      <ChevronRight className="w-4 h-4 gradient-text-rg-animate group-hover:translate-x-1 transition-transform" />
+                      <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 gradient-text-rg-animate group-hover:translate-x-1 transition-transform" />
                     </div>
                     {isAdmin ? (
                       <div className="flex items-center gap-1.5 text-green-500">
-                        <Shield className="w-4 h-4" />
-                        <span className="text-sm font-bold">Free</span>
+                        <Shield className="w-4 h-4 lg:w-5 lg:h-5" />
+                        <span className="text-sm lg:text-base font-bold">Free</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5 text-amber-500">
-                        <Zap className="w-4 h-4" />
-                        <span className="text-sm font-bold">{expert.creditCost} credits</span>
+                        <Zap className="w-4 h-4 lg:w-5 lg:h-5" />
+                        <span className="text-sm lg:text-base font-bold">{expert.creditCost} credits</span>
                       </div>
                     )}
                   </div>
@@ -209,8 +209,8 @@ export default function AIExpertsPage() {
       </div>
 
       {/* Bottom Info */}
-      <div className="mt-8 max-w-5xl">
-        <div className="bg-card border rounded-lg p-4">
+      <div className="mt-8 lg:mt-10">
+        <div className="bg-card border rounded-lg p-4 lg:p-5">
           <div className="flex items-center gap-2 text-sm">
             <Sparkles className="w-4 h-4 text-amber-500" />
             {isAdmin ? (
