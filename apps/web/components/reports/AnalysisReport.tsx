@@ -15,7 +15,6 @@ import {
   pdf,
 } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
-import html2canvas from 'html2canvas';
 
 // TradePath brand colors
 const BRAND = {
@@ -728,7 +727,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
   );
 };
 
-// Capture chart element as image
+// Capture chart element as image (dynamic import for browser-only)
 export async function captureChartAsImage(elementId: string = 'trade-plan-chart'): Promise<string | null> {
   try {
     const element = document.getElementById(elementId);
@@ -736,6 +735,9 @@ export async function captureChartAsImage(elementId: string = 'trade-plan-chart'
       console.warn('Chart element not found:', elementId);
       return null;
     }
+
+    // Dynamic import to avoid SSR issues
+    const html2canvas = (await import('html2canvas')).default;
 
     const canvas = await html2canvas(element, {
       backgroundColor: '#ffffff',
