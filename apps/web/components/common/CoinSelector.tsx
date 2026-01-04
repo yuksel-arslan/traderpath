@@ -255,15 +255,15 @@ export function CoinSelector() {
       <button
         onClick={handleAnalyze}
         disabled={!selectedCoin}
-        className="w-full py-3.5 px-4 bg-gradient-to-r from-red-500 via-amber-500 to-green-500 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:scale-[1.02] transition-all shadow-lg shadow-green-500/25"
+        className="w-full py-3.5 px-4 bg-slate-200 dark:bg-slate-700 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:scale-[1.02] transition-all border border-slate-300 dark:border-slate-600"
       >
         {selectedCoin ? (
-          <span className="flex items-center justify-center gap-2">
+          <span className="flex items-center justify-center gap-2 gradient-text-rg-animate">
             <TrendingUp className="w-5 h-5" />
             Start {selectedCoin.symbol} Analysis
           </span>
         ) : (
-          'Select a coin to analyze'
+          <span className="text-slate-500 dark:text-slate-400 font-medium">Select a coin to analyze</span>
         )}
       </button>
     </div>
