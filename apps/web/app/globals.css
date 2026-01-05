@@ -159,50 +159,40 @@
     background-image: linear-gradient(90deg, #ef4444, #22c55e);
   }
 
-  /* Animated Gradient Text - Red to Green (Ultra Smooth) */
+  /* Animated Gradient Text - Red to Green with Breathing Effect */
   .gradient-text-rg-animate {
     background: linear-gradient(
       90deg,
       #ef4444 0%,
-      #f87171 10%,
-      #fca5a5 20%,
-      #fcd34d 30%,
-      #a3e635 40%,
-      #4ade80 50%,
-      #22c55e 60%,
-      #4ade80 70%,
-      #a3e635 80%,
-      #fcd34d 90%,
-      #fca5a5 95%,
-      #ef4444 100%
+      #dc2626 15%,
+      #b91c1c 30%,
+      #059669 50%,
+      #10b981 70%,
+      #22c55e 85%,
+      #4ade80 100%
     );
     background-size: 200% 100%;
-    animation: gradient-shift-smooth 16s linear infinite;
+    animation: gradient-breathe 6s ease-in-out infinite;
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     font-weight: 700;
   }
 
-  /* Animated Gradient Icon - Red to Green (Ultra Smooth) */
+  /* Animated Gradient Icon - Red to Green with Breathing Effect */
   .gradient-icon-rg-animate {
     background: linear-gradient(
       90deg,
       #ef4444 0%,
-      #f87171 10%,
-      #fca5a5 20%,
-      #fcd34d 30%,
-      #a3e635 40%,
-      #4ade80 50%,
-      #22c55e 60%,
-      #4ade80 70%,
-      #a3e635 80%,
-      #fcd34d 90%,
-      #fca5a5 95%,
-      #ef4444 100%
+      #dc2626 15%,
+      #b91c1c 30%,
+      #059669 50%,
+      #10b981 70%,
+      #22c55e 85%,
+      #4ade80 100%
     );
     background-size: 200% 100%;
-    animation: gradient-shift-smooth 16s linear infinite;
+    animation: gradient-breathe 6s ease-in-out infinite;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -212,25 +202,20 @@
     stroke: url(#gradient-rg) !important;
   }
 
-  /* Animated Gradient Text - Green to Red (Reverse, Ultra Smooth) */
+  /* Animated Gradient Text - Green to Red with Breathing Effect */
   .gradient-text-gr-animate {
     background: linear-gradient(
       90deg,
-      #22c55e 0%,
-      #4ade80 10%,
-      #a3e635 20%,
-      #fcd34d 30%,
-      #fca5a5 40%,
-      #f87171 50%,
-      #ef4444 60%,
-      #f87171 70%,
-      #fca5a5 80%,
-      #fcd34d 90%,
-      #a3e635 95%,
-      #22c55e 100%
+      #4ade80 0%,
+      #22c55e 15%,
+      #10b981 30%,
+      #059669 50%,
+      #b91c1c 70%,
+      #dc2626 85%,
+      #ef4444 100%
     );
     background-size: 200% 100%;
-    animation: gradient-shift-smooth 16s linear infinite;
+    animation: gradient-breathe-reverse 6s ease-in-out infinite;
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -417,6 +402,46 @@
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
+}
+
+/* Breathing/heartbeat gradient animation - Red to Green */
+@keyframes gradient-breathe {
+  0%, 100% {
+    background-position: 0% 50%;
+    filter: brightness(1);
+  }
+  25% {
+    background-position: 25% 50%;
+    filter: brightness(1.05);
+  }
+  50% {
+    background-position: 50% 50%;
+    filter: brightness(1.1);
+  }
+  75% {
+    background-position: 75% 50%;
+    filter: brightness(1.05);
+  }
+}
+
+/* Breathing/heartbeat gradient animation - Green to Red (reverse timing) */
+@keyframes gradient-breathe-reverse {
+  0%, 100% {
+    background-position: 100% 50%;
+    filter: brightness(1);
+  }
+  25% {
+    background-position: 75% 50%;
+    filter: brightness(1.05);
+  }
+  50% {
+    background-position: 50% 50%;
+    filter: brightness(1.1);
+  }
+  75% {
+    background-position: 25% 50%;
+    filter: brightness(1.05);
+  }
 }
 
 @keyframes pulse-glow {
