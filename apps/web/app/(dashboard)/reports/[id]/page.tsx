@@ -183,7 +183,7 @@ export default function ReportViewPage() {
         </Link>
 
         {/* Main Card */}
-        <div className="bg-slate-800/80 rounded-2xl p-6 shadow-xl">
+        <div className="bg-white dark:bg-slate-800/80 rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-transparent">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -191,124 +191,124 @@ export default function ReportViewPage() {
                 {report.symbol.charAt(0)}
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">{report.symbol}/USDT Analysis</h1>
-                <p className="text-sm text-slate-400">{report.generatedAt}</p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">{report.symbol}/USDT Analysis</h1>
+                <p className="text-sm text-gray-500 dark:text-slate-400">{report.generatedAt}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <div className={cn(
                 "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold",
-                isBullish ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+                isBullish ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400" : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
               )}>
                 {isBullish ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                 {isBullish ? 'BULLISH' : 'BEARISH'}
               </div>
-              <div className="text-2xl font-bold text-white">{score}/100</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">{score}/100</div>
             </div>
           </div>
 
           {/* 6 Info Cards - 2x3 Grid (All analysis steps) */}
           <div className="grid grid-cols-2 gap-4 mb-6">
             {/* 1. Market Pulse */}
-            <div className="bg-slate-700/50 rounded-xl p-4">
+            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-emerald-400" />
-                  <span className="font-medium text-white">Market Pulse</span>
+                  <Globe className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  <span className="font-medium text-gray-900 dark:text-white">Market Pulse</span>
                 </div>
                 <span className={cn(
                   "text-sm font-semibold",
-                  marketStatus === 'Bullish' ? 'text-green-400' : marketStatus === 'Bearish' ? 'text-red-400' : 'text-yellow-400'
+                  marketStatus === 'Bullish' ? 'text-green-600 dark:text-green-400' : marketStatus === 'Bearish' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{marketStatus}</span>
               </div>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-gray-500 dark:text-slate-400">
                 Fear & Greed: {report.marketPulse.fearGreedIndex} ({report.marketPulse.fearGreedLabel}) • BTC Dominance: {report.marketPulse.btcDominance?.toFixed(1)}%
               </p>
             </div>
 
             {/* 2. Asset Scan */}
-            <div className="bg-slate-700/50 rounded-xl p-4">
+            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Search className="w-4 h-4 text-purple-400" />
-                  <span className="font-medium text-white">Asset Scan</span>
+                  <Search className="w-4 h-4 text-purple-500 dark:text-purple-400" />
+                  <span className="font-medium text-gray-900 dark:text-white">Asset Scan</span>
                 </div>
                 <span className={cn(
                   "text-sm font-semibold",
-                  assetStatus === 'Strong' ? 'text-green-400' :
-                  assetStatus === 'Stable' ? 'text-blue-400' :
-                  assetStatus === 'Weak' ? 'text-yellow-400' : 'text-red-400'
+                  assetStatus === 'Strong' ? 'text-green-600 dark:text-green-400' :
+                  assetStatus === 'Stable' ? 'text-blue-600 dark:text-blue-400' :
+                  assetStatus === 'Weak' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
                 )}>{assetStatus}</span>
               </div>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-gray-500 dark:text-slate-400">
                 Price: {formatPrice(report.assetScan.currentPrice)} • 24h: {report.assetScan.priceChange24h >= 0 ? '+' : ''}{report.assetScan.priceChange24h?.toFixed(2)}%
               </p>
             </div>
 
             {/* 3. Safety Check */}
-            <div className="bg-slate-700/50 rounded-xl p-4">
+            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-amber-400" />
-                  <span className="font-medium text-white">Safety Check</span>
+                  <Shield className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                  <span className="font-medium text-gray-900 dark:text-white">Safety Check</span>
                 </div>
                 <span className={cn(
                   "text-sm font-semibold",
-                  safetyStatus === 'Safe' ? 'text-green-400' : safetyStatus === 'Risky' ? 'text-red-400' : 'text-yellow-400'
+                  safetyStatus === 'Safe' ? 'text-green-600 dark:text-green-400' : safetyStatus === 'Risky' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{safetyStatus}</span>
               </div>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-gray-500 dark:text-slate-400">
                 {report.safetyCheck.manipulation?.pumpDumpRisk === 'low' ? 'No manipulation detected' : 'Manipulation risk detected'} • Whale activity: {report.safetyCheck.whaleActivity?.bias || 'neutral'}
               </p>
             </div>
 
             {/* 4. Timing Analysis */}
-            <div className="bg-slate-700/50 rounded-xl p-4">
+            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-blue-400" />
-                  <span className="font-medium text-white">Timing Analysis</span>
+                  <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                  <span className="font-medium text-gray-900 dark:text-white">Timing Analysis</span>
                 </div>
                 <span className={cn(
                   "text-sm font-semibold",
-                  timingStatus === 'Good' ? 'text-green-400' : 'text-yellow-400'
+                  timingStatus === 'Good' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{timingStatus}</span>
               </div>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-gray-500 dark:text-slate-400">
                 RSI: {report.assetScan.indicators?.rsi?.toFixed(0) || 'N/A'} • MACD: {macdDesc}
               </p>
             </div>
 
             {/* 5. Trade Plan */}
-            <div className="bg-slate-700/50 rounded-xl p-4">
+            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Target className="w-4 h-4 text-cyan-400" />
-                  <span className="font-medium text-white">Trade Plan</span>
+                  <Target className="w-4 h-4 text-cyan-500 dark:text-cyan-400" />
+                  <span className="font-medium text-gray-900 dark:text-white">Trade Plan</span>
                 </div>
                 <span className={cn(
                   "text-sm font-semibold",
-                  planStatus === 'Ready' ? 'text-green-400' : 'text-yellow-400'
+                  planStatus === 'Ready' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{planStatus}</span>
               </div>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-gray-500 dark:text-slate-400">
                 Entry: {formatPrice(report.tradePlan.averageEntry)} • TP: {formatPrice(report.tradePlan.takeProfits?.[0]?.price)} • SL: {formatPrice(report.tradePlan.stopLoss?.price)}
               </p>
             </div>
 
             {/* 6. Trap Check */}
-            <div className="bg-slate-700/50 rounded-xl p-4">
+            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Crosshair className="w-4 h-4 text-red-400" />
-                  <span className="font-medium text-white">Trap Check</span>
+                  <Crosshair className="w-4 h-4 text-red-500 dark:text-red-400" />
+                  <span className="font-medium text-gray-900 dark:text-white">Trap Check</span>
                 </div>
                 <span className={cn(
                   "text-sm font-semibold",
-                  trapStatus === 'Clear' ? 'text-green-400' : trapStatus === 'Warning' ? 'text-red-400' : 'text-yellow-400'
+                  trapStatus === 'Clear' ? 'text-green-600 dark:text-green-400' : trapStatus === 'Warning' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{trapStatus}</span>
               </div>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-gray-500 dark:text-slate-400">
                 Bull trap: {report.trapCheck?.traps?.bullTrap ? 'Yes' : 'No'} • Bear trap: {report.trapCheck?.traps?.bearTrap ? 'Yes' : 'No'} • Fakeout: {report.trapCheck?.traps?.fakeoutRisk || 'low'}
               </p>
             </div>
@@ -317,15 +317,15 @@ export default function ReportViewPage() {
           {/* 7. Final Verdict */}
           <div className={cn(
             "rounded-xl p-4 mb-6",
-            isLong ? "bg-green-500/20" : "bg-red-500/20"
+            isLong ? "bg-green-50 dark:bg-green-500/20" : "bg-red-50 dark:bg-red-500/20"
           )}>
             <div className="flex items-center gap-2 mb-2">
-              <CheckCircle className={cn("w-5 h-5", isLong ? "text-green-400" : "text-red-400")} />
-              <span className={cn("font-semibold", isLong ? "text-green-400" : "text-red-400")}>
+              <CheckCircle className={cn("w-5 h-5", isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")} />
+              <span className={cn("font-semibold", isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
                 Final Verdict: {report.tradePlan.direction?.toUpperCase()} Recommended
               </span>
             </div>
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-gray-600 dark:text-slate-300">
               {report.verdict.aiSummary || `Market conditions favor ${isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(report.tradePlan.averageEntry)} with ${report.tradePlan.riskReward?.toFixed(1)}:1 risk-reward ratio. Set stop-loss at ${formatPrice(report.tradePlan.stopLoss?.price)} to protect against downside.`}
             </p>
           </div>
