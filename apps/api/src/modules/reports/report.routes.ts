@@ -116,7 +116,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
   );
 
   // ===========================================
-  // GET /api/reports - List user's reports
+  // GET /api/reports - List user's reports with live tracking data
   // ===========================================
   fastify.get(
     '/api/reports',
@@ -154,10 +154,73 @@ export async function reportRoutes(fastify: FastifyInstance) {
             generatedAt: true,
             expiresAt: true,
             downloadCount: true,
+            outcome: true,
+            entryPrice: true,
+            reportData: true,
           },
           orderBy: { generatedAt: 'desc' },
           take: Math.min(parseInt(limit), 50),
           skip: parseInt(offset),
+        });
+
+        // Fetch current prices for all symbols
+        const symbols = [...new Set(reports.map(r => r.symbol))];
+        const prices: Record<string, number> = {};
+
+        if (symbols.length > 0) {
+          try {
+            const pairs = symbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
+            const priceResponse = await fetch(
+              `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
+            );
+            if (priceResponse.ok) {
+              const priceData = await priceResponse.json();
+              for (const item of priceData) {
+                const symbol = item.symbol.replace('USDT', '');
+                prices[symbol] = parseFloat(item.price);
+              }
+            }
+          } catch (err) {
+            fastify.log.error('Failed to fetch prices:', err);
+          }
+        }
+
+        // Enrich reports with live tracking data
+        const enrichedReports = reports.map(report => {
+          const reportData = report.reportData as Record<string, unknown> | null;
+          const tradePlan = reportData?.tradePlan as Record<string, unknown> | undefined;
+
+          const entryPrice = Number(tradePlan?.averageEntry || report.entryPrice) || undefined;
+          const currentPrice = prices[report.symbol] || undefined;
+          const stopLoss = (tradePlan?.stopLoss as { price: number } | undefined)?.price;
+          const takeProfits = tradePlan?.takeProfits as Array<{ price: number }> | undefined;
+
+          // Calculate unrealized P/L
+          let unrealizedPnL: number | undefined;
+          if (entryPrice && currentPrice) {
+            const pnlPercent = ((currentPrice - entryPrice) / entryPrice) * 100;
+            const direction = (tradePlan?.direction as string || report.direction || 'long').toLowerCase();
+            unrealizedPnL = direction === 'short' ? -pnlPercent : pnlPercent;
+          }
+
+          return {
+            id: report.id,
+            symbol: report.symbol,
+            verdict: report.verdict,
+            score: report.score,
+            direction: report.direction,
+            generatedAt: report.generatedAt,
+            expiresAt: report.expiresAt,
+            downloadCount: report.downloadCount,
+            outcome: report.outcome,
+            entryPrice,
+            currentPrice,
+            unrealizedPnL,
+            stopLoss,
+            takeProfit1: takeProfits?.[0]?.price,
+            takeProfit2: takeProfits?.[1]?.price,
+            takeProfit3: takeProfits?.[2]?.price,
+          };
         });
 
         const total = await prisma.report.count({ where: whereClause });
@@ -165,7 +228,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
         return reply.send({
           success: true,
           data: {
-            reports,
+            reports: enrichedReports,
             pagination: {
               total,
               limit: parseInt(limit),
