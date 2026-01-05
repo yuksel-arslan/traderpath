@@ -684,13 +684,57 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         finalVerdict: calcAvg(stepScores.finalVerdict) * 10
       };
 
-      // Overall platform accuracy based on average report scores
-      const platformAccuracy = allScores.length > 0
-        ? Number((allScores.reduce((a, b) => a + b, 0) / allScores.length * 10).toFixed(1))
-        : 0;
+      // Get real accuracy from outcome calculations (if available)
+      const reportsWithOutcomes = await db.report.findMany({
+        where: { outcome: { not: null } },
+        select: { outcome: true, stepOutcomes: true }
+      });
+
+      let realAccuracy = 0;
+      let realSampleSize = 0;
+      const realStepAccuracy: Record<string, { correct: number; total: number }> = {};
+
+      if (reportsWithOutcomes.length > 0) {
+        let correct = 0;
+        reportsWithOutcomes.forEach(r => {
+          if (r.outcome === 'correct') correct++;
+
+          // Aggregate step-level accuracy
+          const stepOutcomes = r.stepOutcomes as Record<string, { correct: boolean }> | null;
+          if (stepOutcomes) {
+            Object.entries(stepOutcomes).forEach(([step, data]) => {
+              if (!realStepAccuracy[step]) {
+                realStepAccuracy[step] = { correct: 0, total: 0 };
+              }
+              realStepAccuracy[step].total++;
+              if (data.correct) realStepAccuracy[step].correct++;
+            });
+          }
+        });
+        realAccuracy = Number(((correct / reportsWithOutcomes.length) * 100).toFixed(1));
+        realSampleSize = reportsWithOutcomes.length;
+      }
+
+      // Overall platform accuracy - prefer real outcome data, fallback to score-based
+      const platformAccuracy = realSampleSize > 0
+        ? realAccuracy
+        : (allScores.length > 0
+          ? Number((allScores.reduce((a, b) => a + b, 0) / allScores.length * 10).toFixed(1))
+          : 0);
 
       // Average confidence is the average report score
       const avgConfidence = calcAvg(allScores);
+
+      // Calculate step accuracy from real outcomes if available
+      if (realSampleSize > 0) {
+        Object.entries(realStepAccuracy).forEach(([step, data]) => {
+          const mappedStep = step === 'assetScanner' ? 'assetScanner' : step;
+          if (stepAccuracyRates[mappedStep as keyof typeof stepAccuracyRates] !== undefined) {
+            stepAccuracyRates[mappedStep as keyof typeof stepAccuracyRates] =
+              data.total > 0 ? Number(((data.correct / data.total) * 100).toFixed(1)) : 0;
+          }
+        });
+      }
 
       // Get platform creation date from first user
       const firstUser = await db.user.findFirst({
@@ -721,8 +765,9 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
             avgConfidence,
             stepRates: stepAccuracyRates,
             lastUpdated: new Date().toISOString(),
-            methodology: 'real-data',
-            sampleSize
+            methodology: realSampleSize > 0 ? 'outcome-verified' : 'score-based',
+            sampleSize: realSampleSize > 0 ? realSampleSize : sampleSize,
+            outcomeVerifiedCount: realSampleSize
           },
           verdicts: verdictDistribution,
           dataQuality: {
@@ -923,8 +968,25 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
           };
         });
 
-      // Recent outcomes from real reports
-      const recentOutcomes = userReports.slice(0, 5).map(report => {
+      // Get reports with expiration info for outcomes
+      const reportsWithExpiration = await db.report.findMany({
+        where: { userId },
+        select: {
+          symbol: true,
+          verdict: true,
+          score: true,
+          generatedAt: true,
+          expiresAt: true,
+          outcome: true,
+          outcomePriceChange: true
+        },
+        orderBy: { generatedAt: 'desc' },
+        take: 5
+      });
+
+      // Recent outcomes from real reports with expiration info
+      const now = new Date();
+      const recentOutcomes = reportsWithExpiration.map(report => {
         // Map verdict to standard format
         const verdictLower = report.verdict.toLowerCase();
         let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
@@ -933,17 +995,32 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         else if (verdictLower === 'avoid') verdict = 'avoid';
         else if (verdictLower === 'wait') verdict = 'wait';
 
-        // Determine outcome based on score
-        // Score >= 7 = high confidence (correct), 5-7 = moderate (pending), < 5 = low (needs review)
-        const score = Number(report.score);
-        let outcome: 'correct' | 'incorrect' | 'pending' = 'pending';
-        if (score >= 7) outcome = 'correct';
-        else if (score < 5) outcome = 'incorrect';
+        // Calculate expiration status
+        const expiresAt = new Date(report.expiresAt);
+        const isExpired = expiresAt < now;
+        const hoursRemaining = isExpired ? 0 : Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60));
 
-        // Price change is calculated from the score (as we don't track actual price movements)
-        // Higher score correlates with expected positive movement for GO signals
-        const expectedDirection = verdict === 'go' || verdict === 'conditional_go' ? 1 : -1;
-        const priceChange = (score - 5) * 2 * expectedDirection;
+        // Use real outcome if available, otherwise determine from score
+        let outcome: 'correct' | 'incorrect' | 'pending' = 'pending';
+        let priceChange = 0;
+
+        if (report.outcome) {
+          // Real outcome exists
+          outcome = report.outcome as 'correct' | 'incorrect' | 'pending';
+          priceChange = report.outcomePriceChange ? Number(report.outcomePriceChange) : 0;
+        } else if (isExpired) {
+          // Expired but no outcome calculated yet - will be calculated soon
+          outcome = 'pending';
+          const score = Number(report.score);
+          const expectedDirection = verdict === 'go' || verdict === 'conditional_go' ? 1 : -1;
+          priceChange = (score - 5) * 2 * expectedDirection;
+        } else {
+          // Still valid - outcome pending
+          outcome = 'pending';
+          const score = Number(report.score);
+          const expectedDirection = verdict === 'go' || verdict === 'conditional_go' ? 1 : -1;
+          priceChange = (score - 5) * 2 * expectedDirection;
+        }
 
         return {
           symbol: report.symbol,
@@ -951,6 +1028,9 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
           outcome,
           priceChange: Number(priceChange.toFixed(2)),
           date: new Date(report.generatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          expiresAt: report.expiresAt.toISOString(),
+          isExpired,
+          hoursRemaining
         };
       });
 

@@ -62,8 +62,9 @@ interface PlatformStats {
       finalVerdict: number;
     };
     lastUpdated: string;
-    methodology: string;
+    methodology: 'outcome-verified' | 'score-based' | string;
     sampleSize?: number; // Number of analyses used for accuracy calculation
+    outcomeVerifiedCount?: number; // Number of analyses with verified outcomes
   };
   verdicts: {
     go: number;
@@ -98,6 +99,9 @@ interface RecentOutcome {
   outcome: 'correct' | 'incorrect' | 'pending';
   priceChange?: number;
   createdAt: string;
+  expiresAt?: string;
+  isExpired?: boolean;
+  hoursRemaining?: number;
 }
 
 // ===========================================
@@ -344,6 +348,9 @@ export default function DashboardPage() {
           outcome: o.outcome,
           priceChange: o.priceChange,
           createdAt: o.date,
+          expiresAt: o.expiresAt,
+          isExpired: o.isExpired,
+          hoursRemaining: o.hoursRemaining,
         }));
         setRecentOutcomes(outcomes);
       }
@@ -408,6 +415,20 @@ export default function DashboardPage() {
                   <>Our 7-Step analysis system generates predictions using real market data. Start analyzing to see accuracy metrics.</>
                 )}
               </p>
+              {platformStats?.accuracy.methodology && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className={cn(
+                    "px-2 py-0.5 rounded-full text-xs font-medium",
+                    platformStats.accuracy.methodology === 'outcome-verified'
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                  )}>
+                    {platformStats.accuracy.methodology === 'outcome-verified'
+                      ? `Outcome Verified (${platformStats.accuracy.outcomeVerifiedCount ?? 0} analyses)`
+                      : 'Score Based Analysis'}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-4 mt-3">
                 <div className="flex items-center gap-1.5 text-sm">
                   <Database className="w-4 h-4 text-blue-400" />
@@ -727,7 +748,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">Live Accuracy Tracking</h2>
-              <p className="text-sm text-slate-400">Predictions vs actual outcomes</p>
+              <p className="text-sm text-slate-400">Predictions vs actual outcomes - verified after validity period expires</p>
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-4 text-sm">
@@ -751,7 +772,12 @@ export default function DashboardPage() {
             {recentOutcomes.map((outcome) => (
               <div
                 key={outcome.id}
-                className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/30 hover:border-slate-600/50 transition"
+                className={cn(
+                  "bg-slate-900/50 rounded-xl p-4 border hover:border-slate-600/50 transition",
+                  outcome.isExpired
+                    ? "border-orange-500/30"
+                    : "border-slate-700/30"
+                )}
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -770,6 +796,23 @@ export default function DashboardPage() {
                       <div className="text-xs text-slate-500">{outcome.createdAt}</div>
                     </div>
                   </div>
+                  {/* Validity indicator */}
+                  {outcome.hoursRemaining !== undefined && (
+                    <div className={cn(
+                      "px-1.5 py-0.5 rounded text-[10px] font-medium",
+                      outcome.isExpired
+                        ? "bg-orange-500/20 text-orange-400"
+                        : outcome.hoursRemaining <= 4
+                          ? "bg-yellow-500/20 text-yellow-400"
+                          : "bg-emerald-500/20 text-emerald-400"
+                    )}>
+                      {outcome.isExpired
+                        ? "Expired"
+                        : outcome.hoursRemaining <= 0
+                          ? "< 1h"
+                          : `${outcome.hoursRemaining}h`}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between">
