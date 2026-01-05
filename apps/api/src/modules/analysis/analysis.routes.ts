@@ -678,9 +678,12 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         finalVerdict: calcAvg(stepScores.finalVerdict) * 10
       };
 
-      // Get real accuracy from outcome calculations (if available)
+      // Get real accuracy from CLOSED trades only (correct or incorrect, not neutral)
+      // Accuracy = TP hits / (TP hits + SL hits) * 100
       const reportsWithOutcomes = await db.report.findMany({
-        where: { outcome: { not: null } },
+        where: {
+          outcome: { in: ['correct', 'incorrect'] } // Only closed trades
+        },
         select: { outcome: true, stepOutcomes: true }
       });
 
@@ -689,11 +692,17 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
       const realStepAccuracy: Record<string, { correct: number; total: number }> = {};
 
       if (reportsWithOutcomes.length > 0) {
-        let correct = 0;
-        reportsWithOutcomes.forEach(r => {
-          if (r.outcome === 'correct') correct++;
+        // Count correct predictions (TP hit)
+        const correctCount = reportsWithOutcomes.filter(r => r.outcome === 'correct').length;
+        // Total closed trades (TP hit + SL hit)
+        const closedCount = reportsWithOutcomes.length;
 
-          // Aggregate step-level accuracy
+        // Accuracy = correct / closed * 100
+        realAccuracy = Number(((correctCount / closedCount) * 100).toFixed(1));
+        realSampleSize = closedCount;
+
+        // Aggregate step-level accuracy
+        reportsWithOutcomes.forEach(r => {
           const stepOutcomes = r.stepOutcomes as Record<string, { correct: boolean }> | null;
           if (stepOutcomes) {
             Object.entries(stepOutcomes).forEach(([step, data]) => {
@@ -705,8 +714,6 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
             });
           }
         });
-        realAccuracy = Number(((correct / reportsWithOutcomes.length) * 100).toFixed(1));
-        realSampleSize = reportsWithOutcomes.length;
       }
 
       // Overall platform accuracy - prefer real outcome data, fallback to score-based
@@ -833,29 +840,30 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1))
         : 0;
 
-      // Get reports with verified outcomes for REAL accuracy calculation
-      const reportsWithOutcomes = await db.report.findMany({
+      // Get CLOSED trades only (correct or incorrect, not neutral/pending)
+      // Accuracy = TP hits / (TP hits + SL hits) * 100
+      const closedTrades = await db.report.findMany({
         where: {
           userId,
-          outcome: { not: null }
+          outcome: { in: ['correct', 'incorrect'] } // Only closed trades
         },
         select: {
           outcome: true
         }
       });
 
-      // Calculate REAL accuracy from verified outcomes (TP/SL hit detection)
-      const verifiedCount = reportsWithOutcomes.length;
-      const correctCount = reportsWithOutcomes.filter(r => r.outcome === 'correct').length;
+      // Calculate REAL accuracy from closed trades
+      const closedCount = closedTrades.length;
+      const correctCount = closedTrades.filter(r => r.outcome === 'correct').length;
 
-      // Accuracy = correct predictions / total verified predictions * 100
-      // If no verified outcomes yet, show 0 (not fake 100%)
-      const accuracy = verifiedCount > 0
-        ? Number(((correctCount / verifiedCount) * 100).toFixed(1))
+      // Accuracy = correct / closed * 100
+      // If no closed trades yet, show 0
+      const accuracy = closedCount > 0
+        ? Number(((correctCount / closedCount) * 100).toFixed(1))
         : 0;
 
-      // Count pending analyses (not yet verified)
-      const pendingCount = totalAnalyses - verifiedCount;
+      // Count pending analyses (total - closed)
+      const pendingCount = totalAnalyses - closedCount;
 
       // Get last analysis date
       const lastReport = userReports[0];
@@ -871,10 +879,10 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
       return reply.send({
         totalAnalyses,
         completedAnalyses: totalAnalyses,
-        verifiedAnalyses: verifiedCount,
+        verifiedAnalyses: closedCount, // Only closed trades (TP or SL hit)
         correctAnalyses: correctCount,
         pendingAnalyses: pendingCount,
-        accuracy, // Real accuracy from verified outcomes
+        accuracy, // Real accuracy = correct / closed * 100
         avgScore,
         goSignals,
         avoidSignals,
