@@ -39,14 +39,6 @@ const ALL_COINS = [
   { symbol: 'RNDR', name: 'Render Token', icon: '🎨', popular: false },
 ];
 
-// Timeframe options
-const TIMEFRAMES = [
-  { value: '15m', label: '15 Min', description: 'Scalping' },
-  { value: '1h', label: '1 Hour', description: 'Intraday' },
-  { value: '4h', label: '4 Hour', description: 'Swing', default: true },
-  { value: '1d', label: 'Daily', description: 'Position' },
-];
-
 const POPULAR_COINS = ALL_COINS.filter(c => c.popular);
 
 export function CoinSelector() {
@@ -54,7 +46,6 @@ export function CoinSelector() {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedCoin, setSelectedCoin] = useState<typeof ALL_COINS[0] | null>(null);
-  const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES.find(t => t.default)?.value || '4h');
   const [recentCoins, setRecentCoins] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -105,7 +96,7 @@ export function CoinSelector() {
 
   const handleAnalyze = () => {
     if (selectedCoin) {
-      router.push(`/analyze/${selectedCoin.symbol}?interval=${selectedTimeframe}`);
+      router.push(`/analyze/${selectedCoin.symbol}`);
     }
   };
 
@@ -254,28 +245,6 @@ export function CoinSelector() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Timeframe Selector */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Timeframe</label>
-        <div className="grid grid-cols-4 gap-2">
-          {TIMEFRAMES.map((tf) => (
-            <button
-              key={tf.value}
-              onClick={() => setSelectedTimeframe(tf.value)}
-              className={cn(
-                "flex flex-col items-center py-2 px-3 rounded-lg border transition-all",
-                selectedTimeframe === tf.value
-                  ? "bg-primary/10 border-primary text-primary"
-                  : "bg-background border-border hover:border-primary/50"
-              )}
-            >
-              <span className="font-semibold text-sm">{tf.label}</span>
-              <span className="text-xs text-muted-foreground">{tf.description}</span>
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Analyze Button */}
