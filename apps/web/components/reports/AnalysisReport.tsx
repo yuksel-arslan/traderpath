@@ -545,7 +545,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
 
         {/* Two Column Layout for Steps 1-6 */}
         <View style={styles.twoColumnRow}>
-          {/* Left Column: Steps 1-3 */}
+          {/* Left Column: Steps 1, 2, 3 */}
           <View style={styles.column}>
             {/* Step 1 */}
             <View style={[styles.stepCard, { borderLeftColor: getBorderColor(marketStatus) }]}>
@@ -594,7 +594,10 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
               </View>
               <Text style={styles.stepDescription}>Whale movements, manipulation detection, smart money analysis.</Text>
             </View>
+          </View>
 
+          {/* Right Column: Steps 4, 5, 6 */}
+          <View style={styles.column}>
             {/* Step 4 */}
             <View style={[styles.stepCard, { borderLeftColor: getBorderColor(timingStatus) }]}>
               <View style={styles.stepHeader}>
@@ -609,10 +612,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
               </View>
               <Text style={styles.stepDescription}>Optimal entry timing via momentum and volatility cycles.</Text>
             </View>
-          </View>
 
-          {/* Right Column: Steps 5-6 + Levels */}
-          <View style={styles.column}>
             {/* Step 5 */}
             <View style={[styles.stepCard, { borderLeftColor: getBorderColor(planStatus) }]}>
               <View style={styles.stepHeader}>

@@ -26,9 +26,20 @@ import {
   ChevronDown,
   Play
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TradePathLogo } from '../../components/common/TradePathLogo';
+import { CREDIT_PACKAGES } from '../../lib/pricing-config';
+
+// Coins to display in the ticker
+const TICKER_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX'];
+
+interface LivePrice {
+  symbol: string;
+  price: string;
+  change: string;
+  up: boolean;
+}
 
 const FEATURES = [
   {
@@ -89,27 +100,6 @@ const TESTIMONIALS = [
   },
 ];
 
-const PRICING = [
-  {
-    name: 'Starter',
-    credits: 25,
-    price: 14.99,
-    features: ['25 analysis credits', 'All 7 analysis steps', 'PDF reports', 'Email support'],
-  },
-  {
-    name: 'Popular',
-    credits: 60,
-    price: 29.99,
-    popular: true,
-    features: ['60 + 5 bonus credits', 'All 7 analysis steps', 'Priority analysis queue', 'Priority support'],
-  },
-  {
-    name: 'Pro',
-    credits: 150,
-    price: 59.99,
-    features: ['150 + 20 bonus credits', 'All 7 analysis steps', 'AI chat support', 'API access'],
-  },
-];
 
 const FAQS = [
   {
@@ -138,14 +128,6 @@ const FAQS = [
   },
 ];
 
-const LIVE_PRICES = [
-  { symbol: 'BTC', price: '67,234', change: '+2.4%', up: true },
-  { symbol: 'ETH', price: '3,521', change: '+1.8%', up: true },
-  { symbol: 'SOL', price: '142.50', change: '-0.5%', up: false },
-  { symbol: 'BNB', price: '612.30', change: '+3.1%', up: true },
-  { symbol: 'XRP', price: '0.542', change: '+0.8%', up: true },
-  { symbol: 'ADA', price: '0.451', change: '-1.2%', up: false },
-];
 
 // FAQ Accordion Component
 function FAQItem({ question, answer }: { question: string; answer: string }) {
@@ -172,20 +154,67 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 }
 
 export default function LandingPage() {
+  const [livePrices, setLivePrices] = useState<LivePrice[]>([]);
+  const [isLoadingPrices, setIsLoadingPrices] = useState(true);
+
+  const fetchPrices = useCallback(async () => {
+    try {
+      const symbols = TICKER_SYMBOLS.map(s => `"${s}USDT"`).join(',');
+      const response = await fetch(
+        `https://api.binance.com/api/v3/ticker/24hr?symbols=[${symbols}]`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        const prices: LivePrice[] = data.map((item: { symbol: string; lastPrice: string; priceChangePercent: string }) => {
+          const symbol = item.symbol.replace('USDT', '');
+          const price = parseFloat(item.lastPrice);
+          const change = parseFloat(item.priceChangePercent);
+          return {
+            symbol,
+            price: price >= 1000
+              ? price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              : price >= 1
+                ? price.toFixed(2)
+                : price.toFixed(4),
+            change: `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`,
+            up: change >= 0,
+          };
+        });
+        setLivePrices(prices);
+      }
+    } catch (error) {
+      console.error('Failed to fetch prices:', error);
+    } finally {
+      setIsLoadingPrices(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 30000); // Update every 30 seconds
+    return () => clearInterval(interval);
+  }, [fetchPrices]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Live Price Ticker */}
       <div className="bg-accent/50 border-b py-2 overflow-hidden">
         <div className="flex gap-8 ticker-scroll whitespace-nowrap">
-          {[...LIVE_PRICES, ...LIVE_PRICES].map((coin, index) => (
-            <div key={index} className="flex items-center gap-2 text-sm">
-              <span className="font-medium">{coin.symbol}</span>
-              <span className="text-muted-foreground">${coin.price}</span>
-              <span className={coin.up ? 'text-green-500' : 'text-red-500'}>
-                {coin.change}
-              </span>
+          {isLoadingPrices ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              Loading prices...
             </div>
-          ))}
+          ) : (
+            [...livePrices, ...livePrices].map((coin, index) => (
+              <div key={index} className="flex items-center gap-2 text-sm">
+                <span className="font-medium">{coin.symbol}</span>
+                <span className="text-muted-foreground">${coin.price}</span>
+                <span className={coin.up ? 'text-green-500' : 'text-red-500'}>
+                  {coin.change}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -416,32 +445,130 @@ export default function LandingPage() {
               Get from market confusion to trading confidence in minutes
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                step: 1,
-                title: 'Select a Coin',
-                description: 'Choose from our supported cryptocurrencies to analyze',
-              },
-              {
-                step: 2,
-                title: 'Run Analysis',
-                description: 'Our AI processes market data through 7 specialized steps',
-              },
-              {
-                step: 3,
-                title: 'Trade with Confidence',
-                description: 'Get clear recommendations with entry, targets, and stop-loss',
-              },
-            ].map((item) => (
-              <div key={item.step} className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4 shadow-lg shadow-amber-500/25">
-                  {item.step}
-                </div>
-                <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                <p className="text-muted-foreground">{item.description}</p>
+
+          {/* Integrated Flow */}
+          <div className="max-w-5xl mx-auto space-y-8">
+            {/* Step 1: Select */}
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-amber-500/25">
+                1
               </div>
-            ))}
+              <div className="text-center md:text-left flex-1">
+                <h3 className="text-xl font-bold mb-1">Select Your Coin</h3>
+                <p className="text-muted-foreground text-sm">Choose from 30+ supported cryptocurrencies</p>
+              </div>
+            </div>
+
+            {/* Arrow */}
+            <div className="flex justify-center md:justify-start md:ml-7">
+              <div className="w-0.5 h-6 bg-border" />
+            </div>
+
+            {/* Step 2: 7-Step Analysis */}
+            <div className="flex flex-col md:flex-row items-start gap-6">
+              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-amber-500/25">
+                2
+              </div>
+              <div className="flex-1">
+                <div className="text-center md:text-left mb-4">
+                  <h3 className="text-xl font-bold mb-1">AI Runs 7-Step Analysis</h3>
+                  <p className="text-muted-foreground text-sm">Each coin goes through specialized checks</p>
+                </div>
+
+                {/* 7 Steps Grid */}
+                <div className="bg-card border rounded-xl p-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                    {[
+                      { name: 'Market Pulse', icon: Globe, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                      { name: 'Asset Scan', icon: BarChart3, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
+                      { name: 'Safety', icon: Shield, color: 'text-green-500', bg: 'bg-green-500/10' },
+                      { name: 'Timing', icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+                      { name: 'Trade Plan', icon: Target, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                      { name: 'Trap Check', icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+                      { name: 'Verdict', icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                    ].map((item, idx) => {
+                      const Icon = item.icon;
+                      return (
+                        <div key={idx} className="flex flex-col items-center text-center p-2 rounded-lg hover:bg-accent/50 transition">
+                          <div className={`w-9 h-9 ${item.bg} rounded-lg flex items-center justify-center mb-1`}>
+                            <Icon className={`w-4 h-4 ${item.color}`} />
+                          </div>
+                          <span className="text-[11px] font-medium">{item.name}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Arrow */}
+            <div className="flex justify-center md:justify-start md:ml-7">
+              <div className="w-0.5 h-6 bg-border" />
+            </div>
+
+            {/* Step 3: Trade */}
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-amber-500/25">
+                3
+              </div>
+              <div className="text-center md:text-left flex-1">
+                <h3 className="text-xl font-bold mb-1">Trade with Confidence</h3>
+                <p className="text-muted-foreground text-sm">Get clear GO/WAIT/AVOID verdicts with exact entry, TP, and SL levels</p>
+              </div>
+            </div>
+          </div>
+
+          {/* How We Measure Success */}
+          <div className="mt-16 pt-16 border-t border-border">
+            <div className="text-center mb-10">
+              <h3 className="text-2xl md:text-3xl font-bold mb-3">How We Measure Success</h3>
+              <p className="text-muted-foreground max-w-xl mx-auto">
+                Honest metrics that reflect real trading outcomes
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+              {/* TP/SL Based */}
+              <div className="bg-card border rounded-xl p-6 text-center">
+                <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Target className="w-6 h-6 text-green-500" />
+                </div>
+                <h4 className="font-semibold mb-2">TP/SL Based</h4>
+                <p className="text-sm text-muted-foreground">
+                  A trade is <span className="text-green-500 font-medium">successful</span> when Take Profit is hit,
+                  <span className="text-red-500 font-medium"> failed</span> when Stop Loss is hit.
+                </p>
+              </div>
+
+              {/* Real Outcomes */}
+              <div className="bg-card border rounded-xl p-6 text-center">
+                <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Eye className="w-6 h-6 text-blue-500" />
+                </div>
+                <h4 className="font-semibold mb-2">Real Outcomes</h4>
+                <p className="text-sm text-muted-foreground">
+                  We monitor prices and automatically verify when TP or SL levels are reached.
+                  Every outcome is tracked.
+                </p>
+              </div>
+
+              {/* No Cherry-Picking */}
+              <div className="bg-card border rounded-xl p-6 text-center">
+                <div className="w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-6 h-6 text-purple-500" />
+                </div>
+                <h4 className="font-semibold mb-2">No Cherry-Picking</h4>
+                <p className="text-sm text-muted-foreground">
+                  All predictions are recorded. We don&apos;t hide failures.
+                  What you see is our real track record.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-center mt-8 text-muted-foreground italic text-sm">
+              &quot;Professional traders measure success by TP/SL outcomes, not arbitrary time periods.&quot;
+            </p>
           </div>
         </div>
       </section>
@@ -755,9 +882,9 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {PRICING.map((plan, index) => (
+            {CREDIT_PACKAGES.map((plan, index) => (
               <div
-                key={index}
+                key={plan.id}
                 className={`p-6 bg-card border rounded-lg relative ${
                   plan.popular ? 'border-primary ring-2 ring-primary' : ''
                 }`}

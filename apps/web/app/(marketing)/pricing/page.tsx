@@ -4,92 +4,15 @@ import Link from 'next/link';
 import { CheckCircle, Zap, Crown, Gem, ArrowRight, HelpCircle } from 'lucide-react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { cn } from '../../../lib/utils';
+import { CREDIT_PACKAGES, ANALYSIS_COSTS, ANALYSIS_BUNDLES, FREE_SIGNUP_CREDITS } from '../../../lib/pricing-config';
 
-const CREDIT_COSTS = [
-  { step: 'Market Pulse', credits: 'FREE', description: 'Overall market conditions' },
-  { step: 'Asset Scanner', credits: '2', description: 'Deep asset analysis' },
-  { step: 'Safety Check', credits: '5', description: 'Manipulation detection' },
-  { step: 'Timing Analysis', credits: '3', description: 'Optimal entry timing' },
-  { step: 'Trade Plan', credits: '5', description: 'Complete trading strategy' },
-  { step: 'Trap Check', credits: '5', description: 'Liquidation zone analysis' },
-  { step: 'Final Verdict', credits: 'FREE', description: 'Overall recommendation' },
-];
-
-const PACKAGES = [
-  {
-    name: 'Starter',
-    credits: 50,
-    bonus: 0,
-    price: 7.99,
-    pricePerCredit: 0.16,
-    features: [
-      '50 analysis credits',
-      'All 7 analysis steps',
-      'Up to 5 price alerts',
-      'Email support',
-    ],
-    icon: Zap,
-    color: 'blue',
-  },
-  {
-    name: 'Trader',
-    credits: 150,
-    bonus: 15,
-    price: 19.99,
-    pricePerCredit: 0.12,
-    popular: true,
-    features: [
-      '150 + 15 bonus credits',
-      'All 7 analysis steps',
-      'Unlimited price alerts',
-      'Priority support',
-      '10% off on bundles',
-    ],
-    icon: Crown,
-    color: 'purple',
-  },
-  {
-    name: 'Pro',
-    credits: 400,
-    bonus: 60,
-    price: 44.99,
-    pricePerCredit: 0.10,
-    features: [
-      '400 + 60 bonus credits',
-      'All 7 analysis steps',
-      'Unlimited price alerts',
-      'Priority queue access',
-      '15% off on bundles',
-      'AI chat questions',
-    ],
-    icon: Gem,
-    color: 'amber',
-  },
-  {
-    name: 'Whale',
-    credits: 1000,
-    bonus: 200,
-    price: 89.99,
-    pricePerCredit: 0.08,
-    features: [
-      '1000 + 200 bonus credits',
-      'All 7 analysis steps',
-      'Unlimited everything',
-      'VIP priority support',
-      '20% off on bundles',
-      'API access',
-      'Custom alerts',
-    ],
-    icon: Crown,
-    color: 'green',
-  },
-];
-
-const BUNDLES = [
-  { name: 'Quick Check', steps: 'Steps 2 + 7', original: 7, discounted: 5, savings: '29%' },
-  { name: 'Smart Entry', steps: 'Steps 2-4 + 7', original: 15, discounted: 12, savings: '20%' },
-  { name: 'Full Analysis', steps: 'All 7 Steps', original: 20, discounted: 15, savings: '25%' },
-];
+// Icon mapping for packages
+const PACKAGE_ICONS: Record<string, typeof Zap> = {
+  blue: Zap,
+  purple: Crown,
+  amber: Gem,
+  green: Crown,
+};
 
 const FAQS = [
   {
@@ -149,7 +72,7 @@ export default function PricingPage() {
             Simple, Transparent Pricing
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Pay only for what you use. No subscriptions, no hidden fees. Start with 25 free credits.
+            Pay only for what you use. No subscriptions, no hidden fees. Start with {FREE_SIGNUP_CREDITS} free credits.
           </p>
         </div>
       </section>
@@ -160,12 +83,12 @@ export default function PricingPage() {
           <h2 className="text-2xl font-bold text-center mb-8">Credit Costs Per Step</h2>
           <div className="max-w-3xl mx-auto">
             <div className="bg-card rounded-lg border overflow-hidden">
-              {CREDIT_COSTS.map((item, index) => (
+              {ANALYSIS_COSTS.map((item, index) => (
                 <div
                   key={index}
                   className={cn(
                     'flex items-center justify-between p-4',
-                    index !== CREDIT_COSTS.length - 1 && 'border-b'
+                    index !== ANALYSIS_COSTS.length - 1 && 'border-b'
                   )}
                 >
                   <div>
@@ -174,11 +97,11 @@ export default function PricingPage() {
                   </div>
                   <span className={cn(
                     'px-3 py-1 rounded-full text-sm font-medium',
-                    item.credits === 'FREE'
+                    item.credits === 0
                       ? 'bg-green-500/20 text-green-500'
                       : 'bg-amber-500/20 text-amber-500'
                   )}>
-                    {item.credits === 'FREE' ? 'FREE' : `${item.credits} credits`}
+                    {item.credits === 0 ? 'FREE' : `${item.credits} credits`}
                   </span>
                 </div>
               ))}
@@ -192,7 +115,7 @@ export default function PricingPage() {
         <div className="container mx-auto px-4">
           <h2 className="text-2xl font-bold text-center mb-8">Analysis Bundles</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            {BUNDLES.map((bundle, index) => (
+            {ANALYSIS_BUNDLES.map((bundle, index) => (
               <div key={index} className="bg-card rounded-lg border p-6 text-center">
                 <h3 className="font-semibold text-lg mb-2">{bundle.name}</h3>
                 <p className="text-sm text-muted-foreground mb-4">{bundle.steps}</p>
@@ -217,12 +140,12 @@ export default function PricingPage() {
           <p className="text-muted-foreground text-center mb-8">
             Choose the package that fits your trading style
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {PACKAGES.map((pkg, index) => {
-              const Icon = pkg.icon;
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {CREDIT_PACKAGES.map((pkg) => {
+              const Icon = PACKAGE_ICONS[pkg.color] || Zap;
               return (
                 <div
-                  key={index}
+                  key={pkg.id}
                   className={cn(
                     'bg-card rounded-lg border p-6 relative',
                     pkg.popular && 'border-primary ring-2 ring-primary'
@@ -255,7 +178,7 @@ export default function PricingPage() {
                   <p className="text-sm text-muted-foreground mb-4">
                     {pkg.credits}{pkg.bonus > 0 && ` + ${pkg.bonus} bonus`} credits
                     <br />
-                    <span className="text-xs">${pkg.pricePerCredit}/credit</span>
+                    <span className="text-xs">${pkg.pricePerCredit.toFixed(2)}/credit</span>
                   </p>
                   <ul className="space-y-2 mb-6">
                     {pkg.features.map((feature, i) => (
@@ -336,7 +259,7 @@ export default function PricingPage() {
           <div className="max-w-2xl mx-auto text-center p-8 bg-gradient-to-r from-red-500/10 via-amber-500/10 to-green-500/10 border border-green-500/20 rounded-2xl">
             <h2 className="text-2xl font-bold mb-4">Ready to Start Trading Smarter?</h2>
             <p className="text-muted-foreground mb-6">
-              Create your free account and get 25 credits to start analyzing.
+              Create your free account and get {FREE_SIGNUP_CREDITS} credits to start analyzing.
             </p>
             <Link
               href="/register"

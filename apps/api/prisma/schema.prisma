@@ -3,7 +3,8 @@
 // ===========================================
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -370,6 +371,16 @@ model Report {
   score        Decimal  @db.Decimal(3, 1)
   direction    String?  @db.VarChar(10) // 'long' or 'short'
 
+  // Price at time of analysis (for outcome comparison)
+  entryPrice   Decimal? @map("entry_price") @db.Decimal(20, 8)
+
+  // Outcome tracking (calculated after expiration)
+  outcome            String?   @db.VarChar(20) // 'correct', 'incorrect', 'neutral'
+  outcomeCalculatedAt DateTime? @map("outcome_calculated_at")
+  outcomePrice       Decimal?  @map("outcome_price") @db.Decimal(20, 8) // Price at expiration
+  outcomePriceChange Decimal?  @map("outcome_price_change") @db.Decimal(10, 4) // Percentage change
+  stepOutcomes       Json?     @map("step_outcomes") // Detailed per-step accuracy
+
   // Metadata
   generatedAt  DateTime @default(now()) @map("generated_at")
   expiresAt    DateTime @map("expires_at")
@@ -379,6 +390,7 @@ model Report {
   @@index([symbol])
   @@index([generatedAt(sort: Desc)])
   @@index([expiresAt])
+  @@index([outcome])
   @@map("reports")
 }
 

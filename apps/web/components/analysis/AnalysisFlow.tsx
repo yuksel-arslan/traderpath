@@ -36,6 +36,7 @@ import { DownloadReportButton } from '../reports/DownloadReportButton';
 
 interface AnalysisFlowProps {
   symbol: string;
+  interval?: string;
   accountSize?: number;
   onComplete?: () => void;
   onCreditsUpdate?: (remaining: number) => void;
@@ -150,7 +151,7 @@ const colorClasses = {
   green: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-500' },
 };
 
-export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCreditsUpdate }: AnalysisFlowProps) {
+export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onComplete, onCreditsUpdate }: AnalysisFlowProps) {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [activeStep, setActiveStep] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'intro' | 'result'>('intro');
@@ -179,7 +180,7 @@ export function AnalysisFlow({ symbol, accountSize = 10000, onComplete, onCredit
     };
 
     if (endpoint.method === 'POST') {
-      options.body = JSON.stringify({ symbol, accountSize });
+      options.body = JSON.stringify({ symbol, accountSize, interval });
     }
 
     const response = await fetch(endpoint.url, options);
