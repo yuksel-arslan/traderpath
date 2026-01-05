@@ -524,7 +524,7 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
   /**
    * GET /api/analysis/platform-stats
    * Platform-wide statistics for trust building (public)
-   * All data is calculated from real database records
+   * All data is calculated from real database records (Report table)
    */
   app.get('/platform-stats', async (_request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -575,60 +575,61 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
       };
 
       verdictCounts.forEach((v) => {
-        const key = v.verdict.toLowerCase().replace(' ', '_');
-        if (key in verdictDistribution) {
-          verdictDistribution[key] = v._count.verdict;
-        } else if (key === 'go!' || key === 'go') {
-          verdictDistribution['go'] = v._count.verdict;
-        } else if (key === 'conditional' || key === 'conditional go') {
-          verdictDistribution['conditional_go'] = v._count.verdict;
+        const key = v.verdict.toLowerCase().replace(' ', '_').replace('!', '');
+        if (key === 'go') {
+          verdictDistribution['go'] += v._count.verdict;
+        } else if (key === 'conditional_go' || key === 'conditional') {
+          verdictDistribution['conditional_go'] += v._count.verdict;
+        } else if (key === 'wait') {
+          verdictDistribution['wait'] += v._count.verdict;
+        } else if (key === 'avoid') {
+          verdictDistribution['avoid'] += v._count.verdict;
         }
       });
 
-      // Calculate real average score from Report table
-      const scoreAggregate = await db.report.aggregate({
-        _avg: { score: true },
-        _count: { score: true }
-      });
-
-      const avgConfidence = scoreAggregate._avg.score
-        ? Number(scoreAggregate._avg.score)
-        : 0;
-
-      // Calculate step scores from Analysis table
-      // Each step result is a JSON object containing a score
-      const analyses = await db.analysis.findMany({
+      // Get reports with full reportData to extract step scores
+      // Only get reports that have analysis data (not expert_analysis type)
+      const reports = await db.report.findMany({
         where: {
-          step7Result: { not: null } // Only completed analyses
+          verdict: { not: 'expert_analysis' }
         },
         select: {
-          step1Result: true,
-          step2Result: true,
-          step3Result: true,
-          step4Result: true,
-          step5Result: true,
-          step6Result: true,
-          step7Result: true,
-          totalScore: true
+          reportData: true,
+          score: true
         },
-        take: 1000, // Limit for performance
-        orderBy: { createdAt: 'desc' }
+        take: 1000,
+        orderBy: { generatedAt: 'desc' }
       });
 
-      // Helper to extract score from step result JSON
-      const extractScore = (stepResult: unknown): number | null => {
-        if (!stepResult || typeof stepResult !== 'object') return null;
-        const result = stepResult as Record<string, unknown>;
-        // Try different score field names
-        if (typeof result.score === 'number') return result.score;
-        if (typeof result.overallScore === 'number') return result.overallScore;
-        if (typeof result.safetyScore === 'number') return result.safetyScore;
-        if (typeof result.riskScore === 'number') return 10 - (result.riskScore as number); // Invert risk
-        if (typeof result.confidence === 'number') return result.confidence;
+      // Helper to extract score from step data in reportData JSON
+      const extractStepScore = (reportData: unknown, stepName: string): number | null => {
+        if (!reportData || typeof reportData !== 'object') return null;
+        const data = reportData as Record<string, unknown>;
+        const stepData = data[stepName] as Record<string, unknown> | undefined;
+        if (!stepData) return null;
+
+        // Try different score field names used in different steps
+        if (typeof stepData.score === 'number') return stepData.score;
+        if (typeof stepData.overallScore === 'number') return stepData.overallScore;
+        if (typeof stepData.safetyScore === 'number') return stepData.safetyScore;
+        if (typeof stepData.riskScore === 'number') return 10 - (stepData.riskScore as number);
+        if (typeof stepData.confidence === 'number') return stepData.confidence;
+        if (typeof stepData.tradingScore === 'number') return stepData.tradingScore;
+
+        // For timing, check tradeNow boolean
+        if (stepName === 'timing' && typeof stepData.tradeNow === 'boolean') {
+          return stepData.tradeNow ? 8 : 5;
+        }
+
+        // For tradePlan, use riskReward as score indicator
+        if (stepName === 'tradePlan' && typeof stepData.riskReward === 'number') {
+          return Math.min(10, stepData.riskReward * 2);
+        }
+
         return null;
       };
 
-      // Calculate average scores per step
+      // Calculate average scores per step from reportData
       const stepScores = {
         marketPulse: [] as number[],
         assetScanner: [] as number[],
@@ -639,14 +640,20 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         finalVerdict: [] as number[]
       };
 
-      analyses.forEach((a) => {
-        const s1 = extractScore(a.step1Result);
-        const s2 = extractScore(a.step2Result);
-        const s3 = extractScore(a.step3Result);
-        const s4 = extractScore(a.step4Result);
-        const s5 = extractScore(a.step5Result);
-        const s6 = extractScore(a.step6Result);
-        const s7 = extractScore(a.step7Result);
+      const allScores: number[] = [];
+
+      reports.forEach((report) => {
+        const rd = report.reportData;
+
+        const s1 = extractStepScore(rd, 'marketPulse');
+        const s2 = extractStepScore(rd, 'assetScan');
+        const s3 = extractStepScore(rd, 'safetyCheck');
+        const s4 = extractStepScore(rd, 'timing');
+        const s5 = extractStepScore(rd, 'tradePlan');
+        const s6 = extractStepScore(rd, 'trapCheck');
+
+        // Final verdict score is the report's overall score
+        const s7 = report.score ? Number(report.score) : null;
 
         if (s1 !== null) stepScores.marketPulse.push(s1);
         if (s2 !== null) stepScores.assetScanner.push(s2);
@@ -654,7 +661,10 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         if (s4 !== null) stepScores.timing.push(s4);
         if (s5 !== null) stepScores.tradePlan.push(s5);
         if (s6 !== null) stepScores.trapCheck.push(s6);
-        if (s7 !== null) stepScores.finalVerdict.push(s7);
+        if (s7 !== null) {
+          stepScores.finalVerdict.push(s7);
+          allScores.push(s7);
+        }
       });
 
       const calcAvg = (arr: number[]): number => {
@@ -674,14 +684,13 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         finalVerdict: calcAvg(stepScores.finalVerdict) * 10
       };
 
-      // Overall platform accuracy based on average of all completed analyses
-      const allTotalScores = analyses
-        .filter(a => a.totalScore !== null)
-        .map(a => Number(a.totalScore));
-
-      const platformAccuracy = allTotalScores.length > 0
-        ? Number((allTotalScores.reduce((a, b) => a + b, 0) / allTotalScores.length * 10).toFixed(1))
+      // Overall platform accuracy based on average report scores
+      const platformAccuracy = allScores.length > 0
+        ? Number((allScores.reduce((a, b) => a + b, 0) / allScores.length * 10).toFixed(1))
         : 0;
+
+      // Average confidence is the average report score
+      const avgConfidence = calcAvg(allScores);
 
       // Get platform creation date from first user
       const firstUser = await db.user.findFirst({
@@ -693,12 +702,15 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         ? firstUser.createdAt.toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0];
 
+      // Sample size is the number of reports with valid scores
+      const sampleSize = allScores.length;
+
       return reply.send({
         success: true,
         data: {
           platform: {
             totalUsers,
-            totalAnalyses: fullAnalyses,
+            totalAnalyses: fullAnalyses > 0 ? fullAnalyses : totalReports,
             totalReports,
             weeklyAnalyses,
             monthlyAnalyses: recentAnalyses,
@@ -706,11 +718,11 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
           },
           accuracy: {
             overall: platformAccuracy,
-            avgConfidence: Number(avgConfidence.toFixed(1)),
+            avgConfidence,
             stepRates: stepAccuracyRates,
             lastUpdated: new Date().toISOString(),
             methodology: 'real-data',
-            sampleSize: analyses.length
+            sampleSize
           },
           verdicts: verdictDistribution,
           dataQuality: {
