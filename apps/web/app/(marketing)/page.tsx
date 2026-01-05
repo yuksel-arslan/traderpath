@@ -449,28 +449,28 @@ export default function LandingPage() {
           {/* Integrated Flow */}
           <div className="max-w-5xl mx-auto space-y-8">
             {/* Step 1: Select */}
-            <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="flex flex-col items-center gap-4">
               <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-amber-500/25">
                 1
               </div>
-              <div className="text-center md:text-left flex-1">
+              <div className="text-center">
                 <h3 className="text-xl font-bold mb-1">Select Your Coin</h3>
                 <p className="text-muted-foreground text-sm">Choose from 30+ supported cryptocurrencies</p>
               </div>
             </div>
 
             {/* Arrow */}
-            <div className="flex justify-center md:justify-start md:ml-7">
+            <div className="flex justify-center">
               <div className="w-0.5 h-6 bg-border" />
             </div>
 
             {/* Step 2: 7-Step Analysis */}
-            <div className="flex flex-col md:flex-row items-start gap-6">
+            <div className="flex flex-col items-center gap-4">
               <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-amber-500/25">
                 2
               </div>
-              <div className="flex-1">
-                <div className="text-center md:text-left mb-4">
+              <div className="w-full">
+                <div className="text-center mb-4">
                   <h3 className="text-xl font-bold mb-1">AI Runs 7-Step Analysis</h3>
                   <p className="text-muted-foreground text-sm">Each coin goes through specialized checks</p>
                 </div>
@@ -503,16 +503,16 @@ export default function LandingPage() {
             </div>
 
             {/* Arrow */}
-            <div className="flex justify-center md:justify-start md:ml-7">
+            <div className="flex justify-center">
               <div className="w-0.5 h-6 bg-border" />
             </div>
 
             {/* Step 3: Trade */}
-            <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="flex flex-col items-center gap-4">
               <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-amber-500/25">
                 3
               </div>
-              <div className="text-center md:text-left flex-1">
+              <div className="text-center">
                 <h3 className="text-xl font-bold mb-1">Trade with Confidence</h3>
                 <p className="text-muted-foreground text-sm">Get clear GO/WAIT/AVOID verdicts with exact entry, TP, and SL levels</p>
               </div>
