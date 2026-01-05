@@ -342,6 +342,8 @@ export default function DashboardPage() {
       // Process performance/outcomes
       if (performanceRes.ok) {
         const data = await performanceRes.json();
+        console.log('Performance API response:', data); // Debug log
+        console.log('Recent outcomes from API:', data.recentOutcomes); // Debug log
         const outcomes = (data.recentOutcomes || []).map((o: any, i: number) => ({
           id: `outcome-${i}`,
           symbol: o.symbol,
@@ -354,7 +356,10 @@ export default function DashboardPage() {
           isExpired: o.isExpired,
           hoursRemaining: o.hoursRemaining,
         }));
+        console.log('Mapped outcomes:', outcomes); // Debug log
         setRecentOutcomes(outcomes);
+      } else {
+        console.error('Performance API failed:', performanceRes.status, performanceRes.statusText);
       }
 
       // Process credits
