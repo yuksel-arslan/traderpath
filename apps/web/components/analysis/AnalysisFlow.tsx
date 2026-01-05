@@ -239,7 +239,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
           verdict: verdict?.action || verdict?.verdict || 'N/A',
           score: verdict?.overallScore || 0,
           direction: tradePlan?.direction || null,
-          interval: '4h',
+          interval: '1h', // 50 periods × 1h = 50 hours (~2 days) validity
         }),
       });
 

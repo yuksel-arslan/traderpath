@@ -103,7 +103,7 @@ interface DownloadReportButtonProps {
 }
 
 // Save report to database
-async function saveReportToDatabase(reportData: AnalysisReportData, interval: string = '4h'): Promise<boolean> {
+async function saveReportToDatabase(reportData: AnalysisReportData, interval: string = '1h'): Promise<boolean> {
   try {
     const token = localStorage.getItem('accessToken');
     if (!token) return false;

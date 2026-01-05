@@ -37,9 +37,9 @@ interface AuthenticatedRequest extends FastifyRequest {
 }
 
 // Calculate expiration based on periods and interval
-function calculateExpiresAt(periods: number, interval: string = '4h'): Date {
+function calculateExpiresAt(periods: number, interval: string = '1h'): Date {
   const now = new Date();
-  let hoursPerPeriod = 4; // default 4h
+  let hoursPerPeriod = 1; // default 1h
 
   // Parse interval to hours
   const match = interval.match(/^(\d+)([mhd])$/);
