@@ -537,25 +537,19 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
       const [
         totalUsers,
         totalReports,
-        fullAnalyses,
-        weeklyAnalyses,
-        recentAnalyses
+        weeklyReports,
+        monthlyReports
       ] = await Promise.all([
         db.user.count(),
         db.report.count(),
-        db.creditTransaction.count({
-          where: { reason: 'analysis_full' }
-        }),
-        db.creditTransaction.count({
+        db.report.count({
           where: {
-            reason: 'analysis_full',
-            createdAt: { gte: sevenDaysAgo }
+            generatedAt: { gte: sevenDaysAgo }
           }
         }),
-        db.creditTransaction.count({
+        db.report.count({
           where: {
-            reason: 'analysis_full',
-            createdAt: { gte: thirtyDaysAgo }
+            generatedAt: { gte: thirtyDaysAgo }
           }
         })
       ]);
@@ -754,10 +748,10 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         data: {
           platform: {
             totalUsers,
-            totalAnalyses: fullAnalyses > 0 ? fullAnalyses : totalReports,
+            totalAnalyses: totalReports,
             totalReports,
-            weeklyAnalyses,
-            monthlyAnalyses: recentAnalyses,
+            weeklyAnalyses: weeklyReports,
+            monthlyAnalyses: monthlyReports,
             platformSince,
           },
           accuracy: {
