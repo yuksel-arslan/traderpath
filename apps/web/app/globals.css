@@ -404,43 +404,51 @@
   100% { background-position: 0% 50%; }
 }
 
-/* Breathing/heartbeat gradient animation - Red to Green */
+/* Breathing/heartbeat gradient animation - Left to Right, Right to Left (ping-pong) */
 @keyframes gradient-breathe {
-  0%, 100% {
+  0% {
     background-position: 0% 50%;
     filter: brightness(1);
   }
-  25% {
-    background-position: 25% 50%;
-    filter: brightness(1.05);
+  45% {
+    background-position: 100% 50%;
+    filter: brightness(1.08);
   }
   50% {
-    background-position: 50% 50%;
-    filter: brightness(1.1);
+    background-position: 100% 50%;
+    filter: brightness(1.08);
   }
-  75% {
-    background-position: 75% 50%;
-    filter: brightness(1.05);
+  95% {
+    background-position: 0% 50%;
+    filter: brightness(1);
+  }
+  100% {
+    background-position: 0% 50%;
+    filter: brightness(1);
   }
 }
 
-/* Breathing/heartbeat gradient animation - Green to Red (reverse timing) */
+/* Breathing/heartbeat gradient animation - Same ping-pong for reverse gradient */
 @keyframes gradient-breathe-reverse {
-  0%, 100% {
-    background-position: 100% 50%;
+  0% {
+    background-position: 0% 50%;
     filter: brightness(1);
   }
-  25% {
-    background-position: 75% 50%;
-    filter: brightness(1.05);
+  45% {
+    background-position: 100% 50%;
+    filter: brightness(1.08);
   }
   50% {
-    background-position: 50% 50%;
-    filter: brightness(1.1);
+    background-position: 100% 50%;
+    filter: brightness(1.08);
   }
-  75% {
-    background-position: 25% 50%;
-    filter: brightness(1.05);
+  95% {
+    background-position: 0% 50%;
+    filter: brightness(1);
+  }
+  100% {
+    background-position: 0% 50%;
+    filter: brightness(1);
   }
 }
 
