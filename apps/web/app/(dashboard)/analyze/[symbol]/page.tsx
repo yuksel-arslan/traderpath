@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
@@ -9,7 +9,9 @@ import { CreditBalance } from '../../../../components/credits/CreditBalance';
 
 export default function AnalyzePage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const symbol = params.symbol as string;
+  const interval = searchParams.get('interval') || '4h';
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceChange, setPriceChange] = useState<number>(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -59,7 +61,10 @@ export default function AnalyzePage() {
           </Link>
           <div>
             <h1 className="text-3xl font-bold">{symbol}/USDT</h1>
-            <p className="text-muted-foreground">7-Step Trading Analysis</p>
+            <p className="text-muted-foreground">
+              7-Step Trading Analysis
+              <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary rounded text-sm font-medium">{interval}</span>
+            </p>
           </div>
         </div>
 
@@ -93,7 +98,7 @@ export default function AnalyzePage() {
       </div>
 
       {/* Analysis Flow */}
-      <AnalysisFlow symbol={symbol} />
+      <AnalysisFlow symbol={symbol} interval={interval} />
     </div>
   );
 }
