@@ -36,12 +36,13 @@ interface AuthenticatedRequest extends FastifyRequest {
   user?: { id: string };
 }
 
-// Calculate expiration - fixed 48 hours validity for all reports
-// This ensures consistent outcome tracking regardless of analysis timeframe
+// Reports stay active until TP/SL hit - no time-based expiration
+// Set far future date (30 days) as technical field only
+// Actual closure is determined by TP/SL hit detection
 function calculateExpiresAt(): Date {
   const now = new Date();
-  const VALIDITY_HOURS = 48; // Fixed 48 hours (2 days) validity
-  return new Date(now.getTime() + VALIDITY_HOURS * 60 * 60 * 1000);
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+  return new Date(now.getTime() + THIRTY_DAYS_MS);
 }
 
 export async function reportRoutes(fastify: FastifyInstance) {
