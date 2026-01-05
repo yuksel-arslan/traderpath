@@ -405,6 +405,126 @@ export default async function adminRoutes(app: FastifyInstance) {
       data: { activity },
     });
   });
+
+  // ===========================================
+  // GET /api/admin/packages - Get all credit packages
+  // ===========================================
+  app.get('/packages', {
+    preHandler: requireAdmin,
+  }, async (_request: FastifyRequest, reply: FastifyReply) => {
+    const packages = await prisma.creditPackage.findMany({
+      orderBy: { credits: 'asc' },
+    });
+
+    return reply.send({
+      success: true,
+      data: { packages },
+    });
+  });
+
+  // ===========================================
+  // POST /api/admin/packages - Create credit package
+  // ===========================================
+  app.post('/packages', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as {
+      name: string;
+      credits: number;
+      bonusCredits?: number;
+      priceUsd: number;
+      discountPercent?: number;
+      isPopular?: boolean;
+      isActive?: boolean;
+    };
+
+    const pricePerCredit = body.priceUsd / (body.credits + (body.bonusCredits || 0));
+
+    const pkg = await prisma.creditPackage.create({
+      data: {
+        name: body.name,
+        credits: body.credits,
+        bonusCredits: body.bonusCredits || 0,
+        priceUsd: body.priceUsd,
+        pricePerCredit,
+        discountPercent: body.discountPercent || 0,
+        isPopular: body.isPopular || false,
+        isActive: body.isActive !== false,
+      },
+    });
+
+    return reply.send({
+      success: true,
+      data: { package: pkg },
+    });
+  });
+
+  // ===========================================
+  // PATCH /api/admin/packages/:id - Update credit package
+  // ===========================================
+  app.patch('/packages/:id', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as {
+      name?: string;
+      credits?: number;
+      bonusCredits?: number;
+      priceUsd?: number;
+      discountPercent?: number;
+      isPopular?: boolean;
+      isActive?: boolean;
+    };
+
+    // Get existing package for calculating pricePerCredit
+    const existing = await prisma.creditPackage.findUnique({ where: { id } });
+    if (!existing) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Package not found' },
+      });
+    }
+
+    const credits = body.credits ?? existing.credits;
+    const bonusCredits = body.bonusCredits ?? existing.bonusCredits;
+    const priceUsd = body.priceUsd ?? Number(existing.priceUsd);
+    const pricePerCredit = priceUsd / (credits + bonusCredits);
+
+    const pkg = await prisma.creditPackage.update({
+      where: { id },
+      data: {
+        ...(body.name && { name: body.name }),
+        ...(body.credits !== undefined && { credits: body.credits }),
+        ...(body.bonusCredits !== undefined && { bonusCredits: body.bonusCredits }),
+        ...(body.priceUsd !== undefined && { priceUsd: body.priceUsd }),
+        pricePerCredit,
+        ...(body.discountPercent !== undefined && { discountPercent: body.discountPercent }),
+        ...(body.isPopular !== undefined && { isPopular: body.isPopular }),
+        ...(body.isActive !== undefined && { isActive: body.isActive }),
+      },
+    });
+
+    return reply.send({
+      success: true,
+      data: { package: pkg },
+    });
+  });
+
+  // ===========================================
+  // DELETE /api/admin/packages/:id - Delete credit package
+  // ===========================================
+  app.delete('/packages/:id', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+
+    await prisma.creditPackage.delete({ where: { id } });
+
+    return reply.send({
+      success: true,
+      message: 'Package deleted successfully',
+    });
+  });
 }
 
 // Helper functions

@@ -375,7 +375,14 @@ export default function AdminPage() {
           className="flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-muted-foreground hover:text-foreground transition"
         >
           <DollarSign className="w-4 h-4" />
-          Costs & Pricing
+          Costs
+        </Link>
+        <Link
+          href="/admin/pricing"
+          className="flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-muted-foreground hover:text-foreground transition"
+        >
+          <CreditCard className="w-4 h-4" />
+          Packages
         </Link>
       </div>
 
