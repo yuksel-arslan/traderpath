@@ -36,25 +36,12 @@ interface AuthenticatedRequest extends FastifyRequest {
   user?: { id: string };
 }
 
-// Calculate expiration based on periods and interval
-function calculateExpiresAt(periods: number, interval: string = '1h'): Date {
+// Calculate expiration - fixed 48 hours validity for all reports
+// This ensures consistent outcome tracking regardless of analysis timeframe
+function calculateExpiresAt(): Date {
   const now = new Date();
-  let hoursPerPeriod = 1; // default 1h
-
-  // Parse interval to hours
-  const match = interval.match(/^(\d+)([mhd])$/);
-  if (match) {
-    const value = parseInt(match[1]);
-    const unit = match[2];
-    switch (unit) {
-      case 'm': hoursPerPeriod = value / 60; break;
-      case 'h': hoursPerPeriod = value; break;
-      case 'd': hoursPerPeriod = value * 24; break;
-    }
-  }
-
-  const totalHours = periods * hoursPerPeriod;
-  return new Date(now.getTime() + totalHours * 60 * 60 * 1000);
+  const VALIDITY_HOURS = 48; // Fixed 48 hours (2 days) validity
+  return new Date(now.getTime() + VALIDITY_HOURS * 60 * 60 * 1000);
 }
 
 export async function reportRoutes(fastify: FastifyInstance) {
@@ -87,8 +74,8 @@ export async function reportRoutes(fastify: FastifyInstance) {
           select: { reportValidityPeriods: true },
         });
 
-        const validityPeriods = user?.reportValidityPeriods ?? 50;
-        const expiresAt = calculateExpiresAt(validityPeriods, interval);
+        // Fixed 48 hours validity for all reports
+        const expiresAt = calculateExpiresAt();
 
         // Extract entry price from reportData if not provided
         const finalEntryPrice = entryPrice || extractEntryPrice(reportData);
