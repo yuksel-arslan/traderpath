@@ -549,8 +549,14 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
         <div className="mt-6 p-5 bg-card border rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-red-500 via-amber-500 to-green-500 flex items-center justify-center">
-                <Brain className="w-5 h-5 text-white" />
+              <div
+                className="w-11 h-11 rounded-lg flex items-center justify-center shadow-lg"
+                style={{
+                  boxShadow: '0 4px 14px rgba(245, 158, 11, 0.25)',
+                  background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.95))',
+                }}
+              >
+                <Brain className="w-5 h-5 gradient-text-rg-animate" />
               </div>
               <div>
                 <h3 className="font-semibold">Full Analysis Bundle</h3>
