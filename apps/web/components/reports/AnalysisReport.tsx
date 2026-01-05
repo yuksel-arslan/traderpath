@@ -129,16 +129,16 @@ const styles = StyleSheet.create({
   // Content Pages - Single Page Layout
   page: {
     backgroundColor: '#ffffff',
-    padding: 15,
-    paddingBottom: 35,
+    padding: 20,
+    paddingBottom: 40,
     fontFamily: 'Helvetica',
   },
   pageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
-    paddingBottom: 4,
+    marginBottom: 10,
+    paddingBottom: 6,
     borderBottomWidth: 1,
     borderBottomColor: BRAND.border,
   },
@@ -147,32 +147,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pageHeaderLogoT: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     color: BRAND.danger,
   },
   pageHeaderLogoP: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     color: BRAND.success,
   },
   pageHeaderSymbol: {
-    fontSize: 12,
+    fontSize: 14,
     color: BRAND.textMuted,
   },
 
-  // Chart section - Minimal
+  // Chart section - Larger
   chartSection: {
     backgroundColor: '#ffffff',
-    borderRadius: 3,
-    marginBottom: 5,
+    borderRadius: 4,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: BRAND.border,
     overflow: 'hidden',
   },
   chartImage: {
     width: '100%',
-    height: 110,
+    height: 160,
   },
   chartTitle: {
     fontSize: 11,
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   // Two Column Layout
   twoColumnRow: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 10,
   },
   column: {
     flex: 1,
@@ -196,45 +196,45 @@ const styles = StyleSheet.create({
   // Step Card - Readable
   stepCard: {
     backgroundColor: BRAND.bgLight,
-    borderRadius: 4,
-    padding: 6,
-    marginBottom: 5,
-    borderLeftWidth: 3,
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 8,
+    borderLeftWidth: 4,
   },
   stepHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 3,
+    marginBottom: 6,
   },
   stepTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   stepNumber: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: BRAND.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 5,
+    marginRight: 6,
   },
   stepNumberText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: 'bold',
     color: '#ffffff',
   },
   stepTitle: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: 'bold',
     color: BRAND.text,
   },
   stepStatus: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: 'bold',
-    paddingVertical: 2,
-    paddingHorizontal: 5,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
     borderRadius: 4,
   },
   stepContent: {
@@ -243,102 +243,122 @@ const styles = StyleSheet.create({
   },
   stepMetric: {
     width: '50%',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   metricLabel: {
-    fontSize: 8,
+    fontSize: 9,
     color: BRAND.textMuted,
-    marginBottom: 1,
+    marginBottom: 2,
   },
   metricValue: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 'bold',
     color: BRAND.text,
   },
   stepDescription: {
-    fontSize: 7,
+    fontSize: 8,
     color: BRAND.textMuted,
-    lineHeight: 1.2,
-    marginTop: 3,
+    lineHeight: 1.3,
+    marginTop: 4,
   },
 
-  // Trade Levels - Minimal
+  // Trade Levels
   levelsGrid: {
     flexDirection: 'row',
-    gap: 3,
-    marginTop: 3,
+    gap: 5,
+    marginTop: 6,
   },
   levelBox: {
     flex: 1,
     backgroundColor: '#ffffff',
-    borderRadius: 3,
-    padding: 4,
+    borderRadius: 4,
+    padding: 6,
     borderWidth: 1,
     borderColor: BRAND.border,
   },
   levelTitle: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: 'bold',
-    marginBottom: 2,
+    marginBottom: 3,
   },
   levelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 1,
+    paddingVertical: 2,
   },
   levelLabel: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: 'bold',
   },
   levelPrice: {
-    fontSize: 8,
+    fontSize: 10,
     color: BRAND.text,
   },
 
-  // Final Verdict - Readable
+  // Final Verdict - Larger
   verdictCard: {
-    borderRadius: 5,
-    padding: 8,
-    marginTop: 5,
+    borderRadius: 6,
+    padding: 12,
+    marginTop: 10,
   },
   verdictTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   verdictText: {
-    fontSize: 9,
+    fontSize: 10,
     color: '#374151',
-    lineHeight: 1.3,
-    marginBottom: 5,
+    lineHeight: 1.4,
+    marginBottom: 8,
   },
   verdictSummary: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingTop: 6,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.1)',
   },
   verdictSummaryItem: {
     width: '25%',
+    marginBottom: 4,
   },
   verdictSummaryLabel: {
-    fontSize: 8,
+    fontSize: 9,
     color: '#6b7280',
+    marginBottom: 2,
   },
   verdictSummaryValue: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: BRAND.text,
+  },
+  // AI Summary in verdict
+  aiSummaryBox: {
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    borderRadius: 4,
+    padding: 8,
+    marginTop: 8,
+  },
+  aiSummaryTitle: {
     fontSize: 10,
     fontWeight: 'bold',
     color: BRAND.text,
+    marginBottom: 4,
+  },
+  aiSummaryText: {
+    fontSize: 9,
+    color: '#374151',
+    lineHeight: 1.4,
   },
 
   // Footer with disclaimer
   footer: {
     position: 'absolute',
-    bottom: 6,
-    left: 15,
-    right: 15,
-    paddingTop: 3,
+    bottom: 10,
+    left: 20,
+    right: 20,
+    paddingTop: 5,
     borderTopWidth: 1,
     borderTopColor: BRAND.border,
   },
@@ -557,10 +577,11 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
                 <Text style={[styles.stepStatus, { backgroundColor: getStatusBg(marketStatus), color: getStatusColor(marketStatus) }]}>{marketStatus}</Text>
               </View>
               <View style={styles.stepContent}>
-                <View style={styles.stepMetric}><Text style={styles.metricLabel}>Fear & Greed</Text><Text style={styles.metricValue}>{data.marketPulse.fearGreedIndex}</Text></View>
-                <View style={styles.stepMetric}><Text style={styles.metricLabel}>BTC Dom</Text><Text style={styles.metricValue}>{data.marketPulse.btcDominance?.toFixed(1)}%</Text></View>
+                <View style={styles.stepMetric}><Text style={styles.metricLabel}>Fear & Greed</Text><Text style={styles.metricValue}>{data.marketPulse.fearGreedIndex} ({data.marketPulse.fearGreedLabel})</Text></View>
+                <View style={styles.stepMetric}><Text style={styles.metricLabel}>BTC Dominance</Text><Text style={styles.metricValue}>{data.marketPulse.btcDominance?.toFixed(1)}%</Text></View>
+                <View style={styles.stepMetric}><Text style={styles.metricLabel}>Trend Direction</Text><Text style={styles.metricValue}>{(data.marketPulse.trend?.direction || 'N/A').toUpperCase()}</Text></View>
+                <View style={styles.stepMetric}><Text style={styles.metricLabel}>Trend Strength</Text><Text style={styles.metricValue}>{data.marketPulse.trend?.strength || 0}%</Text></View>
               </View>
-              <Text style={styles.stepDescription}>Sentiment analysis via Fear & Greed Index and BTC dominance patterns.</Text>
             </View>
 
             {/* Step 2 */}
@@ -573,10 +594,11 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
                 <Text style={[styles.stepStatus, { backgroundColor: getStatusBg(assetStatus), color: getStatusColor(assetStatus) }]}>{assetStatus}</Text>
               </View>
               <View style={styles.stepContent}>
-                <View style={styles.stepMetric}><Text style={styles.metricLabel}>Price</Text><Text style={styles.metricValue}>{formatPrice(data.assetScan.currentPrice)}</Text></View>
-                <View style={styles.stepMetric}><Text style={styles.metricLabel}>RSI</Text><Text style={styles.metricValue}>{data.assetScan.indicators?.rsi?.toFixed(0) || 'N/A'}</Text></View>
+                <View style={styles.stepMetric}><Text style={styles.metricLabel}>Current Price</Text><Text style={styles.metricValue}>{formatPrice(data.assetScan.currentPrice)}</Text></View>
+                <View style={styles.stepMetric}><Text style={styles.metricLabel}>24h Change</Text><Text style={[styles.metricValue, { color: (data.assetScan.priceChange24h || 0) >= 0 ? BRAND.success : BRAND.danger }]}>{(data.assetScan.priceChange24h || 0).toFixed(2)}%</Text></View>
+                <View style={styles.stepMetric}><Text style={styles.metricLabel}>RSI (14)</Text><Text style={styles.metricValue}>{data.assetScan.indicators?.rsi?.toFixed(0) || 'N/A'}</Text></View>
+                <View style={styles.stepMetric}><Text style={styles.metricLabel}>MACD</Text><Text style={[styles.metricValue, { color: (data.assetScan.indicators?.macd?.histogram || 0) >= 0 ? BRAND.success : BRAND.danger }]}>{(data.assetScan.indicators?.macd?.histogram || 0) >= 0 ? 'BULLISH' : 'BEARISH'}</Text></View>
               </View>
-              <Text style={styles.stepDescription}>Multi-timeframe RSI, MACD analysis with support/resistance levels.</Text>
             </View>
 
             {/* Step 3 */}
@@ -589,10 +611,11 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
                 <Text style={[styles.stepStatus, { backgroundColor: getStatusBg(safetyStatus), color: getStatusColor(safetyStatus) }]}>{safetyStatus}</Text>
               </View>
               <View style={styles.stepContent}>
-                <View style={styles.stepMetric}><Text style={styles.metricLabel}>Risk</Text><Text style={[styles.metricValue, { color: getStatusColor(safetyStatus) }]}>{(data.safetyCheck.riskLevel || 'N/A').toUpperCase()}</Text></View>
-                <View style={styles.stepMetric}><Text style={styles.metricLabel}>Whale</Text><Text style={styles.metricValue}>{(data.safetyCheck.whaleActivity?.bias || 'neutral').toUpperCase()}</Text></View>
+                <View style={styles.stepMetric}><Text style={styles.metricLabel}>Risk Level</Text><Text style={[styles.metricValue, { color: getStatusColor(safetyStatus) }]}>{(data.safetyCheck.riskLevel || 'N/A').toUpperCase()}</Text></View>
+                <View style={styles.stepMetric}><Text style={styles.metricLabel}>Whale Bias</Text><Text style={styles.metricValue}>{(data.safetyCheck.whaleActivity?.bias || 'neutral').toUpperCase()}</Text></View>
+                <View style={styles.stepMetric}><Text style={styles.metricLabel}>Pump/Dump Risk</Text><Text style={styles.metricValue}>{(data.safetyCheck.manipulation?.pumpDumpRisk || 'N/A').toUpperCase()}</Text></View>
+                <View style={styles.stepMetric}><Text style={styles.metricLabel}>Smart Money</Text><Text style={styles.metricValue}>{(data.safetyCheck.smartMoney?.positioning || 'N/A').toUpperCase()}</Text></View>
               </View>
-              <Text style={styles.stepDescription}>Whale movements, manipulation detection, smart money analysis.</Text>
             </View>
           </View>
 
@@ -609,8 +632,8 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
               </View>
               <View style={styles.stepContent}>
                 <View style={styles.stepMetric}><Text style={styles.metricLabel}>Trade Now</Text><Text style={[styles.metricValue, { color: data.timing.tradeNow ? BRAND.success : BRAND.warning }]}>{data.timing.tradeNow ? 'YES' : 'WAIT'}</Text></View>
+                <View style={styles.stepMetric}><Text style={styles.metricLabel}>Reason</Text><Text style={[styles.metricValue, { fontSize: 9 }]}>{(data.timing.reason || 'N/A').slice(0, 30)}</Text></View>
               </View>
-              <Text style={styles.stepDescription}>Optimal entry timing via momentum and volatility cycles.</Text>
             </View>
 
             {/* Step 5 */}
@@ -674,7 +697,18 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             <View style={styles.verdictSummaryItem}><Text style={styles.verdictSummaryLabel}>Entry</Text><Text style={styles.verdictSummaryValue}>{formatPrice(data.tradePlan.averageEntry)}</Text></View>
             <View style={styles.verdictSummaryItem}><Text style={styles.verdictSummaryLabel}>Stop Loss</Text><Text style={[styles.verdictSummaryValue, { color: BRAND.danger }]}>{formatPrice(data.tradePlan.stopLoss?.price)}</Text></View>
             <View style={styles.verdictSummaryItem}><Text style={styles.verdictSummaryLabel}>Take Profit</Text><Text style={[styles.verdictSummaryValue, { color: BRAND.success }]}>{formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</Text></View>
+            <View style={styles.verdictSummaryItem}><Text style={styles.verdictSummaryLabel}>Risk/Reward</Text><Text style={styles.verdictSummaryValue}>{(data.tradePlan.riskReward || 0).toFixed(2)}:1</Text></View>
+            <View style={styles.verdictSummaryItem}><Text style={styles.verdictSummaryLabel}>Win Rate Est.</Text><Text style={styles.verdictSummaryValue}>{data.tradePlan.winRateEstimate || 'N/A'}%</Text></View>
+            <View style={styles.verdictSummaryItem}><Text style={styles.verdictSummaryLabel}>TP2</Text><Text style={[styles.verdictSummaryValue, { color: BRAND.success }]}>{formatPrice(data.tradePlan.takeProfits?.[1]?.price)}</Text></View>
+            <View style={styles.verdictSummaryItem}><Text style={styles.verdictSummaryLabel}>TP3</Text><Text style={[styles.verdictSummaryValue, { color: BRAND.success }]}>{formatPrice(data.tradePlan.takeProfits?.[2]?.price)}</Text></View>
           </View>
+          {/* AI Summary */}
+          {data.verdict.aiSummary && (
+            <View style={styles.aiSummaryBox}>
+              <Text style={styles.aiSummaryTitle}>AI Analysis Summary</Text>
+              <Text style={styles.aiSummaryText}>{data.verdict.aiSummary.slice(0, 400)}{data.verdict.aiSummary.length > 400 ? '...' : ''}</Text>
+            </View>
+          )}
         </View>
 
         <PageFooter pageNum={1} totalPages={1} />
