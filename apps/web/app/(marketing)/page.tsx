@@ -29,6 +29,7 @@ import {
 import { useState, useEffect, useCallback } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TradePathLogo } from '../../components/common/TradePathLogo';
+import { CREDIT_PACKAGES } from '../../lib/pricing-config';
 
 // Coins to display in the ticker
 const TICKER_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX'];
@@ -99,27 +100,6 @@ const TESTIMONIALS = [
   },
 ];
 
-const PRICING = [
-  {
-    name: 'Starter',
-    credits: 25,
-    price: 14.99,
-    features: ['25 analysis credits', 'All 7 analysis steps', 'PDF reports', 'Email support'],
-  },
-  {
-    name: 'Popular',
-    credits: 60,
-    price: 29.99,
-    popular: true,
-    features: ['60 + 5 bonus credits', 'All 7 analysis steps', 'Priority analysis queue', 'Priority support'],
-  },
-  {
-    name: 'Pro',
-    credits: 150,
-    price: 59.99,
-    features: ['150 + 20 bonus credits', 'All 7 analysis steps', 'AI chat support', 'API access'],
-  },
-];
 
 const FAQS = [
   {
@@ -902,9 +882,9 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {PRICING.map((plan, index) => (
+            {CREDIT_PACKAGES.map((plan, index) => (
               <div
-                key={index}
+                key={plan.id}
                 className={`p-6 bg-card border rounded-lg relative ${
                   plan.popular ? 'border-primary ring-2 ring-primary' : ''
                 }`}
