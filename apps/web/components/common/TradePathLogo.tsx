@@ -36,17 +36,13 @@ export function TradePathLogo({
           background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.95))',
         }}
       >
-        <span className={`${s.letter} font-black gradient-text-rg-animate`}>T</span>
-        <span className={`${s.letter} font-black gradient-text-gr-animate -ml-0.5`}>P</span>
+        <span className={`${s.letter} font-black gradient-text-rg-animate`}>TP</span>
       </div>
 
       {/* Logo Text */}
       {showText && (
         <div className="flex flex-col">
-          <span className={`${s.text} font-bold`}>
-            <span className="gradient-text-rg-animate">Trade</span>
-            <span className="gradient-text-gr-animate">Path</span>
-          </span>
+          <span className={`${s.text} font-bold gradient-text-rg-animate`}>TradePath</span>
           {showTagline && (
             <span className={`${s.tagline} text-muted-foreground -mt-0.5`}>
               From Charts to Clarity
