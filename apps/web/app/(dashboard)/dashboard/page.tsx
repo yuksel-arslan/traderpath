@@ -106,8 +106,7 @@ const methodologySteps = [
   {
     step: 1,
     name: 'Market Pulse',
-    nameEn: 'Market Pulse',
-    description: 'Piyasa genel durumu, BTC dominansı, Fear & Greed endeksi ve makro trendler analiz edilir.',
+    description: 'Analyzes overall market conditions, BTC dominance, Fear & Greed index, and macro trends.',
     icon: Activity,
     color: 'text-blue-400',
     bgColor: 'bg-blue-500/10',
@@ -116,9 +115,8 @@ const methodologySteps = [
   },
   {
     step: 2,
-    name: 'Varlık Tarama',
-    nameEn: 'Asset Scanner',
-    description: 'Seçilen coin için teknik göstergeler, destek/direnç seviyeleri ve çoklu zaman dilimi analizi yapılır.',
+    name: 'Asset Scanner',
+    description: 'Technical indicators, support/resistance levels, and multi-timeframe analysis for the selected coin.',
     icon: LineChart,
     color: 'text-cyan-400',
     bgColor: 'bg-cyan-500/10',
@@ -127,9 +125,8 @@ const methodologySteps = [
   },
   {
     step: 3,
-    name: 'Güvenlik Kontrolü',
-    nameEn: 'Safety Check',
-    description: 'Manipülasyon riski, balina aktivitesi, exchange akışları ve akıllı para hareketleri incelenir.',
+    name: 'Safety Check',
+    description: 'Examines manipulation risk, whale activity, exchange flows, and smart money movements.',
     icon: Shield,
     color: 'text-green-400',
     bgColor: 'bg-green-500/10',
@@ -138,9 +135,8 @@ const methodologySteps = [
   },
   {
     step: 4,
-    name: 'Zamanlama',
-    nameEn: 'Timing',
-    description: 'Optimal giriş zamanı, beklenmesi gereken koşullar ve giriş bölgeleri hesaplanır.',
+    name: 'Timing',
+    description: 'Calculates optimal entry time, conditions to wait for, and entry zones.',
     icon: Clock,
     color: 'text-yellow-400',
     bgColor: 'bg-yellow-500/10',
@@ -149,9 +145,8 @@ const methodologySteps = [
   },
   {
     step: 5,
-    name: 'İşlem Planı',
-    nameEn: 'Trade Plan',
-    description: 'Giriş, stop-loss, take-profit seviyeleri ve pozisyon büyüklüğü belirlenir.',
+    name: 'Trade Plan',
+    description: 'Determines entry, stop-loss, take-profit levels and position sizing.',
     icon: Target,
     color: 'text-purple-400',
     bgColor: 'bg-purple-500/10',
@@ -160,9 +155,8 @@ const methodologySteps = [
   },
   {
     step: 6,
-    name: 'Tuzak Kontrolü',
-    nameEn: 'Trap Check',
-    description: 'Bull/Bear tuzakları, fakeout riskleri ve likidite avı bölgeleri tespit edilir.',
+    name: 'Trap Check',
+    description: 'Detects bull/bear traps, fakeout risks, and liquidity hunt zones.',
     icon: AlertTriangle,
     color: 'text-orange-400',
     bgColor: 'bg-orange-500/10',
@@ -171,9 +165,8 @@ const methodologySteps = [
   },
   {
     step: 7,
-    name: 'Final Karar',
-    nameEn: 'Final Verdict',
-    description: 'Tüm analizler birleştirilerek GO, WAIT veya AVOID kararı ve güven skoru hesaplanır.',
+    name: 'Final Verdict',
+    description: 'Combines all analyses to generate GO, WAIT or AVOID decision with confidence score.',
     icon: Brain,
     color: 'text-emerald-400',
     bgColor: 'bg-emerald-500/10',
@@ -265,9 +258,9 @@ function VerdictBadge({ verdict, count, total }: { verdict: string; count: numbe
 
 function OutcomeIndicator({ outcome }: { outcome: 'correct' | 'incorrect' | 'pending' }) {
   const config = {
-    correct: { icon: CheckCircle2, color: 'text-green-400', label: 'Doğru' },
-    incorrect: { icon: XCircle, color: 'text-red-400', label: 'Yanlış' },
-    pending: { icon: Clock, color: 'text-yellow-400', label: 'Bekliyor' },
+    correct: { icon: CheckCircle2, color: 'text-green-400', label: 'Correct' },
+    incorrect: { icon: XCircle, color: 'text-red-400', label: 'Wrong' },
+    pending: { icon: Clock, color: 'text-yellow-400', label: 'Pending' },
   }[outcome];
 
   const Icon = config.icon;
@@ -360,7 +353,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <Loader2 className="w-10 h-10 animate-spin text-emerald-500 mx-auto mb-4" />
-          <p className="text-slate-400">Veriler yükleniyor...</p>
+          <p className="text-slate-400">Loading data...</p>
         </div>
       </div>
     );
@@ -386,24 +379,24 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Shield className="w-5 h-5 text-emerald-400" />
-                <h2 className="text-xl font-bold text-white">Platform Doğruluğu</h2>
+                <h2 className="text-xl font-bold text-white">Platform Accuracy</h2>
               </div>
               <p className="text-slate-400 text-sm max-w-md">
-                7-Adım analiz sistemimiz, gerçek piyasa verilerini kullanarak tahminler üretir.
-                Doğruluk oranımız backtesting ve canlı sonuçlarla doğrulanmaktadır.
+                Our 7-Step analysis system generates predictions using real market data.
+                Accuracy rate is verified through backtesting and live results.
               </p>
               <div className="flex items-center gap-4 mt-3">
                 <div className="flex items-center gap-1.5 text-sm">
                   <Database className="w-4 h-4 text-blue-400" />
-                  <span className="text-slate-300">{platformStats?.dataQuality.dataSourcesCount || 12} Veri Kaynağı</span>
+                  <span className="text-slate-300">{platformStats?.dataQuality.dataSourcesCount || 12} Data Sources</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-sm">
                   <Activity className="w-4 h-4 text-purple-400" />
-                  <span className="text-slate-300">{platformStats?.dataQuality.indicatorsUsed || 47} Gösterge</span>
+                  <span className="text-slate-300">{platformStats?.dataQuality.indicatorsUsed || 47} Indicators</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-sm">
                   <RefreshCw className="w-4 h-4 text-cyan-400" />
-                  <span className="text-slate-300">Gerçek Zamanlı</span>
+                  <span className="text-slate-300">Real-time</span>
                 </div>
               </div>
             </div>
@@ -414,22 +407,22 @@ export default function DashboardPage() {
             <div className="bg-slate-800/50 rounded-xl p-4 text-center border border-slate-700/50">
               <Users className="w-5 h-5 text-blue-400 mx-auto mb-1" />
               <div className="text-2xl font-bold text-white">{platformStats?.platform.totalUsers || 0}</div>
-              <div className="text-xs text-slate-400">Aktif Kullanıcı</div>
+              <div className="text-xs text-slate-400">Active Users</div>
             </div>
             <div className="bg-slate-800/50 rounded-xl p-4 text-center border border-slate-700/50">
               <BarChart3 className="w-5 h-5 text-emerald-400 mx-auto mb-1" />
               <div className="text-2xl font-bold text-white">{platformStats?.platform.totalAnalyses || 0}</div>
-              <div className="text-xs text-slate-400">Toplam Analiz</div>
+              <div className="text-xs text-slate-400">Total Analyses</div>
             </div>
             <div className="bg-slate-800/50 rounded-xl p-4 text-center border border-slate-700/50">
               <TrendingUp className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
               <div className="text-2xl font-bold text-white">{platformStats?.platform.weeklyAnalyses || 0}</div>
-              <div className="text-xs text-slate-400">Bu Hafta</div>
+              <div className="text-xs text-slate-400">This Week</div>
             </div>
             <div className="bg-slate-800/50 rounded-xl p-4 text-center border border-slate-700/50">
               <Sparkles className="w-5 h-5 text-purple-400 mx-auto mb-1" />
               <div className="text-2xl font-bold text-white">{credits}</div>
-              <div className="text-xs text-slate-400">Kredilerim</div>
+              <div className="text-xs text-slate-400">My Credits</div>
             </div>
           </div>
         </div>
@@ -443,15 +436,15 @@ export default function DashboardPage() {
               <Brain className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">7-Adım Analiz Metodolojisi</h2>
-              <p className="text-sm text-slate-400">Her adım bağımsız olarak doğrulanmış algoritmalar kullanır</p>
+              <h2 className="text-xl font-bold text-white">7-Step Analysis Methodology</h2>
+              <p className="text-sm text-slate-400">Each step uses independently verified algorithms</p>
             </div>
           </div>
           <Link
             href="/analyze"
             className="hidden sm:flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition"
           >
-            Analiz Başlat
+            Start Analysis
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -493,7 +486,7 @@ export default function DashboardPage() {
                 {/* Accuracy Bar */}
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-500">Doğruluk</span>
+                    <span className="text-slate-500">Accuracy</span>
                     <span className={step.color}>{accuracy.toFixed(1)}%</span>
                   </div>
                   <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
@@ -527,7 +520,7 @@ export default function DashboardPage() {
           href="/analyze"
           className="sm:hidden flex items-center justify-center gap-2 mt-6 px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium transition w-full"
         >
-          Analiz Başlat
+          Start Analysis
           <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
@@ -539,7 +532,7 @@ export default function DashboardPage() {
         <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50">
           <div className="flex items-center gap-2 mb-6">
             <Target className="w-5 h-5 text-emerald-400" />
-            <h3 className="text-lg font-semibold text-white">Adım Bazlı Doğruluk</h3>
+            <h3 className="text-lg font-semibold text-white">Step-by-Step Accuracy</h3>
           </div>
 
           <div className="space-y-4">
@@ -583,7 +576,7 @@ export default function DashboardPage() {
           <div className="mt-6 pt-4 border-t border-slate-700/50">
             <div className="flex items-center gap-2 text-sm text-slate-400">
               <Info className="w-4 h-4" />
-              <span>Son güncelleme: {new Date().toLocaleDateString('tr-TR')}</span>
+              <span>Last updated: {new Date().toLocaleDateString('en-US')}</span>
             </div>
           </div>
         </div>
@@ -592,7 +585,7 @@ export default function DashboardPage() {
         <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50">
           <div className="flex items-center gap-2 mb-6">
             <PieChart className="w-5 h-5 text-purple-400" />
-            <h3 className="text-lg font-semibold text-white">Karar Dağılımı</h3>
+            <h3 className="text-lg font-semibold text-white">Verdict Distribution</h3>
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-6">
@@ -603,15 +596,15 @@ export default function DashboardPage() {
           </div>
 
           <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/30">
-            <h4 className="text-sm font-medium text-white mb-2">Neden Önemli?</h4>
+            <h4 className="text-sm font-medium text-white mb-2">Why It Matters?</h4>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Dengeli bir karar dağılımı, sistemin piyasa koşullarına duyarlı olduğunu gösterir.
-              Sadece "AL" sinyali veren sistemler güvenilir değildir.
+              A balanced verdict distribution shows the system is responsive to market conditions.
+              Systems that only give "BUY" signals are not reliable.
             </p>
           </div>
 
           <div className="mt-4 flex items-center justify-between text-sm">
-            <span className="text-slate-400">Toplam Karar</span>
+            <span className="text-slate-400">Total Verdicts</span>
             <span className="font-bold text-white">{totalVerdicts}</span>
           </div>
         </div>
@@ -620,7 +613,7 @@ export default function DashboardPage() {
         <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50">
           <div className="flex items-center gap-2 mb-6">
             <Award className="w-5 h-5 text-yellow-400" />
-            <h3 className="text-lg font-semibold text-white">Kişisel Performansım</h3>
+            <h3 className="text-lg font-semibold text-white">My Performance</h3>
           </div>
 
           {userStats && userStats.totalAnalyses > 0 ? (
@@ -628,7 +621,7 @@ export default function DashboardPage() {
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-slate-900/50 rounded-xl p-4 text-center">
                   <div className="text-3xl font-bold text-white">{userStats.totalAnalyses}</div>
-                  <div className="text-xs text-slate-400">Toplam Analiz</div>
+                  <div className="text-xs text-slate-400">Total Analyses</div>
                 </div>
                 <div className="bg-slate-900/50 rounded-xl p-4 text-center">
                   <div className={cn(
@@ -642,21 +635,21 @@ export default function DashboardPage() {
                 </div>
                 <div className="bg-green-500/10 rounded-xl p-4 text-center border border-green-500/20">
                   <div className="text-2xl font-bold text-green-400">{userStats.goSignals}</div>
-                  <div className="text-xs text-slate-400">GO Sinyali</div>
+                  <div className="text-xs text-slate-400">GO Signals</div>
                 </div>
                 <div className="bg-red-500/10 rounded-xl p-4 text-center border border-red-500/20">
                   <div className="text-2xl font-bold text-red-400">{userStats.avoidSignals}</div>
-                  <div className="text-xs text-slate-400">AVOID Sinyali</div>
+                  <div className="text-xs text-slate-400">AVOID Signals</div>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Ortalama Skor</span>
+                  <span className="text-slate-400">Average Score</span>
                   <span className="text-white font-medium">{userStats.avgScore.toFixed(1)}/10</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Son Analiz</span>
+                  <span className="text-slate-400">Last Analysis</span>
                   <span className="text-white font-medium">{userStats.lastAnalysisDate || '-'}</span>
                 </div>
               </div>
@@ -666,15 +659,15 @@ export default function DashboardPage() {
               <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center mx-auto mb-4">
                 <BarChart3 className="w-8 h-8 text-slate-500" />
               </div>
-              <h4 className="font-semibold text-white mb-2">Henüz analiz yapmadınız</h4>
+              <h4 className="font-semibold text-white mb-2">No analyses yet</h4>
               <p className="text-sm text-slate-400 mb-4">
-                İlk analizinizi yaparak performansınızı takip etmeye başlayın
+                Start your first analysis to track your performance
               </p>
               <Link
                 href="/analyze"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition"
               >
-                İlk Analizimi Yap
+                Start First Analysis
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -690,22 +683,22 @@ export default function DashboardPage() {
               <Eye className="w-5 h-5 text-blue-400" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Canlı Doğruluk Takibi</h2>
-              <p className="text-sm text-slate-400">Yapılan tahminler vs gerçekleşen sonuçlar</p>
+              <h2 className="text-xl font-bold text-white">Live Accuracy Tracking</h2>
+              <p className="text-sm text-slate-400">Predictions vs actual outcomes</p>
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-4 text-sm">
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-green-400" />
-              <span className="text-slate-400">Doğru</span>
+              <span className="text-slate-400">Correct</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-red-400" />
-              <span className="text-slate-400">Yanlış</span>
+              <span className="text-slate-400">Wrong</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-yellow-400" />
-              <span className="text-slate-400">Bekliyor</span>
+              <span className="text-slate-400">Pending</span>
             </div>
           </div>
         </div>
@@ -763,9 +756,9 @@ export default function DashboardPage() {
         ) : (
           <div className="text-center py-12 bg-slate-900/30 rounded-xl">
             <Activity className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <h4 className="font-semibold text-white mb-2">Henüz takip edilen sonuç yok</h4>
+            <h4 className="font-semibold text-white mb-2">No tracked outcomes yet</h4>
             <p className="text-sm text-slate-400">
-              Analizler tamamlandıktan 24 saat sonra sonuçlar burada görünecek
+              Results will appear here 24 hours after analyses are completed
             </p>
           </div>
         )}
@@ -778,8 +771,8 @@ export default function DashboardPage() {
             <Lock className="w-5 h-5 text-cyan-400" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Veri Kaynakları & Metodoloji</h2>
-            <p className="text-sm text-slate-400">Analizlerimizin arkasındaki güvenilir altyapı</p>
+            <h2 className="text-xl font-bold text-white">Data Sources & Methodology</h2>
+            <p className="text-sm text-slate-400">The reliable infrastructure behind our analyses</p>
           </div>
         </div>
 
@@ -787,7 +780,7 @@ export default function DashboardPage() {
           {/* Data Sources */}
           <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/30">
             <Database className="w-6 h-6 text-blue-400 mb-3" />
-            <h4 className="font-semibold text-white mb-2">Veri Kaynakları</h4>
+            <h4 className="font-semibold text-white mb-2">Data Sources</h4>
             <ul className="text-sm text-slate-400 space-y-1.5">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -811,7 +804,7 @@ export default function DashboardPage() {
           {/* Technical Indicators */}
           <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/30">
             <LineChart className="w-6 h-6 text-purple-400 mb-3" />
-            <h4 className="font-semibold text-white mb-2">Teknik Göstergeler</h4>
+            <h4 className="font-semibold text-white mb-2">Technical Indicators</h4>
             <ul className="text-sm text-slate-400 space-y-1.5">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -835,11 +828,11 @@ export default function DashboardPage() {
           {/* AI Analysis */}
           <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/30">
             <Brain className="w-6 h-6 text-emerald-400 mb-3" />
-            <h4 className="font-semibold text-white mb-2">AI Analiz</h4>
+            <h4 className="font-semibold text-white mb-2">AI Analysis</h4>
             <ul className="text-sm text-slate-400 space-y-1.5">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                Gemini AI Entegrasyonu
+                Gemini AI Integration
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -859,7 +852,7 @@ export default function DashboardPage() {
           {/* Security */}
           <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/30">
             <Shield className="w-6 h-6 text-yellow-400 mb-3" />
-            <h4 className="font-semibold text-white mb-2">Güvenlik</h4>
+            <h4 className="font-semibold text-white mb-2">Security</h4>
             <ul className="text-sm text-slate-400 space-y-1.5">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -886,11 +879,11 @@ export default function DashboardPage() {
           <div className="flex gap-3">
             <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-medium text-yellow-400 mb-1">Risk Uyarısı</h4>
+              <h4 className="font-medium text-yellow-400 mb-1">Risk Disclaimer</h4>
               <p className="text-sm text-slate-400">
-                TradePath, yatırım tavsiyesi vermez. Tüm analizler eğitim amaçlıdır.
-                Kripto para piyasaları yüksek riskli olup, yatırım kararlarınız tamamen size aittir.
-                Geçmiş performans gelecek sonuçların garantisi değildir.
+                TradePath does not provide investment advice. All analyses are for educational purposes only.
+                Cryptocurrency markets are high-risk, and investment decisions are entirely your responsibility.
+                Past performance is not a guarantee of future results.
               </p>
             </div>
           </div>
@@ -904,28 +897,28 @@ export default function DashboardPage() {
           className="flex flex-col items-center gap-2 p-4 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-xl border border-emerald-500/30 transition group"
         >
           <Zap className="w-6 h-6 text-emerald-400 group-hover:scale-110 transition" />
-          <span className="font-medium text-white">Yeni Analiz</span>
+          <span className="font-medium text-white">New Analysis</span>
         </Link>
         <Link
           href="/reports"
           className="flex flex-col items-center gap-2 p-4 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl border border-blue-500/30 transition group"
         >
           <BarChart3 className="w-6 h-6 text-blue-400 group-hover:scale-110 transition" />
-          <span className="font-medium text-white">Raporlarım</span>
+          <span className="font-medium text-white">My Reports</span>
         </Link>
         <Link
           href="/ai-experts"
           className="flex flex-col items-center gap-2 p-4 bg-purple-500/10 hover:bg-purple-500/20 rounded-xl border border-purple-500/30 transition group"
         >
           <Brain className="w-6 h-6 text-purple-400 group-hover:scale-110 transition" />
-          <span className="font-medium text-white">AI Uzmanlar</span>
+          <span className="font-medium text-white">AI Experts</span>
         </Link>
         <Link
           href="/credits"
           className="flex flex-col items-center gap-2 p-4 bg-yellow-500/10 hover:bg-yellow-500/20 rounded-xl border border-yellow-500/30 transition group"
         >
           <Sparkles className="w-6 h-6 text-yellow-400 group-hover:scale-110 transition" />
-          <span className="font-medium text-white">Kredi Al</span>
+          <span className="font-medium text-white">Buy Credits</span>
         </Link>
       </div>
     </div>
