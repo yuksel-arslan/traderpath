@@ -332,9 +332,9 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="max-w-5xl mx-auto">
-            {/* Steps 1-4 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              {FEATURES.slice(0, 4).map((feature, index) => {
+            {/* Steps 1-3 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {FEATURES.slice(0, 3).map((feature, index) => {
                 const Icon = feature.icon;
                 return (
                   <div
@@ -353,21 +353,41 @@ export default function LandingPage() {
                 );
               })}
             </div>
-            {/* Steps 5-7 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {FEATURES.slice(4).map((feature, index) => {
+            {/* Steps 4-6 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {FEATURES.slice(3, 6).map((feature, index) => {
                 const Icon = feature.icon;
-                const isVerdict = index === 2;
                 return (
                   <div
                     key={index}
-                    className={`p-5 bg-card border rounded-lg hover:border-primary/50 transition group ${isVerdict ? 'ring-2 ring-green-500/20 border-green-500/30' : ''}`}
+                    className="p-5 bg-card border rounded-lg hover:border-primary/50 transition group"
                   >
                     <div className="flex items-center gap-3 mb-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-110 transition ${isVerdict ? 'bg-green-500/10' : 'bg-primary/10'}`}>
-                        <Icon className={`w-5 h-5 ${isVerdict ? 'text-green-500' : 'text-primary'}`} />
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
+                        <Icon className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="text-xs text-muted-foreground font-medium">Step {index + 5}</span>
+                      <span className="text-xs text-muted-foreground font-medium">Step {index + 4}</span>
+                    </div>
+                    <h3 className="font-semibold mb-1">{feature.title}</h3>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Step 7 - Final Verdict */}
+            <div className="max-w-md mx-auto">
+              {FEATURES.slice(6).map((feature, index) => {
+                const Icon = feature.icon;
+                return (
+                  <div
+                    key={index}
+                    className="p-5 bg-card border rounded-lg hover:border-primary/50 transition group ring-2 ring-green-500/20 border-green-500/30"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
+                        <Icon className="w-5 h-5 text-green-500" />
+                      </div>
+                      <span className="text-xs text-muted-foreground font-medium">Step 7</span>
                     </div>
                     <h3 className="font-semibold mb-1">{feature.title}</h3>
                     <p className="text-sm text-muted-foreground">{feature.description}</p>
