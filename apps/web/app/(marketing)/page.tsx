@@ -416,64 +416,77 @@ export default function LandingPage() {
               Get from market confusion to trading confidence in minutes
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                step: 1,
-                title: 'Select a Coin',
-                description: 'Choose from our supported cryptocurrencies to analyze',
-              },
-              {
-                step: 2,
-                title: 'Run Analysis',
-                description: 'Our AI processes market data through 7 specialized steps',
-              },
-              {
-                step: 3,
-                title: 'Trade with Confidence',
-                description: 'Get clear recommendations with entry, targets, and stop-loss',
-              },
-            ].map((item) => (
-              <div key={item.step} className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4 shadow-lg shadow-amber-500/25">
-                  {item.step}
-                </div>
-                <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                <p className="text-muted-foreground">{item.description}</p>
-              </div>
-            ))}
-          </div>
 
-          {/* 7-Step Methodology */}
-          <div className="mt-16 pt-16 border-t border-border">
-            <div className="text-center mb-10">
-              <h3 className="text-2xl md:text-3xl font-bold mb-3">Our 7-Step Analysis</h3>
-              <p className="text-muted-foreground max-w-xl mx-auto">
-                Every analysis goes through 7 specialized AI-powered checks
-              </p>
+          {/* Integrated Flow */}
+          <div className="max-w-5xl mx-auto space-y-8">
+            {/* Step 1: Select */}
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-amber-500/25">
+                1
+              </div>
+              <div className="text-center md:text-left flex-1">
+                <h3 className="text-xl font-bold mb-1">Select Your Coin</h3>
+                <p className="text-muted-foreground text-sm">Choose from 30+ supported cryptocurrencies</p>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 max-w-5xl mx-auto">
-              {[
-                { step: 1, name: 'Market Pulse', icon: Globe, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                { step: 2, name: 'Asset Scanner', icon: BarChart3, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
-                { step: 3, name: 'Safety Check', icon: Shield, color: 'text-green-500', bg: 'bg-green-500/10' },
-                { step: 4, name: 'Timing', icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-                { step: 5, name: 'Trade Plan', icon: Target, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-                { step: 6, name: 'Trap Check', icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-500/10' },
-                { step: 7, name: 'Final Verdict', icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-              ].map((item) => {
-                const Icon = item.icon;
-                return (
-                  <div key={item.step} className="flex flex-col items-center text-center p-3">
-                    <div className={`w-12 h-12 ${item.bg} rounded-xl flex items-center justify-center mb-2`}>
-                      <Icon className={`w-6 h-6 ${item.color}`} />
-                    </div>
-                    <span className="text-xs font-medium text-muted-foreground">Step {item.step}</span>
-                    <span className="text-sm font-semibold">{item.name}</span>
+            {/* Arrow */}
+            <div className="flex justify-center md:justify-start md:ml-7">
+              <div className="w-0.5 h-6 bg-border" />
+            </div>
+
+            {/* Step 2: 7-Step Analysis */}
+            <div className="flex flex-col md:flex-row items-start gap-6">
+              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-amber-500/25">
+                2
+              </div>
+              <div className="flex-1">
+                <div className="text-center md:text-left mb-4">
+                  <h3 className="text-xl font-bold mb-1">AI Runs 7-Step Analysis</h3>
+                  <p className="text-muted-foreground text-sm">Each coin goes through specialized checks</p>
+                </div>
+
+                {/* 7 Steps Grid */}
+                <div className="bg-card border rounded-xl p-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                    {[
+                      { name: 'Market Pulse', icon: Globe, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                      { name: 'Asset Scan', icon: BarChart3, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
+                      { name: 'Safety', icon: Shield, color: 'text-green-500', bg: 'bg-green-500/10' },
+                      { name: 'Timing', icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+                      { name: 'Trade Plan', icon: Target, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                      { name: 'Trap Check', icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+                      { name: 'Verdict', icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                    ].map((item, idx) => {
+                      const Icon = item.icon;
+                      return (
+                        <div key={idx} className="flex flex-col items-center text-center p-2 rounded-lg hover:bg-accent/50 transition">
+                          <div className={`w-9 h-9 ${item.bg} rounded-lg flex items-center justify-center mb-1`}>
+                            <Icon className={`w-4 h-4 ${item.color}`} />
+                          </div>
+                          <span className="text-[11px] font-medium">{item.name}</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              </div>
+            </div>
+
+            {/* Arrow */}
+            <div className="flex justify-center md:justify-start md:ml-7">
+              <div className="w-0.5 h-6 bg-border" />
+            </div>
+
+            {/* Step 3: Trade */}
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-amber-500/25">
+                3
+              </div>
+              <div className="text-center md:text-left flex-1">
+                <h3 className="text-xl font-bold mb-1">Trade with Confidence</h3>
+                <p className="text-muted-foreground text-sm">Get clear GO/WAIT/AVOID verdicts with exact entry, TP, and SL levels</p>
+              </div>
             </div>
           </div>
 
