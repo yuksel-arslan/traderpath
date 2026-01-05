@@ -63,6 +63,7 @@ interface PlatformStats {
     };
     lastUpdated: string;
     methodology: string;
+    sampleSize?: number; // Number of analyses used for accuracy calculation
   };
   verdicts: {
     go: number;
@@ -178,15 +179,17 @@ const methodologySteps = [
 // ===========================================
 // Helper Components
 // ===========================================
-function AccuracyRing({ percentage, size = 120, strokeWidth = 8, color = 'text-emerald-400' }: {
+function AccuracyRing({ percentage, size = 120, strokeWidth = 8, color = 'text-emerald-400', hasData = true }: {
   percentage: number;
   size?: number;
   strokeWidth?: number;
   color?: string;
+  hasData?: boolean;
 }) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (percentage / 100) * circumference;
+  const displayPercentage = hasData ? percentage : 0;
+  const offset = circumference - (displayPercentage / 100) * circumference;
 
   return (
     <div className="relative" style={{ width: size, height: size }}>
@@ -201,7 +204,7 @@ function AccuracyRing({ percentage, size = 120, strokeWidth = 8, color = 'text-e
           cy={size / 2}
         />
         <circle
-          className={color}
+          className={hasData ? color : 'text-slate-600'}
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={offset}
@@ -215,24 +218,37 @@ function AccuracyRing({ percentage, size = 120, strokeWidth = 8, color = 'text-e
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-bold text-white">{percentage.toFixed(1)}%</span>
-        <span className="text-xs text-slate-400">Accuracy</span>
+        {hasData ? (
+          <>
+            <span className="text-3xl font-bold text-white">{percentage.toFixed(1)}%</span>
+            <span className="text-xs text-slate-400">Accuracy</span>
+          </>
+        ) : (
+          <>
+            <span className="text-lg font-medium text-slate-400">No Data</span>
+            <span className="text-xs text-slate-500">Yet</span>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-function StepAccuracyBar({ name, accuracy, color }: { name: string; accuracy: number; color: string }) {
+function StepAccuracyBar({ name, accuracy, color, hasData = true }: { name: string; accuracy: number; color: string; hasData?: boolean }) {
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-sm">
         <span className="text-slate-300">{name}</span>
-        <span className="text-white font-medium">{accuracy.toFixed(1)}%</span>
+        {hasData ? (
+          <span className="text-white font-medium">{accuracy.toFixed(1)}%</span>
+        ) : (
+          <span className="text-slate-500 text-xs">No data</span>
+        )}
       </div>
       <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
         <div
-          className={cn("h-full rounded-full transition-all duration-1000", color)}
-          style={{ width: `${accuracy}%` }}
+          className={cn("h-full rounded-full transition-all duration-1000", hasData ? color : 'bg-slate-600')}
+          style={{ width: hasData ? `${accuracy}%` : '0%' }}
         />
       </div>
     </div>
@@ -361,7 +377,10 @@ export default function DashboardPage() {
 
   const totalVerdicts = platformStats ?
     platformStats.verdicts.go + platformStats.verdicts.conditional_go +
-    platformStats.verdicts.wait + platformStats.verdicts.avoid : 100;
+    platformStats.verdicts.wait + platformStats.verdicts.avoid : 0;
+
+  // Check if we have real data (sampleSize > 0 means real analyses exist)
+  const hasRealData = (platformStats?.accuracy.sampleSize ?? 0) > 0 || totalVerdicts > 0;
 
   return (
     <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-8">
@@ -372,9 +391,10 @@ export default function DashboardPage() {
           {/* Left - Main Accuracy Display */}
           <div className="flex items-center gap-6">
             <AccuracyRing
-              percentage={platformStats?.accuracy.overall || 73.2}
+              percentage={platformStats?.accuracy.overall ?? 0}
               size={130}
               strokeWidth={10}
+              hasData={hasRealData}
             />
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -382,17 +402,20 @@ export default function DashboardPage() {
                 <h2 className="text-xl font-bold text-white">Platform Accuracy</h2>
               </div>
               <p className="text-slate-400 text-sm max-w-md">
-                Our 7-Step analysis system generates predictions using real market data.
-                Accuracy rate is verified through backtesting and live results.
+                {hasRealData ? (
+                  <>Our 7-Step analysis system generates predictions using real market data. Accuracy rate is calculated from {platformStats?.accuracy.sampleSize ?? 0} completed analyses.</>
+                ) : (
+                  <>Our 7-Step analysis system generates predictions using real market data. Start analyzing to see accuracy metrics.</>
+                )}
               </p>
               <div className="flex items-center gap-4 mt-3">
                 <div className="flex items-center gap-1.5 text-sm">
                   <Database className="w-4 h-4 text-blue-400" />
-                  <span className="text-slate-300">{platformStats?.dataQuality.dataSourcesCount || 12} Data Sources</span>
+                  <span className="text-slate-300">{platformStats?.dataQuality.dataSourcesCount ?? 12} Data Sources</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-sm">
                   <Activity className="w-4 h-4 text-purple-400" />
-                  <span className="text-slate-300">{platformStats?.dataQuality.indicatorsUsed || 47} Indicators</span>
+                  <span className="text-slate-300">{platformStats?.dataQuality.indicatorsUsed ?? 47} Indicators</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-sm">
                   <RefreshCw className="w-4 h-4 text-cyan-400" />
@@ -406,17 +429,17 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-slate-800/50 rounded-xl p-4 text-center border border-slate-700/50">
               <Users className="w-5 h-5 text-blue-400 mx-auto mb-1" />
-              <div className="text-2xl font-bold text-white">{platformStats?.platform.totalUsers || 0}</div>
+              <div className="text-2xl font-bold text-white">{platformStats?.platform.totalUsers ?? 0}</div>
               <div className="text-xs text-slate-400">Active Users</div>
             </div>
             <div className="bg-slate-800/50 rounded-xl p-4 text-center border border-slate-700/50">
               <BarChart3 className="w-5 h-5 text-emerald-400 mx-auto mb-1" />
-              <div className="text-2xl font-bold text-white">{platformStats?.platform.totalAnalyses || 0}</div>
+              <div className="text-2xl font-bold text-white">{platformStats?.platform.totalAnalyses ?? 0}</div>
               <div className="text-xs text-slate-400">Total Analyses</div>
             </div>
             <div className="bg-slate-800/50 rounded-xl p-4 text-center border border-slate-700/50">
               <TrendingUp className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
-              <div className="text-2xl font-bold text-white">{platformStats?.platform.weeklyAnalyses || 0}</div>
+              <div className="text-2xl font-bold text-white">{platformStats?.platform.weeklyAnalyses ?? 0}</div>
               <div className="text-xs text-slate-400">This Week</div>
             </div>
             <div className="bg-slate-800/50 rounded-xl p-4 text-center border border-slate-700/50">
@@ -463,7 +486,8 @@ export default function DashboardPage() {
               7: 'finalVerdict',
             }[step.step] as keyof typeof platformStats.accuracy.stepRates;
 
-            const accuracy = platformStats?.accuracy.stepRates[accuracyKey] || 75;
+            const accuracy = platformStats?.accuracy.stepRates[accuracyKey] ?? 0;
+            const stepHasData = hasRealData && accuracy > 0;
 
             return (
               <div
@@ -487,12 +511,16 @@ export default function DashboardPage() {
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-500">Accuracy</span>
-                    <span className={step.color}>{accuracy.toFixed(1)}%</span>
+                    {stepHasData ? (
+                      <span className={step.color}>{accuracy.toFixed(1)}%</span>
+                    ) : (
+                      <span className="text-slate-600">No data</span>
+                    )}
                   </div>
                   <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
                     <div
-                      className={cn("h-full rounded-full", step.color.replace('text-', 'bg-'))}
-                      style={{ width: `${accuracy}%` }}
+                      className={cn("h-full rounded-full", stepHasData ? step.color.replace('text-', 'bg-') : 'bg-slate-600')}
+                      style={{ width: stepHasData ? `${accuracy}%` : '0%' }}
                     />
                   </div>
                 </div>
@@ -538,38 +566,45 @@ export default function DashboardPage() {
           <div className="space-y-4">
             <StepAccuracyBar
               name="Market Pulse"
-              accuracy={platformStats?.accuracy.stepRates.marketPulse || 78.5}
+              accuracy={platformStats?.accuracy.stepRates.marketPulse ?? 0}
               color="bg-blue-400"
+              hasData={hasRealData && (platformStats?.accuracy.stepRates.marketPulse ?? 0) > 0}
             />
             <StepAccuracyBar
               name="Asset Scanner"
-              accuracy={platformStats?.accuracy.stepRates.assetScanner || 81.2}
+              accuracy={platformStats?.accuracy.stepRates.assetScanner ?? 0}
               color="bg-cyan-400"
+              hasData={hasRealData && (platformStats?.accuracy.stepRates.assetScanner ?? 0) > 0}
             />
             <StepAccuracyBar
               name="Safety Check"
-              accuracy={platformStats?.accuracy.stepRates.safetyCheck || 76.8}
+              accuracy={platformStats?.accuracy.stepRates.safetyCheck ?? 0}
               color="bg-green-400"
+              hasData={hasRealData && (platformStats?.accuracy.stepRates.safetyCheck ?? 0) > 0}
             />
             <StepAccuracyBar
               name="Timing"
-              accuracy={platformStats?.accuracy.stepRates.timing || 72.4}
+              accuracy={platformStats?.accuracy.stepRates.timing ?? 0}
               color="bg-yellow-400"
+              hasData={hasRealData && (platformStats?.accuracy.stepRates.timing ?? 0) > 0}
             />
             <StepAccuracyBar
               name="Trade Plan"
-              accuracy={platformStats?.accuracy.stepRates.tradePlan || 74.6}
+              accuracy={platformStats?.accuracy.stepRates.tradePlan ?? 0}
               color="bg-purple-400"
+              hasData={hasRealData && (platformStats?.accuracy.stepRates.tradePlan ?? 0) > 0}
             />
             <StepAccuracyBar
               name="Trap Check"
-              accuracy={platformStats?.accuracy.stepRates.trapCheck || 79.3}
+              accuracy={platformStats?.accuracy.stepRates.trapCheck ?? 0}
               color="bg-orange-400"
+              hasData={hasRealData && (platformStats?.accuracy.stepRates.trapCheck ?? 0) > 0}
             />
             <StepAccuracyBar
               name="Final Verdict"
-              accuracy={platformStats?.accuracy.stepRates.finalVerdict || 73.2}
+              accuracy={platformStats?.accuracy.stepRates.finalVerdict ?? 0}
               color="bg-emerald-400"
+              hasData={hasRealData && (platformStats?.accuracy.stepRates.finalVerdict ?? 0) > 0}
             />
           </div>
 
@@ -588,12 +623,20 @@ export default function DashboardPage() {
             <h3 className="text-lg font-semibold text-white">Verdict Distribution</h3>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <VerdictBadge verdict="go" count={platformStats?.verdicts.go || 32} total={totalVerdicts} />
-            <VerdictBadge verdict="conditional_go" count={platformStats?.verdicts.conditional_go || 28} total={totalVerdicts} />
-            <VerdictBadge verdict="wait" count={platformStats?.verdicts.wait || 25} total={totalVerdicts} />
-            <VerdictBadge verdict="avoid" count={platformStats?.verdicts.avoid || 15} total={totalVerdicts} />
-          </div>
+          {totalVerdicts > 0 ? (
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <VerdictBadge verdict="go" count={platformStats?.verdicts.go ?? 0} total={totalVerdicts} />
+              <VerdictBadge verdict="conditional_go" count={platformStats?.verdicts.conditional_go ?? 0} total={totalVerdicts} />
+              <VerdictBadge verdict="wait" count={platformStats?.verdicts.wait ?? 0} total={totalVerdicts} />
+              <VerdictBadge verdict="avoid" count={platformStats?.verdicts.avoid ?? 0} total={totalVerdicts} />
+            </div>
+          ) : (
+            <div className="text-center py-8 mb-6 bg-slate-900/30 rounded-xl">
+              <PieChart className="w-10 h-10 text-slate-600 mx-auto mb-2" />
+              <p className="text-sm text-slate-400">No verdicts yet</p>
+              <p className="text-xs text-slate-500">Complete analyses to see distribution</p>
+            </div>
+          )}
 
           <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/30">
             <h4 className="text-sm font-medium text-white mb-2">Why It Matters?</h4>
