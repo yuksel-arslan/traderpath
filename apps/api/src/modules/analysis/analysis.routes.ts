@@ -805,15 +805,7 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         orderBy: { generatedAt: 'desc' }
       });
 
-      // Get full analyses count from credit transactions
-      const fullAnalysesCount = await db.creditTransaction.count({
-        where: {
-          userId,
-          reason: 'analysis_full'
-        }
-      });
-
-      // Calculate real statistics from reports
+      // Calculate real statistics from reports (not credit transactions)
       const totalAnalyses = userReports.length;
       const completedAnalyses = totalAnalyses;
 
@@ -861,7 +853,7 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         : null;
 
       return reply.send({
-        totalAnalyses: fullAnalysesCount > 0 ? fullAnalysesCount : totalAnalyses,
+        totalAnalyses,
         completedAnalyses,
         accurateAnalyses,
         hitRate,
