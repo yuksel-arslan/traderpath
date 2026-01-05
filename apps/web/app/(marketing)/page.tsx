@@ -444,6 +444,39 @@ export default function LandingPage() {
             ))}
           </div>
 
+          {/* 7-Step Methodology */}
+          <div className="mt-16 pt-16 border-t border-border">
+            <div className="text-center mb-10">
+              <h3 className="text-2xl md:text-3xl font-bold mb-3">Our 7-Step Analysis</h3>
+              <p className="text-muted-foreground max-w-xl mx-auto">
+                Every analysis goes through 7 specialized AI-powered checks
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 max-w-5xl mx-auto">
+              {[
+                { step: 1, name: 'Market Pulse', icon: Globe, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                { step: 2, name: 'Asset Scanner', icon: BarChart3, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
+                { step: 3, name: 'Safety Check', icon: Shield, color: 'text-green-500', bg: 'bg-green-500/10' },
+                { step: 4, name: 'Timing', icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+                { step: 5, name: 'Trade Plan', icon: Target, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                { step: 6, name: 'Trap Check', icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+                { step: 7, name: 'Final Verdict', icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.step} className="flex flex-col items-center text-center p-3">
+                    <div className={`w-12 h-12 ${item.bg} rounded-xl flex items-center justify-center mb-2`}>
+                      <Icon className={`w-6 h-6 ${item.color}`} />
+                    </div>
+                    <span className="text-xs font-medium text-muted-foreground">Step {item.step}</span>
+                    <span className="text-sm font-semibold">{item.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* How We Measure Success */}
           <div className="mt-16 pt-16 border-t border-border">
             <div className="text-center mb-10">
