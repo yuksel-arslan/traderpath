@@ -408,10 +408,10 @@ interface AnalysisReportData {
   };
   tradePlan: {
     direction: string;
-    entries: Array<{ price: number; percentage: number }>;
+    entries?: Array<{ price: number; percentage?: number }>;
     averageEntry: number;
-    stopLoss: { price: number; percentage: number };
-    takeProfits: Array<{ price: number; percentage: number }>;
+    stopLoss: { price: number; percentage?: number };
+    takeProfits: Array<{ price: number; percentage?: number }>;
     riskReward: number;
     winRateEstimate?: number;
   };
