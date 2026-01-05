@@ -374,23 +374,25 @@ export default function LandingPage() {
                 );
               })}
             </div>
-            {/* Step 7 - Final Verdict */}
-            <div className="max-w-md mx-auto">
+            {/* Step 7 - Final Verdict (Full Width) */}
+            <div className="w-full">
               {FEATURES.slice(6).map((feature, index) => {
                 const Icon = feature.icon;
                 return (
                   <div
                     key={index}
-                    className="p-5 bg-card border rounded-lg hover:border-primary/50 transition group ring-2 ring-green-500/20 border-green-500/30"
+                    className="p-6 bg-card border rounded-lg hover:border-primary/50 transition group ring-2 ring-green-500/20 border-green-500/30"
                   >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
-                        <Icon className="w-5 h-5 text-green-500" />
+                    <div className="flex items-center justify-center gap-3 mb-3">
+                      <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
+                        <Icon className="w-6 h-6 text-green-500" />
                       </div>
-                      <span className="text-xs text-muted-foreground font-medium">Step 7</span>
+                      <div className="text-center">
+                        <span className="text-xs text-muted-foreground font-medium">Step 7</span>
+                        <h3 className="font-semibold text-lg">{feature.title}</h3>
+                      </div>
                     </div>
-                    <h3 className="font-semibold mb-1">{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                    <p className="text-sm text-muted-foreground text-center max-w-lg mx-auto">{feature.description}</p>
                   </div>
                 );
               })}
