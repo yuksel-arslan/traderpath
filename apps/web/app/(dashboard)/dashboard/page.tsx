@@ -993,7 +993,7 @@ export default function DashboardPage() {
           <span className="font-medium text-white">My Reports</span>
         </Link>
         <Link
-          href="/ai-experts"
+          href="/ai-expert"
           className="flex flex-col items-center gap-2 p-4 bg-purple-500/10 hover:bg-purple-500/20 rounded-xl border border-purple-500/30 transition group"
         >
           <Brain className="w-6 h-6 text-purple-400 group-hover:scale-110 transition" />
