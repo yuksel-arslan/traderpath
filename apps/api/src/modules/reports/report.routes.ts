@@ -570,4 +570,116 @@ export async function reportRoutes(fastify: FastifyInstance) {
       }
     }
   );
+
+  // ===========================================
+  // GET /api/reports/live-tracking - Get live tracking for all active trades
+  // Real-time TP/SL monitoring without AI costs
+  // ===========================================
+  fastify.get(
+    '/api/reports/live-tracking',
+    { preHandler: authenticate },
+    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+      try {
+        const userId = request.user?.id;
+        if (!userId) {
+          return reply.code(401).send({
+            error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+          });
+        }
+
+        const { getUserActiveTrades } = await import('./live-tracking.service');
+        const trades = await getUserActiveTrades(userId);
+
+        return reply.send({
+          success: true,
+          data: {
+            trades,
+            count: trades.length,
+            lastUpdated: new Date().toISOString(),
+          },
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to get live tracking data' },
+        });
+      }
+    }
+  );
+
+  // ===========================================
+  // GET /api/reports/:id/live-status - Get live status for a single report
+  // ===========================================
+  fastify.get<{ Params: { id: string } }>(
+    '/api/reports/:id/live-status',
+    { preHandler: authenticate },
+    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+      try {
+        const userId = request.user?.id;
+        if (!userId) {
+          return reply.code(401).send({
+            error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+          });
+        }
+
+        const { id } = request.params;
+
+        // Verify ownership
+        const report = await prisma.report.findFirst({
+          where: { id, userId },
+          select: { id: true },
+        });
+
+        if (!report) {
+          return reply.code(404).send({
+            error: { code: 'NOT_FOUND', message: 'Report not found' },
+          });
+        }
+
+        const { getReportLiveStatus } = await import('./live-tracking.service');
+        const status = await getReportLiveStatus(id);
+
+        if (!status) {
+          return reply.code(404).send({
+            error: { code: 'NO_TRADE_PLAN', message: 'No trade plan found for this report' },
+          });
+        }
+
+        return reply.send({
+          success: true,
+          data: status,
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to get live status' },
+        });
+      }
+    }
+  );
+
+  // ===========================================
+  // POST /api/reports/check-outcomes - Background job to check TP/SL hits
+  // Called periodically to update outcomes without AI
+  // ===========================================
+  fastify.post(
+    '/api/reports/check-outcomes',
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { checkAndUpdateOutcomes } = await import('./live-tracking.service');
+        const result = await checkAndUpdateOutcomes();
+
+        return reply.send({
+          success: true,
+          data: result,
+          message: `Checked ${result.checked} reports: ${result.tpHits} TP hits, ${result.slHits} SL hits`,
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to check outcomes' },
+        });
+      }
+    }
+  );
 }
