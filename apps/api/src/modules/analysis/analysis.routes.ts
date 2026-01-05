@@ -985,7 +985,6 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
       });
 
       // Recent outcomes from real reports with expiration info
-      const now = new Date();
       const recentOutcomes = reportsWithExpiration.map(report => {
         // Map verdict to standard format
         const verdictLower = report.verdict.toLowerCase();
