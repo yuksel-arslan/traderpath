@@ -443,6 +443,58 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+
+          {/* How We Measure Success */}
+          <div className="mt-16 pt-16 border-t border-border">
+            <div className="text-center mb-10">
+              <h3 className="text-2xl md:text-3xl font-bold mb-3">How We Measure Success</h3>
+              <p className="text-muted-foreground max-w-xl mx-auto">
+                Honest metrics that reflect real trading outcomes
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+              {/* TP/SL Based */}
+              <div className="bg-card border rounded-xl p-6 text-center">
+                <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Target className="w-6 h-6 text-green-500" />
+                </div>
+                <h4 className="font-semibold mb-2">TP/SL Based</h4>
+                <p className="text-sm text-muted-foreground">
+                  A trade is <span className="text-green-500 font-medium">successful</span> when Take Profit is hit,
+                  <span className="text-red-500 font-medium"> failed</span> when Stop Loss is hit.
+                </p>
+              </div>
+
+              {/* Real Outcomes */}
+              <div className="bg-card border rounded-xl p-6 text-center">
+                <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Eye className="w-6 h-6 text-blue-500" />
+                </div>
+                <h4 className="font-semibold mb-2">Real Outcomes</h4>
+                <p className="text-sm text-muted-foreground">
+                  We monitor prices and automatically verify when TP or SL levels are reached.
+                  Every outcome is tracked.
+                </p>
+              </div>
+
+              {/* No Cherry-Picking */}
+              <div className="bg-card border rounded-xl p-6 text-center">
+                <div className="w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-6 h-6 text-purple-500" />
+                </div>
+                <h4 className="font-semibold mb-2">No Cherry-Picking</h4>
+                <p className="text-sm text-muted-foreground">
+                  All predictions are recorded. We don&apos;t hide failures.
+                  What you see is our real track record.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-center mt-8 text-muted-foreground italic text-sm">
+              &quot;Professional traders measure success by TP/SL outcomes, not arbitrary time periods.&quot;
+            </p>
+          </div>
         </div>
       </section>
 

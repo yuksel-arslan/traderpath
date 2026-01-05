@@ -850,74 +850,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* ===== SECTION 5: How We Measure Success ===== */}
-      <div className="bg-gradient-to-br from-indigo-900/20 via-slate-800/50 to-purple-900/20 rounded-2xl p-6 border border-indigo-500/20">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-            <Target className="w-5 h-5 text-indigo-400" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-white">How We Measure Success</h2>
-            <p className="text-sm text-slate-400">Honest metrics that reflect real trading outcomes</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {/* TP/SL Based */}
-          <div className="bg-slate-900/50 rounded-xl p-5 border border-emerald-500/20">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-              </div>
-              <h4 className="font-semibold text-white">TP/SL Based</h4>
-            </div>
-            <p className="text-sm text-slate-400 leading-relaxed">
-              A trade is <span className="text-emerald-400 font-medium">successful</span> when Take Profit is hit,
-              <span className="text-red-400 font-medium"> failed</span> when Stop Loss is hit.
-              No arbitrary time limits.
-            </p>
-          </div>
-
-          {/* Real Outcomes */}
-          <div className="bg-slate-900/50 rounded-xl p-5 border border-blue-500/20">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                <Eye className="w-5 h-5 text-blue-400" />
-              </div>
-              <h4 className="font-semibold text-white">Real Outcomes</h4>
-            </div>
-            <p className="text-sm text-slate-400 leading-relaxed">
-              We monitor price data and automatically verify when TP or SL levels are reached.
-              Every outcome is tracked and visible.
-            </p>
-          </div>
-
-          {/* No Cherry-Picking */}
-          <div className="bg-slate-900/50 rounded-xl p-5 border border-purple-500/20">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-purple-400" />
-              </div>
-              <h4 className="font-semibold text-white">No Cherry-Picking</h4>
-            </div>
-            <p className="text-sm text-slate-400 leading-relaxed">
-              All predictions are recorded. We don&apos;t hide failures or selectively show winners.
-              What you see is our real track record.
-            </p>
-          </div>
-        </div>
-
-        {/* Philosophy Statement */}
-        <div className="bg-indigo-500/10 rounded-xl p-4 border border-indigo-500/20">
-          <p className="text-sm text-slate-300 text-center">
-            <span className="text-indigo-400 font-medium">&quot;Professional traders measure success by TP/SL outcomes, not arbitrary time periods.&quot;</span>
-            <br />
-            <span className="text-slate-400 text-xs">This is the standard we hold ourselves to.</span>
-          </p>
-        </div>
-      </div>
-
-      {/* ===== SECTION 6: Data Sources & Methodology ===== */}
+      {/* ===== SECTION 5: Data Sources & Methodology ===== */}
       <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl p-6 border border-slate-700/50">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
