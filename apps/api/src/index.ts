@@ -312,6 +312,56 @@ app.setErrorHandler(errorHandler);
 // Startup
 // ===========================================
 
+// ===========================================
+// Outcome Tracking Scheduler
+// Checks TP/SL hits every 30 seconds
+// ===========================================
+
+let outcomeTrackerInterval: NodeJS.Timeout | null = null;
+
+async function startOutcomeTracker() {
+  const { checkAndUpdateOutcomes } = await import('./modules/reports/live-tracking.service');
+  const { calculateExpiredOutcomes } = await import('./modules/reports/outcome.service');
+
+  // Run immediately on startup
+  try {
+    const liveResult = await checkAndUpdateOutcomes();
+    const expiredResult = await calculateExpiredOutcomes();
+    logger.info({
+      live: liveResult,
+      expired: expiredResult
+    }, '✓ Initial outcome check completed');
+  } catch (error) {
+    logger.error(error, 'Initial outcome check failed');
+  }
+
+  // Then run every 30 seconds
+  outcomeTrackerInterval = setInterval(async () => {
+    try {
+      const liveResult = await checkAndUpdateOutcomes();
+      if (liveResult.tpHits > 0 || liveResult.slHits > 0) {
+        logger.info(liveResult, 'Outcome tracker: TP/SL hits detected');
+      }
+    } catch (error) {
+      logger.error(error, 'Outcome tracker error');
+    }
+  }, 30 * 1000); // 30 seconds
+
+  // Also run expired outcome calculation every 5 minutes
+  setInterval(async () => {
+    try {
+      const result = await calculateExpiredOutcomes();
+      if (result.processed > 0) {
+        logger.info(result, 'Expired outcome calculation completed');
+      }
+    } catch (error) {
+      logger.error(error, 'Expired outcome calculation error');
+    }
+  }, 5 * 60 * 1000); // 5 minutes
+
+  logger.info('✓ Outcome tracker started (30s live, 5m expired)');
+}
+
 const start = async () => {
   try {
     // Connect to database
@@ -321,6 +371,9 @@ const start = async () => {
     // Test Redis connection
     await redis.ping();
     logger.info('✓ Redis connected');
+
+    // Start outcome tracker
+    await startOutcomeTracker();
 
     // Start server
     await app.listen({
@@ -353,6 +406,12 @@ const shutdown = async (signal: string) => {
   logger.info(`${signal} received, starting graceful shutdown...`);
 
   try {
+    // Stop outcome tracker
+    if (outcomeTrackerInterval) {
+      clearInterval(outcomeTrackerInterval);
+      logger.info('✓ Outcome tracker stopped');
+    }
+
     // Stop accepting new connections
     await app.close();
     logger.info('✓ Server closed');
