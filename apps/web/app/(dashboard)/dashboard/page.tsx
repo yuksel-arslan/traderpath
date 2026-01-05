@@ -697,45 +697,52 @@ export default function DashboardPage() {
 
           {userStats && userStats.totalAnalyses > 0 ? (
             <>
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 text-center">
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400">Total Analyses</div>
+              {/* Performance Rate - Main Display */}
+              <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 text-center mb-4">
+                <div className={cn(
+                  "text-4xl font-bold",
+                  userStats.accuracy >= 70 ? 'text-green-600 dark:text-green-400' :
+                  userStats.accuracy >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
+                  userStats.verifiedAnalyses === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
+                )}>
+                  {userStats.verifiedAnalyses > 0 ? `${userStats.accuracy.toFixed(1)}%` : '-'}
                 </div>
-                <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 text-center">
-                  <div className={cn(
-                    "text-3xl font-bold",
-                    userStats.accuracy >= 70 ? 'text-green-600 dark:text-green-400' :
-                    userStats.accuracy >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
-                    userStats.verifiedAnalyses === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
-                  )}>
-                    {userStats.verifiedAnalyses > 0 ? `${userStats.accuracy.toFixed(1)}%` : '-'}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400">
-                    {userStats.verifiedAnalyses > 0
-                      ? `Accuracy (${userStats.verifiedAnalyses} verified)`
-                      : 'Accuracy (pending)'}
-                  </div>
-                </div>
-                <div className="bg-green-50 dark:bg-green-500/10 rounded-xl p-4 text-center border border-green-200 dark:border-green-500/20">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">{userStats.goSignals}</div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400">GO Signals</div>
-                </div>
-                <div className="bg-red-50 dark:bg-red-500/10 rounded-xl p-4 text-center border border-red-200 dark:border-red-500/20">
-                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">{userStats.avoidSignals}</div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400">AVOID Signals</div>
+                <div className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                  Performance Rate
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 dark:text-slate-400">Average Score</span>
-                  <span className="text-gray-900 dark:text-white font-medium">{userStats.avgScore.toFixed(1)}/10</span>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                <div className="bg-gray-50 dark:bg-slate-900/50 rounded-lg p-3 text-center">
+                  <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
+                  <div className="text-[10px] text-gray-500 dark:text-slate-400">Total</div>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 dark:text-slate-400">Last Analysis</span>
-                  <span className="text-gray-900 dark:text-white font-medium">{userStats.lastAnalysisDate || '-'}</span>
+                <div className="bg-blue-50 dark:bg-blue-500/10 rounded-lg p-3 text-center border border-blue-200 dark:border-blue-500/20">
+                  <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{userStats.pendingAnalyses}</div>
+                  <div className="text-[10px] text-gray-500 dark:text-slate-400">Active</div>
                 </div>
+                <div className="bg-gray-50 dark:bg-slate-900/50 rounded-lg p-3 text-center">
+                  <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
+                  <div className="text-[10px] text-gray-500 dark:text-slate-400">Closed</div>
+                </div>
+              </div>
+
+              {/* Success/Fail Breakdown */}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <div className="bg-green-50 dark:bg-green-500/10 rounded-lg p-3 text-center border border-green-200 dark:border-green-500/20">
+                  <div className="text-xl font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
+                  <div className="text-[10px] text-gray-500 dark:text-slate-400">Successful</div>
+                </div>
+                <div className="bg-red-50 dark:bg-red-500/10 rounded-lg p-3 text-center border border-red-200 dark:border-red-500/20">
+                  <div className="text-xl font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
+                  <div className="text-[10px] text-gray-500 dark:text-slate-400">Failed</div>
+                </div>
+              </div>
+
+              {/* Formula Display */}
+              <div className="text-center text-xs text-gray-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-900/30 rounded-lg p-2">
+                Performance = {userStats.correctAnalyses} / {userStats.verifiedAnalyses} = {userStats.verifiedAnalyses > 0 ? `${userStats.accuracy.toFixed(1)}%` : '-'}
               </div>
             </>
           ) : (
