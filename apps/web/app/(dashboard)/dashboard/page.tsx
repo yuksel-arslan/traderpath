@@ -83,8 +83,10 @@ interface PlatformStats {
 interface UserStats {
   totalAnalyses: number;
   completedAnalyses: number;
-  accurateAnalyses: number;
-  hitRate: number;
+  verifiedAnalyses: number;
+  correctAnalyses: number;
+  pendingAnalyses: number;
+  accuracy: number; // Real accuracy from verified outcomes
   avgScore: number;
   goSignals: number;
   avoidSignals: number;
@@ -703,12 +705,17 @@ export default function DashboardPage() {
                 <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 text-center">
                   <div className={cn(
                     "text-3xl font-bold",
-                    userStats.hitRate >= 70 ? 'text-green-600 dark:text-green-400' :
-                    userStats.hitRate >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
+                    userStats.accuracy >= 70 ? 'text-green-600 dark:text-green-400' :
+                    userStats.accuracy >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
+                    userStats.verifiedAnalyses === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
                   )}>
-                    {userStats.hitRate.toFixed(1)}%
+                    {userStats.verifiedAnalyses > 0 ? `${userStats.accuracy.toFixed(1)}%` : '-'}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400">Hit Rate</div>
+                  <div className="text-xs text-gray-500 dark:text-slate-400">
+                    {userStats.verifiedAnalyses > 0
+                      ? `Accuracy (${userStats.verifiedAnalyses} verified)`
+                      : 'Accuracy (pending)'}
+                  </div>
                 </div>
                 <div className="bg-green-50 dark:bg-green-500/10 rounded-xl p-4 text-center border border-green-200 dark:border-green-500/20">
                   <div className="text-2xl font-bold text-green-600 dark:text-green-400">{userStats.goSignals}</div>

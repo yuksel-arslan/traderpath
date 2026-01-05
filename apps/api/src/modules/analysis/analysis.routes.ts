@@ -833,13 +833,29 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1))
         : 0;
 
-      // Hit rate is calculated as percentage of positive verdicts (go + conditional_go)
-      // This represents the percentage of analyses that resulted in actionable trading signals
-      const positiveVerdicts = goSignals;
-      const accurateAnalyses = positiveVerdicts;
-      const hitRate = totalAnalyses > 0
-        ? Number(((positiveVerdicts / totalAnalyses) * 100).toFixed(1))
+      // Get reports with verified outcomes for REAL accuracy calculation
+      const reportsWithOutcomes = await db.report.findMany({
+        where: {
+          userId,
+          outcome: { not: null }
+        },
+        select: {
+          outcome: true
+        }
+      });
+
+      // Calculate REAL accuracy from verified outcomes (TP/SL hit detection)
+      const verifiedCount = reportsWithOutcomes.length;
+      const correctCount = reportsWithOutcomes.filter(r => r.outcome === 'correct').length;
+
+      // Accuracy = correct predictions / total verified predictions * 100
+      // If no verified outcomes yet, show 0 (not fake 100%)
+      const accuracy = verifiedCount > 0
+        ? Number(((correctCount / verifiedCount) * 100).toFixed(1))
         : 0;
+
+      // Count pending analyses (not yet verified)
+      const pendingCount = totalAnalyses - verifiedCount;
 
       // Get last analysis date
       const lastReport = userReports[0];
@@ -854,9 +870,11 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
 
       return reply.send({
         totalAnalyses,
-        completedAnalyses,
-        accurateAnalyses,
-        hitRate,
+        completedAnalyses: totalAnalyses,
+        verifiedAnalyses: verifiedCount,
+        correctAnalyses: correctCount,
+        pendingAnalyses: pendingCount,
+        accuracy, // Real accuracy from verified outcomes
         avgScore,
         goSignals,
         avoidSignals,
