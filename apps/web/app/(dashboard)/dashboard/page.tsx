@@ -36,7 +36,7 @@ import {
   LayoutGrid,
   List,
 } from 'lucide-react';
-import { LineChart as RechartsLineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
+import { AreaChart, Area, ResponsiveContainer, Tooltip, ReferenceLine, defs } from 'recharts';
 import { cn } from '../../../lib/utils';
 
 // ===========================================
@@ -699,74 +699,123 @@ export default function DashboardPage() {
 
                 {/* RIGHT COLUMN: Profit Trend + Credits (full height) */}
                 <div className="flex-1 flex gap-3 min-h-[140px]">
-                  {/* Profit Sparkline - Full Height */}
-                  <div className="flex-1 bg-gray-100/80 dark:bg-white/5 rounded-xl p-4 border border-gray-200 dark:border-white/10 flex flex-col">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-emerald-500" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Profit Trend</span>
-                      </div>
-                      <span className={`text-lg font-bold ${(() => {
-                        const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
-                        if (closedTrades.length === 0) return 'text-gray-400';
-                        const avgPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length;
-                        return avgPnL >= 0 ? 'text-emerald-500' : 'text-red-500';
-                      })()}`}>
-                        {(() => {
-                          const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
-                          if (closedTrades.length === 0) return '—';
-                          const avgPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length;
-                          return `${avgPnL >= 0 ? '+' : ''}${avgPnL.toFixed(1)}%`;
-                        })()}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-h-[80px]">
-                      {(() => {
-                        const chartData = recentOutcomes
-                          .filter(o => o.unrealizedPnL !== undefined)
-                          .slice(0, 10)
-                          .reverse()
-                          .map((o, i) => ({
-                            name: o.symbol,
-                            pnl: o.unrealizedPnL || 0,
-                          }));
+                  {/* Premium Profit Sparkline */}
+                  {(() => {
+                    const chartData = recentOutcomes
+                      .filter(o => o.unrealizedPnL !== undefined)
+                      .slice(0, 10)
+                      .reverse()
+                      .map((o, i) => ({
+                        name: o.symbol,
+                        pnl: o.unrealizedPnL || 0,
+                      }));
 
-                        if (chartData.length < 2) {
-                          return (
-                            <div className="h-full flex items-center justify-center text-xs text-gray-400">
-                              No data yet
+                    const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
+                    const avgPnL = closedTrades.length > 0
+                      ? closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length
+                      : 0;
+                    const isPositive = avgPnL >= 0;
+                    const hasData = chartData.length >= 2;
+
+                    return (
+                      <div className={`flex-1 relative overflow-hidden rounded-xl p-4 flex flex-col ${
+                        isPositive
+                          ? 'bg-gradient-to-br from-emerald-50 via-emerald-50/50 to-teal-50/30 dark:from-emerald-500/10 dark:via-emerald-500/5 dark:to-teal-500/5 border border-emerald-200/50 dark:border-emerald-500/20'
+                          : 'bg-gradient-to-br from-red-50 via-red-50/50 to-orange-50/30 dark:from-red-500/10 dark:via-red-500/5 dark:to-orange-500/5 border border-red-200/50 dark:border-red-500/20'
+                      }`}>
+                        {/* Background glow */}
+                        <div className={`absolute -bottom-10 -right-10 w-32 h-32 rounded-full blur-3xl opacity-30 ${
+                          isPositive ? 'bg-emerald-400' : 'bg-red-400'
+                        }`} />
+
+                        <div className="flex items-center justify-between mb-2 relative z-10">
+                          <div className="flex items-center gap-2">
+                            <div className={`p-1.5 rounded-lg ${isPositive ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
+                              {isPositive ? (
+                                <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                              ) : (
+                                <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" />
+                              )}
                             </div>
-                          );
-                        }
-
-                        const isPositive = chartData[chartData.length - 1]?.pnl >= 0;
-
-                        return (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <RechartsLineChart data={chartData}>
-                              <Tooltip
-                                contentStyle={{
-                                  backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                                  border: 'none',
-                                  borderRadius: '8px',
-                                  fontSize: '12px',
-                                }}
-                                formatter={(value: number) => [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, 'P/L']}
-                                labelFormatter={(label) => label}
-                              />
-                              <Line
-                                type="monotone"
-                                dataKey="pnl"
-                                stroke={isPositive ? '#10b981' : '#ef4444'}
-                                strokeWidth={2}
-                                dot={false}
-                              />
-                            </RechartsLineChart>
-                          </ResponsiveContainer>
-                        );
-                      })()}
-                    </div>
-                  </div>
+                            <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">Profit Trend</span>
+                          </div>
+                          <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full ${
+                            isPositive
+                              ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                              : 'bg-red-500/20 text-red-700 dark:text-red-300'
+                          }`}>
+                            <span className="text-lg font-black">
+                              {closedTrades.length === 0 ? '—' : `${isPositive ? '+' : ''}${avgPnL.toFixed(1)}%`}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex-1 min-h-[80px] relative z-10">
+                          {!hasData ? (
+                            <div className="h-full flex flex-col items-center justify-center">
+                              <LineChart className="w-8 h-8 text-gray-300 dark:text-slate-600 mb-2" />
+                              <span className="text-xs text-gray-400 dark:text-slate-500">Waiting for trades</span>
+                            </div>
+                          ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                                <defs>
+                                  <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor={isPositive ? '#10b981' : '#ef4444'} stopOpacity={0.4} />
+                                    <stop offset="100%" stopColor={isPositive ? '#10b981' : '#ef4444'} stopOpacity={0.05} />
+                                  </linearGradient>
+                                  <filter id="glow">
+                                    <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                                    <feMerge>
+                                      <feMergeNode in="coloredBlur" />
+                                      <feMergeNode in="SourceGraphic" />
+                                    </feMerge>
+                                  </filter>
+                                </defs>
+                                <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" strokeOpacity={0.5} />
+                                <Tooltip
+                                  contentStyle={{
+                                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    padding: '8px 12px',
+                                    boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                                  }}
+                                  itemStyle={{ color: isPositive ? '#10b981' : '#ef4444' }}
+                                  formatter={(value: number) => [
+                                    <span key="value" className="font-bold">{value >= 0 ? '+' : ''}{value.toFixed(1)}%</span>,
+                                    <span key="label" className="text-slate-400">P/L</span>
+                                  ]}
+                                  labelFormatter={(label) => <span className="font-semibold text-white">{label}</span>}
+                                  cursor={{ stroke: isPositive ? '#10b981' : '#ef4444', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                />
+                                <Area
+                                  type="monotone"
+                                  dataKey="pnl"
+                                  stroke={isPositive ? '#10b981' : '#ef4444'}
+                                  strokeWidth={3}
+                                  fill="url(#profitGradient)"
+                                  filter="url(#glow)"
+                                  dot={{
+                                    fill: isPositive ? '#10b981' : '#ef4444',
+                                    strokeWidth: 2,
+                                    stroke: '#fff',
+                                    r: 4,
+                                  }}
+                                  activeDot={{
+                                    fill: isPositive ? '#10b981' : '#ef4444',
+                                    strokeWidth: 3,
+                                    stroke: '#fff',
+                                    r: 6,
+                                    filter: 'url(#glow)',
+                                  }}
+                                />
+                              </AreaChart>
+                            </ResponsiveContainer>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Credits - Full Height */}
                   <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-500/10 dark:to-amber-600/5 rounded-xl p-4 border border-amber-200/50 dark:border-amber-500/20 flex flex-col justify-center items-center min-w-[100px]">
