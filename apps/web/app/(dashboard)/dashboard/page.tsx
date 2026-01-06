@@ -33,7 +33,6 @@ import {
   Sparkles,
   Award,
   PieChart,
-  Info,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
@@ -248,27 +247,6 @@ function AccuracyRing({ percentage, size = 120, strokeWidth = 8, color = 'text-e
             <span className="text-xs text-gray-500 dark:text-slate-500">Yet</span>
           </>
         )}
-      </div>
-    </div>
-  );
-}
-
-function StepAccuracyBar({ name, accuracy, color, hasData = true }: { name: string; accuracy: number; color: string; hasData?: boolean }) {
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-sm">
-        <span className="text-gray-600 dark:text-slate-300">{name}</span>
-        {hasData ? (
-          <span className="text-gray-900 dark:text-white font-medium">{accuracy.toFixed(1)}%</span>
-        ) : (
-          <span className="text-gray-400 dark:text-slate-500 text-xs">No data</span>
-        )}
-      </div>
-      <div className="h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
-        <div
-          className={cn("h-full rounded-full transition-all duration-1000", hasData ? color : 'bg-gray-300 dark:bg-slate-600')}
-          style={{ width: hasData ? `${accuracy}%` : '0%' }}
-        />
       </div>
     </div>
   );
@@ -616,70 +594,10 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* ===== SECTION 3: Live Accuracy Tracking & User Stats ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* ===== SECTION 3: Verdict Distribution & User Stats ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* Left - Step Accuracy Breakdown */}
-        <div className="bg-white dark:bg-slate-800/50 rounded-2xl p-6 border border-gray-200 dark:border-slate-700/50 shadow-lg dark:shadow-xl dark:shadow-slate-900/50">
-          <div className="flex items-center gap-2 mb-6">
-            <Target className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Step-by-Step Accuracy</h3>
-          </div>
-
-          <div className="space-y-4">
-            <StepAccuracyBar
-              name="Market Pulse"
-              accuracy={platformStats?.accuracy.stepRates.marketPulse ?? 0}
-              color="bg-blue-400"
-              hasData={hasRealData && (platformStats?.accuracy.stepRates.marketPulse ?? 0) > 0}
-            />
-            <StepAccuracyBar
-              name="Asset Scanner"
-              accuracy={platformStats?.accuracy.stepRates.assetScanner ?? 0}
-              color="bg-cyan-400"
-              hasData={hasRealData && (platformStats?.accuracy.stepRates.assetScanner ?? 0) > 0}
-            />
-            <StepAccuracyBar
-              name="Safety Check"
-              accuracy={platformStats?.accuracy.stepRates.safetyCheck ?? 0}
-              color="bg-green-400"
-              hasData={hasRealData && (platformStats?.accuracy.stepRates.safetyCheck ?? 0) > 0}
-            />
-            <StepAccuracyBar
-              name="Timing"
-              accuracy={platformStats?.accuracy.stepRates.timing ?? 0}
-              color="bg-yellow-400"
-              hasData={hasRealData && (platformStats?.accuracy.stepRates.timing ?? 0) > 0}
-            />
-            <StepAccuracyBar
-              name="Trade Plan"
-              accuracy={platformStats?.accuracy.stepRates.tradePlan ?? 0}
-              color="bg-purple-400"
-              hasData={hasRealData && (platformStats?.accuracy.stepRates.tradePlan ?? 0) > 0}
-            />
-            <StepAccuracyBar
-              name="Trap Check"
-              accuracy={platformStats?.accuracy.stepRates.trapCheck ?? 0}
-              color="bg-orange-400"
-              hasData={hasRealData && (platformStats?.accuracy.stepRates.trapCheck ?? 0) > 0}
-            />
-            <StepAccuracyBar
-              name="Final Verdict"
-              accuracy={platformStats?.accuracy.stepRates.finalVerdict ?? 0}
-              color="bg-emerald-400"
-              hasData={hasRealData && (platformStats?.accuracy.stepRates.finalVerdict ?? 0) > 0}
-            />
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-700/50">
-            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
-              <Info className="w-4 h-4" />
-              <span>Last updated: {new Date().toLocaleDateString('en-US')}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Middle - Verdict Distribution */}
+        {/* Left - Verdict Distribution */}
         <div className="bg-white dark:bg-slate-800/50 rounded-2xl p-6 border border-gray-200 dark:border-slate-700/50 shadow-lg dark:shadow-xl dark:shadow-slate-900/50">
           <div className="flex items-center gap-2 mb-6">
             <PieChart className="w-5 h-5 text-purple-500 dark:text-purple-400" />
@@ -715,7 +633,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Right - Personal Stats */}
+        {/* Right - My Performance */}
         <div className="bg-white dark:bg-slate-800/50 rounded-2xl p-6 border border-gray-200 dark:border-slate-700/50 shadow-lg dark:shadow-xl dark:shadow-slate-900/50">
           <div className="flex items-center gap-2 mb-6">
             <Award className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />
