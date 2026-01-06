@@ -926,6 +926,15 @@ export default function ReportsPage() {
                   <TradingViewChart
                     symbol={chartModal.report.symbol}
                     interval={tvTimeframe}
+                    tradePlan={{
+                      entryPrice: chartModal.report.entryPrice,
+                      stopLoss: chartModal.report.stopLoss,
+                      takeProfit1: chartModal.report.takeProfit1,
+                      takeProfit2: chartModal.report.takeProfit2,
+                      takeProfit3: chartModal.report.takeProfit3,
+                      direction: chartModal.report.direction || undefined,
+                      currentPrice: chartModal.report.currentPrice,
+                    }}
                   />
                 </div>
               </div>
