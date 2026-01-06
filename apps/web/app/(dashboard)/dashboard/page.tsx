@@ -769,7 +769,7 @@ export default function DashboardPage() {
                               : 'bg-red-500/20 text-red-700 dark:text-red-300'
                           }`}>
                             <span className="text-lg font-black">
-                              {closedTrades.length === 0 ? '—' : `${isPositive ? '+' : ''}${avgPnL.toFixed(1)}%`}
+                              {weekTrades.length === 0 ? '—' : `${isPositive ? '+' : ''}${avgPnL.toFixed(1)}%`}
                             </span>
                           </div>
                         </div>
