@@ -1,6 +1,7 @@
 'use client';
 
-import { CheckCircle, XCircle, AlertCircle, TrendingUp, TrendingDown, Minus, Brain, Target } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, TrendingUp, TrendingDown, Minus, Brain, Target, MessageSquare } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { cn } from '../../lib/utils';
 import { TradePlanChart } from './TradePlanChart';
 
@@ -46,6 +47,8 @@ interface FinalVerdictProps {
 }
 
 export function FinalVerdict({ data, symbol, tradePlan }: FinalVerdictProps) {
+  const router = useRouter();
+
   if (!data) {
     return (
       <div className="p-4">
@@ -64,6 +67,25 @@ export function FinalVerdict({ data, symbol, tradePlan }: FinalVerdictProps) {
     tradePlan.entries?.length &&
     tradePlan.stopLoss?.price &&
     tradePlan.takeProfits?.length;
+
+  // Create trade plan context for AI Expert
+  const handleAskAIExpert = () => {
+    if (!hasValidTradePlan) return;
+
+    const contextMessage = `Analyze this ${symbol} ${tradePlan.direction?.toUpperCase()} trade plan:
+• Entry: $${tradePlan.entries?.[0]?.price?.toLocaleString()} (${tradePlan.entries?.length} levels)
+• Stop Loss: $${tradePlan.stopLoss?.price?.toLocaleString()} (${tradePlan.stopLoss?.percentage?.toFixed(1)}%)
+• TP1: $${tradePlan.takeProfits?.[0]?.price?.toLocaleString()} (${tradePlan.takeProfits?.[0]?.riskReward?.toFixed(1)}R)
+• TP2: $${tradePlan.takeProfits?.[1]?.price?.toLocaleString()} (${tradePlan.takeProfits?.[1]?.riskReward?.toFixed(1)}R)
+• TP3: $${tradePlan.takeProfits?.[2]?.price?.toLocaleString()} (${tradePlan.takeProfits?.[2]?.riskReward?.toFixed(1)}R)
+• Verdict: ${data.verdict?.toUpperCase()} (Score: ${data.overallScore}/10)
+
+What is your expert opinion on this setup? Is the risk/reward acceptable?`;
+
+    // Encode and navigate to AI Expert (Nexus - Risk Assessment)
+    const encodedContext = encodeURIComponent(contextMessage);
+    router.push(`/ai-expert/nexus?context=${encodedContext}`);
+  };
 
   const getVerdictStyle = () => {
     switch (data.verdict) {
@@ -164,16 +186,30 @@ export function FinalVerdict({ data, symbol, tradePlan }: FinalVerdictProps) {
 
       {/* Trade Plan Chart - TradingView Lightweight Charts */}
       {hasValidTradePlan && (
-        <TradePlanChart
-          symbol={symbol}
-          direction={tradePlan.direction!}
-          entries={tradePlan.entries!}
-          stopLoss={tradePlan.stopLoss!}
-          takeProfits={tradePlan.takeProfits!}
-          currentPrice={tradePlan.currentPrice || tradePlan.averageEntry || tradePlan.entries![0].price}
-          support={tradePlan.support}
-          resistance={tradePlan.resistance}
-        />
+        <>
+          <TradePlanChart
+            symbol={symbol}
+            direction={tradePlan.direction!}
+            entries={tradePlan.entries!}
+            stopLoss={tradePlan.stopLoss!}
+            takeProfits={tradePlan.takeProfits!}
+            currentPrice={tradePlan.currentPrice || tradePlan.averageEntry || tradePlan.entries![0].price}
+            support={tradePlan.support}
+            resistance={tradePlan.resistance}
+          />
+
+          {/* Ask AI Expert Button */}
+          <div className="flex justify-center">
+            <button
+              onClick={handleAskAIExpert}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105 transition-all duration-200"
+            >
+              <MessageSquare className="w-5 h-5" />
+              Ask AI Expert About This Trade
+              <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">NEXUS</span>
+            </button>
+          </div>
+        </>
       )}
 
       {/* Component Scores - Premium Radial Design */}

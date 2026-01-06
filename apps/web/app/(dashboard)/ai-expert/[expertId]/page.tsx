@@ -5,8 +5,8 @@
 // Smart chat interface with approval flow
 // ===========================================
 
-import { useState, useRef, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Send,
@@ -198,12 +198,14 @@ function AnswerFooter() {
 export default function AIExpertChatPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const expertId = params.expertId as string;
   const expert = AI_EXPERTS[expertId as keyof typeof AI_EXPERTS];
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [contextProcessed, setContextProcessed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -213,6 +215,19 @@ export default function AIExpertChatPage() {
       router.push('/ai-expert');
     }
   }, [expert, router]);
+
+  // Handle context from URL params (e.g., from trade plan)
+  useEffect(() => {
+    if (contextProcessed) return;
+
+    const contextMessage = searchParams.get('context');
+    if (contextMessage) {
+      setInput(decodeURIComponent(contextMessage));
+      setContextProcessed(true);
+      // Clear the URL param to prevent re-processing
+      router.replace(`/ai-expert/${expertId}`, { scroll: false });
+    }
+  }, [searchParams, contextProcessed, router, expertId]);
 
   // Auto-scroll to bottom
   useEffect(() => {
