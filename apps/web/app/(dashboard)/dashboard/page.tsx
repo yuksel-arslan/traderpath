@@ -197,17 +197,30 @@ const methodologySteps = [
 // ===========================================
 // Helper Components
 // ===========================================
-function AccuracyRing({ percentage, size = 120, strokeWidth = 8, color = 'text-emerald-400', hasData = true }: {
-  percentage: number;
+function MetricRing({
+  value,
+  label,
+  size = 120,
+  strokeWidth = 8,
+  color = 'text-emerald-400',
+  hasData = true,
+  isProfit = false,
+  suffix = '%'
+}: {
+  value: number;
+  label: string;
   size?: number;
   strokeWidth?: number;
   color?: string;
   hasData?: boolean;
+  isProfit?: boolean;
+  suffix?: string;
 }) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const displayPercentage = hasData ? percentage : 0;
-  const offset = circumference - (displayPercentage / 100) * circumference;
+  // For profit, cap at 100 for display purposes
+  const displayValue = isProfit ? Math.min(Math.abs(value), 100) : (hasData ? value : 0);
+  const offset = circumference - (displayValue / 100) * circumference;
 
   return (
     <div className="relative" style={{ width: size, height: size }}>
@@ -238,8 +251,15 @@ function AccuracyRing({ percentage, size = 120, strokeWidth = 8, color = 'text-e
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         {hasData ? (
           <>
-            <span className="text-3xl font-extrabold text-gray-900 dark:text-white">{Math.round(percentage)}%</span>
-            <span className="text-xs text-gray-500 dark:text-slate-400">Accuracy</span>
+            <span className={cn(
+              "text-2xl font-extrabold",
+              isProfit && value >= 0 ? "text-green-600 dark:text-green-400" :
+              isProfit && value < 0 ? "text-red-600 dark:text-red-400" :
+              "text-gray-900 dark:text-white"
+            )}>
+              {isProfit && value >= 0 ? '+' : ''}{value.toFixed(1)}{suffix}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-slate-400">{label}</span>
           </>
         ) : (
           <>
@@ -399,24 +419,51 @@ export default function DashboardPage() {
       {/* ===== SECTION 1: Platform Trust Header ===== */}
       <div className="bg-white dark:bg-gradient-to-br dark:from-slate-800/80 dark:to-slate-900/80 rounded-2xl p-6 border border-gray-200 dark:border-slate-700/50 shadow-lg dark:shadow-xl dark:shadow-slate-900/50">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          {/* Left - Main Accuracy Display */}
+          {/* Left - Accuracy & Profitability Display */}
           <div className="flex items-center gap-6">
-            <AccuracyRing
-              percentage={platformStats?.accuracy.overall ?? 0}
-              size={130}
-              strokeWidth={10}
-              hasData={hasRealData}
-            />
+            {/* Dual Rings */}
+            <div className="flex items-center gap-4">
+              {/* Accuracy Ring */}
+              <MetricRing
+                value={platformStats?.accuracy.overall ?? 0}
+                label="Accuracy"
+                size={120}
+                strokeWidth={10}
+                color="text-emerald-400"
+                hasData={hasRealData}
+              />
+              {/* Profitability Ring */}
+              <MetricRing
+                value={(() => {
+                  // Calculate average profitability from closed trades
+                  const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
+                  if (closedTrades.length === 0) return 0;
+                  const totalPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0);
+                  return totalPnL / closedTrades.length;
+                })()}
+                label="Profitability"
+                size={120}
+                strokeWidth={10}
+                color={(() => {
+                  const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
+                  if (closedTrades.length === 0) return 'text-gray-400';
+                  const avgPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length;
+                  return avgPnL >= 0 ? 'text-green-400' : 'text-red-400';
+                })()}
+                hasData={recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect').length > 0}
+                isProfit={true}
+              />
+            </div>
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Shield className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Platform Accuracy</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Platform Performance</h2>
               </div>
               <p className="text-gray-500 dark:text-slate-400 text-sm max-w-md">
                 {hasRealData ? (
-                  <>Our 7-Step analysis system generates predictions using real market data. Accuracy rate is calculated from {platformStats?.accuracy.sampleSize ?? 0} completed analyses.</>
+                  <>Accuracy & profitability verified from {platformStats?.accuracy.sampleSize ?? 0} completed trades with real TP/SL hits.</>
                 ) : (
-                  <>Our 7-Step analysis system generates predictions using real market data. Start analyzing to see accuracy metrics.</>
+                  <>Our 7-Step analysis system generates predictions using real market data. Start analyzing to see performance metrics.</>
                 )}
               </p>
               {platformStats?.accuracy.methodology && (
