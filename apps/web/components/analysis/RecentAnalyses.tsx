@@ -98,7 +98,7 @@ export function RecentAnalyses() {
 
   return (
     <div className="bg-card rounded-lg border divide-y">
-      {analyses.map((analysis) => {
+      {analyses.slice(0, 4).map((analysis) => {
         const config = verdictConfig[analysis.verdict];
         const Icon = config.icon;
 
