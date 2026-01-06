@@ -792,6 +792,19 @@ export default function DashboardPage() {
                 const accuracy = platformStats?.accuracy.stepRates[accuracyKey] ?? 0;
                 const stepHasData = hasRealData && accuracy > 0;
 
+                // Radial gauge calculations
+                const circumference = 2 * Math.PI * 24;
+                const offset = circumference - ((stepHasData ? accuracy : 0) / 100) * circumference;
+
+                // Dynamic color based on accuracy
+                const getGaugeColor = () => {
+                  if (!stepHasData) return { stroke: '#64748b', glow: 'rgba(100, 116, 139, 0.3)' };
+                  if (accuracy >= 80) return { stroke: '#22c55e', glow: 'rgba(34, 197, 94, 0.5)' };
+                  if (accuracy >= 60) return { stroke: '#eab308', glow: 'rgba(234, 179, 8, 0.5)' };
+                  return { stroke: '#ef4444', glow: 'rgba(239, 68, 68, 0.5)' };
+                };
+                const gaugeColor = getGaugeColor();
+
                 return (
                   <div
                     key={step.step}
@@ -821,26 +834,61 @@ export default function DashboardPage() {
                       <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">{step.name}</h3>
                       <p className="text-xs text-gray-500 dark:text-slate-400 mb-3 line-clamp-2">{step.description}</p>
 
-                      {/* Accuracy Bar */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-gray-400 dark:text-slate-500">Accuracy</span>
-                          {stepHasData ? (
-                            <span className={cn("font-semibold", step.color)}>{accuracy.toFixed(1)}%</span>
-                          ) : (
-                            <span className="text-gray-400 dark:text-slate-600">—</span>
+                      {/* Radial Accuracy Gauge */}
+                      <div className="flex justify-center mb-3">
+                        <div className="relative w-16 h-16">
+                          {/* Glow Effect */}
+                          {stepHasData && (
+                            <div
+                              className="absolute inset-1 rounded-full blur-lg opacity-60 group-hover:opacity-80 transition-opacity"
+                              style={{ backgroundColor: gaugeColor.glow }}
+                            />
                           )}
-                        </div>
-                        <div className="h-1.5 bg-gray-200 dark:bg-slate-700/50 rounded-full overflow-hidden">
-                          <div
-                            className={cn("h-full rounded-full transition-all duration-1000", stepHasData ? step.color.replace('text-', 'bg-') : 'bg-gray-300 dark:bg-slate-600')}
-                            style={{ width: stepHasData ? `${accuracy}%` : '0%' }}
-                          />
+
+                          {/* SVG Gauge */}
+                          <svg className="w-16 h-16 transform -rotate-90 relative z-10" viewBox="0 0 56 56">
+                            {/* Background Circle */}
+                            <circle
+                              cx="28"
+                              cy="28"
+                              r="24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              className="text-gray-200 dark:text-slate-700/50"
+                            />
+                            {/* Progress Arc */}
+                            <circle
+                              cx="28"
+                              cy="28"
+                              r="24"
+                              fill="none"
+                              stroke={gaugeColor.stroke}
+                              strokeWidth="4"
+                              strokeLinecap="round"
+                              strokeDasharray={circumference}
+                              strokeDashoffset={offset}
+                              style={{
+                                transition: 'stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                filter: stepHasData ? `drop-shadow(0 0 4px ${gaugeColor.glow})` : 'none'
+                              }}
+                            />
+                          </svg>
+
+                          {/* Center Score */}
+                          <div className="absolute inset-0 flex items-center justify-center z-20">
+                            <span
+                              className="text-base font-black"
+                              style={{ color: gaugeColor.stroke }}
+                            >
+                              {stepHasData ? `${accuracy.toFixed(0)}%` : '—'}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
                       {/* Metrics Tags */}
-                      <div className="flex flex-wrap gap-1 mt-3">
+                      <div className="flex flex-wrap gap-1">
                         {step.metrics.slice(0, 2).map((metric) => (
                           <span key={metric} className="px-1.5 py-0.5 bg-white/50 dark:bg-slate-800/50 rounded text-[10px] text-gray-500 dark:text-slate-400 border border-gray-200/50 dark:border-slate-700/50">
                             {metric}
