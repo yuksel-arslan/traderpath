@@ -351,6 +351,8 @@ export default function DashboardPage() {
       // Process performance/outcomes
       if (performanceRes.ok) {
         const data = await performanceRes.json();
+        console.log('Performance API response:', data);
+        console.log('recentOutcomes from API:', data.recentOutcomes);
         const outcomes = (data.recentOutcomes || []).map((o: any) => ({
           id: o.id || `outcome-${Math.random()}`,
           symbol: o.symbol,
@@ -372,7 +374,10 @@ export default function DashboardPage() {
           takeProfit2: o.takeProfit2,
           takeProfit3: o.takeProfit3,
         }));
+        console.log('Mapped outcomes:', outcomes);
         setRecentOutcomes(outcomes);
+      } else {
+        console.error('Performance API failed:', performanceRes.status, performanceRes.statusText);
       }
 
       // Process credits
