@@ -195,45 +195,6 @@ export default function AnalyzePage() {
         </div>
       </div>
 
-      {/* ===== SECTION 2: Step-by-Step Accuracy Cards ===== */}
-      <div className="bg-white dark:bg-slate-800/50 rounded-2xl p-4 border border-gray-200 dark:border-slate-700/50">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wider">
-            7-Step Analysis Accuracy
-          </h2>
-          <span className="text-xs text-gray-400 dark:text-slate-500">Platform-wide metrics</span>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-          {STEP_ACCURACY_CONFIG.map((step, index) => {
-            const value = stats?.stepAccuracy?.[step.key as keyof StepAccuracy] || 0;
-            const colorSet = getStepColor(step.color);
-
-            return (
-              <div
-                key={step.key}
-                className={cn(
-                  "rounded-xl p-3 text-center border transition-all hover:scale-105",
-                  colorSet.bg,
-                  colorSet.border
-                )}
-              >
-                <div className="flex items-center justify-center gap-1 mb-2">
-                  <span className="text-[10px] text-gray-500 dark:text-slate-400">{index + 1}.</span>
-                  <step.icon className={cn("w-4 h-4", colorSet.text)} />
-                </div>
-                <div className={cn("text-xl font-bold", getAccuracyColor(value))}>
-                  {value > 0 ? `${value}%` : '-'}
-                </div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400 truncate">
-                  {step.name}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       {/* ===== SECTION 3: New Analysis ===== */}
       <div className="bg-white dark:bg-slate-800/50 rounded-2xl p-6 border border-gray-200 dark:border-slate-700/50">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -264,27 +225,43 @@ export default function AnalyzePage() {
             </div>
           </div>
 
-          {/* Right: Analysis Steps */}
+          {/* Right: 7-Step Analysis Accuracy */}
           <div className="lg:col-span-1">
             <div className="bg-gray-50 dark:bg-slate-900/50 border border-gray-200 dark:border-slate-700/30 rounded-xl p-5 h-full">
-              <h3 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-4">
-                7-STEP ANALYSIS INCLUDES
-              </h3>
-              <div className="space-y-3">
-                {ANALYSIS_STEPS.map((step, index) => (
-                  <div key={step.title} className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg ${step.bg} flex items-center justify-center flex-shrink-0`}>
-                      <step.icon className={`w-4 h-4 ${step.color}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400 dark:text-slate-500">{index + 1}.</span>
-                        <span className="font-medium text-sm text-gray-900 dark:text-white">{step.title}</span>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  7-Step Analysis Accuracy
+                </h3>
+                <span className="text-[10px] text-gray-400 dark:text-slate-500">Platform-wide</span>
+              </div>
+              <div className="space-y-2">
+                {STEP_ACCURACY_CONFIG.map((step, index) => {
+                  const value = stats?.stepAccuracy?.[step.key as keyof StepAccuracy] || 0;
+                  const colorSet = getStepColor(step.color);
+                  const stepInfo = ANALYSIS_STEPS[index];
+
+                  return (
+                    <div key={step.key} className={cn(
+                      "flex items-center gap-3 p-2 rounded-lg border",
+                      colorSet.bg,
+                      colorSet.border
+                    )}>
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0", colorSet.bg)}>
+                        <step.icon className={cn("w-4 h-4", colorSet.text)} />
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-slate-400">{step.description}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-gray-400 dark:text-slate-500">{index + 1}.</span>
+                          <span className="font-medium text-sm text-gray-900 dark:text-white">{step.name}</span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 dark:text-slate-400">{stepInfo?.description}</p>
+                      </div>
+                      <div className={cn("text-lg font-bold min-w-[45px] text-right", getAccuracyColor(value))}>
+                        {value > 0 ? `${value}%` : '-'}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Credit Cost Info */}
