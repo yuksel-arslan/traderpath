@@ -104,6 +104,15 @@ interface RecentOutcome {
   expiresAt?: string;
   isExpired?: boolean;
   hoursRemaining?: number;
+  // Live tracking fields
+  direction?: string;
+  entryPrice?: number;
+  currentPrice?: number;
+  unrealizedPnL?: number;
+  stopLoss?: number;
+  takeProfit1?: number;
+  takeProfit2?: number;
+  takeProfit3?: number;
 }
 
 // ===========================================
@@ -342,8 +351,8 @@ export default function DashboardPage() {
       // Process performance/outcomes
       if (performanceRes.ok) {
         const data = await performanceRes.json();
-        const outcomes = (data.recentOutcomes || []).map((o: any, i: number) => ({
-          id: `outcome-${i}`,
+        const outcomes = (data.recentOutcomes || []).map((o: any) => ({
+          id: o.id || `outcome-${Math.random()}`,
           symbol: o.symbol,
           verdict: o.verdict,
           score: 7 + Math.random() * 2,
@@ -353,6 +362,15 @@ export default function DashboardPage() {
           expiresAt: o.expiresAt,
           isExpired: o.isExpired,
           hoursRemaining: o.hoursRemaining,
+          // Live tracking fields
+          direction: o.direction,
+          entryPrice: o.entryPrice,
+          currentPrice: o.currentPrice,
+          unrealizedPnL: o.unrealizedPnL,
+          stopLoss: o.stopLoss,
+          takeProfit1: o.takeProfit1,
+          takeProfit2: o.takeProfit2,
+          takeProfit3: o.takeProfit3,
         }));
         setRecentOutcomes(outcomes);
       }
@@ -775,21 +793,21 @@ export default function DashboardPage() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Live Accuracy Tracking</h2>
-              <p className="text-sm text-gray-500 dark:text-slate-400">Predictions vs actual outcomes - verified after validity period expires</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400">Real-time TP/SL monitoring - trades close when targets hit</p>
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-4 text-sm">
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400" />
-              <span className="text-gray-500 dark:text-slate-400">Correct</span>
+              <span className="text-gray-500 dark:text-slate-400">TP Hit</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-red-500 dark:bg-red-400" />
-              <span className="text-gray-500 dark:text-slate-400">Wrong</span>
+              <span className="text-gray-500 dark:text-slate-400">SL Hit</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-yellow-500 dark:bg-yellow-400" />
-              <span className="text-gray-500 dark:text-slate-400">Pending</span>
+              <div className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400" />
+              <span className="text-gray-500 dark:text-slate-400">Active</span>
             </div>
           </div>
         </div>
@@ -801,11 +819,12 @@ export default function DashboardPage() {
                 key={outcome.id}
                 className={cn(
                   "bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border hover:border-gray-300 dark:hover:border-slate-600/50 transition",
-                  outcome.isExpired
-                    ? "border-orange-200 dark:border-orange-500/30"
-                    : "border-gray-100 dark:border-slate-700/30"
+                  outcome.outcome === 'correct' && "border-green-300 dark:border-green-500/30 bg-green-50 dark:bg-green-500/5",
+                  outcome.outcome === 'incorrect' && "border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/5",
+                  outcome.outcome === 'pending' && "border-gray-100 dark:border-slate-700/30"
                 )}
               >
+                {/* Header: Symbol & Status */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className={cn(
@@ -819,48 +838,79 @@ export default function DashboardPage() {
                       {outcome.symbol.charAt(0)}
                     </div>
                     <div>
-                      <div className="font-semibold text-gray-900 dark:text-white text-sm">{outcome.symbol}</div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-gray-900 dark:text-white text-sm">{outcome.symbol}</span>
+                        {outcome.direction && (
+                          <span className={cn(
+                            "px-1 py-0.5 rounded text-[9px] font-bold",
+                            outcome.direction === 'long' || outcome.direction === 'LONG'
+                              ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400"
+                              : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                          )}>
+                            {outcome.direction === 'long' || outcome.direction === 'LONG' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-gray-400 dark:text-slate-500">{outcome.createdAt}</div>
                     </div>
                   </div>
-                  {/* Validity indicator */}
-                  {outcome.hoursRemaining !== undefined && (
-                    <div className={cn(
-                      "px-1.5 py-0.5 rounded text-[10px] font-medium",
-                      outcome.isExpired
-                        ? "bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400"
-                        : outcome.hoursRemaining <= 4
-                          ? "bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400"
-                          : "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                    )}>
-                      {outcome.isExpired
-                        ? "Expired"
-                        : outcome.hoursRemaining <= 0
-                          ? "< 1h"
-                          : `${outcome.hoursRemaining}h`}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className={cn(
-                    "px-2 py-0.5 rounded text-xs font-medium",
-                    outcome.verdict === 'go' ? 'bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400' :
-                    outcome.verdict === 'conditional_go' ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' :
-                    outcome.verdict === 'avoid' ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400' :
-                    'bg-gray-100 dark:bg-slate-500/20 text-gray-600 dark:text-slate-400'
+                  {/* Status Badge */}
+                  <div className={cn(
+                    "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                    outcome.outcome === 'correct' && "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400",
+                    outcome.outcome === 'incorrect' && "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400",
+                    outcome.outcome === 'pending' && "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
                   )}>
-                    {outcome.verdict.toUpperCase().replace('_', ' ')}
-                  </span>
-                  <OutcomeIndicator outcome={outcome.outcome} />
+                    {outcome.outcome === 'correct' ? 'TP HIT' : outcome.outcome === 'incorrect' ? 'SL HIT' : 'ACTIVE'}
+                  </div>
                 </div>
 
-                {outcome.priceChange !== undefined && (
+                {/* Live Price Display */}
+                {outcome.entryPrice && outcome.currentPrice && (
+                  <div className="mb-2 p-2 bg-slate-100 dark:bg-slate-800/50 rounded-lg">
+                    <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-slate-400 mb-1">
+                      <span>Entry</span>
+                      <span>Current</span>
+                    </div>
+                    <div className="flex items-center justify-between font-mono text-xs">
+                      <span className="text-gray-700 dark:text-slate-300">${outcome.entryPrice.toFixed(2)}</span>
+                      <span className="text-gray-500 dark:text-slate-500">→</span>
+                      <span className="text-gray-700 dark:text-slate-300">${outcome.currentPrice.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* P/L Display */}
+                {outcome.unrealizedPnL !== undefined && (
+                  <div className={cn(
+                    "text-center py-1.5 rounded-lg font-bold text-sm",
+                    outcome.unrealizedPnL >= 0
+                      ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400"
+                      : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                  )}>
+                    {outcome.unrealizedPnL >= 0 ? '+' : ''}{outcome.unrealizedPnL.toFixed(2)}%
+                  </div>
+                )}
+
+                {/* Fallback: Show priceChange if no live data */}
+                {!outcome.unrealizedPnL && outcome.priceChange !== undefined && (
                   <div className={cn(
                     "mt-2 text-sm font-medium text-right",
                     outcome.priceChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                   )}>
                     {outcome.priceChange >= 0 ? '+' : ''}{outcome.priceChange.toFixed(2)}%
+                  </div>
+                )}
+
+                {/* TP/SL Levels (compact) */}
+                {(outcome.stopLoss || outcome.takeProfit1) && (
+                  <div className="mt-2 flex items-center justify-between text-[9px]">
+                    {outcome.stopLoss && (
+                      <span className="text-red-500 dark:text-red-400">SL: ${outcome.stopLoss.toFixed(2)}</span>
+                    )}
+                    {outcome.takeProfit1 && (
+                      <span className="text-green-500 dark:text-green-400">TP: ${outcome.takeProfit1.toFixed(2)}</span>
+                    )}
                   </div>
                 )}
               </div>
@@ -871,7 +921,7 @@ export default function DashboardPage() {
             <Activity className="w-12 h-12 text-gray-400 dark:text-slate-600 mx-auto mb-4" />
             <h4 className="font-semibold text-gray-900 dark:text-white mb-2">No tracked outcomes yet</h4>
             <p className="text-sm text-gray-500 dark:text-slate-400">
-              Results will appear here 24 hours after analyses are completed
+              Create an analysis to start tracking live outcomes
             </p>
           </div>
         )}

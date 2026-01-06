@@ -984,19 +984,45 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
       const reportsWithExpiration = await db.report.findMany({
         where: { userId },
         select: {
+          id: true,
           symbol: true,
           verdict: true,
           score: true,
+          direction: true,
           generatedAt: true,
           expiresAt: true,
           outcome: true,
-          outcomePriceChange: true
+          outcomePriceChange: true,
+          entryPrice: true,
+          reportData: true
         },
         orderBy: { generatedAt: 'desc' },
-        take: 5
+        take: 10
       });
 
-      // Recent outcomes from real reports with expiration info
+      // Fetch current prices for all symbols
+      const symbols = [...new Set(reportsWithExpiration.map(r => r.symbol))];
+      const prices: Record<string, number> = {};
+
+      if (symbols.length > 0) {
+        try {
+          const pairs = symbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
+          const priceResponse = await fetch(
+            `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
+          );
+          if (priceResponse.ok) {
+            const priceData = await priceResponse.json();
+            for (const item of priceData) {
+              const symbol = item.symbol.replace('USDT', '');
+              prices[symbol] = parseFloat(item.price);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to fetch prices for outcomes:', err);
+        }
+      }
+
+      // Recent outcomes from real reports with live tracking info
       const recentOutcomes = reportsWithExpiration.map(report => {
         // Map verdict to standard format
         const verdictLower = report.verdict.toLowerCase();
@@ -1011,29 +1037,34 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         const isExpired = expiresAt < now;
         const hoursRemaining = isExpired ? 0 : Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60));
 
-        // Use real outcome if available, otherwise determine from score
+        // Extract trade plan data
+        const reportData = report.reportData as Record<string, unknown> | null;
+        const tradePlan = reportData?.tradePlan as Record<string, unknown> | undefined;
+        const entryPrice = Number(tradePlan?.averageEntry || report.entryPrice) || undefined;
+        const currentPrice = prices[report.symbol] || undefined;
+        const stopLoss = (tradePlan?.stopLoss as { price: number } | undefined)?.price;
+        const takeProfits = tradePlan?.takeProfits as Array<{ price: number }> | undefined;
+
+        // Calculate unrealized P/L
+        let unrealizedPnL: number | undefined;
+        if (entryPrice && currentPrice) {
+          const pnlPercent = ((currentPrice - entryPrice) / entryPrice) * 100;
+          const direction = (tradePlan?.direction as string || report.direction || 'long').toLowerCase();
+          unrealizedPnL = direction === 'short' ? -pnlPercent : pnlPercent;
+        }
+
+        // Use real outcome if available
         let outcome: 'correct' | 'incorrect' | 'pending' = 'pending';
-        let priceChange = 0;
+        let priceChange = unrealizedPnL || 0;
 
         if (report.outcome) {
-          // Real outcome exists
+          // Real outcome exists (TP/SL hit)
           outcome = report.outcome as 'correct' | 'incorrect' | 'pending';
-          priceChange = report.outcomePriceChange ? Number(report.outcomePriceChange) : 0;
-        } else if (isExpired) {
-          // Expired but no outcome calculated yet - will be calculated soon
-          outcome = 'pending';
-          const score = Number(report.score);
-          const expectedDirection = verdict === 'go' || verdict === 'conditional_go' ? 1 : -1;
-          priceChange = (score - 5) * 2 * expectedDirection;
-        } else {
-          // Still valid - outcome pending
-          outcome = 'pending';
-          const score = Number(report.score);
-          const expectedDirection = verdict === 'go' || verdict === 'conditional_go' ? 1 : -1;
-          priceChange = (score - 5) * 2 * expectedDirection;
+          priceChange = report.outcomePriceChange ? Number(report.outcomePriceChange) : priceChange;
         }
 
         return {
+          id: report.id,
           symbol: report.symbol,
           verdict,
           outcome,
@@ -1041,7 +1072,16 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
           date: new Date(report.generatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           expiresAt: report.expiresAt.toISOString(),
           isExpired,
-          hoursRemaining
+          hoursRemaining,
+          // Live tracking data
+          direction: report.direction,
+          entryPrice,
+          currentPrice,
+          unrealizedPnL: unrealizedPnL ? Number(unrealizedPnL.toFixed(2)) : undefined,
+          stopLoss,
+          takeProfit1: takeProfits?.[0]?.price,
+          takeProfit2: takeProfits?.[1]?.price,
+          takeProfit3: takeProfits?.[2]?.price
         };
       });
 
