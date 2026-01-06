@@ -736,536 +736,651 @@ export default function DashboardPage() {
       </div>
 
       {/* ===== SECTION 2: 7-Step Methodology ===== */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
-              <Brain className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+      <div className="relative overflow-hidden rounded-3xl">
+        {/* Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-cyan-500/5 dark:from-cyan-500/10 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-purple-500/5 dark:from-purple-500/10 via-transparent to-transparent" />
+
+        {/* Grid Pattern */}
+        <div className="absolute inset-0 opacity-[0.03] dark:opacity-5" style={{
+          backgroundImage: `linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)`,
+          backgroundSize: '50px 50px'
+        }} />
+
+        <div className="relative z-10 p-6 md:p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-cyan-500/30 blur-lg rounded-full" />
+                <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                  <Brain className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">7-Step Analysis</h2>
+                <p className="text-gray-500 dark:text-slate-400 text-sm">Each step uses independently verified algorithms</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">7-Step Analysis Methodology</h2>
-              <p className="text-sm text-gray-500 dark:text-slate-400">Each step uses independently verified algorithms</p>
+            <Link
+              href="/analyze"
+              className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white rounded-xl font-semibold transition shadow-lg shadow-cyan-500/25"
+            >
+              Start Analysis
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {/* Steps - Horizontal Scroll Row */}
+          <div className="overflow-x-auto -mx-6 md:-mx-8 px-6 md:px-8 pb-2">
+            <div className="flex gap-4 min-w-max">
+              {methodologySteps.map((step) => {
+                const Icon = step.icon;
+                const accuracyKey = {
+                  1: 'marketPulse',
+                  2: 'assetScanner',
+                  3: 'safetyCheck',
+                  4: 'timing',
+                  5: 'tradePlan',
+                  6: 'trapCheck',
+                  7: 'finalVerdict',
+                }[step.step] as keyof typeof platformStats.accuracy.stepRates;
+
+                const accuracy = platformStats?.accuracy.stepRates[accuracyKey] ?? 0;
+                const stepHasData = hasRealData && accuracy > 0;
+
+                return (
+                  <div
+                    key={step.step}
+                    className="group relative w-[160px] flex-shrink-0"
+                  >
+                    <div className={cn(
+                      "relative p-4 rounded-xl border transition-all duration-300 h-full",
+                      "bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm",
+                      "border-gray-200 dark:border-white/10",
+                      "hover:border-gray-300 dark:hover:border-white/20 hover:shadow-lg"
+                    )}>
+                      {/* Step Number Badge */}
+                      <div className={cn(
+                        "absolute -top-2 -left-2 w-7 h-7 rounded-full flex items-center justify-center shadow-lg",
+                        "bg-gradient-to-br", step.bgColor.replace('bg-', 'from-').replace('/10', ''), "to-transparent",
+                        "border-2 border-white dark:border-slate-800"
+                      )}>
+                        <span className={cn("text-xs font-bold", step.color)}>{step.step}</span>
+                      </div>
+
+                      {/* Icon with glow */}
+                      <div className="relative mb-3">
+                        <div className={cn("absolute inset-0 blur-lg opacity-30 rounded-full", step.bgColor)} />
+                        <Icon className={cn("w-8 h-8 relative group-hover:scale-110 transition-transform", step.color)} />
+                      </div>
+
+                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">{step.name}</h3>
+                      <p className="text-xs text-gray-500 dark:text-slate-400 mb-3 line-clamp-2">{step.description}</p>
+
+                      {/* Accuracy Bar */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-400 dark:text-slate-500">Accuracy</span>
+                          {stepHasData ? (
+                            <span className={cn("font-semibold", step.color)}>{accuracy.toFixed(1)}%</span>
+                          ) : (
+                            <span className="text-gray-400 dark:text-slate-600">—</span>
+                          )}
+                        </div>
+                        <div className="h-1.5 bg-gray-200 dark:bg-slate-700/50 rounded-full overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full transition-all duration-1000", stepHasData ? step.color.replace('text-', 'bg-') : 'bg-gray-300 dark:bg-slate-600')}
+                            style={{ width: stepHasData ? `${accuracy}%` : '0%' }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Metrics Tags */}
+                      <div className="flex flex-wrap gap-1 mt-3">
+                        {step.metrics.slice(0, 2).map((metric) => (
+                          <span key={metric} className="px-1.5 py-0.5 bg-white/50 dark:bg-slate-800/50 rounded text-[10px] text-gray-500 dark:text-slate-400 border border-gray-200/50 dark:border-slate-700/50">
+                            {metric}
+                          </span>
+                        ))}
+                        {step.metrics.length > 2 && (
+                          <span className="px-1.5 py-0.5 bg-white/50 dark:bg-slate-800/50 rounded text-[10px] text-gray-400 dark:text-slate-500">
+                            +{step.metrics.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
+
+          {/* Scroll indicator for mobile */}
+          <div className="flex justify-center mt-3 sm:hidden">
+            <div className="flex gap-1">
+              <ChevronRight className="w-4 h-4 text-gray-400 dark:text-slate-500 animate-pulse" />
+              <span className="text-xs text-gray-400 dark:text-slate-500">Scroll to see all steps</span>
+            </div>
+          </div>
+
+          {/* Mobile CTA */}
           <Link
             href="/analyze"
-            className="hidden sm:flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition"
+            className="sm:hidden flex items-center justify-center gap-2 mt-4 px-4 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl font-semibold transition w-full shadow-lg shadow-cyan-500/25"
           >
             Start Analysis
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
-
-        {/* Steps - Horizontal Scroll Row */}
-        <div className="overflow-x-auto -mx-6 px-6 pb-2">
-          <div className="flex gap-4 min-w-max">
-            {methodologySteps.map((step) => {
-              const Icon = step.icon;
-              const accuracyKey = {
-                1: 'marketPulse',
-                2: 'assetScanner',
-                3: 'safetyCheck',
-                4: 'timing',
-                5: 'tradePlan',
-                6: 'trapCheck',
-                7: 'finalVerdict',
-              }[step.step] as keyof typeof platformStats.accuracy.stepRates;
-
-              const accuracy = platformStats?.accuracy.stepRates[accuracyKey] ?? 0;
-              const stepHasData = hasRealData && accuracy > 0;
-
-              return (
-                <div
-                  key={step.step}
-                  className={cn(
-                    "relative p-4 rounded-xl border transition-all hover:scale-[1.02] w-[160px] flex-shrink-0",
-                    "bg-gray-50 dark:bg-transparent",
-                    step.borderColor.replace('border-', 'border-').replace('/30', '/40 dark:border-').concat('/30')
-                  )}
-                  style={{
-                    backgroundColor: `var(--step-${step.step}-bg)`,
-                  }}
-                >
-                  {/* Step Number Badge */}
-                  <div className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 flex items-center justify-center shadow-sm">
-                    <span className="text-xs font-bold text-gray-900 dark:text-white">{step.step}</span>
-                  </div>
-
-                  <Icon className={cn("w-8 h-8 mb-3", step.color)} />
-                  <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">{step.name}</h3>
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mb-3 line-clamp-2">{step.description}</p>
-
-                  {/* Accuracy Bar */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-400 dark:text-slate-500">Accuracy</span>
-                      {stepHasData ? (
-                        <span className={step.color}>{accuracy.toFixed(1)}%</span>
-                      ) : (
-                        <span className="text-gray-400 dark:text-slate-600">No data</span>
-                      )}
-                    </div>
-                    <div className="h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                      <div
-                        className={cn("h-full rounded-full", stepHasData ? step.color.replace('text-', 'bg-') : 'bg-gray-300 dark:bg-slate-600')}
-                        style={{ width: stepHasData ? `${accuracy}%` : '0%' }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Metrics Tags */}
-                  <div className="flex flex-wrap gap-1 mt-3">
-                    {step.metrics.slice(0, 2).map((metric) => (
-                      <span key={metric} className="px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800/50 rounded text-[10px] text-gray-500 dark:text-slate-400">
-                        {metric}
-                      </span>
-                    ))}
-                    {step.metrics.length > 2 && (
-                      <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800/50 rounded text-[10px] text-gray-400 dark:text-slate-500">
-                        +{step.metrics.length - 2}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Scroll indicator for mobile */}
-        <div className="flex justify-center mt-3 sm:hidden">
-          <div className="flex gap-1">
-            <ChevronRight className="w-4 h-4 text-gray-400 dark:text-slate-500 animate-pulse" />
-            <span className="text-xs text-gray-400 dark:text-slate-500">Scroll to see all steps</span>
-          </div>
-        </div>
-
-        {/* Mobile CTA */}
-        <Link
-          href="/analyze"
-          className="sm:hidden flex items-center justify-center gap-2 mt-4 px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium transition w-full"
-        >
-          Start Analysis
-          <ArrowRight className="w-4 h-4" />
-        </Link>
       </div>
 
       {/* ===== SECTION 3: Verdict Distribution & User Stats ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Left - Verdict Distribution */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
-          <div className="flex items-center gap-2 mb-6">
-            <PieChart className="w-5 h-5 text-purple-500 dark:text-purple-400" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Verdict Distribution</h3>
-          </div>
+        <div className="relative overflow-hidden rounded-3xl">
+          {/* Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-500/5 dark:from-purple-500/10 via-transparent to-transparent" />
 
-          {totalVerdicts > 0 ? (
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <VerdictBadge verdict="go" count={platformStats?.verdicts.go ?? 0} total={totalVerdicts} />
-              <VerdictBadge verdict="conditional_go" count={platformStats?.verdicts.conditional_go ?? 0} total={totalVerdicts} />
-              <VerdictBadge verdict="wait" count={platformStats?.verdicts.wait ?? 0} total={totalVerdicts} />
-              <VerdictBadge verdict="avoid" count={platformStats?.verdicts.avoid ?? 0} total={totalVerdicts} />
+          {/* Grid Pattern */}
+          <div className="absolute inset-0 opacity-[0.03] dark:opacity-5" style={{
+            backgroundImage: `linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)`,
+            backgroundSize: '40px 40px'
+          }} />
+
+          <div className="relative z-10 p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-purple-500/30 blur-lg rounded-full" />
+                <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                  <PieChart className="w-5 h-5 text-white" />
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Verdict Distribution</h3>
             </div>
-          ) : (
-            <div className="text-center py-8 mb-6 bg-gray-50 dark:bg-slate-900/30 rounded-xl">
-              <PieChart className="w-10 h-10 text-gray-400 dark:text-slate-600 mx-auto mb-2" />
-              <p className="text-sm text-gray-500 dark:text-slate-400">No verdicts yet</p>
-              <p className="text-xs text-gray-400 dark:text-slate-500">Complete analyses to see distribution</p>
+
+            {totalVerdicts > 0 ? (
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                <VerdictBadge verdict="go" count={platformStats?.verdicts.go ?? 0} total={totalVerdicts} />
+                <VerdictBadge verdict="conditional_go" count={platformStats?.verdicts.conditional_go ?? 0} total={totalVerdicts} />
+                <VerdictBadge verdict="wait" count={platformStats?.verdicts.wait ?? 0} total={totalVerdicts} />
+                <VerdictBadge verdict="avoid" count={platformStats?.verdicts.avoid ?? 0} total={totalVerdicts} />
+              </div>
+            ) : (
+              <div className="text-center py-8 mb-5 bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10">
+                <PieChart className="w-10 h-10 text-gray-400 dark:text-slate-600 mx-auto mb-2" />
+                <p className="text-sm text-gray-500 dark:text-slate-400">No verdicts yet</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500">Complete analyses to see distribution</p>
+              </div>
+            )}
+
+            <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-gray-200 dark:border-white/10">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Why It Matters?</h4>
+              <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed">
+                A balanced verdict distribution shows the system is responsive to market conditions.
+                Systems that only give "BUY" signals are not reliable.
+              </p>
             </div>
-          )}
 
-          <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-100 dark:border-slate-700/30">
-            <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Why It Matters?</h4>
-            <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed">
-              A balanced verdict distribution shows the system is responsive to market conditions.
-              Systems that only give "BUY" signals are not reliable.
-            </p>
-          </div>
-
-          <div className="mt-4 flex items-center justify-between text-sm">
-            <span className="text-gray-500 dark:text-slate-400">Total Verdicts</span>
-            <span className="font-bold text-gray-900 dark:text-white">{totalVerdicts}</span>
+            <div className="mt-4 flex items-center justify-between text-sm px-1">
+              <span className="text-gray-500 dark:text-slate-400">Total Verdicts</span>
+              <span className="font-bold text-gray-900 dark:text-white">{totalVerdicts}</span>
+            </div>
           </div>
         </div>
 
         {/* Right - My Performance */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
-          <div className="flex items-center gap-2 mb-6">
-            <Award className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">My Performance</h3>
+        <div className="relative overflow-hidden rounded-3xl">
+          {/* Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
+
+          {/* Grid Pattern */}
+          <div className="absolute inset-0 opacity-[0.03] dark:opacity-5" style={{
+            backgroundImage: `linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)`,
+            backgroundSize: '40px 40px'
+          }} />
+
+          <div className="relative z-10 p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-amber-500/30 blur-lg rounded-full" />
+                <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                  <Award className="w-5 h-5 text-white" />
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">My Performance</h3>
+            </div>
+
+            {userStats && userStats.totalAnalyses > 0 ? (
+              <>
+                {/* Two Performance Cards - Realized & Active */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {/* Realized Performance */}
+                  <div className="relative overflow-hidden bg-gradient-to-br from-emerald-100/80 to-green-100/80 dark:from-emerald-500/10 dark:to-green-500/10 rounded-xl p-4 text-center border border-emerald-200/50 dark:border-emerald-500/20">
+                    <div className="text-[10px] uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold mb-1">
+                      Realized
+                    </div>
+                    <div className={cn(
+                      "text-3xl font-black",
+                      userStats.accuracy >= 70 ? 'text-green-600 dark:text-green-400' :
+                      userStats.accuracy >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
+                      userStats.verifiedAnalyses === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
+                    )}>
+                      {userStats.verifiedAnalyses > 0 ? `${userStats.accuracy.toFixed(1)}%` : '-'}
+                    </div>
+                    <div className="text-[10px] text-gray-500 dark:text-slate-400 mt-1">
+                      {userStats.correctAnalyses} / {userStats.verifiedAnalyses} Closed
+                    </div>
+                  </div>
+
+                  {/* Active Performance */}
+                  <div className="relative overflow-hidden bg-gradient-to-br from-blue-100/80 to-cyan-100/80 dark:from-blue-500/10 dark:to-cyan-500/10 rounded-xl p-4 text-center border border-blue-200/50 dark:border-blue-500/20">
+                    <div className="text-[10px] uppercase tracking-wider text-blue-600 dark:text-blue-400 font-semibold mb-1">
+                      Active
+                    </div>
+                    <div className={cn(
+                      "text-3xl font-black",
+                      (userStats.activePerformance || 0) >= 70 ? 'text-green-600 dark:text-green-400' :
+                      (userStats.activePerformance || 0) >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
+                      (userStats.activeCount || 0) === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
+                    )}>
+                      {(userStats.activeCount || 0) > 0 ? `${(userStats.activePerformance || 0).toFixed(1)}%` : '-'}
+                    </div>
+                    <div className="text-[10px] text-gray-500 dark:text-slate-400 mt-1">
+                      {userStats.activeProfitable || 0} / {userStats.activeCount || 0} Profitable
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats Grid - Compact */}
+                <div className="grid grid-cols-5 gap-2 mb-4">
+                  <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-lg p-2 text-center border border-gray-200 dark:border-white/10">
+                    <div className="text-lg font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
+                    <div className="text-[9px] text-gray-500 dark:text-slate-400">Total</div>
+                  </div>
+                  <div className="bg-blue-100/80 dark:bg-blue-500/10 rounded-lg p-2 text-center border border-blue-200/50 dark:border-blue-500/20">
+                    <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
+                    <div className="text-[9px] text-gray-500 dark:text-slate-400">Active</div>
+                  </div>
+                  <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-lg p-2 text-center border border-gray-200 dark:border-white/10">
+                    <div className="text-lg font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
+                    <div className="text-[9px] text-gray-500 dark:text-slate-400">Closed</div>
+                  </div>
+                  <div className="bg-green-100/80 dark:bg-green-500/10 rounded-lg p-2 text-center border border-green-200/50 dark:border-green-500/20">
+                    <div className="text-lg font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
+                    <div className="text-[9px] text-gray-500 dark:text-slate-400">TP Hit</div>
+                  </div>
+                  <div className="bg-red-100/80 dark:bg-red-500/10 rounded-lg p-2 text-center border border-red-200/50 dark:border-red-500/20">
+                    <div className="text-lg font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
+                    <div className="text-[9px] text-gray-500 dark:text-slate-400">SL Hit</div>
+                  </div>
+                </div>
+
+                {/* Performance Comment */}
+                <div className={cn(
+                  "text-center text-sm font-medium p-3 rounded-xl border",
+                  userStats.verifiedAnalyses === 0
+                    ? "bg-blue-100/80 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-500/20"
+                    : userStats.accuracy >= 70
+                    ? "bg-green-100/80 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-500/20"
+                    : userStats.accuracy >= 50
+                    ? "bg-yellow-100/80 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-200/50 dark:border-yellow-500/20"
+                    : "bg-red-100/80 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-500/20"
+                )}>
+                  {userStats.verifiedAnalyses === 0
+                    ? "Trades are still active. Results will update when TP/SL is hit."
+                    : userStats.accuracy >= 70
+                    ? "Excellent performance! Your analysis accuracy is outstanding."
+                    : userStats.accuracy >= 50
+                    ? "Good progress! There's room for improvement."
+                    : "Consider reviewing your analysis approach for better results."}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <div className="relative w-16 h-16 mx-auto mb-4">
+                  <div className="absolute inset-0 bg-gray-400/20 blur-xl rounded-full" />
+                  <div className="relative w-full h-full rounded-full bg-gray-100/80 dark:bg-white/5 flex items-center justify-center border border-gray-200 dark:border-white/10">
+                    <BarChart3 className="w-8 h-8 text-gray-400 dark:text-slate-500" />
+                  </div>
+                </div>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">No analyses yet</h4>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">
+                  Start your first analysis to track your performance
+                </p>
+                <Link
+                  href="/analyze"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl text-sm font-semibold transition shadow-lg shadow-amber-500/25"
+                >
+                  Start First Analysis
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== SECTION 4: Live Outcome Tracking ===== */}
+      <div className="relative overflow-hidden rounded-3xl">
+        {/* Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500/5 dark:from-blue-500/10 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-green-500/5 dark:from-green-500/10 via-transparent to-transparent" />
+
+        {/* Grid Pattern */}
+        <div className="absolute inset-0 opacity-[0.03] dark:opacity-5" style={{
+          backgroundImage: `linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)`,
+          backgroundSize: '50px 50px'
+        }} />
+
+        <div className="relative z-10 p-6 md:p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-blue-500/30 blur-lg rounded-full" />
+                <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                  <Eye className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Live Accuracy Tracking</h2>
+                <p className="text-gray-500 dark:text-slate-400 text-sm">Real-time TP/SL monitoring - trades close when targets hit</p>
+              </div>
+            </div>
+            <div className="hidden sm:flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-100/80 dark:bg-green-500/10 rounded-full border border-green-200/50 dark:border-green-500/20">
+                <div className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400" />
+                <span className="text-green-600 dark:text-green-400 font-medium">TP Hit</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-100/80 dark:bg-red-500/10 rounded-full border border-red-200/50 dark:border-red-500/20">
+                <div className="w-2 h-2 rounded-full bg-red-500 dark:bg-red-400" />
+                <span className="text-red-600 dark:text-red-400 font-medium">SL Hit</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-100/80 dark:bg-blue-500/10 rounded-full border border-blue-200/50 dark:border-blue-500/20">
+                <div className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400 animate-pulse" />
+                <span className="text-blue-600 dark:text-blue-400 font-medium">Active</span>
+              </div>
+            </div>
           </div>
 
-          {userStats && userStats.totalAnalyses > 0 ? (
-            <>
-              {/* Two Performance Cards - Realized & Active */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                {/* Realized Performance */}
-                <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-500/10 dark:to-green-500/10 rounded-xl p-4 text-center border border-emerald-200 dark:border-emerald-500/20">
-                  <div className="text-[10px] uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold mb-1">
-                    Realized
+          {recentOutcomes.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {recentOutcomes.map((outcome) => (
+                <div
+                  key={outcome.id}
+                  className={cn(
+                    "group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border transition-all duration-300 hover:shadow-lg",
+                    outcome.outcome === 'correct' && "border-green-300/50 dark:border-green-500/30 bg-green-100/80 dark:bg-green-500/5",
+                    outcome.outcome === 'incorrect' && "border-red-300/50 dark:border-red-500/30 bg-red-100/80 dark:bg-red-500/5",
+                    outcome.outcome === 'pending' && "border-gray-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/30"
+                  )}
+                >
+                  {/* Header: Symbol & Status */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        "relative w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-sm shadow-lg",
+                        outcome.symbol === 'BTC' ? 'bg-gradient-to-br from-amber-400 to-amber-600' :
+                        outcome.symbol === 'ETH' ? 'bg-gradient-to-br from-blue-400 to-blue-600' :
+                        outcome.symbol === 'SOL' ? 'bg-gradient-to-br from-purple-400 to-purple-600' :
+                        outcome.symbol === 'BNB' ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' :
+                        'bg-gradient-to-br from-gray-400 to-gray-600'
+                      )}>
+                        {outcome.symbol.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-gray-900 dark:text-white text-sm">{outcome.symbol}</span>
+                          {outcome.direction && (
+                            <span className={cn(
+                              "px-1 py-0.5 rounded text-[9px] font-bold",
+                              outcome.direction === 'long' || outcome.direction === 'LONG'
+                                ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400"
+                                : "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                            )}>
+                              {outcome.direction === 'long' || outcome.direction === 'LONG' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-400 dark:text-slate-500">{outcome.createdAt}</div>
+                      </div>
+                    </div>
+                    {/* Status Badge */}
+                    <div className={cn(
+                      "px-2 py-0.5 rounded-lg text-[10px] font-bold",
+                      outcome.outcome === 'correct' && "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400",
+                      outcome.outcome === 'incorrect' && "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400",
+                      outcome.outcome === 'pending' && "bg-blue-200/80 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                    )}>
+                      {outcome.outcome === 'correct' ? 'TP HIT' : outcome.outcome === 'incorrect' ? 'SL HIT' : 'ACTIVE'}
+                    </div>
                   </div>
-                  <div className={cn(
-                    "text-3xl font-bold",
-                    userStats.accuracy >= 70 ? 'text-green-600 dark:text-green-400' :
-                    userStats.accuracy >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
-                    userStats.verifiedAnalyses === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
-                  )}>
-                    {userStats.verifiedAnalyses > 0 ? `${userStats.accuracy.toFixed(1)}%` : '-'}
-                  </div>
-                  <div className="text-[10px] text-gray-500 dark:text-slate-400 mt-1">
-                    {userStats.correctAnalyses} / {userStats.verifiedAnalyses} Closed
-                  </div>
-                </div>
 
-                {/* Active Performance */}
-                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-500/10 dark:to-cyan-500/10 rounded-xl p-4 text-center border border-blue-200 dark:border-blue-500/20">
-                  <div className="text-[10px] uppercase tracking-wider text-blue-600 dark:text-blue-400 font-semibold mb-1">
-                    Active
-                  </div>
-                  <div className={cn(
-                    "text-3xl font-bold",
-                    (userStats.activePerformance || 0) >= 70 ? 'text-green-600 dark:text-green-400' :
-                    (userStats.activePerformance || 0) >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
-                    (userStats.activeCount || 0) === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
-                  )}>
-                    {(userStats.activeCount || 0) > 0 ? `${(userStats.activePerformance || 0).toFixed(1)}%` : '-'}
-                  </div>
-                  <div className="text-[10px] text-gray-500 dark:text-slate-400 mt-1">
-                    {userStats.activeProfitable || 0} / {userStats.activeCount || 0} Profitable
-                  </div>
-                </div>
-              </div>
+                  {/* Live Price Display */}
+                  {outcome.entryPrice && outcome.currentPrice && (
+                    <div className="mb-2 p-2 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-gray-200/50 dark:border-white/5">
+                      <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-slate-400 mb-1">
+                        <span>Entry</span>
+                        <span>Current</span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-xs">
+                        <span className="text-gray-700 dark:text-slate-300">${outcome.entryPrice.toFixed(2)}</span>
+                        <span className="text-gray-400 dark:text-slate-600">→</span>
+                        <span className="text-gray-700 dark:text-slate-300">${outcome.currentPrice.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
 
-              {/* Stats Grid - Compact */}
-              <div className="grid grid-cols-5 gap-2 mb-4">
-                <div className="bg-gray-50 dark:bg-slate-900/50 rounded-lg p-2 text-center">
-                  <div className="text-lg font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
-                  <div className="text-[9px] text-gray-500 dark:text-slate-400">Total</div>
-                </div>
-                <div className="bg-blue-50 dark:bg-blue-500/10 rounded-lg p-2 text-center border border-blue-200 dark:border-blue-500/20">
-                  <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
-                  <div className="text-[9px] text-gray-500 dark:text-slate-400">Active</div>
-                </div>
-                <div className="bg-gray-50 dark:bg-slate-900/50 rounded-lg p-2 text-center">
-                  <div className="text-lg font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
-                  <div className="text-[9px] text-gray-500 dark:text-slate-400">Closed</div>
-                </div>
-                <div className="bg-green-50 dark:bg-green-500/10 rounded-lg p-2 text-center border border-green-200 dark:border-green-500/20">
-                  <div className="text-lg font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
-                  <div className="text-[9px] text-gray-500 dark:text-slate-400">TP Hit</div>
-                </div>
-                <div className="bg-red-50 dark:bg-red-500/10 rounded-lg p-2 text-center border border-red-200 dark:border-red-500/20">
-                  <div className="text-lg font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
-                  <div className="text-[9px] text-gray-500 dark:text-slate-400">SL Hit</div>
-                </div>
-              </div>
+                  {/* P/L Display */}
+                  {outcome.unrealizedPnL !== undefined && (
+                    <div className={cn(
+                      "text-center py-2 rounded-lg font-bold text-sm",
+                      outcome.unrealizedPnL >= 0
+                        ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400"
+                        : "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                    )}>
+                      {outcome.unrealizedPnL >= 0 ? '+' : ''}{outcome.unrealizedPnL.toFixed(2)}%
+                    </div>
+                  )}
 
-              {/* Performance Comment */}
-              <div className={cn(
-                "text-center text-sm font-medium p-3 rounded-lg",
-                userStats.verifiedAnalyses === 0
-                  ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                  : userStats.accuracy >= 70
-                  ? "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400"
-                  : userStats.accuracy >= 50
-                  ? "bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
-                  : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"
-              )}>
-                {userStats.verifiedAnalyses === 0
-                  ? "🔵 Trades are still active. Results will update when TP/SL is hit."
-                  : userStats.accuracy >= 70
-                  ? "🎯 Excellent performance! Your analysis accuracy is outstanding."
-                  : userStats.accuracy >= 50
-                  ? "📈 Good progress! There's room for improvement."
-                  : "⚠️ Consider reviewing your analysis approach for better results."}
-              </div>
-            </>
+                  {/* Fallback: Show priceChange if no live data */}
+                  {!outcome.unrealizedPnL && outcome.priceChange !== undefined && (
+                    <div className={cn(
+                      "mt-2 text-sm font-medium text-right",
+                      outcome.priceChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                    )}>
+                      {outcome.priceChange >= 0 ? '+' : ''}{outcome.priceChange.toFixed(2)}%
+                    </div>
+                  )}
+
+                  {/* TP/SL Levels (compact) */}
+                  {(outcome.stopLoss || outcome.takeProfit1) && (
+                    <div className="mt-2 flex items-center justify-between text-[9px] font-medium">
+                      {outcome.stopLoss && (
+                        <span className="text-red-500 dark:text-red-400">SL: ${outcome.stopLoss.toFixed(2)}</span>
+                      )}
+                      {outcome.takeProfit1 && (
+                        <span className="text-green-500 dark:text-green-400">TP: ${outcome.takeProfit1.toFixed(2)}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           ) : (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-slate-700/50 flex items-center justify-center mx-auto mb-4">
-                <BarChart3 className="w-8 h-8 text-gray-400 dark:text-slate-500" />
+            <div className="text-center py-12 bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10">
+              <div className="relative w-16 h-16 mx-auto mb-4">
+                <div className="absolute inset-0 bg-blue-400/20 blur-xl rounded-full" />
+                <div className="relative w-full h-full rounded-full bg-blue-100/80 dark:bg-blue-500/10 flex items-center justify-center border border-blue-200 dark:border-blue-500/20">
+                  <Activity className="w-8 h-8 text-blue-500 dark:text-blue-400" />
+                </div>
               </div>
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">No analyses yet</h4>
-              <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">
-                Start your first analysis to track your performance
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">No tracked outcomes yet</h4>
+              <p className="text-sm text-gray-500 dark:text-slate-400">
+                Create an analysis to start tracking live outcomes
               </p>
-              <Link
-                href="/analyze"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition"
-              >
-                Start First Analysis
-                <ArrowRight className="w-4 h-4" />
-              </Link>
             </div>
           )}
         </div>
       </div>
 
-      {/* ===== SECTION 4: Live Outcome Tracking ===== */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
-              <Eye className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Live Accuracy Tracking</h2>
-              <p className="text-sm text-gray-500 dark:text-slate-400">Real-time TP/SL monitoring - trades close when targets hit</p>
-            </div>
-          </div>
-          <div className="hidden sm:flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400" />
-              <span className="text-gray-500 dark:text-slate-400">TP Hit</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-red-500 dark:bg-red-400" />
-              <span className="text-gray-500 dark:text-slate-400">SL Hit</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400" />
-              <span className="text-gray-500 dark:text-slate-400">Active</span>
-            </div>
-          </div>
-        </div>
-
-        {recentOutcomes.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {recentOutcomes.map((outcome) => (
-              <div
-                key={outcome.id}
-                className={cn(
-                  "bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border hover:border-gray-300 dark:hover:border-slate-600/50 transition",
-                  outcome.outcome === 'correct' && "border-green-300 dark:border-green-500/30 bg-green-50 dark:bg-green-500/5",
-                  outcome.outcome === 'incorrect' && "border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/5",
-                  outcome.outcome === 'pending' && "border-gray-100 dark:border-slate-700/30"
-                )}
-              >
-                {/* Header: Symbol & Status */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm",
-                      outcome.symbol === 'BTC' ? 'bg-amber-500' :
-                      outcome.symbol === 'ETH' ? 'bg-blue-500' :
-                      outcome.symbol === 'SOL' ? 'bg-purple-500' :
-                      outcome.symbol === 'BNB' ? 'bg-yellow-500' :
-                      'bg-gray-500 dark:bg-slate-600'
-                    )}>
-                      {outcome.symbol.charAt(0)}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-gray-900 dark:text-white text-sm">{outcome.symbol}</span>
-                        {outcome.direction && (
-                          <span className={cn(
-                            "px-1 py-0.5 rounded text-[9px] font-bold",
-                            outcome.direction === 'long' || outcome.direction === 'LONG'
-                              ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400"
-                              : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                          )}>
-                            {outcome.direction === 'long' || outcome.direction === 'LONG' ? '↑' : '↓'}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-400 dark:text-slate-500">{outcome.createdAt}</div>
-                    </div>
-                  </div>
-                  {/* Status Badge */}
-                  <div className={cn(
-                    "px-1.5 py-0.5 rounded text-[10px] font-bold",
-                    outcome.outcome === 'correct' && "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400",
-                    outcome.outcome === 'incorrect' && "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400",
-                    outcome.outcome === 'pending' && "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
-                  )}>
-                    {outcome.outcome === 'correct' ? 'TP HIT' : outcome.outcome === 'incorrect' ? 'SL HIT' : 'ACTIVE'}
-                  </div>
-                </div>
-
-                {/* Live Price Display */}
-                {outcome.entryPrice && outcome.currentPrice && (
-                  <div className="mb-2 p-2 bg-slate-100 dark:bg-slate-800/50 rounded-lg">
-                    <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-slate-400 mb-1">
-                      <span>Entry</span>
-                      <span>Current</span>
-                    </div>
-                    <div className="flex items-center justify-between font-mono text-xs">
-                      <span className="text-gray-700 dark:text-slate-300">${outcome.entryPrice.toFixed(2)}</span>
-                      <span className="text-gray-500 dark:text-slate-500">→</span>
-                      <span className="text-gray-700 dark:text-slate-300">${outcome.currentPrice.toFixed(2)}</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* P/L Display */}
-                {outcome.unrealizedPnL !== undefined && (
-                  <div className={cn(
-                    "text-center py-1.5 rounded-lg font-bold text-sm",
-                    outcome.unrealizedPnL >= 0
-                      ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400"
-                      : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                  )}>
-                    {outcome.unrealizedPnL >= 0 ? '+' : ''}{outcome.unrealizedPnL.toFixed(2)}%
-                  </div>
-                )}
-
-                {/* Fallback: Show priceChange if no live data */}
-                {!outcome.unrealizedPnL && outcome.priceChange !== undefined && (
-                  <div className={cn(
-                    "mt-2 text-sm font-medium text-right",
-                    outcome.priceChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                  )}>
-                    {outcome.priceChange >= 0 ? '+' : ''}{outcome.priceChange.toFixed(2)}%
-                  </div>
-                )}
-
-                {/* TP/SL Levels (compact) */}
-                {(outcome.stopLoss || outcome.takeProfit1) && (
-                  <div className="mt-2 flex items-center justify-between text-[9px]">
-                    {outcome.stopLoss && (
-                      <span className="text-red-500 dark:text-red-400">SL: ${outcome.stopLoss.toFixed(2)}</span>
-                    )}
-                    {outcome.takeProfit1 && (
-                      <span className="text-green-500 dark:text-green-400">TP: ${outcome.takeProfit1.toFixed(2)}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 bg-gray-50 dark:bg-slate-900/30 rounded-xl">
-            <Activity className="w-12 h-12 text-gray-400 dark:text-slate-600 mx-auto mb-4" />
-            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">No tracked outcomes yet</h4>
-            <p className="text-sm text-gray-500 dark:text-slate-400">
-              Create an analysis to start tracking live outcomes
-            </p>
-          </div>
-        )}
-      </div>
-
       {/* ===== SECTION 5: Data Sources & Methodology ===== */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-cyan-100 dark:bg-cyan-500/20 flex items-center justify-center">
-            <Lock className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Data Sources & Methodology</h2>
-            <p className="text-sm text-gray-500 dark:text-slate-400">The reliable infrastructure behind our analyses</p>
-          </div>
-        </div>
+      <div className="relative overflow-hidden rounded-3xl">
+        {/* Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-500/5 dark:from-indigo-500/10 via-transparent to-transparent" />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Data Sources */}
-          <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-200 dark:border-slate-600">
-            <Database className="w-6 h-6 text-blue-600 dark:text-blue-400 mb-3" />
-            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Data Sources</h4>
-            <ul className="text-sm text-gray-600 dark:text-slate-300 space-y-1.5">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                Binance Exchange API
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                CoinGecko Market Data
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                Fear & Greed Index
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                On-chain Analytics
-              </li>
-            </ul>
-          </div>
+        {/* Grid Pattern */}
+        <div className="absolute inset-0 opacity-[0.03] dark:opacity-5" style={{
+          backgroundImage: `linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)`,
+          backgroundSize: '50px 50px'
+        }} />
 
-          {/* Technical Indicators */}
-          <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-200 dark:border-slate-600">
-            <LineChart className="w-6 h-6 text-purple-600 dark:text-purple-400 mb-3" />
-            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Technical Indicators</h4>
-            <ul className="text-sm text-gray-600 dark:text-slate-300 space-y-1.5">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                RSI, MACD, Bollinger
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                EMA (8, 21, 50, 200)
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                Volume Profile
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                ATR & Volatility
-              </li>
-            </ul>
-          </div>
-
-          {/* AI Analysis */}
-          <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-200 dark:border-slate-600">
-            <Brain className="w-6 h-6 text-emerald-600 dark:text-emerald-400 mb-3" />
-            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">AI Analysis</h4>
-            <ul className="text-sm text-gray-600 dark:text-slate-300 space-y-1.5">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                Gemini AI Integration
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                Pattern Recognition
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                Sentiment Analysis
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                Risk Assessment
-              </li>
-            </ul>
-          </div>
-
-          {/* Security */}
-          <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-200 dark:border-slate-600">
-            <Shield className="w-6 h-6 text-amber-600 dark:text-amber-400 mb-3" />
-            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Security</h4>
-            <ul className="text-sm text-gray-600 dark:text-slate-300 space-y-1.5">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                Manipulation Detection
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                Whale Tracking
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                Trap Identification
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                Smart Money Flow
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Disclaimer */}
-        <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-700/50">
-          <div className="flex gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div className="relative z-10 p-6 md:p-8">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-indigo-500/30 blur-lg rounded-full" />
+              <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <Lock className="w-6 h-6 text-white" />
+              </div>
+            </div>
             <div>
-              <h4 className="font-medium text-amber-800 dark:text-amber-300 mb-1">Risk Disclaimer</h4>
-              <p className="text-sm text-amber-700 dark:text-amber-200/80">
-                TradePath does not provide investment advice. All analyses are for educational purposes only.
-                Cryptocurrency markets are high-risk, and investment decisions are entirely your responsibility.
-                Past performance is not a guarantee of future results.
-              </p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Data Sources & Methodology</h2>
+              <p className="text-gray-500 dark:text-slate-400 text-sm">The reliable infrastructure behind our analyses</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Data Sources */}
+            <div className="group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-gray-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/30 transition-all hover:shadow-lg">
+              <div className="relative mb-3">
+                <div className="absolute inset-0 bg-blue-500/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Database className="relative w-7 h-7 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+              </div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Data Sources</h4>
+              <ul className="text-sm text-gray-600 dark:text-slate-300 space-y-2">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  Binance Exchange API
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  CoinGecko Market Data
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  Fear & Greed Index
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  On-chain Analytics
+                </li>
+              </ul>
+            </div>
+
+            {/* Technical Indicators */}
+            <div className="group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-gray-200 dark:border-white/10 hover:border-purple-300 dark:hover:border-purple-500/30 transition-all hover:shadow-lg">
+              <div className="relative mb-3">
+                <div className="absolute inset-0 bg-purple-500/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                <LineChart className="relative w-7 h-7 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform" />
+              </div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Technical Indicators</h4>
+              <ul className="text-sm text-gray-600 dark:text-slate-300 space-y-2">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  RSI, MACD, Bollinger
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  EMA (8, 21, 50, 200)
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  Volume Profile
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  ATR & Volatility
+                </li>
+              </ul>
+            </div>
+
+            {/* AI Analysis */}
+            <div className="group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-gray-200 dark:border-white/10 hover:border-emerald-300 dark:hover:border-emerald-500/30 transition-all hover:shadow-lg">
+              <div className="relative mb-3">
+                <div className="absolute inset-0 bg-emerald-500/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Brain className="relative w-7 h-7 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
+              </div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-3">AI Analysis</h4>
+              <ul className="text-sm text-gray-600 dark:text-slate-300 space-y-2">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  Gemini AI Integration
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  Pattern Recognition
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  Sentiment Analysis
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  Risk Assessment
+                </li>
+              </ul>
+            </div>
+
+            {/* Security */}
+            <div className="group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-gray-200 dark:border-white/10 hover:border-amber-300 dark:hover:border-amber-500/30 transition-all hover:shadow-lg">
+              <div className="relative mb-3">
+                <div className="absolute inset-0 bg-amber-500/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Shield className="relative w-7 h-7 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform" />
+              </div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Security</h4>
+              <ul className="text-sm text-gray-600 dark:text-slate-300 space-y-2">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  Manipulation Detection
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  Whale Tracking
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  Trap Identification
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  Smart Money Flow
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Disclaimer */}
+          <div className="mt-6 p-5 bg-amber-100/80 dark:bg-amber-900/20 rounded-xl border border-amber-200/50 dark:border-amber-700/30">
+            <div className="flex gap-4">
+              <div className="relative flex-shrink-0">
+                <div className="absolute inset-0 bg-amber-500/30 blur-lg rounded-full" />
+                <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                  <AlertTriangle className="w-5 h-5 text-white" />
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold text-amber-800 dark:text-amber-300 mb-1">Risk Disclaimer</h4>
+                <p className="text-sm text-amber-700 dark:text-amber-200/80 leading-relaxed">
+                  TradePath does not provide investment advice. All analyses are for educational purposes only.
+                  Cryptocurrency markets are high-risk, and investment decisions are entirely your responsibility.
+                  Past performance is not a guarantee of future results.
+                </p>
+              </div>
             </div>
           </div>
         </div>
