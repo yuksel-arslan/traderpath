@@ -33,6 +33,7 @@ import { TradePlan } from './TradePlan';
 import { TrapCheck } from './TrapCheck';
 import { FinalVerdict } from './FinalVerdict';
 import { DownloadReportButton } from '../reports/DownloadReportButton';
+import { AnalysisProgressBar } from './AnalysisProgressBar';
 
 interface AnalysisFlowProps {
   symbol: string;
@@ -359,55 +360,17 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
 
   return (
     <div className="w-full">
-      {/* Step Progress Bar */}
-      <div className="bg-card border rounded-lg p-4 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          {STEPS.map((step, index) => {
-            const Icon = step.icon;
-            const stepColors = colorClasses[step.color as keyof typeof colorClasses];
-            const completed = completedSteps.includes(step.id);
-            const active = activeStep === step.id;
-            const unlocked = step.id === 1 || completedSteps.includes(step.id - 1);
-
-            return (
-              <div key={step.id} className="flex items-center flex-1">
-                <button
-                  onClick={() => completed && handleViewResult(step.id)}
-                  disabled={!completed}
-                  className={cn(
-                    'relative flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all',
-                    completed && `${stepColors.bg} border-current ${stepColors.text}`,
-                    active && !completed && `ring-2 ring-primary/30 border-primary ${stepColors.text}`,
-                    !unlocked && 'bg-muted border-muted-foreground/20 text-muted-foreground',
-                    unlocked && !completed && !active && 'bg-background border-border',
-                    completed && 'cursor-pointer hover:scale-110'
-                  )}
-                >
-                  {completed ? (
-                    <CheckCircle className="w-5 h-5" />
-                  ) : !unlocked ? (
-                    <Lock className="w-4 h-4" />
-                  ) : (
-                    <Icon className="w-4 h-4" />
-                  )}
-                </button>
-                {index < STEPS.length - 1 && (
-                  <div className={cn(
-                    'flex-1 h-1 mx-2 rounded',
-                    completed ? 'bg-green-500' : 'bg-muted'
-                  )} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-          {STEPS.map((step) => (
-            <div key={step.id} className="w-10 text-center">
-              {step.name.split(' ')[0]}
-            </div>
-          ))}
-        </div>
+      {/* Premium Step Progress Bar */}
+      <div className="bg-card border rounded-xl p-6 mb-6">
+        <AnalysisProgressBar
+          completedSteps={completedSteps}
+          activeStep={activeStep}
+          isRunning={isRunningFull}
+          onStepClick={handleViewResult}
+          size="md"
+          showLabels={true}
+          animated={true}
+        />
       </div>
 
       {/* Error Display */}
