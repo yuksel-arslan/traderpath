@@ -363,15 +363,78 @@ export default function ReportsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredReports.map((report) => (
+          {filteredReports.map((report) => {
+            // Calculate proximity to TP/SL for dynamic background
+            let bgIntensity = 5; // default
+            let bgColor = 'blue'; // default for active
+
+            if (report.outcome === 'correct') {
+              bgColor = 'green';
+              bgIntensity = 20;
+            } else if (report.outcome === 'incorrect') {
+              bgColor = 'red';
+              bgIntensity = 20;
+            } else if (report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1) {
+              const entry = report.entryPrice;
+              const current = report.currentPrice;
+              const sl = report.stopLoss;
+              const tp = report.takeProfit1;
+              const isLong = report.direction === 'long';
+
+              // Calculate position between SL and TP (0 = at SL, 100 = at TP)
+              const totalRange = isLong ? tp - sl : sl - tp;
+              const currentPos = isLong ? current - sl : sl - current;
+              const positionPercent = totalRange !== 0 ? (currentPos / totalRange) * 100 : 50;
+
+              if (positionPercent >= 50) {
+                // Moving towards TP - green
+                bgColor = 'green';
+                // Intensity increases as it gets closer to TP (50% -> 5, 100% -> 25)
+                bgIntensity = Math.round(5 + ((positionPercent - 50) / 50) * 20);
+              } else {
+                // Moving towards SL - red
+                bgColor = 'red';
+                // Intensity increases as it gets closer to SL (50% -> 5, 0% -> 25)
+                bgIntensity = Math.round(5 + ((50 - positionPercent) / 50) * 20);
+              }
+            }
+
+            const bgClass = `bg-${bgColor}-500/${bgIntensity}`;
+            const borderClass = `border-${bgColor}-500/50`;
+
+            return (
             <div
               key={report.id}
               className={cn(
-                "bg-card border-2 rounded-lg p-4 hover:shadow-lg transition relative overflow-hidden",
-                report.outcome === 'correct' && "border-green-500/50 bg-green-500/5",
-                report.outcome === 'incorrect' && "border-red-500/50 bg-red-500/5",
-                !report.outcome && "border-blue-500/50 bg-blue-500/5"
+                "border-2 rounded-lg p-4 hover:shadow-lg transition relative overflow-hidden",
+                report.outcome === 'correct' && "border-green-500/50",
+                report.outcome === 'incorrect' && "border-red-500/50",
+                !report.outcome && report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1 && (() => {
+                  const isLong = report.direction === 'long';
+                  const totalRange = isLong ? report.takeProfit1! - report.stopLoss! : report.stopLoss! - report.takeProfit1!;
+                  const currentPos = isLong ? report.currentPrice! - report.stopLoss! : report.stopLoss! - report.currentPrice!;
+                  const positionPercent = totalRange !== 0 ? (currentPos / totalRange) * 100 : 50;
+                  return positionPercent >= 50 ? "border-green-500/50" : "border-red-500/50";
+                })(),
+                !report.outcome && !(report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1) && "border-blue-500/50 bg-blue-500/5"
               )}
+              style={{
+                backgroundColor: report.outcome === 'correct' ? `rgba(34, 197, 94, 0.2)` :
+                                report.outcome === 'incorrect' ? `rgba(239, 68, 68, 0.2)` :
+                                report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1 ? (() => {
+                                  const isLong = report.direction === 'long';
+                                  const totalRange = isLong ? report.takeProfit1! - report.stopLoss! : report.stopLoss! - report.takeProfit1!;
+                                  const currentPos = isLong ? report.currentPrice! - report.stopLoss! : report.stopLoss! - report.currentPrice!;
+                                  const positionPercent = totalRange !== 0 ? (currentPos / totalRange) * 100 : 50;
+                                  if (positionPercent >= 50) {
+                                    const intensity = 0.05 + ((positionPercent - 50) / 50) * 0.2;
+                                    return `rgba(34, 197, 94, ${intensity})`;
+                                  } else {
+                                    const intensity = 0.05 + ((50 - positionPercent) / 50) * 0.2;
+                                    return `rgba(239, 68, 68, ${intensity})`;
+                                  }
+                                })() : undefined
+              }}
             >
               {/* Status Corner Ribbon */}
               {!report.outcome && (
@@ -451,31 +514,50 @@ export default function ReportsPage() {
                   </div>
                 </div>
 
-                {/* Live P/L Display */}
-                {report.entryPrice && report.currentPrice && (
-                  <div className="flex items-center gap-3 px-4 py-2 bg-slate-900/50 rounded-lg">
-                    <div className="text-center">
-                      <div className="text-xs text-muted-foreground">Entry</div>
-                      <div className="font-mono text-sm">${report.entryPrice.toFixed(4)}</div>
-                    </div>
-                    <div className="text-muted-foreground">→</div>
-                    <div className="text-center">
-                      <div className="text-xs text-muted-foreground">Current</div>
-                      <div className="font-mono text-sm">${report.currentPrice.toFixed(4)}</div>
-                    </div>
+                {/* Score + Live P/L Display */}
+                <div className="flex items-center gap-3 px-4 py-2 bg-slate-900/50 rounded-lg">
+                  {/* Score as percentage */}
+                  <div className={cn(
+                    "text-center px-3 py-1 rounded-lg",
+                    report.score >= 7 ? "bg-green-500/20" :
+                    report.score >= 5 ? "bg-yellow-500/20" : "bg-red-500/20"
+                  )}>
+                    <div className="text-xs text-muted-foreground">Score</div>
                     <div className={cn(
-                      "text-center px-3 py-1 rounded-lg font-bold",
-                      (report.unrealizedPnL || 0) >= 0
-                        ? "bg-green-500/20 text-green-400"
-                        : "bg-red-500/20 text-red-400"
+                      "font-bold text-sm",
+                      report.score >= 7 ? "text-green-400" :
+                      report.score >= 5 ? "text-yellow-400" : "text-red-400"
                     )}>
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" />
-                        {(report.unrealizedPnL || 0) >= 0 ? '+' : ''}{(report.unrealizedPnL || 0).toFixed(2)}%
-                      </div>
+                      {(report.score * 10).toFixed(0)}%
                     </div>
                   </div>
-                )}
+
+                  {report.entryPrice && report.currentPrice && (
+                    <>
+                      <div className="text-muted-foreground">|</div>
+                      <div className="text-center">
+                        <div className="text-xs text-muted-foreground">Entry</div>
+                        <div className="font-mono text-sm">${report.entryPrice.toFixed(4)}</div>
+                      </div>
+                      <div className="text-muted-foreground">→</div>
+                      <div className="text-center">
+                        <div className="text-xs text-muted-foreground">Current</div>
+                        <div className="font-mono text-sm">${report.currentPrice.toFixed(4)}</div>
+                      </div>
+                      <div className={cn(
+                        "text-center px-3 py-1 rounded-lg font-bold",
+                        (report.unrealizedPnL || 0) >= 0
+                          ? "bg-green-500/20 text-green-400"
+                          : "bg-red-500/20 text-red-400"
+                      )}>
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="w-3 h-3" />
+                          {(report.unrealizedPnL || 0) >= 0 ? '+' : ''}{(report.unrealizedPnL || 0).toFixed(2)}%
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
 
                 {/* Distance to Target */}
                 {report.entryPrice && report.currentPrice && report.takeProfit1 && !report.outcome && (
@@ -526,12 +608,6 @@ export default function ReportsPage() {
                   })()
                 )}
 
-                {/* Score */}
-                <div className="text-center shrink-0">
-                  <div className="text-2xl font-bold">{report.score}</div>
-                  <p className="text-xs text-muted-foreground">Score</p>
-                </div>
-
                 {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0">
                   {/* Chart Button */}
@@ -571,7 +647,8 @@ export default function ReportsPage() {
                 </div>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
 
