@@ -264,6 +264,21 @@ function calculateStepOutcomes(
     };
   }
 
+  // Final Verdict outcome - THE OVERALL RECOMMENDATION
+  const finalVerdict = reportData.finalVerdict as Record<string, unknown> | undefined;
+  const verdict = (finalVerdict?.verdict as string) || '';
+  const verdictLower = verdict.toLowerCase();
+
+  // GO/Conditional GO should result in TP hit, WAIT/AVOID should result in avoiding loss
+  const wasGoSignal = verdictLower.includes('go') && !verdictLower.includes('wait') && !verdictLower.includes('avoid');
+  const wasWaitSignal = verdictLower.includes('wait') || verdictLower.includes('avoid');
+
+  outcomes.finalVerdict = {
+    predicted: verdict || 'unknown',
+    actual: tradeSuccessful ? 'TP hit' : tradeFailed ? 'SL hit' : 'pending',
+    correct: wasGoSignal ? tradeSuccessful : wasWaitSignal ? tradeFailed : false
+  };
+
   return outcomes;
 }
 

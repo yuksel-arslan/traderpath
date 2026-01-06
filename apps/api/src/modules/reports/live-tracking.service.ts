@@ -6,6 +6,7 @@
 
 import { prisma } from '../../core/database';
 import { cache, cacheKeys } from '../../core/cache';
+import { calculateReportOutcome } from './outcome.service';
 
 interface LiveTrackingStatus {
   reportId: string;
@@ -367,6 +368,7 @@ export async function getUserActiveTrades(userId: string): Promise<LiveTrackingS
 }
 
 // Background job to update outcomes when TP/SL is hit
+// Now uses calculateReportOutcome for full step-level tracking
 export async function checkAndUpdateOutcomes(): Promise<{
   checked: number;
   tpHits: number;
@@ -392,7 +394,7 @@ export async function checkAndUpdateOutcomes(): Promise<{
     return { checked: 0, tpHits: 0, slHits: 0 };
   }
 
-  // Fetch all prices at once
+  // Fetch all prices at once to check if any TP/SL might have been hit
   const symbols = [...new Set(reports.map(r => r.symbol))];
   const prices = await fetchBulkPrices(symbols);
 
@@ -414,59 +416,29 @@ export async function checkAndUpdateOutcomes(): Promise<{
 
     if (!entryPrice || !stopLoss || !takeProfits) continue;
 
-    // Check SL hit
+    // Quick check if SL or TP might have been hit
     const slHit = direction === 'long'
       ? currentPrice <= stopLoss.price
       : currentPrice >= stopLoss.price;
 
-    if (slHit) {
-      await prisma.report.update({
-        where: { id: report.id },
-        data: {
-          outcome: 'incorrect',
-          outcomePrice: currentPrice,
-          outcomePriceChange: ((currentPrice - entryPrice) / entryPrice) * 100,
-          outcomeCalculatedAt: new Date(),
-          stepOutcomes: {
-            _meta: {
-              hitType: 'sl',
-              hitPrice: stopLoss.price,
-              hitTime: new Date().toISOString(),
-              entryPrice,
-            },
-          },
-        },
-      });
-      slHits++;
-      continue;
+    let tpHit = false;
+    for (const tp of takeProfits) {
+      if (direction === 'long' ? currentPrice >= tp.price : currentPrice <= tp.price) {
+        tpHit = true;
+        break;
+      }
     }
 
-    // Check TP hits (highest first)
-    for (let i = takeProfits.length - 1; i >= 0; i--) {
-      const tp = takeProfits[i];
-      const tpHit = direction === 'long' ? currentPrice >= tp.price : currentPrice <= tp.price;
-
-      if (tpHit) {
-        const tpLevel = ['tp1', 'tp2', 'tp3'][i];
-        await prisma.report.update({
-          where: { id: report.id },
-          data: {
-            outcome: 'correct',
-            outcomePrice: currentPrice,
-            outcomePriceChange: ((currentPrice - entryPrice) / entryPrice) * 100,
-            outcomeCalculatedAt: new Date(),
-            stepOutcomes: {
-              _meta: {
-                hitType: tpLevel,
-                hitPrice: tp.price,
-                hitTime: new Date().toISOString(),
-                entryPrice,
-              },
-            },
-          },
-        });
-        tpHits++;
-        break;
+    // If SL or TP was hit, use full outcome calculation for step-level tracking
+    if (slHit || tpHit) {
+      try {
+        const result = await calculateReportOutcome(report.id);
+        if (result) {
+          if (result.outcome === 'correct') tpHits++;
+          else if (result.outcome === 'incorrect') slHits++;
+        }
+      } catch (error) {
+        console.error(`Failed to calculate outcome for report ${report.id}:`, error);
       }
     }
   }
