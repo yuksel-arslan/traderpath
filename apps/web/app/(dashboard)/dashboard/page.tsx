@@ -1007,9 +1007,8 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {/* Steps - Horizontal Scroll Row */}
-          <div className="overflow-x-auto -mx-6 md:-mx-8 px-6 md:px-8 pb-2">
-            <div className="flex gap-4 min-w-max">
+          {/* Steps - Full Width Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
               {methodologySteps.map((step) => {
                 const Icon = step.icon;
                 const accuracyKey = {
@@ -1041,7 +1040,7 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={step.step}
-                    className="group relative w-[160px] flex-shrink-0"
+                    className="group relative"
                   >
                     <div className={cn(
                       "relative p-4 rounded-xl border transition-all duration-300 h-full",
@@ -1137,15 +1136,6 @@ export default function DashboardPage() {
                   </div>
                 );
               })}
-            </div>
-          </div>
-
-          {/* Scroll indicator for mobile */}
-          <div className="flex justify-center mt-3 sm:hidden">
-            <div className="flex gap-1">
-              <ChevronRight className="w-4 h-4 text-gray-400 dark:text-slate-500 animate-pulse" />
-              <span className="text-xs text-gray-400 dark:text-slate-500">Scroll to see all steps</span>
-            </div>
           </div>
 
           {/* Mobile CTA */}
