@@ -35,6 +35,7 @@ import {
   PieChart,
   LayoutGrid,
   List,
+  Info,
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip, ReferenceLine, defs } from 'recharts';
 import { cn } from '../../../lib/utils';
@@ -139,6 +140,7 @@ const methodologySteps = [
     step: 1,
     name: 'Market Pulse',
     description: 'Analyzes overall market conditions, BTC dominance, Fear & Greed index, and macro trends.',
+    detailedInfo: 'Market Pulse examines the broader cryptocurrency market health before any trade decision. It analyzes Bitcoin dominance trends, the Fear & Greed Index for sentiment, overall market cap movements, and identifies whether we are in a bull, bear, or sideways regime. This step ensures you are not trading against the macro trend.',
     icon: Activity,
     color: 'text-blue-400',
     bgColor: 'bg-blue-500/10',
@@ -149,6 +151,7 @@ const methodologySteps = [
     step: 2,
     name: 'Asset Scanner',
     description: 'Technical indicators, support/resistance levels, and multi-timeframe analysis for the selected coin.',
+    detailedInfo: 'Asset Scanner performs deep technical analysis on your selected cryptocurrency. It calculates RSI, MACD, Bollinger Bands, and identifies key support/resistance levels across multiple timeframes (1H, 4H, Daily). The multi-timeframe confluence helps identify high-probability trade setups.',
     icon: LineChart,
     color: 'text-cyan-400',
     bgColor: 'bg-cyan-500/10',
@@ -159,6 +162,7 @@ const methodologySteps = [
     step: 3,
     name: 'Safety Check',
     description: 'Examines manipulation risk, whale activity, exchange flows, and smart money movements.',
+    detailedInfo: 'Safety Check protects you from market manipulation. It monitors whale wallet movements, exchange inflow/outflow patterns, and smart money positioning. High manipulation risk or unusual whale activity triggers warnings, helping you avoid potential pump-and-dump schemes or coordinated sell-offs.',
     icon: Shield,
     color: 'text-green-400',
     bgColor: 'bg-green-500/10',
@@ -169,6 +173,7 @@ const methodologySteps = [
     step: 4,
     name: 'Timing',
     description: 'Calculates optimal entry time, conditions to wait for, and entry zones.',
+    detailedInfo: 'Timing determines the perfect moment to enter a trade. It identifies optimal entry zones, calculates whether current price offers good risk/reward, and specifies conditions to wait for if timing is not ideal. This step maximizes your potential profit while minimizing drawdown risk.',
     icon: Clock,
     color: 'text-yellow-400',
     bgColor: 'bg-yellow-500/10',
@@ -179,6 +184,7 @@ const methodologySteps = [
     step: 5,
     name: 'Trade Plan',
     description: 'Determines entry, stop-loss, take-profit levels and position sizing.',
+    detailedInfo: 'Trade Plan creates your complete trading blueprint. It sets precise entry price, stop-loss level (to limit losses), and multiple take-profit targets (TP1, TP2, TP3). Position sizing recommendations ensure proper risk management, typically risking 1-2% of portfolio per trade.',
     icon: Target,
     color: 'text-purple-400',
     bgColor: 'bg-purple-500/10',
@@ -189,6 +195,7 @@ const methodologySteps = [
     step: 6,
     name: 'Trap Check',
     description: 'Detects bull/bear traps, fakeout risks, and liquidity hunt zones.',
+    detailedInfo: 'Trap Check identifies potential fake moves designed to trap traders. It detects bull traps (false breakouts), bear traps (false breakdowns), and liquidity hunt zones where stop-losses cluster. This step helps you avoid entering trades that are likely to reverse against you.',
     icon: AlertTriangle,
     color: 'text-orange-400',
     bgColor: 'bg-orange-500/10',
@@ -199,6 +206,7 @@ const methodologySteps = [
     step: 7,
     name: 'Final Verdict',
     description: 'Combines all analyses to generate GO, WAIT or AVOID decision with confidence score.',
+    detailedInfo: 'Final Verdict synthesizes all previous steps into a clear trading decision. It weighs each factor and generates a GO (trade now), WAIT (conditions not ideal), or AVOID (too risky) verdict with a confidence score. The overall score (1-10) reflects the combined strength of all signals.',
     icon: Brain,
     color: 'text-emerald-400',
     bgColor: 'bg-emerald-500/10',
@@ -1055,6 +1063,29 @@ export default function DashboardPage() {
                         "border-2 border-white dark:border-slate-800"
                       )}>
                         <span className={cn("text-xs font-bold", step.color)}>{step.step}</span>
+                      </div>
+
+                      {/* Info Icon with Tooltip */}
+                      <div className="absolute -top-1 -right-1 group/info">
+                        <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center cursor-help border border-gray-300 dark:border-slate-600 hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors">
+                          <Info className="w-3 h-3 text-gray-500 dark:text-slate-400" />
+                        </div>
+                        {/* Tooltip Popup */}
+                        <div className="absolute right-0 top-6 w-64 p-3 bg-slate-900 dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-700 opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all duration-200 z-50">
+                          <div className="absolute -top-1.5 right-2 w-3 h-3 bg-slate-900 dark:bg-slate-800 rotate-45 border-l border-t border-slate-700" />
+                          <h4 className={cn("font-bold text-sm mb-2", step.color)}>{step.name}</h4>
+                          <p className="text-xs text-slate-300 leading-relaxed">{step.detailedInfo}</p>
+                          <div className="mt-2 pt-2 border-t border-slate-700">
+                            <div className="text-[10px] text-slate-400 font-medium mb-1">Key Metrics:</div>
+                            <div className="flex flex-wrap gap-1">
+                              {step.metrics.map((metric) => (
+                                <span key={metric} className="px-1.5 py-0.5 bg-slate-800 dark:bg-slate-700 rounded text-[10px] text-slate-300">
+                                  {metric}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Icon with glow */}
