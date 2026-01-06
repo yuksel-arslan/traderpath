@@ -873,10 +873,10 @@ export default function ReportsPage() {
 
             {/* 2-Panel Chart Grid */}
             <div className="flex-1 grid grid-cols-2 gap-2 p-2 bg-slate-900">
-              {/* 15m Chart - Left */}
+              {/* 15m Chart - Left (with Trade Plan lines) */}
               <div className="relative bg-slate-800 rounded-lg overflow-hidden">
                 <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-slate-900/90 rounded text-sm font-medium text-purple-400">
-                  15 Minutes
+                  15m • Trade Plan
                 </div>
                 <TradePlanChart
                   symbol={chartModal.report.symbol}
@@ -893,23 +893,11 @@ export default function ReportsPage() {
                 />
               </div>
 
-              {/* 1h Chart - Right */}
+              {/* 1h Chart - Right (TradingView with indicators) */}
               <div className="relative bg-slate-800 rounded-lg overflow-hidden">
-                <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-slate-900/90 rounded text-sm font-medium text-amber-400">
-                  1 Hour
-                </div>
-                <TradePlanChart
+                <TradingViewChart
                   symbol={chartModal.report.symbol}
                   interval="60"
-                  tradePlan={{
-                    entryPrice: chartModal.report.entryPrice,
-                    stopLoss: chartModal.report.stopLoss,
-                    takeProfit1: chartModal.report.takeProfit1,
-                    takeProfit2: chartModal.report.takeProfit2,
-                    takeProfit3: chartModal.report.takeProfit3,
-                    direction: chartModal.report.direction || undefined,
-                    currentPrice: chartModal.report.currentPrice,
-                  }}
                 />
               </div>
             </div>
