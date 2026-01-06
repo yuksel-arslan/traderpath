@@ -226,6 +226,22 @@ export default function ReportsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Reports</h1>
+          <p className="text-gray-500 dark:text-slate-400">Your saved analysis reports</p>
+        </div>
+        <button
+          onClick={fetchReports}
+          disabled={isLoading}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition disabled:opacity-50"
+        >
+          <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
+          Refresh
+        </button>
+      </div>
+
       {/* ===== Statistics Header ===== */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         {/* Total Reports */}
