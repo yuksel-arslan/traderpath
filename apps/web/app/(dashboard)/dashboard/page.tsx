@@ -33,6 +33,8 @@ import {
   Sparkles,
   Award,
   PieChart,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
@@ -495,6 +497,7 @@ export default function DashboardPage() {
   const [recentOutcomes, setRecentOutcomes] = useState<RecentOutcome[]>([]);
   const [loading, setLoading] = useState(true);
   const [credits, setCredits] = useState(0);
+  const [outcomeViewMode, setOutcomeViewMode] = useState<'card' | 'list'>('card');
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -1091,126 +1094,263 @@ export default function DashboardPage() {
                 <p className="text-gray-500 dark:text-slate-400 text-sm">Real-time TP/SL monitoring - trades close when targets hit</p>
               </div>
             </div>
-            <div className="hidden sm:flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-100/80 dark:bg-green-500/10 rounded-full border border-green-200/50 dark:border-green-500/20">
-                <div className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400" />
-                <span className="text-green-600 dark:text-green-400 font-medium">TP Hit</span>
+            <div className="flex items-center gap-3">
+              {/* View Toggle */}
+              <div className="flex items-center bg-gray-100/80 dark:bg-white/5 rounded-lg p-1 border border-gray-200 dark:border-white/10">
+                <button
+                  onClick={() => setOutcomeViewMode('card')}
+                  className={cn(
+                    "p-1.5 rounded-md transition-all",
+                    outcomeViewMode === 'card'
+                      ? "bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400"
+                      : "text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
+                  )}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setOutcomeViewMode('list')}
+                  className={cn(
+                    "p-1.5 rounded-md transition-all",
+                    outcomeViewMode === 'list'
+                      ? "bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400"
+                      : "text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
+                  )}
+                >
+                  <List className="w-4 h-4" />
+                </button>
               </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-100/80 dark:bg-red-500/10 rounded-full border border-red-200/50 dark:border-red-500/20">
-                <div className="w-2 h-2 rounded-full bg-red-500 dark:bg-red-400" />
-                <span className="text-red-600 dark:text-red-400 font-medium">SL Hit</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-100/80 dark:bg-blue-500/10 rounded-full border border-blue-200/50 dark:border-blue-500/20">
-                <div className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400 animate-pulse" />
-                <span className="text-blue-600 dark:text-blue-400 font-medium">Active</span>
+              {/* Status Legends */}
+              <div className="hidden sm:flex items-center gap-3 text-sm">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-100/80 dark:bg-green-500/10 rounded-full border border-green-200/50 dark:border-green-500/20">
+                  <div className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400" />
+                  <span className="text-green-600 dark:text-green-400 font-medium">TP Hit</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-100/80 dark:bg-red-500/10 rounded-full border border-red-200/50 dark:border-red-500/20">
+                  <div className="w-2 h-2 rounded-full bg-red-500 dark:bg-red-400" />
+                  <span className="text-red-600 dark:text-red-400 font-medium">SL Hit</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-100/80 dark:bg-blue-500/10 rounded-full border border-blue-200/50 dark:border-blue-500/20">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400 animate-pulse" />
+                  <span className="text-blue-600 dark:text-blue-400 font-medium">Active</span>
+                </div>
               </div>
             </div>
           </div>
 
           {recentOutcomes.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-              {recentOutcomes.map((outcome) => (
-                <div
-                  key={outcome.id}
-                  className={cn(
-                    "group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border transition-all duration-300 hover:shadow-lg",
-                    outcome.outcome === 'correct' && "border-green-300/50 dark:border-green-500/30 bg-green-100/80 dark:bg-green-500/5",
-                    outcome.outcome === 'incorrect' && "border-red-300/50 dark:border-red-500/30 bg-red-100/80 dark:bg-red-500/5",
-                    outcome.outcome === 'pending' && "border-gray-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/30"
-                  )}
-                >
-                  {/* Header: Symbol & Status */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className={cn(
-                        "relative w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-sm shadow-lg",
-                        outcome.symbol === 'BTC' ? 'bg-gradient-to-br from-amber-400 to-amber-600' :
-                        outcome.symbol === 'ETH' ? 'bg-gradient-to-br from-blue-400 to-blue-600' :
-                        outcome.symbol === 'SOL' ? 'bg-gradient-to-br from-purple-400 to-purple-600' :
-                        outcome.symbol === 'BNB' ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' :
-                        'bg-gradient-to-br from-gray-400 to-gray-600'
-                      )}>
-                        {outcome.symbol.charAt(0)}
+            <>
+              {/* Card View */}
+              {outcomeViewMode === 'card' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                  {recentOutcomes.map((outcome) => (
+                    <div
+                      key={outcome.id}
+                      className={cn(
+                        "group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border transition-all duration-300 hover:shadow-lg",
+                        outcome.outcome === 'correct' && "border-green-300/50 dark:border-green-500/30 bg-green-100/80 dark:bg-green-500/5",
+                        outcome.outcome === 'incorrect' && "border-red-300/50 dark:border-red-500/30 bg-red-100/80 dark:bg-red-500/5",
+                        outcome.outcome === 'pending' && "border-gray-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/30"
+                      )}
+                    >
+                      {/* Header: Symbol & Status */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "relative w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-sm shadow-lg",
+                            outcome.symbol === 'BTC' ? 'bg-gradient-to-br from-amber-400 to-amber-600' :
+                            outcome.symbol === 'ETH' ? 'bg-gradient-to-br from-blue-400 to-blue-600' :
+                            outcome.symbol === 'SOL' ? 'bg-gradient-to-br from-purple-400 to-purple-600' :
+                            outcome.symbol === 'BNB' ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' :
+                            'bg-gradient-to-br from-gray-400 to-gray-600'
+                          )}>
+                            {outcome.symbol.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-gray-900 dark:text-white text-sm">{outcome.symbol}</span>
+                              {outcome.direction && (
+                                <span className={cn(
+                                  "px-1 py-0.5 rounded text-[9px] font-bold",
+                                  outcome.direction === 'long' || outcome.direction === 'LONG'
+                                    ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400"
+                                    : "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                                )}>
+                                  {outcome.direction === 'long' || outcome.direction === 'LONG' ? '↑' : '↓'}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-400 dark:text-slate-500">{outcome.createdAt}</div>
+                          </div>
+                        </div>
+                        {/* Status Badge */}
+                        <div className={cn(
+                          "px-2 py-0.5 rounded-lg text-[10px] font-bold",
+                          outcome.outcome === 'correct' && "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400",
+                          outcome.outcome === 'incorrect' && "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400",
+                          outcome.outcome === 'pending' && "bg-blue-200/80 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                        )}>
+                          {outcome.outcome === 'correct' ? 'TP HIT' : outcome.outcome === 'incorrect' ? 'SL HIT' : 'ACTIVE'}
+                        </div>
                       </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
+
+                      {/* Live Price Display */}
+                      {outcome.entryPrice && outcome.currentPrice && (
+                        <div className="mb-2 p-2 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-gray-200/50 dark:border-white/5">
+                          <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-slate-400 mb-1">
+                            <span>Entry</span>
+                            <span>Current</span>
+                          </div>
+                          <div className="flex items-center justify-between font-mono text-xs">
+                            <span className="text-gray-700 dark:text-slate-300">${outcome.entryPrice.toFixed(2)}</span>
+                            <span className="text-gray-400 dark:text-slate-600">→</span>
+                            <span className="text-gray-700 dark:text-slate-300">${outcome.currentPrice.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* P/L Display */}
+                      {outcome.unrealizedPnL !== undefined && (
+                        <div className={cn(
+                          "text-center py-2 rounded-lg font-bold text-sm",
+                          outcome.unrealizedPnL >= 0
+                            ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400"
+                            : "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                        )}>
+                          {outcome.unrealizedPnL >= 0 ? '+' : ''}{outcome.unrealizedPnL.toFixed(2)}%
+                        </div>
+                      )}
+
+                      {/* Fallback: Show priceChange if no live data */}
+                      {!outcome.unrealizedPnL && outcome.priceChange !== undefined && (
+                        <div className={cn(
+                          "mt-2 text-sm font-medium text-right",
+                          outcome.priceChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                        )}>
+                          {outcome.priceChange >= 0 ? '+' : ''}{outcome.priceChange.toFixed(2)}%
+                        </div>
+                      )}
+
+                      {/* TP/SL Levels (compact) */}
+                      {(outcome.stopLoss || outcome.takeProfit1) && (
+                        <div className="mt-2 flex items-center justify-between text-[9px] font-medium">
+                          {outcome.stopLoss && (
+                            <span className="text-red-500 dark:text-red-400">SL: ${outcome.stopLoss.toFixed(2)}</span>
+                          )}
+                          {outcome.takeProfit1 && (
+                            <span className="text-green-500 dark:text-green-400">TP: ${outcome.takeProfit1.toFixed(2)}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* List View */}
+              {outcomeViewMode === 'list' && (
+                <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+                  {/* Table Header */}
+                  <div className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-3 bg-gray-200/50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                    <div className="col-span-2">Asset</div>
+                    <div className="col-span-1 text-center">Direction</div>
+                    <div className="col-span-2 text-right">Entry</div>
+                    <div className="col-span-2 text-right">Current</div>
+                    <div className="col-span-2 text-right">P/L</div>
+                    <div className="col-span-1 text-center">Status</div>
+                    <div className="col-span-2 text-right">Date</div>
+                  </div>
+
+                  {/* Table Body */}
+                  <div className="divide-y divide-gray-200 dark:divide-white/5">
+                    {recentOutcomes.map((outcome) => (
+                      <div
+                        key={outcome.id}
+                        className={cn(
+                          "grid grid-cols-2 md:grid-cols-12 gap-2 md:gap-4 px-4 py-3 hover:bg-gray-200/50 dark:hover:bg-white/5 transition-colors",
+                          outcome.outcome === 'correct' && "bg-green-50/50 dark:bg-green-500/5",
+                          outcome.outcome === 'incorrect' && "bg-red-50/50 dark:bg-red-500/5"
+                        )}
+                      >
+                        {/* Asset */}
+                        <div className="col-span-1 md:col-span-2 flex items-center gap-2">
+                          <div className={cn(
+                            "w-7 h-7 rounded-lg flex items-center justify-center font-bold text-white text-xs shadow",
+                            outcome.symbol === 'BTC' ? 'bg-gradient-to-br from-amber-400 to-amber-600' :
+                            outcome.symbol === 'ETH' ? 'bg-gradient-to-br from-blue-400 to-blue-600' :
+                            outcome.symbol === 'SOL' ? 'bg-gradient-to-br from-purple-400 to-purple-600' :
+                            outcome.symbol === 'BNB' ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' :
+                            'bg-gradient-to-br from-gray-400 to-gray-600'
+                          )}>
+                            {outcome.symbol.charAt(0)}
+                          </div>
                           <span className="font-semibold text-gray-900 dark:text-white text-sm">{outcome.symbol}</span>
-                          {outcome.direction && (
+                        </div>
+
+                        {/* Direction */}
+                        <div className="col-span-1 md:col-span-1 flex items-center justify-end md:justify-center">
+                          {outcome.direction ? (
                             <span className={cn(
-                              "px-1 py-0.5 rounded text-[9px] font-bold",
+                              "px-2 py-0.5 rounded text-xs font-bold",
                               outcome.direction === 'long' || outcome.direction === 'LONG'
                                 ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400"
                                 : "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
                             )}>
-                              {outcome.direction === 'long' || outcome.direction === 'LONG' ? '↑' : '↓'}
+                              {outcome.direction === 'long' || outcome.direction === 'LONG' ? 'LONG' : 'SHORT'}
                             </span>
+                          ) : (
+                            <span className="text-gray-400 dark:text-slate-500 text-xs">—</span>
                           )}
                         </div>
-                        <div className="text-xs text-gray-400 dark:text-slate-500">{outcome.createdAt}</div>
+
+                        {/* Entry Price */}
+                        <div className="hidden md:flex md:col-span-2 items-center justify-end font-mono text-sm text-gray-700 dark:text-slate-300">
+                          {outcome.entryPrice ? `$${outcome.entryPrice.toFixed(2)}` : '—'}
+                        </div>
+
+                        {/* Current Price */}
+                        <div className="hidden md:flex md:col-span-2 items-center justify-end font-mono text-sm text-gray-700 dark:text-slate-300">
+                          {outcome.currentPrice ? `$${outcome.currentPrice.toFixed(2)}` : '—'}
+                        </div>
+
+                        {/* P/L */}
+                        <div className="col-span-1 md:col-span-2 flex items-center justify-start md:justify-end">
+                          {outcome.unrealizedPnL !== undefined ? (
+                            <span className={cn(
+                              "px-2 py-1 rounded-lg font-bold text-sm",
+                              outcome.unrealizedPnL >= 0
+                                ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400"
+                                : "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                            )}>
+                              {outcome.unrealizedPnL >= 0 ? '+' : ''}{outcome.unrealizedPnL.toFixed(2)}%
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 dark:text-slate-500 text-sm">—</span>
+                          )}
+                        </div>
+
+                        {/* Status */}
+                        <div className="col-span-1 md:col-span-1 flex items-center justify-end md:justify-center">
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-lg text-[10px] font-bold",
+                            outcome.outcome === 'correct' && "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400",
+                            outcome.outcome === 'incorrect' && "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400",
+                            outcome.outcome === 'pending' && "bg-blue-200/80 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                          )}>
+                            {outcome.outcome === 'correct' ? 'TP' : outcome.outcome === 'incorrect' ? 'SL' : 'LIVE'}
+                          </span>
+                        </div>
+
+                        {/* Date */}
+                        <div className="hidden md:flex md:col-span-2 items-center justify-end text-xs text-gray-500 dark:text-slate-400">
+                          {outcome.createdAt}
+                        </div>
                       </div>
-                    </div>
-                    {/* Status Badge */}
-                    <div className={cn(
-                      "px-2 py-0.5 rounded-lg text-[10px] font-bold",
-                      outcome.outcome === 'correct' && "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400",
-                      outcome.outcome === 'incorrect' && "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400",
-                      outcome.outcome === 'pending' && "bg-blue-200/80 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
-                    )}>
-                      {outcome.outcome === 'correct' ? 'TP HIT' : outcome.outcome === 'incorrect' ? 'SL HIT' : 'ACTIVE'}
-                    </div>
+                    ))}
                   </div>
-
-                  {/* Live Price Display */}
-                  {outcome.entryPrice && outcome.currentPrice && (
-                    <div className="mb-2 p-2 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-gray-200/50 dark:border-white/5">
-                      <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-slate-400 mb-1">
-                        <span>Entry</span>
-                        <span>Current</span>
-                      </div>
-                      <div className="flex items-center justify-between font-mono text-xs">
-                        <span className="text-gray-700 dark:text-slate-300">${outcome.entryPrice.toFixed(2)}</span>
-                        <span className="text-gray-400 dark:text-slate-600">→</span>
-                        <span className="text-gray-700 dark:text-slate-300">${outcome.currentPrice.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* P/L Display */}
-                  {outcome.unrealizedPnL !== undefined && (
-                    <div className={cn(
-                      "text-center py-2 rounded-lg font-bold text-sm",
-                      outcome.unrealizedPnL >= 0
-                        ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400"
-                        : "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                    )}>
-                      {outcome.unrealizedPnL >= 0 ? '+' : ''}{outcome.unrealizedPnL.toFixed(2)}%
-                    </div>
-                  )}
-
-                  {/* Fallback: Show priceChange if no live data */}
-                  {!outcome.unrealizedPnL && outcome.priceChange !== undefined && (
-                    <div className={cn(
-                      "mt-2 text-sm font-medium text-right",
-                      outcome.priceChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                    )}>
-                      {outcome.priceChange >= 0 ? '+' : ''}{outcome.priceChange.toFixed(2)}%
-                    </div>
-                  )}
-
-                  {/* TP/SL Levels (compact) */}
-                  {(outcome.stopLoss || outcome.takeProfit1) && (
-                    <div className="mt-2 flex items-center justify-between text-[9px] font-medium">
-                      {outcome.stopLoss && (
-                        <span className="text-red-500 dark:text-red-400">SL: ${outcome.stopLoss.toFixed(2)}</span>
-                      )}
-                      {outcome.takeProfit1 && (
-                        <span className="text-green-500 dark:text-green-400">TP: ${outcome.takeProfit1.toFixed(2)}</span>
-                      )}
-                    </div>
-                  )}
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           ) : (
             <div className="text-center py-12 bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10">
               <div className="relative w-16 h-16 mx-auto mb-4">
