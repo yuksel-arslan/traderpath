@@ -542,11 +542,6 @@ export default function ReportsPage() {
                   {report.currentPrice && (
                     <>
                       <div className="text-muted-foreground/30">|</div>
-                      {/* Current Price */}
-                      <div className="text-center min-w-[70px]">
-                        <div className="text-[10px] text-muted-foreground">Price</div>
-                        <div className="font-mono text-sm font-medium text-white">${report.currentPrice.toFixed(4)}</div>
-                      </div>
 
                       {/* P/L Percentage */}
                       <div className={cn(
