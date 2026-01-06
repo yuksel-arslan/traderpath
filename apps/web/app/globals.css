@@ -635,7 +635,16 @@ html {
   @apply bg-primary/10 text-primary text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0;
 }
 
-/* Paragraph spacing */
+/* Paragraph spacing - more prominent breaks */
 .ai-paragraph-break {
-  @apply h-3;
+  @apply h-5;
+}
+
+/* Additional paragraph separation for readability */
+.ai-message-content p {
+  @apply mb-3;
+}
+
+.ai-message-content br + br {
+  @apply block h-2;
 }

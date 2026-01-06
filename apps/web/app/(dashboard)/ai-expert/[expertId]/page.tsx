@@ -216,28 +216,17 @@ export default function AIExpertChatPage() {
     }
   }, [expert, router]);
 
-  // Handle context from URL params (e.g., from trade plan)
+  // Handle context from sessionStorage (e.g., from trade plan analysis)
   useEffect(() => {
     if (contextProcessed) return;
 
-    const contextMessage = searchParams.get('context');
-    if (contextMessage) {
-      try {
-        // Decode: URI decode -> base64 decode -> URI decode (for unicode)
-        const uriDecoded = decodeURIComponent(contextMessage);
-        try {
-          // Base64 decode, then handle unicode
-          const base64Decoded = atob(uriDecoded);
-          const unicodeDecoded = decodeURIComponent(escape(base64Decoded));
-          setInput(unicodeDecoded);
-        } catch {
-          // Not base64, use plain URI decoded value
-          setInput(uriDecoded);
-        }
-      } catch (e) {
-        // If all decoding fails, show error
-        console.error('Failed to decode context:', e);
-        setInput('Error loading analysis context. Please try again.');
+    const fromAnalysis = searchParams.get('fromAnalysis');
+    if (fromAnalysis === 'true') {
+      const contextMessage = sessionStorage.getItem('aiExpertContext');
+      if (contextMessage) {
+        setInput(contextMessage);
+        // Clear the context after reading
+        sessionStorage.removeItem('aiExpertContext');
       }
       setContextProcessed(true);
       // Clear the URL param to prevent re-processing

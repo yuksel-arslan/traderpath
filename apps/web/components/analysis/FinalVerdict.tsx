@@ -28,44 +28,47 @@ interface TradePlanData {
   resistance?: number[];
 }
 
-// Step result interfaces
+// Step result interfaces - matching actual API response
 interface MarketPulseData {
-  btcTrend?: string;
   btcDominance?: number;
-  marketRegime?: string;
+  btcDominanceTrend?: string;
   fearGreedIndex?: number;
-  overallSentiment?: string;
+  fearGreedLabel?: string;
+  marketRegime?: string;
+  trend?: { direction?: string; strength?: number };
+  aiSummary?: string;
 }
 
 interface AssetScannerData {
-  trend?: string;
-  trendStrength?: string;
-  rsiValue?: number;
-  macdSignal?: string;
-  overallSignal?: string;
-  volatility?: string;
+  currentPrice?: number;
+  priceChange24h?: number;
+  indicators?: { rsi?: number; macd?: { histogram?: number } };
+  levels?: { support?: number[]; resistance?: number[] };
+  aiInsight?: string;
 }
 
 interface SafetyCheckData {
-  overallRisk?: string;
-  pumpDumpRisk?: string;
-  whaleActivity?: string;
-  washTradingRisk?: string;
-  smartMoneyFlow?: string;
+  riskLevel?: string;
+  manipulation?: { pumpDumpRisk?: string };
+  whaleActivity?: { bias?: string };
+  smartMoney?: { positioning?: string };
+  warnings?: string[];
+  aiInsight?: string;
 }
 
 interface TimingData {
-  entryTiming?: string;
-  optimalEntry?: string;
-  entryConditions?: string[];
-  waitForEvents?: string[];
+  tradeNow?: boolean;
+  reason?: string;
+  entryZones?: Array<{ priceLow?: number; priceHigh?: number; probability?: number }>;
+  conditions?: Array<{ name?: string; met?: boolean }>;
+  aiInsight?: string;
 }
 
 interface TrapCheckData {
-  bullTrapRisk?: string;
-  bearTrapRisk?: string;
-  liquidationZones?: string;
-  stopHuntRisk?: string;
+  traps?: { bullTrap?: boolean; bearTrap?: boolean; fakeoutRisk?: string };
+  liquidityGrab?: { zones?: number[] };
+  counterStrategy?: string[];
+  aiInsight?: string;
 }
 
 // AllResults is Record<number, unknown> from AnalysisFlow
@@ -131,11 +134,11 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
     // Step 1: Market Pulse
     sections.push('[STEP 1] MARKET PULSE');
     if (marketPulse) {
-      if (marketPulse.marketRegime) sections.push(`- Market Regime: ${marketPulse.marketRegime}`);
-      if (marketPulse.btcTrend) sections.push(`- BTC Trend: ${marketPulse.btcTrend}`);
-      if (marketPulse.btcDominance) sections.push(`- BTC Dominance: ${marketPulse.btcDominance}%`);
-      if (marketPulse.fearGreedIndex) sections.push(`- Fear and Greed: ${marketPulse.fearGreedIndex}`);
-      if (marketPulse.overallSentiment) sections.push(`- Overall Sentiment: ${marketPulse.overallSentiment}`);
+      if (marketPulse.marketRegime) sections.push(`- Market Regime: ${marketPulse.marketRegime.toUpperCase()}`);
+      if (marketPulse.trend?.direction) sections.push(`- Trend: ${marketPulse.trend.direction.toUpperCase()} (${marketPulse.trend.strength}% strength)`);
+      if (marketPulse.btcDominance) sections.push(`- BTC Dominance: ${marketPulse.btcDominance}% (${marketPulse.btcDominanceTrend || 'stable'})`);
+      if (marketPulse.fearGreedIndex) sections.push(`- Fear and Greed: ${marketPulse.fearGreedIndex} (${marketPulse.fearGreedLabel || 'neutral'})`);
+      if (marketPulse.aiSummary) sections.push(`- AI Summary: ${marketPulse.aiSummary}`);
     } else {
       sections.push('- Data not available');
     }
@@ -144,12 +147,16 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
     // Step 2: Asset Scanner
     sections.push('[STEP 2] ASSET SCANNER');
     if (assetScanner) {
-      if (assetScanner.trend) sections.push(`- Trend: ${assetScanner.trend}`);
-      if (assetScanner.trendStrength) sections.push(`- Trend Strength: ${assetScanner.trendStrength}`);
-      if (assetScanner.rsiValue) sections.push(`- RSI: ${assetScanner.rsiValue}`);
-      if (assetScanner.macdSignal) sections.push(`- MACD Signal: ${assetScanner.macdSignal}`);
-      if (assetScanner.overallSignal) sections.push(`- Overall Signal: ${assetScanner.overallSignal}`);
-      if (assetScanner.volatility) sections.push(`- Volatility: ${assetScanner.volatility}`);
+      if (assetScanner.currentPrice) sections.push(`- Current Price: $${assetScanner.currentPrice.toLocaleString()}`);
+      if (assetScanner.priceChange24h !== undefined) sections.push(`- 24h Change: ${assetScanner.priceChange24h.toFixed(2)}%`);
+      if (assetScanner.indicators?.rsi) sections.push(`- RSI: ${assetScanner.indicators.rsi.toFixed(0)}`);
+      if (assetScanner.indicators?.macd) {
+        const macdSignal = (assetScanner.indicators.macd.histogram || 0) >= 0 ? 'BULLISH' : 'BEARISH';
+        sections.push(`- MACD: ${macdSignal}`);
+      }
+      if (assetScanner.levels?.support?.length) sections.push(`- Support: $${assetScanner.levels.support[0]?.toLocaleString()}`);
+      if (assetScanner.levels?.resistance?.length) sections.push(`- Resistance: $${assetScanner.levels.resistance[0]?.toLocaleString()}`);
+      if (assetScanner.aiInsight) sections.push(`- AI Insight: ${assetScanner.aiInsight}`);
     } else {
       sections.push('- Data not available');
     }
@@ -158,11 +165,12 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
     // Step 3: Safety Check
     sections.push('[STEP 3] SAFETY CHECK');
     if (safetyCheck) {
-      if (safetyCheck.overallRisk) sections.push(`- Overall Risk: ${safetyCheck.overallRisk}`);
-      if (safetyCheck.pumpDumpRisk) sections.push(`- Pump and Dump Risk: ${safetyCheck.pumpDumpRisk}`);
-      if (safetyCheck.whaleActivity) sections.push(`- Whale Activity: ${safetyCheck.whaleActivity}`);
-      if (safetyCheck.washTradingRisk) sections.push(`- Wash Trading Risk: ${safetyCheck.washTradingRisk}`);
-      if (safetyCheck.smartMoneyFlow) sections.push(`- Smart Money Flow: ${safetyCheck.smartMoneyFlow}`);
+      if (safetyCheck.riskLevel) sections.push(`- Risk Level: ${safetyCheck.riskLevel.toUpperCase()}`);
+      if (safetyCheck.manipulation?.pumpDumpRisk) sections.push(`- Pump and Dump Risk: ${safetyCheck.manipulation.pumpDumpRisk.toUpperCase()}`);
+      if (safetyCheck.whaleActivity?.bias) sections.push(`- Whale Activity: ${safetyCheck.whaleActivity.bias.toUpperCase()}`);
+      if (safetyCheck.smartMoney?.positioning) sections.push(`- Smart Money: ${safetyCheck.smartMoney.positioning.toUpperCase()}`);
+      if (safetyCheck.warnings?.length) sections.push(`- Warnings: ${safetyCheck.warnings.join(', ')}`);
+      if (safetyCheck.aiInsight) sections.push(`- AI Insight: ${safetyCheck.aiInsight}`);
     } else {
       sections.push('- Data not available');
     }
@@ -171,14 +179,17 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
     // Step 4: Timing Analysis
     sections.push('[STEP 4] TIMING ANALYSIS');
     if (timing) {
-      if (timing.entryTiming) sections.push(`- Entry Timing: ${timing.entryTiming}`);
-      if (timing.optimalEntry) sections.push(`- Optimal Entry: ${timing.optimalEntry}`);
-      if (timing.entryConditions?.length) {
-        sections.push(`- Entry Conditions: ${timing.entryConditions.join(', ')}`);
+      sections.push(`- Trade Now: ${timing.tradeNow ? 'YES' : 'WAIT'}`);
+      if (timing.reason) sections.push(`- Reason: ${timing.reason}`);
+      if (timing.entryZones?.length) {
+        const zone = timing.entryZones[0];
+        sections.push(`- Entry Zone: $${zone.priceLow?.toLocaleString()} - $${zone.priceHigh?.toLocaleString()} (${zone.probability}% prob)`);
       }
-      if (timing.waitForEvents?.length) {
-        sections.push(`- Wait For: ${timing.waitForEvents.join(', ')}`);
+      if (timing.conditions?.length) {
+        const metConditions = timing.conditions.filter(c => c.met).map(c => c.name).join(', ');
+        if (metConditions) sections.push(`- Met Conditions: ${metConditions}`);
       }
+      if (timing.aiInsight) sections.push(`- AI Insight: ${timing.aiInsight}`);
     } else {
       sections.push('- Data not available');
     }
@@ -189,6 +200,7 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
     if (tradePlan && hasValidTradePlan) {
       sections.push(`- Direction: ${tradePlan.direction?.toUpperCase()}`);
       sections.push(`- Entry: $${tradePlan.entries?.[0]?.price?.toLocaleString()} (${tradePlan.entries?.length} levels)`);
+      if (tradePlan.averageEntry) sections.push(`- Average Entry: $${tradePlan.averageEntry.toLocaleString()}`);
       sections.push(`- Stop Loss: $${tradePlan.stopLoss?.price?.toLocaleString()} (${tradePlan.stopLoss?.percentage?.toFixed(1)}%)`);
       tradePlan.takeProfits?.forEach((tp, i) => {
         sections.push(`- TP${i + 1}: $${tp.price?.toLocaleString()} (${tp.riskReward?.toFixed(1)}R)`);
@@ -201,10 +213,18 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
     // Step 6: Trap Check
     sections.push('[STEP 6] TRAP CHECK');
     if (trapCheck) {
-      if (trapCheck.bullTrapRisk) sections.push(`- Bull Trap Risk: ${trapCheck.bullTrapRisk}`);
-      if (trapCheck.bearTrapRisk) sections.push(`- Bear Trap Risk: ${trapCheck.bearTrapRisk}`);
-      if (trapCheck.liquidationZones) sections.push(`- Liquidation Zones: ${trapCheck.liquidationZones}`);
-      if (trapCheck.stopHuntRisk) sections.push(`- Stop Hunt Risk: ${trapCheck.stopHuntRisk}`);
+      if (trapCheck.traps) {
+        sections.push(`- Bull Trap: ${trapCheck.traps.bullTrap ? 'DETECTED' : 'NO'}`);
+        sections.push(`- Bear Trap: ${trapCheck.traps.bearTrap ? 'DETECTED' : 'NO'}`);
+        if (trapCheck.traps.fakeoutRisk) sections.push(`- Fakeout Risk: ${trapCheck.traps.fakeoutRisk.toUpperCase()}`);
+      }
+      if (trapCheck.liquidityGrab?.zones?.length) {
+        sections.push(`- Liquidity Zones: ${trapCheck.liquidityGrab.zones.map(z => '$' + z.toLocaleString()).join(', ')}`);
+      }
+      if (trapCheck.counterStrategy?.length) {
+        sections.push(`- Counter Strategy: ${trapCheck.counterStrategy.join(', ')}`);
+      }
+      if (trapCheck.aiInsight) sections.push(`- AI Insight: ${trapCheck.aiInsight}`);
     } else {
       sections.push('- Data not available');
     }
@@ -217,12 +237,16 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
     if (data.recommendation) {
       sections.push(`- Recommendation: ${data.recommendation}`);
     }
+    if (data.aiVerdict) {
+      sections.push(`- AI Verdict: ${data.aiVerdict}`);
+    }
     sections.push('');
 
     // Question for AI Expert
     sections.push('========================================');
     sections.push('');
     sections.push('Based on this complete 7-step analysis, please provide your expert opinion:');
+    sections.push('');
     sections.push('1. Do you agree with the overall verdict?');
     sections.push('2. Are there any additional risks I should consider?');
     sections.push('3. What would you change in this trade plan?');
@@ -235,10 +259,9 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
   const handleAskAIExpert = () => {
     const contextMessage = buildComprehensiveContext();
 
-    // Use base64 encoding for reliable transmission of special characters
-    const base64Context = btoa(unescape(encodeURIComponent(contextMessage)));
-    const encodedContext = encodeURIComponent(base64Context);
-    router.push(`/ai-expert/nexus?context=${encodedContext}`);
+    // Store context in sessionStorage to avoid URL encoding issues
+    sessionStorage.setItem('aiExpertContext', contextMessage);
+    router.push('/ai-expert/nexus?fromAnalysis=true');
   };
 
   const getVerdictStyle = () => {
