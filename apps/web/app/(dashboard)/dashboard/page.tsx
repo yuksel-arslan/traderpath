@@ -238,7 +238,7 @@ function AccuracyRing({ percentage, size = 120, strokeWidth = 8, color = 'text-e
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         {hasData ? (
           <>
-            <span className="text-3xl font-bold text-gray-900 dark:text-white">{percentage.toFixed(1)}%</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-white">{Math.round(percentage)}%</span>
             <span className="text-xs text-gray-500 dark:text-slate-400">Accuracy</span>
           </>
         ) : (
