@@ -115,7 +115,8 @@ interface RecentOutcome {
   score: number;
   outcome: 'correct' | 'incorrect' | 'pending';
   priceChange?: number;
-  createdAt: string;
+  createdAt: string; // Raw ISO date for calculations
+  createdAtDisplay?: string; // Formatted date for UI display
   expiresAt?: string;
   isExpired?: boolean;
   hoursRemaining?: number;
@@ -547,7 +548,8 @@ export default function DashboardPage() {
           score: r.score || 7,
           outcome: r.outcome || 'pending',
           priceChange: r.unrealizedPnL,
-          createdAt: new Date(r.generatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          createdAt: r.generatedAt, // Keep raw ISO date for chart calculations
+          createdAtDisplay: new Date(r.generatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           expiresAt: r.expiresAt,
           direction: r.direction,
           entryPrice: r.entryPrice,
@@ -1459,7 +1461,7 @@ export default function DashboardPage() {
                                 </span>
                               )}
                             </div>
-                            <div className="text-xs text-gray-400 dark:text-slate-500">{outcome.createdAt}</div>
+                            <div className="text-xs text-gray-400 dark:text-slate-500">{outcome.createdAtDisplay}</div>
                           </div>
                         </div>
                         {/* Status Badge */}
@@ -1622,7 +1624,7 @@ export default function DashboardPage() {
 
                         {/* Date */}
                         <div className="hidden md:flex md:col-span-2 items-center justify-end text-xs text-gray-500 dark:text-slate-400">
-                          {outcome.createdAt}
+                          {outcome.createdAtDisplay}
                         </div>
                       </div>
                     ))}
