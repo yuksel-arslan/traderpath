@@ -705,6 +705,25 @@ export default function DashboardPage() {
                 </div>
               </div>
 
+              {/* Performance Comment */}
+              <div className={cn(
+                "text-center text-xs p-2 rounded-lg",
+                userStats.verifiedAnalyses === 0
+                  ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                  : userStats.accuracy >= 70
+                  ? "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400"
+                  : userStats.accuracy >= 50
+                  ? "bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
+                  : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"
+              )}>
+                {userStats.verifiedAnalyses === 0
+                  ? "🔵 Trades are still active. Results will update when TP/SL is hit."
+                  : userStats.accuracy >= 70
+                  ? "🎯 Excellent performance! Your analysis accuracy is outstanding."
+                  : userStats.accuracy >= 50
+                  ? "📈 Good progress! There's room for improvement."
+                  : "⚠️ Consider reviewing your analysis approach for better results."}
+              </div>
             </>
           ) : (
             <div className="text-center py-8">
