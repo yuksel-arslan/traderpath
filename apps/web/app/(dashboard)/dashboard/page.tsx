@@ -500,6 +500,10 @@ function OutcomeIndicator({ outcome }: { outcome: 'correct' | 'incorrect' | 'pen
 // ===========================================
 // Main Dashboard Component
 // ===========================================
+// Cache key and duration for dashboard data
+const CACHE_KEY = 'dashboard_cache';
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+
 export default function DashboardPage() {
   const router = useRouter();
   const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
@@ -510,12 +514,33 @@ export default function DashboardPage() {
   const [outcomeViewMode, setOutcomeViewMode] = useState<'card' | 'list'>('card');
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly'>('daily');
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
         router.push('/login');
         return;
+      }
+
+      // Check cache first (unless force refresh)
+      if (!forceRefresh) {
+        try {
+          const cached = sessionStorage.getItem(CACHE_KEY);
+          if (cached) {
+            const { data, timestamp } = JSON.parse(cached);
+            if (Date.now() - timestamp < CACHE_DURATION) {
+              // Use cached data - instant navigation
+              setPlatformStats(data.platformStats);
+              setUserStats(data.userStats);
+              setRecentOutcomes(data.recentOutcomes);
+              setCredits(data.credits);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (e) {
+          // Cache read failed, continue with fetch
+        }
       }
 
       // Fetch all data in parallel
@@ -532,24 +557,30 @@ export default function DashboardPage() {
         }),
       ]);
 
+      let newPlatformStats = null;
+      let newUserStats = null;
+      let newRecentOutcomes: RecentOutcome[] = [];
+      let newCredits = 0;
+
       // Process platform stats
       if (platformRes.ok) {
         const data = await platformRes.json();
-        setPlatformStats(data.data);
+        newPlatformStats = data.data;
+        setPlatformStats(newPlatformStats);
       }
 
       // Process user stats
       if (statsRes.ok) {
         const data = await statsRes.json();
-        setUserStats(data);
+        newUserStats = data;
+        setUserStats(newUserStats);
       }
 
       // Process reports for live tracking outcomes
       if (reportsRes.ok) {
         const data = await reportsRes.json();
-        console.log('Reports API response:', data);
         const reports = data.data?.reports || [];
-        const outcomes = reports.map((r: any) => ({
+        newRecentOutcomes = reports.map((r: any) => ({
           id: r.id,
           symbol: r.symbol,
           verdict: r.verdict,
@@ -568,16 +599,29 @@ export default function DashboardPage() {
           takeProfit2: r.takeProfit2,
           takeProfit3: r.takeProfit3,
         }));
-        console.log('Mapped outcomes from reports:', outcomes);
-        setRecentOutcomes(outcomes);
-      } else {
-        console.error('Reports API failed:', reportsRes.status, reportsRes.statusText);
+        setRecentOutcomes(newRecentOutcomes);
       }
 
       // Process credits
       if (creditsRes.ok) {
         const data = await creditsRes.json();
-        setCredits(data.credits || 0);
+        newCredits = data.credits || 0;
+        setCredits(newCredits);
+      }
+
+      // Save to cache
+      try {
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+          data: {
+            platformStats: newPlatformStats,
+            userStats: newUserStats,
+            recentOutcomes: newRecentOutcomes,
+            credits: newCredits,
+          },
+          timestamp: Date.now(),
+        }));
+      } catch (e) {
+        // Cache write failed, ignore
       }
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);

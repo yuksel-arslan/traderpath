@@ -2,6 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Experimental features for faster navigation
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'recharts', '@tanstack/react-query'],
+  },
+
   // Proxy API requests to the backend
   async rewrites() {
     return [
