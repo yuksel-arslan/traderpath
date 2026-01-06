@@ -4,10 +4,16 @@
 
 import Stripe from 'stripe';
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-12-18.acacia',
-});
+// Initialize Stripe (lazy - only when actually used)
+const getStripeClient = () => {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    throw new Error('STRIPE_SECRET_KEY is not configured');
+  }
+  return new Stripe(key, {
+    apiVersion: '2023-10-16',
+  });
+};
 
 // Credit packages configuration
 export const CREDIT_PACKAGES = [
@@ -72,7 +78,7 @@ export const stripeService = {
 
     const totalCredits = pkg.credits + pkg.bonus;
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripeClient().checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
       customer_email: params.userEmail,
@@ -117,20 +123,20 @@ export const stripeService = {
       throw new Error('Webhook secret not configured');
     }
 
-    return stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+    return getStripeClient().webhooks.constructEvent(payload, signature, webhookSecret);
   },
 
   /**
    * Retrieve checkout session by ID
    */
   async getCheckoutSession(sessionId: string) {
-    return stripe.checkout.sessions.retrieve(sessionId);
+    return getStripeClient().checkout.sessions.retrieve(sessionId);
   },
 
   /**
    * Get Stripe instance for advanced operations
    */
   getStripe() {
-    return stripe;
+    return getStripeClient();
   },
 };
