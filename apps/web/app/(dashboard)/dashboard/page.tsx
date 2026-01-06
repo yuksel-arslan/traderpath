@@ -774,147 +774,96 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {/* Steps - Grid with Radial Accuracy Gauges */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
-            {methodologySteps.map((step) => {
-              const Icon = step.icon;
-              const accuracyKey = {
-                1: 'marketPulse',
-                2: 'assetScanner',
-                3: 'safetyCheck',
-                4: 'timing',
-                5: 'tradePlan',
-                6: 'trapCheck',
-                7: 'finalVerdict',
-              }[step.step] as keyof typeof platformStats.accuracy.stepRates;
+          {/* Steps - Horizontal Scroll Row */}
+          <div className="overflow-x-auto -mx-6 md:-mx-8 px-6 md:px-8 pb-2">
+            <div className="flex gap-4 min-w-max">
+              {methodologySteps.map((step) => {
+                const Icon = step.icon;
+                const accuracyKey = {
+                  1: 'marketPulse',
+                  2: 'assetScanner',
+                  3: 'safetyCheck',
+                  4: 'timing',
+                  5: 'tradePlan',
+                  6: 'trapCheck',
+                  7: 'finalVerdict',
+                }[step.step] as keyof typeof platformStats.accuracy.stepRates;
 
-              const accuracy = platformStats?.accuracy.stepRates[accuracyKey] ?? 0;
-              const stepHasData = hasRealData && accuracy > 0;
-              const circumference = 2 * Math.PI * 32;
-              const offset = circumference - ((stepHasData ? accuracy : 0) / 100) * circumference;
+                const accuracy = platformStats?.accuracy.stepRates[accuracyKey] ?? 0;
+                const stepHasData = hasRealData && accuracy > 0;
 
-              // Dynamic color based on accuracy
-              const getGaugeColor = () => {
-                if (!stepHasData) return { stroke: '#64748b', glow: 'rgba(100, 116, 139, 0.3)' };
-                if (accuracy >= 80) return { stroke: '#22c55e', glow: 'rgba(34, 197, 94, 0.4)' };
-                if (accuracy >= 60) return { stroke: '#eab308', glow: 'rgba(234, 179, 8, 0.4)' };
-                return { stroke: '#ef4444', glow: 'rgba(239, 68, 68, 0.4)' };
-              };
-              const gaugeColor = getGaugeColor();
-
-              return (
-                <div
-                  key={step.step}
-                  className="group relative"
-                >
-                  <div className={cn(
-                    "relative p-4 rounded-2xl border transition-all duration-300 h-full flex flex-col items-center text-center",
-                    "bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm",
-                    "border-gray-200 dark:border-white/10",
-                    "hover:border-gray-300 dark:hover:border-white/20 hover:shadow-xl hover:-translate-y-1"
-                  )}>
-                    {/* Step Number Badge */}
+                return (
+                  <div
+                    key={step.step}
+                    className="group relative w-[160px] flex-shrink-0"
+                  >
                     <div className={cn(
-                      "absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shadow-lg z-20",
-                      "border-2 border-white dark:border-slate-800",
-                      step.bgColor.replace('/10', '/90')
+                      "relative p-4 rounded-xl border transition-all duration-300 h-full",
+                      "bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm",
+                      "border-gray-200 dark:border-white/10",
+                      "hover:border-gray-300 dark:hover:border-white/20 hover:shadow-lg"
                     )}>
-                      <span className="text-white drop-shadow">{step.step}</span>
-                    </div>
+                      {/* Step Number Badge */}
+                      <div className={cn(
+                        "absolute -top-2 -left-2 w-7 h-7 rounded-full flex items-center justify-center shadow-lg",
+                        "bg-gradient-to-br", step.bgColor.replace('bg-', 'from-').replace('/10', ''), "to-transparent",
+                        "border-2 border-white dark:border-slate-800"
+                      )}>
+                        <span className={cn("text-xs font-bold", step.color)}>{step.step}</span>
+                      </div>
 
-                    {/* Radial Accuracy Gauge */}
-                    <div className="relative w-20 h-20 mb-3">
-                      {/* Outer Glow */}
-                      {stepHasData && (
-                        <div
-                          className="absolute inset-1 rounded-full blur-xl opacity-60 group-hover:opacity-80 transition-opacity"
-                          style={{ backgroundColor: gaugeColor.glow }}
-                        />
-                      )}
+                      {/* Icon with glow */}
+                      <div className="relative mb-3">
+                        <div className={cn("absolute inset-0 blur-lg opacity-30 rounded-full", step.bgColor)} />
+                        <Icon className={cn("w-8 h-8 relative group-hover:scale-110 transition-transform", step.color)} />
+                      </div>
 
-                      {/* SVG Gauge */}
-                      <svg className="w-20 h-20 transform -rotate-90 relative z-10" viewBox="0 0 72 72">
-                        {/* Background Circle */}
-                        <circle
-                          cx="36"
-                          cy="36"
-                          r="32"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="5"
-                          className="text-gray-200 dark:text-slate-700/50"
-                        />
+                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">{step.name}</h3>
+                      <p className="text-xs text-gray-500 dark:text-slate-400 mb-3 line-clamp-2">{step.description}</p>
 
-                        {/* Progress Arc */}
-                        <circle
-                          cx="36"
-                          cy="36"
-                          r="32"
-                          fill="none"
-                          stroke={gaugeColor.stroke}
-                          strokeWidth="5"
-                          strokeLinecap="round"
-                          strokeDasharray={circumference}
-                          strokeDashoffset={offset}
-                          style={{
-                            transition: 'stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                            filter: stepHasData ? `drop-shadow(0 0 6px ${gaugeColor.glow})` : 'none'
-                          }}
-                        />
-                      </svg>
+                      {/* Accuracy Bar */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-400 dark:text-slate-500">Accuracy</span>
+                          {stepHasData ? (
+                            <span className={cn("font-semibold", step.color)}>{accuracy.toFixed(1)}%</span>
+                          ) : (
+                            <span className="text-gray-400 dark:text-slate-600">—</span>
+                          )}
+                        </div>
+                        <div className="h-1.5 bg-gray-200 dark:bg-slate-700/50 rounded-full overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full transition-all duration-1000", stepHasData ? step.color.replace('text-', 'bg-') : 'bg-gray-300 dark:bg-slate-600')}
+                            style={{ width: stepHasData ? `${accuracy}%` : '0%' }}
+                          />
+                        </div>
+                      </div>
 
-                      {/* Center Content */}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-                        <Icon className={cn(
-                          "w-5 h-5 mb-0.5 transition-transform group-hover:scale-110",
-                          stepHasData ? step.color : "text-gray-400 dark:text-slate-500"
-                        )} />
-                        <span
-                          className="text-sm font-black"
-                          style={{ color: gaugeColor.stroke }}
-                        >
-                          {stepHasData ? `${accuracy.toFixed(0)}%` : '—'}
-                        </span>
+                      {/* Metrics Tags */}
+                      <div className="flex flex-wrap gap-1 mt-3">
+                        {step.metrics.slice(0, 2).map((metric) => (
+                          <span key={metric} className="px-1.5 py-0.5 bg-white/50 dark:bg-slate-800/50 rounded text-[10px] text-gray-500 dark:text-slate-400 border border-gray-200/50 dark:border-slate-700/50">
+                            {metric}
+                          </span>
+                        ))}
+                        {step.metrics.length > 2 && (
+                          <span className="px-1.5 py-0.5 bg-white/50 dark:bg-slate-800/50 rounded text-[10px] text-gray-400 dark:text-slate-500">
+                            +{step.metrics.length - 2}
+                          </span>
+                        )}
                       </div>
                     </div>
-
-                    {/* Step Name */}
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-xs mb-1 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
-                      {step.name}
-                    </h3>
-
-                    {/* Metrics Dots */}
-                    <div className="flex items-center gap-1 mt-auto">
-                      {step.metrics.slice(0, 3).map((metric, i) => (
-                        <div
-                          key={metric}
-                          className={cn("w-1.5 h-1.5 rounded-full", step.bgColor.replace('/10', '/50'))}
-                          title={metric}
-                        />
-                      ))}
-                      {step.metrics.length > 3 && (
-                        <span className="text-[9px] text-gray-400 dark:text-slate-500">+{step.metrics.length - 3}</span>
-                      )}
-                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
-          {/* Legend */}
-          <div className="flex flex-wrap items-center justify-center gap-4 mt-5 text-xs">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-              <span className="text-gray-500 dark:text-slate-400">≥80% Excellent</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
-              <span className="text-gray-500 dark:text-slate-400">≥60% Good</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-              <span className="text-gray-500 dark:text-slate-400">&lt;60% Needs Work</span>
+          {/* Scroll indicator for mobile */}
+          <div className="flex justify-center mt-3 sm:hidden">
+            <div className="flex gap-1">
+              <ChevronRight className="w-4 h-4 text-gray-400 dark:text-slate-500 animate-pulse" />
+              <span className="text-xs text-gray-400 dark:text-slate-500">Scroll to see all steps</span>
             </div>
           </div>
 
