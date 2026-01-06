@@ -14,7 +14,7 @@ import { prisma } from '../../core/database';
 // Request validation schemas
 const chatSchema = z.object({
   expertId: z.enum(['aria', 'nexus', 'oracle', 'sentinel']),
-  message: z.string().min(1).max(2000),
+  message: z.string().min(1).max(15000), // Increased for analysis context
   conversationHistory: z
     .array(
       z.object({
