@@ -2,6 +2,7 @@
 
 import { CheckCircle, XCircle, AlertCircle, TrendingUp, TrendingDown, Minus, Brain, Target } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { TradePlanChart } from './TradePlanChart';
 
 interface ComponentScore {
   step: string;
@@ -13,6 +14,17 @@ interface ConfidenceFactor {
   factor: string;
   positive: boolean;
   impact: 'high' | 'medium' | 'low';
+}
+
+interface TradePlanData {
+  direction?: 'long' | 'short';
+  entries?: { price: number; percentage: number }[];
+  averageEntry?: number;
+  stopLoss?: { price: number; percentage: number };
+  takeProfits?: { price: number; percentage: number; riskReward: number }[];
+  currentPrice?: number;
+  support?: number[];
+  resistance?: number[];
 }
 
 interface FinalVerdictData {
@@ -30,9 +42,10 @@ interface FinalVerdictData {
 interface FinalVerdictProps {
   data?: FinalVerdictData;
   symbol: string;
+  tradePlan?: TradePlanData;
 }
 
-export function FinalVerdict({ data, symbol }: FinalVerdictProps) {
+export function FinalVerdict({ data, symbol, tradePlan }: FinalVerdictProps) {
   if (!data) {
     return (
       <div className="p-4">
@@ -44,6 +57,13 @@ export function FinalVerdict({ data, symbol }: FinalVerdictProps) {
       </div>
     );
   }
+
+  // Check if we have valid trade plan data for the chart
+  const hasValidTradePlan = tradePlan &&
+    tradePlan.direction &&
+    tradePlan.entries?.length &&
+    tradePlan.stopLoss?.price &&
+    tradePlan.takeProfits?.length;
 
   const getVerdictStyle = () => {
     switch (data.verdict) {
@@ -141,6 +161,20 @@ export function FinalVerdict({ data, symbol }: FinalVerdictProps) {
           <p className="text-sm">{data.recommendation}</p>
         </div>
       </div>
+
+      {/* Trade Plan Chart - TradingView Lightweight Charts */}
+      {hasValidTradePlan && (
+        <TradePlanChart
+          symbol={symbol}
+          direction={tradePlan.direction!}
+          entries={tradePlan.entries!}
+          stopLoss={tradePlan.stopLoss!}
+          takeProfits={tradePlan.takeProfits!}
+          currentPrice={tradePlan.currentPrice || tradePlan.averageEntry || tradePlan.entries![0].price}
+          support={tradePlan.support}
+          resistance={tradePlan.resistance}
+        />
+      )}
 
       {/* Component Scores - Premium Radial Design */}
       {data.componentScores && data.componentScores.length > 0 && (

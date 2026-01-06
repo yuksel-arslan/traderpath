@@ -475,7 +475,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
               {activeStep === 4 && <TimingAnalysis data={results[4]} symbol={symbol} />}
               {activeStep === 5 && <TradePlan data={results[5]} symbol={symbol} />}
               {activeStep === 6 && <TrapCheck data={results[6]} symbol={symbol} />}
-              {activeStep === 7 && <FinalVerdict data={results[7]} symbol={symbol} />}
+              {activeStep === 7 && <FinalVerdict data={results[7]} symbol={symbol} tradePlan={results[5]} />}
 
               {/* Download Report Button */}
               {activeStep === 7 && isStepCompleted && completedSteps.length === 7 && (
