@@ -699,15 +699,17 @@ export default function DashboardPage() {
 
                 {/* RIGHT COLUMN: Profit Trend + Credits (full height) */}
                 <div className="flex-1 flex gap-3 min-h-[140px]">
-                  {/* Premium Profit Sparkline */}
+                  {/* Premium Profit Sparkline - Dual Color */}
                   {(() => {
                     const chartData = recentOutcomes
                       .filter(o => o.unrealizedPnL !== undefined)
                       .slice(0, 10)
                       .reverse()
-                      .map((o, i) => ({
+                      .map((o) => ({
                         name: o.symbol,
                         pnl: o.unrealizedPnL || 0,
+                        positive: Math.max(0, o.unrealizedPnL || 0),
+                        negative: Math.min(0, o.unrealizedPnL || 0),
                       }));
 
                     const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
@@ -718,24 +720,15 @@ export default function DashboardPage() {
                     const hasData = chartData.length >= 2;
 
                     return (
-                      <div className={`flex-1 relative overflow-hidden rounded-xl p-4 flex flex-col ${
-                        isPositive
-                          ? 'bg-gradient-to-br from-emerald-50 via-emerald-50/50 to-teal-50/30 dark:from-emerald-500/10 dark:via-emerald-500/5 dark:to-teal-500/5 border border-emerald-200/50 dark:border-emerald-500/20'
-                          : 'bg-gradient-to-br from-red-50 via-red-50/50 to-orange-50/30 dark:from-red-500/10 dark:via-red-500/5 dark:to-orange-500/5 border border-red-200/50 dark:border-red-500/20'
-                      }`}>
-                        {/* Background glow */}
-                        <div className={`absolute -bottom-10 -right-10 w-32 h-32 rounded-full blur-3xl opacity-30 ${
-                          isPositive ? 'bg-emerald-400' : 'bg-red-400'
-                        }`} />
+                      <div className="flex-1 relative overflow-hidden rounded-xl p-4 flex flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100/50 dark:from-slate-800/50 dark:via-slate-800/30 dark:to-slate-900/50 border border-slate-200 dark:border-slate-700/50">
+                        {/* Dual glow */}
+                        <div className="absolute -bottom-8 right-4 w-20 h-20 rounded-full blur-2xl opacity-30 bg-emerald-400" />
+                        <div className="absolute -bottom-8 left-4 w-20 h-20 rounded-full blur-2xl opacity-30 bg-red-400" />
 
                         <div className="flex items-center justify-between mb-2 relative z-10">
                           <div className="flex items-center gap-2">
-                            <div className={`p-1.5 rounded-lg ${isPositive ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
-                              {isPositive ? (
-                                <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                              ) : (
-                                <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" />
-                              )}
+                            <div className="p-1.5 rounded-lg bg-slate-200/80 dark:bg-slate-700/50">
+                              <LineChart className="w-4 h-4 text-slate-600 dark:text-slate-300" />
                             </div>
                             <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">Profit Trend</span>
                           </div>
@@ -757,57 +750,96 @@ export default function DashboardPage() {
                             </div>
                           ) : (
                             <ResponsiveContainer width="100%" height="100%">
-                              <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                              <AreaChart data={chartData} margin={{ top: 10, right: 5, left: 5, bottom: 5 }}>
                                 <defs>
-                                  <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor={isPositive ? '#10b981' : '#ef4444'} stopOpacity={0.4} />
-                                    <stop offset="100%" stopColor={isPositive ? '#10b981' : '#ef4444'} stopOpacity={0.05} />
+                                  <linearGradient id="greenGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.6} />
+                                    <stop offset="100%" stopColor="#10b981" stopOpacity={0.1} />
                                   </linearGradient>
-                                  <filter id="glow">
-                                    <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                                  <linearGradient id="redGradient" x1="0" y1="1" x2="0" y2="0">
+                                    <stop offset="0%" stopColor="#ef4444" stopOpacity={0.6} />
+                                    <stop offset="100%" stopColor="#ef4444" stopOpacity={0.1} />
+                                  </linearGradient>
+                                  <filter id="glowEffect">
+                                    <feGaussianBlur stdDeviation="1.5" result="blur" />
                                     <feMerge>
-                                      <feMergeNode in="coloredBlur" />
+                                      <feMergeNode in="blur" />
                                       <feMergeNode in="SourceGraphic" />
                                     </feMerge>
                                   </filter>
                                 </defs>
-                                <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" strokeOpacity={0.5} />
+                                <ReferenceLine y={0} stroke="#64748b" strokeWidth={1} strokeOpacity={0.3} />
                                 <Tooltip
                                   contentStyle={{
                                     backgroundColor: 'rgba(15, 23, 42, 0.95)',
                                     border: 'none',
                                     borderRadius: '12px',
-                                    padding: '8px 12px',
+                                    padding: '10px 14px',
                                     boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
                                   }}
-                                  itemStyle={{ color: isPositive ? '#10b981' : '#ef4444' }}
-                                  formatter={(value: number) => [
-                                    <span key="value" className="font-bold">{value >= 0 ? '+' : ''}{value.toFixed(1)}%</span>,
-                                    <span key="label" className="text-slate-400">P/L</span>
-                                  ]}
-                                  labelFormatter={(label) => <span className="font-semibold text-white">{label}</span>}
-                                  cursor={{ stroke: isPositive ? '#10b981' : '#ef4444', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                  formatter={(value: number, name: string) => {
+                                    if (name === 'positive' || name === 'negative') {
+                                      const v = name === 'positive' ? value : value;
+                                      if (v === 0) return null;
+                                      return [
+                                        <span key="v" style={{ color: v >= 0 ? '#10b981' : '#ef4444', fontWeight: 700 }}>
+                                          {v >= 0 ? '+' : ''}{v.toFixed(1)}%
+                                        </span>,
+                                        ''
+                                      ];
+                                    }
+                                    return null;
+                                  }}
+                                  labelFormatter={(label) => <span style={{ color: '#fff', fontWeight: 600 }}>{label}</span>}
+                                  cursor={{ stroke: '#64748b', strokeWidth: 1, strokeDasharray: '4 4' }}
                                 />
+                                {/* Positive area - Green */}
                                 <Area
                                   type="monotone"
-                                  dataKey="pnl"
-                                  stroke={isPositive ? '#10b981' : '#ef4444'}
-                                  strokeWidth={3}
-                                  fill="url(#profitGradient)"
-                                  filter="url(#glow)"
-                                  dot={{
-                                    fill: isPositive ? '#10b981' : '#ef4444',
-                                    strokeWidth: 2,
-                                    stroke: '#fff',
-                                    r: 4,
+                                  dataKey="positive"
+                                  stroke="#10b981"
+                                  strokeWidth={2.5}
+                                  fill="url(#greenGradient)"
+                                  filter="url(#glowEffect)"
+                                  dot={(props: any) => {
+                                    if (!props.payload || props.payload.positive <= 0) return <g key={props.key} />;
+                                    return (
+                                      <circle
+                                        key={props.key}
+                                        cx={props.cx}
+                                        cy={props.cy}
+                                        r={4}
+                                        fill="#10b981"
+                                        stroke="#fff"
+                                        strokeWidth={2}
+                                      />
+                                    );
                                   }}
-                                  activeDot={{
-                                    fill: isPositive ? '#10b981' : '#ef4444',
-                                    strokeWidth: 3,
-                                    stroke: '#fff',
-                                    r: 6,
-                                    filter: 'url(#glow)',
+                                  activeDot={{ fill: '#10b981', strokeWidth: 3, stroke: '#fff', r: 6 }}
+                                />
+                                {/* Negative area - Red */}
+                                <Area
+                                  type="monotone"
+                                  dataKey="negative"
+                                  stroke="#ef4444"
+                                  strokeWidth={2.5}
+                                  fill="url(#redGradient)"
+                                  filter="url(#glowEffect)"
+                                  dot={(props: any) => {
+                                    if (!props.payload || props.payload.negative >= 0) return <g key={props.key} />;
+                                    return (
+                                      <circle
+                                        key={props.key}
+                                        cx={props.cx}
+                                        cy={props.cy}
+                                        r={4}
+                                        fill="#ef4444"
+                                        stroke="#fff"
+                                        strokeWidth={2}
+                                      />
+                                    );
                                   }}
+                                  activeDot={{ fill: '#ef4444', strokeWidth: 3, stroke: '#fff', r: 6 }}
                                 />
                               </AreaChart>
                             </ResponsiveContainer>
