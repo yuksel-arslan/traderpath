@@ -91,7 +91,7 @@ export const CREDIT_COSTS = {
   // Bundles
   BUNDLE_QUICK_CHECK: 5,   // Steps 2 + 7
   BUNDLE_SMART_ENTRY: 12,  // Steps 2-4 + 7 (20% off)
-  BUNDLE_FULL_ANALYSIS: 15, // All steps (25% off)
+  BUNDLE_FULL_ANALYSIS: 25, // All steps
 
   // Features
   PRICE_ALERT: 1,

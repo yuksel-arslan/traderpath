@@ -1605,7 +1605,7 @@ FORMAT:
       };
     }
 
-    // Check and charge credits (15 credits for full analysis)
+    // Check and charge credits (25 credits for full analysis)
     const cost = CREDIT_COSTS.BUNDLE_FULL_ANALYSIS;
     const chargeResult = await creditService.charge(userId, cost, 'expert_panel_analysis', {
       symbol: upperSymbol,
