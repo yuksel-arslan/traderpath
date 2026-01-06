@@ -432,12 +432,12 @@ export default function ReportsPage() {
                   <div className="flex items-center gap-3 px-4 py-2 bg-slate-900/50 rounded-lg">
                     <div className="text-center">
                       <div className="text-xs text-muted-foreground">Entry</div>
-                      <div className="font-mono text-sm">${report.entryPrice.toFixed(2)}</div>
+                      <div className="font-mono text-sm">${report.entryPrice.toFixed(4)}</div>
                     </div>
                     <div className="text-muted-foreground">→</div>
                     <div className="text-center">
                       <div className="text-xs text-muted-foreground">Current</div>
-                      <div className="font-mono text-sm">${report.currentPrice.toFixed(2)}</div>
+                      <div className="font-mono text-sm">${report.currentPrice.toFixed(4)}</div>
                     </div>
                     <div className={cn(
                       "text-center px-3 py-1 rounded-lg font-bold",
@@ -451,6 +451,55 @@ export default function ReportsPage() {
                       </div>
                     </div>
                   </div>
+                )}
+
+                {/* Distance to Target */}
+                {report.entryPrice && report.currentPrice && report.takeProfit1 && !report.outcome && (
+                  (() => {
+                    const entry = report.entryPrice!;
+                    const current = report.currentPrice!;
+                    const tp1 = report.takeProfit1!;
+                    const isLong = report.direction === 'long';
+
+                    // Calculate distance from current to TP1
+                    const distanceToTP = isLong
+                      ? ((tp1 - current) / current) * 100
+                      : ((current - tp1) / current) * 100;
+
+                    // Calculate progress (0% = at entry, 100% = at TP1)
+                    const totalDistance = isLong ? tp1 - entry : entry - tp1;
+                    const coveredDistance = isLong ? current - entry : entry - current;
+                    const progress = totalDistance !== 0 ? Math.max(0, Math.min(100, (coveredDistance / totalDistance) * 100)) : 0;
+
+                    return (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-purple-500/10 rounded-lg min-w-[140px]">
+                        <Target className="w-4 h-4 text-purple-400 shrink-0" />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-purple-300">To TP1</span>
+                            <span className={cn(
+                              "text-xs font-bold",
+                              distanceToTP <= 1 ? "text-green-400" :
+                              distanceToTP <= 3 ? "text-yellow-400" : "text-purple-400"
+                            )}>
+                              {distanceToTP > 0 ? distanceToTP.toFixed(2) : '0.00'}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-all",
+                                progress >= 80 ? "bg-green-500" :
+                                progress >= 50 ? "bg-yellow-500" : "bg-purple-500"
+                              )}
+                              style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
+                            />
+                          </div>
+                          <div className="text-[10px] text-slate-500 mt-0.5 text-right">{progress.toFixed(0)}% done</div>
+                        </div>
+                      </div>
+                    );
+                  })()
                 )}
 
                 {/* Score */}
