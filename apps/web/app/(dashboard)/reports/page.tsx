@@ -483,8 +483,9 @@ export default function ReportsPage() {
               key={report.id}
               className={cn(
                 "border-2 rounded-lg p-4 hover:shadow-lg transition relative overflow-hidden",
-                report.outcome === 'correct' && "border-green-500/50",
-                report.outcome === 'incorrect' && "border-red-500/50",
+                // Closed trades are gray
+                (report.outcome === 'correct' || report.outcome === 'incorrect') && "border-gray-500/50",
+                // Active trades get dynamic border based on position
                 isActive && report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1 && (() => {
                   const isLong = report.direction === 'long';
                   const totalRange = isLong ? report.takeProfit1! - report.stopLoss! : report.stopLoss! - report.takeProfit1!;
@@ -495,10 +496,9 @@ export default function ReportsPage() {
                 isActive && !(report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1) && "border-blue-500/50"
               )}
               style={{
-                background: report.outcome === 'correct'
-                  ? `linear-gradient(to right, rgba(34, 197, 94, 0.05), rgba(34, 197, 94, 0.25))`
-                  : report.outcome === 'incorrect'
-                  ? `linear-gradient(to right, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.25))`
+                // Closed trades get gray gradient
+                background: (report.outcome === 'correct' || report.outcome === 'incorrect')
+                  ? `linear-gradient(to right, rgba(107, 114, 128, 0.05), rgba(107, 114, 128, 0.15))`
                   : report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1 ? (() => {
                     const isLong = report.direction === 'long';
                     const totalRange = isLong ? report.takeProfit1! - report.stopLoss! : report.stopLoss! - report.takeProfit1!;
@@ -526,15 +526,15 @@ export default function ReportsPage() {
               )}
               {report.outcome === 'correct' && (
                 <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden">
-                  <div className="absolute top-3 -right-6 w-24 text-center py-0.5 bg-green-500 text-white text-[10px] font-bold rotate-45 shadow-sm">
-                    TP HIT
+                  <div className="absolute top-3 -right-6 w-24 text-center py-0.5 bg-gray-500 text-white text-[10px] font-bold rotate-45 shadow-sm">
+                    TP HIT ✓
                   </div>
                 </div>
               )}
               {report.outcome === 'incorrect' && (
                 <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden">
-                  <div className="absolute top-3 -right-6 w-24 text-center py-0.5 bg-red-500 text-white text-[10px] font-bold rotate-45 shadow-sm">
-                    SL HIT
+                  <div className="absolute top-3 -right-6 w-24 text-center py-0.5 bg-gray-500 text-white text-[10px] font-bold rotate-45 shadow-sm">
+                    SL HIT ✗
                   </div>
                 </div>
               )}
@@ -630,35 +630,48 @@ export default function ReportsPage() {
                         </div>
                       </div>
 
-                      {/* Distance to TP - only for active trades */}
-                      {report.takeProfit1 && isActive && (() => {
-                        const current = report.currentPrice!;
-                        const tp1 = report.takeProfit1!;
-                        const isLong = report.direction === 'long';
-                        const distanceToTP = isLong
-                          ? ((tp1 - current) / current) * 100
-                          : ((current - tp1) / current) * 100;
-
-                        return (
-                          <div className={cn(
-                            "text-center px-2 py-1 rounded-lg min-w-[60px]",
-                            distanceToTP <= 1 ? "bg-green-500/20" :
-                            distanceToTP <= 3 ? "bg-yellow-500/20" : "bg-purple-500/20"
-                          )}>
+                      {/* Distance to TP - for active trades or show 100% for TP hit */}
+                      {report.takeProfit1 && (
+                        report.outcome === 'correct' ? (
+                          // TP Hit - show 100%
+                          <div className="text-center px-2 py-1 rounded-lg min-w-[60px] bg-gray-500/20">
                             <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
                               <Target className="w-3 h-3" />
                               TP
                             </div>
-                            <div className={cn(
-                              "font-bold text-sm",
-                              distanceToTP <= 1 ? "text-green-400" :
-                              distanceToTP <= 3 ? "text-yellow-400" : "text-purple-400"
-                            )}>
-                              {distanceToTP > 0 ? distanceToTP.toFixed(1) : '0.0'}%
+                            <div className="font-bold text-sm text-gray-400">
+                              100%
                             </div>
                           </div>
-                        );
-                      })()}
+                        ) : isActive ? (() => {
+                          const current = report.currentPrice!;
+                          const tp1 = report.takeProfit1!;
+                          const isLong = report.direction === 'long';
+                          const distanceToTP = isLong
+                            ? ((tp1 - current) / current) * 100
+                            : ((current - tp1) / current) * 100;
+
+                          return (
+                            <div className={cn(
+                              "text-center px-2 py-1 rounded-lg min-w-[60px]",
+                              distanceToTP <= 1 ? "bg-green-500/20" :
+                              distanceToTP <= 3 ? "bg-yellow-500/20" : "bg-purple-500/20"
+                            )}>
+                              <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
+                                <Target className="w-3 h-3" />
+                                TP
+                              </div>
+                              <div className={cn(
+                                "font-bold text-sm",
+                                distanceToTP <= 1 ? "text-green-400" :
+                                distanceToTP <= 3 ? "text-yellow-400" : "text-purple-400"
+                              )}>
+                                {distanceToTP > 0 ? distanceToTP.toFixed(1) : '0.0'}%
+                              </div>
+                            </div>
+                          );
+                        })() : null
+                      )}
                     </>
                   )}
                 </div>
