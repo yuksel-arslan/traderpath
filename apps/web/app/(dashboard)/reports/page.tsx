@@ -623,19 +623,29 @@ export default function ReportsPage() {
                               100%
                             </div>
                           </div>
-                        ) : isActive ? (() => {
+                        ) : isActive && report.currentPrice ? (() => {
                           const current = report.currentPrice!;
                           const tp1 = report.takeProfit1!;
+                          const entry = report.entryPrice || current;
                           const isLong = report.direction === 'long';
-                          const distanceToTP = isLong
-                            ? ((tp1 - current) / current) * 100
-                            : ((current - tp1) / current) * 100;
+
+                          // Calculate progress towards TP (0% = at entry, 100% = at TP)
+                          const totalDistance = isLong ? (tp1 - entry) : (entry - tp1);
+                          const coveredDistance = isLong ? (current - entry) : (entry - current);
+
+                          // Progress as percentage (can exceed 100% if price passed TP)
+                          const progress = totalDistance !== 0
+                            ? Math.min(100, Math.max(0, (coveredDistance / totalDistance) * 100))
+                            : 0;
+
+                          // Distance remaining to TP
+                          const distanceToTP = Math.max(0, 100 - progress);
 
                           return (
                             <div className={cn(
                               "text-center px-2 py-1 rounded-lg min-w-[60px]",
-                              distanceToTP <= 1 ? "bg-green-500/20" :
-                              distanceToTP <= 3 ? "bg-yellow-500/20" : "bg-purple-500/20"
+                              progress >= 80 ? "bg-green-500/20" :
+                              progress >= 50 ? "bg-yellow-500/20" : "bg-blue-500/20"
                             )}>
                               <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
                                 <Target className="w-3 h-3" />
@@ -643,10 +653,10 @@ export default function ReportsPage() {
                               </div>
                               <div className={cn(
                                 "font-bold text-sm",
-                                distanceToTP <= 1 ? "text-green-400" :
-                                distanceToTP <= 3 ? "text-yellow-400" : "text-purple-400"
+                                progress >= 80 ? "text-green-400" :
+                                progress >= 50 ? "text-yellow-400" : "text-blue-400"
                               )}>
-                                {distanceToTP > 0 ? distanceToTP.toFixed(1) : '0.0'}%
+                                {progress.toFixed(0)}%
                               </div>
                             </div>
                           );
