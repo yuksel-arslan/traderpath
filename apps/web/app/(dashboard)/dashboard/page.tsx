@@ -601,13 +601,36 @@ export default function DashboardPage() {
     <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-8">
 
       {/* ===== SECTION 1: Compact Platform Performance ===== */}
-      <div className="relative overflow-hidden rounded-2xl">
+      <div className="relative overflow-hidden rounded-3xl">
         {/* Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/5 dark:from-emerald-500/10 via-transparent to-transparent" />
 
-        {/* Content - Horizontal Layout */}
-        <div className="relative z-10 p-5">
+        {/* Content */}
+        <div className="relative z-10 p-6 md:p-8">
+          {/* Header - Same style as other sections */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-emerald-500/30 blur-lg rounded-full" />
+                <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                  <Shield className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Platform Performance</h2>
+                <p className="text-gray-500 dark:text-slate-400 text-sm">Real-time verification from {platformStats?.accuracy.sampleSize ?? 0} trades</p>
+              </div>
+            </div>
+            {platformStats?.accuracy.methodology === 'outcome-verified' && (
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Live Tracking</span>
+              </div>
+            )}
+          </div>
+
+          {/* Content - Horizontal Layout */}
           <div className="flex flex-col lg:flex-row items-center gap-6">
             {/* LEFT: Main Accuracy Gauge */}
             <div className="flex-shrink-0">
@@ -626,20 +649,6 @@ export default function DashboardPage() {
 
             {/* RIGHT: Stats Grid */}
             <div className="flex-1 w-full">
-              {/* Header Row */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-emerald-500" />
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">Platform Performance</h2>
-                </div>
-                {platformStats?.accuracy.methodology === 'outcome-verified' && (
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Live</span>
-                  </div>
-                )}
-              </div>
-
               {/* Stats Boxes - 2x3 Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {/* Caution Rate */}
