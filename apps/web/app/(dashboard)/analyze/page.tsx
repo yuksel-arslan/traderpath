@@ -53,6 +53,10 @@ interface AnalysisStats {
   slHits: number;
   accuracy: number;
   stepAccuracy: StepAccuracy;
+  // New fields for data quality
+  methodology: 'outcome-verified' | 'score-based' | 'none';
+  sampleSize: number;
+  outcomeVerifiedCount: number;
 }
 
 // Analysis steps for the selector panel
@@ -104,9 +108,20 @@ export default function AnalyzePage() {
         finalVerdict: 0,
       };
 
+      let methodology: 'outcome-verified' | 'score-based' | 'none' = 'none';
+      let sampleSize = 0;
+      let outcomeVerifiedCount = 0;
+
       if (platformRes.ok) {
         const platformData = await platformRes.json();
-        stepAccuracy = platformData.data?.accuracy?.stepRates || stepAccuracy;
+        const accuracyData = platformData.data?.accuracy;
+        if (accuracyData) {
+          stepAccuracy = accuracyData.stepRates || stepAccuracy;
+          methodology = accuracyData.methodology === 'outcome-verified' ? 'outcome-verified' :
+                        accuracyData.sampleSize > 0 ? 'score-based' : 'none';
+          sampleSize = accuracyData.sampleSize || 0;
+          outcomeVerifiedCount = accuracyData.outcomeVerifiedCount || 0;
+        }
       }
 
       if (statsRes.ok) {
@@ -119,6 +134,9 @@ export default function AnalyzePage() {
           slHits: (statsData.verifiedAnalyses || 0) - (statsData.correctAnalyses || 0),
           accuracy: statsData.accuracy || 0,
           stepAccuracy,
+          methodology,
+          sampleSize,
+          outcomeVerifiedCount,
         });
       }
     } catch (error) {
@@ -230,15 +248,29 @@ export default function AnalyzePage() {
             <div className="bg-gray-50 dark:bg-slate-900/50 border border-gray-200 dark:border-slate-700/30 rounded-xl p-5 h-full">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
-                  7-Step Analysis Accuracy
+                  {stats?.methodology === 'outcome-verified' ? '7-Step Accuracy' : '7-Step Analysis'}
                 </h3>
-                <span className="text-[10px] text-gray-400 dark:text-slate-500">Platform-wide</span>
+                <span className={cn(
+                  "text-[10px] px-2 py-0.5 rounded-full",
+                  stats?.methodology === 'outcome-verified'
+                    ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400"
+                    : stats?.methodology === 'score-based'
+                    ? "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400"
+                    : "bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400"
+                )}>
+                  {stats?.methodology === 'outcome-verified'
+                    ? `${stats.outcomeVerifiedCount} verified`
+                    : stats?.methodology === 'score-based'
+                    ? 'Avg scores'
+                    : 'No data'}
+                </span>
               </div>
               <div className="space-y-2">
                 {STEP_ACCURACY_CONFIG.map((step, index) => {
                   const value = stats?.stepAccuracy?.[step.key as keyof StepAccuracy] || 0;
                   const colorSet = getStepColor(step.color);
                   const stepInfo = ANALYSIS_STEPS[index];
+                  const isVerified = stats?.methodology === 'outcome-verified';
 
                   return (
                     <div key={step.key} className={cn(
@@ -256,13 +288,25 @@ export default function AnalyzePage() {
                         </div>
                         <p className="text-[10px] text-gray-500 dark:text-slate-400">{stepInfo?.description}</p>
                       </div>
-                      <div className={cn("text-lg font-bold min-w-[45px] text-right", getAccuracyColor(value))}>
-                        {value > 0 ? `${value}%` : '-'}
+                      <div className={cn(
+                        "text-lg font-bold min-w-[45px] text-right",
+                        isVerified ? getAccuracyColor(value) : "text-gray-400 dark:text-slate-500"
+                      )}>
+                        {isVerified && value > 0 ? `${value}%` : '-'}
                       </div>
                     </div>
                   );
                 })}
               </div>
+
+              {/* Methodology Info */}
+              {stats?.methodology === 'score-based' && (
+                <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-500/10 rounded-lg border border-amber-200 dark:border-amber-500/20">
+                  <p className="text-[10px] text-amber-700 dark:text-amber-400">
+                    Accuracy will be calculated after trades close (TP/SL hit).
+                  </p>
+                </div>
+              )}
 
               {/* Credit Cost Info */}
               <div className="mt-5 pt-4 border-t border-gray-200 dark:border-slate-700/50">
