@@ -135,12 +135,66 @@ interface Message {
   timestamp: Date;
 }
 
+// Expert icons as inline SVG strings
+const EXPERT_ICONS = {
+  ARIA: '<svg class="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>',
+  NEXUS: '<svg class="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+  ORACLE: '<svg class="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
+  SENTINEL: '<svg class="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  VOLTRAN: '<svg class="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/></svg>',
+};
+
+const VERDICT_STYLES = {
+  GO: { bg: 'bg-green-500/20', text: 'text-green-600 dark:text-green-400', border: 'border-green-500/30' },
+  'CONDITIONAL GO': { bg: 'bg-blue-500/20', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-500/30' },
+  WAIT: { bg: 'bg-yellow-500/20', text: 'text-yellow-600 dark:text-yellow-400', border: 'border-yellow-500/30' },
+  AVOID: { bg: 'bg-red-500/20', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/30' },
+  PENDING: { bg: 'bg-gray-500/20', text: 'text-gray-600 dark:text-gray-400', border: 'border-gray-500/30' },
+  ERROR: { bg: 'bg-red-500/20', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/30' },
+};
+
+const EXPERT_STYLES = {
+  ARIA: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-500/20' },
+  NEXUS: { bg: 'bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-500/20' },
+  ORACLE: { bg: 'bg-purple-500/10', text: 'text-purple-600 dark:text-purple-400', border: 'border-purple-500/20' },
+  SENTINEL: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/20' },
+};
+
 // Formatting function to style AI messages
 function formatAIMessage(content: string): string {
   let formatted = content
     // Clean excessive line breaks (3+ lines -> 2 lines)
-    .replace(/\n{3,}/g, '\n\n')
-    // Style section titles (lines starting with emoji)
+    .replace(/\n{3,}/g, '\n\n');
+
+  // Replace expert markers with styled HTML
+  formatted = formatted.replace(/\[EXPERT:(ARIA|NEXUS|ORACLE|SENTINEL)\]\s*/g, (_, expertId) => {
+    const style = EXPERT_STYLES[expertId as keyof typeof EXPERT_STYLES];
+    const icon = EXPERT_ICONS[expertId as keyof typeof EXPERT_ICONS];
+    return `<div class="flex items-start gap-2 p-3 my-2 rounded-lg ${style.bg} border ${style.border}"><span class="${style.text}">${icon}</span><div class="flex-1"><span class="font-semibold ${style.text}">${expertId}</span><span class="text-muted-foreground ml-1">—</span> `;
+  });
+
+  // Close expert blocks (at double newline or end)
+  formatted = formatted.replace(/<\/span> ([^<]+?)(\n\n|$)/g, '</span> $1</div></div>$2');
+
+  // Replace VOLTRAN marker
+  formatted = formatted.replace(/\[VOLTRAN\]\s*/g, () => {
+    const icon = EXPERT_ICONS.VOLTRAN;
+    return `<div class="flex items-start gap-2 p-3 my-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20"><span class="text-purple-500">${icon}</span><div class="flex-1"><span class="font-semibold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">VOLTRAN PANEL VERDICT</span><span class="text-muted-foreground ml-1">—</span> `;
+  });
+
+  // Replace panel header
+  formatted = formatted.replace(/\[PANEL_HEADER\]\s*(.+?)(\n|$)/g, (_, title) => {
+    return `<div class="text-lg font-bold mb-2">${title.trim()}</div>`;
+  });
+
+  // Replace verdict markers
+  formatted = formatted.replace(/\[(GO|CONDITIONAL GO|WAIT|AVOID|PENDING|ERROR)\]\s*/g, (_, verdict) => {
+    const style = VERDICT_STYLES[verdict as keyof typeof VERDICT_STYLES] || VERDICT_STYLES.PENDING;
+    return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${style.bg} ${style.text} ${style.border} border mr-2">${verdict}</span>`;
+  });
+
+  formatted = formatted
+    // Style section titles (lines starting with emoji) - legacy support
     .replace(/^(📍|📊|📌|📚|🚀|💡|✅|⚠️|🔥|🐋|🔐|🎯|📈|📐)\s*(.+?)$/gm,
       '<div class="ai-section-title"><span class="ai-emoji">$1</span> $2</div>')
     // Style bold text
@@ -153,6 +207,8 @@ function formatAIMessage(content: string): string {
     // Style numbered lists (1. 2. 3.)
     .replace(/^(\d+)\.\s+(.+)$/gm,
       '<div class="ai-numbered"><span class="ai-number">$1</span><span>$2</span></div>')
+    // Clean up --- separators
+    .replace(/---/g, '<hr class="my-3 border-border/50" />')
     // Double line break -> paragraph spacing
     .replace(/\n\n/g, '<div class="ai-paragraph-break"></div>')
     // Single line break -> br

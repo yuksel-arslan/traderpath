@@ -1550,9 +1550,7 @@ Create a unified 3-4 sentence synthesis that:
 
 ${langInstruction}
 
-FORMAT:
-🤖 VOLTRAN PANEL VERDICT
-[Your synthesis here]`;
+FORMAT: Just your professional synthesis. Start directly with your unified recommendation.`;
 
     try {
       const response = await fetch(
@@ -1580,7 +1578,7 @@ FORMAT:
       );
     } catch (error) {
       console.error('Voltran synthesis error:', error);
-      return '🤖 VOLTRAN PANEL VERDICT\nUnable to synthesize expert opinions at this time.';
+      return 'Unable to synthesize expert opinions at this time.';
     }
   }
 
@@ -1707,29 +1705,30 @@ FORMAT:
 
   /**
    * Format Expert Panel result for chat response
+   * Icons are rendered by the frontend based on expert ID markers
    */
   formatPanelResponse(result: Awaited<ReturnType<typeof this.analyzeWithExpertPanel>>): string {
     if (!result.success) {
-      return `❌ ${result.error}`;
+      return `[ERROR] ${result.error}`;
     }
 
-    const verdictEmoji = {
-      'go': '🟢',
-      'conditional_go': '🔵',
-      'wait': '🟡',
-      'avoid': '🔴',
-    }[result.verdict || 'wait'] || '⚪';
+    const verdictLabel = {
+      'go': '[GO]',
+      'conditional_go': '[CONDITIONAL GO]',
+      'wait': '[WAIT]',
+      'avoid': '[AVOID]',
+    }[result.verdict || 'wait'] || '[PENDING]';
 
-    let response = `📊 **${result.symbol} Expert Panel Analysis**\n\n`;
-    response += `${verdictEmoji} **Verdict: ${result.verdict?.toUpperCase()}** (${result.score}/10)\n\n`;
+    let response = `[PANEL_HEADER] ${result.symbol} Expert Panel Analysis\n\n`;
+    response += `${verdictLabel} Verdict: ${result.verdict?.toUpperCase()} (${result.score}/10)\n\n`;
 
     response += `---\n\n`;
-    response += `**🎯 ARIA** (Technical): ${result.expertComments?.find(e => e.expertId === 'aria')?.comment}\n\n`;
-    response += `**🔮 ORACLE** (On-Chain): ${result.expertComments?.find(e => e.expertId === 'oracle')?.comment}\n\n`;
-    response += `**🛡️ SENTINEL** (Security): ${result.expertComments?.find(e => e.expertId === 'sentinel')?.comment}\n\n`;
-    response += `**⚖️ NEXUS** (Risk): ${result.expertComments?.find(e => e.expertId === 'nexus')?.comment}\n\n`;
+    response += `[EXPERT:ARIA] ${result.expertComments?.find(e => e.expertId === 'aria')?.comment}\n\n`;
+    response += `[EXPERT:ORACLE] ${result.expertComments?.find(e => e.expertId === 'oracle')?.comment}\n\n`;
+    response += `[EXPERT:SENTINEL] ${result.expertComments?.find(e => e.expertId === 'sentinel')?.comment}\n\n`;
+    response += `[EXPERT:NEXUS] ${result.expertComments?.find(e => e.expertId === 'nexus')?.comment}\n\n`;
     response += `---\n\n`;
-    response += `${result.voltranSynthesis}`;
+    response += `[VOLTRAN] ${result.voltranSynthesis?.replace(/🤖 VOLTRAN PANEL VERDICT\n?/g, '')}`;
 
     return response;
   }
