@@ -285,7 +285,7 @@ function PremiumMetricRing({
 
           {/* Background Track */}
           <circle
-            className="text-slate-200 dark:text-slate-700/50"
+            className="text-gray-200 dark:text-slate-700/50"
             strokeWidth={strokeWidth}
             stroke="currentColor"
             fill="transparent"
@@ -338,27 +338,27 @@ function PremiumMetricRing({
           {/* Icon */}
           <Icon className={cn(
             "w-5 h-5 mb-1 transition-transform group-hover:scale-110",
-            hasData ? "opacity-60" : "opacity-30"
+            hasData ? "opacity-70" : "opacity-30"
           )} style={{ color: hasData ? gradientFrom : '#64748b' }} />
 
           {/* Value */}
           {hasData ? (
             <span className={cn(
               "text-2xl font-black tracking-tight",
-              isProfit && value >= 0 ? "text-emerald-400" :
-              isProfit && value < 0 ? "text-red-400" :
-              "text-white"
+              isProfit && value >= 0 ? "text-emerald-600 dark:text-emerald-400" :
+              isProfit && value < 0 ? "text-red-600 dark:text-red-400" :
+              "text-gray-900 dark:text-white"
             )}>
               {isProfit && value >= 0 ? '+' : ''}{value.toFixed(1)}%
             </span>
           ) : (
-            <span className="text-lg font-medium text-slate-500">—</span>
+            <span className="text-lg font-medium text-gray-400 dark:text-slate-500">—</span>
           )}
 
           {/* Label */}
           <span className={cn(
             "text-[10px] font-semibold uppercase tracking-widest mt-0.5",
-            hasData ? "text-slate-400" : "text-slate-600"
+            hasData ? "text-gray-500 dark:text-slate-400" : "text-gray-400 dark:text-slate-600"
           )}>
             {label}
           </span>
@@ -370,7 +370,7 @@ function PremiumMetricRing({
         "mt-3 text-center max-w-[140px] transition-all duration-300",
         "opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0"
       )}>
-        <p className="text-[10px] text-slate-500 leading-tight">{description}</p>
+        <p className="text-[10px] text-gray-500 dark:text-slate-500 leading-tight">{description}</p>
       </div>
     </div>
   );
@@ -598,14 +598,14 @@ export default function DashboardPage() {
 
       {/* ===== SECTION 1: Premium Platform Performance ===== */}
       <div className="relative overflow-hidden rounded-3xl">
-        {/* Animated Background Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/10 via-transparent to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent" />
+        {/* Light Mode Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/5 dark:from-emerald-500/10 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
 
         {/* Grid Pattern Overlay */}
-        <div className="absolute inset-0 opacity-5" style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)`,
+        <div className="absolute inset-0 opacity-[0.03] dark:opacity-5" style={{
+          backgroundImage: `linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)`,
           backgroundSize: '50px 50px'
         }} />
 
@@ -621,14 +621,14 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white tracking-tight">Platform Performance</h2>
-                <p className="text-slate-400 text-sm">Real-time verification from {platformStats?.accuracy.sampleSize ?? 0} completed trades</p>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Platform Performance</h2>
+                <p className="text-gray-500 dark:text-slate-400 text-sm">Real-time verification from {platformStats?.accuracy.sampleSize ?? 0} completed trades</p>
               </div>
             </div>
             {platformStats?.accuracy.methodology === 'outcome-verified' && (
               <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs font-medium text-emerald-400">Live Tracking</span>
+                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Live Tracking</span>
               </div>
             )}
           </div>
@@ -698,36 +698,36 @@ export default function DashboardPage() {
 
           {/* Bottom Stats Row */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:border-white/20 transition-colors group">
+            <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 transition-colors group">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <BarChart3 className="w-5 h-5 text-emerald-400" />
+                  <BarChart3 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-white">{platformStats?.platform.totalAnalyses ?? 0}</div>
-                  <div className="text-xs text-slate-500">Total Analyses</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{platformStats?.platform.totalAnalyses ?? 0}</div>
+                  <div className="text-xs text-gray-500 dark:text-slate-500">Total Analyses</div>
                 </div>
               </div>
             </div>
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:border-white/20 transition-colors group">
+            <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 transition-colors group">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Activity className="w-5 h-5 text-purple-400" />
+                  <Activity className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-white">{platformStats?.platform.weeklyAnalyses ?? 0}</div>
-                  <div className="text-xs text-slate-500">This Week</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{platformStats?.platform.weeklyAnalyses ?? 0}</div>
+                  <div className="text-xs text-gray-500 dark:text-slate-500">This Week</div>
                 </div>
               </div>
             </div>
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:border-white/20 transition-colors group">
+            <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 transition-colors group">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Sparkles className="w-5 h-5 text-amber-400" />
+                  <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-white">{credits}</div>
-                  <div className="text-xs text-slate-500">My Credits</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{credits}</div>
+                  <div className="text-xs text-gray-500 dark:text-slate-500">My Credits</div>
                 </div>
               </div>
             </div>
