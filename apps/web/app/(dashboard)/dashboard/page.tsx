@@ -702,7 +702,15 @@ export default function DashboardPage() {
                 <div className="flex-1 flex gap-3 min-h-[140px]">
                   {/* Premium Profit Sparkline - Daily/Weekly P&L Toggle */}
                   {(() => {
-                    // Generate last 7 days for daily view
+                    // DAILY VIEW: Hours of today (00:00 - 23:00)
+                    const today = new Date();
+                    const todayStr = today.toISOString().split('T')[0];
+                    const hours: number[] = [];
+                    for (let h = 0; h < 24; h += 3) { // Every 3 hours for cleaner display
+                      hours.push(h);
+                    }
+
+                    // WEEKLY VIEW: Last 7 days
                     const days: string[] = [];
                     const dayLabels: string[] = [];
                     for (let i = 6; i >= 0; i--) {
@@ -712,56 +720,53 @@ export default function DashboardPage() {
                       dayLabels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
                     }
 
-                    // Generate last 4 weeks for weekly view
-                    const getWeekNumber = (date: Date) => {
-                      const startOfYear = new Date(date.getFullYear(), 0, 1);
-                      const diff = date.getTime() - startOfYear.getTime();
-                      return Math.ceil((diff / 86400000 + startOfYear.getDay() + 1) / 7);
-                    };
+                    // Group trades by hour for daily P&L (today only)
+                    const hourlyPnL: Record<number, number[]> = {};
+                    hours.forEach(h => { hourlyPnL[h] = []; });
 
-                    const weeks: { start: Date; end: Date; label: string; key: string }[] = [];
-                    for (let i = 3; i >= 0; i--) {
-                      const endDate = new Date();
-                      endDate.setDate(endDate.getDate() - (i * 7));
-                      const startDate = new Date(endDate);
-                      startDate.setDate(startDate.getDate() - 6);
-                      weeks.push({
-                        start: startDate,
-                        end: endDate,
-                        label: `W${getWeekNumber(endDate)}`,
-                        key: `${startDate.toISOString().split('T')[0]}_${endDate.toISOString().split('T')[0]}`,
-                      });
-                    }
-
-                    // Group trades by date for daily P&L
+                    // Group trades by date for weekly P&L
                     const dailyPnL: Record<string, number[]> = {};
                     days.forEach(day => { dailyPnL[day] = []; });
-
-                    // Group trades by week for weekly P&L
-                    const weeklyPnL: Record<string, number[]> = {};
-                    weeks.forEach(w => { weeklyPnL[w.key] = []; });
 
                     recentOutcomes
                       .filter(o => o.unrealizedPnL !== undefined && o.createdAt)
                       .forEach(o => {
                         const tradeDate = new Date(o.createdAt);
                         const tradeDateStr = tradeDate.toISOString().split('T')[0];
+                        const tradeHour = tradeDate.getHours();
 
-                        // Daily grouping
+                        // Hourly grouping (for today)
+                        if (tradeDateStr === todayStr) {
+                          const hourBucket = Math.floor(tradeHour / 3) * 3;
+                          if (hourlyPnL[hourBucket] !== undefined) {
+                            hourlyPnL[hourBucket].push(o.unrealizedPnL || 0);
+                          }
+                        }
+
+                        // Daily grouping (for the week)
                         if (dailyPnL[tradeDateStr]) {
                           dailyPnL[tradeDateStr].push(o.unrealizedPnL || 0);
                         }
-
-                        // Weekly grouping
-                        weeks.forEach(w => {
-                          if (tradeDate >= w.start && tradeDate <= w.end) {
-                            weeklyPnL[w.key].push(o.unrealizedPnL || 0);
-                          }
-                        });
                       });
 
-                    // Daily chart data
-                    const dailyChartData = days.map((day, i) => {
+                    // Daily chart data (hourly view)
+                    const dailyChartData = hours.map((h) => {
+                      const trades = hourlyPnL[h];
+                      const avgPnl = trades.length > 0
+                        ? trades.reduce((sum, v) => sum + v, 0) / trades.length
+                        : 0;
+                      return {
+                        name: `${h.toString().padStart(2, '0')}:00`,
+                        hour: h,
+                        pnl: avgPnl,
+                        positive: Math.max(0, avgPnl),
+                        negative: Math.min(0, avgPnl),
+                        count: trades.length,
+                      };
+                    });
+
+                    // Weekly chart data (daily view)
+                    const weeklyChartData = days.map((day, i) => {
                       const trades = dailyPnL[day];
                       const avgPnl = trades.length > 0
                         ? trades.reduce((sum, v) => sum + v, 0) / trades.length
@@ -776,31 +781,12 @@ export default function DashboardPage() {
                       };
                     });
 
-                    // Weekly chart data
-                    const weeklyChartData = weeks.map((w) => {
-                      const trades = weeklyPnL[w.key];
-                      const avgPnl = trades.length > 0
-                        ? trades.reduce((sum, v) => sum + v, 0) / trades.length
-                        : 0;
-                      return {
-                        name: w.label,
-                        date: w.key,
-                        pnl: avgPnl,
-                        positive: Math.max(0, avgPnl),
-                        negative: Math.min(0, avgPnl),
-                        count: trades.length,
-                      };
-                    });
-
                     const chartData = pnlViewMode === 'daily' ? dailyChartData : weeklyChartData;
 
                     const allTrades = recentOutcomes.filter(o => o.unrealizedPnL !== undefined && o.createdAt);
                     const relevantTrades = pnlViewMode === 'daily'
-                      ? allTrades.filter(o => days.includes(new Date(o.createdAt).toISOString().split('T')[0]))
-                      : allTrades.filter(o => {
-                          const tradeDate = new Date(o.createdAt);
-                          return weeks.some(w => tradeDate >= w.start && tradeDate <= w.end);
-                        });
+                      ? allTrades.filter(o => new Date(o.createdAt).toISOString().split('T')[0] === todayStr)
+                      : allTrades.filter(o => days.includes(new Date(o.createdAt).toISOString().split('T')[0]));
 
                     const avgPnL = relevantTrades.length > 0
                       ? relevantTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / relevantTrades.length
