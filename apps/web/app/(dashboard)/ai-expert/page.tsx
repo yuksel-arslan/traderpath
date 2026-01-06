@@ -19,8 +19,6 @@ import {
   Gem,
   Zap,
   ChevronRight,
-  Users,
-  Clock,
   TrendingUp,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -168,30 +166,23 @@ export default function AIExpertsPage() {
   return (
     <div className="w-full px-6 md:px-12 lg:px-16 py-8 space-y-6">
       {/* ===== Statistics Header ===== */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
         {/* Total Conversations */}
-        <div className="bg-white dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50 text-center">
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 text-center">
           <MessageCircle className="w-5 h-5 text-blue-500 mx-auto mb-2" />
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{expertStats?.totalConversations || 0}</div>
           <div className="text-xs text-gray-500 dark:text-slate-400">Conversations</div>
         </div>
 
         {/* Total Messages */}
-        <div className="bg-white dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50 text-center">
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 text-center">
           <TrendingUp className="w-5 h-5 text-green-500 mx-auto mb-2" />
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{expertStats?.totalMessages || 0}</div>
           <div className="text-xs text-gray-500 dark:text-slate-400">Messages</div>
         </div>
 
-        {/* Active Users */}
-        <div className="bg-white dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50 text-center">
-          <Users className="w-5 h-5 text-purple-500 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{expertStats?.activeUsers || 0}</div>
-          <div className="text-xs text-gray-500 dark:text-slate-400">Active Users</div>
-        </div>
-
         {/* Total Usage */}
-        <div className="bg-white dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50 text-center">
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 text-center">
           <Bot className="w-5 h-5 text-amber-500 mx-auto mb-2" />
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalUsage}</div>
           <div className="text-xs text-gray-500 dark:text-slate-400">Total Calls</div>
@@ -247,7 +238,7 @@ export default function AIExpertsPage() {
               </span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700/50 rounded-lg">
+            <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg">
               <Gem className="w-4 h-4 text-amber-500" />
               <span className="text-sm font-semibold text-gray-900 dark:text-white">
                 {credits?.balance || 0} credits
