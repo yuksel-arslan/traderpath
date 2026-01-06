@@ -23,8 +23,10 @@ import {
   Search,
   Crosshair,
   Bot,
+  LineChart,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
+import { TradePlanChart } from '../../../../components/analysis/TradePlanChart';
 
 interface ReportData {
   symbol: string;
@@ -178,7 +180,7 @@ export default function ReportViewPage() {
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-200px)] p-4">
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-4xl">
         {/* Back Button */}
         <Link href="/reports" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4">
           <ArrowLeft className="w-4 h-4" />
@@ -332,6 +334,26 @@ export default function ReportViewPage() {
               {report.verdict.aiSummary || `Market conditions favor ${isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(report.tradePlan.averageEntry)} with ${report.tradePlan.riskReward?.toFixed(1)}:1 risk-reward ratio. Set stop-loss at ${formatPrice(report.tradePlan.stopLoss?.price)} to protect against downside.`}
             </p>
           </div>
+
+          {/* Trade Plan Chart */}
+          {report.tradePlan && (
+            <div className="mb-6">
+              <TradePlanChart
+                symbol={report.symbol}
+                direction={report.tradePlan.direction as 'long' | 'short'}
+                entries={report.tradePlan.averageEntry ? [{ price: report.tradePlan.averageEntry, percentage: 100 }] : []}
+                stopLoss={report.tradePlan.stopLoss || { price: 0, percentage: 0 }}
+                takeProfits={report.tradePlan.takeProfits?.map((tp, i) => ({
+                  price: tp.price,
+                  percentage: 0,
+                  riskReward: report.tradePlan.riskReward || (i + 1),
+                })) || []}
+                currentPrice={report.assetScan?.currentPrice || report.tradePlan.averageEntry || 0}
+                support={report.assetScan?.levels?.support}
+                resistance={report.assetScan?.levels?.resistance}
+              />
+            </div>
+          )}
 
           {/* AI Expert Review Section - Only show if comment exists */}
           {aiExpertComment && (
