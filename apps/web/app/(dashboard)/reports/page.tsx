@@ -367,11 +367,34 @@ export default function ReportsPage() {
             <div
               key={report.id}
               className={cn(
-                "bg-card border rounded-lg p-4 hover:shadow-lg transition",
-                report.outcome === 'correct' && "border-green-500/30 bg-green-500/5",
-                report.outcome === 'incorrect' && "border-red-500/30 bg-red-500/5"
+                "bg-card border-2 rounded-lg p-4 hover:shadow-lg transition relative overflow-hidden",
+                report.outcome === 'correct' && "border-green-500/50 bg-green-500/5",
+                report.outcome === 'incorrect' && "border-red-500/50 bg-red-500/5",
+                !report.outcome && "border-blue-500/50 bg-blue-500/5"
               )}
             >
+              {/* Status Corner Ribbon */}
+              {!report.outcome && (
+                <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden">
+                  <div className="absolute top-3 -right-6 w-24 text-center py-0.5 bg-blue-500 text-white text-[10px] font-bold rotate-45 shadow-sm">
+                    LIVE
+                  </div>
+                </div>
+              )}
+              {report.outcome === 'correct' && (
+                <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden">
+                  <div className="absolute top-3 -right-6 w-24 text-center py-0.5 bg-green-500 text-white text-[10px] font-bold rotate-45 shadow-sm">
+                    TP HIT
+                  </div>
+                </div>
+              )}
+              {report.outcome === 'incorrect' && (
+                <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden">
+                  <div className="absolute top-3 -right-6 w-24 text-center py-0.5 bg-red-500 text-white text-[10px] font-bold rotate-45 shadow-sm">
+                    SL HIT
+                  </div>
+                </div>
+              )}
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 {/* Report Info */}
                 <div className="flex items-center gap-4 min-w-0">
@@ -410,9 +433,10 @@ export default function ReportsPage() {
                         </span>
                       )}
                       {!report.outcome && (
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-500 flex items-center gap-1">
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 flex items-center gap-1.5 animate-pulse">
+                          <span className="w-2 h-2 bg-blue-500 rounded-full animate-ping" />
                           <Timer className="w-3 h-3" />
-                          ACTIVE
+                          LIVE TRACKING
                         </span>
                       )}
                     </div>
