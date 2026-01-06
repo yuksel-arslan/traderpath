@@ -336,21 +336,23 @@ let outcomeTrackerInterval: NodeJS.Timeout | null = null;
 
 async function startOutcomeTracker() {
   const { checkAndUpdateOutcomes } = await import('./modules/reports/live-tracking.service');
-  const { calculateExpiredOutcomes } = await import('./modules/reports/outcome.service');
+  const { calculateExpiredOutcomes, calculateCautionOutcomes } = await import('./modules/reports/outcome.service');
 
   // Run immediately on startup
   try {
     const liveResult = await checkAndUpdateOutcomes();
     const expiredResult = await calculateExpiredOutcomes();
+    const cautionResult = await calculateCautionOutcomes();
     logger.info({
       live: liveResult,
-      expired: expiredResult
+      expired: expiredResult,
+      caution: cautionResult
     }, '✓ Initial outcome check completed');
   } catch (error) {
     logger.error(error, 'Initial outcome check failed');
   }
 
-  // Then run every 30 seconds
+  // Then run every 30 seconds for live TP/SL tracking
   outcomeTrackerInterval = setInterval(async () => {
     try {
       const liveResult = await checkAndUpdateOutcomes();
@@ -362,7 +364,7 @@ async function startOutcomeTracker() {
     }
   }, 30 * 1000); // 30 seconds
 
-  // Also run expired outcome calculation every 5 minutes
+  // Run expired outcome calculation every 5 minutes
   setInterval(async () => {
     try {
       const result = await calculateExpiredOutcomes();
@@ -374,7 +376,19 @@ async function startOutcomeTracker() {
     }
   }, 5 * 60 * 1000); // 5 minutes
 
-  logger.info('✓ Outcome tracker started (30s live, 5m expired)');
+  // Run WAIT/AVOID caution outcome calculation every 10 minutes
+  setInterval(async () => {
+    try {
+      const result = await calculateCautionOutcomes();
+      if (result.processed > 0) {
+        logger.info(result, 'Caution outcome calculation completed');
+      }
+    } catch (error) {
+      logger.error(error, 'Caution outcome calculation error');
+    }
+  }, 10 * 60 * 1000); // 10 minutes
+
+  logger.info('✓ Outcome tracker started (30s live, 5m expired, 10m caution)');
 }
 
 const start = async () => {
