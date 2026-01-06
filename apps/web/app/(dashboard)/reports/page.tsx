@@ -584,18 +584,18 @@ export default function ReportsPage() {
                 </div>
 
                 {/* Score + Price + P/L + Distance Display */}
-                <div className="flex items-center gap-2 px-3 py-2 bg-slate-900/50 rounded-lg">
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-slate-900/50 rounded-lg border border-gray-200 dark:border-transparent">
                   {/* Score as percentage */}
                   <div className={cn(
                     "text-center px-2 py-1 rounded-lg min-w-[50px]",
-                    report.score >= 7 ? "bg-green-500/20" :
-                    report.score >= 5 ? "bg-yellow-500/20" : "bg-red-500/20"
+                    report.score >= 7 ? "bg-green-100 dark:bg-green-500/20" :
+                    report.score >= 5 ? "bg-yellow-100 dark:bg-yellow-500/20" : "bg-red-100 dark:bg-red-500/20"
                   )}>
-                    <div className="text-[10px] text-muted-foreground">Score</div>
+                    <div className="text-[10px] text-gray-500 dark:text-muted-foreground">Score</div>
                     <div className={cn(
                       "font-bold text-sm",
-                      report.score >= 7 ? "text-green-400" :
-                      report.score >= 5 ? "text-yellow-400" : "text-red-400"
+                      report.score >= 7 ? "text-green-600 dark:text-green-400" :
+                      report.score >= 5 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"
                     )}>
                       {(report.score * 10).toFixed(0)}%
                     </div>
@@ -609,13 +609,13 @@ export default function ReportsPage() {
                       <div className={cn(
                         "text-center px-2 py-1 rounded-lg min-w-[60px]",
                         (report.unrealizedPnL || 0) >= 0
-                          ? "bg-green-500/20"
-                          : "bg-red-500/20"
+                          ? "bg-green-100 dark:bg-green-500/20"
+                          : "bg-red-100 dark:bg-red-500/20"
                       )}>
-                        <div className="text-[10px] text-muted-foreground">P/L</div>
+                        <div className="text-[10px] text-gray-500 dark:text-muted-foreground">P/L</div>
                         <div className={cn(
                           "font-bold text-sm",
-                          (report.unrealizedPnL || 0) >= 0 ? "text-green-400" : "text-red-400"
+                          (report.unrealizedPnL || 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                         )}>
                           {(report.unrealizedPnL || 0) >= 0 ? '+' : ''}{(report.unrealizedPnL || 0).toFixed(2)}%
                         </div>
@@ -625,12 +625,12 @@ export default function ReportsPage() {
                       {report.takeProfit1 && (
                         report.outcome === 'correct' ? (
                           // TP Hit - show 100% in green
-                          <div className="text-center px-2 py-1 rounded-lg min-w-[60px] bg-green-500/20">
-                            <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
+                          <div className="text-center px-2 py-1 rounded-lg min-w-[60px] bg-green-100 dark:bg-green-500/20">
+                            <div className="text-[10px] text-gray-500 dark:text-muted-foreground flex items-center justify-center gap-1">
                               <Target className="w-3 h-3" />
                               TP
                             </div>
-                            <div className="font-bold text-sm text-green-400">
+                            <div className="font-bold text-sm text-green-600 dark:text-green-400">
                               100%
                             </div>
                           </div>
@@ -655,17 +655,17 @@ export default function ReportsPage() {
                           return (
                             <div className={cn(
                               "text-center px-2 py-1 rounded-lg min-w-[60px]",
-                              progress >= 80 ? "bg-green-500/20" :
-                              progress >= 50 ? "bg-yellow-500/20" : "bg-blue-500/20"
+                              progress >= 80 ? "bg-green-100 dark:bg-green-500/20" :
+                              progress >= 50 ? "bg-yellow-100 dark:bg-yellow-500/20" : "bg-blue-100 dark:bg-blue-500/20"
                             )}>
-                              <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
+                              <div className="text-[10px] text-gray-500 dark:text-muted-foreground flex items-center justify-center gap-1">
                                 <Target className="w-3 h-3" />
                                 TP
                               </div>
                               <div className={cn(
                                 "font-bold text-sm",
-                                progress >= 80 ? "text-green-400" :
-                                progress >= 50 ? "text-yellow-400" : "text-blue-400"
+                                progress >= 80 ? "text-green-600 dark:text-green-400" :
+                                progress >= 50 ? "text-yellow-600 dark:text-yellow-400" : "text-blue-600 dark:text-blue-400"
                               )}>
                                 {progress.toFixed(0)}%
                               </div>
@@ -682,7 +682,7 @@ export default function ReportsPage() {
                   {/* Chart Button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); setChartModal({ isOpen: true, report }); }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 transition"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-100 dark:bg-blue-500/10 hover:bg-blue-200 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-500 transition"
                     title="View Chart"
                   >
                     <LineChart className="w-4 h-4" />
@@ -691,7 +691,7 @@ export default function ReportsPage() {
                   {/* Details Button */}
                   <button
                     onClick={() => router.push(`/reports/${report.id}`)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 transition"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-100 dark:bg-emerald-500/10 hover:bg-emerald-200 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-500 transition"
                     title="View Details"
                   >
                     <Eye className="w-4 h-4" />
@@ -745,11 +745,11 @@ export default function ReportsPage() {
       )}
 
       {/* Info Box */}
-      <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+      <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-lg">
         <div className="flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-blue-500 mt-0.5" />
-          <div className="text-sm text-blue-400">
-            <p className="font-medium text-blue-500 mb-1">Live Tracking</p>
+          <AlertTriangle className="w-5 h-5 text-blue-600 dark:text-blue-500 mt-0.5" />
+          <div className="text-sm text-blue-700 dark:text-blue-400">
+            <p className="font-medium text-blue-600 dark:text-blue-500 mb-1">Live Tracking</p>
             <p>
               Reports are tracked live. When TP or SL is hit, the trade automatically closes.
               Click the Chart button to view multi-timeframe analysis.
@@ -763,7 +763,7 @@ export default function ReportsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
           <div className="bg-card border rounded-xl w-[95vw] h-[90vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-slate-900/50">
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-gray-100 dark:bg-slate-900/50">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 via-amber-500 to-green-500 flex items-center justify-center text-white font-bold">
                   {chartModal.report.symbol.slice(0, 2)}
@@ -814,43 +814,43 @@ export default function ReportsPage() {
               <div className="flex items-center gap-6">
                 {/* Entry Price */}
                 {chartModal.report.entryPrice && (
-                  <div className="text-center px-4 py-2 bg-slate-800/50 rounded-lg">
-                    <div className="text-xs text-muted-foreground">Entry</div>
-                    <div className="font-mono font-bold text-white">${chartModal.report.entryPrice.toFixed(4)}</div>
+                  <div className="text-center px-4 py-2 bg-gray-200 dark:bg-slate-800/50 rounded-lg">
+                    <div className="text-xs text-gray-500 dark:text-muted-foreground">Entry</div>
+                    <div className="font-mono font-bold text-gray-900 dark:text-white">${chartModal.report.entryPrice.toFixed(4)}</div>
                   </div>
                 )}
 
                 {/* Stop Loss */}
                 {chartModal.report.stopLoss && (
-                  <div className="text-center px-4 py-2 bg-red-500/10 rounded-lg border border-red-500/30">
-                    <div className="flex items-center gap-1 text-xs text-red-400">
+                  <div className="text-center px-4 py-2 bg-red-100 dark:bg-red-500/10 rounded-lg border border-red-300 dark:border-red-500/30">
+                    <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
                       <Shield className="w-3 h-3" />
                       Stop Loss
                     </div>
-                    <div className="font-mono font-bold text-red-400">${chartModal.report.stopLoss.toFixed(4)}</div>
+                    <div className="font-mono font-bold text-red-600 dark:text-red-400">${chartModal.report.stopLoss.toFixed(4)}</div>
                   </div>
                 )}
 
                 {/* Take Profits */}
                 {chartModal.report.takeProfit1 && (
                   <div className="flex gap-2">
-                    <div className="text-center px-3 py-2 bg-green-500/10 rounded-lg border border-green-500/30">
-                      <div className="flex items-center gap-1 text-xs text-green-400">
+                    <div className="text-center px-3 py-2 bg-green-100 dark:bg-green-500/10 rounded-lg border border-green-300 dark:border-green-500/30">
+                      <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
                         <Target className="w-3 h-3" />
                         TP1
                       </div>
-                      <div className="font-mono font-bold text-green-400">${chartModal.report.takeProfit1.toFixed(4)}</div>
+                      <div className="font-mono font-bold text-green-600 dark:text-green-400">${chartModal.report.takeProfit1.toFixed(4)}</div>
                     </div>
                     {chartModal.report.takeProfit2 && (
-                      <div className="text-center px-3 py-2 bg-green-500/10 rounded-lg border border-green-500/30">
-                        <div className="text-xs text-green-400">TP2</div>
-                        <div className="font-mono font-bold text-green-400">${chartModal.report.takeProfit2.toFixed(4)}</div>
+                      <div className="text-center px-3 py-2 bg-green-100 dark:bg-green-500/10 rounded-lg border border-green-300 dark:border-green-500/30">
+                        <div className="text-xs text-green-600 dark:text-green-400">TP2</div>
+                        <div className="font-mono font-bold text-green-600 dark:text-green-400">${chartModal.report.takeProfit2.toFixed(4)}</div>
                       </div>
                     )}
                     {chartModal.report.takeProfit3 && (
-                      <div className="text-center px-3 py-2 bg-green-500/10 rounded-lg border border-green-500/30">
-                        <div className="text-xs text-green-400">TP3</div>
-                        <div className="font-mono font-bold text-green-400">${chartModal.report.takeProfit3.toFixed(4)}</div>
+                      <div className="text-center px-3 py-2 bg-green-100 dark:bg-green-500/10 rounded-lg border border-green-300 dark:border-green-500/30">
+                        <div className="text-xs text-green-600 dark:text-green-400">TP3</div>
+                        <div className="font-mono font-bold text-green-600 dark:text-green-400">${chartModal.report.takeProfit3.toFixed(4)}</div>
                       </div>
                     )}
                   </div>
@@ -861,8 +861,8 @@ export default function ReportsPage() {
                   <div className={cn(
                     "text-center px-4 py-2 rounded-lg font-bold",
                     chartModal.report.unrealizedPnL >= 0
-                      ? "bg-green-500/20 text-green-400"
-                      : "bg-red-500/20 text-red-400"
+                      ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400"
+                      : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
                   )}>
                     <div className="text-xs">P/L</div>
                     <div className="flex items-center gap-1 text-lg">
@@ -874,7 +874,7 @@ export default function ReportsPage() {
                 {/* Close Button */}
                 <button
                   onClick={() => setChartModal({ isOpen: false, report: null })}
-                  className="p-2 rounded-lg hover:bg-slate-700 transition"
+                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 transition"
                 >
                   <X className="w-6 h-6" />
                 </button>
