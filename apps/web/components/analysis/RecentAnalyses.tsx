@@ -97,8 +97,8 @@ export function RecentAnalyses() {
   }
 
   return (
-    <div className="bg-card rounded-lg border divide-y">
-      {analyses.slice(0, 4).map((analysis) => {
+    <div className="bg-card rounded-lg border divide-y max-h-[280px] overflow-y-auto">
+      {analyses.map((analysis) => {
         const config = verdictConfig[analysis.verdict];
         const Icon = config.icon;
 
