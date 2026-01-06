@@ -26,7 +26,9 @@ import {
   Target,
   Shield,
   BarChart3,
-  Percent
+  Percent,
+  Bot,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
@@ -48,6 +50,9 @@ interface Report {
   takeProfit1?: number;
   takeProfit2?: number;
   takeProfit3?: number;
+  // AI Expert fields
+  analysisId?: string;
+  aiExpertComment?: string | null;
 }
 
 // Trade Plan Levels for Chart
@@ -265,6 +270,76 @@ export default function ReportsPage() {
     } catch (error) {
       console.error('Failed to download report:', error);
       alert('Failed to download report');
+    }
+  };
+
+  // Navigate to AI Expert with report context
+  const handleAskAIExpert = async (report: Report) => {
+    if (!report.analysisId) {
+      alert('Analysis ID not found for this report');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      // Fetch full report data to build context
+      const response = await fetch(`/api/reports/${report.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data.reportData) {
+          const reportData = data.data.reportData;
+
+          // Build comprehensive context
+          const contextMessage = `Bu analiz hakkında uzman görüşünü istiyorum:
+
+[${report.symbol}/USDT ANALİZ ÖZETİ]
+Tarih: ${reportData.generatedAt || report.generatedAt}
+Skor: ${(report.score * 10).toFixed(0)}/100
+Yön: ${report.direction?.toUpperCase() || 'N/A'}
+
+[ADIM 1: Market Pulse]
+Fear & Greed: ${reportData.marketPulse?.fearGreedIndex || 'N/A'} (${reportData.marketPulse?.fearGreedLabel || 'N/A'})
+BTC Dominance: ${reportData.marketPulse?.btcDominance?.toFixed(1) || 'N/A'}%
+
+[ADIM 2: Asset Scanner]
+Fiyat: $${reportData.assetScan?.currentPrice || 'N/A'}
+RSI: ${reportData.assetScan?.indicators?.rsi?.toFixed(0) || 'N/A'}
+
+[ADIM 3: Safety Check]
+Risk Seviyesi: ${reportData.safetyCheck?.riskLevel || 'N/A'}
+
+[ADIM 4: Timing]
+Trade Now: ${reportData.timing?.tradeNow ? 'Evet' : 'Hayır'}
+
+[ADIM 5: Trade Plan]
+Entry: $${reportData.tradePlan?.averageEntry || report.entryPrice || 'N/A'}
+Stop Loss: $${reportData.tradePlan?.stopLoss?.price || report.stopLoss || 'N/A'}
+Take Profit: $${reportData.tradePlan?.takeProfits?.[0]?.price || report.takeProfit1 || 'N/A'}
+
+[ADIM 6: Trap Check]
+Bull Trap: ${reportData.trapCheck?.traps?.bullTrap ? 'Evet' : 'Hayır'}
+Bear Trap: ${reportData.trapCheck?.traps?.bearTrap ? 'Evet' : 'Hayır'}
+
+[ADIM 7: Final Verdict]
+Karar: ${reportData.verdict?.action || report.verdict}
+
+Bu analize göre risk değerlendirmeni ve önerilerini paylaşır mısın?`;
+
+          // Store context in sessionStorage
+          sessionStorage.setItem('aiExpertContext', contextMessage);
+          sessionStorage.setItem('aiExpertAnalysisId', report.analysisId);
+
+          // Navigate to AI Expert
+          router.push('/ai-expert/nexus?fromAnalysis=true');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to prepare AI Expert context:', error);
     }
   };
 
@@ -697,6 +772,17 @@ export default function ReportsPage() {
                     <Eye className="w-4 h-4" />
                     <span className="text-sm font-medium hidden sm:inline">Details</span>
                   </button>
+                  {/* AI Expert Button - only show if no comment yet */}
+                  {!report.aiExpertComment && report.analysisId && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleAskAIExpert(report); }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-100 dark:bg-amber-500/10 hover:bg-amber-200 dark:hover:bg-amber-500/20 text-amber-600 dark:text-amber-500 transition"
+                      title="Ask AI Expert"
+                    >
+                      <Bot className="w-4 h-4" />
+                      <span className="text-sm font-medium hidden sm:inline">AI Expert</span>
+                    </button>
+                  )}
                   {/* Download Button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDownload(report); }}

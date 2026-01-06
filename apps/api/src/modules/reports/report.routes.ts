@@ -172,6 +172,8 @@ export async function reportRoutes(fastify: FastifyInstance) {
             outcome: true,
             entryPrice: true,
             reportData: true,
+            analysisId: true,
+            aiExpertComment: true,
           },
           orderBy: { generatedAt: 'desc' },
           take: Math.min(parseInt(limit), 50),
@@ -252,6 +254,9 @@ export async function reportRoutes(fastify: FastifyInstance) {
             takeProfit1: takeProfits?.[0]?.price,
             takeProfit2: takeProfits?.[1]?.price,
             takeProfit3: takeProfits?.[2]?.price,
+            // AI Expert fields
+            analysisId: report.analysisId,
+            aiExpertComment: report.aiExpertComment,
           };
         }));
 
