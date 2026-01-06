@@ -736,7 +736,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ===== SECTION 2: 7-Step Methodology ===== */}
-      <div className="bg-white dark:bg-slate-800/50 rounded-2xl p-6 border border-gray-200 dark:border-slate-700/50 shadow-lg dark:shadow-xl dark:shadow-slate-900/50">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
@@ -854,7 +854,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Left - Verdict Distribution */}
-        <div className="bg-white dark:bg-slate-800/50 rounded-2xl p-6 border border-gray-200 dark:border-slate-700/50 shadow-lg dark:shadow-xl dark:shadow-slate-900/50">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
           <div className="flex items-center gap-2 mb-6">
             <PieChart className="w-5 h-5 text-purple-500 dark:text-purple-400" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Verdict Distribution</h3>
@@ -890,7 +890,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Right - My Performance */}
-        <div className="bg-white dark:bg-slate-800/50 rounded-2xl p-6 border border-gray-200 dark:border-slate-700/50 shadow-lg dark:shadow-xl dark:shadow-slate-900/50">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
           <div className="flex items-center gap-2 mb-6">
             <Award className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">My Performance</h3>
@@ -1003,7 +1003,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ===== SECTION 4: Live Outcome Tracking ===== */}
-      <div className="bg-white dark:bg-slate-800/50 rounded-2xl p-6 border border-gray-200 dark:border-slate-700/50 shadow-lg dark:shadow-xl dark:shadow-slate-900/50">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
@@ -1146,7 +1146,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ===== SECTION 5: Data Sources & Methodology ===== */}
-      <div className="bg-white dark:bg-gradient-to-br dark:from-slate-800/50 dark:to-slate-900/50 rounded-2xl p-6 border border-gray-200 dark:border-slate-700/50 shadow-lg dark:shadow-xl dark:shadow-slate-900/50">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-cyan-100 dark:bg-cyan-500/20 flex items-center justify-center">
             <Lock className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
@@ -1159,96 +1159,96 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Data Sources */}
-          <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-100 dark:border-slate-700/30">
-            <Database className="w-6 h-6 text-blue-500 dark:text-blue-400 mb-3" />
+          <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-200 dark:border-slate-600">
+            <Database className="w-6 h-6 text-blue-600 dark:text-blue-400 mb-3" />
             <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Data Sources</h4>
-            <ul className="text-sm text-gray-500 dark:text-slate-400 space-y-1.5">
+            <ul className="text-sm text-gray-600 dark:text-slate-300 space-y-1.5">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 Binance Exchange API
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 CoinGecko Market Data
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 Fear & Greed Index
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 On-chain Analytics
               </li>
             </ul>
           </div>
 
           {/* Technical Indicators */}
-          <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-100 dark:border-slate-700/30">
-            <LineChart className="w-6 h-6 text-purple-500 dark:text-purple-400 mb-3" />
+          <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-200 dark:border-slate-600">
+            <LineChart className="w-6 h-6 text-purple-600 dark:text-purple-400 mb-3" />
             <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Technical Indicators</h4>
-            <ul className="text-sm text-gray-500 dark:text-slate-400 space-y-1.5">
+            <ul className="text-sm text-gray-600 dark:text-slate-300 space-y-1.5">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 RSI, MACD, Bollinger
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 EMA (8, 21, 50, 200)
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 Volume Profile
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 ATR & Volatility
               </li>
             </ul>
           </div>
 
           {/* AI Analysis */}
-          <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-100 dark:border-slate-700/30">
-            <Brain className="w-6 h-6 text-emerald-500 dark:text-emerald-400 mb-3" />
+          <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-200 dark:border-slate-600">
+            <Brain className="w-6 h-6 text-emerald-600 dark:text-emerald-400 mb-3" />
             <h4 className="font-semibold text-gray-900 dark:text-white mb-2">AI Analysis</h4>
-            <ul className="text-sm text-gray-500 dark:text-slate-400 space-y-1.5">
+            <ul className="text-sm text-gray-600 dark:text-slate-300 space-y-1.5">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 Gemini AI Integration
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 Pattern Recognition
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 Sentiment Analysis
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 Risk Assessment
               </li>
             </ul>
           </div>
 
           {/* Security */}
-          <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-100 dark:border-slate-700/30">
-            <Shield className="w-6 h-6 text-yellow-500 dark:text-yellow-400 mb-3" />
+          <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-200 dark:border-slate-600">
+            <Shield className="w-6 h-6 text-amber-600 dark:text-amber-400 mb-3" />
             <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Security</h4>
-            <ul className="text-sm text-gray-500 dark:text-slate-400 space-y-1.5">
+            <ul className="text-sm text-gray-600 dark:text-slate-300 space-y-1.5">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 Manipulation Detection
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 Whale Tracking
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 Trap Identification
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 Smart Money Flow
               </li>
             </ul>
@@ -1256,12 +1256,12 @@ export default function DashboardPage() {
         </div>
 
         {/* Disclaimer */}
-        <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-500/5 rounded-xl border border-yellow-200 dark:border-yellow-500/20">
+        <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-700/50">
           <div className="flex gap-3">
-            <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-medium text-yellow-700 dark:text-yellow-400 mb-1">Risk Disclaimer</h4>
-              <p className="text-sm text-gray-600 dark:text-slate-400">
+              <h4 className="font-medium text-amber-800 dark:text-amber-300 mb-1">Risk Disclaimer</h4>
+              <p className="text-sm text-amber-700 dark:text-amber-200/80">
                 TradePath does not provide investment advice. All analyses are for educational purposes only.
                 Cryptocurrency markets are high-risk, and investment decisions are entirely your responsibility.
                 Past performance is not a guarantee of future results.
