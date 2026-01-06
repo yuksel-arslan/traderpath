@@ -707,7 +707,7 @@ export default function DashboardPage() {
 
               {/* Performance Comment */}
               <div className={cn(
-                "text-center text-xs p-2 rounded-lg",
+                "text-center text-sm font-medium p-3 rounded-lg",
                 userStats.verifiedAnalyses === 0
                   ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400"
                   : userStats.accuracy >= 70
