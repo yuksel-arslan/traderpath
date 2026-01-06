@@ -36,6 +36,7 @@ import {
   LayoutGrid,
   List,
 } from 'lucide-react';
+import { LineChart as RechartsLineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 import { cn } from '../../../lib/utils';
 
 // ===========================================
@@ -599,138 +600,170 @@ export default function DashboardPage() {
   return (
     <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-8">
 
-      {/* ===== SECTION 1: Premium Platform Performance ===== */}
-      <div className="relative overflow-hidden rounded-3xl">
-        {/* Light Mode Background */}
+      {/* ===== SECTION 1: Compact Platform Performance ===== */}
+      <div className="relative overflow-hidden rounded-2xl">
+        {/* Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/5 dark:from-emerald-500/10 via-transparent to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
 
-        {/* Grid Pattern Overlay */}
-        <div className="absolute inset-0 opacity-[0.03] dark:opacity-5" style={{
-          backgroundImage: `linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)`,
-          backgroundSize: '50px 50px'
-        }} />
-
-        {/* Content */}
-        <div className="relative z-10 p-8">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="absolute inset-0 bg-emerald-500/30 blur-lg rounded-full" />
-                <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                  <Shield className="w-6 h-6 text-white" />
-                </div>
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Platform Performance</h2>
-                <p className="text-gray-500 dark:text-slate-400 text-sm">Real-time verification from {platformStats?.accuracy.sampleSize ?? 0} completed trades</p>
-              </div>
+        {/* Content - Horizontal Layout */}
+        <div className="relative z-10 p-5">
+          <div className="flex flex-col lg:flex-row items-center gap-6">
+            {/* LEFT: Main Accuracy Gauge */}
+            <div className="flex-shrink-0">
+              <PremiumMetricRing
+                value={platformStats?.accuracy.overall ?? 0}
+                label="Accuracy"
+                description="GO signal success rate"
+                icon={Target}
+                size={140}
+                gradientFrom="#10b981"
+                gradientTo="#34d399"
+                glowColor="#10b981"
+                hasData={hasRealData}
+              />
             </div>
-            {platformStats?.accuracy.methodology === 'outcome-verified' && (
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Live Tracking</span>
+
+            {/* RIGHT: Stats Grid */}
+            <div className="flex-1 w-full">
+              {/* Header Row */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-emerald-500" />
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">Platform Performance</h2>
+                </div>
+                {platformStats?.accuracy.methodology === 'outcome-verified' && (
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Live</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Triple Premium Rings */}
-          <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-16 mb-8">
-            {/* Accuracy Ring */}
-            <PremiumMetricRing
-              value={platformStats?.accuracy.overall ?? 0}
-              label="Accuracy"
-              description="GO signal success rate based on TP/SL hits"
-              icon={Target}
-              size={150}
-              gradientFrom="#10b981"
-              gradientTo="#34d399"
-              glowColor="#10b981"
-              hasData={hasRealData}
-            />
+              {/* Stats Boxes - 2x3 Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {/* Caution Rate */}
+                <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Shield className="w-4 h-4 text-amber-500" />
+                    <span className="text-xs text-gray-500 dark:text-slate-400">Caution</span>
+                  </div>
+                  <div className="text-xl font-bold text-gray-900 dark:text-white">
+                    {(platformStats?.cautionRate?.total ?? 0) > 0 ? `${platformStats?.cautionRate?.rate ?? 0}%` : '—'}
+                  </div>
+                </div>
 
-            {/* Caution Rate Ring */}
-            <PremiumMetricRing
-              value={platformStats?.cautionRate?.rate ?? 0}
-              label="Caution"
-              description="WAIT/AVOID signals that correctly avoided losses"
-              icon={Shield}
-              size={150}
-              gradientFrom="#f59e0b"
-              gradientTo="#fbbf24"
-              glowColor="#f59e0b"
-              hasData={(platformStats?.cautionRate?.total ?? 0) > 0}
-            />
+                {/* Profit Sparkline */}
+                <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10 col-span-2 sm:col-span-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-emerald-500" />
+                      <span className="text-xs text-gray-500 dark:text-slate-400">Profit Trend</span>
+                    </div>
+                    <span className={`text-sm font-bold ${(() => {
+                      const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
+                      if (closedTrades.length === 0) return 'text-gray-400';
+                      const avgPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length;
+                      return avgPnL >= 0 ? 'text-emerald-500' : 'text-red-500';
+                    })()}`}>
+                      {(() => {
+                        const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
+                        if (closedTrades.length === 0) return '—';
+                        const avgPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length;
+                        return `${avgPnL >= 0 ? '+' : ''}${avgPnL.toFixed(1)}%`;
+                      })()}
+                    </span>
+                  </div>
+                  <div className="h-10">
+                    {(() => {
+                      const chartData = recentOutcomes
+                        .filter(o => o.unrealizedPnL !== undefined)
+                        .slice(0, 10)
+                        .reverse()
+                        .map((o, i) => ({
+                          name: o.symbol,
+                          pnl: o.unrealizedPnL || 0,
+                        }));
 
-            {/* Profitability Ring */}
-            <PremiumMetricRing
-              value={(() => {
-                const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
-                if (closedTrades.length === 0) return 0;
-                const totalPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0);
-                return totalPnL / closedTrades.length;
-              })()}
-              label="Profit"
-              description="Average return per completed trade"
-              icon={TrendingUp}
-              size={150}
-              gradientFrom={(() => {
-                const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
-                if (closedTrades.length === 0) return '#64748b';
-                const avgPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length;
-                return avgPnL >= 0 ? '#22c55e' : '#ef4444';
-              })()}
-              gradientTo={(() => {
-                const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
-                if (closedTrades.length === 0) return '#94a3b8';
-                const avgPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length;
-                return avgPnL >= 0 ? '#4ade80' : '#f87171';
-              })()}
-              glowColor={(() => {
-                const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
-                if (closedTrades.length === 0) return '#64748b';
-                const avgPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length;
-                return avgPnL >= 0 ? '#22c55e' : '#ef4444';
-              })()}
-              hasData={recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect').length > 0}
-              isProfit={true}
-            />
-          </div>
+                      if (chartData.length < 2) {
+                        return (
+                          <div className="h-full flex items-center justify-center text-xs text-gray-400">
+                            No data yet
+                          </div>
+                        );
+                      }
 
-          {/* Bottom Stats Row */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 transition-colors group">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <BarChart3 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                      const isPositive = chartData[chartData.length - 1]?.pnl >= 0;
+
+                      return (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsLineChart data={chartData}>
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                              }}
+                              formatter={(value: number) => [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, 'P/L']}
+                              labelFormatter={(label) => label}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="pnl"
+                              stroke={isPositive ? '#10b981' : '#ef4444'}
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                          </RechartsLineChart>
+                        </ResponsiveContainer>
+                      );
+                    })()}
+                  </div>
                 </div>
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{platformStats?.platform.totalAnalyses ?? 0}</div>
-                  <div className="text-xs text-gray-500 dark:text-slate-500">Total Analyses</div>
+
+                {/* Total Analyses */}
+                <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10">
+                  <div className="flex items-center gap-2 mb-1">
+                    <BarChart3 className="w-4 h-4 text-purple-500" />
+                    <span className="text-xs text-gray-500 dark:text-slate-400">Total</span>
+                  </div>
+                  <div className="text-xl font-bold text-gray-900 dark:text-white">
+                    {platformStats?.platform.totalAnalyses ?? 0}
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 transition-colors group">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Activity className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+
+                {/* Weekly Analyses */}
+                <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Activity className="w-4 h-4 text-cyan-500" />
+                    <span className="text-xs text-gray-500 dark:text-slate-400">This Week</span>
+                  </div>
+                  <div className="text-xl font-bold text-gray-900 dark:text-white">
+                    {platformStats?.platform.weeklyAnalyses ?? 0}
+                  </div>
                 </div>
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{platformStats?.platform.weeklyAnalyses ?? 0}</div>
-                  <div className="text-xs text-gray-500 dark:text-slate-500">This Week</div>
+
+                {/* Sample Size */}
+                <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10">
+                  <div className="flex items-center gap-2 mb-1">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    <span className="text-xs text-gray-500 dark:text-slate-400">Verified</span>
+                  </div>
+                  <div className="text-xl font-bold text-gray-900 dark:text-white">
+                    {platformStats?.accuracy.sampleSize ?? 0}
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 transition-colors group">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{credits}</div>
-                  <div className="text-xs text-gray-500 dark:text-slate-500">My Credits</div>
+
+                {/* My Credits */}
+                <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    <span className="text-xs text-gray-500 dark:text-slate-400">Credits</span>
+                  </div>
+                  <div className="text-xl font-bold text-gray-900 dark:text-white">
+                    {credits}
+                  </div>
                 </div>
               </div>
             </div>
