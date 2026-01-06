@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CoinIcon } from '../../../components/common/CoinIcon';
+import { TradePlanChart } from '../../../components/charts/TradePlanChart';
 import {
   FileText,
   Download,
@@ -877,7 +878,7 @@ export default function ReportsPage() {
                 <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-slate-900/80 rounded text-xs font-medium text-blue-400">
                   5 Minutes
                 </div>
-                <TradingViewChart
+                <TradePlanChart
                   symbol={chartModal.report.symbol}
                   interval="5"
                   tradePlan={{
@@ -897,7 +898,7 @@ export default function ReportsPage() {
                 <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-slate-900/80 rounded text-xs font-medium text-purple-400">
                   15 Minutes
                 </div>
-                <TradingViewChart
+                <TradePlanChart
                   symbol={chartModal.report.symbol}
                   interval="15"
                   tradePlan={{
@@ -917,7 +918,7 @@ export default function ReportsPage() {
                 <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-slate-900/80 rounded text-xs font-medium text-amber-400">
                   1 Hour
                 </div>
-                <TradingViewChart
+                <TradePlanChart
                   symbol={chartModal.report.symbol}
                   interval="60"
                   tradePlan={{
@@ -937,7 +938,7 @@ export default function ReportsPage() {
                 <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-slate-900/80 rounded text-xs font-medium text-emerald-400">
                   4 Hours
                 </div>
-                <TradingViewChart
+                <TradePlanChart
                   symbol={chartModal.report.symbol}
                   interval="240"
                   tradePlan={{
