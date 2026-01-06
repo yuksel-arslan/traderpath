@@ -699,25 +699,56 @@ export default function DashboardPage() {
 
                 {/* RIGHT COLUMN: Profit Trend + Credits (full height) */}
                 <div className="flex-1 flex gap-3 min-h-[140px]">
-                  {/* Premium Profit Sparkline - Dual Color */}
+                  {/* Premium Profit Sparkline - Daily P&L for 1 Week */}
                   {(() => {
-                    const chartData = recentOutcomes
-                      .filter(o => o.unrealizedPnL !== undefined)
-                      .slice(0, 10)
-                      .reverse()
-                      .map((o) => ({
-                        name: o.symbol,
-                        pnl: o.unrealizedPnL || 0,
-                        positive: Math.max(0, o.unrealizedPnL || 0),
-                        negative: Math.min(0, o.unrealizedPnL || 0),
-                      }));
+                    // Generate last 7 days
+                    const days: string[] = [];
+                    const dayLabels: string[] = [];
+                    for (let i = 6; i >= 0; i--) {
+                      const d = new Date();
+                      d.setDate(d.getDate() - i);
+                      days.push(d.toISOString().split('T')[0]);
+                      dayLabels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
+                    }
 
-                    const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
-                    const avgPnL = closedTrades.length > 0
-                      ? closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length
+                    // Group trades by date and calculate daily P&L
+                    const dailyPnL: Record<string, number[]> = {};
+                    days.forEach(day => { dailyPnL[day] = []; });
+
+                    recentOutcomes
+                      .filter(o => o.unrealizedPnL !== undefined && o.createdAt)
+                      .forEach(o => {
+                        const tradeDate = new Date(o.createdAt).toISOString().split('T')[0];
+                        if (dailyPnL[tradeDate]) {
+                          dailyPnL[tradeDate].push(o.unrealizedPnL || 0);
+                        }
+                      });
+
+                    const chartData = days.map((day, i) => {
+                      const trades = dailyPnL[day];
+                      const avgPnl = trades.length > 0
+                        ? trades.reduce((sum, v) => sum + v, 0) / trades.length
+                        : 0;
+                      return {
+                        name: dayLabels[i],
+                        date: day,
+                        pnl: avgPnl,
+                        positive: Math.max(0, avgPnl),
+                        negative: Math.min(0, avgPnl),
+                        count: trades.length,
+                      };
+                    });
+
+                    const weekTrades = recentOutcomes.filter(o => {
+                      if (!o.createdAt || o.unrealizedPnL === undefined) return false;
+                      const tradeDate = new Date(o.createdAt).toISOString().split('T')[0];
+                      return days.includes(tradeDate);
+                    });
+                    const avgPnL = weekTrades.length > 0
+                      ? weekTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / weekTrades.length
                       : 0;
                     const isPositive = avgPnL >= 0;
-                    const hasData = chartData.length >= 2;
+                    const hasData = weekTrades.length >= 1;
 
                     return (
                       <div className="flex-1 relative overflow-hidden rounded-xl p-4 flex flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100/50 dark:from-slate-800/50 dark:via-slate-800/30 dark:to-slate-900/50 border border-slate-200 dark:border-slate-700/50">
@@ -730,7 +761,7 @@ export default function DashboardPage() {
                             <div className="p-1.5 rounded-lg bg-slate-200/80 dark:bg-slate-700/50">
                               <LineChart className="w-4 h-4 text-slate-600 dark:text-slate-300" />
                             </div>
-                            <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">Profit Trend</span>
+                            <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">Weekly P&L</span>
                           </div>
                           <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full ${
                             isPositive
@@ -777,20 +808,28 @@ export default function DashboardPage() {
                                     padding: '10px 14px',
                                     boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
                                   }}
-                                  formatter={(value: number, name: string) => {
-                                    if (name === 'positive' || name === 'negative') {
-                                      const v = name === 'positive' ? value : value;
-                                      if (v === 0) return null;
-                                      return [
-                                        <span key="v" style={{ color: v >= 0 ? '#10b981' : '#ef4444', fontWeight: 700 }}>
-                                          {v >= 0 ? '+' : ''}{v.toFixed(1)}%
-                                        </span>,
-                                        ''
-                                      ];
-                                    }
-                                    return null;
+                                  content={({ active, payload }) => {
+                                    if (!active || !payload || !payload[0]) return null;
+                                    const data = payload[0].payload;
+                                    const pnl = data.pnl;
+                                    const isPos = pnl >= 0;
+                                    return (
+                                      <div style={{
+                                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                        borderRadius: '12px',
+                                        padding: '10px 14px',
+                                        boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                                      }}>
+                                        <div style={{ color: '#fff', fontWeight: 600, marginBottom: '4px' }}>{data.name}</div>
+                                        <div style={{ color: isPos ? '#10b981' : '#ef4444', fontWeight: 700, fontSize: '16px' }}>
+                                          {data.count === 0 ? '—' : `${isPos ? '+' : ''}${pnl.toFixed(1)}%`}
+                                        </div>
+                                        <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '2px' }}>
+                                          {data.count} trade{data.count !== 1 ? 's' : ''}
+                                        </div>
+                                      </div>
+                                    );
                                   }}
-                                  labelFormatter={(label) => <span style={{ color: '#fff', fontWeight: 600 }}>{label}</span>}
                                   cursor={{ stroke: '#64748b', strokeWidth: 1, strokeDasharray: '4 4' }}
                                 />
                                 {/* Positive area - Green */}
