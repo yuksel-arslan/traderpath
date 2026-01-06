@@ -305,12 +305,12 @@ export default function DashboardPage() {
       }
 
       // Fetch all data in parallel
-      const [platformRes, statsRes, performanceRes, creditsRes] = await Promise.all([
+      const [platformRes, statsRes, reportsRes, creditsRes] = await Promise.all([
         fetch('/api/analysis/platform-stats'),
         fetch('/api/analysis/statistics', {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch('/api/analysis/performance', {
+        fetch('/api/reports?limit=10&includeExpired=true', {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch('/api/user/credits', {
@@ -330,36 +330,33 @@ export default function DashboardPage() {
         setUserStats(data);
       }
 
-      // Process performance/outcomes
-      if (performanceRes.ok) {
-        const data = await performanceRes.json();
-        console.log('Performance API response:', data);
-        console.log('recentOutcomes from API:', data.recentOutcomes);
-        const outcomes = (data.recentOutcomes || []).map((o: any) => ({
-          id: o.id || `outcome-${Math.random()}`,
-          symbol: o.symbol,
-          verdict: o.verdict,
-          score: 7 + Math.random() * 2,
-          outcome: o.outcome || 'pending', // API returns null for active trades
-          priceChange: o.priceChange,
-          createdAt: o.date,
-          expiresAt: o.expiresAt,
-          isExpired: o.isExpired,
-          hoursRemaining: o.hoursRemaining,
-          // Live tracking fields
-          direction: o.direction,
-          entryPrice: o.entryPrice,
-          currentPrice: o.currentPrice,
-          unrealizedPnL: o.unrealizedPnL,
-          stopLoss: o.stopLoss,
-          takeProfit1: o.takeProfit1,
-          takeProfit2: o.takeProfit2,
-          takeProfit3: o.takeProfit3,
+      // Process reports for live tracking outcomes
+      if (reportsRes.ok) {
+        const data = await reportsRes.json();
+        console.log('Reports API response:', data);
+        const reports = data.data?.reports || [];
+        const outcomes = reports.map((r: any) => ({
+          id: r.id,
+          symbol: r.symbol,
+          verdict: r.verdict,
+          score: r.score || 7,
+          outcome: r.outcome || 'pending',
+          priceChange: r.unrealizedPnL,
+          createdAt: new Date(r.generatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          expiresAt: r.expiresAt,
+          direction: r.direction,
+          entryPrice: r.entryPrice,
+          currentPrice: r.currentPrice,
+          unrealizedPnL: r.unrealizedPnL,
+          stopLoss: r.stopLoss,
+          takeProfit1: r.takeProfit1,
+          takeProfit2: r.takeProfit2,
+          takeProfit3: r.takeProfit3,
         }));
-        console.log('Mapped outcomes:', outcomes);
+        console.log('Mapped outcomes from reports:', outcomes);
         setRecentOutcomes(outcomes);
       } else {
-        console.error('Performance API failed:', performanceRes.status, performanceRes.statusText);
+        console.error('Reports API failed:', reportsRes.status, reportsRes.statusText);
       }
 
       // Process credits
