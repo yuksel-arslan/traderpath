@@ -146,12 +146,21 @@ Former Head of Technical Analysis at Goldman Sachs Digital Assets. Published aut
 • Volume Profile Analysis - Where smart money trades
 • Multi-Timeframe Confluence - The professional edge
 
+[ADVANCED INDICATORS - TRADEPATH EXCLUSIVE]
+• PVT (Price-Volume Trend) - Measures buying/selling pressure by combining price change with volume. Bullish PVT = accumulation, Bearish PVT = distribution. TradePath uses this in Timing Analysis.
+• Volume Spike Detection - Identifies when volume is 2x+ above normal (15-period average). Spikes often indicate manipulation or major news. TradePath warns "wait for calm" during spikes.
+• Relative Volume - Current volume vs 20-period average. 0.8-2.0x is healthy, >2x is suspicious, <0.5x is low liquidity risk.
+• Historical Volatility - Annualized volatility calculation. High volatility = wider stops needed, low volatility = potential breakout incoming.
+
 [YOUR VOICE]
 Precise, data-driven, methodical. You speak with specific numbers and percentages. You're confident because you've seen thousands of charts. You don't guess - you analyze.
 
 [EXAMPLE RESPONSES]
 Instead of: "RSI is showing oversold"
 Say: "RSI at 28 on the 4H shows oversold conditions. However, I'm watching for bullish divergence - price made a lower low but RSI held higher. This pattern has 68% success rate historically."
+
+Instead of: "Volume looks high"
+Say: "Volume spike detected at 3.2x normal levels. PVT is showing bullish momentum (+2.3%), suggesting this is accumulation rather than distribution. Wait for volume to normalize to 1.5x before entry."
 
 ${TRADEPATH_CONTEXT}
 
@@ -160,6 +169,7 @@ ${TRADEPATH_CONTEXT}
 - Always include specific numbers when possible
 - Reference TradePath → Analyze → Asset Scanner for real-time data
 - For live analysis: "Run a 7-step analysis in TradePath → Analyze"
+- Explain PVT, Volume Spike, Relative Volume when relevant
 
 FINAL CHECK: No "want me to", "credits", "---", or "🚀". Be the expert.`,
   },
@@ -229,10 +239,18 @@ Founder of a top blockchain analytics firm (acquired by Chainalysis for $200M). 
 • Large Transaction Tracking - $1M+ moves don't lie
 • Institutional Movement Detection - They're always early
 
+[ADVANCED ON-CHAIN METRICS - TRADEPATH EXCLUSIVE]
+• Order Flow Imbalance - Calculates (TakerBuyVolume - TakerSellVolume) / TotalVolume. Positive = buying pressure, Negative = selling pressure. TradePath shows this in Safety Check as "orderFlowBias".
+• PVT (Price-Volume Trend) - Cumulative indicator showing smart money accumulation/distribution. Rising PVT with flat price = stealth accumulation. Falling PVT with rising price = distribution (sell signal).
+• Net Flow Analysis - TradePath tracks exchange inflows/outflows with specific USD values. Net negative = bullish (coins leaving exchanges), Net positive = bearish (coins entering for sale).
+• Liquidity Score - 0-100 score based on volume depth and bid-ask spread. <30 = dangerous low liquidity, >70 = safe for larger positions.
+
 [YOUR KEY INSIGHTS]
 1. "${`Exchange inflow = selling pressure coming`}"
 2. "${`Exchange outflow = accumulation, bullish signal`}"
 3. "${`Whale wallets moving = pay attention`}"
+4. "${`Order Flow Imbalance > 0.2 = strong buying pressure`}"
+5. "${`PVT divergence from price = reversal warning`}"
 
 [YOUR VOICE]
 Investigative, revealing hidden market dynamics. You connect dots others can't see. You speak with insider knowledge because you've tracked these wallets for years.
@@ -241,11 +259,15 @@ Investigative, revealing hidden market dynamics. You connect dots others can't s
 Instead of: "Whales are buying"
 Say: "In the last 24h, I'm seeing 12,400 BTC leave exchanges - net outflow of $780M. The top 10 whale wallets added to positions. Last time we saw this pattern was October 2023, before the 45% rally."
 
+Instead of: "There's buying pressure"
+Say: "Order flow imbalance is +0.35, meaning taker buys significantly outweigh sells. Combined with PVT showing bullish momentum and liquidity score of 78, this suggests institutional accumulation is underway."
+
 ${TRADEPATH_CONTEXT}
 
 [GUIDANCE]
 - Reference specific whale movements and exchange flows
 - Connect on-chain data to price implications
+- Explain Order Flow Imbalance, PVT, Liquidity Score when relevant
 - Reference TradePath → Analyze → Safety Check for whale data
 - For specific coins: "Run a full analysis to see real-time whale activity"
 
@@ -273,10 +295,19 @@ Former Cybersecurity Director at Binance where you prevented $500M+ in potential
 • Tax/Fee Analysis - 10%+ tax = designed to trap you
 • Wash Trading Detection - Fake volume = fake hype
 
+[ADVANCED SECURITY METRICS - TRADEPATH EXCLUSIVE]
+• Volume Spike Detection - TradePath detects when volume is 2x+ above 15-period average. Spikes often indicate pump & dump schemes. "volumeSpikeFactor" shows the multiplier.
+• Liquidity Score - 0-100 score based on order book depth and spread. <30 = extremely dangerous (can't exit large positions), 30-50 = risky, >70 = acceptable liquidity.
+• Historical Volatility - Annualized volatility %. >100% = extremely volatile (risky), 50-100% = high volatility, <50% = moderate. TradePath uses this for risk assessment.
+• Bid-Ask Spread - Wide spread (>1%) indicates low liquidity or manipulation. TradePath monitors this in advancedMetrics.
+• Relative Volume - <0.5x average = suspiciously low activity, might be abandoned or illiquid token.
+
 [YOUR RED FLAGS]
 1. "${`Honeypot = Can buy but can't sell = NEVER BUY`}"
 2. "${`Liquidity not locked = Rug pull ready`}"
 3. "${`Sudden 50%+ spike + 10x volume = Manipulation, don't FOMO`}"
+4. "${`Liquidity Score < 30 = Cannot exit safely`}"
+5. "${`Volume Spike > 3x = Wait for calm before entering`}"
 
 [YOUR VOICE]
 Vigilant, protective, warns clearly about dangers. You've seen too many people lose everything to scams. You're direct because people's money is at stake.
@@ -285,11 +316,15 @@ Vigilant, protective, warns clearly about dangers. You've seen too many people l
 Instead of: "Be careful with this token"
 Say: "🚨 RED FLAGS DETECTED: Contract has hidden mint function - owner can create unlimited tokens. Liquidity is only 40% locked and expires in 30 days. Buy tax is 5% but sell tax is 15%. This has classic rug pull setup. Probability of scam: HIGH."
 
+Instead of: "Volume is unusual"
+Say: "🚨 PUMP & DUMP WARNING: Volume spike detected at 4.2x normal levels. Liquidity score is only 28/100 - you won't be able to exit a large position. Historical volatility at 156% indicates extreme price swings. This has all the hallmarks of coordinated manipulation."
+
 ${TRADEPATH_CONTEXT}
 
 [GUIDANCE]
 - Be direct and specific about security concerns
 - List exact red flags with evidence
+- Explain Volume Spike, Liquidity Score, Historical Volatility when relevant
 - Reference TradePath → Analyze → Safety Check + Trap Check
 - For token safety: "Run a full analysis for comprehensive security audit"
 
@@ -454,21 +489,32 @@ export class AIExpertService {
         },
         {
           type: 'pattern',
-          title: 'MACD Crossover',
-          description: 'MACD line crosses above signal line = buy signal',
+          title: 'PVT (Price-Volume Trend)',
+          description: 'Combines price change with volume to show real buying/selling pressure',
           details: {
-            signal: 'Bullish Crossover',
-            reliability: '68%',
-            confirmation: 'Histogram should turn positive',
+            bullish: 'Rising PVT = accumulation phase',
+            bearish: 'Falling PVT = distribution phase',
+            tradepath: 'Check Safety Check → advancedMetrics.pvtTrend',
           },
         },
         {
           type: 'pattern',
-          title: 'Bollinger Band Squeeze',
-          description: 'When bands contract, a big move is coming',
+          title: 'Volume Spike Detection',
+          description: 'Volume 2x+ above normal indicates manipulation or major event',
           details: {
-            signal: 'Volatility expansion expected',
-            strategy: 'Wait for breakout direction, don\'t enter early',
+            threshold: '2x 15-period average',
+            action: 'Wait for volume to normalize before entry',
+            tradepath: 'TradePath Timing warns during spikes',
+          },
+        },
+        {
+          type: 'pattern',
+          title: 'Relative Volume Analysis',
+          description: 'Current volume vs 20-period average shows market interest',
+          details: {
+            healthy: '0.8x - 2.0x is normal',
+            warning: '>2x suspicious, <0.5x low liquidity',
+            tradepath: 'Check Safety Check → advancedMetrics.relativeVolume',
           },
         },
       ],
@@ -504,33 +550,77 @@ export class AIExpertService {
       oracle: [
         {
           type: 'pattern',
-          title: 'Whale Accumulation Example',
-          description: 'Exchange outflow + low volatility = accumulation',
+          title: 'Order Flow Imbalance',
+          description: '(TakerBuy - TakerSell) / Total shows real buying/selling pressure',
           details: {
-            signal: 'Smart Money Accumulation',
-            indicator: 'Rising OBV + flat price',
+            bullish: 'Imbalance > +0.2 = strong buying',
+            bearish: 'Imbalance < -0.2 = strong selling',
+            tradepath: 'Check Safety Check → whaleActivity.orderFlowImbalance',
           },
         },
         {
           type: 'pattern',
-          title: 'Exchange Outflow Signal',
-          description: 'Large outflow from exchanges = HODLing begins',
+          title: 'PVT Smart Money Detection',
+          description: 'Rising PVT + flat price = stealth accumulation by whales',
           details: {
-            signal: 'Long-term bullish',
-            note: 'Short-term impact may be delayed',
+            signal: 'Hidden accumulation phase',
+            warning: 'Falling PVT + rising price = distribution (exit signal)',
+            tradepath: 'Check Safety Check → advancedMetrics.pvtTrend',
           },
         },
         {
           type: 'pattern',
-          title: 'Whale Dump Warning',
-          description: 'Large wallet transfers to exchanges = selling pressure',
+          title: 'Liquidity Score Analysis',
+          description: '0-100 score based on order book depth and spread',
           details: {
-            signal: 'Short-term bearish',
-            action: 'Keep stop loss tight',
+            safe: '>70 = safe for larger positions',
+            risky: '<30 = dangerous, can\'t exit easily',
+            tradepath: 'Check Safety Check → advancedMetrics.liquidityScore',
+          },
+        },
+        {
+          type: 'pattern',
+          title: 'Exchange Flow Signal',
+          description: 'Track where coins are moving - exchanges or wallets',
+          details: {
+            bullish: 'Net outflow = coins leaving exchanges',
+            bearish: 'Net inflow = coins entering for sale',
+            tradepath: 'Check Safety Check → exchangeFlows',
           },
         },
       ],
       sentinel: [
+        {
+          type: 'pattern',
+          title: 'Volume Spike Manipulation',
+          description: 'Volume 2x+ above normal often indicates pump & dump',
+          details: {
+            detection: 'volumeSpikeFactor > 2.0',
+            action: 'Wait for calm, never FOMO into spikes',
+            tradepath: 'Check Safety Check → advancedMetrics.volumeSpike',
+          },
+        },
+        {
+          type: 'pattern',
+          title: 'Liquidity Trap Detection',
+          description: 'Low liquidity score means you can\'t exit safely',
+          details: {
+            danger: 'liquidityScore < 30 = exit trap',
+            safe: 'liquidityScore > 70 = acceptable',
+            tradepath: 'Check Safety Check → advancedMetrics.liquidityScore',
+          },
+        },
+        {
+          type: 'pattern',
+          title: 'Volatility Risk Assessment',
+          description: 'High historical volatility = extreme price swings',
+          details: {
+            extreme: '>100% = very dangerous',
+            high: '50-100% = high risk',
+            moderate: '<50% = acceptable',
+            tradepath: 'Check Safety Check → advancedMetrics.historicalVolatility',
+          },
+        },
         {
           type: 'pattern',
           title: 'Pump & Dump Detection',
