@@ -774,103 +774,183 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {/* Steps - Horizontal Scroll Row */}
-          <div className="overflow-x-auto -mx-6 md:-mx-8 px-6 md:px-8 pb-2">
-            <div className="flex gap-4 min-w-max">
-              {methodologySteps.map((step) => {
-                const Icon = step.icon;
-                const accuracyKey = {
-                  1: 'marketPulse',
-                  2: 'assetScanner',
-                  3: 'safetyCheck',
-                  4: 'timing',
-                  5: 'tradePlan',
-                  6: 'trapCheck',
-                  7: 'finalVerdict',
-                }[step.step] as keyof typeof platformStats.accuracy.stepRates;
+          {/* Steps - Hexagonal Pipeline Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+            {methodologySteps.map((step, index) => {
+              const Icon = step.icon;
+              const accuracyKey = {
+                1: 'marketPulse',
+                2: 'assetScanner',
+                3: 'safetyCheck',
+                4: 'timing',
+                5: 'tradePlan',
+                6: 'trapCheck',
+                7: 'finalVerdict',
+              }[step.step] as keyof typeof platformStats.accuracy.stepRates;
 
-                const accuracy = platformStats?.accuracy.stepRates[accuracyKey] ?? 0;
-                const stepHasData = hasRealData && accuracy > 0;
+              const accuracy = platformStats?.accuracy.stepRates[accuracyKey] ?? 0;
+              const stepHasData = hasRealData && accuracy > 0;
 
-                return (
-                  <div
-                    key={step.step}
-                    className="group relative w-[160px] flex-shrink-0"
-                  >
-                    <div className={cn(
-                      "relative p-4 rounded-xl border transition-all duration-300 h-full",
-                      "bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm",
-                      "border-gray-200 dark:border-white/10",
-                      "hover:border-gray-300 dark:hover:border-white/20 hover:shadow-lg"
-                    )}>
-                      {/* Step Number Badge */}
-                      <div className={cn(
-                        "absolute -top-2 -left-2 w-7 h-7 rounded-full flex items-center justify-center shadow-lg",
-                        "bg-gradient-to-br", step.bgColor.replace('bg-', 'from-').replace('/10', ''), "to-transparent",
-                        "border-2 border-white dark:border-slate-800"
-                      )}>
-                        <span className={cn("text-xs font-bold", step.color)}>{step.step}</span>
-                      </div>
+              // Dynamic color based on accuracy level
+              const getScoreColor = () => {
+                if (!stepHasData) return { ring: '#64748b', glow: 'rgba(100, 116, 139, 0.3)', text: 'text-gray-400 dark:text-slate-500' };
+                if (accuracy >= 80) return { ring: '#22c55e', glow: 'rgba(34, 197, 94, 0.4)', text: 'text-green-500 dark:text-green-400' };
+                if (accuracy >= 60) return { ring: '#eab308', glow: 'rgba(234, 179, 8, 0.4)', text: 'text-yellow-500 dark:text-yellow-400' };
+                return { ring: '#ef4444', glow: 'rgba(239, 68, 68, 0.4)', text: 'text-red-500 dark:text-red-400' };
+              };
 
-                      {/* Icon with glow */}
-                      <div className="relative mb-3">
-                        <div className={cn("absolute inset-0 blur-lg opacity-30 rounded-full", step.bgColor)} />
-                        <Icon className={cn("w-8 h-8 relative group-hover:scale-110 transition-transform", step.color)} />
-                      </div>
+              const scoreColor = getScoreColor();
+              const circumference = 2 * Math.PI * 28; // radius = 28
+              const offset = circumference - ((stepHasData ? accuracy : 0) / 100) * circumference;
 
-                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">{step.name}</h3>
-                      <p className="text-xs text-gray-500 dark:text-slate-400 mb-3 line-clamp-2">{step.description}</p>
+              return (
+                <div
+                  key={step.step}
+                  className="group relative"
+                >
+                  <div className={cn(
+                    "relative p-4 rounded-2xl border transition-all duration-500 h-full flex flex-col items-center text-center",
+                    "bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm",
+                    "border-gray-200 dark:border-white/10",
+                    "hover:border-gray-300 dark:hover:border-white/20 hover:shadow-xl hover:-translate-y-1"
+                  )}>
+                    {/* Connector Line (hidden on first and mobile) */}
+                    {index > 0 && (
+                      <div className="hidden xl:block absolute -left-3 top-1/2 w-3 h-0.5 bg-gradient-to-r from-transparent via-gray-300 dark:via-slate-600 to-gray-300 dark:to-slate-600" />
+                    )}
 
-                      {/* Accuracy Bar */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-gray-400 dark:text-slate-500">Accuracy</span>
-                          {stepHasData ? (
-                            <span className={cn("font-semibold", step.color)}>{accuracy.toFixed(1)}%</span>
-                          ) : (
-                            <span className="text-gray-400 dark:text-slate-600">—</span>
-                          )}
-                        </div>
-                        <div className="h-1.5 bg-gray-200 dark:bg-slate-700/50 rounded-full overflow-hidden">
-                          <div
-                            className={cn("h-full rounded-full transition-all duration-1000", stepHasData ? step.color.replace('text-', 'bg-') : 'bg-gray-300 dark:bg-slate-600')}
-                            style={{ width: stepHasData ? `${accuracy}%` : '0%' }}
+                    {/* Radial Score Gauge - The Star of the Show */}
+                    <div className="relative w-20 h-20 mb-3">
+                      {/* Outer Glow Effect */}
+                      {stepHasData && (
+                        <div
+                          className="absolute inset-0 rounded-full blur-xl animate-pulse"
+                          style={{ backgroundColor: scoreColor.glow }}
+                        />
+                      )}
+
+                      {/* SVG Gauge */}
+                      <svg className="w-20 h-20 transform -rotate-90 relative z-10" viewBox="0 0 64 64">
+                        {/* Background Circle */}
+                        <circle
+                          cx="32"
+                          cy="32"
+                          r="28"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          className="text-gray-200 dark:text-slate-700/50"
+                        />
+
+                        {/* Progress Arc */}
+                        <circle
+                          cx="32"
+                          cy="32"
+                          r="28"
+                          fill="none"
+                          stroke={scoreColor.ring}
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeDasharray={circumference}
+                          strokeDashoffset={offset}
+                          style={{
+                            transition: 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                            filter: stepHasData ? `drop-shadow(0 0 6px ${scoreColor.glow})` : 'none'
+                          }}
+                        />
+
+                        {/* Decorative Dots */}
+                        {stepHasData && [0, 90, 180, 270].map((angle) => (
+                          <circle
+                            key={angle}
+                            cx={32 + 28 * Math.cos((angle - 90) * Math.PI / 180)}
+                            cy={32 + 28 * Math.sin((angle - 90) * Math.PI / 180)}
+                            r="1.5"
+                            fill={scoreColor.ring}
+                            opacity="0.5"
                           />
-                        </div>
-                      </div>
-
-                      {/* Metrics Tags */}
-                      <div className="flex flex-wrap gap-1 mt-3">
-                        {step.metrics.slice(0, 2).map((metric) => (
-                          <span key={metric} className="px-1.5 py-0.5 bg-white/50 dark:bg-slate-800/50 rounded text-[10px] text-gray-500 dark:text-slate-400 border border-gray-200/50 dark:border-slate-700/50">
-                            {metric}
-                          </span>
                         ))}
-                        {step.metrics.length > 2 && (
-                          <span className="px-1.5 py-0.5 bg-white/50 dark:bg-slate-800/50 rounded text-[10px] text-gray-400 dark:text-slate-500">
-                            +{step.metrics.length - 2}
-                          </span>
-                        )}
+                      </svg>
+
+                      {/* Center Content */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+                        <Icon className={cn(
+                          "w-5 h-5 mb-0.5 transition-all duration-300 group-hover:scale-110",
+                          stepHasData ? step.color : "text-gray-400 dark:text-slate-500"
+                        )} />
+                        <span className={cn(
+                          "text-sm font-black tracking-tight",
+                          scoreColor.text
+                        )}>
+                          {stepHasData ? `${accuracy.toFixed(0)}%` : '—'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Step Badge */}
+                    <div className={cn(
+                      "absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shadow-lg",
+                      "bg-gradient-to-br border-2 border-white dark:border-slate-800",
+                      step.bgColor.replace('/10', '/90')
+                    )}>
+                      <span className="text-white drop-shadow">{step.step}</span>
+                    </div>
+
+                    {/* Step Name */}
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-xs mb-1 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                      {step.name}
+                    </h3>
+
+                    {/* Mini Metrics Row */}
+                    <div className="flex items-center gap-1 mt-auto">
+                      {step.metrics.slice(0, 2).map((metric, i) => (
+                        <div
+                          key={metric}
+                          className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-gray-300 to-gray-400 dark:from-slate-600 dark:to-slate-500"
+                          title={metric}
+                        />
+                      ))}
+                      {step.metrics.length > 2 && (
+                        <span className="text-[9px] text-gray-400 dark:text-slate-500">+{step.metrics.length - 2}</span>
+                      )}
+                    </div>
+
+                    {/* Hover Tooltip */}
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 translate-y-full opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-30">
+                      <div className="bg-gray-900 dark:bg-slate-700 text-white text-[10px] px-2 py-1 rounded-lg shadow-xl whitespace-nowrap">
+                        {step.description.slice(0, 50)}...
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
 
-          {/* Scroll indicator for mobile */}
-          <div className="flex justify-center mt-3 sm:hidden">
-            <div className="flex gap-1">
-              <ChevronRight className="w-4 h-4 text-gray-400 dark:text-slate-500 animate-pulse" />
-              <span className="text-xs text-gray-400 dark:text-slate-500">Scroll to see all steps</span>
+          {/* Legend Row */}
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-6 text-xs">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-green-500" />
+              <span className="text-gray-600 dark:text-slate-400">≥80% Excellent</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-yellow-500" />
+              <span className="text-gray-600 dark:text-slate-400">≥60% Good</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-red-500" />
+              <span className="text-gray-600 dark:text-slate-400">&lt;60% Needs Work</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-gray-400 dark:bg-slate-500" />
+              <span className="text-gray-600 dark:text-slate-400">No Data</span>
             </div>
           </div>
 
           {/* Mobile CTA */}
           <Link
             href="/analyze"
-            className="sm:hidden flex items-center justify-center gap-2 mt-4 px-4 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl font-semibold transition w-full shadow-lg shadow-cyan-500/25"
+            className="sm:hidden flex items-center justify-center gap-2 mt-6 px-4 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl font-semibold transition w-full shadow-lg shadow-cyan-500/25"
           >
             Start Analysis
             <ArrowRight className="w-4 h-4" />
