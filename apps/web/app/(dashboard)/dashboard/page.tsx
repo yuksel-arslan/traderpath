@@ -206,6 +206,177 @@ const methodologySteps = [
 // ===========================================
 // Helper Components
 // ===========================================
+
+// Premium Metric Ring with Glow Effects
+function PremiumMetricRing({
+  value,
+  label,
+  description,
+  icon: Icon,
+  size = 140,
+  gradientFrom,
+  gradientTo,
+  glowColor,
+  hasData = true,
+  isProfit = false,
+}: {
+  value: number;
+  label: string;
+  description: string;
+  icon: React.ElementType;
+  size?: number;
+  gradientFrom: string;
+  gradientTo: string;
+  glowColor: string;
+  hasData?: boolean;
+  isProfit?: boolean;
+}) {
+  const strokeWidth = 10;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const displayValue = isProfit ? Math.min(Math.abs(value), 100) : (hasData ? Math.min(value, 100) : 0);
+  const offset = circumference - (displayValue / 100) * circumference;
+  const uniqueId = `ring-${label.toLowerCase().replace(/\s/g, '-')}`;
+
+  return (
+    <div className="group relative flex flex-col items-center">
+      {/* Main Ring Container */}
+      <div
+        className="relative"
+        style={{ width: size, height: size }}
+      >
+        {/* Outer Glow */}
+        {hasData && (
+          <div
+            className="absolute inset-0 rounded-full opacity-30 blur-xl animate-pulse"
+            style={{
+              background: `radial-gradient(circle, ${glowColor} 0%, transparent 70%)`,
+            }}
+          />
+        )}
+
+        {/* SVG Ring */}
+        <svg className="transform -rotate-90 relative z-10" width={size} height={size}>
+          <defs>
+            {/* Gradient Definition */}
+            <linearGradient id={`gradient-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={gradientFrom} />
+              <stop offset="100%" stopColor={gradientTo} />
+            </linearGradient>
+
+            {/* Glow Filter */}
+            <filter id={`glow-${uniqueId}`} x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+
+            {/* Shimmer Pattern */}
+            <linearGradient id={`shimmer-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+              <stop offset="50%" stopColor="rgba(255,255,255,0.3)" />
+              <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+              <animate attributeName="x1" from="-100%" to="100%" dur="2s" repeatCount="indefinite" />
+              <animate attributeName="x2" from="0%" to="200%" dur="2s" repeatCount="indefinite" />
+            </linearGradient>
+          </defs>
+
+          {/* Background Track */}
+          <circle
+            className="text-slate-200 dark:text-slate-700/50"
+            strokeWidth={strokeWidth}
+            stroke="currentColor"
+            fill="transparent"
+            r={radius}
+            cx={size / 2}
+            cy={size / 2}
+          />
+
+          {/* Progress Ring with Gradient */}
+          {hasData && (
+            <circle
+              stroke={`url(#gradient-${uniqueId})`}
+              strokeWidth={strokeWidth}
+              strokeDasharray={circumference}
+              strokeDashoffset={offset}
+              strokeLinecap="round"
+              fill="transparent"
+              r={radius}
+              cx={size / 2}
+              cy={size / 2}
+              filter={`url(#glow-${uniqueId})`}
+              style={{
+                transition: 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            />
+          )}
+
+          {/* Shimmer Overlay */}
+          {hasData && (
+            <circle
+              stroke={`url(#shimmer-${uniqueId})`}
+              strokeWidth={strokeWidth}
+              strokeDasharray={circumference}
+              strokeDashoffset={offset}
+              strokeLinecap="round"
+              fill="transparent"
+              r={radius}
+              cx={size / 2}
+              cy={size / 2}
+              style={{
+                transition: 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                mixBlendMode: 'overlay',
+              }}
+            />
+          )}
+        </svg>
+
+        {/* Center Content */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+          {/* Icon */}
+          <Icon className={cn(
+            "w-5 h-5 mb-1 transition-transform group-hover:scale-110",
+            hasData ? "opacity-60" : "opacity-30"
+          )} style={{ color: hasData ? gradientFrom : '#64748b' }} />
+
+          {/* Value */}
+          {hasData ? (
+            <span className={cn(
+              "text-2xl font-black tracking-tight",
+              isProfit && value >= 0 ? "text-emerald-400" :
+              isProfit && value < 0 ? "text-red-400" :
+              "text-white"
+            )}>
+              {isProfit && value >= 0 ? '+' : ''}{value.toFixed(1)}%
+            </span>
+          ) : (
+            <span className="text-lg font-medium text-slate-500">—</span>
+          )}
+
+          {/* Label */}
+          <span className={cn(
+            "text-[10px] font-semibold uppercase tracking-widest mt-0.5",
+            hasData ? "text-slate-400" : "text-slate-600"
+          )}>
+            {label}
+          </span>
+        </div>
+      </div>
+
+      {/* Description - Shows on hover */}
+      <div className={cn(
+        "mt-3 text-center max-w-[140px] transition-all duration-300",
+        "opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0"
+      )}>
+        <p className="text-[10px] text-slate-500 leading-tight">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+// Legacy MetricRing for backward compatibility
 function MetricRing({
   value,
   label,
@@ -425,121 +596,151 @@ export default function DashboardPage() {
   return (
     <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-8">
 
-      {/* ===== SECTION 1: Platform Trust Header ===== */}
-      <div className="bg-white dark:bg-gradient-to-br dark:from-slate-800/80 dark:to-slate-900/80 rounded-2xl p-6 border border-gray-200 dark:border-slate-700/50 shadow-lg dark:shadow-xl dark:shadow-slate-900/50">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          {/* Left - Accuracy, Caution Rate & Profitability Display */}
-          <div className="flex items-center gap-6">
-            {/* Triple Rings - Performance Metrics */}
+      {/* ===== SECTION 1: Premium Platform Performance ===== */}
+      <div className="relative overflow-hidden rounded-3xl">
+        {/* Animated Background Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/10 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent" />
+
+        {/* Grid Pattern Overlay */}
+        <div className="absolute inset-0 opacity-5" style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)`,
+          backgroundSize: '50px 50px'
+        }} />
+
+        {/* Content */}
+        <div className="relative z-10 p-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
-              {/* Accuracy Ring - GO Signals */}
-              <MetricRing
-                value={platformStats?.accuracy.overall ?? 0}
-                label="Accuracy"
-                size={100}
-                strokeWidth={8}
-                color="text-emerald-400"
-                hasData={hasRealData}
-              />
-              {/* Caution Rate Ring - WAIT/AVOID Signals */}
-              <MetricRing
-                value={platformStats?.cautionRate?.rate ?? 0}
-                label="Caution"
-                size={100}
-                strokeWidth={8}
-                color="text-amber-400"
-                hasData={(platformStats?.cautionRate?.total ?? 0) > 0}
-              />
-              {/* Profitability Ring */}
-              <MetricRing
-                value={(() => {
-                  // Calculate average profitability from closed trades
-                  const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
-                  if (closedTrades.length === 0) return 0;
-                  const totalPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0);
-                  return totalPnL / closedTrades.length;
-                })()}
-                label="Profit"
-                size={100}
-                strokeWidth={8}
-                color={(() => {
-                  const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
-                  if (closedTrades.length === 0) return 'text-gray-400';
-                  const avgPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length;
-                  return avgPnL >= 0 ? 'text-green-400' : 'text-red-400';
-                })()}
-                hasData={recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect').length > 0}
-                isProfit={true}
-              />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Shield className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Platform Performance</h2>
-              </div>
-              <p className="text-gray-500 dark:text-slate-400 text-sm max-w-lg">
-                {hasRealData ? (
-                  <>
-                    <strong className="text-emerald-500">Accuracy</strong> = GO signal success rate •
-                    <strong className="text-amber-500"> Caution</strong> = WAIT/AVOID correctness •
-                    <strong className="text-green-500"> Profit</strong> = Avg. P/L per trade
-                  </>
-                ) : (
-                  <>Our 7-Step analysis system generates predictions using real market data. Start analyzing to see performance metrics.</>
-                )}
-              </p>
-              {platformStats?.accuracy.methodology && (
-                <div className="flex items-center gap-2 mt-2">
-                  <span className={cn(
-                    "px-2 py-0.5 rounded-full text-xs font-medium",
-                    platformStats.accuracy.methodology === 'outcome-verified'
-                      ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30'
-                      : 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30'
-                  )}>
-                    {platformStats.accuracy.methodology === 'outcome-verified'
-                      ? `Outcome Verified (${platformStats.accuracy.outcomeVerifiedCount ?? 0} analyses)`
-                      : 'Score Based Analysis'}
-                  </span>
-                </div>
-              )}
-              <div className="flex items-center gap-4 mt-3 flex-wrap">
-                <div className="flex items-center gap-1.5 text-sm">
-                  <Database className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-                  <span className="text-gray-600 dark:text-slate-300">{platformStats?.dataQuality.dataSourcesCount ?? 12} Data Sources</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-sm">
-                  <Activity className="w-4 h-4 text-purple-500 dark:text-purple-400" />
-                  <span className="text-gray-600 dark:text-slate-300">{platformStats?.dataQuality.indicatorsUsed ?? 47} Indicators</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-sm">
-                  <RefreshCw className="w-4 h-4 text-cyan-500 dark:text-cyan-400" />
-                  <span className="text-gray-600 dark:text-slate-300">Real-time</span>
+              <div className="relative">
+                <div className="absolute inset-0 bg-emerald-500/30 blur-lg rounded-full" />
+                <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                  <Shield className="w-6 h-6 text-white" />
                 </div>
               </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white tracking-tight">Platform Performance</h2>
+                <p className="text-slate-400 text-sm">Real-time verification from {platformStats?.accuracy.sampleSize ?? 0} completed trades</p>
+              </div>
             </div>
+            {platformStats?.accuracy.methodology === 'outcome-verified' && (
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs font-medium text-emerald-400">Live Tracking</span>
+              </div>
+            )}
           </div>
 
-          {/* Right - Quick Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-4 text-center border border-gray-100 dark:border-slate-700/50">
-              <Users className="w-5 h-5 text-blue-500 dark:text-blue-400 mx-auto mb-1" />
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{platformStats?.platform.totalUsers ?? 0}</div>
-              <div className="text-xs text-gray-500 dark:text-slate-400">Active Users</div>
+          {/* Triple Premium Rings */}
+          <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-16 mb-8">
+            {/* Accuracy Ring */}
+            <PremiumMetricRing
+              value={platformStats?.accuracy.overall ?? 0}
+              label="Accuracy"
+              description="GO signal success rate based on TP/SL hits"
+              icon={Target}
+              size={150}
+              gradientFrom="#10b981"
+              gradientTo="#34d399"
+              glowColor="#10b981"
+              hasData={hasRealData}
+            />
+
+            {/* Caution Rate Ring */}
+            <PremiumMetricRing
+              value={platformStats?.cautionRate?.rate ?? 0}
+              label="Caution"
+              description="WAIT/AVOID signals that correctly avoided losses"
+              icon={Shield}
+              size={150}
+              gradientFrom="#f59e0b"
+              gradientTo="#fbbf24"
+              glowColor="#f59e0b"
+              hasData={(platformStats?.cautionRate?.total ?? 0) > 0}
+            />
+
+            {/* Profitability Ring */}
+            <PremiumMetricRing
+              value={(() => {
+                const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
+                if (closedTrades.length === 0) return 0;
+                const totalPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0);
+                return totalPnL / closedTrades.length;
+              })()}
+              label="Profit"
+              description="Average return per completed trade"
+              icon={TrendingUp}
+              size={150}
+              gradientFrom={(() => {
+                const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
+                if (closedTrades.length === 0) return '#64748b';
+                const avgPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length;
+                return avgPnL >= 0 ? '#22c55e' : '#ef4444';
+              })()}
+              gradientTo={(() => {
+                const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
+                if (closedTrades.length === 0) return '#94a3b8';
+                const avgPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length;
+                return avgPnL >= 0 ? '#4ade80' : '#f87171';
+              })()}
+              glowColor={(() => {
+                const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
+                if (closedTrades.length === 0) return '#64748b';
+                const avgPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length;
+                return avgPnL >= 0 ? '#22c55e' : '#ef4444';
+              })()}
+              hasData={recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect').length > 0}
+              isProfit={true}
+            />
+          </div>
+
+          {/* Bottom Stats Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:border-white/20 transition-colors group">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Users className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white">{platformStats?.platform.totalUsers ?? 0}</div>
+                  <div className="text-xs text-slate-500">Active Users</div>
+                </div>
+              </div>
             </div>
-            <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-4 text-center border border-gray-100 dark:border-slate-700/50">
-              <BarChart3 className="w-5 h-5 text-emerald-500 dark:text-emerald-400 mx-auto mb-1" />
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{platformStats?.platform.totalAnalyses ?? 0}</div>
-              <div className="text-xs text-gray-500 dark:text-slate-400">Total Analyses</div>
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:border-white/20 transition-colors group">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <BarChart3 className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white">{platformStats?.platform.totalAnalyses ?? 0}</div>
+                  <div className="text-xs text-slate-500">Total Analyses</div>
+                </div>
+              </div>
             </div>
-            <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-4 text-center border border-gray-100 dark:border-slate-700/50">
-              <TrendingUp className="w-5 h-5 text-yellow-500 dark:text-yellow-400 mx-auto mb-1" />
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{platformStats?.platform.weeklyAnalyses ?? 0}</div>
-              <div className="text-xs text-gray-500 dark:text-slate-400">This Week</div>
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:border-white/20 transition-colors group">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Activity className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white">{platformStats?.platform.weeklyAnalyses ?? 0}</div>
+                  <div className="text-xs text-slate-500">This Week</div>
+                </div>
+              </div>
             </div>
-            <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-4 text-center border border-gray-100 dark:border-slate-700/50">
-              <Sparkles className="w-5 h-5 text-purple-500 dark:text-purple-400 mx-auto mb-1" />
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{credits}</div>
-              <div className="text-xs text-gray-500 dark:text-slate-400">My Credits</div>
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:border-white/20 transition-colors group">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Sparkles className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white">{credits}</div>
+                  <div className="text-xs text-slate-500">My Credits</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
