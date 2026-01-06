@@ -340,7 +340,7 @@ export default function DashboardPage() {
           symbol: o.symbol,
           verdict: o.verdict,
           score: 7 + Math.random() * 2,
-          outcome: o.outcome,
+          outcome: o.outcome || 'pending', // API returns null for active trades
           priceChange: o.priceChange,
           createdAt: o.date,
           expiresAt: o.expiresAt,
