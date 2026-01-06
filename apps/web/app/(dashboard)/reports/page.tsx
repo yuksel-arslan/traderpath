@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { CoinIcon } from '../../../components/common/CoinIcon';
 import {
   FileText,
   Download,
@@ -215,8 +216,9 @@ export default function ReportsPage() {
     );
 
   // Calculate report statistics
+  // Note: outcome can be null, 'pending', 'correct', or 'incorrect'
   const totalReports = pagination.total;
-  const activeReports = reports.filter(r => !r.outcome).length;
+  const activeReports = reports.filter(r => !r.outcome || r.outcome === 'pending').length;
   const closedReports = reports.filter(r => r.outcome === 'correct' || r.outcome === 'incorrect').length;
   const tpHits = reports.filter(r => r.outcome === 'correct').length;
   const slHits = reports.filter(r => r.outcome === 'incorrect').length;
@@ -364,6 +366,9 @@ export default function ReportsPage() {
       ) : (
         <div className="space-y-4">
           {filteredReports.map((report) => {
+            // Helper to check if report is active (outcome is null or 'pending')
+            const isActive = !report.outcome || report.outcome === 'pending';
+
             // Calculate proximity to TP/SL for dynamic background
             let bgIntensity = 5; // default
             let bgColor = 'blue'; // default for active
@@ -409,14 +414,14 @@ export default function ReportsPage() {
                 "border-2 rounded-lg p-4 hover:shadow-lg transition relative overflow-hidden",
                 report.outcome === 'correct' && "border-green-500/50",
                 report.outcome === 'incorrect' && "border-red-500/50",
-                !report.outcome && report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1 && (() => {
+                isActive && report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1 && (() => {
                   const isLong = report.direction === 'long';
                   const totalRange = isLong ? report.takeProfit1! - report.stopLoss! : report.stopLoss! - report.takeProfit1!;
                   const currentPos = isLong ? report.currentPrice! - report.stopLoss! : report.stopLoss! - report.currentPrice!;
                   const positionPercent = totalRange !== 0 ? (currentPos / totalRange) * 100 : 50;
                   return positionPercent >= 50 ? "border-green-500/50" : "border-red-500/50";
                 })(),
-                !report.outcome && !(report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1) && "border-blue-500/50"
+                isActive && !(report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1) && "border-blue-500/50"
               )}
               style={{
                 background: report.outcome === 'correct'
@@ -441,7 +446,7 @@ export default function ReportsPage() {
               }}
             >
               {/* Status Corner Ribbon */}
-              {!report.outcome && (
+              {isActive && (
                 <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden">
                   <div className="absolute top-3 -right-6 w-24 text-center py-0.5 bg-blue-500 text-white text-[10px] font-bold rotate-45 shadow-sm">
                     LIVE
@@ -465,9 +470,7 @@ export default function ReportsPage() {
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 {/* Report Info */}
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 via-amber-500 to-green-500 flex items-center justify-center text-white font-bold shrink-0">
-                    {report.symbol.slice(0, 2)}
-                  </div>
+                  <CoinIcon symbol={report.symbol} size={48} className="shrink-0" />
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold text-lg">{report.symbol}</h3>
@@ -499,7 +502,7 @@ export default function ReportsPage() {
                           SL HIT
                         </span>
                       )}
-                      {!report.outcome && (
+                      {isActive && (
                         <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 flex items-center gap-1.5 animate-pulse">
                           <span className="w-2 h-2 bg-blue-500 rounded-full animate-ping" />
                           <Timer className="w-3 h-3" />
@@ -562,7 +565,7 @@ export default function ReportsPage() {
                       </div>
 
                       {/* Distance to TP - only for active trades */}
-                      {report.takeProfit1 && !report.outcome && (() => {
+                      {report.takeProfit1 && isActive && (() => {
                         const current = report.currentPrice!;
                         const tp1 = report.takeProfit1!;
                         const isLong = report.direction === 'long';

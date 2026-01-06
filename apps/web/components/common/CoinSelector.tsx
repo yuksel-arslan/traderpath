@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ChevronDown, TrendingUp, Clock, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { CoinIcon } from './CoinIcon';
 
 // Coin data
 const ALL_COINS = [
@@ -122,7 +123,7 @@ export function CoinSelector() {
         >
           {selectedCoin ? (
             <div className="flex items-center gap-3">
-              <span className="text-2xl">{selectedCoin.icon}</span>
+              <CoinIcon symbol={selectedCoin.symbol} size={32} />
               <div className="text-left">
                 <div className="font-semibold">{selectedCoin.symbol}/USDT</div>
                 <div className="text-sm text-muted-foreground">{selectedCoin.name}</div>
@@ -180,7 +181,7 @@ export function CoinSelector() {
                         onClick={() => handleSelect(coin)}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/50 hover:bg-muted rounded-full text-sm transition-colors"
                       >
-                        <span>{coin.icon}</span>
+                        <CoinIcon symbol={coin.symbol} size={16} />
                         <span className="font-medium">{coin.symbol}</span>
                       </button>
                     ))}
@@ -205,7 +206,7 @@ export function CoinSelector() {
                           selectedCoin?.symbol === coin.symbol && "bg-primary/10 ring-1 ring-primary"
                         )}
                       >
-                        <span className="text-xl">{coin.icon}</span>
+                        <CoinIcon symbol={coin.symbol} size={28} />
                         <span className="text-xs font-medium">{coin.symbol}</span>
                       </button>
                     ))}
@@ -226,7 +227,7 @@ export function CoinSelector() {
                           selectedCoin?.symbol === coin.symbol && "bg-primary/10"
                         )}
                       >
-                        <span className="text-xl w-8 text-center">{coin.icon}</span>
+                        <CoinIcon symbol={coin.symbol} size={28} />
                         <div className="flex-1 text-left">
                           <div className="font-medium">{coin.symbol}</div>
                           <div className="text-xs text-muted-foreground">{coin.name}</div>

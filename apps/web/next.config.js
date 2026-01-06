@@ -14,7 +14,13 @@ const nextConfig = {
 
   // Allow images from external sources
   images: {
-    domains: ['lh3.googleusercontent.com', 'avatars.githubusercontent.com'],
+    domains: [
+      'lh3.googleusercontent.com',
+      'avatars.githubusercontent.com',
+      'raw.githubusercontent.com', // For cryptocurrency icons
+      'assets.coingecko.com',
+      'www.cryptocompare.com',
+    ],
   },
 
   // Webpack configuration for @react-pdf/renderer
