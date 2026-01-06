@@ -28,6 +28,49 @@ interface TradePlanData {
   resistance?: number[];
 }
 
+// Step result interfaces
+interface MarketPulseData {
+  btcTrend?: string;
+  btcDominance?: number;
+  marketRegime?: string;
+  fearGreedIndex?: number;
+  overallSentiment?: string;
+}
+
+interface AssetScannerData {
+  trend?: string;
+  trendStrength?: string;
+  rsiValue?: number;
+  macdSignal?: string;
+  overallSignal?: string;
+  volatility?: string;
+}
+
+interface SafetyCheckData {
+  overallRisk?: string;
+  pumpDumpRisk?: string;
+  whaleActivity?: string;
+  washTradingRisk?: string;
+  smartMoneyFlow?: string;
+}
+
+interface TimingData {
+  entryTiming?: string;
+  optimalEntry?: string;
+  entryConditions?: string[];
+  waitForEvents?: string[];
+}
+
+interface TrapCheckData {
+  bullTrapRisk?: string;
+  bearTrapRisk?: string;
+  liquidationZones?: string;
+  stopHuntRisk?: string;
+}
+
+// AllResults is Record<number, unknown> from AnalysisFlow
+type AllResultsData = Record<number, unknown>;
+
 interface FinalVerdictData {
   overallScore: number;
   verdict: 'go' | 'conditional_go' | 'wait' | 'avoid';
@@ -43,10 +86,10 @@ interface FinalVerdictData {
 interface FinalVerdictProps {
   data?: FinalVerdictData;
   symbol: string;
-  tradePlan?: TradePlanData;
+  allResults?: AllResultsData;
 }
 
-export function FinalVerdict({ data, symbol, tradePlan }: FinalVerdictProps) {
+export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
   const router = useRouter();
 
   if (!data) {
@@ -61,6 +104,14 @@ export function FinalVerdict({ data, symbol, tradePlan }: FinalVerdictProps) {
     );
   }
 
+  // Extract all step data from allResults
+  const marketPulse = allResults?.[1] as MarketPulseData | undefined;
+  const assetScanner = allResults?.[2] as AssetScannerData | undefined;
+  const safetyCheck = allResults?.[3] as SafetyCheckData | undefined;
+  const timing = allResults?.[4] as TimingData | undefined;
+  const tradePlan = allResults?.[5] as TradePlanData | undefined;
+  const trapCheck = allResults?.[6] as TrapCheckData | undefined;
+
   // Check if we have valid trade plan data for the chart
   const hasValidTradePlan = tradePlan &&
     tradePlan.direction &&
@@ -68,19 +119,121 @@ export function FinalVerdict({ data, symbol, tradePlan }: FinalVerdictProps) {
     tradePlan.stopLoss?.price &&
     tradePlan.takeProfits?.length;
 
+  // Build comprehensive context message with all 7 steps
+  const buildComprehensiveContext = () => {
+    const sections: string[] = [];
+
+    // Header
+    sections.push(`📊 FULL ${symbol} ANALYSIS REPORT`);
+    sections.push(`═══════════════════════════════════════`);
+    sections.push('');
+
+    // Step 1: Market Pulse
+    sections.push('📈 STEP 1: MARKET PULSE');
+    if (marketPulse) {
+      if (marketPulse.marketRegime) sections.push(`• Market Regime: ${marketPulse.marketRegime}`);
+      if (marketPulse.btcTrend) sections.push(`• BTC Trend: ${marketPulse.btcTrend}`);
+      if (marketPulse.btcDominance) sections.push(`• BTC Dominance: ${marketPulse.btcDominance}%`);
+      if (marketPulse.fearGreedIndex) sections.push(`• Fear & Greed: ${marketPulse.fearGreedIndex}`);
+      if (marketPulse.overallSentiment) sections.push(`• Overall Sentiment: ${marketPulse.overallSentiment}`);
+    } else {
+      sections.push('• Data not available');
+    }
+    sections.push('');
+
+    // Step 2: Asset Scanner
+    sections.push('🎯 STEP 2: ASSET SCANNER');
+    if (assetScanner) {
+      if (assetScanner.trend) sections.push(`• Trend: ${assetScanner.trend}`);
+      if (assetScanner.trendStrength) sections.push(`• Trend Strength: ${assetScanner.trendStrength}`);
+      if (assetScanner.rsiValue) sections.push(`• RSI: ${assetScanner.rsiValue}`);
+      if (assetScanner.macdSignal) sections.push(`• MACD Signal: ${assetScanner.macdSignal}`);
+      if (assetScanner.overallSignal) sections.push(`• Overall Signal: ${assetScanner.overallSignal}`);
+      if (assetScanner.volatility) sections.push(`• Volatility: ${assetScanner.volatility}`);
+    } else {
+      sections.push('• Data not available');
+    }
+    sections.push('');
+
+    // Step 3: Safety Check
+    sections.push('🛡️ STEP 3: SAFETY CHECK');
+    if (safetyCheck) {
+      if (safetyCheck.overallRisk) sections.push(`• Overall Risk: ${safetyCheck.overallRisk}`);
+      if (safetyCheck.pumpDumpRisk) sections.push(`• Pump & Dump Risk: ${safetyCheck.pumpDumpRisk}`);
+      if (safetyCheck.whaleActivity) sections.push(`• Whale Activity: ${safetyCheck.whaleActivity}`);
+      if (safetyCheck.washTradingRisk) sections.push(`• Wash Trading Risk: ${safetyCheck.washTradingRisk}`);
+      if (safetyCheck.smartMoneyFlow) sections.push(`• Smart Money Flow: ${safetyCheck.smartMoneyFlow}`);
+    } else {
+      sections.push('• Data not available');
+    }
+    sections.push('');
+
+    // Step 4: Timing Analysis
+    sections.push('⏰ STEP 4: TIMING ANALYSIS');
+    if (timing) {
+      if (timing.entryTiming) sections.push(`• Entry Timing: ${timing.entryTiming}`);
+      if (timing.optimalEntry) sections.push(`• Optimal Entry: ${timing.optimalEntry}`);
+      if (timing.entryConditions?.length) {
+        sections.push(`• Entry Conditions: ${timing.entryConditions.join(', ')}`);
+      }
+      if (timing.waitForEvents?.length) {
+        sections.push(`• Wait For: ${timing.waitForEvents.join(', ')}`);
+      }
+    } else {
+      sections.push('• Data not available');
+    }
+    sections.push('');
+
+    // Step 5: Trade Plan
+    sections.push('📋 STEP 5: TRADE PLAN');
+    if (tradePlan && hasValidTradePlan) {
+      sections.push(`• Direction: ${tradePlan.direction?.toUpperCase()}`);
+      sections.push(`• Entry: $${tradePlan.entries?.[0]?.price?.toLocaleString()} (${tradePlan.entries?.length} levels)`);
+      sections.push(`• Stop Loss: $${tradePlan.stopLoss?.price?.toLocaleString()} (${tradePlan.stopLoss?.percentage?.toFixed(1)}%)`);
+      tradePlan.takeProfits?.forEach((tp, i) => {
+        sections.push(`• TP${i + 1}: $${tp.price?.toLocaleString()} (${tp.riskReward?.toFixed(1)}R)`);
+      });
+    } else {
+      sections.push('• Data not available');
+    }
+    sections.push('');
+
+    // Step 6: Trap Check
+    sections.push('⚠️ STEP 6: TRAP CHECK');
+    if (trapCheck) {
+      if (trapCheck.bullTrapRisk) sections.push(`• Bull Trap Risk: ${trapCheck.bullTrapRisk}`);
+      if (trapCheck.bearTrapRisk) sections.push(`• Bear Trap Risk: ${trapCheck.bearTrapRisk}`);
+      if (trapCheck.liquidationZones) sections.push(`• Liquidation Zones: ${trapCheck.liquidationZones}`);
+      if (trapCheck.stopHuntRisk) sections.push(`• Stop Hunt Risk: ${trapCheck.stopHuntRisk}`);
+    } else {
+      sections.push('• Data not available');
+    }
+    sections.push('');
+
+    // Step 7: Final Verdict
+    sections.push('✅ STEP 7: FINAL VERDICT');
+    sections.push(`• Verdict: ${data.verdict?.toUpperCase()}`);
+    sections.push(`• Score: ${data.overallScore}/10`);
+    if (data.recommendation) {
+      sections.push(`• Recommendation: ${data.recommendation}`);
+    }
+    sections.push('');
+
+    // Question for AI Expert
+    sections.push('═══════════════════════════════════════');
+    sections.push('');
+    sections.push('Based on this complete 7-step analysis, please provide your expert opinion:');
+    sections.push('1. Do you agree with the overall verdict?');
+    sections.push('2. Are there any additional risks I should consider?');
+    sections.push('3. What would you change in this trade plan?');
+    sections.push('4. Is the risk/reward ratio acceptable?');
+
+    return sections.join('\n');
+  };
+
   // Create trade plan context for AI Expert
   const handleAskAIExpert = () => {
-    if (!hasValidTradePlan) return;
-
-    const contextMessage = `Analyze this ${symbol} ${tradePlan.direction?.toUpperCase()} trade plan:
-• Entry: $${tradePlan.entries?.[0]?.price?.toLocaleString()} (${tradePlan.entries?.length} levels)
-• Stop Loss: $${tradePlan.stopLoss?.price?.toLocaleString()} (${tradePlan.stopLoss?.percentage?.toFixed(1)}%)
-• TP1: $${tradePlan.takeProfits?.[0]?.price?.toLocaleString()} (${tradePlan.takeProfits?.[0]?.riskReward?.toFixed(1)}R)
-• TP2: $${tradePlan.takeProfits?.[1]?.price?.toLocaleString()} (${tradePlan.takeProfits?.[1]?.riskReward?.toFixed(1)}R)
-• TP3: $${tradePlan.takeProfits?.[2]?.price?.toLocaleString()} (${tradePlan.takeProfits?.[2]?.riskReward?.toFixed(1)}R)
-• Verdict: ${data.verdict?.toUpperCase()} (Score: ${data.overallScore}/10)
-
-What is your expert opinion on this setup? Is the risk/reward acceptable?`;
+    const contextMessage = buildComprehensiveContext();
 
     // Encode and navigate to AI Expert (Nexus - Risk Assessment)
     const encodedContext = encodeURIComponent(contextMessage);
@@ -186,31 +339,29 @@ What is your expert opinion on this setup? Is the risk/reward acceptable?`;
 
       {/* Trade Plan Chart - TradingView Lightweight Charts */}
       {hasValidTradePlan && (
-        <>
-          <TradePlanChart
-            symbol={symbol}
-            direction={tradePlan.direction!}
-            entries={tradePlan.entries!}
-            stopLoss={tradePlan.stopLoss!}
-            takeProfits={tradePlan.takeProfits!}
-            currentPrice={tradePlan.currentPrice || tradePlan.averageEntry || tradePlan.entries![0].price}
-            support={tradePlan.support}
-            resistance={tradePlan.resistance}
-          />
-
-          {/* Ask AI Expert Button */}
-          <div className="flex justify-center">
-            <button
-              onClick={handleAskAIExpert}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105 transition-all duration-200"
-            >
-              <MessageSquare className="w-5 h-5" />
-              Ask AI Expert About This Trade
-              <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">NEXUS</span>
-            </button>
-          </div>
-        </>
+        <TradePlanChart
+          symbol={symbol}
+          direction={tradePlan.direction!}
+          entries={tradePlan.entries!}
+          stopLoss={tradePlan.stopLoss!}
+          takeProfits={tradePlan.takeProfits!}
+          currentPrice={tradePlan.currentPrice || tradePlan.averageEntry || tradePlan.entries![0].price}
+          support={tradePlan.support}
+          resistance={tradePlan.resistance}
+        />
       )}
+
+      {/* Ask AI Expert Button - Always show with full analysis */}
+      <div className="flex justify-center">
+        <button
+          onClick={handleAskAIExpert}
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105 transition-all duration-200"
+        >
+          <MessageSquare className="w-5 h-5" />
+          Ask AI Expert to Review Full Analysis
+          <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">NEXUS</span>
+        </button>
+      </div>
 
       {/* Component Scores - Premium Radial Design */}
       {data.componentScores && data.componentScores.length > 0 && (
