@@ -871,31 +871,11 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            {/* 4-Panel Chart Grid */}
-            <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-1 p-1 bg-slate-900">
-              {/* 5m Chart */}
-              <div className="relative bg-slate-800 rounded overflow-hidden">
-                <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-slate-900/80 rounded text-xs font-medium text-blue-400">
-                  5 Minutes
-                </div>
-                <TradePlanChart
-                  symbol={chartModal.report.symbol}
-                  interval="5"
-                  tradePlan={{
-                    entryPrice: chartModal.report.entryPrice,
-                    stopLoss: chartModal.report.stopLoss,
-                    takeProfit1: chartModal.report.takeProfit1,
-                    takeProfit2: chartModal.report.takeProfit2,
-                    takeProfit3: chartModal.report.takeProfit3,
-                    direction: chartModal.report.direction || undefined,
-                    currentPrice: chartModal.report.currentPrice,
-                  }}
-                />
-              </div>
-
-              {/* 15m Chart */}
-              <div className="relative bg-slate-800 rounded overflow-hidden">
-                <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-slate-900/80 rounded text-xs font-medium text-purple-400">
+            {/* 2-Panel Chart Grid */}
+            <div className="flex-1 grid grid-cols-2 gap-2 p-2 bg-slate-900">
+              {/* 15m Chart - Left */}
+              <div className="relative bg-slate-800 rounded-lg overflow-hidden">
+                <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-slate-900/90 rounded text-sm font-medium text-purple-400">
                   15 Minutes
                 </div>
                 <TradePlanChart
@@ -913,34 +893,14 @@ export default function ReportsPage() {
                 />
               </div>
 
-              {/* 1h Chart */}
-              <div className="relative bg-slate-800 rounded overflow-hidden">
-                <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-slate-900/80 rounded text-xs font-medium text-amber-400">
+              {/* 1h Chart - Right */}
+              <div className="relative bg-slate-800 rounded-lg overflow-hidden">
+                <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-slate-900/90 rounded text-sm font-medium text-amber-400">
                   1 Hour
                 </div>
                 <TradePlanChart
                   symbol={chartModal.report.symbol}
                   interval="60"
-                  tradePlan={{
-                    entryPrice: chartModal.report.entryPrice,
-                    stopLoss: chartModal.report.stopLoss,
-                    takeProfit1: chartModal.report.takeProfit1,
-                    takeProfit2: chartModal.report.takeProfit2,
-                    takeProfit3: chartModal.report.takeProfit3,
-                    direction: chartModal.report.direction || undefined,
-                    currentPrice: chartModal.report.currentPrice,
-                  }}
-                />
-              </div>
-
-              {/* 4h Chart */}
-              <div className="relative bg-slate-800 rounded overflow-hidden">
-                <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-slate-900/80 rounded text-xs font-medium text-emerald-400">
-                  4 Hours
-                </div>
-                <TradePlanChart
-                  symbol={chartModal.report.symbol}
-                  interval="240"
                   tradePlan={{
                     entryPrice: chartModal.report.entryPrice,
                     stopLoss: chartModal.report.stopLoss,
