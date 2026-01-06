@@ -253,7 +253,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
             takeProfit2: takeProfits?.[1]?.price,
             takeProfit3: takeProfits?.[2]?.price,
           };
-        });
+        }));
 
         const total = await prisma.report.count({ where: whereClause });
 

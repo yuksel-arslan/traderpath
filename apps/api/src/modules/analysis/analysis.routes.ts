@@ -10,6 +10,7 @@ import { costService } from '../costs/cost.service';
 import { CREDIT_COSTS } from '@tradepath/types';
 import { analysisEngine } from './analysis.engine';
 import { config } from '../../core/config';
+import { getCautionRate, calculateCautionOutcomes, calculateExpiredOutcomes } from '../reports/outcome.service';
 
 // Gemini response with usage data
 interface GeminiResult {
@@ -726,6 +727,13 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
       // Average confidence is the average report score
       const avgConfidence = calcAvg(allScores);
 
+      // Get caution rate for WAIT/AVOID signals
+      const cautionData = await getCautionRate();
+
+      // Trigger background outcome calculations (don't await)
+      calculateExpiredOutcomes().catch(err => console.error('Background outcome calculation failed:', err));
+      calculateCautionOutcomes().catch(err => console.error('Background caution calculation failed:', err));
+
       // Calculate step accuracy from real outcomes if available
       if (realSampleSize > 0) {
         Object.entries(realStepAccuracy).forEach(([step, data]) => {
@@ -769,6 +777,15 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
             methodology: realSampleSize > 0 ? 'outcome-verified' : 'score-based',
             sampleSize: realSampleSize > 0 ? realSampleSize : sampleSize,
             outcomeVerifiedCount: realSampleSize
+          },
+          // Caution Rate: How often WAIT/AVOID recommendations were correct
+          cautionRate: {
+            rate: cautionData.rate,
+            cautionCorrect: cautionData.cautionCorrect,
+            cautionIncorrect: cautionData.cautionIncorrect,
+            pending: cautionData.pending,
+            total: cautionData.total,
+            description: 'Success rate of WAIT/AVOID recommendations'
           },
           verdicts: verdictDistribution,
           dataQuality: {

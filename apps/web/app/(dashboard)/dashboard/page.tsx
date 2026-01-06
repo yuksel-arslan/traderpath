@@ -65,6 +65,15 @@ interface PlatformStats {
     sampleSize?: number; // Number of analyses used for accuracy calculation
     outcomeVerifiedCount?: number; // Number of analyses with verified outcomes
   };
+  // Caution Rate: Success rate of WAIT/AVOID recommendations
+  cautionRate?: {
+    rate: number;
+    cautionCorrect: number;
+    cautionIncorrect: number;
+    pending: number;
+    total: number;
+    description: string;
+  };
   verdicts: {
     go: number;
     conditional_go: number;
@@ -419,18 +428,27 @@ export default function DashboardPage() {
       {/* ===== SECTION 1: Platform Trust Header ===== */}
       <div className="bg-white dark:bg-gradient-to-br dark:from-slate-800/80 dark:to-slate-900/80 rounded-2xl p-6 border border-gray-200 dark:border-slate-700/50 shadow-lg dark:shadow-xl dark:shadow-slate-900/50">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          {/* Left - Accuracy & Profitability Display */}
+          {/* Left - Accuracy, Caution Rate & Profitability Display */}
           <div className="flex items-center gap-6">
-            {/* Dual Rings */}
-            <div className="flex items-center gap-4">
-              {/* Accuracy Ring */}
+            {/* Triple Rings - Performance Metrics */}
+            <div className="flex items-center gap-3">
+              {/* Accuracy Ring - GO Signals */}
               <MetricRing
                 value={platformStats?.accuracy.overall ?? 0}
                 label="Accuracy"
-                size={120}
-                strokeWidth={10}
+                size={100}
+                strokeWidth={8}
                 color="text-emerald-400"
                 hasData={hasRealData}
+              />
+              {/* Caution Rate Ring - WAIT/AVOID Signals */}
+              <MetricRing
+                value={platformStats?.cautionRate?.rate ?? 0}
+                label="Caution"
+                size={100}
+                strokeWidth={8}
+                color="text-amber-400"
+                hasData={(platformStats?.cautionRate?.total ?? 0) > 0}
               />
               {/* Profitability Ring */}
               <MetricRing
@@ -441,9 +459,9 @@ export default function DashboardPage() {
                   const totalPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0);
                   return totalPnL / closedTrades.length;
                 })()}
-                label="Profitability"
-                size={120}
-                strokeWidth={10}
+                label="Profit"
+                size={100}
+                strokeWidth={8}
                 color={(() => {
                   const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
                   if (closedTrades.length === 0) return 'text-gray-400';
@@ -459,9 +477,13 @@ export default function DashboardPage() {
                 <Shield className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Platform Performance</h2>
               </div>
-              <p className="text-gray-500 dark:text-slate-400 text-sm max-w-md">
+              <p className="text-gray-500 dark:text-slate-400 text-sm max-w-lg">
                 {hasRealData ? (
-                  <>Accuracy & profitability verified from {platformStats?.accuracy.sampleSize ?? 0} completed trades with real TP/SL hits.</>
+                  <>
+                    <strong className="text-emerald-500">Accuracy</strong> = GO signal success rate •
+                    <strong className="text-amber-500"> Caution</strong> = WAIT/AVOID correctness •
+                    <strong className="text-green-500"> Profit</strong> = Avg. P/L per trade
+                  </>
                 ) : (
                   <>Our 7-Step analysis system generates predictions using real market data. Start analyzing to see performance metrics.</>
                 )}

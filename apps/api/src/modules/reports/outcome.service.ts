@@ -443,6 +443,233 @@ export async function calculateExpiredOutcomes(): Promise<{
   };
 }
 
+// Calculate caution outcome for WAIT/AVOID signals
+// Checks if avoiding the trade was the right decision
+export async function calculateCautionOutcome(reportId: string): Promise<{
+  outcome: 'caution_correct' | 'caution_incorrect' | 'pending';
+  priceChange: number;
+  reasoning: string;
+} | null> {
+  const report = await prisma.report.findUnique({
+    where: { id: reportId },
+    select: {
+      id: true,
+      symbol: true,
+      verdict: true,
+      direction: true,
+      entryPrice: true,
+      reportData: true,
+      generatedAt: true,
+      outcome: true
+    }
+  });
+
+  if (!report) return null;
+
+  // Only process WAIT/AVOID signals
+  const verdict = report.verdict?.toLowerCase() || '';
+  if (!verdict.includes('wait') && !verdict.includes('avoid')) {
+    return null;
+  }
+
+  // If already calculated, skip
+  if (report.outcome) return null;
+
+  const reportData = report.reportData as Record<string, unknown>;
+  const tradePlan = reportData?.tradePlan as Record<string, unknown> | undefined;
+
+  // Get the direction that WOULD have been taken
+  const potentialDirection = (tradePlan?.direction as string || report.direction || 'long').toLowerCase();
+
+  // Get the price at analysis time
+  let analysisPrice = report.entryPrice ? Number(report.entryPrice) : null;
+  if (!analysisPrice) {
+    analysisPrice = extractEntryPrice(reportData);
+  }
+  if (!analysisPrice && tradePlan?.averageEntry) {
+    analysisPrice = Number(tradePlan.averageEntry);
+  }
+
+  if (!analysisPrice) {
+    console.error(`No analysis price for caution report ${reportId}`);
+    return null;
+  }
+
+  // Get current price
+  const currentPrice = await fetchCurrentPrice(report.symbol);
+  if (!currentPrice) {
+    console.error(`Failed to fetch price for ${report.symbol}`);
+    return null;
+  }
+
+  // Calculate price change since analysis
+  const priceChange = ((currentPrice - analysisPrice) / analysisPrice) * 100;
+
+  // Minimum threshold for significant move (5%)
+  const SIGNIFICANCE_THRESHOLD = 5;
+
+  // Check if we need more time (at least 24 hours since analysis)
+  const hoursSinceAnalysis = (Date.now() - report.generatedAt.getTime()) / (1000 * 60 * 60);
+  if (hoursSinceAnalysis < 24 && Math.abs(priceChange) < SIGNIFICANCE_THRESHOLD) {
+    return {
+      outcome: 'pending',
+      priceChange,
+      reasoning: 'Waiting for more price data'
+    };
+  }
+
+  // Determine if caution was correct
+  let outcome: 'caution_correct' | 'caution_incorrect' | 'pending' = 'pending';
+  let reasoning = '';
+
+  if (potentialDirection === 'long') {
+    // We avoided a LONG trade
+    if (priceChange < -SIGNIFICANCE_THRESHOLD) {
+      // Price dropped significantly - we were RIGHT to avoid
+      outcome = 'caution_correct';
+      reasoning = `Avoided LONG, price dropped ${Math.abs(priceChange).toFixed(1)}%`;
+    } else if (priceChange > SIGNIFICANCE_THRESHOLD) {
+      // Price rose significantly - we MISSED a good trade
+      outcome = 'caution_incorrect';
+      reasoning = `Avoided LONG, price rose ${priceChange.toFixed(1)}%`;
+    } else if (hoursSinceAnalysis >= 48) {
+      // After 48 hours with no significant move, consider it neutral (correct caution)
+      outcome = 'caution_correct';
+      reasoning = `Price stayed flat (${priceChange.toFixed(1)}%), caution was reasonable`;
+    }
+  } else {
+    // We avoided a SHORT trade
+    if (priceChange > SIGNIFICANCE_THRESHOLD) {
+      // Price rose significantly - we were RIGHT to avoid shorting
+      outcome = 'caution_correct';
+      reasoning = `Avoided SHORT, price rose ${priceChange.toFixed(1)}%`;
+    } else if (priceChange < -SIGNIFICANCE_THRESHOLD) {
+      // Price dropped significantly - we MISSED a good short
+      outcome = 'caution_incorrect';
+      reasoning = `Avoided SHORT, price dropped ${Math.abs(priceChange).toFixed(1)}%`;
+    } else if (hoursSinceAnalysis >= 48) {
+      outcome = 'caution_correct';
+      reasoning = `Price stayed flat (${priceChange.toFixed(1)}%), caution was reasonable`;
+    }
+  }
+
+  // Update the report with caution outcome
+  if (outcome !== 'pending') {
+    await prisma.report.update({
+      where: { id: reportId },
+      data: {
+        outcome,
+        outcomePrice: currentPrice,
+        outcomePriceChange: priceChange,
+        outcomeCalculatedAt: new Date(),
+        stepOutcomes: {
+          _meta: {
+            type: 'caution',
+            potentialDirection,
+            analysisPrice,
+            reasoning
+          }
+        }
+      }
+    });
+  }
+
+  return {
+    outcome,
+    priceChange,
+    reasoning
+  };
+}
+
+// Calculate caution outcomes for all WAIT/AVOID reports
+export async function calculateCautionOutcomes(): Promise<{
+  processed: number;
+  cautionCorrect: number;
+  cautionIncorrect: number;
+  pending: number;
+}> {
+  // Find WAIT/AVOID reports without outcomes
+  const reportsToCheck = await prisma.report.findMany({
+    where: {
+      outcome: null,
+      OR: [
+        { verdict: { contains: 'wait', mode: 'insensitive' } },
+        { verdict: { contains: 'avoid', mode: 'insensitive' } }
+      ],
+      // At least 6 hours old
+      generatedAt: { lt: new Date(Date.now() - 6 * 60 * 60 * 1000) }
+    },
+    select: { id: true },
+    take: 50
+  });
+
+  let cautionCorrect = 0;
+  let cautionIncorrect = 0;
+  let pending = 0;
+
+  for (const report of reportsToCheck) {
+    try {
+      const result = await calculateCautionOutcome(report.id);
+      if (result) {
+        if (result.outcome === 'caution_correct') cautionCorrect++;
+        else if (result.outcome === 'caution_incorrect') cautionIncorrect++;
+        else pending++;
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    } catch (error) {
+      console.error(`Failed to calculate caution outcome for report ${report.id}:`, error);
+    }
+  }
+
+  return {
+    processed: reportsToCheck.length,
+    cautionCorrect,
+    cautionIncorrect,
+    pending
+  };
+}
+
+// Get platform caution rate for WAIT/AVOID signals
+export async function getCautionRate(): Promise<{
+  rate: number;
+  cautionCorrect: number;
+  cautionIncorrect: number;
+  pending: number;
+  total: number;
+}> {
+  const reports = await prisma.report.findMany({
+    where: {
+      OR: [
+        { outcome: 'caution_correct' },
+        { outcome: 'caution_incorrect' }
+      ]
+    },
+    select: { outcome: true }
+  });
+
+  const pendingCount = await prisma.report.count({
+    where: {
+      outcome: null,
+      OR: [
+        { verdict: { contains: 'wait', mode: 'insensitive' } },
+        { verdict: { contains: 'avoid', mode: 'insensitive' } }
+      ]
+    }
+  });
+
+  const cautionCorrect = reports.filter(r => r.outcome === 'caution_correct').length;
+  const cautionIncorrect = reports.filter(r => r.outcome === 'caution_incorrect').length;
+  const total = cautionCorrect + cautionIncorrect;
+
+  return {
+    rate: total > 0 ? Number(((cautionCorrect / total) * 100).toFixed(1)) : 0,
+    cautionCorrect,
+    cautionIncorrect,
+    pending: pendingCount,
+    total
+  };
+}
+
 // Get platform accuracy based on real outcomes
 export async function getRealAccuracy(): Promise<{
   overall: number;
