@@ -124,103 +124,103 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
     const sections: string[] = [];
 
     // Header
-    sections.push(`📊 FULL ${symbol} ANALYSIS REPORT`);
-    sections.push(`═══════════════════════════════════════`);
+    sections.push(`FULL ${symbol} ANALYSIS REPORT`);
+    sections.push(`========================================`);
     sections.push('');
 
     // Step 1: Market Pulse
-    sections.push('📈 STEP 1: MARKET PULSE');
+    sections.push('[STEP 1] MARKET PULSE');
     if (marketPulse) {
-      if (marketPulse.marketRegime) sections.push(`• Market Regime: ${marketPulse.marketRegime}`);
-      if (marketPulse.btcTrend) sections.push(`• BTC Trend: ${marketPulse.btcTrend}`);
-      if (marketPulse.btcDominance) sections.push(`• BTC Dominance: ${marketPulse.btcDominance}%`);
-      if (marketPulse.fearGreedIndex) sections.push(`• Fear & Greed: ${marketPulse.fearGreedIndex}`);
-      if (marketPulse.overallSentiment) sections.push(`• Overall Sentiment: ${marketPulse.overallSentiment}`);
+      if (marketPulse.marketRegime) sections.push(`- Market Regime: ${marketPulse.marketRegime}`);
+      if (marketPulse.btcTrend) sections.push(`- BTC Trend: ${marketPulse.btcTrend}`);
+      if (marketPulse.btcDominance) sections.push(`- BTC Dominance: ${marketPulse.btcDominance}%`);
+      if (marketPulse.fearGreedIndex) sections.push(`- Fear and Greed: ${marketPulse.fearGreedIndex}`);
+      if (marketPulse.overallSentiment) sections.push(`- Overall Sentiment: ${marketPulse.overallSentiment}`);
     } else {
-      sections.push('• Data not available');
+      sections.push('- Data not available');
     }
     sections.push('');
 
     // Step 2: Asset Scanner
-    sections.push('🎯 STEP 2: ASSET SCANNER');
+    sections.push('[STEP 2] ASSET SCANNER');
     if (assetScanner) {
-      if (assetScanner.trend) sections.push(`• Trend: ${assetScanner.trend}`);
-      if (assetScanner.trendStrength) sections.push(`• Trend Strength: ${assetScanner.trendStrength}`);
-      if (assetScanner.rsiValue) sections.push(`• RSI: ${assetScanner.rsiValue}`);
-      if (assetScanner.macdSignal) sections.push(`• MACD Signal: ${assetScanner.macdSignal}`);
-      if (assetScanner.overallSignal) sections.push(`• Overall Signal: ${assetScanner.overallSignal}`);
-      if (assetScanner.volatility) sections.push(`• Volatility: ${assetScanner.volatility}`);
+      if (assetScanner.trend) sections.push(`- Trend: ${assetScanner.trend}`);
+      if (assetScanner.trendStrength) sections.push(`- Trend Strength: ${assetScanner.trendStrength}`);
+      if (assetScanner.rsiValue) sections.push(`- RSI: ${assetScanner.rsiValue}`);
+      if (assetScanner.macdSignal) sections.push(`- MACD Signal: ${assetScanner.macdSignal}`);
+      if (assetScanner.overallSignal) sections.push(`- Overall Signal: ${assetScanner.overallSignal}`);
+      if (assetScanner.volatility) sections.push(`- Volatility: ${assetScanner.volatility}`);
     } else {
-      sections.push('• Data not available');
+      sections.push('- Data not available');
     }
     sections.push('');
 
     // Step 3: Safety Check
-    sections.push('🛡️ STEP 3: SAFETY CHECK');
+    sections.push('[STEP 3] SAFETY CHECK');
     if (safetyCheck) {
-      if (safetyCheck.overallRisk) sections.push(`• Overall Risk: ${safetyCheck.overallRisk}`);
-      if (safetyCheck.pumpDumpRisk) sections.push(`• Pump & Dump Risk: ${safetyCheck.pumpDumpRisk}`);
-      if (safetyCheck.whaleActivity) sections.push(`• Whale Activity: ${safetyCheck.whaleActivity}`);
-      if (safetyCheck.washTradingRisk) sections.push(`• Wash Trading Risk: ${safetyCheck.washTradingRisk}`);
-      if (safetyCheck.smartMoneyFlow) sections.push(`• Smart Money Flow: ${safetyCheck.smartMoneyFlow}`);
+      if (safetyCheck.overallRisk) sections.push(`- Overall Risk: ${safetyCheck.overallRisk}`);
+      if (safetyCheck.pumpDumpRisk) sections.push(`- Pump and Dump Risk: ${safetyCheck.pumpDumpRisk}`);
+      if (safetyCheck.whaleActivity) sections.push(`- Whale Activity: ${safetyCheck.whaleActivity}`);
+      if (safetyCheck.washTradingRisk) sections.push(`- Wash Trading Risk: ${safetyCheck.washTradingRisk}`);
+      if (safetyCheck.smartMoneyFlow) sections.push(`- Smart Money Flow: ${safetyCheck.smartMoneyFlow}`);
     } else {
-      sections.push('• Data not available');
+      sections.push('- Data not available');
     }
     sections.push('');
 
     // Step 4: Timing Analysis
-    sections.push('⏰ STEP 4: TIMING ANALYSIS');
+    sections.push('[STEP 4] TIMING ANALYSIS');
     if (timing) {
-      if (timing.entryTiming) sections.push(`• Entry Timing: ${timing.entryTiming}`);
-      if (timing.optimalEntry) sections.push(`• Optimal Entry: ${timing.optimalEntry}`);
+      if (timing.entryTiming) sections.push(`- Entry Timing: ${timing.entryTiming}`);
+      if (timing.optimalEntry) sections.push(`- Optimal Entry: ${timing.optimalEntry}`);
       if (timing.entryConditions?.length) {
-        sections.push(`• Entry Conditions: ${timing.entryConditions.join(', ')}`);
+        sections.push(`- Entry Conditions: ${timing.entryConditions.join(', ')}`);
       }
       if (timing.waitForEvents?.length) {
-        sections.push(`• Wait For: ${timing.waitForEvents.join(', ')}`);
+        sections.push(`- Wait For: ${timing.waitForEvents.join(', ')}`);
       }
     } else {
-      sections.push('• Data not available');
+      sections.push('- Data not available');
     }
     sections.push('');
 
     // Step 5: Trade Plan
-    sections.push('📋 STEP 5: TRADE PLAN');
+    sections.push('[STEP 5] TRADE PLAN');
     if (tradePlan && hasValidTradePlan) {
-      sections.push(`• Direction: ${tradePlan.direction?.toUpperCase()}`);
-      sections.push(`• Entry: $${tradePlan.entries?.[0]?.price?.toLocaleString()} (${tradePlan.entries?.length} levels)`);
-      sections.push(`• Stop Loss: $${tradePlan.stopLoss?.price?.toLocaleString()} (${tradePlan.stopLoss?.percentage?.toFixed(1)}%)`);
+      sections.push(`- Direction: ${tradePlan.direction?.toUpperCase()}`);
+      sections.push(`- Entry: $${tradePlan.entries?.[0]?.price?.toLocaleString()} (${tradePlan.entries?.length} levels)`);
+      sections.push(`- Stop Loss: $${tradePlan.stopLoss?.price?.toLocaleString()} (${tradePlan.stopLoss?.percentage?.toFixed(1)}%)`);
       tradePlan.takeProfits?.forEach((tp, i) => {
-        sections.push(`• TP${i + 1}: $${tp.price?.toLocaleString()} (${tp.riskReward?.toFixed(1)}R)`);
+        sections.push(`- TP${i + 1}: $${tp.price?.toLocaleString()} (${tp.riskReward?.toFixed(1)}R)`);
       });
     } else {
-      sections.push('• Data not available');
+      sections.push('- Data not available');
     }
     sections.push('');
 
     // Step 6: Trap Check
-    sections.push('⚠️ STEP 6: TRAP CHECK');
+    sections.push('[STEP 6] TRAP CHECK');
     if (trapCheck) {
-      if (trapCheck.bullTrapRisk) sections.push(`• Bull Trap Risk: ${trapCheck.bullTrapRisk}`);
-      if (trapCheck.bearTrapRisk) sections.push(`• Bear Trap Risk: ${trapCheck.bearTrapRisk}`);
-      if (trapCheck.liquidationZones) sections.push(`• Liquidation Zones: ${trapCheck.liquidationZones}`);
-      if (trapCheck.stopHuntRisk) sections.push(`• Stop Hunt Risk: ${trapCheck.stopHuntRisk}`);
+      if (trapCheck.bullTrapRisk) sections.push(`- Bull Trap Risk: ${trapCheck.bullTrapRisk}`);
+      if (trapCheck.bearTrapRisk) sections.push(`- Bear Trap Risk: ${trapCheck.bearTrapRisk}`);
+      if (trapCheck.liquidationZones) sections.push(`- Liquidation Zones: ${trapCheck.liquidationZones}`);
+      if (trapCheck.stopHuntRisk) sections.push(`- Stop Hunt Risk: ${trapCheck.stopHuntRisk}`);
     } else {
-      sections.push('• Data not available');
+      sections.push('- Data not available');
     }
     sections.push('');
 
     // Step 7: Final Verdict
-    sections.push('✅ STEP 7: FINAL VERDICT');
-    sections.push(`• Verdict: ${data.verdict?.toUpperCase()}`);
-    sections.push(`• Score: ${data.overallScore}/10`);
+    sections.push('[STEP 7] FINAL VERDICT');
+    sections.push(`- Verdict: ${data.verdict?.toUpperCase()}`);
+    sections.push(`- Score: ${data.overallScore}/10`);
     if (data.recommendation) {
-      sections.push(`• Recommendation: ${data.recommendation}`);
+      sections.push(`- Recommendation: ${data.recommendation}`);
     }
     sections.push('');
 
     // Question for AI Expert
-    sections.push('═══════════════════════════════════════');
+    sections.push('========================================');
     sections.push('');
     sections.push('Based on this complete 7-step analysis, please provide your expert opinion:');
     sections.push('1. Do you agree with the overall verdict?');
