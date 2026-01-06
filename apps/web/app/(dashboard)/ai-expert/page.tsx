@@ -5,6 +5,7 @@
 // Choose which AI expert to chat with (3 credits each)
 // ===========================================
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Bot,
@@ -18,8 +19,12 @@ import {
   Gem,
   Zap,
   ChevronRight,
+  Users,
+  Clock,
+  TrendingUp,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { cn } from '../../../lib/utils';
 
 // AI Expert definitions - World-Class Professionals
 const AI_EXPERTS = [
@@ -85,7 +90,44 @@ const AI_EXPERTS = [
   },
 ];
 
+// Interface for expert stats
+interface ExpertStats {
+  totalConversations: number;
+  totalMessages: number;
+  activeUsers: number;
+  expertUsage: {
+    aria: number;
+    nexus: number;
+    oracle: number;
+    sentinel: number;
+  };
+}
+
 export default function AIExpertsPage() {
+  const [expertStats, setExpertStats] = useState<ExpertStats | null>(null);
+
+  // Fetch expert stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+
+        const res = await fetch('/api/ai-expert/stats', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setExpertStats(data.data || data);
+        }
+      } catch (error) {
+        // Stats are optional, don't show error
+        console.log('Expert stats not available');
+      }
+    };
+    fetchStats();
+  }, []);
+
   // Fetch credit balance
   const { data: credits } = useQuery({
     queryKey: ['credits'],
@@ -118,18 +160,82 @@ export default function AIExpertsPage() {
 
   const isAdmin = user?.isAdmin === true;
 
+  // Calculate total expert usage
+  const totalUsage = expertStats?.expertUsage
+    ? Object.values(expertStats.expertUsage).reduce((a, b) => a + b, 0)
+    : 0;
+
   return (
-    <div className="w-full px-6 md:px-12 lg:px-16 py-8">
+    <div className="w-full px-6 md:px-12 lg:px-16 py-8 space-y-6">
+      {/* ===== Statistics Header ===== */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+        {/* Total Conversations */}
+        <div className="bg-white dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50 text-center">
+          <MessageCircle className="w-5 h-5 text-blue-500 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{expertStats?.totalConversations || 0}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">Conversations</div>
+        </div>
+
+        {/* Total Messages */}
+        <div className="bg-white dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50 text-center">
+          <TrendingUp className="w-5 h-5 text-green-500 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{expertStats?.totalMessages || 0}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">Messages</div>
+        </div>
+
+        {/* Active Users */}
+        <div className="bg-white dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50 text-center">
+          <Users className="w-5 h-5 text-purple-500 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{expertStats?.activeUsers || 0}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">Active Users</div>
+        </div>
+
+        {/* Total Usage */}
+        <div className="bg-white dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50 text-center">
+          <Bot className="w-5 h-5 text-amber-500 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalUsage}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">Total Calls</div>
+        </div>
+
+        {/* ARIA Usage */}
+        <div className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-4 border border-blue-200 dark:border-blue-500/30 text-center">
+          <LineChart className="w-5 h-5 text-blue-500 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{expertStats?.expertUsage?.aria || 0}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">ARIA</div>
+        </div>
+
+        {/* NEXUS Usage */}
+        <div className="bg-amber-50 dark:bg-amber-500/10 rounded-xl p-4 border border-amber-200 dark:border-amber-500/30 text-center">
+          <Target className="w-5 h-5 text-amber-500 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{expertStats?.expertUsage?.nexus || 0}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">NEXUS</div>
+        </div>
+
+        {/* ORACLE Usage */}
+        <div className="bg-purple-50 dark:bg-purple-500/10 rounded-xl p-4 border border-purple-200 dark:border-purple-500/30 text-center">
+          <Eye className="w-5 h-5 text-purple-500 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{expertStats?.expertUsage?.oracle || 0}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">ORACLE</div>
+        </div>
+
+        {/* SENTINEL Usage */}
+        <div className="bg-red-50 dark:bg-red-500/10 rounded-xl p-4 border border-red-200 dark:border-red-500/30 text-center">
+          <ShieldAlert className="w-5 h-5 text-red-500 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-red-600 dark:text-red-400">{expertStats?.expertUsage?.sentinel || 0}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">SENTINEL</div>
+        </div>
+      </div>
+
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-2">
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Bot className="w-6 h-6 text-amber-500" />
-              <h1 className="text-2xl font-bold">AI Expert Team</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">AI Expert Team</h1>
               <span className="px-2 py-0.5 bg-green-500/10 text-green-500 rounded text-xs font-bold">NEW</span>
             </div>
-            <p className="text-muted-foreground">
+            <p className="text-gray-500 dark:text-slate-400">
               Four specialized AI experts, each mastering their own domain
             </p>
           </div>
@@ -141,9 +247,9 @@ export default function AIExpertsPage() {
               </span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-4 py-2 bg-card border rounded-lg">
+            <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700/50 rounded-lg">
               <Gem className="w-4 h-4 text-amber-500" />
-              <span className="text-sm font-semibold">
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">
                 {credits?.balance || 0} credits
               </span>
             </div>

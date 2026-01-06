@@ -87,6 +87,10 @@ interface UserStats {
   correctAnalyses: number;
   pendingAnalyses: number;
   accuracy: number; // Real accuracy from verified outcomes
+  // Active performance metrics
+  activeCount: number;
+  activeProfitable: number;
+  activePerformance: number; // Active profitable / active * 100
   avgScore: number;
   goSignals: number;
   avoidSignals: number;
@@ -720,52 +724,73 @@ export default function DashboardPage() {
 
           {userStats && userStats.totalAnalyses > 0 ? (
             <>
-              {/* Performance Rate - Main Display */}
-              <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 text-center mb-4">
-                <div className={cn(
-                  "text-4xl font-bold",
-                  userStats.accuracy >= 70 ? 'text-green-600 dark:text-green-400' :
-                  userStats.accuracy >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
-                  userStats.verifiedAnalyses === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
-                )}>
-                  {userStats.verifiedAnalyses > 0 ? `${userStats.accuracy.toFixed(1)}%` : '-'}
+              {/* Two Performance Cards - Realized & Active */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {/* Realized Performance */}
+                <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-500/10 dark:to-green-500/10 rounded-xl p-4 text-center border border-emerald-200 dark:border-emerald-500/20">
+                  <div className="text-[10px] uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold mb-1">
+                    Realized
+                  </div>
+                  <div className={cn(
+                    "text-3xl font-bold",
+                    userStats.accuracy >= 70 ? 'text-green-600 dark:text-green-400' :
+                    userStats.accuracy >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
+                    userStats.verifiedAnalyses === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
+                  )}>
+                    {userStats.verifiedAnalyses > 0 ? `${userStats.accuracy.toFixed(1)}%` : '-'}
+                  </div>
+                  <div className="text-[10px] text-gray-500 dark:text-slate-400 mt-1">
+                    {userStats.correctAnalyses} / {userStats.verifiedAnalyses} Closed
+                  </div>
                 </div>
-                <div className="text-xs text-gray-500 dark:text-slate-400 mt-1">
-                  Performance Rate
+
+                {/* Active Performance */}
+                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-500/10 dark:to-cyan-500/10 rounded-xl p-4 text-center border border-blue-200 dark:border-blue-500/20">
+                  <div className="text-[10px] uppercase tracking-wider text-blue-600 dark:text-blue-400 font-semibold mb-1">
+                    Active
+                  </div>
+                  <div className={cn(
+                    "text-3xl font-bold",
+                    (userStats.activePerformance || 0) >= 70 ? 'text-green-600 dark:text-green-400' :
+                    (userStats.activePerformance || 0) >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
+                    (userStats.activeCount || 0) === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
+                  )}>
+                    {(userStats.activeCount || 0) > 0 ? `${(userStats.activePerformance || 0).toFixed(1)}%` : '-'}
+                  </div>
+                  <div className="text-[10px] text-gray-500 dark:text-slate-400 mt-1">
+                    {userStats.activeProfitable || 0} / {userStats.activeCount || 0} Profitable
+                  </div>
                 </div>
               </div>
 
-              {/* Stats Grid */}
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                <div className="bg-gray-50 dark:bg-slate-900/50 rounded-lg p-3 text-center">
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
-                  <div className="text-[10px] text-gray-500 dark:text-slate-400">Total</div>
+              {/* Stats Grid - Compact */}
+              <div className="grid grid-cols-5 gap-2 mb-4">
+                <div className="bg-gray-50 dark:bg-slate-900/50 rounded-lg p-2 text-center">
+                  <div className="text-lg font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
+                  <div className="text-[9px] text-gray-500 dark:text-slate-400">Total</div>
                 </div>
-                <div className="bg-blue-50 dark:bg-blue-500/10 rounded-lg p-3 text-center border border-blue-200 dark:border-blue-500/20">
-                  <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{userStats.pendingAnalyses}</div>
-                  <div className="text-[10px] text-gray-500 dark:text-slate-400">Active</div>
+                <div className="bg-blue-50 dark:bg-blue-500/10 rounded-lg p-2 text-center border border-blue-200 dark:border-blue-500/20">
+                  <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
+                  <div className="text-[9px] text-gray-500 dark:text-slate-400">Active</div>
                 </div>
-                <div className="bg-gray-50 dark:bg-slate-900/50 rounded-lg p-3 text-center">
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
-                  <div className="text-[10px] text-gray-500 dark:text-slate-400">Closed</div>
+                <div className="bg-gray-50 dark:bg-slate-900/50 rounded-lg p-2 text-center">
+                  <div className="text-lg font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
+                  <div className="text-[9px] text-gray-500 dark:text-slate-400">Closed</div>
                 </div>
-              </div>
-
-              {/* Success/Fail Breakdown */}
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <div className="bg-green-50 dark:bg-green-500/10 rounded-lg p-3 text-center border border-green-200 dark:border-green-500/20">
-                  <div className="text-xl font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
-                  <div className="text-[10px] text-gray-500 dark:text-slate-400">Successful</div>
+                <div className="bg-green-50 dark:bg-green-500/10 rounded-lg p-2 text-center border border-green-200 dark:border-green-500/20">
+                  <div className="text-lg font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
+                  <div className="text-[9px] text-gray-500 dark:text-slate-400">TP Hit</div>
                 </div>
-                <div className="bg-red-50 dark:bg-red-500/10 rounded-lg p-3 text-center border border-red-200 dark:border-red-500/20">
-                  <div className="text-xl font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
-                  <div className="text-[10px] text-gray-500 dark:text-slate-400">Failed</div>
+                <div className="bg-red-50 dark:bg-red-500/10 rounded-lg p-2 text-center border border-red-200 dark:border-red-500/20">
+                  <div className="text-lg font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
+                  <div className="text-[9px] text-gray-500 dark:text-slate-400">SL Hit</div>
                 </div>
               </div>
 
               {/* Formula Display */}
-              <div className="text-center text-xs text-gray-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-900/30 rounded-lg p-2">
-                Performance = {userStats.correctAnalyses} / {userStats.verifiedAnalyses} = {userStats.verifiedAnalyses > 0 ? `${userStats.accuracy.toFixed(1)}%` : '-'}
+              <div className="text-center text-[10px] text-gray-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-900/30 rounded-lg p-2 space-y-1">
+                <div>Realized = TP Hit / Closed = {userStats.correctAnalyses}/{userStats.verifiedAnalyses} = {userStats.verifiedAnalyses > 0 ? `${userStats.accuracy.toFixed(1)}%` : '-'}</div>
+                <div>Active = Profitable / Active = {userStats.activeProfitable || 0}/{userStats.activeCount || 0} = {(userStats.activeCount || 0) > 0 ? `${(userStats.activePerformance || 0).toFixed(1)}%` : '-'}</div>
               </div>
             </>
           ) : (

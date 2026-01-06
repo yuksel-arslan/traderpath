@@ -22,7 +22,9 @@ import {
   DollarSign,
   X,
   Target,
-  Shield
+  Shield,
+  BarChart3,
+  Percent
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
@@ -212,18 +214,94 @@ export default function ReportsPage() {
       (filter === 'all' || r.direction === filter)
     );
 
+  // Calculate report statistics
+  const totalReports = pagination.total;
+  const activeReports = reports.filter(r => !r.outcome).length;
+  const closedReports = reports.filter(r => r.outcome === 'correct' || r.outcome === 'incorrect').length;
+  const tpHits = reports.filter(r => r.outcome === 'correct').length;
+  const slHits = reports.filter(r => r.outcome === 'incorrect').length;
+  const longReports = reports.filter(r => r.direction === 'long').length;
+  const shortReports = reports.filter(r => r.direction === 'short').length;
+  const accuracy = closedReports > 0 ? ((tpHits / closedReports) * 100).toFixed(1) : '0';
+
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 space-y-6">
+      {/* ===== Statistics Header ===== */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+        {/* Total Reports */}
+        <div className="bg-white dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50 text-center">
+          <FileText className="w-5 h-5 text-gray-500 dark:text-slate-400 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalReports}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">Total</div>
+        </div>
+
+        {/* Active */}
+        <div className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-4 border border-blue-200 dark:border-blue-500/30 text-center">
+          <Timer className="w-5 h-5 text-blue-500 dark:text-blue-400 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{activeReports}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">Active</div>
+        </div>
+
+        {/* Closed */}
+        <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50 text-center">
+          <BarChart3 className="w-5 h-5 text-gray-500 dark:text-slate-400 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{closedReports}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">Closed</div>
+        </div>
+
+        {/* TP Hits */}
+        <div className="bg-green-50 dark:bg-green-500/10 rounded-xl p-4 border border-green-200 dark:border-green-500/30 text-center">
+          <CheckCircle2 className="w-5 h-5 text-green-500 dark:text-green-400 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-green-600 dark:text-green-400">{tpHits}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">TP Hits</div>
+        </div>
+
+        {/* SL Hits */}
+        <div className="bg-red-50 dark:bg-red-500/10 rounded-xl p-4 border border-red-200 dark:border-red-500/30 text-center">
+          <XCircle className="w-5 h-5 text-red-500 dark:text-red-400 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-red-600 dark:text-red-400">{slHits}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">SL Hits</div>
+        </div>
+
+        {/* Long */}
+        <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-xl p-4 border border-emerald-200 dark:border-emerald-500/30 text-center">
+          <TrendingUp className="w-5 h-5 text-emerald-500 dark:text-emerald-400 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{longReports}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">Long</div>
+        </div>
+
+        {/* Short */}
+        <div className="bg-orange-50 dark:bg-orange-500/10 rounded-xl p-4 border border-orange-200 dark:border-orange-500/30 text-center">
+          <TrendingDown className="w-5 h-5 text-orange-500 dark:text-orange-400 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{shortReports}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">Short</div>
+        </div>
+
+        {/* Accuracy */}
+        <div className="bg-purple-50 dark:bg-purple-500/10 rounded-xl p-4 border border-purple-200 dark:border-purple-500/30 text-center">
+          <Percent className="w-5 h-5 text-purple-500 dark:text-purple-400 mx-auto mb-2" />
+          <div className={cn(
+            "text-2xl font-bold",
+            Number(accuracy) >= 70 ? 'text-green-600 dark:text-green-400' :
+            Number(accuracy) >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
+            closedReports === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
+          )}>
+            {closedReports > 0 ? `${accuracy}%` : '-'}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">Accuracy</div>
+        </div>
+      </div>
+
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">My Reports</h1>
-          <p className="text-muted-foreground">Your saved analysis reports</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Reports</h1>
+          <p className="text-gray-500 dark:text-slate-400">Your saved analysis reports</p>
         </div>
         <button
           onClick={fetchReports}
           disabled={isLoading}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition disabled:opacity-50"
         >
           <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
           Refresh

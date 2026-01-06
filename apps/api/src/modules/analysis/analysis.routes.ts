@@ -805,9 +805,15 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
       const userReports = await db.report.findMany({
         where: { userId },
         select: {
+          id: true,
+          symbol: true,
           verdict: true,
           score: true,
-          generatedAt: true
+          direction: true,
+          generatedAt: true,
+          outcome: true,
+          entryPrice: true,
+          reportData: true
         },
         orderBy: { generatedAt: 'desc' }
       });
@@ -841,29 +847,64 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         : 0;
 
       // Get CLOSED trades only (correct or incorrect, not neutral/pending)
-      // Accuracy = TP hits / (TP hits + SL hits) * 100
-      const closedTrades = await db.report.findMany({
-        where: {
-          userId,
-          outcome: { in: ['correct', 'incorrect'] } // Only closed trades
-        },
-        select: {
-          outcome: true
-        }
-      });
-
-      // Calculate REAL accuracy from closed trades
+      const closedTrades = userReports.filter(r => r.outcome === 'correct' || r.outcome === 'incorrect');
       const closedCount = closedTrades.length;
       const correctCount = closedTrades.filter(r => r.outcome === 'correct').length;
 
       // Accuracy = correct / closed * 100
-      // If no closed trades yet, show 0
       const accuracy = closedCount > 0
         ? Number(((correctCount / closedCount) * 100).toFixed(1))
         : 0;
 
-      // Count pending analyses (total - closed)
-      const pendingCount = totalAnalyses - closedCount;
+      // Get ACTIVE trades (outcome is null)
+      const activeTrades = userReports.filter(r => !r.outcome);
+      const activeCount = activeTrades.length;
+
+      // Fetch current prices for active trades to calculate active performance
+      let activeProfitable = 0;
+      if (activeCount > 0) {
+        const activeSymbols = [...new Set(activeTrades.map(r => r.symbol))];
+        const prices: Record<string, number> = {};
+
+        try {
+          const pairs = activeSymbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
+          const priceResponse = await fetch(
+            `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
+          );
+          if (priceResponse.ok) {
+            const priceData = await priceResponse.json();
+            for (const item of priceData) {
+              const symbol = item.symbol.replace('USDT', '');
+              prices[symbol] = parseFloat(item.price);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to fetch prices for active performance:', err);
+        }
+
+        // Calculate how many active trades are profitable
+        activeTrades.forEach(report => {
+          const reportData = report.reportData as Record<string, unknown> | null;
+          const tradePlan = reportData?.tradePlan as Record<string, unknown> | undefined;
+          const entryPrice = Number(tradePlan?.averageEntry || report.entryPrice) || 0;
+          const currentPrice = prices[report.symbol] || 0;
+          const direction = (tradePlan?.direction as string || report.direction || 'long').toLowerCase();
+
+          if (entryPrice > 0 && currentPrice > 0) {
+            const pnl = direction === 'short'
+              ? entryPrice - currentPrice
+              : currentPrice - entryPrice;
+            if (pnl > 0) {
+              activeProfitable++;
+            }
+          }
+        });
+      }
+
+      // Active Performance = profitable / active * 100
+      const activePerformance = activeCount > 0
+        ? Number(((activeProfitable / activeCount) * 100).toFixed(1))
+        : 0;
 
       // Get last analysis date
       const lastReport = userReports[0];
@@ -881,8 +922,12 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         completedAnalyses: totalAnalyses,
         verifiedAnalyses: closedCount, // Only closed trades (TP or SL hit)
         correctAnalyses: correctCount,
-        pendingAnalyses: pendingCount,
+        pendingAnalyses: activeCount, // Active trades (not closed yet)
         accuracy, // Real accuracy = correct / closed * 100
+        // Active performance metrics
+        activeCount,
+        activeProfitable,
+        activePerformance, // Active profitable / active * 100
         avgScore,
         goSignals,
         avoidSignals,
