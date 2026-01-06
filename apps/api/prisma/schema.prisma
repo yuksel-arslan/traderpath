@@ -366,6 +366,9 @@ model Report {
   // Report content stored as JSON (can regenerate PDF from this)
   reportData   Json     @map("report_data")
 
+  // AI Expert review comment
+  aiExpertComment String? @map("ai_expert_comment") @db.Text
+
   // Verdict summary for quick display
   verdict      String   @db.VarChar(50)
   score        Decimal  @db.Decimal(3, 1)

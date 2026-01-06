@@ -352,6 +352,46 @@ const styles = StyleSheet.create({
     lineHeight: 1.4,
   },
 
+  // AI Expert Comment Section
+  aiExpertSection: {
+    backgroundColor: '#fef3c7', // amber-100
+    borderRadius: 6,
+    padding: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#fbbf24', // amber-400
+  },
+  aiExpertHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#fcd34d', // amber-300
+  },
+  aiExpertBadge: {
+    backgroundColor: '#f59e0b', // amber-500
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  aiExpertBadgeText: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  aiExpertTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#92400e', // amber-800
+  },
+  aiExpertContent: {
+    fontSize: 9,
+    color: '#78350f', // amber-900
+    lineHeight: 1.5,
+  },
+
   // Footer with disclaimer
   footer: {
     position: 'absolute',
@@ -443,6 +483,7 @@ interface AnalysisReportData {
     overallScore: number;
     aiSummary?: string;
   };
+  aiExpertComment?: string; // AI Expert review comment
 }
 
 // Status helpers
@@ -711,8 +752,36 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           )}
         </View>
 
-        <PageFooter pageNum={1} totalPages={1} />
+        <PageFooter pageNum={1} totalPages={data.aiExpertComment ? 2 : 1} />
       </Page>
+
+      {/* AI EXPERT REVIEW PAGE - Only if comment exists */}
+      {data.aiExpertComment && (
+        <Page size="A4" style={styles.page}>
+          <View style={styles.pageHeader}>
+            <View style={styles.pageHeaderLogoContainer}>
+              <Text style={styles.pageHeaderLogoT}>Trade</Text>
+              <Text style={styles.pageHeaderLogoP}>Path</Text>
+            </View>
+            <Text style={styles.pageHeaderSymbol}>{data.symbol}/USDT - AI Expert Review</Text>
+          </View>
+
+          {/* AI Expert Comment Section */}
+          <View style={styles.aiExpertSection}>
+            <View style={styles.aiExpertHeader}>
+              <View style={styles.aiExpertBadge}>
+                <Text style={styles.aiExpertBadgeText}>NEXUS</Text>
+              </View>
+              <Text style={styles.aiExpertTitle}>AI Expert Risk Assessment</Text>
+            </View>
+            <Text style={styles.aiExpertContent}>
+              {data.aiExpertComment}
+            </Text>
+          </View>
+
+          <PageFooter pageNum={2} totalPages={2} />
+        </Page>
+      )}
     </Document>
   );
 };

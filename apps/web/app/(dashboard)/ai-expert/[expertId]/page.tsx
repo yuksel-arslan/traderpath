@@ -206,6 +206,8 @@ export default function AIExpertChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [contextProcessed, setContextProcessed] = useState(false);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
+  const [commentSaved, setCommentSaved] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -223,16 +225,46 @@ export default function AIExpertChatPage() {
     const fromAnalysis = searchParams.get('fromAnalysis');
     if (fromAnalysis === 'true') {
       const contextMessage = sessionStorage.getItem('aiExpertContext');
+      const storedAnalysisId = sessionStorage.getItem('aiExpertAnalysisId');
+
       if (contextMessage) {
         setInput(contextMessage);
-        // Clear the context after reading
         sessionStorage.removeItem('aiExpertContext');
       }
+      if (storedAnalysisId) {
+        setAnalysisId(storedAnalysisId);
+        sessionStorage.removeItem('aiExpertAnalysisId');
+      }
       setContextProcessed(true);
-      // Clear the URL param to prevent re-processing
       router.replace(`/ai-expert/${expertId}`, { scroll: false });
     }
   }, [searchParams, contextProcessed, router, expertId]);
+
+  // Save AI Expert comment to report
+  const saveCommentToReport = async (comment: string) => {
+    if (!analysisId) return;
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      // Find report by analysisId and save comment
+      const res = await fetch(`/api/reports/by-analysis/${analysisId}/ai-expert-comment`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ comment }),
+      });
+
+      if (res.ok) {
+        setCommentSaved(true);
+      }
+    } catch (error) {
+      console.error('Failed to save AI Expert comment:', error);
+    }
+  };
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -300,16 +332,22 @@ export default function AIExpertChatPage() {
     },
     onSuccess: (data) => {
       if (data.success && data.data) {
+        const response = data.data!.response;
         setMessages(prev => [
           ...prev,
           {
             id: `assistant-${Date.now()}`,
             role: 'assistant',
-            content: data.data!.response,
+            content: response,
             timestamp: new Date(),
           },
         ]);
         queryClient.invalidateQueries({ queryKey: ['credits'] });
+
+        // Auto-save AI Expert comment to report if coming from analysis
+        if (analysisId && !commentSaved) {
+          saveCommentToReport(response);
+        }
       }
     },
   });

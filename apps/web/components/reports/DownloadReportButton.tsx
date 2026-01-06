@@ -92,6 +92,7 @@ interface AnalysisReportData {
     confidenceFactors: Array<{ factor: string; positive: boolean }>;
     aiSummary?: string;
   };
+  aiExpertComment?: string; // AI Expert review comment
 }
 
 interface DownloadReportButtonProps {
@@ -100,6 +101,27 @@ interface DownloadReportButtonProps {
   interval?: string;
   className?: string;
   defaultLanguage?: string;
+  analysisId?: string; // To fetch existing AI Expert comment
+}
+
+// Fetch existing AI Expert comment from report
+async function fetchAiExpertComment(analysisId: string): Promise<string | null> {
+  try {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return null;
+
+    const response = await fetch(`/api/reports/by-analysis/${analysisId}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    return data.data?.aiExpertComment || null;
+  } catch (error) {
+    console.error('Failed to fetch AI Expert comment:', error);
+    return null;
+  }
 }
 
 // Save report to database
@@ -172,6 +194,7 @@ export function DownloadReportButton({
   interval = '4h',
   className,
   defaultLanguage = 'en',
+  analysisId,
 }: DownloadReportButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -244,6 +267,14 @@ export function DownloadReportButton({
           confidenceFactors: [],
         },
       };
+
+      // Fetch existing AI Expert comment if we have an analysisId
+      if (analysisId) {
+        const aiExpertComment = await fetchAiExpertComment(analysisId);
+        if (aiExpertComment) {
+          reportData.aiExpertComment = aiExpertComment;
+        }
+      }
 
       // Translate AI commentary if not English
       if (needsTranslation) {

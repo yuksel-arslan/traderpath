@@ -486,7 +486,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
                       <span>Report saved - View in Reports page</span>
                     </div>
                   )}
-                  <DownloadReportButton analysisData={results} symbol={symbol} />
+                  <DownloadReportButton analysisData={results} symbol={symbol} analysisId={(results[7] as { analysisId?: string })?.analysisId} />
                 </div>
               )}
 

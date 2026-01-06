@@ -278,6 +278,51 @@ export async function reportRoutes(fastify: FastifyInstance) {
   );
 
   // ===========================================
+  // GET /api/reports/by-analysis/:analysisId - Get report by analysis ID
+  // ===========================================
+  fastify.get<{ Params: { analysisId: string } }>(
+    '/api/reports/by-analysis/:analysisId',
+    { preHandler: authenticate },
+    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+      try {
+        const userId = request.user?.id;
+        if (!userId) {
+          return reply.code(401).send({
+            error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+          });
+        }
+
+        const { analysisId } = request.params;
+
+        const report = await prisma.report.findFirst({
+          where: { analysisId, userId },
+          select: {
+            id: true,
+            aiExpertComment: true,
+            reportData: true,
+          },
+        });
+
+        if (!report) {
+          return reply.code(404).send({
+            error: { code: 'NOT_FOUND', message: 'Report not found' },
+          });
+        }
+
+        return reply.send({
+          success: true,
+          data: report,
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to fetch report' },
+        });
+      }
+    }
+  );
+
+  // ===========================================
   // GET /api/reports/:id - Get a specific report
   // ===========================================
   fastify.get<{ Params: { id: string } }>(
@@ -327,6 +372,116 @@ export async function reportRoutes(fastify: FastifyInstance) {
         fastify.log.error(error);
         return reply.code(500).send({
           error: { code: 'SERVER_ERROR', message: 'Failed to fetch report' },
+        });
+      }
+    }
+  );
+
+  // ===========================================
+  // PATCH /api/reports/by-analysis/:analysisId/ai-expert-comment - Save AI Expert comment by analysisId
+  // ===========================================
+  fastify.patch<{ Params: { analysisId: string }; Body: { comment: string } }>(
+    '/api/reports/by-analysis/:analysisId/ai-expert-comment',
+    { preHandler: authenticate },
+    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+      try {
+        const userId = request.user?.id;
+        if (!userId) {
+          return reply.code(401).send({
+            error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+          });
+        }
+
+        const { analysisId } = request.params;
+        const { comment } = request.body;
+
+        if (!comment || typeof comment !== 'string') {
+          return reply.code(400).send({
+            error: { code: 'INVALID_INPUT', message: 'Comment is required' },
+          });
+        }
+
+        // Find report by analysisId
+        const report = await prisma.report.findFirst({
+          where: { analysisId, userId },
+          select: { id: true },
+        });
+
+        if (!report) {
+          return reply.code(404).send({
+            error: { code: 'NOT_FOUND', message: 'Report not found for this analysis' },
+          });
+        }
+
+        // Update the AI Expert comment
+        await prisma.report.update({
+          where: { id: report.id },
+          data: { aiExpertComment: comment },
+        });
+
+        return reply.send({
+          success: true,
+          message: 'AI Expert comment saved successfully',
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to save AI Expert comment' },
+        });
+      }
+    }
+  );
+
+  // ===========================================
+  // PATCH /api/reports/:id/ai-expert-comment - Save AI Expert comment
+  // ===========================================
+  fastify.patch<{ Params: { id: string }; Body: { comment: string } }>(
+    '/api/reports/:id/ai-expert-comment',
+    { preHandler: authenticate },
+    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+      try {
+        const userId = request.user?.id;
+        if (!userId) {
+          return reply.code(401).send({
+            error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+          });
+        }
+
+        const { id } = request.params;
+        const { comment } = request.body;
+
+        if (!comment || typeof comment !== 'string') {
+          return reply.code(400).send({
+            error: { code: 'INVALID_INPUT', message: 'Comment is required' },
+          });
+        }
+
+        // Verify ownership
+        const report = await prisma.report.findFirst({
+          where: { id, userId },
+          select: { id: true },
+        });
+
+        if (!report) {
+          return reply.code(404).send({
+            error: { code: 'NOT_FOUND', message: 'Report not found' },
+          });
+        }
+
+        // Update the AI Expert comment
+        await prisma.report.update({
+          where: { id },
+          data: { aiExpertComment: comment },
+        });
+
+        return reply.send({
+          success: true,
+          message: 'AI Expert comment saved successfully',
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to save AI Expert comment' },
         });
       }
     }

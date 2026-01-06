@@ -261,6 +261,10 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
 
     // Store context in sessionStorage to avoid URL encoding issues
     sessionStorage.setItem('aiExpertContext', contextMessage);
+    // Also store analysisId for saving AI Expert comment to report
+    if (data.analysisId) {
+      sessionStorage.setItem('aiExpertAnalysisId', data.analysisId);
+    }
     router.push('/ai-expert/nexus?fromAnalysis=true');
   };
 
