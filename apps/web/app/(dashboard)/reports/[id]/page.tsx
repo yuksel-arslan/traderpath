@@ -2,7 +2,7 @@
 
 // ===========================================
 // Report View Page - Clean Summary Design
-// All 7 analysis steps included
+// All 7 analysis steps + AI Expert Review
 // ===========================================
 
 import { useEffect, useState } from 'react';
@@ -22,6 +22,9 @@ import {
   CheckCircle,
   Search,
   Crosshair,
+  Bot,
+  MessageSquare,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
 
@@ -84,6 +87,8 @@ export default function ReportViewPage() {
   const reportId = params.id as string;
 
   const [report, setReport] = useState<ReportData | null>(null);
+  const [aiExpertComment, setAiExpertComment] = useState<string | null>(null);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -105,6 +110,8 @@ export default function ReportViewPage() {
         const data = await response.json();
         if (data.success && data.data.reportData) {
           setReport(data.data.reportData);
+          setAiExpertComment(data.data.aiExpertComment || null);
+          setAnalysisId(data.data.analysisId || data.data.reportData.analysisId || null);
         } else {
           throw new Error('Report data not found');
         }
@@ -122,11 +129,70 @@ export default function ReportViewPage() {
     if (!report) return;
     try {
       const { generateAnalysisReport } = await import('../../../../components/reports/AnalysisReport');
-      await generateAnalysisReport(report);
+      await generateAnalysisReport({ ...report, aiExpertComment: aiExpertComment || undefined });
     } catch (err) {
       console.error('Failed to generate PDF:', err);
       alert('Failed to generate PDF');
     }
+  };
+
+  // Navigate to AI Expert with context
+  const handleAskAIExpert = () => {
+    if (!report) return;
+
+    // Build comprehensive context from all 7 steps
+    const contextMessage = `Bu analiz hakkında uzman görüşünü istiyorum:
+
+[${report.symbol}/USDT ANALİZ ÖZETİ]
+Tarih: ${report.generatedAt}
+Skor: ${report.verdict.overallScore * 10}/100
+Yön: ${report.tradePlan.direction?.toUpperCase()}
+
+[ADIM 1: Market Pulse]
+Fear & Greed: ${report.marketPulse.fearGreedIndex} (${report.marketPulse.fearGreedLabel})
+BTC Dominance: ${report.marketPulse.btcDominance?.toFixed(1)}%
+Trend: ${report.marketPulse.trend?.direction} (${report.marketPulse.trend?.strength}/10)
+
+[ADIM 2: Asset Scanner]
+Fiyat: $${report.assetScan.currentPrice}
+24h Değişim: ${report.assetScan.priceChange24h?.toFixed(2)}%
+RSI: ${report.assetScan.indicators?.rsi?.toFixed(0)}
+MACD: ${report.assetScan.indicators?.macd?.signal}
+
+[ADIM 3: Safety Check]
+Risk Seviyesi: ${report.safetyCheck.riskLevel}
+Manipülasyon: ${report.safetyCheck.manipulation?.pumpDumpRisk}
+Whale Activity: ${report.safetyCheck.whaleActivity?.bias}
+
+[ADIM 4: Timing]
+Trade Now: ${report.timing.tradeNow ? 'Evet' : 'Hayır'}
+Sebep: ${report.timing.reason}
+
+[ADIM 5: Trade Plan]
+Entry: $${report.tradePlan.averageEntry}
+Stop Loss: $${report.tradePlan.stopLoss?.price}
+Take Profit: $${report.tradePlan.takeProfits?.[0]?.price}
+Risk/Reward: ${report.tradePlan.riskReward?.toFixed(1)}:1
+
+[ADIM 6: Trap Check]
+Bull Trap: ${report.trapCheck?.traps?.bullTrap ? 'Evet' : 'Hayır'}
+Bear Trap: ${report.trapCheck?.traps?.bearTrap ? 'Evet' : 'Hayır'}
+Fakeout Risk: ${report.trapCheck?.traps?.fakeoutRisk}
+
+[ADIM 7: Final Verdict]
+Karar: ${report.verdict.action}
+Özet: ${report.verdict.aiSummary || 'N/A'}
+
+Bu analize göre risk değerlendirmeni ve önerilerini paylaşır mısın?`;
+
+    // Store context in sessionStorage
+    sessionStorage.setItem('aiExpertContext', contextMessage);
+    if (analysisId) {
+      sessionStorage.setItem('aiExpertAnalysisId', analysisId);
+    }
+
+    // Navigate to AI Expert (NEXUS for risk assessment)
+    router.push('/ai-expert/nexus?fromAnalysis=true');
   };
 
   if (loading) {
@@ -328,6 +394,46 @@ export default function ReportViewPage() {
             <p className="text-sm text-gray-600 dark:text-slate-300">
               {report.verdict.aiSummary || `Market conditions favor ${isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(report.tradePlan.averageEntry)} with ${report.tradePlan.riskReward?.toFixed(1)}:1 risk-reward ratio. Set stop-loss at ${formatPrice(report.tradePlan.stopLoss?.price)} to protect against downside.`}
             </p>
+          </div>
+
+          {/* AI Expert Review Section */}
+          <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-4 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                <Bot className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-amber-700 dark:text-amber-400">AI Expert Review</h3>
+                <p className="text-xs text-amber-600 dark:text-amber-500">NEXUS Risk Assessment</p>
+              </div>
+            </div>
+
+            {aiExpertComment ? (
+              // Show AI Expert comment if available
+              <div className="bg-white dark:bg-slate-800/50 rounded-lg p-4 border border-amber-200 dark:border-amber-500/20">
+                <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                  {aiExpertComment}
+                </p>
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-amber-200 dark:border-amber-500/20">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <span className="text-xs text-amber-600 dark:text-amber-400">AI Expert yorumu rapora eklendi</span>
+                </div>
+              </div>
+            ) : (
+              // Show Ask AI Expert button if no comment
+              <div className="text-center py-2">
+                <p className="text-sm text-amber-700 dark:text-amber-400 mb-3">
+                  AI Expert'ten bu analiz için risk değerlendirmesi ve öneri alabilirsiniz.
+                </p>
+                <button
+                  onClick={handleAskAIExpert}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-lg transition shadow-lg shadow-amber-500/25"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Ask AI Expert
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Download Button */}
