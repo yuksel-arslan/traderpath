@@ -19,15 +19,30 @@ interface SaveReportBody {
   entryPrice?: number; // Price at time of analysis
 }
 
-// Extract entry price from report data
+// Extract entry price from report data - comprehensive search
 function extractEntryPrice(reportData: Record<string, unknown>): number | null {
-  const assetScan = reportData.assetScan as Record<string, unknown> | undefined;
-  const timing = reportData.timing as Record<string, unknown> | undefined;
-  const tradePlan = reportData.tradePlan as Record<string, unknown> | undefined;
-
-  if (assetScan?.currentPrice) return Number(assetScan.currentPrice);
-  if (timing?.currentPrice) return Number(timing.currentPrice);
+  // Try tradePlan first (most accurate)
+  const tradePlan = reportData?.tradePlan as Record<string, unknown> | undefined;
   if (tradePlan?.averageEntry) return Number(tradePlan.averageEntry);
+  if (tradePlan?.entryPrice) return Number(tradePlan.entryPrice);
+
+  // Try assetScan (current price at analysis time)
+  const assetScan = reportData?.assetScan as Record<string, unknown> | undefined;
+  if (assetScan?.currentPrice) return Number(assetScan.currentPrice);
+  if (assetScan?.price) return Number(assetScan.price);
+
+  // Try timing
+  const timing = reportData?.timing as Record<string, unknown> | undefined;
+  if (timing?.currentPrice) return Number(timing.currentPrice);
+  if (timing?.entryPrice) return Number(timing.entryPrice);
+
+  // Try verdict
+  const verdict = reportData?.verdict as Record<string, unknown> | undefined;
+  if (verdict?.currentPrice) return Number(verdict.currentPrice);
+
+  // Try marketPulse
+  const marketPulse = reportData?.marketPulse as Record<string, unknown> | undefined;
+  if (marketPulse?.btcPrice) return null; // This is BTC price, not the coin price
 
   return null;
 }
@@ -186,11 +201,28 @@ export async function reportRoutes(fastify: FastifyInstance) {
         }
 
         // Enrich reports with live tracking data
-        const enrichedReports = reports.map(report => {
+        const enrichedReports = await Promise.all(reports.map(async (report) => {
           const reportData = report.reportData as Record<string, unknown> | null;
           const tradePlan = reportData?.tradePlan as Record<string, unknown> | undefined;
 
-          const entryPrice = Number(tradePlan?.averageEntry || report.entryPrice) || undefined;
+          // Try multiple sources for entry price
+          let entryPrice = report.entryPrice
+            ? Number(report.entryPrice)
+            : Number(tradePlan?.averageEntry) || undefined;
+
+          // If still no entry price, try to extract from reportData
+          if (!entryPrice && reportData) {
+            const extractedPrice = extractEntryPrice(reportData);
+            if (extractedPrice) {
+              entryPrice = extractedPrice;
+              // Update the report in database for future queries
+              prisma.report.update({
+                where: { id: report.id },
+                data: { entryPrice: extractedPrice },
+              }).catch(() => {}); // Fire and forget
+            }
+          }
+
           const currentPrice = prices[report.symbol] || undefined;
           const stopLoss = (tradePlan?.stopLoss as { price: number } | undefined)?.price;
           const takeProfits = tradePlan?.takeProfits as Array<{ price: number }> | undefined;

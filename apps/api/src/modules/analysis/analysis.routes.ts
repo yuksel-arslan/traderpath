@@ -886,7 +886,18 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         activeTrades.forEach(report => {
           const reportData = report.reportData as Record<string, unknown> | null;
           const tradePlan = reportData?.tradePlan as Record<string, unknown> | undefined;
-          const entryPrice = Number(tradePlan?.averageEntry || report.entryPrice) || 0;
+          const assetScan = reportData?.assetScan as Record<string, unknown> | undefined;
+          const timing = reportData?.timing as Record<string, unknown> | undefined;
+
+          // Try multiple sources for entry price
+          const entryPrice = Number(
+            tradePlan?.averageEntry ||
+            tradePlan?.entryPrice ||
+            report.entryPrice ||
+            assetScan?.currentPrice ||
+            timing?.currentPrice
+          ) || 0;
+
           const currentPrice = prices[report.symbol] || 0;
           const direction = (tradePlan?.direction as string || report.direction || 'long').toLowerCase();
 
