@@ -49,8 +49,27 @@ interface Report {
   takeProfit3?: number;
 }
 
-// TradingView Widget Component for Multi-Timeframe View
-function TradingViewChart({ symbol, interval }: { symbol: string; interval: string }) {
+// Trade Plan Levels for Chart
+interface TradePlanLevels {
+  entryPrice?: number;
+  stopLoss?: number;
+  takeProfit1?: number;
+  takeProfit2?: number;
+  takeProfit3?: number;
+  direction?: string;
+  currentPrice?: number;
+}
+
+// TradingView Widget Component with Trade Plan Overlay
+function TradingViewChart({
+  symbol,
+  interval,
+  tradePlan
+}: {
+  symbol: string;
+  interval: string;
+  tradePlan?: TradePlanLevels;
+}) {
   const containerId = `tradingview_${symbol}_${interval}`;
 
   useEffect(() => {
@@ -87,7 +106,59 @@ function TradingViewChart({ symbol, interval }: { symbol: string; interval: stri
     };
   }, [symbol, interval, containerId]);
 
-  return <div id={containerId} className="w-full h-full" />;
+  return (
+    <div className="relative w-full h-full">
+      <div id={containerId} className="w-full h-full" />
+
+      {/* Trade Plan Overlay - Right Side */}
+      {tradePlan && (tradePlan.entryPrice || tradePlan.stopLoss || tradePlan.takeProfit1) && (
+        <div className="absolute right-2 top-12 flex flex-col gap-1 z-10">
+          {/* TP3 */}
+          {tradePlan.takeProfit3 && (
+            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/90 rounded text-[10px] font-bold text-white shadow-lg">
+              <span>TP3</span>
+              <span className="font-mono">${tradePlan.takeProfit3.toFixed(4)}</span>
+            </div>
+          )}
+          {/* TP2 */}
+          {tradePlan.takeProfit2 && (
+            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/80 rounded text-[10px] font-bold text-white shadow-lg">
+              <span>TP2</span>
+              <span className="font-mono">${tradePlan.takeProfit2.toFixed(4)}</span>
+            </div>
+          )}
+          {/* TP1 */}
+          {tradePlan.takeProfit1 && (
+            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/70 rounded text-[10px] font-bold text-white shadow-lg">
+              <span>TP1</span>
+              <span className="font-mono">${tradePlan.takeProfit1.toFixed(4)}</span>
+            </div>
+          )}
+          {/* Current Price */}
+          {tradePlan.currentPrice && (
+            <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/90 rounded text-[10px] font-bold text-white shadow-lg">
+              <span>NOW</span>
+              <span className="font-mono">${tradePlan.currentPrice.toFixed(4)}</span>
+            </div>
+          )}
+          {/* Entry */}
+          {tradePlan.entryPrice && (
+            <div className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500/90 rounded text-[10px] font-bold text-black shadow-lg">
+              <span>ENTRY</span>
+              <span className="font-mono">${tradePlan.entryPrice.toFixed(4)}</span>
+            </div>
+          )}
+          {/* Stop Loss */}
+          {tradePlan.stopLoss && (
+            <div className="flex items-center gap-1 px-2 py-0.5 bg-red-500/90 rounded text-[10px] font-bold text-white shadow-lg">
+              <span>SL</span>
+              <span className="font-mono">${tradePlan.stopLoss.toFixed(4)}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface ReportsResponse {
@@ -803,7 +874,19 @@ export default function ReportsPage() {
                 <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-slate-900/80 rounded text-xs font-medium text-blue-400">
                   5 Minutes
                 </div>
-                <TradingViewChart symbol={chartModal.report.symbol} interval="5" />
+                <TradingViewChart
+                  symbol={chartModal.report.symbol}
+                  interval="5"
+                  tradePlan={{
+                    entryPrice: chartModal.report.entryPrice,
+                    stopLoss: chartModal.report.stopLoss,
+                    takeProfit1: chartModal.report.takeProfit1,
+                    takeProfit2: chartModal.report.takeProfit2,
+                    takeProfit3: chartModal.report.takeProfit3,
+                    direction: chartModal.report.direction || undefined,
+                    currentPrice: chartModal.report.currentPrice,
+                  }}
+                />
               </div>
 
               {/* 15m Chart */}
@@ -811,7 +894,19 @@ export default function ReportsPage() {
                 <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-slate-900/80 rounded text-xs font-medium text-purple-400">
                   15 Minutes
                 </div>
-                <TradingViewChart symbol={chartModal.report.symbol} interval="15" />
+                <TradingViewChart
+                  symbol={chartModal.report.symbol}
+                  interval="15"
+                  tradePlan={{
+                    entryPrice: chartModal.report.entryPrice,
+                    stopLoss: chartModal.report.stopLoss,
+                    takeProfit1: chartModal.report.takeProfit1,
+                    takeProfit2: chartModal.report.takeProfit2,
+                    takeProfit3: chartModal.report.takeProfit3,
+                    direction: chartModal.report.direction || undefined,
+                    currentPrice: chartModal.report.currentPrice,
+                  }}
+                />
               </div>
 
               {/* 1h Chart */}
@@ -819,7 +914,19 @@ export default function ReportsPage() {
                 <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-slate-900/80 rounded text-xs font-medium text-amber-400">
                   1 Hour
                 </div>
-                <TradingViewChart symbol={chartModal.report.symbol} interval="60" />
+                <TradingViewChart
+                  symbol={chartModal.report.symbol}
+                  interval="60"
+                  tradePlan={{
+                    entryPrice: chartModal.report.entryPrice,
+                    stopLoss: chartModal.report.stopLoss,
+                    takeProfit1: chartModal.report.takeProfit1,
+                    takeProfit2: chartModal.report.takeProfit2,
+                    takeProfit3: chartModal.report.takeProfit3,
+                    direction: chartModal.report.direction || undefined,
+                    currentPrice: chartModal.report.currentPrice,
+                  }}
+                />
               </div>
 
               {/* 4h Chart */}
@@ -827,7 +934,19 @@ export default function ReportsPage() {
                 <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-slate-900/80 rounded text-xs font-medium text-emerald-400">
                   4 Hours
                 </div>
-                <TradingViewChart symbol={chartModal.report.symbol} interval="240" />
+                <TradingViewChart
+                  symbol={chartModal.report.symbol}
+                  interval="240"
+                  tradePlan={{
+                    entryPrice: chartModal.report.entryPrice,
+                    stopLoss: chartModal.report.stopLoss,
+                    takeProfit1: chartModal.report.takeProfit1,
+                    takeProfit2: chartModal.report.takeProfit2,
+                    takeProfit3: chartModal.report.takeProfit3,
+                    direction: chartModal.report.direction || undefined,
+                    currentPrice: chartModal.report.currentPrice,
+                  }}
+                />
               </div>
             </div>
           </div>
