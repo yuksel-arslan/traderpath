@@ -705,11 +705,6 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Formula Display */}
-              <div className="text-center text-[10px] text-gray-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-900/30 rounded-lg p-2 space-y-1">
-                <div>Realized = TP Hit / Closed = {userStats.correctAnalyses}/{userStats.verifiedAnalyses} = {userStats.verifiedAnalyses > 0 ? `${userStats.accuracy.toFixed(1)}%` : '-'}</div>
-                <div>Active = Profitable / Active = {userStats.activeProfitable || 0}/{userStats.activeCount || 0} = {(userStats.activeCount || 0) > 0 ? `${(userStats.activePerformance || 0).toFixed(1)}%` : '-'}</div>
-              </div>
             </>
           ) : (
             <div className="text-center py-8">
