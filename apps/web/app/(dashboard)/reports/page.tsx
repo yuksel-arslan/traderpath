@@ -416,24 +416,28 @@ export default function ReportsPage() {
                   const positionPercent = totalRange !== 0 ? (currentPos / totalRange) * 100 : 50;
                   return positionPercent >= 50 ? "border-green-500/50" : "border-red-500/50";
                 })(),
-                !report.outcome && !(report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1) && "border-blue-500/50 bg-blue-500/5"
+                !report.outcome && !(report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1) && "border-blue-500/50"
               )}
               style={{
-                backgroundColor: report.outcome === 'correct' ? `rgba(34, 197, 94, 0.2)` :
-                                report.outcome === 'incorrect' ? `rgba(239, 68, 68, 0.2)` :
-                                report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1 ? (() => {
-                                  const isLong = report.direction === 'long';
-                                  const totalRange = isLong ? report.takeProfit1! - report.stopLoss! : report.stopLoss! - report.takeProfit1!;
-                                  const currentPos = isLong ? report.currentPrice! - report.stopLoss! : report.stopLoss! - report.currentPrice!;
-                                  const positionPercent = totalRange !== 0 ? (currentPos / totalRange) * 100 : 50;
-                                  if (positionPercent >= 50) {
-                                    const intensity = 0.05 + ((positionPercent - 50) / 50) * 0.2;
-                                    return `rgba(34, 197, 94, ${intensity})`;
-                                  } else {
-                                    const intensity = 0.05 + ((50 - positionPercent) / 50) * 0.2;
-                                    return `rgba(239, 68, 68, ${intensity})`;
-                                  }
-                                })() : undefined
+                background: report.outcome === 'correct'
+                  ? `linear-gradient(to right, rgba(34, 197, 94, 0.05), rgba(34, 197, 94, 0.25))`
+                  : report.outcome === 'incorrect'
+                  ? `linear-gradient(to right, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.25))`
+                  : report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1 ? (() => {
+                    const isLong = report.direction === 'long';
+                    const totalRange = isLong ? report.takeProfit1! - report.stopLoss! : report.stopLoss! - report.takeProfit1!;
+                    const currentPos = isLong ? report.currentPrice! - report.stopLoss! : report.stopLoss! - report.currentPrice!;
+                    const positionPercent = totalRange !== 0 ? (currentPos / totalRange) * 100 : 50;
+                    if (positionPercent >= 50) {
+                      // Green gradient - intensity based on proximity to TP
+                      const maxIntensity = 0.08 + ((positionPercent - 50) / 50) * 0.22;
+                      return `linear-gradient(to right, rgba(34, 197, 94, 0.03), rgba(34, 197, 94, ${maxIntensity}))`;
+                    } else {
+                      // Red gradient - intensity based on proximity to SL
+                      const maxIntensity = 0.08 + ((50 - positionPercent) / 50) * 0.22;
+                      return `linear-gradient(to right, rgba(239, 68, 68, 0.03), rgba(239, 68, 68, ${maxIntensity}))`;
+                    }
+                  })() : `linear-gradient(to right, rgba(59, 130, 246, 0.02), rgba(59, 130, 246, 0.08))`
               }}
             >
               {/* Status Corner Ribbon */}
@@ -514,15 +518,15 @@ export default function ReportsPage() {
                   </div>
                 </div>
 
-                {/* Score + Live P/L Display */}
-                <div className="flex items-center gap-3 px-4 py-2 bg-slate-900/50 rounded-lg">
+                {/* Score + Price + P/L + Distance Display */}
+                <div className="flex items-center gap-2 px-3 py-2 bg-slate-900/50 rounded-lg">
                   {/* Score as percentage */}
                   <div className={cn(
-                    "text-center px-3 py-1 rounded-lg",
+                    "text-center px-2 py-1 rounded-lg min-w-[50px]",
                     report.score >= 7 ? "bg-green-500/20" :
                     report.score >= 5 ? "bg-yellow-500/20" : "bg-red-500/20"
                   )}>
-                    <div className="text-xs text-muted-foreground">Score</div>
+                    <div className="text-[10px] text-muted-foreground">Score</div>
                     <div className={cn(
                       "font-bold text-sm",
                       report.score >= 7 ? "text-green-400" :
@@ -532,81 +536,63 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  {report.entryPrice && report.currentPrice && (
+                  {report.currentPrice && (
                     <>
-                      <div className="text-muted-foreground">|</div>
-                      <div className="text-center">
-                        <div className="text-xs text-muted-foreground">Entry</div>
-                        <div className="font-mono text-sm">${report.entryPrice.toFixed(4)}</div>
+                      <div className="text-muted-foreground/30">|</div>
+                      {/* Current Price */}
+                      <div className="text-center min-w-[70px]">
+                        <div className="text-[10px] text-muted-foreground">Price</div>
+                        <div className="font-mono text-sm font-medium text-white">${report.currentPrice.toFixed(4)}</div>
                       </div>
-                      <div className="text-muted-foreground">→</div>
-                      <div className="text-center">
-                        <div className="text-xs text-muted-foreground">Current</div>
-                        <div className="font-mono text-sm">${report.currentPrice.toFixed(4)}</div>
-                      </div>
+
+                      {/* P/L Percentage */}
                       <div className={cn(
-                        "text-center px-3 py-1 rounded-lg font-bold",
+                        "text-center px-2 py-1 rounded-lg min-w-[60px]",
                         (report.unrealizedPnL || 0) >= 0
-                          ? "bg-green-500/20 text-green-400"
-                          : "bg-red-500/20 text-red-400"
+                          ? "bg-green-500/20"
+                          : "bg-red-500/20"
                       )}>
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="w-3 h-3" />
+                        <div className="text-[10px] text-muted-foreground">P/L</div>
+                        <div className={cn(
+                          "font-bold text-sm",
+                          (report.unrealizedPnL || 0) >= 0 ? "text-green-400" : "text-red-400"
+                        )}>
                           {(report.unrealizedPnL || 0) >= 0 ? '+' : ''}{(report.unrealizedPnL || 0).toFixed(2)}%
                         </div>
                       </div>
-                    </>
-                  )}
-                </div>
 
-                {/* Distance to Target */}
-                {report.entryPrice && report.currentPrice && report.takeProfit1 && !report.outcome && (
-                  (() => {
-                    const entry = report.entryPrice!;
-                    const current = report.currentPrice!;
-                    const tp1 = report.takeProfit1!;
-                    const isLong = report.direction === 'long';
+                      {/* Distance to TP - only for active trades */}
+                      {report.takeProfit1 && !report.outcome && (() => {
+                        const current = report.currentPrice!;
+                        const tp1 = report.takeProfit1!;
+                        const isLong = report.direction === 'long';
+                        const distanceToTP = isLong
+                          ? ((tp1 - current) / current) * 100
+                          : ((current - tp1) / current) * 100;
 
-                    // Calculate distance from current to TP1
-                    const distanceToTP = isLong
-                      ? ((tp1 - current) / current) * 100
-                      : ((current - tp1) / current) * 100;
-
-                    // Calculate progress (0% = at entry, 100% = at TP1)
-                    const totalDistance = isLong ? tp1 - entry : entry - tp1;
-                    const coveredDistance = isLong ? current - entry : entry - current;
-                    const progress = totalDistance !== 0 ? Math.max(0, Math.min(100, (coveredDistance / totalDistance) * 100)) : 0;
-
-                    return (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-purple-500/10 rounded-lg min-w-[140px]">
-                        <Target className="w-4 h-4 text-purple-400 shrink-0" />
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs text-purple-300">To TP1</span>
-                            <span className={cn(
-                              "text-xs font-bold",
+                        return (
+                          <div className={cn(
+                            "text-center px-2 py-1 rounded-lg min-w-[60px]",
+                            distanceToTP <= 1 ? "bg-green-500/20" :
+                            distanceToTP <= 3 ? "bg-yellow-500/20" : "bg-purple-500/20"
+                          )}>
+                            <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
+                              <Target className="w-3 h-3" />
+                              TP
+                            </div>
+                            <div className={cn(
+                              "font-bold text-sm",
                               distanceToTP <= 1 ? "text-green-400" :
                               distanceToTP <= 3 ? "text-yellow-400" : "text-purple-400"
                             )}>
-                              {distanceToTP > 0 ? distanceToTP.toFixed(2) : '0.00'}%
-                            </span>
+                              {distanceToTP > 0 ? distanceToTP.toFixed(1) : '0.0'}%
+                            </div>
                           </div>
-                          <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                            <div
-                              className={cn(
-                                "h-full rounded-full transition-all",
-                                progress >= 80 ? "bg-green-500" :
-                                progress >= 50 ? "bg-yellow-500" : "bg-purple-500"
-                              )}
-                              style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
-                            />
-                          </div>
-                          <div className="text-[10px] text-slate-500 mt-0.5 text-right">{progress.toFixed(0)}% done</div>
-                        </div>
-                      </div>
-                    );
-                  })()
-                )}
+                        );
+                      })()}
+                    </>
+                  )}
+                </div>
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0">
