@@ -7,6 +7,9 @@
 import { config } from '../../core/config';
 import { costService } from '../costs/cost.service';
 import { prisma } from '../../core/database';
+import { analysisEngine } from '../analysis/analysis.engine';
+import { creditService } from '../credits/credit.service';
+import { CREDIT_COSTS } from '@tradepath/types';
 
 // Gemini API configuration
 const GEMINI_API_KEY = config.gemini.apiKey;
@@ -369,6 +372,19 @@ interface ChatResponse {
   inputTokens: number;
   outputTokens: number;
   costUsd: number;
+}
+
+interface ExpertPanelResult {
+  success: boolean;
+  symbol: string;
+  analysisId?: string;
+  verdict?: string;
+  score?: number;
+  expertComments?: Array<{ expertId: string; expertName: string; comment: string }>;
+  voltranSynthesis?: string;
+  creditsSpent?: number;
+  remainingCredits?: number;
+  error?: string;
 }
 
 export class AIExpertService {
@@ -1006,8 +1022,9 @@ export class AIExpertService {
 
   /**
    * Chat with an AI expert - Enhanced with examples
+   * Now supports Expert Panel analysis when coin + analysis request detected
    */
-  async chat(request: ChatRequest): Promise<ChatResponse> {
+  async chat(request: ChatRequest): Promise<ChatResponse & { panelAnalysis?: ExpertPanelResult }> {
     if (!GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY is not configured.');
     }
@@ -1016,6 +1033,44 @@ export class AIExpertService {
     if (!expert) {
       throw new Error(`Unknown expert: ${request.expertId}`);
     }
+
+    // ===========================================
+    // EXPERT PANEL DETECTION
+    // If user asks for coin analysis, trigger Voltran
+    // ===========================================
+    const detectedSymbol = this.detectCoinSymbol(request.message);
+    const isAnalysisRequest = this.isAnalysisRequest(request.message);
+
+    if (detectedSymbol && isAnalysisRequest) {
+      // Detect language from message
+      const isTurkish = /[çğıöşüÇĞİÖŞÜ]|analiz|değerlendir|incele|nasıl|almalı|satmalı/i.test(request.message);
+      const language = isTurkish ? 'tr' : 'en';
+
+      // Run Expert Panel analysis
+      const panelResult = await this.analyzeWithExpertPanel({
+        symbol: detectedSymbol,
+        userId: request.userId,
+        language,
+      });
+
+      // Format the panel response
+      const panelResponse = this.formatPanelResponse(panelResult);
+
+      // Return with panel analysis included
+      return {
+        response: panelResponse,
+        expertId: request.expertId,
+        examples: [],
+        inputTokens: 0,
+        outputTokens: 0,
+        costUsd: 0,
+        panelAnalysis: panelResult,
+      };
+    }
+
+    // ===========================================
+    // REGULAR CHAT (no analysis request)
+    // ===========================================
 
     // Find relevant TradePath examples
     const examples = await this.findExamples(request.expertId, request.userId);
@@ -1252,6 +1307,431 @@ export class AIExpertService {
       experts: expertInsights,
       reportId: report.id,
     };
+  }
+
+  // ===========================================
+  // EXPERT PANEL (VOLTRAN) - 4 Experts Collaborate
+  // ===========================================
+
+  /**
+   * Supported coin symbols for analysis
+   */
+  private readonly SUPPORTED_SYMBOLS = [
+    'BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOGE',
+    'DOT', 'MATIC', 'LINK', 'UNI', 'ATOM', 'LTC', 'INJ', 'ARB',
+    'OP', 'APT', 'SUI', 'SEI', 'TIA', 'NEAR', 'FTM', 'ALGO'
+  ];
+
+  /**
+   * Detect coin symbol in user message
+   */
+  detectCoinSymbol(message: string): string | null {
+    const upperMessage = message.toUpperCase();
+
+    // Check for explicit patterns like "analyze BTC" or "BTC analizi"
+    const patterns = [
+      /\b(ANALIZ|ANALYZE|ANALYSIS|ANALİZ)\s+([A-Z]{2,6})\b/i,
+      /\b([A-Z]{2,6})\s+(ANALIZ|ANALYZE|ANALYSIS|ANALİZ)/i,
+      /\b([A-Z]{2,6})\s+(İÇİN|FOR|ABOUT)\b/i,
+      /\b(BITCOIN|ETHEREUM|SOLANA|RIPPLE|CARDANO|DOGECOIN|POLKADOT|POLYGON|CHAINLINK|UNISWAP|COSMOS|LITECOIN)\b/i,
+    ];
+
+    // Map full names to symbols
+    const nameToSymbol: Record<string, string> = {
+      'BITCOIN': 'BTC', 'ETHEREUM': 'ETH', 'SOLANA': 'SOL', 'RIPPLE': 'XRP',
+      'CARDANO': 'ADA', 'DOGECOIN': 'DOGE', 'POLKADOT': 'DOT', 'POLYGON': 'MATIC',
+      'CHAINLINK': 'LINK', 'UNISWAP': 'UNI', 'COSMOS': 'ATOM', 'LITECOIN': 'LTC',
+      'AVALANCHE': 'AVAX', 'INJECTIVE': 'INJ', 'ARBITRUM': 'ARB', 'OPTIMISM': 'OP',
+      'APTOS': 'APT', 'CELESTIA': 'TIA', 'NEAR PROTOCOL': 'NEAR', 'FANTOM': 'FTM'
+    };
+
+    // Check for full coin names
+    for (const [name, symbol] of Object.entries(nameToSymbol)) {
+      if (upperMessage.includes(name)) {
+        return symbol;
+      }
+    }
+
+    // Check for symbol patterns
+    for (const pattern of patterns) {
+      const match = upperMessage.match(pattern);
+      if (match) {
+        const potentialSymbol = match[2] || match[1];
+        if (potentialSymbol && this.SUPPORTED_SYMBOLS.includes(potentialSymbol)) {
+          return potentialSymbol;
+        }
+      }
+    }
+
+    // Direct symbol check (with word boundaries)
+    for (const symbol of this.SUPPORTED_SYMBOLS) {
+      const regex = new RegExp(`\\b${symbol}(USDT)?\\b`, 'i');
+      if (regex.test(upperMessage)) {
+        return symbol;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Check if message is requesting analysis
+   */
+  isAnalysisRequest(message: string): boolean {
+    const lowerMessage = message.toLowerCase();
+    const analysisKeywords = [
+      'analiz', 'analyze', 'analysis', 'değerlendir', 'evaluate',
+      'incele', 'examine', 'rapor', 'report', 'ne düşünüyorsun',
+      'what do you think', 'almalı mıyım', 'should i buy',
+      'satmalı mıyım', 'should i sell', 'entry', 'giriş',
+      'nasıl görünüyor', 'how does it look', 'fiyat tahmini',
+      'price prediction', 'yorum', 'comment', 'fikir', 'opinion'
+    ];
+
+    return analysisKeywords.some(keyword => lowerMessage.includes(keyword));
+  }
+
+  /**
+   * Generate expert commentary on analysis data
+   */
+  private async generateExpertCommentary(
+    expertId: ExpertId,
+    symbol: string,
+    analysisData: Record<string, unknown>,
+    language: 'en' | 'tr' = 'en'
+  ): Promise<{ expertId: string; expertName: string; comment: string }> {
+    const expert = AI_EXPERTS[expertId];
+
+    const langInstruction = language === 'tr'
+      ? 'Respond in Turkish. Be professional and concise.'
+      : 'Respond in English. Be professional and concise.';
+
+    // Expert-specific data extraction
+    let focusData: Record<string, unknown> = {};
+    let focusPrompt = '';
+
+    switch (expertId) {
+      case 'aria':
+        focusData = {
+          price: analysisData.currentPrice,
+          rsi: (analysisData.indicators as Record<string, unknown>)?.rsi,
+          macd: (analysisData.indicators as Record<string, unknown>)?.macd,
+          timeframes: analysisData.timeframes,
+          levels: analysisData.levels,
+          pvtTrend: (analysisData.advancedMetrics as Record<string, unknown>)?.pvtTrend,
+          volumeSpike: (analysisData.advancedMetrics as Record<string, unknown>)?.volumeSpike,
+        };
+        focusPrompt = `Analyze the TECHNICAL picture for ${symbol}. Focus on RSI, MACD, trend alignment, and key price levels.`;
+        break;
+
+      case 'oracle':
+        focusData = {
+          whaleActivity: analysisData.whaleActivity,
+          exchangeFlows: analysisData.exchangeFlows,
+          smartMoney: analysisData.smartMoney,
+          orderFlowImbalance: (analysisData.advancedMetrics as Record<string, unknown>)?.orderFlowImbalance,
+          liquidityScore: (analysisData.advancedMetrics as Record<string, unknown>)?.liquidityScore,
+        };
+        focusPrompt = `Analyze the ON-CHAIN activity for ${symbol}. Focus on whale movements, exchange flows, and smart money positioning.`;
+        break;
+
+      case 'sentinel':
+        focusData = {
+          riskLevel: analysisData.riskLevel,
+          manipulation: analysisData.manipulation,
+          traps: analysisData.traps,
+          warnings: analysisData.warnings,
+          liquidityScore: (analysisData.advancedMetrics as Record<string, unknown>)?.liquidityScore,
+          historicalVolatility: (analysisData.advancedMetrics as Record<string, unknown>)?.historicalVolatility,
+        };
+        focusPrompt = `Analyze the SECURITY & TRAP risks for ${symbol}. Focus on manipulation signs, trap risks, and red flags.`;
+        break;
+
+      case 'nexus':
+        focusData = {
+          direction: analysisData.direction,
+          entries: analysisData.entries,
+          stopLoss: analysisData.stopLoss,
+          takeProfits: analysisData.takeProfits,
+          riskReward: analysisData.riskReward,
+          positionSizePercent: analysisData.positionSizePercent,
+          riskAmount: analysisData.riskAmount,
+        };
+        focusPrompt = `Analyze the RISK MANAGEMENT for ${symbol}. Focus on R/R ratio, position sizing, and stop/take profit placement.`;
+        break;
+    }
+
+    const prompt = `You are ${expert.name}, ${expert.title} at TradePath.
+
+${focusPrompt}
+
+DATA:
+${JSON.stringify(focusData, null, 2)}
+
+RULES:
+- Give your expert opinion in 2-3 sentences MAX
+- Be specific with numbers and percentages
+- Highlight the most important finding from your perspective
+- ${langInstruction}
+- NO questions, NO offers, NO CTAs at the end
+
+FORMAT: Just your professional insight. Start directly with your analysis.`;
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 200,
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Gemini API error');
+      }
+
+      const data = await response.json();
+      const comment = sanitizeAIResponse(
+        data.candidates?.[0]?.content?.parts?.[0]?.text || 'Analysis unavailable.'
+      );
+
+      return {
+        expertId,
+        expertName: expert.name,
+        comment,
+      };
+    } catch (error) {
+      console.error(`Expert ${expertId} commentary error:`, error);
+      return {
+        expertId,
+        expertName: expert.name,
+        comment: 'Unable to generate analysis at this time.',
+      };
+    }
+  }
+
+  /**
+   * Generate Voltran synthesis - combining all expert opinions
+   */
+  private async generateVoltranSynthesis(
+    symbol: string,
+    expertComments: Array<{ expertId: string; expertName: string; comment: string }>,
+    verdict: Record<string, unknown>,
+    language: 'en' | 'tr' = 'en'
+  ): Promise<string> {
+    const langInstruction = language === 'tr'
+      ? 'Respond in Turkish.'
+      : 'Respond in English.';
+
+    const prompt = `You are the VOLTRAN - the unified voice of TradePath's Expert Panel.
+
+4 world-class experts have analyzed ${symbol}. Synthesize their insights into ONE powerful recommendation.
+
+EXPERT OPINIONS:
+${expertComments.map(e => `${e.expertName}: ${e.comment}`).join('\n\n')}
+
+FINAL VERDICT DATA:
+- Decision: ${verdict.verdict}
+- Score: ${verdict.overallScore}/10
+- Recommendation: ${verdict.recommendation}
+
+YOUR TASK:
+Create a unified 3-4 sentence synthesis that:
+1. Highlights the consensus view
+2. Notes any expert disagreements
+3. Gives the final actionable recommendation
+
+${langInstruction}
+
+FORMAT:
+🤖 VOLTRAN PANEL VERDICT
+[Your synthesis here]`;
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 300,
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Gemini API error');
+      }
+
+      const data = await response.json();
+      return sanitizeAIResponse(
+        data.candidates?.[0]?.content?.parts?.[0]?.text || 'Panel synthesis unavailable.'
+      );
+    } catch (error) {
+      console.error('Voltran synthesis error:', error);
+      return '🤖 VOLTRAN PANEL VERDICT\nUnable to synthesize expert opinions at this time.';
+    }
+  }
+
+  /**
+   * Run full Expert Panel analysis (VOLTRAN)
+   * Triggers 7-step analysis and gets all 4 experts to comment
+   */
+  async analyzeWithExpertPanel(params: {
+    symbol: string;
+    userId: string;
+    language?: 'en' | 'tr';
+  }): Promise<ExpertPanelResult> {
+    const { symbol, userId, language = 'en' } = params;
+    const upperSymbol = symbol.toUpperCase();
+
+    // Check if symbol is supported
+    if (!this.SUPPORTED_SYMBOLS.includes(upperSymbol)) {
+      return {
+        success: false,
+        symbol: upperSymbol,
+        error: `${upperSymbol} is not supported. Supported: ${this.SUPPORTED_SYMBOLS.slice(0, 10).join(', ')}...`,
+      };
+    }
+
+    // Check and charge credits (15 credits for full analysis)
+    const cost = CREDIT_COSTS.BUNDLE_FULL_ANALYSIS;
+    const chargeResult = await creditService.charge(userId, cost, 'expert_panel_analysis', {
+      symbol: upperSymbol,
+    });
+
+    if (!chargeResult.success) {
+      return {
+        success: false,
+        symbol: upperSymbol,
+        error: `Insufficient credits. Required: ${cost}, Available: ${chargeResult.newBalance + cost}`,
+      };
+    }
+
+    try {
+      // Run full 7-step analysis
+      const [marketPulse, assetScan, safetyCheck, timing, tradePlan, trapCheck] = await Promise.all([
+        analysisEngine.getMarketPulse(),
+        analysisEngine.scanAsset(upperSymbol),
+        analysisEngine.safetyCheck(upperSymbol),
+        analysisEngine.timingAnalysis(upperSymbol),
+        analysisEngine.tradePlan(upperSymbol, 10000),
+        analysisEngine.trapCheck(upperSymbol),
+      ]);
+
+      // Generate final verdict
+      const verdict = await analysisEngine.finalVerdict(upperSymbol, {
+        marketPulse,
+        assetScan,
+        safetyCheck,
+        timing,
+        tradePlan,
+        trapCheck,
+      });
+
+      // Prepare combined data for each expert
+      const ariaData = { ...assetScan, advancedMetrics: safetyCheck.advancedMetrics };
+      const oracleData = { ...safetyCheck, advancedMetrics: safetyCheck.advancedMetrics };
+      const sentinelData = { ...safetyCheck, ...trapCheck, advancedMetrics: safetyCheck.advancedMetrics };
+      const nexusData = { ...tradePlan };
+
+      // Get all 4 expert comments in parallel
+      const [ariaComment, oracleComment, sentinelComment, nexusComment] = await Promise.all([
+        this.generateExpertCommentary('aria', upperSymbol, ariaData, language),
+        this.generateExpertCommentary('oracle', upperSymbol, oracleData, language),
+        this.generateExpertCommentary('sentinel', upperSymbol, sentinelData, language),
+        this.generateExpertCommentary('nexus', upperSymbol, nexusData, language),
+      ]);
+
+      const expertComments = [ariaComment, oracleComment, sentinelComment, nexusComment];
+
+      // Generate Voltran synthesis
+      const voltranSynthesis = await this.generateVoltranSynthesis(
+        upperSymbol,
+        expertComments,
+        verdict as unknown as Record<string, unknown>,
+        language
+      );
+
+      // Log costs for AI calls (5 Gemini calls: 4 experts + 1 synthesis)
+      await costService.logCost({
+        service: 'gemini',
+        operation: 'expert_panel_analysis',
+        inputTokens: 2000, // Approximate
+        outputTokens: 800,
+        costUsd: 0.001,
+        userId,
+        symbol: upperSymbol,
+        metadata: { experts: 4, synthesis: true },
+      });
+
+      return {
+        success: true,
+        symbol: upperSymbol,
+        analysisId: verdict.analysisId,
+        verdict: verdict.verdict,
+        score: verdict.overallScore,
+        expertComments,
+        voltranSynthesis,
+        creditsSpent: cost,
+        remainingCredits: chargeResult.newBalance,
+      };
+    } catch (error) {
+      console.error('Expert Panel analysis error:', error);
+
+      // Refund credits on failure using add with BONUS type
+      await creditService.add(userId, cost, 'BONUS', 'expert_panel_refund', {
+        symbol: upperSymbol,
+        reason: 'analysis_failed',
+        error: String(error),
+      });
+
+      return {
+        success: false,
+        symbol: upperSymbol,
+        error: 'Analysis failed. Credits have been refunded.',
+      };
+    }
+  }
+
+  /**
+   * Format Expert Panel result for chat response
+   */
+  formatPanelResponse(result: Awaited<ReturnType<typeof this.analyzeWithExpertPanel>>): string {
+    if (!result.success) {
+      return `❌ ${result.error}`;
+    }
+
+    const verdictEmoji = {
+      'go': '🟢',
+      'conditional_go': '🔵',
+      'wait': '🟡',
+      'avoid': '🔴',
+    }[result.verdict || 'wait'] || '⚪';
+
+    let response = `📊 **${result.symbol} Expert Panel Analysis**\n\n`;
+    response += `${verdictEmoji} **Verdict: ${result.verdict?.toUpperCase()}** (${result.score}/10)\n\n`;
+
+    response += `---\n\n`;
+    response += `**🎯 ARIA** (Technical): ${result.expertComments?.find(e => e.expertId === 'aria')?.comment}\n\n`;
+    response += `**🔮 ORACLE** (On-Chain): ${result.expertComments?.find(e => e.expertId === 'oracle')?.comment}\n\n`;
+    response += `**🛡️ SENTINEL** (Security): ${result.expertComments?.find(e => e.expertId === 'sentinel')?.comment}\n\n`;
+    response += `**⚖️ NEXUS** (Risk): ${result.expertComments?.find(e => e.expertId === 'nexus')?.comment}\n\n`;
+    response += `---\n\n`;
+    response += `${result.voltranSynthesis}`;
+
+    return response;
   }
 }
 
