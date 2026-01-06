@@ -222,7 +222,23 @@ export default function AIExpertChatPage() {
 
     const contextMessage = searchParams.get('context');
     if (contextMessage) {
-      setInput(decodeURIComponent(contextMessage));
+      try {
+        // Decode: URI decode -> base64 decode -> URI decode (for unicode)
+        const uriDecoded = decodeURIComponent(contextMessage);
+        try {
+          // Base64 decode, then handle unicode
+          const base64Decoded = atob(uriDecoded);
+          const unicodeDecoded = decodeURIComponent(escape(base64Decoded));
+          setInput(unicodeDecoded);
+        } catch {
+          // Not base64, use plain URI decoded value
+          setInput(uriDecoded);
+        }
+      } catch (e) {
+        // If all decoding fails, show error
+        console.error('Failed to decode context:', e);
+        setInput('Error loading analysis context. Please try again.');
+      }
       setContextProcessed(true);
       // Clear the URL param to prevent re-processing
       router.replace(`/ai-expert/${expertId}`, { scroll: false });

@@ -235,8 +235,9 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
   const handleAskAIExpert = () => {
     const contextMessage = buildComprehensiveContext();
 
-    // Encode and navigate to AI Expert (Nexus - Risk Assessment)
-    const encodedContext = encodeURIComponent(contextMessage);
+    // Use base64 encoding for reliable transmission of special characters
+    const base64Context = btoa(unescape(encodeURIComponent(contextMessage)));
+    const encodedContext = encodeURIComponent(base64Context);
     router.push(`/ai-expert/nexus?context=${encodedContext}`);
   };
 
