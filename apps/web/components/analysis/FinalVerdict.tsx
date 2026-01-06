@@ -142,32 +142,125 @@ export function FinalVerdict({ data, symbol }: FinalVerdictProps) {
         </div>
       </div>
 
-      {/* Component Scores */}
+      {/* Component Scores - Premium Radial Design */}
       {data.componentScores && data.componentScores.length > 0 && (
-        <div className="bg-card rounded-lg p-4 border">
-          <h4 className="font-medium mb-4">Component Scores</h4>
-          <div className="space-y-3">
+        <div className="bg-card rounded-xl p-5 border">
+          <h4 className="font-semibold mb-5 text-lg">Component Scores</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             {data.componentScores.map((cs, i) => {
               const score = cs.score ?? 0;
               const weight = cs.weight ?? 0;
+              const percentage = (score / 10) * 100;
+              const circumference = 2 * Math.PI * 36;
+              const offset = circumference - (percentage / 100) * circumference;
+
+              // Dynamic colors based on score
+              const getGaugeColor = () => {
+                if (score >= 7) return { stroke: '#22c55e', glow: 'rgba(34, 197, 94, 0.4)', bg: 'bg-green-500/10' };
+                if (score >= 5) return { stroke: '#eab308', glow: 'rgba(234, 179, 8, 0.4)', bg: 'bg-yellow-500/10' };
+                return { stroke: '#ef4444', glow: 'rgba(239, 68, 68, 0.4)', bg: 'bg-red-500/10' };
+              };
+
+              const gaugeColor = getGaugeColor();
+
               return (
-                <div key={i} className="flex items-center gap-3">
-                  <span className="text-sm w-32 truncate">{cs.step || `Step ${i + 1}`}</span>
-                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                <div key={i} className="group flex flex-col items-center">
+                  {/* Radial Gauge */}
+                  <div className="relative w-24 h-24 mb-2">
+                    {/* Outer Glow */}
                     <div
-                      className={cn("h-full rounded-full transition-all", getScoreBarColor(score))}
-                      style={{ width: `${score * 10}%` }}
+                      className="absolute inset-2 rounded-full blur-lg opacity-50 group-hover:opacity-70 transition-opacity"
+                      style={{ backgroundColor: gaugeColor.glow }}
                     />
+
+                    {/* SVG Gauge */}
+                    <svg className="w-24 h-24 transform -rotate-90 relative z-10" viewBox="0 0 80 80">
+                      {/* Background Circle */}
+                      <circle
+                        cx="40"
+                        cy="40"
+                        r="36"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="6"
+                        className="text-muted/30"
+                      />
+
+                      {/* Progress Arc */}
+                      <circle
+                        cx="40"
+                        cy="40"
+                        r="36"
+                        fill="none"
+                        stroke={gaugeColor.stroke}
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                        strokeDasharray={circumference}
+                        strokeDashoffset={offset}
+                        style={{
+                          transition: 'stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                          filter: `drop-shadow(0 0 8px ${gaugeColor.glow})`
+                        }}
+                      />
+
+                      {/* Tick marks */}
+                      {[0, 72, 144, 216, 288].map((angle) => (
+                        <line
+                          key={angle}
+                          x1={40 + 30 * Math.cos((angle - 90) * Math.PI / 180)}
+                          y1={40 + 30 * Math.sin((angle - 90) * Math.PI / 180)}
+                          x2={40 + 34 * Math.cos((angle - 90) * Math.PI / 180)}
+                          y2={40 + 34 * Math.sin((angle - 90) * Math.PI / 180)}
+                          stroke="currentColor"
+                          strokeWidth="1"
+                          className="text-muted-foreground/30"
+                        />
+                      ))}
+                    </svg>
+
+                    {/* Center Score */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+                      <span
+                        className="text-xl font-black"
+                        style={{ color: gaugeColor.stroke }}
+                      >
+                        {score.toFixed(1)}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">/10</span>
+                    </div>
+
+                    {/* Weight Badge */}
+                    <div className={cn(
+                      "absolute -top-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-background shadow-lg z-30",
+                      gaugeColor.bg
+                    )}>
+                      <span style={{ color: gaugeColor.stroke }}>{(weight * 100).toFixed(0)}%</span>
+                    </div>
                   </div>
-                  <span className={cn("text-sm font-medium w-8", getScoreColor(score))}>
-                    {score.toFixed(1)}
-                  </span>
-                  <span className="text-xs text-muted-foreground w-12">
-                    ({(weight * 100).toFixed(0)}%)
+
+                  {/* Step Name */}
+                  <span className="text-xs font-medium text-center text-muted-foreground group-hover:text-foreground transition-colors line-clamp-2">
+                    {cs.step || `Step ${i + 1}`}
                   </span>
                 </div>
               );
             })}
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center justify-center gap-6 mt-5 pt-4 border-t border-border/50">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+              <span className="text-[11px] text-muted-foreground">≥7 Strong</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+              <span className="text-[11px] text-muted-foreground">5-7 Moderate</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+              <span className="text-[11px] text-muted-foreground">&lt;5 Weak</span>
+            </div>
           </div>
         </div>
       )}
