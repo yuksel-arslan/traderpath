@@ -499,6 +499,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [credits, setCredits] = useState(0);
   const [outcomeViewMode, setOutcomeViewMode] = useState<'card' | 'list'>('card');
+  const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly'>('daily');
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -699,9 +700,9 @@ export default function DashboardPage() {
 
                 {/* RIGHT COLUMN: Profit Trend + Credits (full height) */}
                 <div className="flex-1 flex gap-3 min-h-[140px]">
-                  {/* Premium Profit Sparkline - Daily P&L for 1 Week */}
+                  {/* Premium Profit Sparkline - Daily/Weekly P&L Toggle */}
                   {(() => {
-                    // Generate last 7 days
+                    // Generate last 7 days for daily view
                     const days: string[] = [];
                     const dayLabels: string[] = [];
                     for (let i = 6; i >= 0; i--) {
@@ -711,20 +712,56 @@ export default function DashboardPage() {
                       dayLabels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
                     }
 
-                    // Group trades by date and calculate daily P&L
+                    // Generate last 4 weeks for weekly view
+                    const getWeekNumber = (date: Date) => {
+                      const startOfYear = new Date(date.getFullYear(), 0, 1);
+                      const diff = date.getTime() - startOfYear.getTime();
+                      return Math.ceil((diff / 86400000 + startOfYear.getDay() + 1) / 7);
+                    };
+
+                    const weeks: { start: Date; end: Date; label: string; key: string }[] = [];
+                    for (let i = 3; i >= 0; i--) {
+                      const endDate = new Date();
+                      endDate.setDate(endDate.getDate() - (i * 7));
+                      const startDate = new Date(endDate);
+                      startDate.setDate(startDate.getDate() - 6);
+                      weeks.push({
+                        start: startDate,
+                        end: endDate,
+                        label: `W${getWeekNumber(endDate)}`,
+                        key: `${startDate.toISOString().split('T')[0]}_${endDate.toISOString().split('T')[0]}`,
+                      });
+                    }
+
+                    // Group trades by date for daily P&L
                     const dailyPnL: Record<string, number[]> = {};
                     days.forEach(day => { dailyPnL[day] = []; });
+
+                    // Group trades by week for weekly P&L
+                    const weeklyPnL: Record<string, number[]> = {};
+                    weeks.forEach(w => { weeklyPnL[w.key] = []; });
 
                     recentOutcomes
                       .filter(o => o.unrealizedPnL !== undefined && o.createdAt)
                       .forEach(o => {
-                        const tradeDate = new Date(o.createdAt).toISOString().split('T')[0];
-                        if (dailyPnL[tradeDate]) {
-                          dailyPnL[tradeDate].push(o.unrealizedPnL || 0);
+                        const tradeDate = new Date(o.createdAt);
+                        const tradeDateStr = tradeDate.toISOString().split('T')[0];
+
+                        // Daily grouping
+                        if (dailyPnL[tradeDateStr]) {
+                          dailyPnL[tradeDateStr].push(o.unrealizedPnL || 0);
                         }
+
+                        // Weekly grouping
+                        weeks.forEach(w => {
+                          if (tradeDate >= w.start && tradeDate <= w.end) {
+                            weeklyPnL[w.key].push(o.unrealizedPnL || 0);
+                          }
+                        });
                       });
 
-                    const chartData = days.map((day, i) => {
+                    // Daily chart data
+                    const dailyChartData = days.map((day, i) => {
                       const trades = dailyPnL[day];
                       const avgPnl = trades.length > 0
                         ? trades.reduce((sum, v) => sum + v, 0) / trades.length
@@ -739,16 +776,37 @@ export default function DashboardPage() {
                       };
                     });
 
-                    const weekTrades = recentOutcomes.filter(o => {
-                      if (!o.createdAt || o.unrealizedPnL === undefined) return false;
-                      const tradeDate = new Date(o.createdAt).toISOString().split('T')[0];
-                      return days.includes(tradeDate);
+                    // Weekly chart data
+                    const weeklyChartData = weeks.map((w) => {
+                      const trades = weeklyPnL[w.key];
+                      const avgPnl = trades.length > 0
+                        ? trades.reduce((sum, v) => sum + v, 0) / trades.length
+                        : 0;
+                      return {
+                        name: w.label,
+                        date: w.key,
+                        pnl: avgPnl,
+                        positive: Math.max(0, avgPnl),
+                        negative: Math.min(0, avgPnl),
+                        count: trades.length,
+                      };
                     });
-                    const avgPnL = weekTrades.length > 0
-                      ? weekTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / weekTrades.length
+
+                    const chartData = pnlViewMode === 'daily' ? dailyChartData : weeklyChartData;
+
+                    const allTrades = recentOutcomes.filter(o => o.unrealizedPnL !== undefined && o.createdAt);
+                    const relevantTrades = pnlViewMode === 'daily'
+                      ? allTrades.filter(o => days.includes(new Date(o.createdAt).toISOString().split('T')[0]))
+                      : allTrades.filter(o => {
+                          const tradeDate = new Date(o.createdAt);
+                          return weeks.some(w => tradeDate >= w.start && tradeDate <= w.end);
+                        });
+
+                    const avgPnL = relevantTrades.length > 0
+                      ? relevantTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / relevantTrades.length
                       : 0;
                     const isPositive = avgPnL >= 0;
-                    const hasData = weekTrades.length >= 1;
+                    const hasData = relevantTrades.length >= 1;
 
                     return (
                       <div className="flex-1 relative overflow-hidden rounded-xl p-4 flex flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100/50 dark:from-slate-800/50 dark:via-slate-800/30 dark:to-slate-900/50 border border-slate-200 dark:border-slate-700/50">
@@ -761,7 +819,29 @@ export default function DashboardPage() {
                             <div className="p-1.5 rounded-lg bg-slate-200/80 dark:bg-slate-700/50">
                               <LineChart className="w-4 h-4 text-slate-600 dark:text-slate-300" />
                             </div>
-                            <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">Weekly P&L</span>
+                            {/* Toggle Buttons */}
+                            <div className="flex bg-slate-200/80 dark:bg-slate-700/50 rounded-lg p-0.5">
+                              <button
+                                onClick={() => setPnlViewMode('daily')}
+                                className={`px-2 py-0.5 text-xs font-medium rounded-md transition-all ${
+                                  pnlViewMode === 'daily'
+                                    ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-white shadow-sm'
+                                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
+                                }`}
+                              >
+                                Daily
+                              </button>
+                              <button
+                                onClick={() => setPnlViewMode('weekly')}
+                                className={`px-2 py-0.5 text-xs font-medium rounded-md transition-all ${
+                                  pnlViewMode === 'weekly'
+                                    ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-white shadow-sm'
+                                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
+                                }`}
+                              >
+                                Weekly
+                              </button>
+                            </div>
                           </div>
                           <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full ${
                             isPositive
@@ -769,7 +849,7 @@ export default function DashboardPage() {
                               : 'bg-red-500/20 text-red-700 dark:text-red-300'
                           }`}>
                             <span className="text-lg font-black">
-                              {weekTrades.length === 0 ? '—' : `${isPositive ? '+' : ''}${avgPnL.toFixed(1)}%`}
+                              {relevantTrades.length === 0 ? '—' : `${isPositive ? '+' : ''}${avgPnL.toFixed(1)}%`}
                             </span>
                           </div>
                         </div>
