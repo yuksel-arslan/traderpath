@@ -266,6 +266,9 @@ export default function AIExpertChatPage() {
   const [commentSaved, setCommentSaved] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Use ref to keep current analysisId value accessible in callbacks
+  const analysisIdRef = useRef<string | null>(null);
+  const commentSavedRef = useRef(false);
 
   // Redirect if invalid expert
   useEffect(() => {
@@ -289,6 +292,7 @@ export default function AIExpertChatPage() {
       }
       if (storedAnalysisId) {
         setAnalysisId(storedAnalysisId);
+        analysisIdRef.current = storedAnalysisId;
         sessionStorage.removeItem('aiExpertAnalysisId');
       }
       setContextProcessed(true);
@@ -296,16 +300,19 @@ export default function AIExpertChatPage() {
     }
   }, [searchParams, contextProcessed, router, expertId]);
 
-  // Save AI Expert comment to report
+  // Save AI Expert comment to report (uses refs for current values)
   const saveCommentToReport = async (comment: string) => {
-    if (!analysisId) return;
+    const currentAnalysisId = analysisIdRef.current;
+    if (!currentAnalysisId || commentSavedRef.current) return;
 
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
+      console.log('Saving AI Expert comment for analysisId:', currentAnalysisId);
+
       // Find report by analysisId and save comment
-      const res = await fetch(`/api/reports/by-analysis/${analysisId}/ai-expert-comment`, {
+      const res = await fetch(`/api/reports/by-analysis/${currentAnalysisId}/ai-expert-comment`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -315,7 +322,12 @@ export default function AIExpertChatPage() {
       });
 
       if (res.ok) {
+        console.log('AI Expert comment saved successfully');
         setCommentSaved(true);
+        commentSavedRef.current = true;
+      } else {
+        const errorData = await res.json();
+        console.error('Failed to save AI Expert comment:', errorData);
       }
     } catch (error) {
       console.error('Failed to save AI Expert comment:', error);
@@ -401,9 +413,8 @@ export default function AIExpertChatPage() {
         queryClient.invalidateQueries({ queryKey: ['credits'] });
 
         // Auto-save AI Expert comment to report if coming from analysis
-        if (analysisId && !commentSaved) {
-          saveCommentToReport(response);
-        }
+        // Uses refs to get current values (state may be stale in callback)
+        saveCommentToReport(response);
       }
     },
   });
