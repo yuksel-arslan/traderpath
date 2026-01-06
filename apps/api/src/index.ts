@@ -9,6 +9,7 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import jwt from '@fastify/jwt';
 import websocket from '@fastify/websocket';
+import rawBody from 'fastify-raw-body';
 import { config } from './core/config';
 import { prisma } from './core/database';
 import { redis } from './core/cache';
@@ -30,6 +31,7 @@ import { translationRoutes } from './modules/translation/translation.routes';
 import aiExpertRoutes from './modules/ai-expert/ai-expert.routes';
 import expertRoutes from './modules/expert/expert.routes';
 import contractSecurityRoutes from './modules/security/contract-security.routes';
+import paymentRoutes from './modules/payments/payment.routes';
 
 // ===========================================
 // Server Configuration
@@ -128,6 +130,15 @@ await app.register(websocket, {
     maxPayload: 1048576, // 1MB
     clientTracking: true,
   },
+});
+
+// Raw body support for Stripe webhooks
+await app.register(rawBody, {
+  field: 'rawBody',
+  global: false, // Only add rawBody where needed
+  encoding: 'utf8',
+  runFirst: true,
+  routes: ['/api/payments/webhook', '/api/v1/payments/webhook'],
 });
 
 // ===========================================
@@ -287,6 +298,10 @@ app.register(expertRoutes, { prefix: '/api/expert' }); // Legacy
 // Contract Security routes
 app.register(contractSecurityRoutes, { prefix: '/api/v1/security' });
 app.register(contractSecurityRoutes, { prefix: '/api/security' }); // Legacy
+
+// Payment routes (Stripe)
+app.register(paymentRoutes, { prefix: '/api/v1/payments' });
+app.register(paymentRoutes, { prefix: '/api/payments' }); // Legacy
 
 // ===========================================
 // 404 Handler
