@@ -260,7 +260,13 @@ export async function reportRoutes(fastify: FastifyInstance) {
           };
         }));
 
-        const total = await prisma.report.count({ where: whereClause });
+        // Get total count and statistics
+        const [total, activeCount, correctCount, incorrectCount] = await Promise.all([
+          prisma.report.count({ where: whereClause }),
+          prisma.report.count({ where: { ...whereClause, OR: [{ outcome: null }, { outcome: 'pending' }] } }),
+          prisma.report.count({ where: { ...whereClause, outcome: 'correct' } }),
+          prisma.report.count({ where: { ...whereClause, outcome: 'incorrect' } }),
+        ]);
 
         return reply.send({
           success: true,
@@ -270,6 +276,13 @@ export async function reportRoutes(fastify: FastifyInstance) {
               total,
               limit: parseInt(limit),
               offset: parseInt(offset),
+            },
+            stats: {
+              total,
+              active: activeCount,
+              closed: correctCount + incorrectCount,
+              tpHits: correctCount,
+              slHits: incorrectCount,
             },
           },
         });

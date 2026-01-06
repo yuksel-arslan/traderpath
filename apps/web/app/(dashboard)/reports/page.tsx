@@ -167,6 +167,14 @@ function TradingViewChart({
   );
 }
 
+interface ReportStats {
+  total: number;
+  active: number;
+  closed: number;
+  tpHits: number;
+  slHits: number;
+}
+
 interface ReportsResponse {
   success: boolean;
   data: {
@@ -176,6 +184,7 @@ interface ReportsResponse {
       limit: number;
       offset: number;
     };
+    stats: ReportStats;
   };
 }
 
@@ -195,6 +204,7 @@ export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'long' | 'short'>('all');
   const [pagination, setPagination] = useState({ total: 0, limit: 20, offset: 0 });
+  const [stats, setStats] = useState<ReportStats>({ total: 0, active: 0, closed: 0, tpHits: 0, slHits: 0 });
   const [chartModal, setChartModal] = useState<{ isOpen: boolean; report: Report | null }>({ isOpen: false, report: null });
   const [tvTimeframe, setTvTimeframe] = useState('60'); // Default 1h for TradingView
 
@@ -216,6 +226,9 @@ export default function ReportsPage() {
         if (data.success) {
           setReports(data.data.reports);
           setPagination(data.data.pagination);
+          if (data.data.stats) {
+            setStats(data.data.stats);
+          }
         }
       }
     } catch (error) {
@@ -372,13 +385,12 @@ Bu analize göre risk değerlendirmeni ve önerilerini paylaşır mısın?`;
       (filter === 'all' || r.direction === filter)
     );
 
-  // Calculate report statistics
-  // Note: outcome can be null, 'pending', 'correct', or 'incorrect'
-  const totalReports = pagination.total;
-  const activeReports = reports.filter(r => !r.outcome || r.outcome === 'pending').length;
-  const closedReports = reports.filter(r => r.outcome === 'correct' || r.outcome === 'incorrect').length;
-  const tpHits = reports.filter(r => r.outcome === 'correct').length;
-  const slHits = reports.filter(r => r.outcome === 'incorrect').length;
+  // Use stats from API (accurate counts from database, not just current page)
+  const totalReports = stats.total;
+  const activeReports = stats.active;
+  const closedReports = stats.closed;
+  const tpHits = stats.tpHits;
+  const slHits = stats.slHits;
   const longReports = reports.filter(r => r.direction === 'long').length;
   const shortReports = reports.filter(r => r.direction === 'short').length;
   const accuracy = closedReports > 0 ? ((tpHits / closedReports) * 100).toFixed(1) : '0';
