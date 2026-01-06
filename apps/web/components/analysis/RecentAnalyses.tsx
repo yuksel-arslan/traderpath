@@ -1,22 +1,41 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Clock, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
+import {
+  Clock,
+  TrendingUp,
+  TrendingDown,
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  Timer,
+  Target,
+  Eye
+} from 'lucide-react';
 import Link from 'next/link';
+import { CoinIcon } from '../common/CoinIcon';
+import { cn } from '../../lib/utils';
 
 interface RecentAnalysis {
   id: string;
   symbol: string;
   verdict: 'go' | 'conditional_go' | 'wait' | 'avoid';
   score: number;
+  direction: string | null;
   createdAt: string;
+  outcome?: 'correct' | 'incorrect' | null;
+  entryPrice?: number;
+  currentPrice?: number;
+  unrealizedPnL?: number;
+  stopLoss?: number;
+  takeProfit1?: number;
 }
 
 const verdictConfig = {
-  go: { label: 'GO', color: 'text-green-500', bg: 'bg-green-500/10', icon: TrendingUp },
-  conditional_go: { label: 'CONDITIONAL', color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: TrendingUp },
-  wait: { label: 'WAIT', color: 'text-orange-500', bg: 'bg-orange-500/10', icon: Minus },
-  avoid: { label: 'AVOID', color: 'text-red-500', bg: 'bg-red-500/10', icon: TrendingDown },
+  go: { label: 'GO', color: 'text-green-500', bg: 'bg-green-500/10' },
+  conditional_go: { label: 'CONDITIONAL', color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+  wait: { label: 'WAIT', color: 'text-orange-500', bg: 'bg-orange-500/10' },
+  avoid: { label: 'AVOID', color: 'text-red-500', bg: 'bg-red-500/10' },
 };
 
 export function RecentAnalyses() {
@@ -39,7 +58,8 @@ export function RecentAnalyses() {
         return;
       }
 
-      const response = await fetch('/api/analysis/recent', {
+      // Fetch from reports API for richer data
+      const response = await fetch('/api/reports?limit=10', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -47,7 +67,30 @@ export function RecentAnalyses() {
 
       if (response.ok) {
         const result = await response.json();
-        setAnalyses(result.data || []);
+        const reports = result.data?.reports || [];
+
+        // Map to RecentAnalysis format
+        const mapped = reports.map((r: any) => ({
+          id: r.id,
+          symbol: r.symbol,
+          verdict: r.verdict || 'wait',
+          score: r.score || 0,
+          direction: r.direction,
+          createdAt: new Date(r.generatedAt).toLocaleDateString('en-US', {
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          outcome: r.outcome,
+          entryPrice: r.entryPrice,
+          currentPrice: r.currentPrice,
+          unrealizedPnL: r.unrealizedPnL,
+          stopLoss: r.stopLoss,
+          takeProfit1: r.takeProfit1,
+        }));
+
+        setAnalyses(mapped);
       } else if (response.status === 401) {
         setAnalyses([]);
       } else {
@@ -97,35 +140,120 @@ export function RecentAnalyses() {
   }
 
   return (
-    <div className="bg-card rounded-lg border divide-y max-h-[280px] overflow-y-auto">
+    <div className="bg-card rounded-lg border divide-y divide-border max-h-[320px] overflow-y-auto">
       {analyses.map((analysis) => {
-        const config = verdictConfig[analysis.verdict];
-        const Icon = config.icon;
+        const config = verdictConfig[analysis.verdict] || verdictConfig.wait;
+        const isActive = !analysis.outcome || analysis.outcome === 'pending';
+
+        // Calculate TP progress for active trades
+        let tpProgress = 0;
+        if (isActive && analysis.entryPrice && analysis.currentPrice && analysis.takeProfit1) {
+          const entry = analysis.entryPrice;
+          const current = analysis.currentPrice;
+          const tp1 = analysis.takeProfit1;
+          const isLong = analysis.direction === 'long';
+
+          const totalDistance = isLong ? (tp1 - entry) : (entry - tp1);
+          const coveredDistance = isLong ? (current - entry) : (entry - current);
+          tpProgress = totalDistance !== 0
+            ? Math.min(100, Math.max(0, (coveredDistance / totalDistance) * 100))
+            : 0;
+        }
 
         return (
           <Link
             key={analysis.id}
-            href={`/analysis/${analysis.id}`}
-            className="flex items-center justify-between p-4 hover:bg-accent transition-colors"
+            href={`/reports/${analysis.id}`}
+            className={cn(
+              "flex items-center justify-between p-3 hover:bg-accent/50 transition-colors relative",
+              // Dynamic background based on status
+              analysis.outcome === 'correct' && "bg-green-500/5",
+              analysis.outcome === 'incorrect' && "bg-red-500/5",
+              isActive && "bg-blue-500/5"
+            )}
           >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold">
-                {analysis.symbol.slice(0, 2)}
-              </div>
-              <div>
-                <div className="font-semibold">{analysis.symbol}/USDT</div>
-                <div className="text-sm text-muted-foreground">{analysis.createdAt}</div>
+            {/* Left: Coin Info */}
+            <div className="flex items-center gap-3 min-w-0">
+              <CoinIcon symbol={analysis.symbol} size={40} className="shrink-0" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-sm">{analysis.symbol}</span>
+                  {/* Direction Badge */}
+                  {analysis.direction && (
+                    <span className={cn(
+                      "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                      analysis.direction === 'long'
+                        ? "bg-green-500/20 text-green-500"
+                        : "bg-red-500/20 text-red-500"
+                    )}>
+                      {analysis.direction === 'long' ? (
+                        <TrendingUp className="w-3 h-3 inline" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3 inline" />
+                      )}
+                    </span>
+                  )}
+                  {/* Status Badge */}
+                  {analysis.outcome === 'correct' && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-400 flex items-center gap-0.5">
+                      <CheckCircle2 className="w-3 h-3" />
+                      TP
+                    </span>
+                  )}
+                  {analysis.outcome === 'incorrect' && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 flex items-center gap-0.5">
+                      <XCircle className="w-3 h-3" />
+                      SL
+                    </span>
+                  )}
+                  {isActive && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 flex items-center gap-0.5">
+                      <Timer className="w-3 h-3" />
+                      LIVE
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground truncate">{analysis.createdAt}</div>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="font-semibold">{analysis.score.toFixed(1)}/10</div>
-                <div className={`text-sm flex items-center gap-1 ${config.color}`}>
-                  <Icon className="w-3 h-3" />
-                  {config.label}
+            {/* Right: Stats */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* P/L Display */}
+              {analysis.unrealizedPnL !== undefined && (
+                <div className={cn(
+                  "px-2 py-1 rounded text-xs font-bold min-w-[50px] text-center",
+                  analysis.unrealizedPnL >= 0
+                    ? "bg-green-500/20 text-green-400"
+                    : "bg-red-500/20 text-red-400"
+                )}>
+                  {analysis.unrealizedPnL >= 0 ? '+' : ''}{analysis.unrealizedPnL.toFixed(1)}%
                 </div>
+              )}
+
+              {/* TP Progress for active */}
+              {isActive && analysis.takeProfit1 && tpProgress > 0 && (
+                <div className={cn(
+                  "px-2 py-1 rounded text-xs font-bold min-w-[40px] text-center flex items-center gap-1",
+                  tpProgress >= 80 ? "bg-green-500/20 text-green-400" :
+                  tpProgress >= 50 ? "bg-yellow-500/20 text-yellow-400" : "bg-blue-500/20 text-blue-400"
+                )}>
+                  <Target className="w-3 h-3" />
+                  {tpProgress.toFixed(0)}%
+                </div>
+              )}
+
+              {/* Score */}
+              <div className={cn(
+                "px-2 py-1 rounded text-xs font-bold min-w-[40px] text-center",
+                analysis.score >= 7 ? "bg-green-500/20 text-green-400" :
+                analysis.score >= 5 ? "bg-yellow-500/20 text-yellow-400" : "bg-red-500/20 text-red-400"
+              )}>
+                {(analysis.score * 10).toFixed(0)}%
               </div>
+
+              {/* View Icon */}
+              <Eye className="w-4 h-4 text-muted-foreground" />
             </div>
           </Link>
         );
