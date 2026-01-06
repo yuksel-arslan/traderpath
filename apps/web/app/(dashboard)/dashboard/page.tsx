@@ -647,131 +647,134 @@ export default function DashboardPage() {
               />
             </div>
 
-            {/* RIGHT: Stats Grid */}
+            {/* RIGHT: Stats Grid - New Layout */}
             <div className="flex-1 w-full">
-              {/* Stats Boxes - 2x3 Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {/* Caution Rate */}
-                <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Shield className="w-4 h-4 text-amber-500" />
-                    <span className="text-xs text-gray-500 dark:text-slate-400">Caution</span>
-                  </div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">
-                    {(platformStats?.cautionRate?.total ?? 0) > 0 ? `${platformStats?.cautionRate?.rate ?? 0}%` : '—'}
-                  </div>
-                </div>
-
-                {/* Profit Sparkline */}
-                <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10 col-span-2 sm:col-span-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-emerald-500" />
-                      <span className="text-xs text-gray-500 dark:text-slate-400">Profit Trend</span>
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* LEFT COLUMN: Total/Week + Caution/Verified */}
+                <div className="flex gap-3">
+                  {/* Total & This Week */}
+                  <div className="flex flex-col gap-3">
+                    <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10 min-w-[100px]">
+                      <div className="flex items-center gap-2 mb-1">
+                        <BarChart3 className="w-4 h-4 text-purple-500" />
+                        <span className="text-xs text-gray-500 dark:text-slate-400">Total</span>
+                      </div>
+                      <div className="text-xl font-bold text-gray-900 dark:text-white">
+                        {platformStats?.platform.totalAnalyses ?? 0}
+                      </div>
                     </div>
-                    <span className={`text-sm font-bold ${(() => {
-                      const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
-                      if (closedTrades.length === 0) return 'text-gray-400';
-                      const avgPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length;
-                      return avgPnL >= 0 ? 'text-emerald-500' : 'text-red-500';
-                    })()}`}>
-                      {(() => {
+                    <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Activity className="w-4 h-4 text-cyan-500" />
+                        <span className="text-xs text-gray-500 dark:text-slate-400">This Week</span>
+                      </div>
+                      <div className="text-xl font-bold text-gray-900 dark:text-white">
+                        {platformStats?.platform.weeklyAnalyses ?? 0}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Caution & Verified */}
+                  <div className="flex flex-col gap-3">
+                    <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10 min-w-[100px]">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Shield className="w-4 h-4 text-amber-500" />
+                        <span className="text-xs text-gray-500 dark:text-slate-400">Caution</span>
+                      </div>
+                      <div className="text-xl font-bold text-gray-900 dark:text-white">
+                        {(platformStats?.cautionRate?.total ?? 0) > 0 ? `${platformStats?.cautionRate?.rate ?? 0}%` : '—'}
+                      </div>
+                    </div>
+                    <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        <span className="text-xs text-gray-500 dark:text-slate-400">Verified</span>
+                      </div>
+                      <div className="text-xl font-bold text-gray-900 dark:text-white">
+                        {platformStats?.accuracy.sampleSize ?? 0}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN: Profit Trend + Credits (full height) */}
+                <div className="flex-1 flex gap-3 min-h-[140px]">
+                  {/* Profit Sparkline - Full Height */}
+                  <div className="flex-1 bg-gray-100/80 dark:bg-white/5 rounded-xl p-4 border border-gray-200 dark:border-white/10 flex flex-col">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-emerald-500" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Profit Trend</span>
+                      </div>
+                      <span className={`text-lg font-bold ${(() => {
                         const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
-                        if (closedTrades.length === 0) return '—';
+                        if (closedTrades.length === 0) return 'text-gray-400';
                         const avgPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length;
-                        return `${avgPnL >= 0 ? '+' : ''}${avgPnL.toFixed(1)}%`;
-                      })()}
-                    </span>
-                  </div>
-                  <div className="h-10">
-                    {(() => {
-                      const chartData = recentOutcomes
-                        .filter(o => o.unrealizedPnL !== undefined)
-                        .slice(0, 10)
-                        .reverse()
-                        .map((o, i) => ({
-                          name: o.symbol,
-                          pnl: o.unrealizedPnL || 0,
-                        }));
+                        return avgPnL >= 0 ? 'text-emerald-500' : 'text-red-500';
+                      })()}`}>
+                        {(() => {
+                          const closedTrades = recentOutcomes.filter(o => o.outcome === 'correct' || o.outcome === 'incorrect');
+                          if (closedTrades.length === 0) return '—';
+                          const avgPnL = closedTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / closedTrades.length;
+                          return `${avgPnL >= 0 ? '+' : ''}${avgPnL.toFixed(1)}%`;
+                        })()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-h-[80px]">
+                      {(() => {
+                        const chartData = recentOutcomes
+                          .filter(o => o.unrealizedPnL !== undefined)
+                          .slice(0, 10)
+                          .reverse()
+                          .map((o, i) => ({
+                            name: o.symbol,
+                            pnl: o.unrealizedPnL || 0,
+                          }));
 
-                      if (chartData.length < 2) {
+                        if (chartData.length < 2) {
+                          return (
+                            <div className="h-full flex items-center justify-center text-xs text-gray-400">
+                              No data yet
+                            </div>
+                          );
+                        }
+
+                        const isPositive = chartData[chartData.length - 1]?.pnl >= 0;
+
                         return (
-                          <div className="h-full flex items-center justify-center text-xs text-gray-400">
-                            No data yet
-                          </div>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RechartsLineChart data={chartData}>
+                              <Tooltip
+                                contentStyle={{
+                                  backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  fontSize: '12px',
+                                }}
+                                formatter={(value: number) => [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, 'P/L']}
+                                labelFormatter={(label) => label}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="pnl"
+                                stroke={isPositive ? '#10b981' : '#ef4444'}
+                                strokeWidth={2}
+                                dot={false}
+                              />
+                            </RechartsLineChart>
+                          </ResponsiveContainer>
                         );
-                      }
+                      })()}
+                    </div>
+                  </div>
 
-                      const isPositive = chartData[chartData.length - 1]?.pnl >= 0;
-
-                      return (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RechartsLineChart data={chartData}>
-                            <Tooltip
-                              contentStyle={{
-                                backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                                border: 'none',
-                                borderRadius: '8px',
-                                fontSize: '12px',
-                              }}
-                              formatter={(value: number) => [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, 'P/L']}
-                              labelFormatter={(label) => label}
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="pnl"
-                              stroke={isPositive ? '#10b981' : '#ef4444'}
-                              strokeWidth={2}
-                              dot={false}
-                            />
-                          </RechartsLineChart>
-                        </ResponsiveContainer>
-                      );
-                    })()}
-                  </div>
-                </div>
-
-                {/* Total Analyses */}
-                <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10">
-                  <div className="flex items-center gap-2 mb-1">
-                    <BarChart3 className="w-4 h-4 text-purple-500" />
-                    <span className="text-xs text-gray-500 dark:text-slate-400">Total</span>
-                  </div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">
-                    {platformStats?.platform.totalAnalyses ?? 0}
-                  </div>
-                </div>
-
-                {/* Weekly Analyses */}
-                <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Activity className="w-4 h-4 text-cyan-500" />
-                    <span className="text-xs text-gray-500 dark:text-slate-400">This Week</span>
-                  </div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">
-                    {platformStats?.platform.weeklyAnalyses ?? 0}
-                  </div>
-                </div>
-
-                {/* Sample Size */}
-                <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10">
-                  <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                    <span className="text-xs text-gray-500 dark:text-slate-400">Verified</span>
-                  </div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">
-                    {platformStats?.accuracy.sampleSize ?? 0}
-                  </div>
-                </div>
-
-                {/* My Credits */}
-                <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
-                    <span className="text-xs text-gray-500 dark:text-slate-400">Credits</span>
-                  </div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">
-                    {credits}
+                  {/* Credits - Full Height */}
+                  <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-500/10 dark:to-amber-600/5 rounded-xl p-4 border border-amber-200/50 dark:border-amber-500/20 flex flex-col justify-center items-center min-w-[100px]">
+                    <Sparkles className="w-6 h-6 text-amber-500 mb-2" />
+                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-1">Credits</span>
+                    <div className="text-3xl font-black text-amber-600 dark:text-amber-400">
+                      {credits}
+                    </div>
                   </div>
                 </div>
               </div>
