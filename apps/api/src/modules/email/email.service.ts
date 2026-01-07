@@ -21,6 +21,21 @@ interface ReportEmailData {
   generatedAt: string;
 }
 
+interface ScheduledReportEmailData {
+  userName: string;
+  symbol: string;
+  verdict: string;
+  score: number;
+  direction: string;
+  entryPrice: string;
+  stopLoss: string;
+  takeProfit1: string;
+  takeProfit2?: string;
+  takeProfit3?: string;
+  reportUrl: string;
+  generatedAt: string;
+}
+
 class EmailService {
   private readonly FROM_EMAIL = 'TradePath <noreply@tradepath.app>';
   private readonly RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -190,6 +205,203 @@ ${data.expertInsights}
 Tam raporu görüntülemek için: ${data.reportUrl}
 
 Bu rapor ${data.generatedAt} tarihinde oluşturulmuştur.
+
+---
+TradePath - Professional Trading Analysis
+    `.trim();
+  }
+
+  /**
+   * Send scheduled analysis report to user
+   */
+  async sendScheduledReport(email: string, data: ScheduledReportEmailData): Promise<{ success: boolean }> {
+    const html = this.generateScheduledReportHtml(data);
+    const text = this.generateScheduledReportText(data);
+
+    const result = await this.sendEmail({
+      to: email,
+      subject: `📊 TradePath ${data.symbol} Daily Analysis - ${data.verdict}`,
+      html,
+      text,
+    });
+
+    return { success: result.success };
+  }
+
+  /**
+   * Generate HTML email for scheduled report
+   */
+  private generateScheduledReportHtml(data: ScheduledReportEmailData): string {
+    const verdictColor = data.verdict === 'GO' ? '#22c55e' :
+                        data.verdict === 'WAIT' ? '#f59e0b' : '#ef4444';
+    const verdictEmoji = data.verdict === 'GO' ? '🟢' :
+                        data.verdict === 'WAIT' ? '🟡' : '🔴';
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradePath Scheduled Report</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; overflow: hidden; border: 1px solid #334155;">
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); padding: 30px; text-align: center;">
+              <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
+                TradePath
+              </h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
+                Scheduled Analysis Report
+              </p>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 30px;">
+              <p style="color: #94a3b8; font-size: 16px; margin: 0 0 20px;">
+                Hi ${data.userName}, here's your scheduled analysis for today:
+              </p>
+
+              <!-- Symbol & Verdict -->
+              <div style="display: flex; justify-content: space-between; margin-bottom: 25px;">
+                <div style="background: #1e293b; border-radius: 12px; padding: 20px; text-align: center; flex: 1; margin-right: 10px;">
+                  <span style="color: white; font-size: 32px; font-weight: bold;">
+                    ${data.symbol}
+                  </span>
+                  <p style="color: #94a3b8; margin: 10px 0 0; font-size: 14px;">
+                    ${data.direction.toUpperCase()}
+                  </p>
+                </div>
+                <div style="background: ${verdictColor}20; border: 2px solid ${verdictColor}; border-radius: 12px; padding: 20px; text-align: center; flex: 1; margin-left: 10px;">
+                  <span style="font-size: 24px;">${verdictEmoji}</span>
+                  <p style="color: ${verdictColor}; font-size: 24px; font-weight: bold; margin: 5px 0;">
+                    ${data.verdict}
+                  </p>
+                  <p style="color: #94a3b8; margin: 5px 0 0; font-size: 14px;">
+                    Score: ${data.score}/100
+                  </p>
+                </div>
+              </div>
+
+              <!-- Trade Plan -->
+              <div style="background-color: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 25px;">
+                <h3 style="color: #3b82f6; margin: 0 0 15px; font-size: 18px;">
+                  📋 Trade Plan
+                </h3>
+                <table width="100%" style="color: #e2e8f0; font-size: 14px;">
+                  <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #334155;">
+                      <span style="color: #94a3b8;">Entry:</span>
+                    </td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #334155; text-align: right; font-weight: bold;">
+                      ${data.entryPrice}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #334155;">
+                      <span style="color: #22c55e;">TP1:</span>
+                    </td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #334155; text-align: right; color: #22c55e; font-weight: bold;">
+                      ${data.takeProfit1}
+                    </td>
+                  </tr>
+                  ${data.takeProfit2 ? `
+                  <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #334155;">
+                      <span style="color: #22c55e;">TP2:</span>
+                    </td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #334155; text-align: right; color: #22c55e; font-weight: bold;">
+                      ${data.takeProfit2}
+                    </td>
+                  </tr>
+                  ` : ''}
+                  ${data.takeProfit3 ? `
+                  <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #334155;">
+                      <span style="color: #22c55e;">TP3:</span>
+                    </td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #334155; text-align: right; color: #22c55e; font-weight: bold;">
+                      ${data.takeProfit3}
+                    </td>
+                  </tr>
+                  ` : ''}
+                  <tr>
+                    <td style="padding: 8px 0;">
+                      <span style="color: #ef4444;">Stop Loss:</span>
+                    </td>
+                    <td style="padding: 8px 0; text-align: right; color: #ef4444; font-weight: bold;">
+                      ${data.stopLoss}
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- CTA Button -->
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${data.reportUrl}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; text-decoration: none; padding: 15px 40px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                  View Full Report
+                </a>
+              </div>
+
+              <!-- Footer Note -->
+              <p style="color: #64748b; font-size: 13px; text-align: center; margin: 20px 0 0;">
+                Generated on ${data.generatedAt}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #0f172a; padding: 20px; text-align: center; border-top: 1px solid #334155;">
+              <p style="color: #64748b; font-size: 12px; margin: 0;">
+                TradePath - Professional Trading Analysis
+              </p>
+              <p style="color: #475569; font-size: 11px; margin: 10px 0 0;">
+                This is your scheduled report. Manage settings in your dashboard.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+  }
+
+  /**
+   * Generate plain text email for scheduled report
+   */
+  private generateScheduledReportText(data: ScheduledReportEmailData): string {
+    return `
+TradePath Scheduled Analysis Report
+====================================
+
+Hi ${data.userName},
+
+Here's your scheduled analysis for ${data.symbol}:
+
+VERDICT: ${data.verdict} (Score: ${data.score}/100)
+Direction: ${data.direction.toUpperCase()}
+
+TRADE PLAN:
+- Entry: ${data.entryPrice}
+- TP1: ${data.takeProfit1}
+${data.takeProfit2 ? `- TP2: ${data.takeProfit2}` : ''}
+${data.takeProfit3 ? `- TP3: ${data.takeProfit3}` : ''}
+- Stop Loss: ${data.stopLoss}
+
+View full report: ${data.reportUrl}
+
+Generated on ${data.generatedAt}
 
 ---
 TradePath - Professional Trading Analysis

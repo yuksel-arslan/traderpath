@@ -57,6 +57,7 @@ model User {
   referralReceived Referral?  @relation("ReferredReferrals")
   quizAnswers      QuizAnswer[]
   reports          Report[]
+  scheduledReports ScheduledReport[]
 
   @@map("users")
 }
@@ -321,6 +322,47 @@ enum AlertType {
   TP3
   SL
   CUSTOM
+}
+
+// ===========================================
+// Scheduled Reports
+// ===========================================
+
+model ScheduledReport {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  symbol       String   @db.VarChar(20)
+  frequency    ScheduleFrequency  @default(DAILY)
+
+  // Delivery options
+  deliverEmail    Boolean @default(true) @map("deliver_email")
+  deliverTelegram Boolean @default(false) @map("deliver_telegram")
+  deliverDiscord  Boolean @default(false) @map("deliver_discord")
+
+  // Schedule timing (hour in UTC, 0-23)
+  scheduleHour Int      @default(8) @map("schedule_hour")
+
+  // For weekly schedules (0=Sunday, 1=Monday, etc.)
+  scheduleDayOfWeek Int? @map("schedule_day_of_week")
+
+  // Last execution tracking
+  lastRunAt    DateTime? @map("last_run_at")
+  nextRunAt    DateTime  @map("next_run_at")
+
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId, isActive])
+  @@index([nextRunAt, isActive])
+  @@map("scheduled_reports")
+}
+
+enum ScheduleFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
 }
 
 // ===========================================

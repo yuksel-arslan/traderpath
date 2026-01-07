@@ -41,12 +41,14 @@
     "pino-pretty": "^10.3.0",
     "socket.io": "^4.7.2",
     "stripe": "^14.8.0",
+    "web-push": "^3.6.7",
     "ws": "^8.14.2",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.10.0",
+    "@types/web-push": "^3.6.4",
     "@types/ws": "^8.5.10",
     "cross-env": "^7.0.3",
     "eslint": "^8.55.0",

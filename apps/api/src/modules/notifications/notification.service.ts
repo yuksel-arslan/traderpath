@@ -4,6 +4,19 @@
 // ===========================================
 
 import { prisma } from '../../core/database';
+import webpush from 'web-push';
+
+// Configure web-push with VAPID keys
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:support@tradepath.app';
+
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+  console.log('[Web Push] VAPID keys configured');
+} else {
+  console.warn('[Web Push] VAPID keys not configured - push notifications disabled');
+}
 
 export interface NotificationPayload {
   userId: string;
@@ -70,18 +83,69 @@ class NotificationService {
   }
 
   /**
-   * Send browser push notification
+   * Send browser push notification using web-push
    */
   private async sendBrowserPush(
     payload: NotificationPayload,
     settings: UserNotificationSettings['browserPush']
   ): Promise<void> {
-    if (!settings?.subscription) return;
+    if (!settings?.subscription) {
+      console.log('[Browser Push] No subscription found');
+      return;
+    }
 
-    // Browser push notifications are handled client-side via Service Worker
-    // We store the subscription and the client polls for new alerts
-    // This is a placeholder - actual implementation uses web-push library
-    console.log(`[Browser Push] ${payload.symbol} hit ${payload.alertType} at $${payload.currentPrice}`);
+    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+      console.warn('[Browser Push] VAPID keys not configured');
+      return;
+    }
+
+    const emoji = payload.alertType === 'SL' ? '🔴' :
+                  payload.alertType.startsWith('TP') ? '🟢' :
+                  payload.alertType === 'ENTRY' ? '🔵' : '🔔';
+
+    const alertName = {
+      ENTRY: 'Entry Zone',
+      TP1: 'Take Profit 1',
+      TP2: 'Take Profit 2',
+      TP3: 'Take Profit 3',
+      SL: 'Stop Loss',
+      CUSTOM: 'Custom Alert',
+    }[payload.alertType] || payload.alertType;
+
+    const notificationPayload = JSON.stringify({
+      title: `${emoji} ${payload.symbol} Alert`,
+      body: `${alertName} reached at $${payload.currentPrice.toLocaleString()}`,
+      icon: '/icon-192x192.png',
+      badge: '/badge-72x72.png',
+      tag: `alert-${payload.symbol}-${payload.alertType}`,
+      data: {
+        symbol: payload.symbol,
+        alertType: payload.alertType,
+        targetPrice: payload.targetPrice,
+        currentPrice: payload.currentPrice,
+        url: `/alerts?symbol=${payload.symbol}`,
+      },
+      actions: [
+        { action: 'view', title: 'View Details' },
+        { action: 'dismiss', title: 'Dismiss' },
+      ],
+    });
+
+    try {
+      await webpush.sendNotification(
+        settings.subscription as webpush.PushSubscription,
+        notificationPayload
+      );
+      console.log(`[Browser Push] Sent alert for ${payload.symbol}`);
+    } catch (error: any) {
+      console.error('[Browser Push] Failed to send:', error.message);
+
+      // If subscription is invalid, we should remove it
+      if (error.statusCode === 410 || error.statusCode === 404) {
+        console.log('[Browser Push] Subscription expired or invalid, should be removed');
+        // Note: Subscription removal should be handled by the calling code
+      }
+    }
   }
 
   /**
