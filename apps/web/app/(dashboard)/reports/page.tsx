@@ -29,6 +29,9 @@ import {
   Percent,
   Bot,
   MessageSquare,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
@@ -196,6 +199,8 @@ export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'long' | 'short'>('all');
+  const [sortBy, setSortBy] = useState<'date' | 'score' | 'pnl' | 'tp'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [pagination, setPagination] = useState({ total: 0, limit: 20, offset: 0 });
   const [stats, setStats] = useState<ReportStats>({ total: 0, active: 0, closed: 0, tpHits: 0, slHits: 0 });
   const [chartModal, setChartModal] = useState<{ isOpen: boolean; report: Report | null }>({ isOpen: false, report: null });
@@ -371,11 +376,50 @@ Bu analize göre risk değerlendirmeni ve önerilerini paylaşır mısın?`;
     return 'Expiring soon';
   };
 
+  // Calculate TP progress for sorting
+  const calculateTpProgress = (report: Report): number => {
+    if (report.outcome === 'correct') return 100;
+    if (!report.currentPrice || !report.takeProfit1 || !report.entryPrice) return 0;
+
+    const isLong = report.direction === 'long';
+    const totalDistance = isLong
+      ? (report.takeProfit1 - report.entryPrice)
+      : (report.entryPrice - report.takeProfit1);
+    const coveredDistance = isLong
+      ? (report.currentPrice - report.entryPrice)
+      : (report.entryPrice - report.currentPrice);
+
+    return totalDistance !== 0
+      ? Math.min(100, Math.max(0, (coveredDistance / totalDistance) * 100))
+      : 0;
+  };
+
   const filteredReports = reports
     .filter(r =>
       r.symbol.toLowerCase().includes(searchQuery.toLowerCase()) &&
       (filter === 'all' || r.direction === filter)
-    );
+    )
+    .sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case 'score':
+          comparison = (a.score || 0) - (b.score || 0);
+          break;
+        case 'pnl':
+          comparison = (a.unrealizedPnL || 0) - (b.unrealizedPnL || 0);
+          break;
+        case 'tp':
+          comparison = calculateTpProgress(a) - calculateTpProgress(b);
+          break;
+        case 'date':
+        default:
+          comparison = new Date(a.generatedAt).getTime() - new Date(b.generatedAt).getTime();
+          break;
+      }
+
+      return sortOrder === 'desc' ? -comparison : comparison;
+    });
 
   // Use stats from API (accurate counts from database, not just current page)
   const totalReports = stats.total;
@@ -471,35 +515,77 @@ Bu analize göre risk değerlendirmeni ve önerilerini paylaşır mısın?`;
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search coin..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-card border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-          />
+      {/* Search, Filters, and Sorting */}
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search coin..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-card border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+            />
+          </div>
+          <div className="flex gap-2">
+            {[
+              { value: 'all', label: 'All' },
+              { value: 'long', label: 'Long' },
+              { value: 'short', label: 'Short' },
+            ].map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value as typeof filter)}
+                className={cn(
+                  "px-4 py-2 rounded-lg font-medium transition",
+                  filter === f.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-card border hover:bg-accent"
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex gap-2">
+
+        {/* Sorting Options */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground flex items-center gap-1">
+            <ArrowUpDown className="w-4 h-4" />
+            Sort by:
+          </span>
           {[
-            { value: 'all', label: 'All' },
-            { value: 'long', label: 'Long' },
-            { value: 'short', label: 'Short' },
-          ].map((f) => (
+            { value: 'date', label: 'Date', icon: Clock },
+            { value: 'score', label: 'Score', icon: BarChart3 },
+            { value: 'pnl', label: 'P/L', icon: DollarSign },
+            { value: 'tp', label: 'TP Progress', icon: Target },
+          ].map((s) => (
             <button
-              key={f.value}
-              onClick={() => setFilter(f.value as typeof filter)}
+              key={s.value}
+              onClick={() => {
+                if (sortBy === s.value) {
+                  setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
+                } else {
+                  setSortBy(s.value as typeof sortBy);
+                  setSortOrder('desc');
+                }
+              }}
               className={cn(
-                "px-4 py-2 rounded-lg font-medium transition",
-                filter === f.value
-                  ? "bg-primary text-primary-foreground"
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition",
+                sortBy === s.value
+                  ? "bg-emerald-500 text-white"
                   : "bg-card border hover:bg-accent"
               )}
             >
-              {f.label}
+              <s.icon className="w-3.5 h-3.5" />
+              {s.label}
+              {sortBy === s.value && (
+                sortOrder === 'desc'
+                  ? <ArrowDown className="w-3.5 h-3.5" />
+                  : <ArrowUp className="w-3.5 h-3.5" />
+              )}
             </button>
           ))}
         </div>
