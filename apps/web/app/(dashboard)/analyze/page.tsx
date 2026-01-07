@@ -75,6 +75,9 @@ export default function AnalyzePage() {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
+      {/* ===== Page Title ===== */}
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analysis</h1>
+
       {/* ===== SECTION 1: Analysis Statistics Header ===== */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="bg-white dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50 text-center">
@@ -116,11 +119,11 @@ export default function AnalyzePage() {
         </div>
       </div>
 
-      {/* ===== SECTION 3: New Analysis ===== */}
+      {/* ===== SECTION 2: New Analysis ===== */}
       <div className="bg-white dark:bg-slate-800/50 rounded-2xl p-6 border border-gray-200 dark:border-slate-700/50">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">New Analysis</h1>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">New Analysis</h2>
             <p className="text-gray-500 dark:text-slate-400">
               AI-powered trading insights in 7 steps
             </p>
