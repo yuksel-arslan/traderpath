@@ -1247,20 +1247,20 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">How TradePath Works</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Get from market confusion to trading confidence in minutes
+              We don&apos;t trade for you. We provide scientific analysis and education so you can make informed decisions.
             </p>
           </div>
 
           {/* Integrated Flow */}
           <div className="max-w-5xl mx-auto space-y-8">
-            {/* Step 1: Select */}
+            {/* Step 1: Research */}
             <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-red-500/20">
+              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-blue-500/20">
                 1
               </div>
               <div className="text-center md:text-left flex-1">
-                <h3 className="text-xl font-bold mb-1">Select Your Coin</h3>
-                <p className="text-muted-foreground text-sm">Choose from 30+ supported cryptocurrencies</p>
+                <h3 className="text-xl font-bold mb-1">Research & Explore</h3>
+                <p className="text-muted-foreground text-sm">Select a coin and let our AI gather comprehensive market data, technicals, and fundamentals</p>
               </div>
             </div>
 
@@ -1269,15 +1269,15 @@ export default function LandingPage() {
               <div className="w-0.5 h-6 bg-border" />
             </div>
 
-            {/* Step 2: 7-Step Analysis */}
+            {/* Step 2: Scientific Analysis */}
             <div className="flex flex-col md:flex-row items-start gap-6">
-              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-red-500/20">
+              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-purple-500/20">
                 2
               </div>
               <div className="flex-1">
                 <div className="text-center md:text-left mb-4">
-                  <h3 className="text-xl font-bold mb-1">AI Runs 7-Step Analysis</h3>
-                  <p className="text-muted-foreground text-sm">Each coin goes through specialized checks</p>
+                  <h3 className="text-xl font-bold mb-1">Scientific 7-Step Analysis</h3>
+                  <p className="text-muted-foreground text-sm">Our AI applies proven methodologies across 7 specialized disciplines for objective insights</p>
                 </div>
 
                 {/* 7 Steps Grid */}
@@ -1290,67 +1290,68 @@ export default function LandingPage() {
               <div className="w-0.5 h-6 bg-border" />
             </div>
 
-            {/* Step 3: Trade */}
+            {/* Step 3: Learn & Decide */}
             <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-red-500/20">
+              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-green-500/20">
                 3
               </div>
               <div className="text-center md:text-left flex-1">
-                <h3 className="text-xl font-bold mb-1">Trade with Confidence</h3>
-                <p className="text-muted-foreground text-sm">Get clear GO/WAIT/AVOID verdicts with exact entry, TP, and SL levels</p>
+                <h3 className="text-xl font-bold mb-1">Learn & Make Informed Decisions</h3>
+                <p className="text-muted-foreground text-sm">Understand the analysis, chat with AI experts for deeper insights, and decide what&apos;s right for you</p>
               </div>
             </div>
           </div>
 
-          {/* How We Measure Success */}
+          {/* How We Measure Analysis Accuracy */}
           <div className="mt-16 pt-16 border-t border-border">
             <div className="text-center mb-10">
-              <h3 className="text-2xl md:text-3xl font-bold mb-3">How We Measure Success</h3>
+              <h3 className="text-2xl md:text-3xl font-bold mb-3">How We Measure Analysis Accuracy</h3>
               <p className="text-muted-foreground max-w-xl mx-auto">
-                Honest metrics that reflect real trading outcomes
+                Transparent methodology to validate our analysis quality
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-              {/* TP/SL Based */}
+              {/* Scientific Method */}
               <div className="bg-card border rounded-xl p-6 text-center">
                 <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Target className="w-6 h-6 text-green-500" />
                 </div>
-                <h4 className="font-semibold mb-2">TP/SL Based</h4>
+                <h4 className="font-semibold mb-2">Scientific Method</h4>
                 <p className="text-sm text-muted-foreground">
-                  A trade is <span className="text-green-500 font-medium">successful</span> when Take Profit is hit,
-                  <span className="text-red-500 font-medium"> failed</span> when Stop Loss is hit.
+                  Each analysis includes specific price levels. We verify if the market
+                  <span className="text-green-500 font-medium"> confirms</span> or
+                  <span className="text-red-500 font-medium"> invalidates</span> our projections.
                 </p>
               </div>
 
-              {/* Real Outcomes */}
+              {/* Tracked Accuracy */}
               <div className="bg-card border rounded-xl p-6 text-center">
                 <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Eye className="w-6 h-6 text-blue-500" />
                 </div>
-                <h4 className="font-semibold mb-2">Real Outcomes</h4>
+                <h4 className="font-semibold mb-2">Tracked Accuracy</h4>
                 <p className="text-sm text-muted-foreground">
-                  We monitor prices and automatically verify when TP or SL levels are reached.
-                  Every outcome is tracked.
+                  We monitor price movements against our analysis projections.
+                  Every analysis outcome is logged and visible.
                 </p>
               </div>
 
-              {/* No Cherry-Picking */}
+              {/* Full Transparency */}
               <div className="bg-card border rounded-xl p-6 text-center">
                 <div className="w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Shield className="w-6 h-6 text-purple-500" />
                 </div>
-                <h4 className="font-semibold mb-2">No Cherry-Picking</h4>
+                <h4 className="font-semibold mb-2">Full Transparency</h4>
                 <p className="text-sm text-muted-foreground">
-                  All predictions are recorded. We don&apos;t hide failures.
-                  What you see is our real track record.
+                  All analyses are recorded. We show both accurate and inaccurate calls.
+                  No hidden results, just honest data.
                 </p>
               </div>
             </div>
 
             <p className="text-center mt-8 text-muted-foreground italic text-sm">
-              &quot;Professional traders measure success by TP/SL outcomes, not arbitrary time periods.&quot;
+              &quot;We provide analysis and education - what you do with it is your informed decision.&quot;
             </p>
           </div>
         </div>
