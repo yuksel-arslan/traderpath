@@ -10,6 +10,7 @@ import {
   Page,
   Text,
   View,
+  Image,
   StyleSheet,
   pdf,
 } from '@react-pdf/renderer';
@@ -322,6 +323,129 @@ const styles = StyleSheet.create({
     borderBottomColor: C.border,
   },
 
+  // Chart
+  chartContainer: {
+    backgroundColor: C.white,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: C.border,
+    marginBottom: 15,
+    overflow: 'hidden',
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: C.bg,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  chartTitle: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  chartImage: {
+    width: '100%',
+    height: 220,
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 15,
+    padding: 8,
+    backgroundColor: C.bg,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
+  chartLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  chartLegendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  chartLegendText: {
+    fontSize: 7,
+    color: C.secondary,
+  },
+
+  // AI Expert Box (different from AI Summary)
+  aiExpertBox: {
+    backgroundColor: '#ecfdf5',
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#6ee7b7',
+  },
+  aiExpertHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  aiExpertBadge: {
+    backgroundColor: '#10b981',
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  aiExpertBadgeText: {
+    fontSize: 6,
+    fontWeight: 'bold',
+    color: C.white,
+  },
+  aiExpertTitle: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#047857',
+  },
+  aiExpertText: {
+    fontSize: 8,
+    color: '#065f46',
+    lineHeight: 1.4,
+  },
+
+  // Alert Notification
+  alertBox: {
+    backgroundColor: '#eff6ff',
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#93c5fd',
+  },
+  alertHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  alertBadge: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  alertBadgeText: {
+    fontSize: 6,
+    fontWeight: 'bold',
+    color: C.white,
+  },
+  alertTitle: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#1d4ed8',
+  },
+  alertText: {
+    fontSize: 8,
+    color: '#1e40af',
+    lineHeight: 1.4,
+  },
+
   // Step Explanations
   stepExplanation: {
     backgroundColor: C.bg,
@@ -460,6 +584,12 @@ interface AnalysisReportData {
     aiSummary?: string;
   };
   aiExpertComment?: string;
+  // Alert info (if auto-created)
+  alertInfo?: {
+    created: boolean;
+    targetPrice?: number;
+    type?: string;
+  };
 }
 
 // Step descriptions for explanations
@@ -674,6 +804,39 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </View>
         )}
 
+        {/* AI Expert Comment - Page 1 */}
+        {data.aiExpertComment && (
+          <View style={styles.aiExpertBox}>
+            <View style={styles.aiExpertHeader}>
+              <View style={styles.aiExpertBadge}>
+                <Text style={styles.aiExpertBadgeText}>AI EXPERT</Text>
+              </View>
+              <Text style={styles.aiExpertTitle}>Expert Review</Text>
+            </View>
+            <Text style={styles.aiExpertText}>
+              {data.aiExpertComment.slice(0, 500)}{data.aiExpertComment.length > 500 ? '...' : ''}
+            </Text>
+          </View>
+        )}
+
+        {/* Alert Notification */}
+        {data.alertInfo?.created && (
+          <View style={styles.alertBox}>
+            <View style={styles.alertHeader}>
+              <View style={styles.alertBadge}>
+                <Text style={styles.alertBadgeText}>ALERT</Text>
+              </View>
+              <Text style={styles.alertTitle}>Otomatik Fiyat Alarmı Oluşturuldu</Text>
+            </View>
+            <Text style={styles.alertText}>
+              Bu analiz için otomatik bir fiyat alarmı oluşturuldu.
+              {data.alertInfo.targetPrice && ` Hedef fiyat: ${formatPrice(data.alertInfo.targetPrice)}`}
+              {data.alertInfo.type && ` (${data.alertInfo.type})`}.
+              {'\n'}Fiyat hedef seviyeye ulaştığında bildirim alacaksınız. Alarmlarınızı Dashboard &gt; Alerts sayfasından yönetebilirsiniz.
+            </Text>
+          </View>
+        )}
+
         {/* Risk Warning */}
         <View style={styles.riskWarning}>
           <Text style={styles.riskWarningText}>
@@ -706,7 +869,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
         </View>
       </Page>
 
-      {/* PAGE 2: Detailed Steps */}
+      {/* PAGE 2: Chart + Detailed Steps */}
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
@@ -716,9 +879,37 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.symbol}>{data.symbol}/USDT</Text>
-            <Text style={styles.date}>Detailed Analysis</Text>
+            <Text style={styles.date}>Chart & Details</Text>
           </View>
         </View>
+
+        {/* Trade Plan Chart */}
+        {data.chartImage && (
+          <View style={styles.chartContainer}>
+            <View style={styles.chartHeader}>
+              <Text style={styles.chartTitle}>Trade Plan Chart - {data.symbol}/USDT</Text>
+            </View>
+            <Image src={data.chartImage} style={styles.chartImage} />
+            <View style={styles.chartLegend}>
+              <View style={styles.chartLegendItem}>
+                <View style={[styles.chartLegendDot, { backgroundColor: '#2563eb' }]} />
+                <Text style={styles.chartLegendText}>Entry Zone</Text>
+              </View>
+              <View style={styles.chartLegendItem}>
+                <View style={[styles.chartLegendDot, { backgroundColor: '#dc2626' }]} />
+                <Text style={styles.chartLegendText}>Stop Loss</Text>
+              </View>
+              <View style={styles.chartLegendItem}>
+                <View style={[styles.chartLegendDot, { backgroundColor: '#16a34a' }]} />
+                <Text style={styles.chartLegendText}>Take Profits</Text>
+              </View>
+              <View style={styles.chartLegendItem}>
+                <View style={[styles.chartLegendDot, { backgroundColor: '#f59e0b' }]} />
+                <Text style={styles.chartLegendText}>Current Price</Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Detailed Steps */}
         <View style={styles.page2Section}>
@@ -923,8 +1114,60 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
   );
 };
 
-// Export function - simplified without chart capture
-export async function generateAnalysisReport(data: AnalysisReportData): Promise<void> {
+// Chart capture function
+export async function captureChartAsImage(elementId: string = 'trade-plan-chart'): Promise<string | null> {
+  try {
+    const element = document.getElementById(elementId);
+    if (!element) {
+      console.warn('Chart element not found:', elementId);
+      return null;
+    }
+
+    // Get the parent container
+    const parent = element.parentElement;
+    const originalStyle = parent?.getAttribute('style') || '';
+
+    // Temporarily make visible for capture
+    if (parent) {
+      parent.style.cssText = 'position: fixed; left: 0; top: 0; width: 800px; z-index: 9999; background: #fff;';
+    }
+
+    // Wait for chart to render
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const html2canvas = (await import('html2canvas')).default;
+    const canvas = await html2canvas(element, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      logging: false,
+      useCORS: true,
+      allowTaint: true,
+      width: 800,
+      windowWidth: 800,
+    });
+
+    // Restore original position
+    if (parent) {
+      parent.style.cssText = originalStyle;
+    }
+
+    return canvas.toDataURL('image/png');
+  } catch (error) {
+    console.error('Failed to capture chart:', error);
+    return null;
+  }
+}
+
+// Export function with optional chart capture
+export async function generateAnalysisReport(data: AnalysisReportData, captureChart: boolean = false): Promise<void> {
+  // Capture chart if requested and not already provided
+  if (captureChart && !data.chartImage) {
+    const chartImage = await captureChartAsImage();
+    if (chartImage) {
+      data.chartImage = chartImage;
+    }
+  }
+
   const blob = await pdf(<AnalysisReportDocument data={data} />).toBlob();
   const filename = `TradePath_${data.symbol}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
   saveAs(blob, filename);

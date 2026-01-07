@@ -314,8 +314,11 @@ export function DownloadReportButton({
         }
       }
 
-      // Generate and download PDF
-      await generateAnalysisReport(reportData);
+      // Wait for chart to be rendered before capture
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Generate and download PDF with chart capture
+      await generateAnalysisReport(reportData, true);
 
       // Save to database with interval for expiration calculation
       const saved = await saveReportToDatabase(reportData, interval);
