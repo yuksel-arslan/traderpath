@@ -214,15 +214,17 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
       if (!token) return;
 
       // Build report data from results
-      const verdict = results[7] as { action?: string; verdict?: string; overallScore?: number } | undefined;
+      const verdict = results[7] as { action?: string; verdict?: string; overallScore?: number; analysisId?: string } | undefined;
       const tradePlan = results[5] as { direction?: string } | undefined;
 
-      const generatedAnalysisId = `analysis_${Date.now()}_${symbol}`;
+      // Use the analysisId from the verdict API response (consistent with FinalVerdict component)
+      // This ensures the AI Expert page can find the report using the same ID
+      const reportAnalysisId = verdict?.analysisId || `analysis_${Date.now()}_${symbol}`;
 
       const reportData = {
         symbol,
         generatedAt: new Date().toISOString(),
-        analysisId: generatedAnalysisId,
+        analysisId: reportAnalysisId,
         marketPulse: results[1],
         assetScan: results[2],
         safetyCheck: results[3],
@@ -240,7 +242,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
         },
         body: JSON.stringify({
           symbol,
-          analysisId: generatedAnalysisId,
+          analysisId: reportAnalysisId,
           reportData,
           verdict: verdict?.action || verdict?.verdict || 'N/A',
           score: verdict?.overallScore || 0,
@@ -251,8 +253,8 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
 
       if (response.ok) {
         setReportSaved(true);
-        setSavedAnalysisId(generatedAnalysisId);
-        console.log('Report auto-saved successfully with analysisId:', generatedAnalysisId);
+        setSavedAnalysisId(reportAnalysisId);
+        console.log('Report auto-saved successfully with analysisId:', reportAnalysisId);
       }
     } catch (error) {
       console.error('Failed to auto-save report:', error);
