@@ -14,16 +14,16 @@ const envSchema = z.object({
   APP_URL: z.string().url().default('http://localhost:3000'),
   API_URL: z.string().url().default('http://localhost:4000'),
 
-  // Database
-  DATABASE_URL: z.string().url(),
+  // Database (optional - using JSON file storage)
+  DATABASE_URL: z.string().optional(),
 
-  // Redis
-  REDIS_URL: z.string().url(),
+  // Redis (optional)
+  REDIS_URL: z.string().optional(),
 
-  // JWT
-  JWT_SECRET: z.string().min(32),
+  // JWT (with defaults for development)
+  JWT_SECRET: z.string().min(32).default('dev-jwt-secret-key-minimum-32-characters-long'),
   JWT_EXPIRES_IN: z.string().default('7d'),
-  REFRESH_TOKEN_SECRET: z.string().min(32),
+  REFRESH_TOKEN_SECRET: z.string().min(32).default('dev-refresh-token-secret-minimum-32-chars'),
   REFRESH_TOKEN_EXPIRES_IN: z.string().default('30d'),
 
   // Google OAuth

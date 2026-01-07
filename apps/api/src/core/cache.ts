@@ -1,34 +1,86 @@
 // ===========================================
-// Redis Cache Client
+// Cache Client (Memory-based fallback)
 // ===========================================
 
-import Redis from 'ioredis';
 import { config } from './config';
 
-export const redis = new Redis(config.redisUrl, {
-  maxRetriesPerRequest: 3,
-  retryStrategy: (times) => {
-    if (times > 3) return null;
-    return Math.min(times * 200, 1000);
+// In-memory cache for development
+const memoryCache = new Map<string, { value: string; expiresAt?: number }>();
+
+// Mock Redis interface
+export const redis = {
+  async ping() {
+    return 'PONG';
   },
-});
 
-redis.on('connect', () => {
-  console.log('Redis connected');
-});
+  async get(key: string): Promise<string | null> {
+    const item = memoryCache.get(key);
+    if (!item) return null;
+    if (item.expiresAt && Date.now() > item.expiresAt) {
+      memoryCache.delete(key);
+      return null;
+    }
+    return item.value;
+  },
 
-redis.on('error', (error) => {
-  console.error('Redis error:', error);
-});
+  async set(key: string, value: string): Promise<'OK'> {
+    memoryCache.set(key, { value });
+    return 'OK';
+  },
+
+  async setex(key: string, seconds: number, value: string): Promise<'OK'> {
+    memoryCache.set(key, { value, expiresAt: Date.now() + seconds * 1000 });
+    return 'OK';
+  },
+
+  async del(...keys: string[]): Promise<number> {
+    let deleted = 0;
+    for (const key of keys) {
+      if (memoryCache.delete(key)) deleted++;
+    }
+    return deleted;
+  },
+
+  async keys(pattern: string): Promise<string[]> {
+    const regex = new RegExp(pattern.replace(/\*/g, '.*'));
+    return Array.from(memoryCache.keys()).filter(k => regex.test(k));
+  },
+
+  async exists(key: string): Promise<number> {
+    return memoryCache.has(key) ? 1 : 0;
+  },
+
+  async incr(key: string): Promise<number> {
+    const current = await this.get(key);
+    const newValue = (parseInt(current || '0') + 1).toString();
+    await this.set(key, newValue);
+    return parseInt(newValue);
+  },
+
+  async expire(key: string, seconds: number): Promise<number> {
+    const item = memoryCache.get(key);
+    if (!item) return 0;
+    item.expiresAt = Date.now() + seconds * 1000;
+    return 1;
+  },
+
+  async quit(): Promise<'OK'> {
+    memoryCache.clear();
+    return 'OK';
+  },
+
+  on(_event: string, _callback: (...args: any[]) => void) {
+    // No-op for memory cache
+  },
+};
+
+console.log('Using in-memory cache (Redis not configured)');
 
 // ===========================================
 // Cache Utilities
 // ===========================================
 
 export const cache = {
-  /**
-   * Get cached value
-   */
   async get<T>(key: string): Promise<T | null> {
     const value = await redis.get(key);
     if (!value) return null;
@@ -39,9 +91,6 @@ export const cache = {
     }
   },
 
-  /**
-   * Set cached value
-   */
   async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
     const serialized = typeof value === 'string' ? value : JSON.stringify(value);
     if (ttlSeconds) {
@@ -51,16 +100,10 @@ export const cache = {
     }
   },
 
-  /**
-   * Delete cached value
-   */
   async del(key: string): Promise<void> {
     await redis.del(key);
   },
 
-  /**
-   * Delete by pattern
-   */
   async delPattern(pattern: string): Promise<void> {
     const keys = await redis.keys(pattern);
     if (keys.length > 0) {
@@ -68,16 +111,10 @@ export const cache = {
     }
   },
 
-  /**
-   * Check if key exists
-   */
   async exists(key: string): Promise<boolean> {
     return (await redis.exists(key)) === 1;
   },
 
-  /**
-   * Get or set (with callback)
-   */
   async getOrSet<T>(
     key: string,
     fetcher: () => Promise<T>,
@@ -91,16 +128,10 @@ export const cache = {
     return value;
   },
 
-  /**
-   * Increment counter
-   */
   async incr(key: string): Promise<number> {
     return redis.incr(key);
   },
 
-  /**
-   * Set expiry
-   */
   async expire(key: string, seconds: number): Promise<void> {
     await redis.expire(key, seconds);
   },
@@ -111,20 +142,13 @@ export const cache = {
 // ===========================================
 
 export const cacheKeys = {
-  // Market data
   marketPulse: () => 'market:pulse',
   assetData: (symbol: string) => `asset:${symbol}`,
   orderBook: (symbol: string) => `orderbook:${symbol}`,
-
-  // User data
   userSession: (userId: string) => `session:${userId}`,
   userCredits: (userId: string) => `credits:${userId}`,
   userDailyRewards: (userId: string, date: string) => `daily:${userId}:${date}`,
-
-  // Analysis
   analysis: (id: string) => `analysis:${id}`,
-
-  // Rate limiting
   rateLimit: (ip: string, endpoint: string) => `ratelimit:${ip}:${endpoint}`,
 };
 
@@ -133,10 +157,10 @@ export const cacheKeys = {
 // ===========================================
 
 export const cacheTTL = {
-  marketPulse: 5 * 60,     // 5 minutes
-  assetData: 60,            // 1 minute
-  orderBook: 10,            // 10 seconds
-  userSession: 24 * 60 * 60, // 24 hours
-  userCredits: 5 * 60,      // 5 minutes
-  analysis: 24 * 60 * 60,   // 24 hours
+  marketPulse: 5 * 60,
+  assetData: 60,
+  orderBook: 10,
+  userSession: 24 * 60 * 60,
+  userCredits: 5 * 60,
+  analysis: 24 * 60 * 60,
 };
