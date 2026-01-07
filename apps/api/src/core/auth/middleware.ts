@@ -1,14 +1,12 @@
 // ===========================================
 // Authentication Middleware
+// Re-exports Firebase authentication
 // ===========================================
 
-import { FastifyRequest, FastifyReply } from 'fastify';
-import { prisma } from '../database';
+// Export Firebase middleware as the default authentication
+export { firebaseAuth as authenticate, optionalFirebaseAuth as optionalAuth } from './firebase-middleware';
 
-// Admin emails with free unlimited access
-const ADMIN_EMAILS = ['contact@yukselarslan.com'];
-
-// Extend FastifyRequest to include user
+// Re-export types
 declare module 'fastify' {
   interface FastifyRequest {
     user?: {
@@ -17,104 +15,7 @@ declare module 'fastify' {
       name: string;
       level: number;
       isAdmin?: boolean;
+      firebaseUid?: string;
     };
-  }
-}
-
-/**
- * Authentication middleware
- * Verifies JWT token and attaches user to request
- */
-export async function authenticate(
-  request: FastifyRequest,
-  reply: FastifyReply
-): Promise<void> {
-  try {
-    // Get token from header
-    const authHeader = request.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return reply.status(401).send({
-        success: false,
-        error: {
-          code: 'AUTH_001',
-          message: 'No token provided',
-        },
-      });
-    }
-
-    const token = authHeader.substring(7);
-
-    // Verify token
-    const decoded = await request.jwtVerify<{ id: string }>();
-
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        level: true,
-      },
-    });
-
-    if (!user) {
-      return reply.status(401).send({
-        success: false,
-        error: {
-          code: 'AUTH_002',
-          message: 'User not found',
-        },
-      });
-    }
-
-    // Check if user is admin
-    const isAdmin = ADMIN_EMAILS.includes(user.email);
-
-    // Attach user to request
-    request.user = { ...user, isAdmin };
-  } catch (error) {
-    return reply.status(401).send({
-      success: false,
-      error: {
-        code: 'AUTH_003',
-        message: 'Invalid or expired token',
-      },
-    });
-  }
-}
-
-/**
- * Optional authentication middleware
- * Attaches user if token is valid, but doesn't require it
- */
-export async function optionalAuth(
-  request: FastifyRequest,
-  _reply: FastifyReply
-): Promise<void> {
-  try {
-    const authHeader = request.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return;
-    }
-
-    const decoded = await request.jwtVerify<{ id: string }>();
-
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        level: true,
-      },
-    });
-
-    if (user) {
-      const isAdmin = ADMIN_EMAILS.includes(user.email);
-      request.user = { ...user, isAdmin };
-    }
-  } catch {
-    // Ignore errors for optional auth
   }
 }
