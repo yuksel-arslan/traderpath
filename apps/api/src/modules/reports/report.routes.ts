@@ -9,6 +9,9 @@ import { authenticate } from '../../core/auth/middleware';
 import { calculateExpiredOutcomes, getRealAccuracy, calculateReportOutcome } from './outcome.service';
 import { notificationService } from '../notifications/notification.service';
 
+// Admin emails - their reports are public and visible to all users
+const ADMIN_EMAILS = ['contact@yukselarslan.com'];
+
 interface SaveReportBody {
   symbol: string;
   analysisId?: string;
@@ -85,11 +88,14 @@ export async function reportRoutes(fastify: FastifyInstance) {
           });
         }
 
-        // Get user's report validity setting
+        // Get user info to check if admin
         const user = await prisma.user.findUnique({
           where: { id: userId },
-          select: { reportValidityPeriods: true },
+          select: { email: true, reportValidityPeriods: true },
         });
+
+        // Check if user is admin - their reports are public
+        const isAdmin = user ? ADMIN_EMAILS.includes(user.email) : false;
 
         // Fixed 48 hours validity for all reports
         const expiresAt = calculateExpiresAt();
@@ -108,6 +114,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
             direction,
             expiresAt,
             entryPrice: finalEntryPrice,
+            isPublic: isAdmin, // Admin reports are visible to all users
           },
         });
 
@@ -204,16 +211,18 @@ export async function reportRoutes(fastify: FastifyInstance) {
           fastify.log.error('Failed to calculate expired report outcomes:', err)
         );
 
-        // Build query - filter out expired unless explicitly requested
-        const whereClause: Record<string, unknown> = { userId };
-        if (includeExpired !== 'true') {
-          whereClause.expiresAt = { gt: new Date() };
-        }
+        // Base expiry filter
+        const expiryFilter = includeExpired !== 'true' ? { expiresAt: { gt: new Date() } } : {};
 
-        const reports = await prisma.report.findMany({
-          where: whereClause,
+        // Fetch user's own reports
+        const userReports = await prisma.report.findMany({
+          where: {
+            userId,
+            ...expiryFilter,
+          },
           select: {
             id: true,
+            userId: true,
             symbol: true,
             verdict: true,
             score: true,
@@ -226,10 +235,49 @@ export async function reportRoutes(fastify: FastifyInstance) {
             reportData: true,
             analysisId: true,
             aiExpertComment: true,
+            isPublic: true,
           },
           orderBy: { generatedAt: 'desc' },
           take: Math.min(parseInt(limit), 50),
           skip: parseInt(offset),
+        });
+
+        // Fetch public (admin) reports that user doesn't own
+        const publicReports = await prisma.report.findMany({
+          where: {
+            isPublic: true,
+            userId: { not: userId }, // Don't duplicate if admin views their own
+            ...expiryFilter,
+          },
+          select: {
+            id: true,
+            userId: true,
+            symbol: true,
+            verdict: true,
+            score: true,
+            direction: true,
+            generatedAt: true,
+            expiresAt: true,
+            downloadCount: true,
+            outcome: true,
+            entryPrice: true,
+            reportData: true,
+            analysisId: true,
+            aiExpertComment: true,
+            isPublic: true,
+          },
+          orderBy: { generatedAt: 'desc' },
+          take: 10, // Limit sample reports
+        });
+
+        // Merge and sort: user's reports first, then public samples
+        const allReports = [...userReports, ...publicReports];
+        const reports = allReports.sort((a, b) => {
+          // User's own reports come first
+          if (a.userId === userId && b.userId !== userId) return -1;
+          if (a.userId !== userId && b.userId === userId) return 1;
+          // Then sort by date
+          return new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime();
         });
 
         // Fetch current prices for all symbols
@@ -309,15 +357,20 @@ export async function reportRoutes(fastify: FastifyInstance) {
             // AI Expert fields
             analysisId: report.analysisId,
             aiExpertComment: report.aiExpertComment,
+            // Sample report flag - public reports from admin that user doesn't own
+            isSample: report.isPublic && report.userId !== userId,
           };
         }));
 
-        // Get total count and statistics
+        // Build where clause for user's own reports (for stats)
+        const userWhereClause = { userId, ...expiryFilter };
+
+        // Get total count and statistics (only for user's own reports)
         const [total, activeCount, correctCount, incorrectCount] = await Promise.all([
-          prisma.report.count({ where: whereClause }),
-          prisma.report.count({ where: { ...whereClause, OR: [{ outcome: null }, { outcome: 'pending' }] } }),
-          prisma.report.count({ where: { ...whereClause, outcome: 'correct' } }),
-          prisma.report.count({ where: { ...whereClause, outcome: 'incorrect' } }),
+          prisma.report.count({ where: userWhereClause }),
+          prisma.report.count({ where: { ...userWhereClause, OR: [{ outcome: null }, { outcome: 'pending' }] } }),
+          prisma.report.count({ where: { ...userWhereClause, outcome: 'correct' } }),
+          prisma.report.count({ where: { ...userWhereClause, outcome: 'incorrect' } }),
         ]);
 
         return reply.send({

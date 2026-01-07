@@ -29,6 +29,7 @@ interface RecentAnalysis {
   unrealizedPnL?: number;
   stopLoss?: number;
   takeProfit1?: number;
+  isSample?: boolean;
 }
 
 const verdictConfig = {
@@ -210,6 +211,13 @@ export function RecentAnalyses() {
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 flex items-center gap-0.5">
                       <Timer className="w-3 h-3" />
                       LIVE
+                    </span>
+                  )}
+                  {/* Sample Report Badge */}
+                  {analysis.isSample && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400 flex items-center gap-0.5">
+                      <Eye className="w-3 h-3" />
+                      SAMPLE
                     </span>
                   )}
                 </div>

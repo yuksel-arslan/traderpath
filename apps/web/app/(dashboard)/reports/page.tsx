@@ -53,6 +53,8 @@ interface Report {
   // AI Expert fields
   analysisId?: string;
   aiExpertComment?: string | null;
+  // Sample report flag (admin's public reports)
+  isSample?: boolean;
 }
 
 // Trade Plan Levels for Chart
@@ -646,6 +648,13 @@ Bu analize göre risk değerlendirmeni ve önerilerini paylaşır mısın?`;
                           <span className="w-2 h-2 bg-blue-500 rounded-full animate-ping" />
                           <Timer className="w-3 h-3" />
                           LIVE TRACKING
+                        </span>
+                      )}
+                      {/* Sample Report Badge */}
+                      {report.isSample && (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400 flex items-center gap-1">
+                          <Eye className="w-3 h-3" />
+                          SAMPLE
                         </span>
                       )}
                     </div>
