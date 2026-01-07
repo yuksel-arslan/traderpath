@@ -296,51 +296,51 @@ const ANALYSIS_STEPS = [
   },
 ];
 
-// AI Experts Data - 4 specialized AI models that review the analysis
+// AI Experts Data - 4 specialized AI mentors for chat, education, and analysis review
 const AI_EXPERTS = [
   {
     name: 'ARIA',
-    title: 'Technical Analysis AI',
+    title: 'Technical Analysis Mentor',
     icon: LineChart,
     color: 'text-blue-500',
     bg: 'bg-blue-500/10',
     border: 'border-blue-500/30',
-    credentials: 'Specialized AI model • Trained on 10+ years of chart data • Real-time indicator analysis',
-    description: 'AI model specialized in technical analysis including RSI divergence detection, MACD interpretation, and multi-timeframe confluence analysis.',
-    focus: ['RSI & MACD Analysis', 'Pattern Recognition', 'Multi-TF Analysis', 'Trend Detection']
+    credentials: 'AI Mentor • Technical Analysis Specialist • Chart Pattern Expert',
+    description: 'Your go-to mentor for all things technical analysis. Chat with ARIA to learn about RSI, MACD, chart patterns, support/resistance levels, and multi-timeframe analysis. Ask any question and get clear, educational explanations.',
+    focus: ['RSI & MACD', 'Chart Patterns', 'Support/Resistance', 'Trend Analysis']
   },
   {
     name: 'NEXUS',
-    title: 'Risk Assessment AI',
+    title: 'Risk Management Mentor',
     icon: Crosshair,
     color: 'text-green-500',
     bg: 'bg-green-500/10',
     border: 'border-green-500/30',
-    credentials: 'Specialized AI model • Quantitative risk algorithms • Position sizing optimization',
-    description: 'AI model focused on quantitative risk assessment, position sizing recommendations, stop loss optimization, and capital protection strategies.',
-    focus: ['Position Sizing', 'Risk/Reward Calc', 'Capital Protection', 'Drawdown Analysis']
+    credentials: 'AI Mentor • Risk Management Specialist • Position Sizing Expert',
+    description: 'Your mentor for smart money management. Chat with NEXUS to learn about position sizing, risk/reward ratios, stop-loss strategies, and how to protect your capital. Perfect for beginners and experienced traders alike.',
+    focus: ['Position Sizing', 'Risk/Reward', 'Stop-Loss Strategy', 'Capital Protection']
   },
   {
     name: 'ORACLE',
-    title: 'On-Chain Analysis AI',
+    title: 'On-Chain Intelligence Mentor',
     icon: Radar,
     color: 'text-purple-500',
     bg: 'bg-purple-500/10',
     border: 'border-purple-500/30',
-    credentials: 'Specialized AI model • Real-time blockchain data • Whale wallet monitoring',
-    description: 'AI model specialized in on-chain data analysis including whale wallet tracking, exchange flow monitoring, and institutional movement detection.',
-    focus: ['Whale Monitoring', 'Exchange Flow', 'Smart Money Tracking', 'On-Chain Metrics']
+    credentials: 'AI Mentor • Blockchain Data Specialist • Whale Tracking Expert',
+    description: 'Your guide to understanding on-chain data. Chat with ORACLE to learn about whale movements, exchange flows, smart money tracking, and how blockchain data can inform your trading decisions.',
+    focus: ['Whale Tracking', 'Exchange Flows', 'Smart Money', 'On-Chain Metrics']
   },
   {
     name: 'SENTINEL',
-    title: 'Security Analysis AI',
+    title: 'Security & Safety Mentor',
     icon: ShieldAlert,
     color: 'text-orange-500',
     bg: 'bg-orange-500/10',
     border: 'border-orange-500/30',
-    credentials: 'Specialized AI model • Scam pattern database • Real-time manipulation detection',
-    description: 'AI model trained to detect scams, honeypots, rug pulls, and market manipulation patterns to protect users from fraudulent activities.',
-    focus: ['Scam Detection', 'Contract Analysis', 'Trap Detection', 'Manipulation Patterns']
+    credentials: 'AI Mentor • Security Specialist • Scam Prevention Expert',
+    description: 'Your protector in the crypto world. Chat with SENTINEL to learn about common scams, how to spot rug pulls, market manipulation tactics, and how to keep your investments safe from fraudulent projects.',
+    focus: ['Scam Detection', 'Rug Pull Signs', 'Manipulation Tactics', 'Safe Trading']
   },
 ];
 
@@ -536,7 +536,7 @@ function FeaturesSection() {
               <Sparkles className="w-8 h-8 text-yellow-500" />
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Every analysis is reviewed by 4 specialized AI experts who either confirm or challenge the verdict. Click any expert to learn more.
+              Your personal AI mentors for trading education. Chat with specialized experts to learn, ask questions, and get personalized guidance on any trading topic.
             </p>
           </div>
           <div className="max-w-4xl mx-auto">
@@ -561,12 +561,25 @@ function FeaturesSection() {
                 );
               })}
             </div>
-            <div className="mt-8 p-4 bg-card border rounded-xl text-center">
-              <p className="text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">How it works:</span> After the 7-step analysis, each expert reviews the findings independently.
-                Their assessments are aggregated to provide you with a <span className="text-green-500 font-medium">consensus verdict</span> or
-                highlight <span className="text-yellow-500 font-medium">areas of disagreement</span> in your final report.
-              </p>
+            <div className="mt-8 p-4 bg-card border rounded-xl">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-purple-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Brain className="w-4 h-4 text-purple-500" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">Chat & Learn:</span> Ask any trading question and get instant, educational responses tailored to your level.
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">Analysis Review:</span> Each expert also reviews your analyses and adds their specialized perspective to your reports.
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -746,11 +759,20 @@ function FeaturesSection() {
                     </div>
                   </div>
 
-                  {/* How It Works */}
-                  <div className="bg-accent/50 rounded-lg p-4 border border-border">
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-semibold text-foreground">Role in Analysis:</span> After the 7-step analysis completes, {expert.name} reviews the findings and either <span className="text-green-500 font-medium">confirms</span> or <span className="text-yellow-500 font-medium">challenges</span> the verdict. Their expert assessment is included in your final report.
-                    </p>
+                  {/* What You Can Do */}
+                  <div className="bg-accent/50 rounded-lg p-4 border border-border space-y-3">
+                    <div className="flex items-start gap-2">
+                      <Brain className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-semibold text-foreground">Chat & Learn:</span> Start a conversation with {expert.name} to ask questions, learn concepts, and get personalized trading education.
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-semibold text-foreground">Analysis Review:</span> {expert.name} also reviews your 7-step analyses and adds specialized insights to your reports.
+                      </p>
+                    </div>
                   </div>
                 </>
               );
