@@ -24,7 +24,9 @@ import {
   ArrowDownRight,
   HelpCircle,
   ChevronDown,
-  Play
+  Play,
+  Brain,
+  Sparkles
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
@@ -283,12 +285,58 @@ const ANALYSIS_STEPS = [
   },
 ];
 
+// AI Experts Data - 4 specialized AI experts that review the analysis
+const AI_EXPERTS = [
+  {
+    name: 'Technical Analyst',
+    avatar: '📊',
+    color: 'text-blue-500',
+    bg: 'bg-blue-500/10',
+    border: 'border-blue-500/30',
+    specialty: 'Chart Patterns & Indicators',
+    description: 'Specialized in reading price action, identifying chart patterns, and interpreting technical indicators. Reviews support/resistance levels, trend analysis, and momentum signals.',
+    focus: ['Price action analysis', 'Pattern recognition', 'Indicator interpretation', 'Trend confirmation']
+  },
+  {
+    name: 'Risk Manager',
+    avatar: '🛡️',
+    color: 'text-green-500',
+    bg: 'bg-green-500/10',
+    border: 'border-green-500/30',
+    specialty: 'Risk Assessment & Position Sizing',
+    description: 'Focuses on protecting your capital by evaluating risk/reward ratios, position sizing, and potential downside scenarios. Ensures the trade plan is prudent.',
+    focus: ['Risk/reward evaluation', 'Stop-loss validation', 'Position sizing', 'Drawdown analysis']
+  },
+  {
+    name: 'Market Strategist',
+    avatar: '🎯',
+    color: 'text-purple-500',
+    bg: 'bg-purple-500/10',
+    border: 'border-purple-500/30',
+    specialty: 'Macro Trends & Market Context',
+    description: 'Analyzes the bigger picture including market cycles, sector rotation, and correlation with traditional markets. Ensures the trade aligns with macro conditions.',
+    focus: ['Market cycle analysis', 'Sector correlation', 'Macro trends', 'Sentiment alignment']
+  },
+  {
+    name: 'Manipulation Detective',
+    avatar: '🔍',
+    color: 'text-orange-500',
+    bg: 'bg-orange-500/10',
+    border: 'border-orange-500/30',
+    specialty: 'Whale Activity & Market Manipulation',
+    description: 'Expert in detecting unusual trading patterns, whale movements, and potential market manipulation. Protects you from becoming exit liquidity.',
+    focus: ['Whale tracking', 'Volume anomalies', 'Spoofing detection', 'Trap identification']
+  },
+];
+
 // Analysis Steps Grid Component with Centered Modal Popup
 function AnalysisStepsGrid() {
   const [activeStep, setActiveStep] = useState<number | null>(null);
+  const [activeExpert, setActiveExpert] = useState<number | null>(null);
 
   return (
     <>
+      {/* 7 Analysis Steps Grid */}
       <div className="bg-card border rounded-xl p-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
           {ANALYSIS_STEPS.map((item, idx) => {
@@ -310,7 +358,40 @@ function AnalysisStepsGrid() {
         </div>
       </div>
 
-      {/* Centered Modal Popup */}
+      {/* AI Experts Review Section */}
+      <div className="mt-4 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-cyan-500/10 border border-purple-500/20 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
+            <Brain className="w-4 h-4 text-purple-500" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold flex items-center gap-2">
+              Reviewed by 4 AI Experts
+              <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
+            </h4>
+            <p className="text-xs text-muted-foreground">Each analysis is validated by specialized AI agents</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {AI_EXPERTS.map((expert, idx) => (
+            <div
+              key={idx}
+              className={`flex flex-col items-center text-center p-3 rounded-lg ${expert.bg} border ${expert.border} hover:scale-105 transition cursor-pointer`}
+              onMouseEnter={() => setActiveExpert(idx)}
+              onMouseLeave={() => setActiveExpert(null)}
+            >
+              <span className="text-2xl mb-1">{expert.avatar}</span>
+              <span className="text-[11px] font-semibold">{expert.name}</span>
+              <span className="text-[9px] text-muted-foreground">{expert.specialty.split(' & ')[0]}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-center text-muted-foreground mt-3 italic">
+          Hover over each expert to learn what they analyze
+        </p>
+      </div>
+
+      {/* Analysis Step Popup */}
       {activeStep !== null && (
         <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
           <div className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-xl w-full mx-4 pointer-events-auto animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] overflow-y-auto">
@@ -361,6 +442,59 @@ function AnalysisStepsGrid() {
                   <div className="bg-accent/50 rounded-lg p-3 border border-border">
                     <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Real Example</h5>
                     <p className="text-sm text-muted-foreground italic">{item.example}</p>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* AI Expert Popup */}
+      {activeExpert !== null && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
+            {(() => {
+              const expert = AI_EXPERTS[activeExpert];
+              return (
+                <>
+                  {/* Header */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-14 h-14 ${expert.bg} ${expert.border} border-2 rounded-xl flex items-center justify-center flex-shrink-0`}>
+                      <span className="text-3xl">{expert.avatar}</span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-lg font-bold">{expert.name}</h4>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${expert.bg} ${expert.color} font-medium`}>AI Expert</span>
+                      </div>
+                      <p className={`text-sm ${expert.color} font-medium`}>{expert.specialty}</p>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-sm leading-relaxed mb-4 text-muted-foreground">
+                    {expert.description}
+                  </p>
+
+                  {/* Focus Areas */}
+                  <div className={`${expert.bg} rounded-lg p-3`}>
+                    <h5 className={`text-xs font-semibold uppercase tracking-wide ${expert.color} mb-2`}>Review Focus Areas</h5>
+                    <ul className="space-y-1.5">
+                      {expert.focus.map((item, i) => (
+                        <li key={i} className="flex items-center gap-2 text-sm">
+                          <CheckCircle className={`w-3.5 h-3.5 ${expert.color} flex-shrink-0`} />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Expert Verdict Info */}
+                  <div className="mt-4 p-3 bg-accent/50 rounded-lg border border-border">
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-semibold text-foreground">How it works:</span> After the 7-step analysis completes, this expert reviews the findings and either <span className="text-green-500 font-medium">confirms</span> or <span className="text-yellow-500 font-medium">challenges</span> the verdict. Their assessment is included in your final report.
+                    </p>
                   </div>
                 </>
               );
