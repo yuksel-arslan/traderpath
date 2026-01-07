@@ -1254,48 +1254,46 @@ export default function LandingPage() {
           {/* Integrated Flow */}
           <div className="max-w-5xl mx-auto space-y-8">
             {/* Step 1: Research */}
-            <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="flex flex-col items-center gap-4">
               <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-blue-500/20">
                 1
               </div>
-              <div className="text-center md:text-left flex-1">
+              <div className="text-center max-w-md">
                 <h3 className="text-xl font-bold mb-1">Research & Explore</h3>
                 <p className="text-muted-foreground text-sm">Select a coin and let our AI gather comprehensive market data, technicals, and fundamentals</p>
               </div>
             </div>
 
             {/* Arrow */}
-            <div className="flex justify-center md:justify-start md:ml-7">
+            <div className="flex justify-center">
               <div className="w-0.5 h-6 bg-border" />
             </div>
 
             {/* Step 2: Scientific Analysis */}
-            <div className="flex flex-col md:flex-row items-start gap-6">
+            <div className="flex flex-col items-center gap-4">
               <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-purple-500/20">
                 2
               </div>
-              <div className="flex-1">
-                <div className="text-center md:text-left mb-4">
-                  <h3 className="text-xl font-bold mb-1">Scientific 7-Step Analysis</h3>
-                  <p className="text-muted-foreground text-sm">Our AI applies proven methodologies across 7 specialized disciplines for objective insights</p>
-                </div>
-
-                {/* 7 Steps Grid */}
-                <AnalysisStepsGrid />
+              <div className="text-center max-w-md mb-4">
+                <h3 className="text-xl font-bold mb-1">Scientific 7-Step Analysis</h3>
+                <p className="text-muted-foreground text-sm">Our AI applies proven methodologies across 7 specialized disciplines for objective insights</p>
               </div>
+
+              {/* 7 Steps Grid */}
+              <AnalysisStepsGrid />
             </div>
 
             {/* Arrow */}
-            <div className="flex justify-center md:justify-start md:ml-7">
+            <div className="flex justify-center">
               <div className="w-0.5 h-6 bg-border" />
             </div>
 
             {/* Step 3: Learn & Decide */}
-            <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="flex flex-col items-center gap-4">
               <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-green-500/20">
                 3
               </div>
-              <div className="text-center md:text-left flex-1">
+              <div className="text-center max-w-md">
                 <h3 className="text-xl font-bold mb-1">Learn & Make Informed Decisions</h3>
                 <p className="text-muted-foreground text-sm">Understand the analysis, chat with AI experts for deeper insights, and decide what&apos;s right for you</p>
               </div>
