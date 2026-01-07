@@ -29,11 +29,11 @@ export function TradePathLogo({
   const LogoContent = (
     <div className={`flex items-center gap-2 ${className}`}>
       {/* Logo Icon - T and P side by side */}
+      {/* Light mode: white bg with colored text, Dark mode: dark bg with gradient text */}
       <div
-        className={`${s.wrapper} rounded-lg flex items-center justify-center shadow-lg`}
+        className={`${s.wrapper} rounded-lg flex items-center justify-center shadow-lg bg-gradient-to-br from-slate-800 to-slate-900 dark:from-slate-800/90 dark:to-slate-900/95`}
         style={{
           boxShadow: '0 4px 14px rgba(245, 158, 11, 0.25)',
-          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.95))',
         }}
       >
         <span className={`${s.letter} font-black gradient-text-rg-animate`}>TP</span>
@@ -42,7 +42,9 @@ export function TradePathLogo({
       {/* Logo Text */}
       {showText && (
         <div className="flex flex-col">
-          <span className={`${s.text} font-bold gradient-text-rg-animate`}>TradePath</span>
+          <span className={`${s.text} font-bold text-slate-800 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-amber-400 dark:via-orange-500 dark:to-red-500`}>
+            TradePath
+          </span>
           {showTagline && (
             <span className={`${s.tagline} text-muted-foreground -mt-0.5`}>
               From Charts to Clarity
