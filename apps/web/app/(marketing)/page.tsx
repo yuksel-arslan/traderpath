@@ -296,51 +296,51 @@ const ANALYSIS_STEPS = [
   },
 ];
 
-// AI Experts Data - 4 specialized AI experts that review the analysis
+// AI Experts Data - 4 specialized AI models that review the analysis
 const AI_EXPERTS = [
   {
     name: 'ARIA',
-    title: 'Chief Technical Analyst',
+    title: 'Technical Analysis AI',
     icon: LineChart,
     color: 'text-blue-500',
     bg: 'bg-blue-500/10',
     border: 'border-blue-500/30',
-    credentials: '15+ years • Former Goldman Sachs • CMT Certified • 73% trend prediction accuracy',
-    description: 'Master-level technical analysis with RSI divergence detection, MACD interpretation, and multi-timeframe confluence. Analyzes patterns others miss.',
-    focus: ['RSI & MACD Mastery', 'Pattern Recognition', 'Multi-TF Analysis', 'Trend Prediction']
+    credentials: 'Specialized AI model • Trained on 10+ years of chart data • Real-time indicator analysis',
+    description: 'AI model specialized in technical analysis including RSI divergence detection, MACD interpretation, and multi-timeframe confluence analysis.',
+    focus: ['RSI & MACD Analysis', 'Pattern Recognition', 'Multi-TF Analysis', 'Trend Detection']
   },
   {
     name: 'NEXUS',
-    title: 'Chief Risk Officer',
+    title: 'Risk Assessment AI',
     icon: Crosshair,
     color: 'text-green-500',
     bg: 'bg-green-500/10',
     border: 'border-green-500/30',
-    credentials: '20+ years • Former Bridgewater Associates • PhD MIT • $50B+ managed',
-    description: 'Quantitative risk models for position sizing, stop loss optimization, and portfolio protection. Survived 2018, 2020, 2022 crashes.',
-    focus: ['Position Sizing', 'Risk/Reward Calc', 'Capital Protection', 'Drawdown Prevention']
+    credentials: 'Specialized AI model • Quantitative risk algorithms • Position sizing optimization',
+    description: 'AI model focused on quantitative risk assessment, position sizing recommendations, stop loss optimization, and capital protection strategies.',
+    focus: ['Position Sizing', 'Risk/Reward Calc', 'Capital Protection', 'Drawdown Analysis']
   },
   {
     name: 'ORACLE',
-    title: 'On-Chain Intelligence Director',
+    title: 'On-Chain Analysis AI',
     icon: Radar,
     color: 'text-purple-500',
     bg: 'bg-purple-500/10',
     border: 'border-purple-500/30',
-    credentials: '8+ years • Founded analytics firm (acq. by Chainalysis) • Advisor to Grayscale',
-    description: 'Pioneer in whale wallet tracking and exchange flow analysis. Sees institutional movements before they impact price.',
-    focus: ['Whale Monitoring', 'Exchange Flow', 'Smart Money', 'Institutional Tracking']
+    credentials: 'Specialized AI model • Real-time blockchain data • Whale wallet monitoring',
+    description: 'AI model specialized in on-chain data analysis including whale wallet tracking, exchange flow monitoring, and institutional movement detection.',
+    focus: ['Whale Monitoring', 'Exchange Flow', 'Smart Money Tracking', 'On-Chain Metrics']
   },
   {
     name: 'SENTINEL',
-    title: 'Security & Fraud Prevention Lead',
+    title: 'Security Analysis AI',
     icon: ShieldAlert,
     color: 'text-orange-500',
     bg: 'bg-orange-500/10',
     border: 'border-orange-500/30',
-    credentials: '12+ years • Former Binance Security • Prevented $500M+ in scams • White-hat hacker',
-    description: 'Identified 2,000+ honeypots before they harmed users. Expert in rug pull detection, contract auditing, and manipulation patterns.',
-    focus: ['Scam Detection', 'Contract Audit', 'Trap Analysis', 'Manipulation Patterns']
+    credentials: 'Specialized AI model • Scam pattern database • Real-time manipulation detection',
+    description: 'AI model trained to detect scams, honeypots, rug pulls, and market manipulation patterns to protect users from fraudulent activities.',
+    focus: ['Scam Detection', 'Contract Analysis', 'Trap Detection', 'Manipulation Patterns']
   },
 ];
 
