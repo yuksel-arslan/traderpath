@@ -21,7 +21,12 @@ import {
   FileText,
   Clock,
   Info,
-  Loader2
+  Loader2,
+  Send,
+  MessageSquare,
+  Tv,
+  ExternalLink,
+  AlertCircle,
 } from 'lucide-react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 
@@ -49,6 +54,13 @@ export default function SettingsPage() {
     priceAlerts: true,
     marketing: false,
   });
+  const [webhookSettings, setWebhookSettings] = useState({
+    telegram: { enabled: false, chatId: '', botToken: '' },
+    discord: { enabled: false, webhookUrl: '' },
+    tradingView: { enabled: false, webhookUrl: '' },
+  });
+  const [isSavingWebhooks, setIsSavingWebhooks] = useState(false);
+  const [webhookSaveStatus, setWebhookSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -96,6 +108,33 @@ export default function SettingsPage() {
           const settingsData = await settingsResponse.json();
           if (settingsData.success && settingsData.data.reportValidityPeriods) {
             setReportValidityPeriods(settingsData.data.reportValidityPeriods);
+          }
+        }
+
+        // Fetch notification/webhook settings
+        const alertSettingsResponse = await fetch('/api/alerts/settings', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (alertSettingsResponse.ok) {
+          const alertData = await alertSettingsResponse.json();
+          if (alertData.success && alertData.data?.settings) {
+            const s = alertData.data.settings;
+            setWebhookSettings({
+              telegram: {
+                enabled: s.telegram?.enabled || false,
+                chatId: s.telegram?.chatId || '',
+                botToken: s.telegram?.botToken || '',
+              },
+              discord: {
+                enabled: s.discord?.enabled || false,
+                webhookUrl: s.discord?.webhookUrl || '',
+              },
+              tradingView: {
+                enabled: s.tradingView?.enabled || false,
+                webhookUrl: s.tradingView?.webhookUrl || '',
+              },
+            });
           }
         }
       } catch (error) {
@@ -167,6 +206,60 @@ export default function SettingsPage() {
       console.error('Failed to save report settings:', error);
     } finally {
       setIsSavingReportSettings(false);
+    }
+  };
+
+  const handleSaveWebhookSettings = async () => {
+    setIsSavingWebhooks(true);
+    setWebhookSaveStatus('idle');
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const response = await fetch('/api/alerts/settings', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(webhookSettings),
+      });
+
+      if (response.ok) {
+        setWebhookSaveStatus('success');
+        setTimeout(() => setWebhookSaveStatus('idle'), 3000);
+      } else {
+        setWebhookSaveStatus('error');
+      }
+    } catch (error) {
+      console.error('Failed to save webhook settings:', error);
+      setWebhookSaveStatus('error');
+    } finally {
+      setIsSavingWebhooks(false);
+    }
+  };
+
+  const handleTestWebhook = async (channel: 'telegram' | 'discord' | 'tradingview') => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const response = await fetch('/api/alerts/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ channel }),
+      });
+
+      if (response.ok) {
+        alert(`Test notification sent to ${channel}!`);
+      } else {
+        alert(`Failed to send test notification. Please check your settings.`);
+      }
+    } catch (error) {
+      alert(`Failed to send test notification.`);
     }
   };
 
@@ -343,77 +436,296 @@ export default function SettingsPage() {
 
             {/* Notifications Section */}
             {activeSection === 'notifications' && (
-              <div>
-                <h2 className="text-xl font-semibold mb-6">Notification Preferences</h2>
+              <div className="space-y-8">
+                <div>
+                  <h2 className="text-xl font-semibold mb-6">Notification Preferences</h2>
 
-                <div className="space-y-4">
-                  {[
-                    {
-                      id: 'email',
-                      label: 'Email Notifications',
-                      description: 'Receive important updates via email',
-                      icon: Mail,
-                    },
-                    {
-                      id: 'push',
-                      label: 'Push Notifications',
-                      description: 'Get real-time alerts on your device',
-                      icon: Smartphone,
-                    },
-                    {
-                      id: 'priceAlerts',
-                      label: 'Price Alerts',
-                      description: 'Get notified when prices hit your targets',
-                      icon: Bell,
-                    },
-                    {
-                      id: 'marketing',
-                      label: 'Marketing Emails',
-                      description: 'Receive news, updates and special offers',
-                      icon: Globe,
-                    },
-                  ].map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between p-4 bg-background rounded-lg"
-                      >
+                  <div className="space-y-4">
+                    {[
+                      {
+                        id: 'push',
+                        label: 'Browser Push Notifications',
+                        description: 'Get real-time alerts in your browser',
+                        icon: Smartphone,
+                      },
+                      {
+                        id: 'priceAlerts',
+                        label: 'Price Alerts',
+                        description: 'Get notified when prices hit your targets',
+                        icon: Bell,
+                      },
+                    ].map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between p-4 bg-background rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-accent rounded-full">
+                              <Icon className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{item.label}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {item.description}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() =>
+                              setNotifications({
+                                ...notifications,
+                                [item.id]: !notifications[item.id as keyof typeof notifications],
+                              })
+                            }
+                            className={`w-12 h-6 rounded-full transition-colors ${
+                              notifications[item.id as keyof typeof notifications]
+                                ? 'bg-primary'
+                                : 'bg-gray-300'
+                            }`}
+                          >
+                            <div
+                              className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                                notifications[item.id as keyof typeof notifications]
+                                  ? 'translate-x-6'
+                                  : 'translate-x-0.5'
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Webhook Integrations */}
+                <div>
+                  <h2 className="text-xl font-semibold mb-2">Alert Integrations</h2>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Connect external services to receive price alerts when your trade plan levels are hit
+                  </p>
+
+                  <div className="space-y-6">
+                    {/* Telegram */}
+                    <div className="p-4 bg-background rounded-lg border">
+                      <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-accent rounded-full">
-                            <Icon className="w-5 h-5" />
+                          <div className="p-2 bg-blue-500/10 rounded-full">
+                            <Send className="w-5 h-5 text-blue-500" />
                           </div>
                           <div>
-                            <p className="font-medium">{item.label}</p>
+                            <p className="font-medium">Telegram</p>
                             <p className="text-sm text-muted-foreground">
-                              {item.description}
+                              Receive instant alerts via Telegram bot
                             </p>
                           </div>
                         </div>
                         <button
-                          onClick={() =>
-                            setNotifications({
-                              ...notifications,
-                              [item.id]: !notifications[item.id as keyof typeof notifications],
-                            })
-                          }
+                          onClick={() => setWebhookSettings({
+                            ...webhookSettings,
+                            telegram: { ...webhookSettings.telegram, enabled: !webhookSettings.telegram.enabled }
+                          })}
                           className={`w-12 h-6 rounded-full transition-colors ${
-                            notifications[item.id as keyof typeof notifications]
-                              ? 'bg-primary'
-                              : 'bg-gray-300'
+                            webhookSettings.telegram.enabled ? 'bg-blue-500' : 'bg-gray-300'
                           }`}
                         >
-                          <div
-                            className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                              notifications[item.id as keyof typeof notifications]
-                                ? 'translate-x-6'
-                                : 'translate-x-0.5'
-                            }`}
-                          />
+                          <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                            webhookSettings.telegram.enabled ? 'translate-x-6' : 'translate-x-0.5'
+                          }`} />
                         </button>
                       </div>
-                    );
-                  })}
+
+                      {webhookSettings.telegram.enabled && (
+                        <div className="space-y-3 pt-3 border-t">
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Bot Token</label>
+                            <input
+                              type="text"
+                              value={webhookSettings.telegram.botToken}
+                              onChange={(e) => setWebhookSettings({
+                                ...webhookSettings,
+                                telegram: { ...webhookSettings.telegram, botToken: e.target.value }
+                              })}
+                              placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+                              className="w-full px-3 py-2 bg-card border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Chat ID</label>
+                            <input
+                              type="text"
+                              value={webhookSettings.telegram.chatId}
+                              onChange={(e) => setWebhookSettings({
+                                ...webhookSettings,
+                                telegram: { ...webhookSettings.telegram, chatId: e.target.value }
+                              })}
+                              placeholder="-1001234567890"
+                              className="w-full px-3 py-2 bg-card border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 p-2 bg-blue-500/5 rounded-lg">
+                            <Info className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                            <p className="text-xs text-blue-600 dark:text-blue-400">
+                              Create a bot via @BotFather, get token, then send /start to your bot and get chat ID from @userinfobot
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleTestWebhook('telegram')}
+                            className="text-sm text-blue-500 hover:underline flex items-center gap-1"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Send Test Message
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Discord */}
+                    <div className="p-4 bg-background rounded-lg border">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-indigo-500/10 rounded-full">
+                            <MessageSquare className="w-5 h-5 text-indigo-500" />
+                          </div>
+                          <div>
+                            <p className="font-medium">Discord</p>
+                            <p className="text-sm text-muted-foreground">
+                              Send alerts to a Discord channel
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setWebhookSettings({
+                            ...webhookSettings,
+                            discord: { ...webhookSettings.discord, enabled: !webhookSettings.discord.enabled }
+                          })}
+                          className={`w-12 h-6 rounded-full transition-colors ${
+                            webhookSettings.discord.enabled ? 'bg-indigo-500' : 'bg-gray-300'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                            webhookSettings.discord.enabled ? 'translate-x-6' : 'translate-x-0.5'
+                          }`} />
+                        </button>
+                      </div>
+
+                      {webhookSettings.discord.enabled && (
+                        <div className="space-y-3 pt-3 border-t">
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Webhook URL</label>
+                            <input
+                              type="url"
+                              value={webhookSettings.discord.webhookUrl}
+                              onChange={(e) => setWebhookSettings({
+                                ...webhookSettings,
+                                discord: { ...webhookSettings.discord, webhookUrl: e.target.value }
+                              })}
+                              placeholder="https://discord.com/api/webhooks/..."
+                              className="w-full px-3 py-2 bg-card border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 p-2 bg-indigo-500/5 rounded-lg">
+                            <Info className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                            <p className="text-xs text-indigo-600 dark:text-indigo-400">
+                              Server Settings → Integrations → Webhooks → Create Webhook → Copy URL
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleTestWebhook('discord')}
+                            className="text-sm text-indigo-500 hover:underline flex items-center gap-1"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Send Test Message
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* TradingView */}
+                    <div className="p-4 bg-background rounded-lg border">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-emerald-500/10 rounded-full">
+                            <Tv className="w-5 h-5 text-emerald-500" />
+                          </div>
+                          <div>
+                            <p className="font-medium">TradingView Webhook</p>
+                            <p className="text-sm text-muted-foreground">
+                              Trigger TradingView alerts or custom automation
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setWebhookSettings({
+                            ...webhookSettings,
+                            tradingView: { ...webhookSettings.tradingView, enabled: !webhookSettings.tradingView.enabled }
+                          })}
+                          className={`w-12 h-6 rounded-full transition-colors ${
+                            webhookSettings.tradingView.enabled ? 'bg-emerald-500' : 'bg-gray-300'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                            webhookSettings.tradingView.enabled ? 'translate-x-6' : 'translate-x-0.5'
+                          }`} />
+                        </button>
+                      </div>
+
+                      {webhookSettings.tradingView.enabled && (
+                        <div className="space-y-3 pt-3 border-t">
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Webhook URL</label>
+                            <input
+                              type="url"
+                              value={webhookSettings.tradingView.webhookUrl}
+                              onChange={(e) => setWebhookSettings({
+                                ...webhookSettings,
+                                tradingView: { ...webhookSettings.tradingView, webhookUrl: e.target.value }
+                              })}
+                              placeholder="https://your-webhook-endpoint.com/tradingview"
+                              className="w-full px-3 py-2 bg-card border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 p-2 bg-emerald-500/5 rounded-lg">
+                            <Info className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                            <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                              Use with 3commas, Cornix, or any webhook-compatible service
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleTestWebhook('tradingview')}
+                            className="text-sm text-emerald-500 hover:underline flex items-center gap-1"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Send Test Webhook
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Save Button */}
+                  <div className="flex items-center gap-4 pt-4">
+                    <button
+                      onClick={handleSaveWebhookSettings}
+                      disabled={isSavingWebhooks}
+                      className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50"
+                    >
+                      {isSavingWebhooks ? 'Saving...' : 'Save Integration Settings'}
+                    </button>
+                    {webhookSaveStatus === 'success' && (
+                      <span className="text-sm text-green-500 flex items-center gap-1">
+                        <Check className="w-4 h-4" />
+                        Settings saved!
+                      </span>
+                    )}
+                    {webhookSaveStatus === 'error' && (
+                      <span className="text-sm text-red-500 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" />
+                        Failed to save
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
