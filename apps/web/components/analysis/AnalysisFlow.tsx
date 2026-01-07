@@ -2,7 +2,7 @@
 
 // ===========================================
 // 7-Step Analysis Flow
-// Clean, Dashboard-consistent design
+// Smart Mode: Educational (step-by-step) vs Quick (one-click)
 // ===========================================
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -21,7 +21,11 @@ import {
   Zap,
   Brain,
   TrendingUp,
-  Eye
+  Eye,
+  GraduationCap,
+  Rocket,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { CREDIT_COSTS } from '@tradepath/types';
@@ -153,6 +157,14 @@ const colorClasses = {
   green: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-500' },
 };
 
+// localStorage keys for user preferences
+const STORAGE_KEYS = {
+  ANALYSIS_MODE: 'tradepath_analysis_mode',
+  HAS_COMPLETED_ANALYSIS: 'tradepath_has_completed_analysis',
+};
+
+type AnalysisMode = 'educational' | 'quick';
+
 export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onComplete, onCreditsUpdate }: AnalysisFlowProps) {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [activeStep, setActiveStep] = useState<number>(1);
@@ -164,6 +176,43 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
   const [reportSaved, setReportSaved] = useState(false);
   const [savedAnalysisId, setSavedAnalysisId] = useState<string | null>(null);
   const saveAttemptedRef = useRef(false);
+
+  // Smart Analysis Mode state
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('educational');
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState(true);
+  const [showStepDetails, setShowStepDetails] = useState(false);
+  const [modeInitialized, setModeInitialized] = useState(false);
+
+  // Initialize mode from localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const hasCompleted = localStorage.getItem(STORAGE_KEYS.HAS_COMPLETED_ANALYSIS);
+    const savedMode = localStorage.getItem(STORAGE_KEYS.ANALYSIS_MODE) as AnalysisMode | null;
+
+    if (hasCompleted === 'true') {
+      setIsFirstTimeUser(false);
+      // Use saved preference or default to quick for returning users
+      setAnalysisMode(savedMode || 'quick');
+    } else {
+      // First time user - default to educational
+      setIsFirstTimeUser(true);
+      setAnalysisMode('educational');
+    }
+    setModeInitialized(true);
+  }, []);
+
+  // Save mode preference when changed
+  const handleModeChange = (newMode: AnalysisMode) => {
+    setAnalysisMode(newMode);
+    localStorage.setItem(STORAGE_KEYS.ANALYSIS_MODE, newMode);
+  };
+
+  // Mark user as experienced when analysis completes
+  const markAnalysisCompleted = useCallback(() => {
+    localStorage.setItem(STORAGE_KEYS.HAS_COMPLETED_ANALYSIS, 'true');
+    setIsFirstTimeUser(false);
+  }, []);
 
   const getAuthHeaders = useCallback(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
@@ -301,7 +350,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
     }
   };
 
-  const handleRunFullAnalysis = async () => {
+  const handleRunFullAnalysis = async (skipAnimation = false) => {
     setIsRunningFull(true);
     setError(null);
     setActiveStep(1);
@@ -340,18 +389,28 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
         7: steps.verdict,
       };
 
-      // Animate through steps
-      for (let stepId = 1; stepId <= 7; stepId++) {
-        setActiveStep(stepId);
-        setViewMode('intro');
-        await new Promise((resolve) => setTimeout(resolve, 400));
-
-        setCompletedSteps((prev) => [...prev, stepId]);
-        setResults((prev) => ({ ...prev, [stepId]: allResults[stepId] }));
+      if (skipAnimation) {
+        // Quick mode: instant results, go directly to final verdict
+        setCompletedSteps([1, 2, 3, 4, 5, 6, 7]);
+        setResults(allResults);
+        setActiveStep(7);
         setViewMode('result');
-        await new Promise((resolve) => setTimeout(resolve, 800));
+      } else {
+        // Educational mode: animate through steps
+        for (let stepId = 1; stepId <= 7; stepId++) {
+          setActiveStep(stepId);
+          setViewMode('intro');
+          await new Promise((resolve) => setTimeout(resolve, 400));
+
+          setCompletedSteps((prev) => [...prev, stepId]);
+          setResults((prev) => ({ ...prev, [stepId]: allResults[stepId] }));
+          setViewMode('result');
+          await new Promise((resolve) => setTimeout(resolve, 800));
+        }
       }
 
+      // Mark that user has completed an analysis
+      markAnalysisCompleted();
       onComplete?.();
     } catch (err) {
       console.error('Full analysis failed:', err);
@@ -361,24 +420,146 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
     }
   };
 
+  // Quick analysis handler
+  const handleQuickAnalysis = () => {
+    handleRunFullAnalysis(true);
+  };
+
   const currentStep = STEPS[activeStep - 1];
   const colors = colorClasses[currentStep.color as keyof typeof colorClasses];
   const isStepCompleted = completedSteps.includes(activeStep);
   const canProceed = activeStep === 1 || completedSteps.includes(activeStep - 1);
 
+  // Don't render until mode is initialized from localStorage
+  if (!modeInitialized) {
+    return (
+      <div className="w-full flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
+      {/* Analysis Mode Selector - Only show before analysis starts */}
+      {completedSteps.length === 0 && !isRunningFull && (
+        <div className="bg-card border rounded-xl p-5 mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="font-semibold text-lg">Analysis Mode</h3>
+              <p className="text-sm text-muted-foreground">
+                {isFirstTimeUser
+                  ? 'First time? We recommend Educational mode to learn how our analysis works.'
+                  : 'Choose how you want to run your analysis'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
+              <button
+                onClick={() => handleModeChange('educational')}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all',
+                  analysisMode === 'educational'
+                    ? 'bg-background shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <GraduationCap className="w-4 h-4" />
+                <span>Educational</span>
+              </button>
+              <button
+                onClick={() => handleModeChange('quick')}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all',
+                  analysisMode === 'quick'
+                    ? 'bg-background shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <Rocket className="w-4 h-4" />
+                <span>Quick</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Mode Description */}
+          <div className={cn(
+            'mt-4 p-3 rounded-lg text-sm',
+            analysisMode === 'educational' ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-amber-500/10 border border-amber-500/20'
+          )}>
+            {analysisMode === 'educational' ? (
+              <div className="flex items-start gap-3">
+                <GraduationCap className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-blue-500">Step-by-Step Learning</p>
+                  <p className="text-muted-foreground mt-1">
+                    Go through each analysis step one-by-one. See what each step analyzes and why it matters before running it.
+                    Perfect for understanding the full analysis process.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start gap-3">
+                <Rocket className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-amber-500">Instant Results</p>
+                  <p className="text-muted-foreground mt-1">
+                    Run all 7 analysis steps at once and jump straight to the Final Verdict.
+                    You can expand individual step details anytime after the analysis completes.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Analysis Button - Only show in Quick mode */}
+          {analysisMode === 'quick' && (
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={handleQuickAnalysis}
+                disabled={isRunningFull}
+                className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-semibold flex items-center gap-2 hover:shadow-lg hover:scale-[1.02] transition-all"
+              >
+                <Rocket className="w-5 h-5" />
+                <span>Run Quick Analysis (25 cr)</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Premium Step Progress Bar */}
       <div className="bg-card border rounded-xl p-6 mb-6">
-        <AnalysisProgressBar
-          completedSteps={completedSteps}
-          activeStep={activeStep}
-          isRunning={isRunningFull}
-          onStepClick={handleViewResult}
-          size="md"
-          showLabels={true}
-          animated={true}
-        />
+        <div className="flex items-center justify-between mb-4">
+          <AnalysisProgressBar
+            completedSteps={completedSteps}
+            activeStep={activeStep}
+            isRunning={isRunningFull}
+            onStepClick={handleViewResult}
+            size="md"
+            showLabels={true}
+            animated={true}
+          />
+        </div>
+
+        {/* Show/Hide Step Details Toggle - After quick analysis completes */}
+        {completedSteps.length === 7 && analysisMode === 'quick' && !isRunningFull && (
+          <button
+            onClick={() => setShowStepDetails(!showStepDetails)}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mt-2"
+          >
+            {showStepDetails ? (
+              <>
+                <ChevronUp className="w-4 h-4" />
+                <span>Hide step details</span>
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4" />
+                <span>Show all step details</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Error Display */}
@@ -529,8 +710,8 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
         </div>
       </div>
 
-      {/* Full Analysis Bundle CTA */}
-      {completedSteps.length === 0 && !isRunningFull && (
+      {/* Full Analysis Bundle CTA - Only in Educational mode */}
+      {completedSteps.length === 0 && !isRunningFull && analysisMode === 'educational' && (
         <div className="mt-6 p-5 bg-card border rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -549,7 +730,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
               </div>
             </div>
             <button
-              onClick={handleRunFullAnalysis}
+              onClick={() => handleRunFullAnalysis(false)}
               disabled={isRunningFull}
               className="px-5 py-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg font-semibold flex items-center gap-2 hover:shadow-lg hover:scale-[1.02] transition-all border border-slate-300 dark:border-slate-600"
             >
@@ -557,6 +738,45 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
               <span className="gradient-text-rg-animate">Full Analysis (25 cr)</span>
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Collapsible Step Details - After Quick Analysis */}
+      {showStepDetails && completedSteps.length === 7 && (
+        <div className="mt-6 space-y-4">
+          <h3 className="font-semibold text-lg flex items-center gap-2">
+            <Eye className="w-5 h-5" />
+            Step Details
+          </h3>
+          {STEPS.slice(0, 6).map((step) => {
+            const stepColors = colorClasses[step.color as keyof typeof colorClasses];
+            return (
+              <div key={step.id} className={cn('bg-card border rounded-lg overflow-hidden', stepColors.border)}>
+                <div className={cn('p-4 border-b', stepColors.bg)}>
+                  <div className="flex items-center gap-3">
+                    <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center bg-background/50', stepColors.text)}>
+                      <step.icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{step.name}</span>
+                        <span className="px-2 py-0.5 bg-green-500 text-white text-xs rounded-full">Done</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{step.shortDesc}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4">
+                  {step.id === 1 && <MarketPulse data={results[1] as Parameters<typeof MarketPulse>[0]['data']} />}
+                  {step.id === 2 && <AssetScanner data={results[2] as Parameters<typeof AssetScanner>[0]['data']} symbol={symbol} />}
+                  {step.id === 3 && <SafetyCheck data={results[3] as Parameters<typeof SafetyCheck>[0]['data']} symbol={symbol} />}
+                  {step.id === 4 && <TimingAnalysis data={results[4] as Parameters<typeof TimingAnalysis>[0]['data']} symbol={symbol} />}
+                  {step.id === 5 && <TradePlan data={results[5] as Parameters<typeof TradePlan>[0]['data']} symbol={symbol} />}
+                  {step.id === 6 && <TrapCheck data={results[6] as Parameters<typeof TrapCheck>[0]['data']} symbol={symbol} />}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
