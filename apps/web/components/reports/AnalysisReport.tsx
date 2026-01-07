@@ -1,8 +1,8 @@
 'use client';
 
 // ===========================================
-// Analysis Report PDF Generator
-// Clean, professional design with full content
+// TradePath Analysis Report - Clean Design
+// Professional, readable, single-page focus
 // ===========================================
 
 import {
@@ -10,298 +10,405 @@ import {
   Page,
   Text,
   View,
-  Image,
   StyleSheet,
   pdf,
 } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
 
-// TradePath brand colors
-const COLORS = {
-  // Brand
-  logoRed: '#dc2626',
-  logoGreen: '#16a34a',
-  // Status
+// Brand colors
+const C = {
+  primary: '#0f172a',
+  secondary: '#64748b',
   success: '#16a34a',
   danger: '#dc2626',
   warning: '#d97706',
   info: '#2563eb',
-  // Neutral
-  black: '#0f172a',
-  dark: '#1e293b',
-  gray: '#64748b',
-  lightGray: '#94a3b8',
   border: '#e2e8f0',
-  bgLight: '#f8fafc',
+  bg: '#f8fafc',
   white: '#ffffff',
+  red: '#dc2626',
+  green: '#16a34a',
 };
 
-// Styles
 const styles = StyleSheet.create({
-  // Page
   page: {
-    backgroundColor: COLORS.white,
-    padding: 30,
+    backgroundColor: C.white,
+    padding: 25,
     fontFamily: 'Helvetica',
-    fontSize: 10,
-    color: COLORS.black,
+    fontSize: 9,
+    color: C.primary,
   },
 
   // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 15,
+    alignItems: 'flex-start',
+    marginBottom: 15,
+    paddingBottom: 10,
     borderBottomWidth: 2,
-    borderBottomColor: COLORS.border,
-    marginBottom: 20,
+    borderBottomColor: C.primary,
   },
   logo: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
-  logoT: {
-    fontSize: 20,
+  logoText: {
+    fontSize: 18,
     fontWeight: 'bold',
-    color: COLORS.logoRed,
-  },
-  logoP: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.logoGreen,
   },
   headerRight: {
     alignItems: 'flex-end',
   },
   symbol: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: COLORS.black,
   },
-  subtitle: {
-    fontSize: 9,
-    color: COLORS.gray,
+  date: {
+    fontSize: 8,
+    color: C.secondary,
     marginTop: 2,
   },
 
-  // Summary Box
-  summaryBox: {
+  // Verdict Banner
+  verdictBanner: {
     flexDirection: 'row',
-    backgroundColor: COLORS.bgLight,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
     borderRadius: 6,
-    padding: 15,
+    marginBottom: 15,
+  },
+  verdictLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+  },
+  verdictAction: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: C.white,
+  },
+  verdictScore: {
+    fontSize: 16,
+    color: C.white,
+    opacity: 0.9,
+  },
+  verdictRight: {
+    alignItems: 'flex-end',
+  },
+  verdictDirection: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: C.white,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+  },
+
+  // Trade Plan Box
+  tradePlanBox: {
+    backgroundColor: C.bg,
+    borderRadius: 6,
+    padding: 12,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: C.border,
   },
-  summaryItem: {
+  tradePlanTitle: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  tradePlanGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tradePlanItem: {
     flex: 1,
+    backgroundColor: C.white,
+    borderRadius: 4,
+    padding: 8,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: C.border,
   },
-  summaryLabel: {
-    fontSize: 8,
-    color: COLORS.gray,
+  tradePlanLabel: {
+    fontSize: 7,
+    fontWeight: 'bold',
     marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  summaryDivider: {
-    width: 1,
-    backgroundColor: COLORS.border,
-    marginHorizontal: 10,
-  },
-
-  // Section
-  section: {
-    marginBottom: 12,
-  },
-  sectionTitle: {
+  tradePlanPrice: {
     fontSize: 11,
     fontWeight: 'bold',
-    color: COLORS.black,
+  },
+  tradePlanPercent: {
+    fontSize: 7,
+    marginTop: 2,
+  },
+
+  // Steps Section
+  stepsSection: {
+    marginBottom: 15,
+  },
+  stepsTitle: {
+    fontSize: 11,
+    fontWeight: 'bold',
     marginBottom: 8,
     paddingBottom: 4,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: C.border,
   },
-
-  // Step Card
+  stepsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
   stepCard: {
-    backgroundColor: COLORS.bgLight,
+    width: '32%',
+    backgroundColor: C.bg,
     borderRadius: 4,
-    padding: 10,
-    marginBottom: 8,
+    padding: 8,
     borderLeftWidth: 3,
   },
   stepHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
-  },
-  stepTitle: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: COLORS.black,
-  },
-  stepBadge: {
-    fontSize: 8,
-    fontWeight: 'bold',
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    borderRadius: 3,
-    color: COLORS.white,
-  },
-  stepMetrics: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  metric: {
-    width: '25%',
     marginBottom: 4,
   },
-  metricLabel: {
+  stepNumber: {
     fontSize: 7,
-    color: COLORS.gray,
+    color: C.secondary,
   },
-  metricValue: {
-    fontSize: 9,
-    fontWeight: 'bold',
-    color: COLORS.black,
-  },
-
-  // Trade Levels
-  levelsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  levelBox: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderRadius: 4,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-  },
-  levelLabel: {
+  stepName: {
     fontSize: 8,
     fontWeight: 'bold',
-    marginBottom: 2,
+    flex: 1,
+    marginLeft: 4,
   },
-  levelPrice: {
-    fontSize: 11,
+  stepBadge: {
+    fontSize: 6,
     fontWeight: 'bold',
-    color: COLORS.black,
+    color: C.white,
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    borderRadius: 2,
   },
-  levelPercent: {
+  stepDesc: {
     fontSize: 7,
-    marginTop: 1,
+    color: C.secondary,
+    marginTop: 4,
+    lineHeight: 1.3,
   },
-
-  // Chart
-  chartContainer: {
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    overflow: 'hidden',
-    marginBottom: 12,
+  stepMetric: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
   },
-  chartTitle: {
-    fontSize: 9,
+  stepMetricLabel: {
+    fontSize: 6,
+    color: C.secondary,
+  },
+  stepMetricValue: {
+    fontSize: 7,
     fontWeight: 'bold',
-    padding: 6,
-    backgroundColor: COLORS.bgLight,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  chartImage: {
-    width: '100%',
-    height: 200,
   },
 
-  // AI Expert
-  aiExpert: {
+  // AI Summary
+  aiSummary: {
     backgroundColor: '#fef3c7',
-    borderRadius: 4,
+    borderRadius: 6,
     padding: 10,
+    marginBottom: 15,
     borderWidth: 1,
     borderColor: '#fcd34d',
-    marginBottom: 12,
   },
-  aiExpertHeader: {
+  aiSummaryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6,
   },
-  aiExpertBadge: {
+  aiSummaryBadge: {
     backgroundColor: '#f59e0b',
     paddingVertical: 2,
     paddingHorizontal: 6,
     borderRadius: 3,
     marginRight: 6,
   },
-  aiExpertBadgeText: {
-    fontSize: 7,
+  aiSummaryBadgeText: {
+    fontSize: 6,
     fontWeight: 'bold',
-    color: COLORS.white,
+    color: C.white,
   },
-  aiExpertTitle: {
-    fontSize: 10,
+  aiSummaryTitle: {
+    fontSize: 9,
     fontWeight: 'bold',
     color: '#92400e',
   },
-  aiExpertContent: {
+  aiSummaryText: {
     fontSize: 8,
     color: '#78350f',
+    lineHeight: 1.4,
+  },
+
+  // Risk Warning
+  riskWarning: {
+    backgroundColor: C.bg,
+    borderRadius: 4,
+    padding: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  riskWarningText: {
+    fontSize: 7,
+    color: C.secondary,
+    textAlign: 'center',
     lineHeight: 1.4,
   },
 
   // Footer
   footer: {
     position: 'absolute',
-    bottom: 20,
-    left: 30,
-    right: 30,
+    bottom: 15,
+    left: 25,
+    right: 25,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 10,
+    paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: C.border,
   },
-  footerText: {
+  footerLeft: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  footerItem: {
+    alignItems: 'flex-start',
+  },
+  footerLabel: {
+    fontSize: 6,
+    color: C.secondary,
+  },
+  footerValue: {
     fontSize: 7,
-    color: COLORS.lightGray,
+    color: C.primary,
   },
-  pageNumber: {
-    fontSize: 8,
-    color: COLORS.gray,
+  footerRight: {
+    alignItems: 'flex-end',
+  },
+  footerDisclaimer: {
+    fontSize: 6,
+    color: C.secondary,
+    maxWidth: 200,
+    textAlign: 'right',
   },
 
-  // Two columns
-  twoCol: {
-    flexDirection: 'row',
-    gap: 10,
+  // Page 2
+  page2Section: {
+    marginBottom: 15,
   },
-  col: {
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+
+  // Step Explanations
+  stepExplanation: {
+    backgroundColor: C.bg,
+    borderRadius: 4,
+    padding: 10,
+    marginBottom: 8,
+    borderLeftWidth: 3,
+  },
+  stepExplanationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  stepExplanationNumber: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: C.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  stepExplanationNumberText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: C.white,
+  },
+  stepExplanationTitle: {
+    fontSize: 10,
+    fontWeight: 'bold',
     flex: 1,
+  },
+  stepExplanationBadge: {
+    fontSize: 7,
+    fontWeight: 'bold',
+    color: C.white,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 3,
+  },
+  stepExplanationDesc: {
+    fontSize: 8,
+    color: C.secondary,
+    marginBottom: 6,
+    lineHeight: 1.4,
+  },
+  stepExplanationMetrics: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 15,
+  },
+  stepExplanationMetric: {
+    minWidth: 80,
+  },
+  stepExplanationMetricLabel: {
+    fontSize: 7,
+    color: C.secondary,
+  },
+  stepExplanationMetricValue: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: C.primary,
   },
 });
 
-// Helper
+// Helpers
 function formatPrice(price: number): string {
-  if (!price) return '$0';
-  if (price >= 1000) return `$${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
-  if (price >= 1) return `$${price.toFixed(2)}`;
-  return `$${price.toFixed(6)}`;
+  if (!price || isNaN(price)) return '-';
+  if (price >= 10000) return `$${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  if (price >= 100) return `$${price.toFixed(2)}`;
+  if (price >= 1) return `$${price.toFixed(4)}`;
+  return `$${price.toFixed(8)}`;
 }
 
-// Data types
+function getVerdictColor(action: string): string {
+  const a = (action || '').toLowerCase();
+  if (a.includes('go') || a.includes('buy')) return C.success;
+  if (a.includes('wait') || a.includes('conditional')) return C.warning;
+  return C.danger;
+}
+
+function getStepColor(stepId: number): string {
+  const colors = ['#2563eb', '#06b6d4', '#f97316', '#a855f7', '#6366f1', '#dc2626', '#16a34a'];
+  return colors[stepId - 1] || C.primary;
+}
+
+// Data type
 interface AnalysisReportData {
   symbol: string;
   generatedAt: string;
@@ -311,21 +418,27 @@ interface AnalysisReportData {
     btcDominance: number;
     fearGreedIndex: number;
     fearGreedLabel: string;
+    marketRegime?: string;
     trend: { direction: string; strength: number };
   };
   assetScan: {
     currentPrice: number;
     priceChange24h: number;
+    volume24h?: number;
     indicators: { rsi: number; macd: { histogram: number } };
+    trend?: { primary: string };
   };
   safetyCheck: {
     riskLevel: string;
+    riskScore?: number;
     manipulation: { pumpDumpRisk: string };
-    whaleActivity: { bias: string };
+    whaleActivity: { bias: string; largeTransactions?: number };
   };
   timing: {
     tradeNow: boolean;
     reason: string;
+    entryZone?: { min: number; max: number };
+    conditions?: string[];
   };
   tradePlan: {
     direction: string;
@@ -335,9 +448,11 @@ interface AnalysisReportData {
     takeProfits: Array<{ price: number; percentage?: number; riskReward?: number }>;
     riskReward: number;
     winRateEstimate?: number;
+    positionSize?: number;
   };
   trapCheck?: {
     traps: { bullTrap: boolean; bearTrap: boolean; fakeoutRisk: string };
+    liquidityZones?: Array<{ price: number; type: string }>;
   };
   verdict: {
     action: string;
@@ -347,386 +462,469 @@ interface AnalysisReportData {
   aiExpertComment?: string;
 }
 
-// Header Component
-const Header = ({ symbol }: { symbol: string }) => (
-  <View style={styles.header}>
-    <View style={styles.logo}>
-      <Text style={styles.logoT}>Trade</Text>
-      <Text style={styles.logoP}>Path</Text>
-    </View>
-    <View style={styles.headerRight}>
-      <Text style={styles.symbol}>{symbol}/USDT</Text>
-      <Text style={styles.subtitle}>7-Step AI Analysis Report</Text>
-    </View>
-  </View>
-);
+// Step descriptions for explanations
+const STEP_EXPLANATIONS = {
+  1: {
+    name: 'Market Pulse',
+    desc: 'Genel piyasa durumunu analiz eder. BTC dominansı, korku/açgözlülük endeksi ve piyasa trendi değerlendirilir.',
+  },
+  2: {
+    name: 'Asset Scanner',
+    desc: 'Varlığın teknik analizini yapar. Fiyat hareketleri, RSI, MACD ve trend yönü incelenir.',
+  },
+  3: {
+    name: 'Safety Check',
+    desc: 'Risk ve manipülasyon kontrolü yapar. Balina aktivitesi ve pump-dump riskleri taranır.',
+  },
+  4: {
+    name: 'Timing',
+    desc: 'Optimal giriş zamanını belirler. Mevcut fiyatın giriş bölgesinde olup olmadığı kontrol edilir.',
+  },
+  5: {
+    name: 'Trade Plan',
+    desc: 'Detaylı işlem planı oluşturur. Giriş, stop-loss ve kar hedefleri hesaplanır.',
+  },
+  6: {
+    name: 'Trap Check',
+    desc: 'Bull/bear tuzaklarını tespit eder. Likidite bölgeleri ve fakeout riskleri analiz edilir.',
+  },
+  7: {
+    name: 'Final Verdict',
+    desc: 'Tüm analizleri birleştirerek nihai karar verir. GO, WAIT veya AVOID önerisi sunar.',
+  },
+};
 
-// Footer Component
-const Footer = ({ pageNum, totalPages }: { pageNum: number; totalPages: number }) => (
-  <View style={styles.footer}>
-    <Text style={styles.footerText}>
-      TradePath AI • For educational purposes only • Not financial advice
-    </Text>
-    <Text style={styles.pageNumber}>Page {pageNum}/{totalPages}</Text>
-  </View>
-);
-
-// PDF Document
+// Document
 const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
   const isLong = data.tradePlan.direction === 'long';
   const score = Math.round((data.verdict.overallScore || 0) * 10);
-  const directionColor = isLong ? COLORS.success : COLORS.danger;
-  const hasPage2Content = data.chartImage || data.aiExpertComment;
-  const totalPages = hasPage2Content ? 2 : 1;
+  const verdictColor = getVerdictColor(data.verdict.action);
+  const directionText = isLong ? 'LONG' : 'SHORT';
+  const directionColor = isLong ? C.success : C.danger;
 
   return (
     <Document>
-      {/* PAGE 1: Summary + Steps 1-6 */}
+      {/* PAGE 1: Summary */}
       <Page size="A4" style={styles.page}>
-        <Header symbol={data.symbol} />
-
-        {/* Summary Box */}
-        <View style={styles.summaryBox}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Direction</Text>
-            <Text style={[styles.summaryValue, { color: directionColor }]}>
-              {isLong ? '↗ LONG' : '↘ SHORT'}
-            </Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.logo}>
+            <Text style={[styles.logoText, { color: C.red }]}>Trade</Text>
+            <Text style={[styles.logoText, { color: C.green }]}>Path</Text>
           </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Score</Text>
-            <Text style={[styles.summaryValue, { color: score >= 70 ? COLORS.success : score >= 50 ? COLORS.warning : COLORS.danger }]}>
-              {score}/100
-            </Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Entry</Text>
-            <Text style={styles.summaryValue}>{formatPrice(data.tradePlan.averageEntry)}</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Risk/Reward</Text>
-            <Text style={styles.summaryValue}>{(data.tradePlan.riskReward || 0).toFixed(1)}:1</Text>
+          <View style={styles.headerRight}>
+            <Text style={styles.symbol}>{data.symbol}/USDT</Text>
+            <Text style={styles.date}>{data.generatedAt}</Text>
           </View>
         </View>
 
-        {/* Steps in 2 columns */}
-        <View style={styles.twoCol}>
-          {/* Left Column */}
-          <View style={styles.col}>
-            {/* Step 1: Market Pulse */}
-            <View style={[styles.stepCard, { borderLeftColor: COLORS.info }]}>
-              <View style={styles.stepHeader}>
-                <Text style={styles.stepTitle}>1. Market Pulse</Text>
-                <Text style={[styles.stepBadge, { backgroundColor: data.marketPulse.trend?.direction === 'bullish' ? COLORS.success : data.marketPulse.trend?.direction === 'bearish' ? COLORS.danger : COLORS.warning }]}>
-                  {(data.marketPulse.trend?.direction || 'neutral').toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.stepMetrics}>
-                <View style={styles.metric}>
-                  <Text style={styles.metricLabel}>Fear & Greed</Text>
-                  <Text style={styles.metricValue}>{data.marketPulse.fearGreedIndex}</Text>
-                </View>
-                <View style={styles.metric}>
-                  <Text style={styles.metricLabel}>BTC Dom.</Text>
-                  <Text style={styles.metricValue}>{data.marketPulse.btcDominance?.toFixed(1)}%</Text>
-                </View>
-                <View style={styles.metric}>
-                  <Text style={styles.metricLabel}>Trend</Text>
-                  <Text style={styles.metricValue}>{data.marketPulse.trend?.strength || 0}%</Text>
-                </View>
-              </View>
-            </View>
+        {/* Verdict Banner */}
+        <View style={[styles.verdictBanner, { backgroundColor: verdictColor }]}>
+          <View style={styles.verdictLeft}>
+            <Text style={styles.verdictAction}>{data.verdict.action || 'ANALYZE'}</Text>
+            <Text style={styles.verdictScore}>Score: {score}/100</Text>
+          </View>
+          <View style={styles.verdictRight}>
+            <Text style={[styles.verdictDirection, { backgroundColor: directionColor }]}>
+              {directionText}
+            </Text>
+          </View>
+        </View>
 
-            {/* Step 2: Asset Scanner */}
-            <View style={[styles.stepCard, { borderLeftColor: '#06b6d4' }]}>
-              <View style={styles.stepHeader}>
-                <Text style={styles.stepTitle}>2. Asset Scanner</Text>
-                <Text style={[styles.stepBadge, { backgroundColor: (data.assetScan.priceChange24h || 0) >= 0 ? COLORS.success : COLORS.danger }]}>
-                  {(data.assetScan.priceChange24h || 0) >= 0 ? 'BULLISH' : 'BEARISH'}
-                </Text>
-              </View>
-              <View style={styles.stepMetrics}>
-                <View style={styles.metric}>
-                  <Text style={styles.metricLabel}>Price</Text>
-                  <Text style={styles.metricValue}>{formatPrice(data.assetScan.currentPrice)}</Text>
-                </View>
-                <View style={styles.metric}>
-                  <Text style={styles.metricLabel}>24h</Text>
-                  <Text style={[styles.metricValue, { color: (data.assetScan.priceChange24h || 0) >= 0 ? COLORS.success : COLORS.danger }]}>
-                    {(data.assetScan.priceChange24h || 0).toFixed(2)}%
-                  </Text>
-                </View>
-                <View style={styles.metric}>
-                  <Text style={styles.metricLabel}>RSI</Text>
-                  <Text style={styles.metricValue}>{data.assetScan.indicators?.rsi?.toFixed(0) || '-'}</Text>
-                </View>
-              </View>
+        {/* Trade Plan */}
+        <View style={styles.tradePlanBox}>
+          <Text style={styles.tradePlanTitle}>Trade Plan</Text>
+          <View style={styles.tradePlanGrid}>
+            <View style={styles.tradePlanItem}>
+              <Text style={[styles.tradePlanLabel, { color: C.info }]}>ENTRY</Text>
+              <Text style={styles.tradePlanPrice}>{formatPrice(data.tradePlan.averageEntry)}</Text>
             </View>
-
-            {/* Step 3: Safety Check */}
-            <View style={[styles.stepCard, { borderLeftColor: '#f97316' }]}>
-              <View style={styles.stepHeader}>
-                <Text style={styles.stepTitle}>3. Safety Check</Text>
-                <Text style={[styles.stepBadge, { backgroundColor: data.safetyCheck.riskLevel === 'low' ? COLORS.success : data.safetyCheck.riskLevel === 'high' ? COLORS.danger : COLORS.warning }]}>
-                  {(data.safetyCheck.riskLevel || 'medium').toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.stepMetrics}>
-                <View style={styles.metric}>
-                  <Text style={styles.metricLabel}>Whale</Text>
-                  <Text style={styles.metricValue}>{(data.safetyCheck.whaleActivity?.bias || '-').toUpperCase()}</Text>
-                </View>
-                <View style={styles.metric}>
-                  <Text style={styles.metricLabel}>Pump/Dump</Text>
-                  <Text style={styles.metricValue}>{(data.safetyCheck.manipulation?.pumpDumpRisk || '-').toUpperCase()}</Text>
-                </View>
-              </View>
+            <View style={styles.tradePlanItem}>
+              <Text style={[styles.tradePlanLabel, { color: C.danger }]}>STOP LOSS</Text>
+              <Text style={[styles.tradePlanPrice, { color: C.danger }]}>{formatPrice(data.tradePlan.stopLoss?.price)}</Text>
+              <Text style={[styles.tradePlanPercent, { color: C.danger }]}>-{(data.tradePlan.stopLoss?.percentage || 0).toFixed(1)}%</Text>
+            </View>
+            <View style={styles.tradePlanItem}>
+              <Text style={[styles.tradePlanLabel, { color: C.success }]}>TP1</Text>
+              <Text style={[styles.tradePlanPrice, { color: C.success }]}>{formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</Text>
+              <Text style={[styles.tradePlanPercent, { color: C.success }]}>+{(data.tradePlan.takeProfits?.[0]?.percentage || 0).toFixed(1)}%</Text>
+            </View>
+            <View style={styles.tradePlanItem}>
+              <Text style={[styles.tradePlanLabel, { color: C.success }]}>TP2</Text>
+              <Text style={[styles.tradePlanPrice, { color: C.success }]}>{formatPrice(data.tradePlan.takeProfits?.[1]?.price)}</Text>
+              <Text style={[styles.tradePlanPercent, { color: C.success }]}>+{(data.tradePlan.takeProfits?.[1]?.percentage || 0).toFixed(1)}%</Text>
+            </View>
+            <View style={styles.tradePlanItem}>
+              <Text style={[styles.tradePlanLabel, { color: C.success }]}>TP3</Text>
+              <Text style={[styles.tradePlanPrice, { color: C.success }]}>{formatPrice(data.tradePlan.takeProfits?.[2]?.price)}</Text>
+              <Text style={[styles.tradePlanPercent, { color: C.success }]}>+{(data.tradePlan.takeProfits?.[2]?.percentage || 0).toFixed(1)}%</Text>
             </View>
           </View>
+        </View>
 
-          {/* Right Column */}
-          <View style={styles.col}>
-            {/* Step 4: Timing */}
-            <View style={[styles.stepCard, { borderLeftColor: '#a855f7' }]}>
+        {/* Steps Overview */}
+        <View style={styles.stepsSection}>
+          <Text style={styles.stepsTitle}>7-Step Analysis Overview</Text>
+          <View style={styles.stepsGrid}>
+            {/* Step 1 */}
+            <View style={[styles.stepCard, { borderLeftColor: getStepColor(1) }]}>
               <View style={styles.stepHeader}>
-                <Text style={styles.stepTitle}>4. Timing</Text>
-                <Text style={[styles.stepBadge, { backgroundColor: data.timing.tradeNow ? COLORS.success : COLORS.warning }]}>
-                  {data.timing.tradeNow ? 'READY' : 'WAIT'}
+                <Text style={styles.stepNumber}>1.</Text>
+                <Text style={styles.stepName}>Market</Text>
+                <Text style={[styles.stepBadge, { backgroundColor: data.marketPulse.trend?.direction === 'bullish' ? C.success : data.marketPulse.trend?.direction === 'bearish' ? C.danger : C.warning }]}>
+                  {(data.marketPulse.trend?.direction || 'N').slice(0, 4).toUpperCase()}
                 </Text>
               </View>
-              <View style={styles.stepMetrics}>
-                <View style={[styles.metric, { width: '100%' }]}>
-                  <Text style={styles.metricLabel}>Reason</Text>
-                  <Text style={styles.metricValue}>{(data.timing.reason || '-').slice(0, 40)}</Text>
-                </View>
+              <View style={styles.stepMetric}>
+                <Text style={styles.stepMetricLabel}>Fear/Greed</Text>
+                <Text style={styles.stepMetricValue}>{data.marketPulse.fearGreedIndex}</Text>
               </View>
             </View>
 
-            {/* Step 5: Trade Plan */}
-            <View style={[styles.stepCard, { borderLeftColor: '#6366f1' }]}>
+            {/* Step 2 */}
+            <View style={[styles.stepCard, { borderLeftColor: getStepColor(2) }]}>
               <View style={styles.stepHeader}>
-                <Text style={styles.stepTitle}>5. Trade Plan</Text>
+                <Text style={styles.stepNumber}>2.</Text>
+                <Text style={styles.stepName}>Asset</Text>
+                <Text style={[styles.stepBadge, { backgroundColor: (data.assetScan.priceChange24h || 0) >= 0 ? C.success : C.danger }]}>
+                  {(data.assetScan.priceChange24h || 0) >= 0 ? 'UP' : 'DOWN'}
+                </Text>
+              </View>
+              <View style={styles.stepMetric}>
+                <Text style={styles.stepMetricLabel}>RSI</Text>
+                <Text style={styles.stepMetricValue}>{data.assetScan.indicators?.rsi?.toFixed(0) || '-'}</Text>
+              </View>
+            </View>
+
+            {/* Step 3 */}
+            <View style={[styles.stepCard, { borderLeftColor: getStepColor(3) }]}>
+              <View style={styles.stepHeader}>
+                <Text style={styles.stepNumber}>3.</Text>
+                <Text style={styles.stepName}>Safety</Text>
+                <Text style={[styles.stepBadge, { backgroundColor: data.safetyCheck.riskLevel === 'low' ? C.success : data.safetyCheck.riskLevel === 'high' ? C.danger : C.warning }]}>
+                  {(data.safetyCheck.riskLevel || 'MED').slice(0, 3).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.stepMetric}>
+                <Text style={styles.stepMetricLabel}>Whale</Text>
+                <Text style={styles.stepMetricValue}>{(data.safetyCheck.whaleActivity?.bias || '-').slice(0, 6)}</Text>
+              </View>
+            </View>
+
+            {/* Step 4 */}
+            <View style={[styles.stepCard, { borderLeftColor: getStepColor(4) }]}>
+              <View style={styles.stepHeader}>
+                <Text style={styles.stepNumber}>4.</Text>
+                <Text style={styles.stepName}>Timing</Text>
+                <Text style={[styles.stepBadge, { backgroundColor: data.timing.tradeNow ? C.success : C.warning }]}>
+                  {data.timing.tradeNow ? 'NOW' : 'WAIT'}
+                </Text>
+              </View>
+              <View style={styles.stepMetric}>
+                <Text style={[styles.stepMetricLabel, { flex: 1 }]} numberOfLines={1}>
+                  {(data.timing.reason || '-').slice(0, 20)}
+                </Text>
+              </View>
+            </View>
+
+            {/* Step 5 */}
+            <View style={[styles.stepCard, { borderLeftColor: getStepColor(5) }]}>
+              <View style={styles.stepHeader}>
+                <Text style={styles.stepNumber}>5.</Text>
+                <Text style={styles.stepName}>Plan</Text>
                 <Text style={[styles.stepBadge, { backgroundColor: directionColor }]}>
-                  {isLong ? 'LONG' : 'SHORT'}
+                  {directionText}
                 </Text>
               </View>
-              <View style={styles.stepMetrics}>
-                <View style={styles.metric}>
-                  <Text style={styles.metricLabel}>R:R</Text>
-                  <Text style={styles.metricValue}>{(data.tradePlan.riskReward || 0).toFixed(1)}:1</Text>
-                </View>
-                <View style={styles.metric}>
-                  <Text style={styles.metricLabel}>Win Rate</Text>
-                  <Text style={styles.metricValue}>{data.tradePlan.winRateEstimate || 0}%</Text>
-                </View>
+              <View style={styles.stepMetric}>
+                <Text style={styles.stepMetricLabel}>R:R</Text>
+                <Text style={styles.stepMetricValue}>{(data.tradePlan.riskReward || 0).toFixed(1)}:1</Text>
               </View>
             </View>
 
-            {/* Step 6: Trap Check */}
-            <View style={[styles.stepCard, { borderLeftColor: COLORS.danger }]}>
+            {/* Step 6 */}
+            <View style={[styles.stepCard, { borderLeftColor: getStepColor(6) }]}>
               <View style={styles.stepHeader}>
-                <Text style={styles.stepTitle}>6. Trap Check</Text>
-                <Text style={[styles.stepBadge, { backgroundColor: (data.trapCheck?.traps?.bullTrap || data.trapCheck?.traps?.bearTrap) ? COLORS.danger : COLORS.success }]}>
-                  {(data.trapCheck?.traps?.bullTrap || data.trapCheck?.traps?.bearTrap) ? 'WARNING' : 'CLEAR'}
+                <Text style={styles.stepNumber}>6.</Text>
+                <Text style={styles.stepName}>Traps</Text>
+                <Text style={[styles.stepBadge, { backgroundColor: (data.trapCheck?.traps?.bullTrap || data.trapCheck?.traps?.bearTrap) ? C.danger : C.success }]}>
+                  {(data.trapCheck?.traps?.bullTrap || data.trapCheck?.traps?.bearTrap) ? 'WARN' : 'OK'}
                 </Text>
               </View>
-              <View style={styles.stepMetrics}>
-                <View style={styles.metric}>
-                  <Text style={styles.metricLabel}>Bull Trap</Text>
-                  <Text style={[styles.metricValue, { color: data.trapCheck?.traps?.bullTrap ? COLORS.danger : COLORS.success }]}>
-                    {data.trapCheck?.traps?.bullTrap ? 'YES' : 'NO'}
-                  </Text>
-                </View>
-                <View style={styles.metric}>
-                  <Text style={styles.metricLabel}>Bear Trap</Text>
-                  <Text style={[styles.metricValue, { color: data.trapCheck?.traps?.bearTrap ? COLORS.danger : COLORS.success }]}>
-                    {data.trapCheck?.traps?.bearTrap ? 'YES' : 'NO'}
-                  </Text>
-                </View>
+              <View style={styles.stepMetric}>
+                <Text style={styles.stepMetricLabel}>Fakeout</Text>
+                <Text style={styles.stepMetricValue}>{(data.trapCheck?.traps?.fakeoutRisk || 'low').slice(0, 4)}</Text>
               </View>
             </View>
           </View>
         </View>
 
-        {/* Trade Levels */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Trade Levels</Text>
-          <View style={styles.levelsRow}>
-            <View style={styles.levelBox}>
-              <Text style={[styles.levelLabel, { color: COLORS.info }]}>ENTRY</Text>
-              <Text style={styles.levelPrice}>{formatPrice(data.tradePlan.averageEntry)}</Text>
+        {/* AI Summary */}
+        {data.verdict.aiSummary && (
+          <View style={styles.aiSummary}>
+            <View style={styles.aiSummaryHeader}>
+              <View style={styles.aiSummaryBadge}>
+                <Text style={styles.aiSummaryBadgeText}>AI</Text>
+              </View>
+              <Text style={styles.aiSummaryTitle}>Analysis Summary</Text>
             </View>
-            <View style={styles.levelBox}>
-              <Text style={[styles.levelLabel, { color: COLORS.danger }]}>STOP LOSS</Text>
-              <Text style={[styles.levelPrice, { color: COLORS.danger }]}>{formatPrice(data.tradePlan.stopLoss?.price)}</Text>
-              <Text style={[styles.levelPercent, { color: COLORS.danger }]}>-{(data.tradePlan.stopLoss?.percentage || 0).toFixed(1)}%</Text>
-            </View>
-            <View style={styles.levelBox}>
-              <Text style={[styles.levelLabel, { color: COLORS.success }]}>TP1</Text>
-              <Text style={[styles.levelPrice, { color: COLORS.success }]}>{formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</Text>
-            </View>
-            <View style={styles.levelBox}>
-              <Text style={[styles.levelLabel, { color: COLORS.success }]}>TP2</Text>
-              <Text style={[styles.levelPrice, { color: COLORS.success }]}>{formatPrice(data.tradePlan.takeProfits?.[1]?.price)}</Text>
-            </View>
-            <View style={styles.levelBox}>
-              <Text style={[styles.levelLabel, { color: COLORS.success }]}>TP3</Text>
-              <Text style={[styles.levelPrice, { color: COLORS.success }]}>{formatPrice(data.tradePlan.takeProfits?.[2]?.price)}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Final Verdict */}
-        <View style={[styles.stepCard, { borderLeftColor: directionColor, backgroundColor: isLong ? '#f0fdf4' : '#fef2f2' }]}>
-          <View style={styles.stepHeader}>
-            <Text style={styles.stepTitle}>7. Final Verdict</Text>
-            <Text style={[styles.stepBadge, { backgroundColor: directionColor }]}>
-              {score}/100
+            <Text style={styles.aiSummaryText}>
+              {data.verdict.aiSummary.slice(0, 400)}{data.verdict.aiSummary.length > 400 ? '...' : ''}
             </Text>
           </View>
-          {data.verdict.aiSummary && (
-            <Text style={{ fontSize: 8, color: COLORS.dark, lineHeight: 1.4, marginTop: 4 }}>
-              {data.verdict.aiSummary.slice(0, 300)}{data.verdict.aiSummary.length > 300 ? '...' : ''}
-            </Text>
-          )}
+        )}
+
+        {/* Risk Warning */}
+        <View style={styles.riskWarning}>
+          <Text style={styles.riskWarningText}>
+            Bu rapor eğitim amaçlıdır ve yatırım tavsiyesi değildir. Kripto para piyasaları yüksek risk içerir.
+            Yatırım kararlarınızı vermeden önce kendi araştırmanızı yapın.
+          </Text>
         </View>
 
-        <Footer pageNum={1} totalPages={totalPages} />
+        {/* Footer */}
+        <View style={styles.footer}>
+          <View style={styles.footerLeft}>
+            <View style={styles.footerItem}>
+              <Text style={styles.footerLabel}>REPORT ID</Text>
+              <Text style={styles.footerValue}>{data.analysisId?.slice(-12) || 'N/A'}</Text>
+            </View>
+            <View style={styles.footerItem}>
+              <Text style={styles.footerLabel}>CURRENT PRICE</Text>
+              <Text style={styles.footerValue}>{formatPrice(data.assetScan.currentPrice)}</Text>
+            </View>
+            <View style={styles.footerItem}>
+              <Text style={styles.footerLabel}>WIN RATE EST.</Text>
+              <Text style={styles.footerValue}>{data.tradePlan.winRateEstimate || 0}%</Text>
+            </View>
+          </View>
+          <View style={styles.footerRight}>
+            <Text style={styles.footerDisclaimer}>
+              TradePath AI Analysis • Page 1/2
+            </Text>
+          </View>
+        </View>
       </Page>
 
-      {/* PAGE 2: Chart + AI Expert - Only render if there's content */}
-      {hasPage2Content && (
-        <Page size="A4" style={styles.page}>
-          <Header symbol={data.symbol} />
-
-          {/* Chart */}
-          {data.chartImage && (
-            <View style={styles.chartContainer}>
-              <Text style={styles.chartTitle}>Trade Plan Chart</Text>
-              <Image src={data.chartImage} style={styles.chartImage} />
-            </View>
-          )}
-
-          {/* Quick Reference */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quick Reference</Text>
-            <View style={styles.levelsRow}>
-              <View style={[styles.levelBox, { flex: 2 }]}>
-                <Text style={[styles.levelLabel, { color: COLORS.info }]}>ENTRY ZONE</Text>
-                <Text style={[styles.levelPrice, { fontSize: 14 }]}>{formatPrice(data.tradePlan.averageEntry)}</Text>
-              </View>
-              <View style={[styles.levelBox, { flex: 2 }]}>
-                <Text style={[styles.levelLabel, { color: COLORS.danger }]}>STOP LOSS</Text>
-                <Text style={[styles.levelPrice, { fontSize: 14, color: COLORS.danger }]}>{formatPrice(data.tradePlan.stopLoss?.price)}</Text>
-                <Text style={[styles.levelPercent, { color: COLORS.danger }]}>-{(data.tradePlan.stopLoss?.percentage || 0).toFixed(1)}%</Text>
-              </View>
-              <View style={[styles.levelBox, { flex: 3 }]}>
-                <Text style={[styles.levelLabel, { color: COLORS.success }]}>TAKE PROFITS</Text>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
-                  <Text style={{ fontSize: 9, color: COLORS.success }}>TP1: {formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</Text>
-                  <Text style={{ fontSize: 9, color: COLORS.success }}>TP2: {formatPrice(data.tradePlan.takeProfits?.[1]?.price)}</Text>
-                  <Text style={{ fontSize: 9, color: COLORS.success }}>TP3: {formatPrice(data.tradePlan.takeProfits?.[2]?.price)}</Text>
-                </View>
-              </View>
-            </View>
+      {/* PAGE 2: Detailed Steps */}
+      <Page size="A4" style={styles.page}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.logo}>
+            <Text style={[styles.logoText, { color: C.red }]}>Trade</Text>
+            <Text style={[styles.logoText, { color: C.green }]}>Path</Text>
           </View>
+          <View style={styles.headerRight}>
+            <Text style={styles.symbol}>{data.symbol}/USDT</Text>
+            <Text style={styles.date}>Detailed Analysis</Text>
+          </View>
+        </View>
 
-          {/* AI Expert Comment */}
-          {data.aiExpertComment && (
-            <View style={styles.aiExpert}>
-              <View style={styles.aiExpertHeader}>
-                <View style={styles.aiExpertBadge}>
-                  <Text style={styles.aiExpertBadgeText}>AI EXPERT</Text>
-                </View>
-                <Text style={styles.aiExpertTitle}>Expert Analysis</Text>
+        {/* Detailed Steps */}
+        <View style={styles.page2Section}>
+          <Text style={styles.sectionTitle}>Step-by-Step Analysis Details</Text>
+
+          {/* Step 1 */}
+          <View style={[styles.stepExplanation, { borderLeftColor: getStepColor(1) }]}>
+            <View style={styles.stepExplanationHeader}>
+              <View style={[styles.stepExplanationNumber, { backgroundColor: getStepColor(1) }]}>
+                <Text style={styles.stepExplanationNumberText}>1</Text>
               </View>
-              <Text style={styles.aiExpertContent}>
-                {data.aiExpertComment}
+              <Text style={styles.stepExplanationTitle}>{STEP_EXPLANATIONS[1].name}</Text>
+              <Text style={[styles.stepExplanationBadge, { backgroundColor: data.marketPulse.trend?.direction === 'bullish' ? C.success : data.marketPulse.trend?.direction === 'bearish' ? C.danger : C.warning }]}>
+                {(data.marketPulse.trend?.direction || 'neutral').toUpperCase()}
               </Text>
             </View>
-          )}
-
-          {/* Report Info */}
-          <View style={{ marginTop: 'auto', paddingTop: 20 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderTopWidth: 1, borderTopColor: COLORS.border }}>
-              <View>
-                <Text style={{ fontSize: 7, color: COLORS.gray }}>REPORT ID</Text>
-                <Text style={{ fontSize: 9, color: COLORS.dark }}>{data.analysisId?.slice(-16) || 'N/A'}</Text>
+            <Text style={styles.stepExplanationDesc}>{STEP_EXPLANATIONS[1].desc}</Text>
+            <View style={styles.stepExplanationMetrics}>
+              <View style={styles.stepExplanationMetric}>
+                <Text style={styles.stepExplanationMetricLabel}>Fear & Greed Index</Text>
+                <Text style={styles.stepExplanationMetricValue}>{data.marketPulse.fearGreedIndex} ({data.marketPulse.fearGreedLabel})</Text>
               </View>
-              <View>
-                <Text style={{ fontSize: 7, color: COLORS.gray }}>GENERATED</Text>
-                <Text style={{ fontSize: 9, color: COLORS.dark }}>{data.generatedAt}</Text>
+              <View style={styles.stepExplanationMetric}>
+                <Text style={styles.stepExplanationMetricLabel}>BTC Dominance</Text>
+                <Text style={styles.stepExplanationMetricValue}>{data.marketPulse.btcDominance?.toFixed(1)}%</Text>
               </View>
-              <View>
-                <Text style={{ fontSize: 7, color: COLORS.gray }}>POWERED BY</Text>
-                <Text style={{ fontSize: 9, color: COLORS.dark }}>Gemini 2.5 Flash AI</Text>
+              <View style={styles.stepExplanationMetric}>
+                <Text style={styles.stepExplanationMetricLabel}>Trend Strength</Text>
+                <Text style={styles.stepExplanationMetricValue}>{data.marketPulse.trend?.strength || 0}%</Text>
               </View>
             </View>
           </View>
 
-          <Footer pageNum={2} totalPages={totalPages} />
-        </Page>
-      )}
+          {/* Step 2 */}
+          <View style={[styles.stepExplanation, { borderLeftColor: getStepColor(2) }]}>
+            <View style={styles.stepExplanationHeader}>
+              <View style={[styles.stepExplanationNumber, { backgroundColor: getStepColor(2) }]}>
+                <Text style={styles.stepExplanationNumberText}>2</Text>
+              </View>
+              <Text style={styles.stepExplanationTitle}>{STEP_EXPLANATIONS[2].name}</Text>
+              <Text style={[styles.stepExplanationBadge, { backgroundColor: (data.assetScan.priceChange24h || 0) >= 0 ? C.success : C.danger }]}>
+                {(data.assetScan.priceChange24h || 0) >= 0 ? 'BULLISH' : 'BEARISH'}
+              </Text>
+            </View>
+            <Text style={styles.stepExplanationDesc}>{STEP_EXPLANATIONS[2].desc}</Text>
+            <View style={styles.stepExplanationMetrics}>
+              <View style={styles.stepExplanationMetric}>
+                <Text style={styles.stepExplanationMetricLabel}>Current Price</Text>
+                <Text style={styles.stepExplanationMetricValue}>{formatPrice(data.assetScan.currentPrice)}</Text>
+              </View>
+              <View style={styles.stepExplanationMetric}>
+                <Text style={styles.stepExplanationMetricLabel}>24h Change</Text>
+                <Text style={[styles.stepExplanationMetricValue, { color: (data.assetScan.priceChange24h || 0) >= 0 ? C.success : C.danger }]}>
+                  {(data.assetScan.priceChange24h || 0).toFixed(2)}%
+                </Text>
+              </View>
+              <View style={styles.stepExplanationMetric}>
+                <Text style={styles.stepExplanationMetricLabel}>RSI (14)</Text>
+                <Text style={styles.stepExplanationMetricValue}>{data.assetScan.indicators?.rsi?.toFixed(1) || '-'}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Step 3 */}
+          <View style={[styles.stepExplanation, { borderLeftColor: getStepColor(3) }]}>
+            <View style={styles.stepExplanationHeader}>
+              <View style={[styles.stepExplanationNumber, { backgroundColor: getStepColor(3) }]}>
+                <Text style={styles.stepExplanationNumberText}>3</Text>
+              </View>
+              <Text style={styles.stepExplanationTitle}>{STEP_EXPLANATIONS[3].name}</Text>
+              <Text style={[styles.stepExplanationBadge, { backgroundColor: data.safetyCheck.riskLevel === 'low' ? C.success : data.safetyCheck.riskLevel === 'high' ? C.danger : C.warning }]}>
+                {(data.safetyCheck.riskLevel || 'MEDIUM').toUpperCase()} RISK
+              </Text>
+            </View>
+            <Text style={styles.stepExplanationDesc}>{STEP_EXPLANATIONS[3].desc}</Text>
+            <View style={styles.stepExplanationMetrics}>
+              <View style={styles.stepExplanationMetric}>
+                <Text style={styles.stepExplanationMetricLabel}>Whale Activity</Text>
+                <Text style={styles.stepExplanationMetricValue}>{data.safetyCheck.whaleActivity?.bias || '-'}</Text>
+              </View>
+              <View style={styles.stepExplanationMetric}>
+                <Text style={styles.stepExplanationMetricLabel}>Pump/Dump Risk</Text>
+                <Text style={styles.stepExplanationMetricValue}>{data.safetyCheck.manipulation?.pumpDumpRisk || '-'}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Step 4 */}
+          <View style={[styles.stepExplanation, { borderLeftColor: getStepColor(4) }]}>
+            <View style={styles.stepExplanationHeader}>
+              <View style={[styles.stepExplanationNumber, { backgroundColor: getStepColor(4) }]}>
+                <Text style={styles.stepExplanationNumberText}>4</Text>
+              </View>
+              <Text style={styles.stepExplanationTitle}>{STEP_EXPLANATIONS[4].name}</Text>
+              <Text style={[styles.stepExplanationBadge, { backgroundColor: data.timing.tradeNow ? C.success : C.warning }]}>
+                {data.timing.tradeNow ? 'TRADE NOW' : 'WAIT'}
+              </Text>
+            </View>
+            <Text style={styles.stepExplanationDesc}>{STEP_EXPLANATIONS[4].desc}</Text>
+            <View style={styles.stepExplanationMetrics}>
+              <View style={[styles.stepExplanationMetric, { flex: 1 }]}>
+                <Text style={styles.stepExplanationMetricLabel}>Reason</Text>
+                <Text style={styles.stepExplanationMetricValue}>{data.timing.reason || '-'}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Step 5 */}
+          <View style={[styles.stepExplanation, { borderLeftColor: getStepColor(5) }]}>
+            <View style={styles.stepExplanationHeader}>
+              <View style={[styles.stepExplanationNumber, { backgroundColor: getStepColor(5) }]}>
+                <Text style={styles.stepExplanationNumberText}>5</Text>
+              </View>
+              <Text style={styles.stepExplanationTitle}>{STEP_EXPLANATIONS[5].name}</Text>
+              <Text style={[styles.stepExplanationBadge, { backgroundColor: directionColor }]}>
+                {directionText} POSITION
+              </Text>
+            </View>
+            <Text style={styles.stepExplanationDesc}>{STEP_EXPLANATIONS[5].desc}</Text>
+            <View style={styles.stepExplanationMetrics}>
+              <View style={styles.stepExplanationMetric}>
+                <Text style={styles.stepExplanationMetricLabel}>Risk/Reward</Text>
+                <Text style={styles.stepExplanationMetricValue}>{(data.tradePlan.riskReward || 0).toFixed(2)}:1</Text>
+              </View>
+              <View style={styles.stepExplanationMetric}>
+                <Text style={styles.stepExplanationMetricLabel}>Win Rate Est.</Text>
+                <Text style={styles.stepExplanationMetricValue}>{data.tradePlan.winRateEstimate || 0}%</Text>
+              </View>
+              <View style={styles.stepExplanationMetric}>
+                <Text style={styles.stepExplanationMetricLabel}>Entry Price</Text>
+                <Text style={styles.stepExplanationMetricValue}>{formatPrice(data.tradePlan.averageEntry)}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Step 6 */}
+          <View style={[styles.stepExplanation, { borderLeftColor: getStepColor(6) }]}>
+            <View style={styles.stepExplanationHeader}>
+              <View style={[styles.stepExplanationNumber, { backgroundColor: getStepColor(6) }]}>
+                <Text style={styles.stepExplanationNumberText}>6</Text>
+              </View>
+              <Text style={styles.stepExplanationTitle}>{STEP_EXPLANATIONS[6].name}</Text>
+              <Text style={[styles.stepExplanationBadge, { backgroundColor: (data.trapCheck?.traps?.bullTrap || data.trapCheck?.traps?.bearTrap) ? C.danger : C.success }]}>
+                {(data.trapCheck?.traps?.bullTrap || data.trapCheck?.traps?.bearTrap) ? 'WARNING' : 'CLEAR'}
+              </Text>
+            </View>
+            <Text style={styles.stepExplanationDesc}>{STEP_EXPLANATIONS[6].desc}</Text>
+            <View style={styles.stepExplanationMetrics}>
+              <View style={styles.stepExplanationMetric}>
+                <Text style={styles.stepExplanationMetricLabel}>Bull Trap</Text>
+                <Text style={[styles.stepExplanationMetricValue, { color: data.trapCheck?.traps?.bullTrap ? C.danger : C.success }]}>
+                  {data.trapCheck?.traps?.bullTrap ? 'DETECTED' : 'None'}
+                </Text>
+              </View>
+              <View style={styles.stepExplanationMetric}>
+                <Text style={styles.stepExplanationMetricLabel}>Bear Trap</Text>
+                <Text style={[styles.stepExplanationMetricValue, { color: data.trapCheck?.traps?.bearTrap ? C.danger : C.success }]}>
+                  {data.trapCheck?.traps?.bearTrap ? 'DETECTED' : 'None'}
+                </Text>
+              </View>
+              <View style={styles.stepExplanationMetric}>
+                <Text style={styles.stepExplanationMetricLabel}>Fakeout Risk</Text>
+                <Text style={styles.stepExplanationMetricValue}>{data.trapCheck?.traps?.fakeoutRisk || 'Low'}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* AI Expert Comment */}
+        {data.aiExpertComment && (
+          <View style={styles.aiSummary}>
+            <View style={styles.aiSummaryHeader}>
+              <View style={styles.aiSummaryBadge}>
+                <Text style={styles.aiSummaryBadgeText}>AI EXPERT</Text>
+              </View>
+              <Text style={styles.aiSummaryTitle}>Expert Analysis</Text>
+            </View>
+            <Text style={styles.aiSummaryText}>{data.aiExpertComment}</Text>
+          </View>
+        )}
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <View style={styles.footerLeft}>
+            <View style={styles.footerItem}>
+              <Text style={styles.footerLabel}>GENERATED</Text>
+              <Text style={styles.footerValue}>{data.generatedAt}</Text>
+            </View>
+            <View style={styles.footerItem}>
+              <Text style={styles.footerLabel}>POWERED BY</Text>
+              <Text style={styles.footerValue}>Gemini 2.5 Flash AI</Text>
+            </View>
+          </View>
+          <View style={styles.footerRight}>
+            <Text style={styles.footerDisclaimer}>
+              TradePath AI Analysis • Page 2/2
+            </Text>
+          </View>
+        </View>
+      </Page>
     </Document>
   );
 };
 
-// Capture chart - handles off-screen elements
-export async function captureChartAsImage(elementId: string = 'trade-plan-chart'): Promise<string | null> {
-  try {
-    const element = document.getElementById(elementId);
-    if (!element) {
-      console.warn('Chart element not found:', elementId);
-      return null;
-    }
-
-    // Get the parent container (might be off-screen)
-    const parent = element.parentElement;
-    const originalStyle = parent?.getAttribute('style') || '';
-
-    // Temporarily move into view for capture
-    if (parent) {
-      parent.style.cssText = 'position: fixed; left: 0; top: 0; width: 800px; z-index: 9999; background: #fff;';
-    }
-
-    // Wait for chart to render (Binance API data)
-    await new Promise(resolve => setTimeout(resolve, 2500));
-
-    const html2canvas = (await import('html2canvas')).default;
-    const canvas = await html2canvas(element, {
-      backgroundColor: '#ffffff',
-      scale: 2,
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-      width: 800,
-      windowWidth: 800,
-    });
-
-    // Restore original position
-    if (parent) {
-      parent.style.cssText = originalStyle;
-    }
-
-    return canvas.toDataURL('image/png');
-  } catch (error) {
-    console.error('Failed to capture chart:', error);
-    return null;
-  }
-}
-
-// Export function
-export async function generateAnalysisReport(data: AnalysisReportData, captureChart: boolean = true): Promise<void> {
-  if (captureChart && !data.chartImage) {
-    const chartImage = await captureChartAsImage();
-    if (chartImage) {
-      data.chartImage = chartImage;
-    }
-  }
-
+// Export function - simplified without chart capture
+export async function generateAnalysisReport(data: AnalysisReportData): Promise<void> {
   const blob = await pdf(<AnalysisReportDocument data={data} />).toBlob();
   const filename = `TradePath_${data.symbol}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
   saveAs(blob, filename);
