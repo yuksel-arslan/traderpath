@@ -153,7 +153,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
   );
 }
 
-// Analysis Steps Data
+// Analysis Steps Data - Detailed information for curious users
 const ANALYSIS_STEPS = [
   {
     name: 'Market Pulse',
@@ -161,13 +161,17 @@ const ANALYSIS_STEPS = [
     color: 'text-blue-500',
     bg: 'bg-blue-500/10',
     border: 'border-blue-500/30',
-    description: 'Analyzes overall crypto market sentiment including Bitcoin dominance, total market cap trends, fear & greed index, and institutional flow data to determine if market conditions favor your trade.',
-    details: [
-      'Bitcoin dominance & market cap analysis',
-      'Fear & Greed Index evaluation',
-      'Institutional money flow tracking',
-      'Overall market trend direction'
-    ]
+    subtitle: 'Understanding the Big Picture',
+    description: 'Before analyzing any specific coin, we first check the overall health of the crypto market. Even the best altcoin setup can fail if Bitcoin suddenly dumps or the entire market shifts to fear mode. Market Pulse acts as your macro-level radar.',
+    whatWeDo: [
+      'Monitor Bitcoin dominance trends to predict altcoin season or Bitcoin season',
+      'Analyze total crypto market cap momentum and direction',
+      'Track the Fear & Greed Index to gauge market psychology',
+      'Detect institutional money flows through on-chain data',
+      'Identify correlation patterns between major assets'
+    ],
+    whyItMatters: 'Trading against the market trend is like swimming against the current. Market Pulse ensures you only trade when conditions are favorable.',
+    example: 'If Fear & Greed shows "Extreme Fear" while BTC dominance is rising, altcoins typically underperform—we factor this into your trade decision.'
   },
   {
     name: 'Asset Scan',
@@ -175,13 +179,17 @@ const ANALYSIS_STEPS = [
     color: 'text-cyan-500',
     bg: 'bg-cyan-500/10',
     border: 'border-cyan-500/30',
-    description: 'Deep technical analysis of the specific coin including support/resistance levels, volume analysis, RSI, MACD, moving averages, and price action patterns on multiple timeframes.',
-    details: [
-      'Support & resistance level identification',
-      'RSI, MACD, and momentum indicators',
-      'Volume profile analysis',
-      'Multi-timeframe pattern recognition'
-    ]
+    subtitle: 'Deep Technical Analysis',
+    description: 'This is where we dive deep into your chosen cryptocurrency. Our AI analyzes price action, volume, momentum indicators, and chart patterns across multiple timeframes to build a complete technical picture.',
+    whatWeDo: [
+      'Identify key support and resistance levels from historical price data',
+      'Calculate RSI, MACD, Stochastic, and other momentum indicators',
+      'Analyze volume profiles to confirm price movements',
+      'Detect chart patterns (triangles, flags, head & shoulders, etc.)',
+      'Compare 15m, 1h, 4h, and daily timeframes for confluence'
+    ],
+    whyItMatters: 'Technical analysis helps predict where price is likely to go next. Multiple timeframe confirmation significantly increases trade probability.',
+    example: 'If ETH shows a bullish flag pattern on 4h with RSI oversold on 1h and strong support nearby, that\'s a high-probability long setup.'
   },
   {
     name: 'Safety',
@@ -189,13 +197,17 @@ const ANALYSIS_STEPS = [
     color: 'text-green-500',
     bg: 'bg-green-500/10',
     border: 'border-green-500/30',
-    description: 'Risk assessment checking for market manipulation signs, unusual whale activity, exchange inflow/outflow anomalies, and potential rug pull indicators to protect your investment.',
-    details: [
-      'Whale wallet movement monitoring',
-      'Exchange inflow/outflow analysis',
-      'Manipulation pattern detection',
-      'Rug pull risk assessment'
-    ]
+    subtitle: 'Risk & Manipulation Detection',
+    description: 'The crypto market is filled with manipulation, whale games, and hidden risks. Safety Check protects your capital by detecting dangerous patterns that retail traders often miss. This step can save you from devastating losses.',
+    whatWeDo: [
+      'Track whale wallet movements and large holder accumulation/distribution',
+      'Monitor exchange inflows (selling pressure) and outflows (accumulation)',
+      'Detect wash trading and artificial volume patterns',
+      'Check for unusual funding rate spikes indicating overleveraged positions',
+      'Analyze social sentiment for coordinated pump & dump signals'
+    ],
+    whyItMatters: 'Over 70% of retail traders lose money partly due to manipulation they can\'t see. Safety Check gives you the institutional-level awareness.',
+    example: 'If a coin shows massive exchange inflows while price rises, whales might be preparing to dump. We\'ll warn you before you become exit liquidity.'
   },
   {
     name: 'Timing',
@@ -203,13 +215,17 @@ const ANALYSIS_STEPS = [
     color: 'text-yellow-500',
     bg: 'bg-yellow-500/10',
     border: 'border-yellow-500/30',
-    description: 'Optimal entry timing analysis considering upcoming events, funding rates, liquidation levels, and historical volatility patterns to find the best moment to enter.',
-    details: [
-      'Funding rate analysis',
-      'Liquidation level mapping',
-      'Event calendar consideration',
-      'Volatility pattern recognition'
-    ]
+    subtitle: 'Optimal Entry Window',
+    description: 'Even with a great trade setup, entering at the wrong time can turn a winner into a loser. Timing Analysis finds the optimal moment to enter based on volatility patterns, funding rates, and market events.',
+    whatWeDo: [
+      'Analyze historical volatility to predict optimal entry windows',
+      'Check funding rates to avoid entering during extreme leverage',
+      'Map liquidation clusters that could trigger cascading moves',
+      'Review upcoming events (unlocks, earnings, protocol updates)',
+      'Calculate time-based support/resistance from previous sessions'
+    ],
+    whyItMatters: 'A perfectly good trade can hit stop-loss due to bad timing. Entering during low volatility periods near support dramatically improves success rate.',
+    example: 'If there\'s a $50M liquidation cluster just below current price, entering long here is risky—we\'d suggest waiting for that level to be swept first.'
   },
   {
     name: 'Trade Plan',
@@ -217,13 +233,17 @@ const ANALYSIS_STEPS = [
     color: 'text-purple-500',
     bg: 'bg-purple-500/10',
     border: 'border-purple-500/30',
-    description: 'Generates precise entry price, take-profit targets (TP1, TP2, TP3), and stop-loss levels based on risk/reward ratios and key technical levels.',
-    details: [
-      'Optimal entry price calculation',
-      'Multiple take-profit targets (TP1, TP2, TP3)',
-      'Strategic stop-loss placement',
-      'Risk/reward ratio optimization'
-    ]
+    subtitle: 'Your Execution Strategy',
+    description: 'This is where everything comes together into an actionable plan. We calculate the exact entry price, multiple take-profit targets, and a strategic stop-loss level—all optimized for the best risk/reward ratio.',
+    whatWeDo: [
+      'Calculate optimal entry price based on current orderbook and momentum',
+      'Set TP1 (conservative), TP2 (moderate), and TP3 (aggressive) targets',
+      'Place stop-loss at technical invalidation points, not arbitrary percentages',
+      'Calculate position sizing suggestions based on risk percentage',
+      'Determine risk/reward ratio and expected value of the trade'
+    ],
+    whyItMatters: 'Professional traders never enter without a plan. Having predefined exits removes emotion from trading and protects your capital.',
+    example: 'Entry: $0.5420 | TP1: $0.5680 (+4.8%) | TP2: $0.5890 (+8.7%) | TP3: $0.6200 (+14.4%) | SL: $0.5180 (-4.4%) | R:R = 2.1:1'
   },
   {
     name: 'Trap Check',
@@ -231,13 +251,17 @@ const ANALYSIS_STEPS = [
     color: 'text-orange-500',
     bg: 'bg-orange-500/10',
     border: 'border-orange-500/30',
-    description: 'Detects potential bull/bear traps, fake breakouts, stop-loss hunting zones, and manipulation patterns that could invalidate the trade setup.',
-    details: [
-      'Bull/bear trap identification',
-      'Fake breakout detection',
-      'Stop-loss hunting zone alerts',
-      'Market maker pattern analysis'
-    ]
+    subtitle: 'Avoiding Common Pitfalls',
+    description: 'Market makers and whales set traps to liquidate retail traders. Trap Check identifies these danger zones—fake breakouts, stop hunts, and manipulation patterns—so you don\'t become their target.',
+    whatWeDo: [
+      'Identify potential bull traps (fake breakouts above resistance)',
+      'Detect bear traps (fake breakdowns below support)',
+      'Map stop-loss hunting zones where liquidity clusters exist',
+      'Analyze orderbook spoofing and wall manipulation',
+      'Check for divergences between price action and real buying/selling'
+    ],
+    whyItMatters: 'Most traders get stopped out right before price moves in their direction. Trap Check helps you avoid these frustrating scenarios.',
+    example: 'Price breaking above resistance with low volume and hidden sell walls = likely bull trap. We\'d warn you to wait for confirmation or avoid the trade.'
   },
   {
     name: 'Verdict',
@@ -245,13 +269,17 @@ const ANALYSIS_STEPS = [
     color: 'text-emerald-500',
     bg: 'bg-emerald-500/10',
     border: 'border-emerald-500/30',
-    description: 'Final decision combining all 6 analysis steps into a clear GO (strong setup), WAIT (uncertain conditions), or AVOID (high risk) recommendation with confidence score.',
-    details: [
-      'Aggregated analysis score',
-      'Clear GO / WAIT / AVOID decision',
-      'Confidence percentage',
-      'Key factors summary'
-    ]
+    subtitle: 'The Final Decision',
+    description: 'All six analysis steps are combined using our proprietary scoring algorithm to deliver a clear, actionable verdict. No more analysis paralysis—you get a straightforward recommendation backed by comprehensive data.',
+    whatWeDo: [
+      'Aggregate scores from all previous analysis steps',
+      'Weight factors based on current market conditions',
+      'Generate a confidence percentage (0-100%)',
+      'Deliver clear verdict: GO (take the trade), WAIT (conditions uncertain), or AVOID (too risky)',
+      'Provide a summary of the key factors behind the decision'
+    ],
+    whyItMatters: 'Information overload leads to bad decisions. A clear verdict with reasoning helps you act confidently and consistently.',
+    example: 'VERDICT: GO (78% confidence) | Strong technicals + favorable market + no manipulation detected + optimal timing. Key risk: BTC correlation during US market hours.'
   },
 ];
 
@@ -285,34 +313,54 @@ function AnalysisStepsGrid() {
       {/* Centered Modal Popup */}
       {activeStep !== null && (
         <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <div className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-xl w-full mx-4 pointer-events-auto animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] overflow-y-auto">
             {(() => {
               const item = ANALYSIS_STEPS[activeStep];
               const Icon = item.icon;
               return (
                 <>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className={`w-12 h-12 ${item.bg} ${item.border} border rounded-xl flex items-center justify-center`}>
+                  {/* Header */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-12 h-12 ${item.bg} ${item.border} border rounded-xl flex items-center justify-center flex-shrink-0`}>
                       <Icon className={`w-6 h-6 ${item.color}`} />
                     </div>
                     <div>
-                      <h4 className="text-lg font-bold">{item.name}</h4>
-                      <span className="text-xs text-muted-foreground">Step {activeStep + 1} of 7</span>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-lg font-bold">{item.name}</h4>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${item.bg} ${item.color} font-medium`}>Step {activeStep + 1}/7</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{item.subtitle}</p>
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+
+                  {/* Description */}
+                  <p className="text-sm leading-relaxed mb-4">
                     {item.description}
                   </p>
-                  <div className="space-y-2">
-                    <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Key Features</h5>
+
+                  {/* What We Do */}
+                  <div className="mb-4">
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">What We Analyze</h5>
                     <ul className="space-y-1.5">
-                      {item.details.map((detail, i) => (
-                        <li key={i} className="flex items-center gap-2 text-sm">
-                          <CheckCircle className={`w-3.5 h-3.5 ${item.color} flex-shrink-0`} />
-                          <span>{detail}</span>
+                      {item.whatWeDo.map((point, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <CheckCircle className={`w-3.5 h-3.5 ${item.color} flex-shrink-0 mt-0.5`} />
+                          <span className="text-muted-foreground">{point}</span>
                         </li>
                       ))}
                     </ul>
+                  </div>
+
+                  {/* Why It Matters */}
+                  <div className={`${item.bg} rounded-lg p-3 mb-4`}>
+                    <h5 className={`text-xs font-semibold uppercase tracking-wide ${item.color} mb-1`}>Why It Matters</h5>
+                    <p className="text-sm">{item.whyItMatters}</p>
+                  </div>
+
+                  {/* Example */}
+                  <div className="bg-accent/50 rounded-lg p-3 border border-border">
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Real Example</h5>
+                    <p className="text-sm text-muted-foreground italic">{item.example}</p>
                   </div>
                 </>
               );
