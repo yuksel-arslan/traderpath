@@ -376,7 +376,8 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
   const isLong = data.tradePlan.direction === 'long';
   const score = Math.round((data.verdict.overallScore || 0) * 10);
   const directionColor = isLong ? COLORS.success : COLORS.danger;
-  const totalPages = 2;
+  const hasPage2Content = data.chartImage || data.aiExpertComment;
+  const totalPages = hasPage2Content ? 2 : 1;
 
   return (
     <Document>
@@ -596,82 +597,84 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
         <Footer pageNum={1} totalPages={totalPages} />
       </Page>
 
-      {/* PAGE 2: Chart + AI Expert */}
-      <Page size="A4" style={styles.page}>
-        <Header symbol={data.symbol} />
+      {/* PAGE 2: Chart + AI Expert - Only render if there's content */}
+      {hasPage2Content && (
+        <Page size="A4" style={styles.page}>
+          <Header symbol={data.symbol} />
 
-        {/* Chart */}
-        {data.chartImage && (
-          <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>Trade Plan Chart</Text>
-            <Image src={data.chartImage} style={styles.chartImage} />
-          </View>
-        )}
+          {/* Chart */}
+          {data.chartImage && (
+            <View style={styles.chartContainer}>
+              <Text style={styles.chartTitle}>Trade Plan Chart</Text>
+              <Image src={data.chartImage} style={styles.chartImage} />
+            </View>
+          )}
 
-        {/* Quick Reference */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Reference</Text>
-          <View style={styles.levelsRow}>
-            <View style={[styles.levelBox, { flex: 2 }]}>
-              <Text style={[styles.levelLabel, { color: COLORS.info }]}>ENTRY ZONE</Text>
-              <Text style={[styles.levelPrice, { fontSize: 14 }]}>{formatPrice(data.tradePlan.averageEntry)}</Text>
-            </View>
-            <View style={[styles.levelBox, { flex: 2 }]}>
-              <Text style={[styles.levelLabel, { color: COLORS.danger }]}>STOP LOSS</Text>
-              <Text style={[styles.levelPrice, { fontSize: 14, color: COLORS.danger }]}>{formatPrice(data.tradePlan.stopLoss?.price)}</Text>
-              <Text style={[styles.levelPercent, { color: COLORS.danger }]}>-{(data.tradePlan.stopLoss?.percentage || 0).toFixed(1)}%</Text>
-            </View>
-            <View style={[styles.levelBox, { flex: 3 }]}>
-              <Text style={[styles.levelLabel, { color: COLORS.success }]}>TAKE PROFITS</Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
-                <Text style={{ fontSize: 9, color: COLORS.success }}>TP1: {formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</Text>
-                <Text style={{ fontSize: 9, color: COLORS.success }}>TP2: {formatPrice(data.tradePlan.takeProfits?.[1]?.price)}</Text>
-                <Text style={{ fontSize: 9, color: COLORS.success }}>TP3: {formatPrice(data.tradePlan.takeProfits?.[2]?.price)}</Text>
+          {/* Quick Reference */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Quick Reference</Text>
+            <View style={styles.levelsRow}>
+              <View style={[styles.levelBox, { flex: 2 }]}>
+                <Text style={[styles.levelLabel, { color: COLORS.info }]}>ENTRY ZONE</Text>
+                <Text style={[styles.levelPrice, { fontSize: 14 }]}>{formatPrice(data.tradePlan.averageEntry)}</Text>
+              </View>
+              <View style={[styles.levelBox, { flex: 2 }]}>
+                <Text style={[styles.levelLabel, { color: COLORS.danger }]}>STOP LOSS</Text>
+                <Text style={[styles.levelPrice, { fontSize: 14, color: COLORS.danger }]}>{formatPrice(data.tradePlan.stopLoss?.price)}</Text>
+                <Text style={[styles.levelPercent, { color: COLORS.danger }]}>-{(data.tradePlan.stopLoss?.percentage || 0).toFixed(1)}%</Text>
+              </View>
+              <View style={[styles.levelBox, { flex: 3 }]}>
+                <Text style={[styles.levelLabel, { color: COLORS.success }]}>TAKE PROFITS</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+                  <Text style={{ fontSize: 9, color: COLORS.success }}>TP1: {formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</Text>
+                  <Text style={{ fontSize: 9, color: COLORS.success }}>TP2: {formatPrice(data.tradePlan.takeProfits?.[1]?.price)}</Text>
+                  <Text style={{ fontSize: 9, color: COLORS.success }}>TP3: {formatPrice(data.tradePlan.takeProfits?.[2]?.price)}</Text>
+                </View>
               </View>
             </View>
           </View>
-        </View>
 
-        {/* AI Expert Comment */}
-        {data.aiExpertComment && (
-          <View style={styles.aiExpert}>
-            <View style={styles.aiExpertHeader}>
-              <View style={styles.aiExpertBadge}>
-                <Text style={styles.aiExpertBadgeText}>AI EXPERT</Text>
+          {/* AI Expert Comment */}
+          {data.aiExpertComment && (
+            <View style={styles.aiExpert}>
+              <View style={styles.aiExpertHeader}>
+                <View style={styles.aiExpertBadge}>
+                  <Text style={styles.aiExpertBadgeText}>AI EXPERT</Text>
+                </View>
+                <Text style={styles.aiExpertTitle}>Expert Analysis</Text>
               </View>
-              <Text style={styles.aiExpertTitle}>Expert Analysis</Text>
+              <Text style={styles.aiExpertContent}>
+                {data.aiExpertComment}
+              </Text>
             </View>
-            <Text style={styles.aiExpertContent}>
-              {data.aiExpertComment}
-            </Text>
-          </View>
-        )}
+          )}
 
-        {/* Report Info */}
-        <View style={{ marginTop: 'auto', paddingTop: 20 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderTopWidth: 1, borderTopColor: COLORS.border }}>
-            <View>
-              <Text style={{ fontSize: 7, color: COLORS.gray }}>REPORT ID</Text>
-              <Text style={{ fontSize: 9, color: COLORS.dark }}>{data.analysisId?.slice(-16) || 'N/A'}</Text>
-            </View>
-            <View>
-              <Text style={{ fontSize: 7, color: COLORS.gray }}>GENERATED</Text>
-              <Text style={{ fontSize: 9, color: COLORS.dark }}>{data.generatedAt}</Text>
-            </View>
-            <View>
-              <Text style={{ fontSize: 7, color: COLORS.gray }}>POWERED BY</Text>
-              <Text style={{ fontSize: 9, color: COLORS.dark }}>Gemini 2.5 Flash AI</Text>
+          {/* Report Info */}
+          <View style={{ marginTop: 'auto', paddingTop: 20 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderTopWidth: 1, borderTopColor: COLORS.border }}>
+              <View>
+                <Text style={{ fontSize: 7, color: COLORS.gray }}>REPORT ID</Text>
+                <Text style={{ fontSize: 9, color: COLORS.dark }}>{data.analysisId?.slice(-16) || 'N/A'}</Text>
+              </View>
+              <View>
+                <Text style={{ fontSize: 7, color: COLORS.gray }}>GENERATED</Text>
+                <Text style={{ fontSize: 9, color: COLORS.dark }}>{data.generatedAt}</Text>
+              </View>
+              <View>
+                <Text style={{ fontSize: 7, color: COLORS.gray }}>POWERED BY</Text>
+                <Text style={{ fontSize: 9, color: COLORS.dark }}>Gemini 2.5 Flash AI</Text>
+              </View>
             </View>
           </View>
-        </View>
 
-        <Footer pageNum={2} totalPages={totalPages} />
-      </Page>
+          <Footer pageNum={2} totalPages={totalPages} />
+        </Page>
+      )}
     </Document>
   );
 };
 
-// Capture chart
+// Capture chart - handles off-screen elements
 export async function captureChartAsImage(elementId: string = 'trade-plan-chart'): Promise<string | null> {
   try {
     const element = document.getElementById(elementId);
@@ -680,8 +683,17 @@ export async function captureChartAsImage(elementId: string = 'trade-plan-chart'
       return null;
     }
 
-    element.scrollIntoView({ behavior: 'instant', block: 'center' });
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Get the parent container (might be off-screen)
+    const parent = element.parentElement;
+    const originalStyle = parent?.getAttribute('style') || '';
+
+    // Temporarily move into view for capture
+    if (parent) {
+      parent.style.cssText = 'position: fixed; left: 0; top: 0; width: 800px; z-index: 9999; background: #fff;';
+    }
+
+    // Wait for chart to render (Binance API data)
+    await new Promise(resolve => setTimeout(resolve, 2500));
 
     const html2canvas = (await import('html2canvas')).default;
     const canvas = await html2canvas(element, {
@@ -690,7 +702,14 @@ export async function captureChartAsImage(elementId: string = 'trade-plan-chart'
       logging: false,
       useCORS: true,
       allowTaint: true,
+      width: 800,
+      windowWidth: 800,
     });
+
+    // Restore original position
+    if (parent) {
+      parent.style.cssText = originalStyle;
+    }
 
     return canvas.toDataURL('image/png');
   } catch (error) {

@@ -32,6 +32,7 @@ import { TimingAnalysis } from './TimingAnalysis';
 import { TradePlan } from './TradePlan';
 import { TrapCheck } from './TrapCheck';
 import { FinalVerdict } from './FinalVerdict';
+import { TradePlanChart } from './TradePlanChart';
 import { DownloadReportButton } from '../reports/DownloadReportButton';
 import { AnalysisProgressBar } from './AnalysisProgressBar';
 
@@ -492,6 +493,20 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
                     </div>
                   )}
                   <DownloadReportButton analysisData={results} symbol={symbol} analysisId={savedAnalysisId || undefined} />
+
+                  {/* Hidden TradePlanChart for PDF capture - positioned off-screen but in DOM */}
+                  {results[5] && (
+                    <div style={{ position: 'fixed', left: '-9999px', top: '0', width: '800px', background: '#fff' }}>
+                      <TradePlanChart
+                        symbol={symbol}
+                        entries={(results[5] as { entries?: Array<{ price: number }> })?.entries}
+                        stopLoss={(results[5] as { stopLoss?: { price: number; percentage: number } })?.stopLoss}
+                        takeProfits={(results[5] as { takeProfits?: Array<{ price: number; percentage: number }> })?.takeProfits}
+                        direction={(results[5] as { direction?: string })?.direction || 'long'}
+                        currentPrice={(results[2] as { currentPrice?: number })?.currentPrice}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 

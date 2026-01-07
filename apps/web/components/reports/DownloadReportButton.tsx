@@ -215,10 +215,13 @@ export function DownloadReportButton({
       const { generateAnalysisReport } = await import('./AnalysisReport');
 
       // Transform analysis data to report format
+      // Use existing analysisId if provided (from saved report), otherwise generate new one
+      const reportAnalysisId = analysisId || `analysis_${Date.now()}_${symbol}`;
+
       const reportData: AnalysisReportData = {
         symbol,
         generatedAt: new Date().toLocaleString('tr-TR'),
-        analysisId: `analysis_${Date.now()}_${symbol}`,
+        analysisId: reportAnalysisId,
         marketPulse: (analysisData[1] as AnalysisReportData['marketPulse']) || {
           btcDominance: 0,
           fearGreedIndex: 0,
