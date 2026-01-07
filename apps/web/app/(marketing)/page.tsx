@@ -1299,22 +1299,23 @@ export default function LandingPage() {
               </div>
 
               {/* AI Experts Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 w-full max-w-3xl">
-                {AI_EXPERTS.map((expert, idx) => {
-                  const ExpertIcon = expert.icon;
-                  return (
-                    <div
-                      key={idx}
-                      className={`p-4 bg-card border rounded-xl text-center ${expert.border}`}
-                    >
-                      <div className={`w-12 h-12 ${expert.bg} rounded-xl flex items-center justify-center mb-2 mx-auto`}>
-                        <ExpertIcon className={`w-6 h-6 ${expert.color}`} />
+              <div className="bg-card border rounded-xl p-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {AI_EXPERTS.map((expert, idx) => {
+                    const ExpertIcon = expert.icon;
+                    return (
+                      <div
+                        key={idx}
+                        className="flex flex-col items-center text-center p-2 rounded-lg hover:bg-accent/50 transition"
+                      >
+                        <div className={`w-9 h-9 ${expert.bg} rounded-lg flex items-center justify-center mb-1`}>
+                          <ExpertIcon className={`w-4 h-4 ${expert.color}`} />
+                        </div>
+                        <span className="text-[11px] font-medium">{expert.name}</span>
                       </div>
-                      <h4 className="font-bold text-sm">{expert.name}</h4>
-                      <p className={`text-xs ${expert.color}`}>{expert.title}</p>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
