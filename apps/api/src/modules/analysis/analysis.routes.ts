@@ -828,6 +828,7 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
           score: true,
           direction: true,
           generatedAt: true,
+          expiresAt: true,
           outcome: true,
           entryPrice: true,
           reportData: true
@@ -873,8 +874,12 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
         ? Number(((correctCount / closedCount) * 100).toFixed(1))
         : 0;
 
-      // Get ACTIVE trades (outcome is null)
-      const activeTrades = userReports.filter(r => !r.outcome);
+      // Get ACTIVE trades (outcome is null or 'pending') AND not expired
+      const now = new Date();
+      const activeTrades = userReports.filter(r =>
+        (!r.outcome || r.outcome === 'pending') &&
+        (!r.expiresAt || new Date(r.expiresAt) > now)
+      );
       const activeCount = activeTrades.length;
 
       // Fetch current prices for active trades to calculate active performance

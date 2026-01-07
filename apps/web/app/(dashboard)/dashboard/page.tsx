@@ -549,7 +549,7 @@ export default function DashboardPage() {
         fetch('/api/analysis/statistics', {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch('/api/reports?limit=10&includeExpired=true', {
+        fetch('/api/reports?limit=20', {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch('/api/user/credits', {
