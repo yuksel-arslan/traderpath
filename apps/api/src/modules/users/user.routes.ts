@@ -6,6 +6,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../../core/database';
 import { authenticate } from '../../core/auth/middleware';
+import { creditService } from '../credits/credit.service';
 
 export default async function userRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
@@ -215,6 +216,20 @@ export default async function userRoutes(app: FastifyInstance) {
         },
         tier,
       },
+    });
+  });
+
+  /**
+   * GET /api/user/credits
+   * Get user credit balance (alias for /api/credits/balance)
+   */
+  app.get('/credits', async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = request.user!.id;
+    const balance = await creditService.getBalance(userId);
+
+    return reply.send({
+      success: true,
+      data: balance,
     });
   });
 }
