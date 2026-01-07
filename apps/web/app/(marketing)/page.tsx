@@ -1297,6 +1297,25 @@ export default function LandingPage() {
                 <h3 className="text-xl font-bold mb-1">Learn & Make Informed Decisions</h3>
                 <p className="text-muted-foreground text-sm">Understand the analysis, chat with AI experts for deeper insights, and decide what&apos;s right for you</p>
               </div>
+
+              {/* AI Experts Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 w-full max-w-3xl">
+                {AI_EXPERTS.map((expert, idx) => {
+                  const ExpertIcon = expert.icon;
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-4 bg-card border rounded-xl text-center ${expert.border}`}
+                    >
+                      <div className={`w-12 h-12 ${expert.bg} rounded-xl flex items-center justify-center mb-2 mx-auto`}>
+                        <ExpertIcon className={`w-6 h-6 ${expert.color}`} />
+                      </div>
+                      <h4 className="font-bold text-sm">{expert.name}</h4>
+                      <p className={`text-xs ${expert.color}`}>{expert.title}</p>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
