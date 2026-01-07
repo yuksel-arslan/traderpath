@@ -277,7 +277,7 @@ const ANALYSIS_STEPS = [
     example: 'Price breaking above resistance with low volume and hidden sell walls = likely bull trap. We\'d warn you to wait for confirmation or avoid the trade.'
   },
   {
-    name: 'Verdict',
+    name: 'Final Verdict',
     icon: CheckCircle,
     color: 'text-emerald-500',
     bg: 'bg-emerald-500/10',
