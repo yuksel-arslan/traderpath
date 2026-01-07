@@ -5,10 +5,9 @@
 // Enhanced with AI level explanations
 // ===========================================
 
-import { FileText, Target, TrendingUp, TrendingDown, Brain, ChevronDown, ChevronUp, Lightbulb, AlertCircle, Bell } from 'lucide-react';
+import { FileText, Target, TrendingUp, TrendingDown, Brain, ChevronDown, ChevronUp, Lightbulb, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { TradePlanChart } from './TradePlanChart';
-import { SetAlertModal } from '../alerts/SetAlertModal';
 import { useState } from 'react';
 
 interface Entry {
@@ -109,7 +108,6 @@ function generateLevelExplanation(data: TradePlanData): string {
 
 export function TradePlan({ data, symbol }: TradePlanProps) {
   const [showDetails, setShowDetails] = useState(true);
-  const [showAlertModal, setShowAlertModal] = useState(false);
 
   if (!data) {
     return (
@@ -198,23 +196,17 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
 
       {/* Trade Plan Chart - PROMINENT */}
       <div className="border-2 border-indigo-500/30 rounded-xl overflow-hidden">
-        <div className="bg-indigo-500/10 px-4 py-3 border-b border-indigo-500/20 flex items-center justify-between">
-          <div>
-            <h4 className="font-semibold flex items-center gap-2">
-              <Target className="w-5 h-5 text-indigo-500" />
-              📊 Visual Trade Plan
-            </h4>
-            <p className="text-xs text-muted-foreground mt-1">
-              Entry (blue), Stop Loss (red) and Take Profit (green) levels are shown on the chart
-            </p>
-          </div>
-          <button
-            onClick={() => setShowAlertModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition font-semibold text-sm shadow-lg shadow-amber-500/25"
-          >
-            <Bell className="w-4 h-4" />
-            Set Alerts
-          </button>
+        <div className="bg-indigo-500/10 px-4 py-3 border-b border-indigo-500/20">
+          <h4 className="font-semibold flex items-center gap-2">
+            <Target className="w-5 h-5 text-indigo-500" />
+            📊 Visual Trade Plan
+          </h4>
+          <p className="text-xs text-muted-foreground mt-1">
+            Entry (blue), Stop Loss (red) and Take Profit (green) levels are shown on the chart
+          </p>
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+            🔔 Price alerts are automatically set for all levels
+          </p>
         </div>
         <TradePlanChart
           symbol={symbol}
@@ -227,19 +219,6 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
           resistance={data.resistance}
         />
       </div>
-
-      {/* Set Alert Modal */}
-      <SetAlertModal
-        isOpen={showAlertModal}
-        onClose={() => setShowAlertModal(false)}
-        tradePlan={{
-          symbol,
-          direction: data.direction || 'long',
-          entryPrice: averageEntry,
-          stopLoss: stopLossPrice,
-          takeProfits: chartTakeProfits.map(tp => tp.price),
-        }}
-      />
 
       {/* AI Level Explanation - KEY FEATURE */}
       <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 rounded-xl p-6 border border-indigo-500/20">

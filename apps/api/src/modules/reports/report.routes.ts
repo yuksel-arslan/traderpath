@@ -7,6 +7,7 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { prisma } from '../../core/database';
 import { authenticate } from '../../core/auth/middleware';
 import { calculateExpiredOutcomes, getRealAccuracy, calculateReportOutcome } from './outcome.service';
+import { notificationService } from '../notifications/notification.service';
 
 interface SaveReportBody {
   symbol: string;
@@ -110,6 +111,56 @@ export async function reportRoutes(fastify: FastifyInstance) {
           },
         });
 
+        // Auto-create price alerts for trade plan (if GO or CONDITIONAL_GO verdict)
+        const tradePlan = reportData?.tradePlan as Record<string, unknown> | undefined;
+        const verdictLower = verdict.toLowerCase();
+        const shouldCreateAlerts = verdictLower === 'go' || verdictLower === 'go!' || verdictLower === 'conditional_go' || verdictLower === 'conditional go';
+
+        let alertsCreated = 0;
+        if (shouldCreateAlerts && tradePlan) {
+          try {
+            const planDirection = (tradePlan.direction as string || direction || 'long').toLowerCase() as 'long' | 'short';
+            const entryPriceValue = Number(tradePlan.averageEntry || tradePlan.entryPrice || finalEntryPrice);
+            const stopLossObj = tradePlan.stopLoss as { price: number } | undefined;
+            const stopLossValue = stopLossObj?.price || 0;
+            const takeProfitsArray = tradePlan.takeProfits as Array<{ price: number }> | undefined;
+            const takeProfitValues = takeProfitsArray?.map(tp => tp.price).filter(p => p > 0) || [];
+
+            if (entryPriceValue > 0 && stopLossValue > 0 && takeProfitValues.length > 0) {
+              // Get user's notification settings to determine channels
+              const userSettings = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { notificationSettings: true },
+              });
+              const settings = (userSettings?.notificationSettings as Record<string, { enabled?: boolean }>) || {};
+
+              // Determine active channels
+              const channels: string[] = ['browser']; // Browser is always enabled
+              if (settings.telegram?.enabled) channels.push('telegram');
+              if (settings.discord?.enabled) channels.push('discord');
+              if (settings.tradingView?.enabled) channels.push('tradingview');
+
+              const result = await notificationService.createTradePlanAlerts(
+                userId,
+                symbol.toUpperCase(),
+                {
+                  direction: planDirection,
+                  entryPrice: entryPriceValue,
+                  stopLoss: stopLossValue,
+                  takeProfits: takeProfitValues,
+                },
+                channels,
+                report.id
+              );
+              alertsCreated = result.alerts.length;
+              fastify.log.info({ symbol, alertsCreated }, 'Auto-created price alerts for trade plan');
+            }
+          } catch (alertError) {
+            fastify.log.error(alertError, 'Failed to auto-create price alerts');
+            // Don't fail the report creation if alerts fail
+          }
+        }
+
         return reply.code(201).send({
           success: true,
           data: {
@@ -119,6 +170,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
             score: report.score,
             generatedAt: report.generatedAt,
             expiresAt: report.expiresAt,
+            alertsCreated, // Number of auto-created alerts
           },
         });
       } catch (error) {
