@@ -29,12 +29,9 @@ export function TradePathLogo({
   const LogoContent = (
     <div className={`flex items-center gap-2 ${className}`}>
       {/* Logo Icon - T and P side by side */}
-      {/* Light mode: white bg with colored text, Dark mode: dark bg with gradient text */}
+      {/* Transparent background with border for visibility */}
       <div
-        className={`${s.wrapper} rounded-lg flex items-center justify-center shadow-lg bg-gradient-to-br from-slate-800 to-slate-900 dark:from-slate-800/90 dark:to-slate-900/95`}
-        style={{
-          boxShadow: '0 4px 14px rgba(245, 158, 11, 0.25)',
-        }}
+        className={`${s.wrapper} rounded-lg flex items-center justify-center border-2 border-slate-300 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm`}
       >
         <span className={`${s.letter} font-black gradient-text-rg-animate`}>TP</span>
       </div>
