@@ -338,94 +338,189 @@ const AI_EXPERTS = [
   },
 ];
 
-// Analysis Steps Grid Component with Centered Modal Popup
+// Analysis Steps Grid Component (Simple version for How it Works section)
 function AnalysisStepsGrid() {
+  return (
+    <div className="bg-card border rounded-xl p-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+        {ANALYSIS_STEPS.map((item, idx) => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={idx}
+              className="flex flex-col items-center text-center p-2 rounded-lg hover:bg-accent/50 transition"
+            >
+              <div className={`w-9 h-9 ${item.bg} rounded-lg flex items-center justify-center mb-1`}>
+                <Icon className={`w-4 h-4 ${item.color}`} />
+              </div>
+              <span className="text-[11px] font-medium">{item.name}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Features Section Component with Click-to-Open Modals and AI Experts
+function FeaturesSection() {
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [activeExpert, setActiveExpert] = useState<number | null>(null);
 
   return (
-    <>
-      {/* 7 Analysis Steps Grid */}
-      <div className="bg-card border rounded-xl p-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-          {ANALYSIS_STEPS.map((item, idx) => {
-            const Icon = item.icon;
-            return (
-              <div
-                key={idx}
-                className="flex flex-col items-center text-center p-2 rounded-lg hover:bg-accent/50 transition cursor-pointer"
-                onMouseEnter={() => setActiveStep(idx)}
-                onMouseLeave={() => setActiveStep(null)}
-              >
-                <div className={`w-9 h-9 ${item.bg} rounded-lg flex items-center justify-center mb-1`}>
-                  <Icon className={`w-4 h-4 ${item.color}`} />
+    <section id="features" className="py-20">
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            7-Step Analysis Suite
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Complete trading analysis covering every aspect. Click any step to learn more.
+          </p>
+        </div>
+        <div className="max-w-5xl mx-auto">
+          {/* Steps 1-3 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            {ANALYSIS_STEPS.slice(0, 3).map((step, index) => {
+              const Icon = step.icon;
+              return (
+                <div
+                  key={index}
+                  onClick={() => setActiveStep(index)}
+                  className={`p-5 bg-card border rounded-lg hover:border-primary/50 hover:shadow-lg transition cursor-pointer group ${step.border}`}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-10 h-10 ${step.bg} rounded-lg flex items-center justify-center group-hover:scale-110 transition`}>
+                      <Icon className={`w-5 h-5 ${step.color}`} />
+                    </div>
+                    <span className={`text-xs font-medium ${step.color}`}>Step {index + 1}</span>
+                  </div>
+                  <h3 className="font-semibold mb-1">{step.name}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2">{step.subtitle}</p>
                 </div>
-                <span className="text-[11px] font-medium">{item.name}</span>
+              );
+            })}
+          </div>
+          {/* Steps 4-6 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            {ANALYSIS_STEPS.slice(3, 6).map((step, index) => {
+              const Icon = step.icon;
+              const stepNumber = index + 4;
+              return (
+                <div
+                  key={index}
+                  onClick={() => setActiveStep(index + 3)}
+                  className={`p-5 bg-card border rounded-lg hover:border-primary/50 hover:shadow-lg transition cursor-pointer group ${step.border}`}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-10 h-10 ${step.bg} rounded-lg flex items-center justify-center group-hover:scale-110 transition`}>
+                      <Icon className={`w-5 h-5 ${step.color}`} />
+                    </div>
+                    <span className={`text-xs font-medium ${step.color}`}>Step {stepNumber}</span>
+                  </div>
+                  <h3 className="font-semibold mb-1">{step.name}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2">{step.subtitle}</p>
+                </div>
+              );
+            })}
+          </div>
+          {/* Step 7 - Final Verdict (Full Width) */}
+          <div className="w-full mb-8">
+            {ANALYSIS_STEPS.slice(6).map((step, index) => {
+              const Icon = step.icon;
+              return (
+                <div
+                  key={index}
+                  onClick={() => setActiveStep(6)}
+                  className="p-6 bg-card border rounded-lg hover:border-primary/50 hover:shadow-lg transition cursor-pointer group ring-2 ring-green-500/20 border-green-500/30"
+                >
+                  <div className="flex items-center justify-center gap-3 mb-3">
+                    <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
+                      <Icon className="w-6 h-6 text-green-500" />
+                    </div>
+                    <div className="text-center">
+                      <span className="text-xs text-green-500 font-medium">Step 7</span>
+                      <h3 className="font-semibold text-lg">{step.name}</h3>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground text-center max-w-lg mx-auto">{step.subtitle}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* AI Experts Review Section */}
+          <div className="bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-cyan-500/10 border border-purple-500/20 rounded-xl p-6">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                <Brain className="w-5 h-5 text-purple-500" />
               </div>
-            );
-          })}
+              <div className="text-center">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  Reviewed by 4 AI Experts
+                  <Sparkles className="w-4 h-4 text-yellow-500" />
+                </h3>
+                <p className="text-sm text-muted-foreground">Each analysis is validated by specialized AI agents</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {AI_EXPERTS.map((expert, idx) => {
+                const ExpertIcon = expert.icon;
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => setActiveExpert(idx)}
+                    className={`flex flex-col items-center text-center p-4 rounded-lg ${expert.bg} border ${expert.border} hover:scale-105 hover:shadow-lg transition cursor-pointer`}
+                  >
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-2 ${expert.bg}`}>
+                      <ExpertIcon className={`w-6 h-6 ${expert.color}`} />
+                    </div>
+                    <span className="text-sm font-semibold">{expert.name}</span>
+                    <span className="text-xs text-muted-foreground">{expert.title.split(' ').slice(0, 2).join(' ')}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-center text-muted-foreground mt-4">
+              Click on any expert to learn about their role in validating your analysis
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* AI Experts Review Section */}
-      <div className="mt-4 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-cyan-500/10 border border-purple-500/20 rounded-xl p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
-            <Brain className="w-4 h-4 text-purple-500" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold flex items-center gap-2">
-              Reviewed by 4 AI Experts
-              <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
-            </h4>
-            <p className="text-xs text-muted-foreground">Each analysis is validated by specialized AI agents</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {AI_EXPERTS.map((expert, idx) => {
-            const ExpertIcon = expert.icon;
-            return (
-              <div
-                key={idx}
-                className={`flex flex-col items-center text-center p-3 rounded-lg ${expert.bg} border ${expert.border} hover:scale-105 transition cursor-pointer`}
-                onMouseEnter={() => setActiveExpert(idx)}
-                onMouseLeave={() => setActiveExpert(null)}
-              >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-1 ${expert.bg}`}>
-                  <ExpertIcon className={`w-5 h-5 ${expert.color}`} />
-                </div>
-                <span className="text-[11px] font-semibold">{expert.name}</span>
-                <span className="text-[9px] text-muted-foreground">{expert.title.split(' ')[0]}</span>
-              </div>
-            );
-          })}
-        </div>
-        <p className="text-xs text-center text-muted-foreground mt-3 italic">
-          Hover over each expert to learn what they analyze
-        </p>
-      </div>
-
-      {/* Analysis Step Popup */}
+      {/* Analysis Step Modal */}
       {activeStep !== null && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <div className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-xl w-full mx-4 pointer-events-auto animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setActiveStep(null)}
+        >
+          <div
+            className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-xl w-full max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             {(() => {
               const item = ANALYSIS_STEPS[activeStep];
               const Icon = item.icon;
               return (
                 <>
                   {/* Header */}
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-12 h-12 ${item.bg} ${item.border} border rounded-xl flex items-center justify-center flex-shrink-0`}>
-                      <Icon className={`w-6 h-6 ${item.color}`} />
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-14 h-14 ${item.bg} ${item.border} border-2 rounded-xl flex items-center justify-center flex-shrink-0`}>
+                      <Icon className={`w-7 h-7 ${item.color}`} />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h4 className="text-lg font-bold">{item.name}</h4>
+                        <h4 className="text-xl font-bold">{item.name}</h4>
                         <span className={`text-xs px-2 py-0.5 rounded-full ${item.bg} ${item.color} font-medium`}>Step {activeStep + 1}/7</span>
                       </div>
                       <p className="text-sm text-muted-foreground">{item.subtitle}</p>
                     </div>
+                    <button
+                      onClick={() => setActiveStep(null)}
+                      className="text-muted-foreground hover:text-foreground transition"
+                    >
+                      ✕
+                    </button>
                   </div>
 
                   {/* Description */}
@@ -433,29 +528,29 @@ function AnalysisStepsGrid() {
                     {item.description}
                   </p>
 
-                  {/* What We Do */}
+                  {/* What We Analyze */}
                   <div className="mb-4">
                     <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">What We Analyze</h5>
-                    <ul className="space-y-1.5">
+                    <ul className="space-y-2">
                       {item.whatWeDo.map((point, i) => (
                         <li key={i} className="flex items-start gap-2 text-sm">
-                          <CheckCircle className={`w-3.5 h-3.5 ${item.color} flex-shrink-0 mt-0.5`} />
-                          <span className="text-muted-foreground">{point}</span>
+                          <CheckCircle className={`w-4 h-4 ${item.color} flex-shrink-0 mt-0.5`} />
+                          <span>{point}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
 
                   {/* Why It Matters */}
-                  <div className={`${item.bg} rounded-lg p-3 mb-4`}>
-                    <h5 className={`text-xs font-semibold uppercase tracking-wide ${item.color} mb-1`}>Why It Matters</h5>
+                  <div className={`${item.bg} rounded-lg p-4 mb-4`}>
+                    <h5 className={`text-xs font-semibold uppercase tracking-wide ${item.color} mb-2`}>Why It Matters</h5>
                     <p className="text-sm">{item.whyItMatters}</p>
                   </div>
 
-                  {/* Example */}
-                  <div className="bg-accent/50 rounded-lg p-3 border border-border">
-                    <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Real Example</h5>
-                    <p className="text-sm text-muted-foreground italic">{item.example}</p>
+                  {/* Real Example */}
+                  <div className="bg-accent/50 rounded-lg p-4 border border-border">
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Real Example</h5>
+                    <p className="text-sm italic">{item.example}</p>
                   </div>
                 </>
               );
@@ -464,10 +559,16 @@ function AnalysisStepsGrid() {
         </div>
       )}
 
-      {/* AI Expert Popup */}
+      {/* AI Expert Modal */}
       {activeExpert !== null && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <div className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setActiveExpert(null)}
+        >
+          <div
+            className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-md w-full animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             {(() => {
               const expert = AI_EXPERTS[activeExpert];
               const ExpertIcon = expert.icon;
@@ -475,20 +576,26 @@ function AnalysisStepsGrid() {
                 <>
                   {/* Header */}
                   <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-14 h-14 ${expert.bg} ${expert.border} border-2 rounded-xl flex items-center justify-center flex-shrink-0`}>
-                      <ExpertIcon className={`w-7 h-7 ${expert.color}`} />
+                    <div className={`w-16 h-16 ${expert.bg} ${expert.border} border-2 rounded-xl flex items-center justify-center flex-shrink-0`}>
+                      <ExpertIcon className={`w-8 h-8 ${expert.color}`} />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h4 className="text-lg font-bold">{expert.name}</h4>
+                        <h4 className="text-xl font-bold">{expert.name}</h4>
                         <Sparkles className="w-4 h-4 text-yellow-500" />
                       </div>
                       <p className={`text-sm ${expert.color} font-medium`}>{expert.title}</p>
                     </div>
+                    <button
+                      onClick={() => setActiveExpert(null)}
+                      className="text-muted-foreground hover:text-foreground transition"
+                    >
+                      ✕
+                    </button>
                   </div>
 
                   {/* Credentials */}
-                  <p className="text-xs text-muted-foreground mb-3 pb-3 border-b border-border">
+                  <p className="text-xs text-muted-foreground mb-4 pb-3 border-b border-border">
                     {expert.credentials}
                   </p>
 
@@ -497,22 +604,22 @@ function AnalysisStepsGrid() {
                     {expert.description}
                   </p>
 
-                  {/* Focus Areas */}
-                  <div className={`${expert.bg} rounded-lg p-3`}>
+                  {/* Expertise Areas */}
+                  <div className={`${expert.bg} rounded-lg p-4 mb-4`}>
                     <h5 className={`text-xs font-semibold uppercase tracking-wide ${expert.color} mb-2`}>Expertise Areas</h5>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                       {expert.focus.map((item, i) => (
-                        <span key={i} className={`text-xs px-2 py-1 rounded-full border ${expert.border} ${expert.color}`}>
+                        <span key={i} className={`text-xs px-3 py-1.5 rounded-full border ${expert.border} ${expert.color} font-medium`}>
                           {item}
                         </span>
                       ))}
                     </div>
                   </div>
 
-                  {/* Expert Verdict Info */}
-                  <div className="mt-4 p-3 bg-accent/50 rounded-lg border border-border">
-                    <p className="text-xs text-muted-foreground">
-                      <span className="font-semibold text-foreground">How it works:</span> After the 7-step analysis completes, {expert.name} reviews the findings and either <span className="text-green-500 font-medium">confirms</span> or <span className="text-yellow-500 font-medium">challenges</span> the verdict. Their assessment is included in your final report.
+                  {/* How It Works */}
+                  <div className="bg-accent/50 rounded-lg p-4 border border-border">
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-semibold text-foreground">Role in Analysis:</span> After the 7-step analysis completes, {expert.name} reviews the findings and either <span className="text-green-500 font-medium">confirms</span> or <span className="text-yellow-500 font-medium">challenges</span> the verdict. Their expert assessment is included in your final report.
                     </p>
                   </div>
                 </>
@@ -521,7 +628,7 @@ function AnalysisStepsGrid() {
           </div>
         </div>
       )}
-    </>
+    </section>
   );
 }
 
@@ -692,86 +799,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              7-Step Analysis Suite
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Complete trading analysis covering every aspect, from market conditions to final verdict.
-            </p>
-          </div>
-          <div className="max-w-5xl mx-auto">
-            {/* Steps 1-3 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              {FEATURES.slice(0, 3).map((feature, index) => {
-                const Icon = feature.icon;
-                return (
-                  <div
-                    key={index}
-                    className="p-5 bg-card border rounded-lg hover:border-primary/50 transition group"
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
-                        <Icon className="w-5 h-5 text-primary" />
-                      </div>
-                      <span className="text-xs text-muted-foreground font-medium">Step {index + 1}</span>
-                    </div>
-                    <h3 className="font-semibold mb-1">{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground">{feature.description}</p>
-                  </div>
-                );
-              })}
-            </div>
-            {/* Steps 4-6 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              {FEATURES.slice(3, 6).map((feature, index) => {
-                const Icon = feature.icon;
-                return (
-                  <div
-                    key={index}
-                    className="p-5 bg-card border rounded-lg hover:border-primary/50 transition group"
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
-                        <Icon className="w-5 h-5 text-primary" />
-                      </div>
-                      <span className="text-xs text-muted-foreground font-medium">Step {index + 4}</span>
-                    </div>
-                    <h3 className="font-semibold mb-1">{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground">{feature.description}</p>
-                  </div>
-                );
-              })}
-            </div>
-            {/* Step 7 - Final Verdict (Full Width) */}
-            <div className="w-full">
-              {FEATURES.slice(6).map((feature, index) => {
-                const Icon = feature.icon;
-                return (
-                  <div
-                    key={index}
-                    className="p-6 bg-card border rounded-lg hover:border-primary/50 transition group ring-2 ring-green-500/20 border-green-500/30"
-                  >
-                    <div className="flex items-center justify-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
-                        <Icon className="w-6 h-6 text-green-500" />
-                      </div>
-                      <div className="text-center">
-                        <span className="text-xs text-muted-foreground font-medium">Step 7</span>
-                        <h3 className="font-semibold text-lg">{feature.title}</h3>
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground text-center max-w-lg mx-auto">{feature.description}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Features Section with 7-Step Analysis + AI Experts */}
+      <FeaturesSection />
 
       {/* Why TradePath Section */}
       <section className="py-20 bg-accent/50">
