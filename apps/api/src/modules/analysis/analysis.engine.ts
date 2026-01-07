@@ -3,6 +3,7 @@
 // Full Technical Specification Compliance
 // ===========================================
 
+import { randomUUID } from 'crypto';
 import { config } from '../../core/config';
 import { contractSecurityService } from '../security/contract-security.service';
 
@@ -2359,7 +2360,7 @@ export const analysisEngine = {
       componentScores,
       confidenceFactors,
       recommendation,
-      analysisId: `analysis_${Date.now()}_${symbol}`,
+      analysisId: randomUUID(),
       createdAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
     };

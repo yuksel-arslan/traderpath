@@ -215,8 +215,8 @@ export function DownloadReportButton({
       const { generateAnalysisReport } = await import('./AnalysisReport');
 
       // Transform analysis data to report format
-      // Use existing analysisId if provided (from saved report), otherwise generate new one
-      const reportAnalysisId = analysisId || `analysis_${Date.now()}_${symbol}`;
+      // Use existing analysisId if provided (from saved report), otherwise generate UUID
+      const reportAnalysisId = analysisId || crypto.randomUUID();
 
       const reportData: AnalysisReportData = {
         symbol,

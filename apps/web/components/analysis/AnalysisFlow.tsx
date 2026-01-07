@@ -268,7 +268,8 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
 
       // Use the analysisId from the verdict API response (consistent with FinalVerdict component)
       // This ensures the AI Expert page can find the report using the same ID
-      const reportAnalysisId = verdict?.analysisId || `analysis_${Date.now()}_${symbol}`;
+      // Fallback generates a proper UUID (required by database schema)
+      const reportAnalysisId = verdict?.analysisId || crypto.randomUUID();
 
       const reportData = {
         symbol,
