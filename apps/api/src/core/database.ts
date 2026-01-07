@@ -1,17 +1,29 @@
 // ===========================================
 // Database Client
-// Using JSON file storage (temporary solution)
+// Using Prisma with Neon PostgreSQL
 // ===========================================
 
-// Re-export from json-database
-export { prisma, jsonDb } from './json-database';
+import { PrismaClient } from '@prisma/client';
+
+// Create Prisma client
+export const prisma = new PrismaClient({
+  log: process.env.NODE_ENV === 'development'
+    ? ['error', 'warn']
+    : ['error'],
+});
 
 // Connection test
 export async function testConnection(): Promise<boolean> {
-  return true; // JSON always works
+  try {
+    await prisma.$connect();
+    return true;
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    return false;
+  }
 }
 
-// Close (no-op for JSON)
+// Close database connection
 export async function closeDatabase(): Promise<void> {
-  // Nothing to close for JSON file storage
+  await prisma.$disconnect();
 }
