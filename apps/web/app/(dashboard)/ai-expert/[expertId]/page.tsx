@@ -28,6 +28,8 @@ import {
   Check,
   ExternalLink,
   ChevronRight,
+  FileText,
+  Plus,
 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { cn } from '../../../../lib/utils';
@@ -230,19 +232,133 @@ interface ChatResponse {
   };
 }
 
-// Answer Footer Component - Single unified footer with link
-function AnswerFooter() {
+// Answer Footer Component - With Add to Report button
+function AnswerFooter({ content, onAddToReport }: { content: string; onAddToReport: (content: string) => void }) {
+  const [showReportSelector, setShowReportSelector] = useState(false);
+  const [reports, setReports] = useState<Array<{ id: string; symbol: string; createdAt: string }>>([]);
+  const [loading, setLoading] = useState(false);
+  const [added, setAdded] = useState(false);
+
+  const fetchReports = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const res = await fetch('/api/reports?limit=10', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReports(data.data?.reports || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch reports:', error);
+    }
+  };
+
+  const handleAddToReport = async (reportId: string) => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const res = await fetch(`/api/reports/${reportId}/ai-expert-comment`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ comment: content }),
+      });
+
+      if (res.ok) {
+        setAdded(true);
+        setShowReportSelector(false);
+        onAddToReport(content);
+      }
+    } catch (error) {
+      console.error('Failed to add to report:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="mt-4">
+    <div className="mt-4 flex flex-col sm:flex-row gap-2">
+      {/* Add to Report Button */}
+      <div className="relative">
+        <button
+          onClick={() => {
+            if (!showReportSelector) {
+              fetchReports();
+            }
+            setShowReportSelector(!showReportSelector);
+          }}
+          disabled={added}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition",
+            added
+              ? "bg-green-500/10 text-green-600 border border-green-500/20"
+              : "bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20"
+          )}
+        >
+          {added ? (
+            <>
+              <Check className="w-4 h-4" />
+              Added to Report
+            </>
+          ) : (
+            <>
+              <Plus className="w-4 h-4" />
+              Add to Report
+            </>
+          )}
+        </button>
+
+        {/* Report Selector Dropdown */}
+        {showReportSelector && !added && (
+          <div className="absolute top-full left-0 mt-2 w-72 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
+            <div className="p-3 border-b border-border bg-muted/30">
+              <p className="text-xs font-medium text-muted-foreground">Select a report:</p>
+            </div>
+            <div className="max-h-64 overflow-y-auto">
+              {reports.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  No reports found
+                </div>
+              ) : (
+                reports.map((report) => (
+                  <button
+                    key={report.id}
+                    onClick={() => handleAddToReport(report.id)}
+                    disabled={loading}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition text-left"
+                  >
+                    <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{report.symbol}/USDT</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(report.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Full Analysis Link */}
       <Link
         href="/analyze"
-        className="flex items-center justify-between p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl hover:border-green-500/40 transition group"
+        className="flex items-center justify-between flex-1 px-4 py-2.5 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl hover:border-green-500/40 transition group"
       >
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-green-500" />
           <span className="text-sm">
-            See in TradePath running{' '}
-            <span className="font-semibold text-green-600 dark:text-green-400">Full Analysis</span>
+            Run <span className="font-semibold text-green-600 dark:text-green-400">Full Analysis</span>
           </span>
         </div>
         <ChevronRight className="w-4 h-4 text-green-500 group-hover:translate-x-1 transition-transform" />
@@ -645,7 +761,10 @@ export default function AIExpertChatPage() {
 
                     {/* Answer Footer - show for all assistant messages */}
                     {message.role === 'assistant' && (
-                      <AnswerFooter />
+                      <AnswerFooter
+                        content={message.content}
+                        onAddToReport={() => setCommentSaved(true)}
+                      />
                     )}
                   </div>
 
