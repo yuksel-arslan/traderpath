@@ -30,6 +30,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TradePathLogo } from '../../components/common/TradePathLogo';
 import { CREDIT_PACKAGES } from '../../lib/pricing-config';
+import { LiveAnalysisPreview } from '../../components/marketing/LiveAnalysisPreview';
 
 // Coins to display in the ticker
 const TICKER_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX'];
@@ -607,111 +608,8 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Sample Analysis Card */}
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-card border rounded-2xl overflow-hidden shadow-2xl">
-              {/* Header */}
-              <div className="bg-gradient-to-r from-red-500/10 via-amber-500/10 to-green-500/10 p-4 border-b flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center text-white font-bold">
-                    ₿
-                  </div>
-                  <div>
-                    <h3 className="font-bold">BTC/USDT Analysis</h3>
-                    <p className="text-sm text-muted-foreground">Live sample • Updated hourly</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 bg-green-500/20 text-green-500 rounded-full text-sm font-medium flex items-center gap-1">
-                    <TrendingUp className="w-4 h-4" />
-                    BULLISH
-                  </span>
-                  <span className="text-2xl font-bold">87/100</span>
-                </div>
-              </div>
-
-              {/* Analysis Steps Preview */}
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  {/* Market Pulse */}
-                  <div className="p-4 bg-accent/50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Globe className="w-5 h-5 text-amber-500" />
-                      <span className="font-semibold">Market Pulse</span>
-                      <span className="ml-auto text-green-500 text-sm">Bullish</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">Fear & Greed: 72 (Greed) • BTC Dominance: 54.2%</p>
-                  </div>
-
-                  {/* Safety Check */}
-                  <div className="p-4 bg-accent/50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Shield className="w-5 h-5 text-amber-500" />
-                      <span className="font-semibold">Safety Check</span>
-                      <span className="ml-auto text-green-500 text-sm">Safe</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">No manipulation detected • Whale activity: Normal</p>
-                  </div>
-
-                  {/* Timing */}
-                  <div className="p-4 bg-accent/50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="w-5 h-5 text-cyan-500" />
-                      <span className="font-semibold">Timing Analysis</span>
-                      <span className="ml-auto text-cyan-500 text-sm">Good</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">RSI: 58 • MACD: Bullish crossover forming</p>
-                  </div>
-
-                  {/* Trade Plan */}
-                  <div className="p-4 bg-accent/50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Target className="w-5 h-5 text-amber-500" />
-                      <span className="font-semibold">Trade Plan</span>
-                      <span className="ml-auto text-green-500 text-sm">Ready</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">Entry: $67,250 • TP: $72,800 • SL: $64,500</p>
-                  </div>
-                </div>
-
-                {/* Verdict */}
-                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white flex-shrink-0">
-                      <CheckCircle className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-green-500 mb-1">Final Verdict: LONG Recommended</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Market conditions favor bullish continuation. Entry zone $67,000-$67,500 with 3:1 risk-reward ratio.
-                        Set stop-loss at $64,500 to protect against downside.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Blur overlay for full report */}
-                <div className="mt-6 relative">
-                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent z-10 flex items-end justify-center pb-4">
-                    <Link
-                      href="/register"
-                      className="px-6 py-3 bg-slate-200 dark:bg-slate-700 rounded-lg font-semibold flex items-center gap-2 shadow-lg border border-slate-300 dark:border-slate-600"
-                    >
-                      <Eye className="w-5 h-5 gradient-text-rg-animate" />
-                      <span className="gradient-text-rg-animate">Get Full Analysis Free</span>
-                    </Link>
-                  </div>
-                  <div className="blur-sm pointer-events-none opacity-50">
-                    <div className="grid grid-cols-3 gap-4 p-4 bg-accent/30 rounded-lg">
-                      <div className="h-20 bg-accent rounded"></div>
-                      <div className="h-20 bg-accent rounded"></div>
-                      <div className="h-20 bg-accent rounded"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Live Analysis Card - Real BTC Data */}
+          <LiveAnalysisPreview />
         </div>
       </section>
 
