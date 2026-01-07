@@ -30,7 +30,13 @@ import {
   LineChart,
   Crosshair,
   Radar,
-  ShieldAlert
+  ShieldAlert,
+  Download,
+  Mail,
+  History,
+  Share2,
+  PieChart,
+  Calendar
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
@@ -338,6 +344,64 @@ const AI_EXPERTS = [
   },
 ];
 
+// Advanced Reporting Features Data
+const REPORTING_FEATURES = [
+  {
+    name: 'PDF Reports',
+    icon: Download,
+    color: 'text-red-500',
+    bg: 'bg-red-500/10',
+    border: 'border-red-500/30',
+    description: 'Download professional PDF reports for each analysis. Perfect for record-keeping and sharing with your trading partners.',
+    highlights: ['Branded professional layout', 'Complete analysis data', 'Charts & visualizations', 'Offline access']
+  },
+  {
+    name: 'Email Delivery',
+    icon: Mail,
+    color: 'text-blue-500',
+    bg: 'bg-blue-500/10',
+    border: 'border-blue-500/30',
+    description: 'Get your analysis reports delivered directly to your inbox. Set up automatic delivery for scheduled analyses.',
+    highlights: ['Instant delivery', 'Mobile-friendly format', 'Custom recipients', 'Digest options']
+  },
+  {
+    name: 'Report History',
+    icon: History,
+    color: 'text-green-500',
+    bg: 'bg-green-500/10',
+    border: 'border-green-500/30',
+    description: 'Access all your past analyses anytime. Track your trading decisions and learn from historical data.',
+    highlights: ['Unlimited history', 'Search & filter', 'Compare analyses', 'Export bulk data']
+  },
+  {
+    name: 'Share & Collaborate',
+    icon: Share2,
+    color: 'text-purple-500',
+    bg: 'bg-purple-500/10',
+    border: 'border-purple-500/30',
+    description: 'Share your analyses with team members or trading communities. Generate shareable links with customizable permissions.',
+    highlights: ['Shareable links', 'Team workspaces', 'Permission controls', 'Community sharing']
+  },
+  {
+    name: 'Performance Analytics',
+    icon: PieChart,
+    color: 'text-cyan-500',
+    bg: 'bg-cyan-500/10',
+    border: 'border-cyan-500/30',
+    description: 'Track your trading performance over time. See win rates, ROI, and identify patterns in your successful trades.',
+    highlights: ['Win/loss tracking', 'ROI calculations', 'Pattern insights', 'Monthly summaries']
+  },
+  {
+    name: 'Scheduled Reports',
+    icon: Calendar,
+    color: 'text-orange-500',
+    bg: 'bg-orange-500/10',
+    border: 'border-orange-500/30',
+    description: 'Set up automated analyses for your favorite coins. Wake up to fresh reports every morning.',
+    highlights: ['Daily/weekly schedules', 'Multi-coin support', 'Custom timing', 'Smart alerts']
+  },
+];
+
 // Analysis Steps Grid Component (Simple version for How it Works section)
 function AnalysisStepsGrid() {
   return (
@@ -366,6 +430,7 @@ function AnalysisStepsGrid() {
 function FeaturesSection() {
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [activeExpert, setActiveExpert] = useState<number | null>(null);
+  const [activeReport, setActiveReport] = useState<number | null>(null);
 
   return (
     <>
@@ -501,6 +566,52 @@ function FeaturesSection() {
                 <span className="font-semibold text-foreground">How it works:</span> After the 7-step analysis, each expert reviews the findings independently.
                 Their assessments are aggregated to provide you with a <span className="text-green-500 font-medium">consensus verdict</span> or
                 highlight <span className="text-yellow-500 font-medium">areas of disagreement</span> in your final report.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature 3: Advanced Reporting */}
+      <section className="py-20 bg-gradient-to-b from-cyan-500/5 via-blue-500/5 to-transparent">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <span className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-cyan-500 text-sm font-medium mb-4">
+              <FileText className="w-4 h-4" />
+              Feature 3
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
+              Advanced Reporting
+              <Download className="w-8 h-8 text-cyan-500" />
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Professional-grade reporting tools to track, share, and learn from your trading analyses. Click any feature to learn more.
+            </p>
+          </div>
+          <div className="max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {REPORTING_FEATURES.map((feature, idx) => {
+                const FeatureIcon = feature.icon;
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => setActiveReport(idx)}
+                    className={`p-6 bg-card border-2 rounded-xl hover:shadow-xl transition cursor-pointer group ${feature.border}`}
+                  >
+                    <div className={`w-14 h-14 ${feature.bg} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition`}>
+                      <FeatureIcon className={`w-7 h-7 ${feature.color}`} />
+                    </div>
+                    <h3 className="font-bold text-lg mb-2">{feature.name}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{feature.description.split('.')[0]}.</p>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-8 p-4 bg-card border rounded-xl text-center">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">All reports included:</span> Every analysis automatically generates a comprehensive report.
+                Download as <span className="text-cyan-500 font-medium">PDF</span>, receive via <span className="text-blue-500 font-medium">email</span>,
+                or access from your <span className="text-green-500 font-medium">dashboard</span> anytime.
               </p>
             </div>
           </div>
@@ -647,7 +758,70 @@ function FeaturesSection() {
           </div>
         </div>
       )}
-    </section>
+
+      {/* Report Feature Modal */}
+      {activeReport !== null && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setActiveReport(null)}
+        >
+          <div
+            className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-md w-full animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {(() => {
+              const feature = REPORTING_FEATURES[activeReport];
+              const FeatureIcon = feature.icon;
+              return (
+                <>
+                  {/* Header */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-16 h-16 ${feature.bg} ${feature.border} border-2 rounded-xl flex items-center justify-center flex-shrink-0`}>
+                      <FeatureIcon className={`w-8 h-8 ${feature.color}`} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-xl font-bold">{feature.name}</h4>
+                      <p className={`text-sm ${feature.color} font-medium`}>Advanced Reporting</p>
+                    </div>
+                    <button
+                      onClick={() => setActiveReport(null)}
+                      className="text-muted-foreground hover:text-foreground transition"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-sm leading-relaxed mb-4">
+                    {feature.description}
+                  </p>
+
+                  {/* Highlights */}
+                  <div className={`${feature.bg} rounded-lg p-4 mb-4`}>
+                    <h5 className={`text-xs font-semibold uppercase tracking-wide ${feature.color} mb-3`}>Key Features</h5>
+                    <div className="grid grid-cols-2 gap-2">
+                      {feature.highlights.map((item, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm">
+                          <CheckCircle className={`w-4 h-4 ${feature.color} flex-shrink-0`} />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Availability */}
+                  <div className="bg-accent/50 rounded-lg p-4 border border-border">
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-semibold text-foreground">Availability:</span> This feature is included with all TradePath accounts. No additional cost or subscription required.
+                    </p>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
