@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   },
   chartImage: {
     width: '100%',
-    height: 160,
+    height: 220,
   },
   chartTitle: {
     fontSize: 11,
@@ -597,13 +597,6 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           <Text style={styles.pageHeaderSymbol}>{data.symbol}/USDT Analysis Report</Text>
         </View>
 
-        {/* Chart */}
-        {data.chartImage ? (
-          <View style={styles.chartSection}>
-            <Image src={data.chartImage} style={styles.chartImage} />
-          </View>
-        ) : null}
-
         {/* Two Column Layout for Steps 1-6 */}
         <View style={styles.twoColumnRow}>
           {/* Left Column: Steps 1, 2, 3 */}
@@ -752,8 +745,49 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
           )}
         </View>
 
-        <PageFooter pageNum={1} totalPages={data.aiExpertComment ? 2 : 1} />
+        <PageFooter pageNum={1} totalPages={data.chartImage ? 2 : (data.aiExpertComment ? 2 : 1)} />
       </Page>
+
+      {/* TRADE PLAN CHART PAGE - Separate page for better visibility */}
+      {data.chartImage && (
+        <Page size="A4" style={styles.page}>
+          <View style={styles.pageHeader}>
+            <View style={styles.pageHeaderLogoContainer}>
+              <Text style={styles.pageHeaderLogoT}>Trade</Text>
+              <Text style={styles.pageHeaderLogoP}>Path</Text>
+            </View>
+            <Text style={styles.pageHeaderSymbol}>{data.symbol}/USDT - Trade Plan Chart</Text>
+          </View>
+
+          {/* Chart - Full Page */}
+          <View style={[styles.chartSection, { marginBottom: 20 }]}>
+            <Text style={styles.chartTitle}>Trade Plan Visualization</Text>
+            <Image src={data.chartImage} style={[styles.chartImage, { height: 450 }]} />
+          </View>
+
+          {/* Quick Reference */}
+          <View style={styles.levelsGrid}>
+            <View style={[styles.levelBox, { flex: 2 }]}>
+              <Text style={[styles.levelTitle, { color: BRAND.primary, fontSize: 12 }]}>Entry Zone</Text>
+              <Text style={[styles.levelPrice, { fontSize: 14, fontWeight: 'bold' }]}>{formatPrice(data.tradePlan.averageEntry)}</Text>
+            </View>
+            <View style={[styles.levelBox, { flex: 2 }]}>
+              <Text style={[styles.levelTitle, { color: BRAND.danger, fontSize: 12 }]}>Stop Loss</Text>
+              <Text style={[styles.levelPrice, { fontSize: 14, fontWeight: 'bold', color: BRAND.danger }]}>{formatPrice(data.tradePlan.stopLoss?.price)} ({data.tradePlan.stopLoss?.percentage?.toFixed(1) || '0'}%)</Text>
+            </View>
+            <View style={[styles.levelBox, { flex: 3 }]}>
+              <Text style={[styles.levelTitle, { color: BRAND.success, fontSize: 12 }]}>Take Profits</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={[styles.levelPrice, { fontSize: 11, color: BRAND.success }]}>TP1: {formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</Text>
+                <Text style={[styles.levelPrice, { fontSize: 11, color: BRAND.success }]}>TP2: {formatPrice(data.tradePlan.takeProfits?.[1]?.price)}</Text>
+                <Text style={[styles.levelPrice, { fontSize: 11, color: BRAND.success }]}>TP3: {formatPrice(data.tradePlan.takeProfits?.[2]?.price)}</Text>
+              </View>
+            </View>
+          </View>
+
+          <PageFooter pageNum={2} totalPages={data.aiExpertComment ? 3 : 2} />
+        </Page>
+      )}
 
       {/* AI EXPERT REVIEW PAGE - Only if comment exists */}
       {data.aiExpertComment && (
@@ -779,7 +813,7 @@ const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
             </Text>
           </View>
 
-          <PageFooter pageNum={2} totalPages={2} />
+          <PageFooter pageNum={data.chartImage ? 3 : 2} totalPages={data.chartImage ? 3 : 2} />
         </Page>
       )}
     </Document>
