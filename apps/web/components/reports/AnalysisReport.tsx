@@ -1,343 +1,15 @@
 'use client';
 
 // ===========================================
-// TradePath Analysis Report - Template Based
-// Clean, fixed layout - just fill in the data
+// TradePath Analysis Report - HTML to PDF
+// Clean template-based approach using html2canvas + jsPDF
 // ===========================================
 
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  Image,
-  StyleSheet,
-  pdf,
-} from '@react-pdf/renderer';
-import { saveAs } from 'file-saver';
-
-// Brand colors
-const C = {
-  primary: '#0f172a',
-  secondary: '#64748b',
-  success: '#16a34a',
-  danger: '#dc2626',
-  warning: '#d97706',
-  info: '#2563eb',
-  border: '#e2e8f0',
-  bg: '#f8fafc',
-  white: '#ffffff',
-};
-
-const styles = StyleSheet.create({
-  page: {
-    backgroundColor: C.white,
-    padding: 30,
-    fontFamily: 'Helvetica',
-    fontSize: 9,
-    color: C.primary,
-  },
-
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 15,
-    borderBottomWidth: 2,
-    borderBottomColor: C.primary,
-  },
-  logo: {
-    flexDirection: 'row',
-  },
-  logoRed: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#dc2626',
-  },
-  logoGreen: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#16a34a',
-  },
-  headerRight: {
-    alignItems: 'flex-end',
-  },
-  symbol: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  date: {
-    fontSize: 8,
-    color: C.secondary,
-    marginTop: 2,
-  },
-
-  // Verdict Box
-  verdictBox: {
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  verdictText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: C.white,
-  },
-  verdictScore: {
-    fontSize: 14,
-    color: C.white,
-    opacity: 0.9,
-    marginTop: 4,
-  },
-  directionBadge: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  directionText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: C.white,
-  },
-
-  // Trade Plan Grid
-  tradePlanSection: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: C.primary,
-  },
-  tradePlanGrid: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  tradePlanItem: {
-    flex: 1,
-    backgroundColor: C.bg,
-    borderRadius: 6,
-    padding: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  tradePlanLabel: {
-    fontSize: 8,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-  },
-  tradePlanPrice: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  tradePlanPercent: {
-    fontSize: 8,
-    marginTop: 2,
-  },
-
-  // Steps Grid
-  stepsSection: {
-    marginBottom: 20,
-  },
-  stepsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  stepItem: {
-    width: '32%',
-    backgroundColor: C.bg,
-    borderRadius: 6,
-    padding: 10,
-    borderLeftWidth: 4,
-  },
-  stepHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  stepName: {
-    fontSize: 9,
-    fontWeight: 'bold',
-  },
-  stepBadge: {
-    fontSize: 7,
-    fontWeight: 'bold',
-    color: C.white,
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    borderRadius: 3,
-  },
-  stepMetrics: {
-    marginTop: 4,
-  },
-  stepMetric: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 2,
-  },
-  stepMetricLabel: {
-    fontSize: 7,
-    color: C.secondary,
-  },
-  stepMetricValue: {
-    fontSize: 8,
-    fontWeight: 'bold',
-  },
-
-  // AI Expert Box
-  aiExpertBox: {
-    backgroundColor: '#ecfdf5',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#6ee7b7',
-  },
-  aiExpertTitle: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#047857',
-    marginBottom: 6,
-  },
-  aiExpertText: {
-    fontSize: 8,
-    color: '#065f46',
-    lineHeight: 1.5,
-  },
-
-  // Risk Warning
-  riskWarning: {
-    backgroundColor: '#fef3c7',
-    borderRadius: 6,
-    padding: 10,
-    marginBottom: 15,
-  },
-  riskText: {
-    fontSize: 7,
-    color: '#92400e',
-    textAlign: 'center',
-    lineHeight: 1.4,
-  },
-
-  // Footer
-  footer: {
-    position: 'absolute',
-    bottom: 20,
-    left: 30,
-    right: 30,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-  },
-  footerText: {
-    fontSize: 7,
-    color: C.secondary,
-  },
-
-  // Page 2 - Chart
-  chartSection: {
-    marginBottom: 20,
-  },
-  chartContainer: {
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: C.border,
-    overflow: 'hidden',
-  },
-  chartHeader: {
-    backgroundColor: C.bg,
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  chartTitle: {
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  chartImage: {
-    width: '100%',
-    height: 280,
-  },
-
-  // Quick Reference Box
-  quickRefBox: {
-    backgroundColor: C.bg,
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  quickRefGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  quickRefItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  quickRefLabel: {
-    fontSize: 8,
-    color: C.secondary,
-    marginBottom: 4,
-  },
-  quickRefValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-
-  // Analysis Summary
-  summaryBox: {
-    backgroundColor: C.white,
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  summaryTitle: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: C.primary,
-  },
-  summaryText: {
-    fontSize: 8,
-    color: C.secondary,
-    lineHeight: 1.5,
-  },
-});
-
-// Helpers
-function formatPrice(price: number): string {
-  if (!price || isNaN(price)) return '-';
-  if (price >= 10000) return `$${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
-  if (price >= 100) return `$${price.toFixed(2)}`;
-  if (price >= 1) return `$${price.toFixed(4)}`;
-  return `$${price.toFixed(8)}`;
-}
-
-function getVerdictBg(action: string): string {
-  const a = (action || '').toLowerCase();
-  if (a.includes('go') && !a.includes('wait') && !a.includes('conditional')) return C.success;
-  if (a.includes('wait') || a.includes('conditional')) return C.warning;
-  return C.danger;
-}
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 // Data type
-interface AnalysisReportData {
+export interface AnalysisReportData {
   symbol: string;
   generatedAt: string;
   analysisId: string;
@@ -381,278 +53,604 @@ interface AnalysisReportData {
   aiExpertComment?: string;
 }
 
-// PDF Document Component
-const AnalysisReportDocument = ({ data }: { data: AnalysisReportData }) => {
+// Helpers
+function formatPrice(price: number): string {
+  if (!price || isNaN(price)) return '-';
+  if (price >= 10000) return `$${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  if (price >= 100) return `$${price.toFixed(2)}`;
+  if (price >= 1) return `$${price.toFixed(4)}`;
+  return `$${price.toFixed(8)}`;
+}
+
+function getVerdictColor(action: string): { bg: string; text: string } {
+  const a = (action || '').toLowerCase();
+  if (a.includes('go') && !a.includes('wait') && !a.includes('conditional')) {
+    return { bg: '#16a34a', text: '#ffffff' };
+  }
+  if (a.includes('wait') || a.includes('conditional')) {
+    return { bg: '#d97706', text: '#ffffff' };
+  }
+  return { bg: '#dc2626', text: '#ffffff' };
+}
+
+function getStepBadgeColor(condition: boolean | string, positive: string = 'bullish'): string {
+  if (typeof condition === 'boolean') {
+    return condition ? '#16a34a' : '#d97706';
+  }
+  return condition?.toLowerCase().includes(positive) ? '#16a34a' : '#d97706';
+}
+
+// Generate HTML template for PDF
+function generateReportHTML(data: AnalysisReportData): string {
+  const verdictColors = getVerdictColor(data.verdict.action);
   const isLong = data.tradePlan.direction === 'long';
   const score = Math.round((data.verdict.overallScore || 0) * 10);
-  const verdictBg = getVerdictBg(data.verdict.action);
 
-  return (
-    <Document>
-      {/* PAGE 1: Summary */}
-      <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.logo}>
-            <Text style={styles.logoRed}>Trade</Text>
-            <Text style={styles.logoGreen}>Path</Text>
-          </View>
-          <View style={styles.headerRight}>
-            <Text style={styles.symbol}>{data.symbol}/USDT</Text>
-            <Text style={styles.date}>{data.generatedAt}</Text>
-          </View>
-        </View>
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-size: 12px;
+          color: #0f172a;
+          background: #ffffff;
+          line-height: 1.4;
+        }
+        .page {
+          width: 794px;
+          min-height: 1123px;
+          padding: 40px;
+          background: #ffffff;
+          page-break-after: always;
+        }
+        .page:last-child {
+          page-break-after: auto;
+        }
 
-        {/* Verdict Box */}
-        <View style={[styles.verdictBox, { backgroundColor: verdictBg }]}>
-          <View>
-            <Text style={styles.verdictText}>{data.verdict.action || 'ANALYZE'}</Text>
-            <Text style={styles.verdictScore}>Score: {score}/100</Text>
-          </View>
-          <View style={styles.directionBadge}>
-            <Text style={styles.directionText}>{isLong ? 'LONG' : 'SHORT'}</Text>
-          </View>
-        </View>
+        /* Header */
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-bottom: 20px;
+          border-bottom: 3px solid #0f172a;
+          margin-bottom: 25px;
+        }
+        .logo {
+          font-size: 28px;
+          font-weight: bold;
+        }
+        .logo-red { color: #dc2626; }
+        .logo-green { color: #16a34a; }
+        .header-right {
+          text-align: right;
+        }
+        .symbol {
+          font-size: 22px;
+          font-weight: bold;
+          color: #0f172a;
+        }
+        .date {
+          font-size: 11px;
+          color: #64748b;
+          margin-top: 4px;
+        }
 
-        {/* Trade Plan */}
-        <View style={styles.tradePlanSection}>
-          <Text style={styles.sectionTitle}>Trade Plan</Text>
-          <View style={styles.tradePlanGrid}>
-            <View style={styles.tradePlanItem}>
-              <Text style={[styles.tradePlanLabel, { color: C.info }]}>ENTRY</Text>
-              <Text style={styles.tradePlanPrice}>{formatPrice(data.tradePlan.averageEntry)}</Text>
-            </View>
-            <View style={styles.tradePlanItem}>
-              <Text style={[styles.tradePlanLabel, { color: C.danger }]}>STOP LOSS</Text>
-              <Text style={[styles.tradePlanPrice, { color: C.danger }]}>{formatPrice(data.tradePlan.stopLoss?.price)}</Text>
-              <Text style={[styles.tradePlanPercent, { color: C.danger }]}>-{(data.tradePlan.stopLoss?.percentage || 0).toFixed(1)}%</Text>
-            </View>
-            <View style={styles.tradePlanItem}>
-              <Text style={[styles.tradePlanLabel, { color: C.success }]}>TP1</Text>
-              <Text style={[styles.tradePlanPrice, { color: C.success }]}>{formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</Text>
-            </View>
-            <View style={styles.tradePlanItem}>
-              <Text style={[styles.tradePlanLabel, { color: C.success }]}>TP2</Text>
-              <Text style={[styles.tradePlanPrice, { color: C.success }]}>{formatPrice(data.tradePlan.takeProfits?.[1]?.price)}</Text>
-            </View>
-            <View style={styles.tradePlanItem}>
-              <Text style={[styles.tradePlanLabel, { color: C.success }]}>TP3</Text>
-              <Text style={[styles.tradePlanPrice, { color: C.success }]}>{formatPrice(data.tradePlan.takeProfits?.[2]?.price)}</Text>
-            </View>
-          </View>
-        </View>
+        /* Verdict Box */
+        .verdict-box {
+          background: ${verdictColors.bg};
+          color: ${verdictColors.text};
+          border-radius: 12px;
+          padding: 20px 25px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 25px;
+        }
+        .verdict-text {
+          font-size: 32px;
+          font-weight: bold;
+        }
+        .verdict-score {
+          font-size: 16px;
+          opacity: 0.9;
+          margin-top: 4px;
+        }
+        .direction-badge {
+          background: rgba(255,255,255,0.2);
+          padding: 8px 20px;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: bold;
+        }
 
-        {/* 6 Steps Grid */}
-        <View style={styles.stepsSection}>
-          <Text style={styles.sectionTitle}>Analysis Steps</Text>
-          <View style={styles.stepsGrid}>
-            {/* Step 1: Market */}
-            <View style={[styles.stepItem, { borderLeftColor: '#2563eb' }]}>
-              <View style={styles.stepHeader}>
-                <Text style={styles.stepName}>1. Market</Text>
-                <Text style={[styles.stepBadge, { backgroundColor: data.marketPulse.trend?.direction === 'bullish' ? C.success : C.warning }]}>
-                  {(data.marketPulse.trend?.direction || 'N/A').slice(0, 4).toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.stepMetrics}>
-                <View style={styles.stepMetric}>
-                  <Text style={styles.stepMetricLabel}>Fear/Greed</Text>
-                  <Text style={styles.stepMetricValue}>{data.marketPulse.fearGreedIndex}</Text>
-                </View>
-                <View style={styles.stepMetric}>
-                  <Text style={styles.stepMetricLabel}>BTC Dom.</Text>
-                  <Text style={styles.stepMetricValue}>{data.marketPulse.btcDominance?.toFixed(1)}%</Text>
-                </View>
-              </View>
-            </View>
+        /* Section Title */
+        .section-title {
+          font-size: 14px;
+          font-weight: bold;
+          color: #0f172a;
+          margin-bottom: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
 
-            {/* Step 2: Asset */}
-            <View style={[styles.stepItem, { borderLeftColor: '#06b6d4' }]}>
-              <View style={styles.stepHeader}>
-                <Text style={styles.stepName}>2. Asset</Text>
-                <Text style={[styles.stepBadge, { backgroundColor: (data.assetScan.priceChange24h || 0) >= 0 ? C.success : C.danger }]}>
-                  {(data.assetScan.priceChange24h || 0) >= 0 ? 'UP' : 'DOWN'}
-                </Text>
-              </View>
-              <View style={styles.stepMetrics}>
-                <View style={styles.stepMetric}>
-                  <Text style={styles.stepMetricLabel}>Price</Text>
-                  <Text style={styles.stepMetricValue}>{formatPrice(data.assetScan.currentPrice)}</Text>
-                </View>
-                <View style={styles.stepMetric}>
-                  <Text style={styles.stepMetricLabel}>RSI</Text>
-                  <Text style={styles.stepMetricValue}>{data.assetScan.indicators?.rsi?.toFixed(0) || '-'}</Text>
-                </View>
-              </View>
-            </View>
+        /* Trade Plan Grid */
+        .trade-plan-section {
+          margin-bottom: 25px;
+        }
+        .trade-plan-grid {
+          display: flex;
+          gap: 10px;
+        }
+        .trade-plan-item {
+          flex: 1;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 15px;
+          text-align: center;
+        }
+        .trade-plan-label {
+          font-size: 10px;
+          font-weight: bold;
+          text-transform: uppercase;
+          margin-bottom: 6px;
+        }
+        .trade-plan-price {
+          font-size: 14px;
+          font-weight: bold;
+        }
+        .trade-plan-percent {
+          font-size: 10px;
+          margin-top: 4px;
+        }
+        .color-entry { color: #2563eb; }
+        .color-stop { color: #dc2626; }
+        .color-tp { color: #16a34a; }
 
-            {/* Step 3: Safety */}
-            <View style={[styles.stepItem, { borderLeftColor: '#f97316' }]}>
-              <View style={styles.stepHeader}>
-                <Text style={styles.stepName}>3. Safety</Text>
-                <Text style={[styles.stepBadge, { backgroundColor: data.safetyCheck.riskLevel === 'low' ? C.success : C.warning }]}>
-                  {(data.safetyCheck.riskLevel || 'MED').toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.stepMetrics}>
-                <View style={styles.stepMetric}>
-                  <Text style={styles.stepMetricLabel}>Whale</Text>
-                  <Text style={styles.stepMetricValue}>{data.safetyCheck.whaleActivity?.bias || '-'}</Text>
-                </View>
-              </View>
-            </View>
+        /* Steps Grid */
+        .steps-section {
+          margin-bottom: 25px;
+        }
+        .steps-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+        .step-item {
+          width: calc(33.33% - 7px);
+          background: #f8fafc;
+          border-radius: 8px;
+          padding: 12px;
+          border-left: 4px solid;
+        }
+        .step-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+        .step-name {
+          font-size: 11px;
+          font-weight: bold;
+        }
+        .step-badge {
+          font-size: 9px;
+          font-weight: bold;
+          color: #ffffff;
+          padding: 3px 8px;
+          border-radius: 4px;
+        }
+        .step-metrics {
+          margin-top: 6px;
+        }
+        .step-metric {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 3px;
+        }
+        .step-metric-label {
+          font-size: 9px;
+          color: #64748b;
+        }
+        .step-metric-value {
+          font-size: 10px;
+          font-weight: bold;
+        }
 
-            {/* Step 4: Timing */}
-            <View style={[styles.stepItem, { borderLeftColor: '#a855f7' }]}>
-              <View style={styles.stepHeader}>
-                <Text style={styles.stepName}>4. Timing</Text>
-                <Text style={[styles.stepBadge, { backgroundColor: data.timing.tradeNow ? C.success : C.warning }]}>
-                  {data.timing.tradeNow ? 'NOW' : 'WAIT'}
-                </Text>
-              </View>
-              <View style={styles.stepMetrics}>
-                <View style={styles.stepMetric}>
-                  <Text style={[styles.stepMetricLabel, { width: '100%' }]} numberOfLines={1}>
-                    {(data.timing.reason || '-').slice(0, 25)}
-                  </Text>
-                </View>
-              </View>
-            </View>
+        /* AI Expert Box */
+        .ai-expert-box {
+          background: #ecfdf5;
+          border: 1px solid #6ee7b7;
+          border-radius: 10px;
+          padding: 15px;
+          margin-bottom: 20px;
+        }
+        .ai-expert-title {
+          font-size: 12px;
+          font-weight: bold;
+          color: #047857;
+          margin-bottom: 8px;
+        }
+        .ai-expert-text {
+          font-size: 10px;
+          color: #065f46;
+          line-height: 1.6;
+        }
 
-            {/* Step 5: Plan */}
-            <View style={[styles.stepItem, { borderLeftColor: '#6366f1' }]}>
-              <View style={styles.stepHeader}>
-                <Text style={styles.stepName}>5. Plan</Text>
-                <Text style={[styles.stepBadge, { backgroundColor: isLong ? C.success : C.danger }]}>
-                  {isLong ? 'LONG' : 'SHORT'}
-                </Text>
-              </View>
-              <View style={styles.stepMetrics}>
-                <View style={styles.stepMetric}>
-                  <Text style={styles.stepMetricLabel}>R:R</Text>
-                  <Text style={styles.stepMetricValue}>{(data.tradePlan.riskReward || 0).toFixed(1)}:1</Text>
-                </View>
-                <View style={styles.stepMetric}>
-                  <Text style={styles.stepMetricLabel}>Win%</Text>
-                  <Text style={styles.stepMetricValue}>{data.tradePlan.winRateEstimate || 0}%</Text>
-                </View>
-              </View>
-            </View>
+        /* Risk Warning */
+        .risk-warning {
+          background: #fef3c7;
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 20px;
+        }
+        .risk-text {
+          font-size: 9px;
+          color: #92400e;
+          text-align: center;
+          line-height: 1.5;
+        }
 
-            {/* Step 6: Traps */}
-            <View style={[styles.stepItem, { borderLeftColor: '#dc2626' }]}>
-              <View style={styles.stepHeader}>
-                <Text style={styles.stepName}>6. Traps</Text>
-                <Text style={[styles.stepBadge, { backgroundColor: (data.trapCheck?.traps?.bullTrap || data.trapCheck?.traps?.bearTrap) ? C.danger : C.success }]}>
-                  {(data.trapCheck?.traps?.bullTrap || data.trapCheck?.traps?.bearTrap) ? 'WARN' : 'OK'}
-                </Text>
-              </View>
-              <View style={styles.stepMetrics}>
-                <View style={styles.stepMetric}>
-                  <Text style={styles.stepMetricLabel}>Fakeout</Text>
-                  <Text style={styles.stepMetricValue}>{data.trapCheck?.traps?.fakeoutRisk || 'low'}</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
+        /* Footer */
+        .footer {
+          position: absolute;
+          bottom: 30px;
+          left: 40px;
+          right: 40px;
+          display: flex;
+          justify-content: space-between;
+          padding-top: 15px;
+          border-top: 1px solid #e2e8f0;
+        }
+        .footer-text {
+          font-size: 9px;
+          color: #64748b;
+        }
 
-        {/* AI Expert Comment */}
-        {data.aiExpertComment && (
-          <View style={styles.aiExpertBox}>
-            <Text style={styles.aiExpertTitle}>AI Expert Analysis</Text>
-            <Text style={styles.aiExpertText}>{data.aiExpertComment}</Text>
-          </View>
-        )}
+        /* Page 2 - Chart */
+        .chart-section {
+          margin-bottom: 25px;
+        }
+        .chart-container {
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          overflow: hidden;
+        }
+        .chart-header {
+          background: #f8fafc;
+          padding: 12px 15px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+        .chart-title {
+          font-size: 13px;
+          font-weight: bold;
+        }
+        .chart-image {
+          width: 100%;
+          height: auto;
+          display: block;
+        }
+        .chart-placeholder {
+          height: 300px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #64748b;
+          font-size: 14px;
+        }
 
-        {/* Risk Warning */}
-        <View style={styles.riskWarning}>
-          <Text style={styles.riskText}>
-            This report is for educational purposes only and is not investment advice. Cryptocurrency investments carry high risk.
-          </Text>
-        </View>
+        /* Quick Reference */
+        .quick-ref-box {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 20px;
+          margin-bottom: 25px;
+        }
+        .quick-ref-grid {
+          display: flex;
+          gap: 15px;
+        }
+        .quick-ref-item {
+          flex: 1;
+          text-align: center;
+        }
+        .quick-ref-label {
+          font-size: 10px;
+          color: #64748b;
+          margin-bottom: 6px;
+        }
+        .quick-ref-value {
+          font-size: 18px;
+          font-weight: bold;
+        }
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Report ID: {data.analysisId?.slice(-12)}</Text>
-          <Text style={styles.footerText}>TradePath AI • Page 1/2</Text>
-        </View>
-      </Page>
+        /* AI Summary Box */
+        .summary-box {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 15px;
+        }
+        .summary-title {
+          font-size: 12px;
+          font-weight: bold;
+          margin-bottom: 10px;
+          color: #0f172a;
+        }
+        .summary-text {
+          font-size: 10px;
+          color: #64748b;
+          line-height: 1.6;
+        }
+      </style>
+    </head>
+    <body>
+      <!-- PAGE 1: Summary -->
+      <div class="page">
+        <!-- Header -->
+        <div class="header">
+          <div class="logo">
+            <span class="logo-red">Trade</span><span class="logo-green">Path</span>
+          </div>
+          <div class="header-right">
+            <div class="symbol">${data.symbol}/USDT</div>
+            <div class="date">${data.generatedAt}</div>
+          </div>
+        </div>
 
-      {/* PAGE 2: Chart */}
-      <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.logo}>
-            <Text style={styles.logoRed}>Trade</Text>
-            <Text style={styles.logoGreen}>Path</Text>
-          </View>
-          <View style={styles.headerRight}>
-            <Text style={styles.symbol}>{data.symbol}/USDT</Text>
-            <Text style={styles.date}>Trade Plan Chart</Text>
-          </View>
-        </View>
+        <!-- Verdict Box -->
+        <div class="verdict-box">
+          <div>
+            <div class="verdict-text">${data.verdict.action || 'ANALYZE'}</div>
+            <div class="verdict-score">Score: ${score}/100</div>
+          </div>
+          <div class="direction-badge">${isLong ? 'LONG' : 'SHORT'}</div>
+        </div>
 
-        {/* Chart */}
-        <View style={styles.chartSection}>
-          {data.chartImage ? (
-            <View style={styles.chartContainer}>
-              <View style={styles.chartHeader}>
-                <Text style={styles.chartTitle}>{data.symbol}/USDT - Entry, Stop Loss & Take Profit Levels</Text>
-              </View>
-              <Image src={data.chartImage} style={styles.chartImage} />
-            </View>
-          ) : (
-            <View style={[styles.chartContainer, { height: 300, justifyContent: 'center', alignItems: 'center' }]}>
-              <Text style={{ fontSize: 12, color: C.secondary }}>Chart not available</Text>
-            </View>
-          )}
-        </View>
+        <!-- Trade Plan -->
+        <div class="trade-plan-section">
+          <div class="section-title">Trade Plan</div>
+          <div class="trade-plan-grid">
+            <div class="trade-plan-item">
+              <div class="trade-plan-label color-entry">ENTRY</div>
+              <div class="trade-plan-price">${formatPrice(data.tradePlan.averageEntry)}</div>
+            </div>
+            <div class="trade-plan-item">
+              <div class="trade-plan-label color-stop">STOP LOSS</div>
+              <div class="trade-plan-price color-stop">${formatPrice(data.tradePlan.stopLoss?.price)}</div>
+              <div class="trade-plan-percent color-stop">-${(data.tradePlan.stopLoss?.percentage || 0).toFixed(1)}%</div>
+            </div>
+            <div class="trade-plan-item">
+              <div class="trade-plan-label color-tp">TP1</div>
+              <div class="trade-plan-price color-tp">${formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</div>
+            </div>
+            <div class="trade-plan-item">
+              <div class="trade-plan-label color-tp">TP2</div>
+              <div class="trade-plan-price color-tp">${formatPrice(data.tradePlan.takeProfits?.[1]?.price)}</div>
+            </div>
+            <div class="trade-plan-item">
+              <div class="trade-plan-label color-tp">TP3</div>
+              <div class="trade-plan-price color-tp">${formatPrice(data.tradePlan.takeProfits?.[2]?.price)}</div>
+            </div>
+          </div>
+        </div>
 
-        {/* Quick Reference */}
-        <View style={styles.quickRefBox}>
-          <Text style={styles.sectionTitle}>Quick Reference</Text>
-          <View style={styles.quickRefGrid}>
-            <View style={styles.quickRefItem}>
-              <Text style={styles.quickRefLabel}>ENTRY ZONE</Text>
-              <Text style={[styles.quickRefValue, { color: C.info }]}>{formatPrice(data.tradePlan.averageEntry)}</Text>
-            </View>
-            <View style={styles.quickRefItem}>
-              <Text style={styles.quickRefLabel}>STOP LOSS</Text>
-              <Text style={[styles.quickRefValue, { color: C.danger }]}>{formatPrice(data.tradePlan.stopLoss?.price)}</Text>
-            </View>
-            <View style={styles.quickRefItem}>
-              <Text style={styles.quickRefLabel}>TP1</Text>
-              <Text style={[styles.quickRefValue, { color: C.success }]}>{formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</Text>
-            </View>
-            <View style={styles.quickRefItem}>
-              <Text style={styles.quickRefLabel}>TP2</Text>
-              <Text style={[styles.quickRefValue, { color: C.success }]}>{formatPrice(data.tradePlan.takeProfits?.[1]?.price)}</Text>
-            </View>
-            <View style={styles.quickRefItem}>
-              <Text style={styles.quickRefLabel}>TP3</Text>
-              <Text style={[styles.quickRefValue, { color: C.success }]}>{formatPrice(data.tradePlan.takeProfits?.[2]?.price)}</Text>
-            </View>
-          </View>
-        </View>
+        <!-- 6 Steps Grid -->
+        <div class="steps-section">
+          <div class="section-title">Analysis Steps</div>
+          <div class="steps-grid">
+            <!-- Step 1: Market -->
+            <div class="step-item" style="border-left-color: #2563eb;">
+              <div class="step-header">
+                <span class="step-name">1. Market</span>
+                <span class="step-badge" style="background: ${getStepBadgeColor(data.marketPulse.trend?.direction)};">
+                  ${(data.marketPulse.trend?.direction || 'N/A').slice(0, 4).toUpperCase()}
+                </span>
+              </div>
+              <div class="step-metrics">
+                <div class="step-metric">
+                  <span class="step-metric-label">Fear/Greed</span>
+                  <span class="step-metric-value">${data.marketPulse.fearGreedIndex}</span>
+                </div>
+                <div class="step-metric">
+                  <span class="step-metric-label">BTC Dom.</span>
+                  <span class="step-metric-value">${data.marketPulse.btcDominance?.toFixed(1)}%</span>
+                </div>
+              </div>
+            </div>
 
-        {/* AI Summary */}
-        {data.verdict.aiSummary && (
-          <View style={styles.summaryBox}>
-            <Text style={styles.summaryTitle}>AI Analysis Summary</Text>
-            <Text style={styles.summaryText}>{data.verdict.aiSummary}</Text>
-          </View>
-        )}
+            <!-- Step 2: Asset -->
+            <div class="step-item" style="border-left-color: #06b6d4;">
+              <div class="step-header">
+                <span class="step-name">2. Asset</span>
+                <span class="step-badge" style="background: ${(data.assetScan.priceChange24h || 0) >= 0 ? '#16a34a' : '#dc2626'};">
+                  ${(data.assetScan.priceChange24h || 0) >= 0 ? 'UP' : 'DOWN'}
+                </span>
+              </div>
+              <div class="step-metrics">
+                <div class="step-metric">
+                  <span class="step-metric-label">Price</span>
+                  <span class="step-metric-value">${formatPrice(data.assetScan.currentPrice)}</span>
+                </div>
+                <div class="step-metric">
+                  <span class="step-metric-label">RSI</span>
+                  <span class="step-metric-value">${data.assetScan.indicators?.rsi?.toFixed(0) || '-'}</span>
+                </div>
+              </div>
+            </div>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Generated: {data.generatedAt}</Text>
-          <Text style={styles.footerText}>TradePath AI • Page 2/2</Text>
-        </View>
-      </Page>
-    </Document>
-  );
-};
+            <!-- Step 3: Safety -->
+            <div class="step-item" style="border-left-color: #f97316;">
+              <div class="step-header">
+                <span class="step-name">3. Safety</span>
+                <span class="step-badge" style="background: ${data.safetyCheck.riskLevel === 'low' ? '#16a34a' : '#d97706'};">
+                  ${(data.safetyCheck.riskLevel || 'MED').toUpperCase()}
+                </span>
+              </div>
+              <div class="step-metrics">
+                <div class="step-metric">
+                  <span class="step-metric-label">Whale</span>
+                  <span class="step-metric-value">${data.safetyCheck.whaleActivity?.bias || '-'}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 4: Timing -->
+            <div class="step-item" style="border-left-color: #a855f7;">
+              <div class="step-header">
+                <span class="step-name">4. Timing</span>
+                <span class="step-badge" style="background: ${data.timing.tradeNow ? '#16a34a' : '#d97706'};">
+                  ${data.timing.tradeNow ? 'NOW' : 'WAIT'}
+                </span>
+              </div>
+              <div class="step-metrics">
+                <div class="step-metric">
+                  <span class="step-metric-label" style="width: 100%;">${(data.timing.reason || '-').slice(0, 30)}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 5: Plan -->
+            <div class="step-item" style="border-left-color: #6366f1;">
+              <div class="step-header">
+                <span class="step-name">5. Plan</span>
+                <span class="step-badge" style="background: ${isLong ? '#16a34a' : '#dc2626'};">
+                  ${isLong ? 'LONG' : 'SHORT'}
+                </span>
+              </div>
+              <div class="step-metrics">
+                <div class="step-metric">
+                  <span class="step-metric-label">R:R</span>
+                  <span class="step-metric-value">${(data.tradePlan.riskReward || 0).toFixed(1)}:1</span>
+                </div>
+                <div class="step-metric">
+                  <span class="step-metric-label">Win%</span>
+                  <span class="step-metric-value">${data.tradePlan.winRateEstimate || 0}%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 6: Traps -->
+            <div class="step-item" style="border-left-color: #dc2626;">
+              <div class="step-header">
+                <span class="step-name">6. Traps</span>
+                <span class="step-badge" style="background: ${(data.trapCheck?.traps?.bullTrap || data.trapCheck?.traps?.bearTrap) ? '#dc2626' : '#16a34a'};">
+                  ${(data.trapCheck?.traps?.bullTrap || data.trapCheck?.traps?.bearTrap) ? 'WARN' : 'OK'}
+                </span>
+              </div>
+              <div class="step-metrics">
+                <div class="step-metric">
+                  <span class="step-metric-label">Fakeout</span>
+                  <span class="step-metric-value">${data.trapCheck?.traps?.fakeoutRisk || 'low'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Expert Comment -->
+        ${data.aiExpertComment ? `
+        <div class="ai-expert-box">
+          <div class="ai-expert-title">🤖 AI Expert Analysis</div>
+          <div class="ai-expert-text">${data.aiExpertComment}</div>
+        </div>
+        ` : ''}
+
+        <!-- Risk Warning -->
+        <div class="risk-warning">
+          <div class="risk-text">
+            ⚠️ This report is for educational purposes only and is not investment advice. Cryptocurrency investments carry high risk.
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+          <span class="footer-text">Report ID: ${data.analysisId?.slice(-12) || 'N/A'}</span>
+          <span class="footer-text">TradePath AI • Page 1/2</span>
+        </div>
+      </div>
+
+      <!-- PAGE 2: Chart -->
+      <div class="page">
+        <!-- Header -->
+        <div class="header">
+          <div class="logo">
+            <span class="logo-red">Trade</span><span class="logo-green">Path</span>
+          </div>
+          <div class="header-right">
+            <div class="symbol">${data.symbol}/USDT</div>
+            <div class="date">Trade Plan Chart</div>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="chart-section">
+          <div class="chart-container">
+            <div class="chart-header">
+              <div class="chart-title">📊 ${data.symbol}/USDT - Entry, Stop Loss & Take Profit Levels</div>
+            </div>
+            ${data.chartImage
+              ? `<img src="${data.chartImage}" class="chart-image" alt="Trade Plan Chart" />`
+              : `<div class="chart-placeholder">Chart not available</div>`
+            }
+          </div>
+        </div>
+
+        <!-- Quick Reference -->
+        <div class="quick-ref-box">
+          <div class="section-title">Quick Reference</div>
+          <div class="quick-ref-grid">
+            <div class="quick-ref-item">
+              <div class="quick-ref-label">ENTRY ZONE</div>
+              <div class="quick-ref-value color-entry">${formatPrice(data.tradePlan.averageEntry)}</div>
+            </div>
+            <div class="quick-ref-item">
+              <div class="quick-ref-label">STOP LOSS</div>
+              <div class="quick-ref-value color-stop">${formatPrice(data.tradePlan.stopLoss?.price)}</div>
+            </div>
+            <div class="quick-ref-item">
+              <div class="quick-ref-label">TP1</div>
+              <div class="quick-ref-value color-tp">${formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</div>
+            </div>
+            <div class="quick-ref-item">
+              <div class="quick-ref-label">TP2</div>
+              <div class="quick-ref-value color-tp">${formatPrice(data.tradePlan.takeProfits?.[1]?.price)}</div>
+            </div>
+            <div class="quick-ref-item">
+              <div class="quick-ref-label">TP3</div>
+              <div class="quick-ref-value color-tp">${formatPrice(data.tradePlan.takeProfits?.[2]?.price)}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Summary -->
+        ${data.verdict.aiSummary ? `
+        <div class="summary-box">
+          <div class="summary-title">📝 AI Analysis Summary</div>
+          <div class="summary-text">${data.verdict.aiSummary}</div>
+        </div>
+        ` : ''}
+
+        <!-- Footer -->
+        <div class="footer">
+          <span class="footer-text">Generated: ${data.generatedAt}</span>
+          <span class="footer-text">TradePath AI • Page 2/2</span>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
 
 // Chart capture function
 export async function captureChartAsImage(): Promise<string | null> {
@@ -673,7 +671,6 @@ export async function captureChartAsImage(): Promise<string | null> {
 
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    const html2canvas = (await import('html2canvas')).default;
     const canvas = await html2canvas(element, {
       backgroundColor: '#ffffff',
       scale: 2,
@@ -695,8 +692,9 @@ export async function captureChartAsImage(): Promise<string | null> {
   }
 }
 
-// Main export function
+// Main export function - HTML to PDF
 export async function generateAnalysisReport(data: AnalysisReportData, captureChart: boolean = true): Promise<void> {
+  // Capture chart if needed
   if (captureChart && !data.chartImage) {
     const chartImage = await captureChartAsImage();
     if (chartImage) {
@@ -704,10 +702,65 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
     }
   }
 
-  const blob = await pdf(<AnalysisReportDocument data={data} />).toBlob();
-  const filename = `TradePath_${data.symbol}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-  saveAs(blob, filename);
+  // Generate HTML
+  const html = generateReportHTML(data);
+
+  // Create a hidden container for rendering
+  const container = document.createElement('div');
+  container.style.cssText = 'position: fixed; left: -9999px; top: 0; width: 794px;';
+  container.innerHTML = html;
+  document.body.appendChild(container);
+
+  // Wait for images to load
+  await new Promise(resolve => setTimeout(resolve, 500));
+
+  try {
+    // Get all pages
+    const pages = container.querySelectorAll('.page');
+
+    // Create PDF (A4 size)
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'px',
+      format: 'a4',
+      hotfixes: ['px_scaling'],
+    });
+
+    // Process each page
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i] as HTMLElement;
+
+      // Render page to canvas
+      const canvas = await html2canvas(page, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        width: 794,
+        windowWidth: 794,
+      });
+
+      // Add page to PDF
+      const imgData = canvas.toDataURL('image/png');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      if (i > 0) {
+        pdf.addPage();
+      }
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    }
+
+    // Save PDF
+    const filename = `TradePath_${data.symbol}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+    pdf.save(filename);
+
+  } finally {
+    // Cleanup
+    document.body.removeChild(container);
+  }
 }
 
-export { AnalysisReportDocument };
-export type { AnalysisReportData };
+export type { AnalysisReportData as ReportData };
