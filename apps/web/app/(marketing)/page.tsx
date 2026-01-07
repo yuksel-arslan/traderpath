@@ -120,7 +120,7 @@ const FAQS = [
   },
   {
     question: 'How does the credit system work?',
-    answer: 'You purchase credits upfront and spend them as you analyze. A full 7-step analysis costs 15 credits (or 20 if done step-by-step). You can also earn free credits daily through login bonuses, quizzes, and other activities.',
+    answer: 'You purchase credits upfront and spend them as you analyze. A full 7-step analysis costs 25 credits. You can also earn free credits daily through login bonuses, quizzes, and other activities.',
   },
   {
     question: 'Can I get a refund if I\'m not satisfied?',

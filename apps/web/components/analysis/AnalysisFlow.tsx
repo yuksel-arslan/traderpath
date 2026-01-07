@@ -318,7 +318,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
 
       if (!response.ok) {
         if (response.status === 402) {
-          throw new Error('Insufficient credits (15 required). Please purchase more credits.');
+          throw new Error('Insufficient credits (25 required). Please purchase more credits.');
         }
         throw new Error(data.error?.message || 'Full analysis failed');
       }
@@ -554,7 +554,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
               className="px-5 py-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg font-semibold flex items-center gap-2 hover:shadow-lg hover:scale-[1.02] transition-all border border-slate-300 dark:border-slate-600"
             >
               <TrendingUp className="w-4 h-4 gradient-text-rg-animate" />
-              <span className="gradient-text-rg-animate">Full Analysis (15 cr)</span>
+              <span className="gradient-text-rg-animate">Full Analysis (25 cr)</span>
             </button>
           </div>
         </div>

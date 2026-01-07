@@ -77,7 +77,7 @@ export const ANALYSIS_COSTS = [
 export const ANALYSIS_BUNDLES = [
   { name: 'Quick Check', steps: 'Steps 2 + 7', original: 7, discounted: 5, savings: '29%' },
   { name: 'Smart Entry', steps: 'Steps 2-4 + 7', original: 15, discounted: 12, savings: '20%' },
-  { name: 'Full Analysis', steps: 'All 7 Steps', original: 20, discounted: 15, savings: '25%' },
+  { name: 'Full Analysis', steps: 'All 7 Steps', original: 30, discounted: 25, savings: '17%' },
 ];
 
 // Free signup credits
