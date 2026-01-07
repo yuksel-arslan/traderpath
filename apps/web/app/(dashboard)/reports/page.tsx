@@ -188,15 +188,6 @@ interface ReportsResponse {
   };
 }
 
-// Timeframe options for TradingView
-const TIMEFRAMES = [
-  { value: '5', label: '5m' },
-  { value: '15', label: '15m' },
-  { value: '60', label: '1h' },
-  { value: '240', label: '4h' },
-  { value: 'D', label: '1D' },
-];
-
 export default function ReportsPage() {
   const router = useRouter();
   const [reports, setReports] = useState<Report[]>([]);
@@ -206,7 +197,6 @@ export default function ReportsPage() {
   const [pagination, setPagination] = useState({ total: 0, limit: 20, offset: 0 });
   const [stats, setStats] = useState<ReportStats>({ total: 0, active: 0, closed: 0, tpHits: 0, slHits: 0 });
   const [chartModal, setChartModal] = useState<{ isOpen: boolean; report: Report | null }>({ isOpen: false, report: null });
-  const [tvTimeframe, setTvTimeframe] = useState('60'); // Default 1h for TradingView
 
   const fetchReports = async () => {
     setIsLoading(true);
@@ -1001,40 +991,12 @@ Bu analize göre risk değerlendirmeni ve önerilerini paylaşır mısın?`;
                 />
               </div>
 
-              {/* TradingView Chart - Right (with indicators & timeframe selector) */}
-              <div className="relative bg-slate-800 rounded-lg overflow-hidden flex flex-col">
-                {/* Timeframe Selector */}
-                <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-slate-900/90 rounded-lg p-1">
-                  {TIMEFRAMES.map((tf) => (
-                    <button
-                      key={tf.value}
-                      onClick={() => setTvTimeframe(tf.value)}
-                      className={cn(
-                        "px-2 py-1 rounded text-xs font-medium transition",
-                        tvTimeframe === tf.value
-                          ? "bg-amber-500 text-white"
-                          : "text-slate-400 hover:text-white hover:bg-slate-700"
-                      )}
-                    >
-                      {tf.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex-1">
-                  <TradingViewChart
-                    symbol={chartModal.report.symbol}
-                    interval={tvTimeframe}
-                    tradePlan={{
-                      entryPrice: chartModal.report.entryPrice,
-                      stopLoss: chartModal.report.stopLoss,
-                      takeProfit1: chartModal.report.takeProfit1,
-                      takeProfit2: chartModal.report.takeProfit2,
-                      takeProfit3: chartModal.report.takeProfit3,
-                      direction: chartModal.report.direction || undefined,
-                      currentPrice: chartModal.report.currentPrice,
-                    }}
-                  />
-                </div>
+              {/* TradingView Chart - Right */}
+              <div className="relative bg-slate-800 rounded-lg overflow-hidden">
+                <TradingViewChart
+                  symbol={chartModal.report.symbol}
+                  interval="60"
+                />
               </div>
             </div>
           </div>
