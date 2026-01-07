@@ -15,6 +15,7 @@ import { prisma } from '../../core/database';
 const chatSchema = z.object({
   expertId: z.enum(['aria', 'nexus', 'oracle', 'sentinel']),
   message: z.string().min(1).max(15000), // Increased for analysis context
+  chatId: z.string().uuid().optional(), // Existing chat ID to continue conversation
   conversationHistory: z
     .array(
       z.object({
@@ -241,17 +242,78 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
       }
 
       try {
+        // Get or create chat
+        let chat;
+        if (body.chatId) {
+          // Verify chat belongs to user
+          chat = await prisma.expertChat.findFirst({
+            where: { id: body.chatId, userId },
+          });
+          if (!chat) {
+            return reply.code(404).send({
+              success: false,
+              error: { code: 'CHAT_NOT_FOUND', message: 'Chat not found' },
+            });
+          }
+        } else {
+          // Create new chat
+          const title = body.message.slice(0, 100) + (body.message.length > 100 ? '...' : '');
+          chat = await prisma.expertChat.create({
+            data: {
+              userId,
+              expertId: body.expertId,
+              title,
+            },
+          });
+        }
+
+        // Save user message
+        await prisma.chatMessage.create({
+          data: {
+            chatId: chat.id,
+            role: 'user',
+            content: body.message,
+          },
+        });
+
+        // Get conversation history from database if not provided
+        let conversationHistory = body.conversationHistory;
+        if (!conversationHistory && body.chatId) {
+          const messages = await prisma.chatMessage.findMany({
+            where: { chatId: body.chatId },
+            orderBy: { createdAt: 'asc' },
+            take: 20, // Last 20 messages
+          });
+          conversationHistory = messages.slice(0, -1).map(m => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+          }));
+        }
+
         // Call AI Expert service
         const response = await aiExpertService.chat({
           expertId: body.expertId,
           message: body.message,
-          conversationHistory: body.conversationHistory,
+          conversationHistory,
           userId,
+        });
+
+        // Save assistant response
+        await prisma.chatMessage.create({
+          data: {
+            chatId: chat.id,
+            role: 'assistant',
+            content: response.response,
+            creditsUsed: cost,
+            inputTokens: response.inputTokens,
+            outputTokens: response.outputTokens,
+          },
         });
 
         return reply.send({
           success: true,
           data: {
+            chatId: chat.id,
             response: response.response,
             examples: response.examples,
             expert: {
@@ -543,6 +605,174 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
       return reply.send({
         success: true,
         data: summary,
+      });
+    }
+  );
+
+  // ===========================================
+  // GET /api/ai-expert/chats
+  // Get all chats for the user
+  // ===========================================
+  fastify.get(
+    '/api/ai-expert/chats',
+    {
+      preHandler: authenticate,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request as any).user?.id;
+      if (!userId) {
+        return reply.code(401).send({
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+        });
+      }
+
+      const { expertId, limit = '20', offset = '0' } = request.query as {
+        expertId?: string;
+        limit?: string;
+        offset?: string;
+      };
+
+      const where: { userId: string; expertId?: string } = { userId };
+      if (expertId) {
+        where.expertId = expertId;
+      }
+
+      const [chats, total] = await Promise.all([
+        prisma.expertChat.findMany({
+          where,
+          orderBy: { updatedAt: 'desc' },
+          take: parseInt(limit),
+          skip: parseInt(offset),
+          include: {
+            messages: {
+              orderBy: { createdAt: 'desc' },
+              take: 1, // Only get last message for preview
+            },
+          },
+        }),
+        prisma.expertChat.count({ where }),
+      ]);
+
+      return reply.send({
+        success: true,
+        data: {
+          chats: chats.map(chat => ({
+            id: chat.id,
+            expertId: chat.expertId,
+            title: chat.title,
+            lastMessage: chat.messages[0]?.content?.slice(0, 100) || null,
+            lastMessageAt: chat.messages[0]?.createdAt || chat.createdAt,
+            createdAt: chat.createdAt,
+            updatedAt: chat.updatedAt,
+          })),
+          total,
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+        },
+      });
+    }
+  );
+
+  // ===========================================
+  // GET /api/ai-expert/chats/:chatId
+  // Get a specific chat with all messages
+  // ===========================================
+  fastify.get(
+    '/api/ai-expert/chats/:chatId',
+    {
+      preHandler: authenticate,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request as any).user?.id;
+      if (!userId) {
+        return reply.code(401).send({
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+        });
+      }
+
+      const { chatId } = request.params as { chatId: string };
+
+      const chat = await prisma.expertChat.findFirst({
+        where: { id: chatId, userId },
+        include: {
+          messages: {
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
+
+      if (!chat) {
+        return reply.code(404).send({
+          success: false,
+          error: { code: 'CHAT_NOT_FOUND', message: 'Chat not found' },
+        });
+      }
+
+      const expert = aiExpertService.getExpert(chat.expertId);
+
+      return reply.send({
+        success: true,
+        data: {
+          id: chat.id,
+          expertId: chat.expertId,
+          expert: expert ? { id: expert.id, name: expert.name, role: expert.role } : null,
+          title: chat.title,
+          messages: chat.messages.map(m => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            creditsUsed: m.creditsUsed,
+            createdAt: m.createdAt,
+          })),
+          createdAt: chat.createdAt,
+          updatedAt: chat.updatedAt,
+        },
+      });
+    }
+  );
+
+  // ===========================================
+  // DELETE /api/ai-expert/chats/:chatId
+  // Delete a chat
+  // ===========================================
+  fastify.delete(
+    '/api/ai-expert/chats/:chatId',
+    {
+      preHandler: authenticate,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request as any).user?.id;
+      if (!userId) {
+        return reply.code(401).send({
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+        });
+      }
+
+      const { chatId } = request.params as { chatId: string };
+
+      // Verify ownership
+      const chat = await prisma.expertChat.findFirst({
+        where: { id: chatId, userId },
+      });
+
+      if (!chat) {
+        return reply.code(404).send({
+          success: false,
+          error: { code: 'CHAT_NOT_FOUND', message: 'Chat not found' },
+        });
+      }
+
+      // Delete chat (messages will be cascade deleted)
+      await prisma.expertChat.delete({
+        where: { id: chatId },
+      });
+
+      return reply.send({
+        success: true,
+        data: { message: 'Chat deleted successfully' },
       });
     }
   );
