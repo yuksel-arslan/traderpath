@@ -45,6 +45,7 @@ export async function loginWithEmail(email: string, password: string) {
     };
   } catch (error: unknown) {
     const firebaseError = error as { code?: string; message?: string };
+    console.error('Firebase login error:', firebaseError.code, firebaseError.message);
     return {
       success: false,
       error: getErrorMessage(firebaseError.code),
@@ -67,6 +68,7 @@ export async function registerWithEmail(email: string, password: string, name: s
     };
   } catch (error: unknown) {
     const firebaseError = error as { code?: string; message?: string };
+    console.error('Firebase register error:', firebaseError.code, firebaseError.message);
     return {
       success: false,
       error: getErrorMessage(firebaseError.code),
@@ -85,6 +87,7 @@ export async function loginWithGoogle() {
     };
   } catch (error: unknown) {
     const firebaseError = error as { code?: string; message?: string };
+    console.error('Firebase Google login error:', firebaseError.code, firebaseError.message);
     return {
       success: false,
       error: getErrorMessage(firebaseError.code),
