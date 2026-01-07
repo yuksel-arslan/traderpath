@@ -57,7 +57,6 @@ model User {
   referralReceived Referral?  @relation("ReferredReferrals")
   quizAnswers      QuizAnswer[]
   reports          Report[]
-  expertChats      ExpertChat[]
 
   @@map("users")
 }
@@ -494,47 +493,4 @@ model CostSettings {
   updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@map("cost_settings")
-}
-
-// ===========================================
-// AI Expert Chat
-// ===========================================
-
-model ExpertChat {
-  id           String   @id @default(uuid()) @db.Uuid
-  userId       String   @map("user_id") @db.Uuid
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  expertId     String   @map("expert_id") @db.VarChar(20) // aria, nexus, oracle, sentinel
-  title        String?  @db.VarChar(255) // Auto-generated from first message
-
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  messages     ChatMessage[]
-
-  @@index([userId])
-  @@index([expertId])
-  @@index([createdAt(sort: Desc)])
-  @@map("expert_chats")
-}
-
-model ChatMessage {
-  id           String   @id @default(uuid()) @db.Uuid
-  chatId       String   @map("chat_id") @db.Uuid
-  chat         ExpertChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
-
-  role         String   @db.VarChar(20) // 'user' or 'assistant'
-  content      String   @db.Text
-
-  // Metadata for assistant messages
-  creditsUsed  Int?     @map("credits_used")
-  inputTokens  Int?     @map("input_tokens")
-  outputTokens Int?     @map("output_tokens")
-
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  @@index([chatId])
-  @@index([createdAt(sort: Asc)])
-  @@map("chat_messages")
 }
