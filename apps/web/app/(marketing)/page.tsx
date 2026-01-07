@@ -450,7 +450,7 @@ export default function LandingPage() {
           <div className="max-w-5xl mx-auto space-y-8">
             {/* Step 1: Select */}
             <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-amber-500/25">
+              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-red-500/20">
                 1
               </div>
               <div className="text-center md:text-left flex-1">
@@ -466,7 +466,7 @@ export default function LandingPage() {
 
             {/* Step 2: 7-Step Analysis */}
             <div className="flex flex-col md:flex-row items-start gap-6">
-              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-amber-500/25">
+              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-red-500/20">
                 2
               </div>
               <div className="flex-1">
@@ -479,21 +479,79 @@ export default function LandingPage() {
                 <div className="bg-card border rounded-xl p-4">
                   <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
                     {[
-                      { name: 'Market Pulse', icon: Globe, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                      { name: 'Asset Scan', icon: BarChart3, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
-                      { name: 'Safety', icon: Shield, color: 'text-green-500', bg: 'bg-green-500/10' },
-                      { name: 'Timing', icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-                      { name: 'Trade Plan', icon: Target, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-                      { name: 'Trap Check', icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-500/10' },
-                      { name: 'Verdict', icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                      {
+                        name: 'Market Pulse',
+                        icon: Globe,
+                        color: 'text-blue-500',
+                        bg: 'bg-blue-500/10',
+                        description: 'Analyzes overall crypto market sentiment including Bitcoin dominance, total market cap trends, fear & greed index, and institutional flow data to determine if market conditions favor your trade.'
+                      },
+                      {
+                        name: 'Asset Scan',
+                        icon: BarChart3,
+                        color: 'text-cyan-500',
+                        bg: 'bg-cyan-500/10',
+                        description: 'Deep technical analysis of the specific coin including support/resistance levels, volume analysis, RSI, MACD, moving averages, and price action patterns on multiple timeframes.'
+                      },
+                      {
+                        name: 'Safety',
+                        icon: Shield,
+                        color: 'text-green-500',
+                        bg: 'bg-green-500/10',
+                        description: 'Risk assessment checking for market manipulation signs, unusual whale activity, exchange inflow/outflow anomalies, and potential rug pull indicators to protect your investment.'
+                      },
+                      {
+                        name: 'Timing',
+                        icon: Clock,
+                        color: 'text-yellow-500',
+                        bg: 'bg-yellow-500/10',
+                        description: 'Optimal entry timing analysis considering upcoming events, funding rates, liquidation levels, and historical volatility patterns to find the best moment to enter.'
+                      },
+                      {
+                        name: 'Trade Plan',
+                        icon: Target,
+                        color: 'text-purple-500',
+                        bg: 'bg-purple-500/10',
+                        description: 'Generates precise entry price, take-profit targets (TP1, TP2, TP3), and stop-loss levels based on risk/reward ratios and key technical levels.'
+                      },
+                      {
+                        name: 'Trap Check',
+                        icon: AlertTriangle,
+                        color: 'text-orange-500',
+                        bg: 'bg-orange-500/10',
+                        description: 'Detects potential bull/bear traps, fake breakouts, stop-loss hunting zones, and manipulation patterns that could invalidate the trade setup.'
+                      },
+                      {
+                        name: 'Verdict',
+                        icon: CheckCircle,
+                        color: 'text-emerald-500',
+                        bg: 'bg-emerald-500/10',
+                        description: 'Final decision combining all 6 analysis steps into a clear GO (strong setup), WAIT (uncertain conditions), or AVOID (high risk) recommendation with confidence score.'
+                      },
                     ].map((item, idx) => {
                       const Icon = item.icon;
                       return (
-                        <div key={idx} className="flex flex-col items-center text-center p-2 rounded-lg hover:bg-accent/50 transition">
-                          <div className={`w-9 h-9 ${item.bg} rounded-lg flex items-center justify-center mb-1`}>
-                            <Icon className={`w-4 h-4 ${item.color}`} />
+                        <div key={idx} className="relative group">
+                          <div className="flex flex-col items-center text-center p-2 rounded-lg hover:bg-accent/50 transition cursor-pointer">
+                            <div className={`w-9 h-9 ${item.bg} rounded-lg flex items-center justify-center mb-1`}>
+                              <Icon className={`w-4 h-4 ${item.color}`} />
+                            </div>
+                            <span className="text-[11px] font-medium">{item.name}</span>
                           </div>
-                          <span className="text-[11px] font-medium">{item.name}</span>
+                          {/* Tooltip Popup */}
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-popover border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className={`w-6 h-6 ${item.bg} rounded flex items-center justify-center`}>
+                                <Icon className={`w-3 h-3 ${item.color}`} />
+                              </div>
+                              <span className="font-semibold text-sm">{item.name}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
+                            {/* Arrow */}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
+                              <div className="border-8 border-transparent border-t-popover" />
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
@@ -509,7 +567,7 @@ export default function LandingPage() {
 
             {/* Step 3: Trade */}
             <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-amber-500/25">
+              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-red-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-red-500/20">
                 3
               </div>
               <div className="text-center md:text-left flex-1">
