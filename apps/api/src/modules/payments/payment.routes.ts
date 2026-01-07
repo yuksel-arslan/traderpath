@@ -7,9 +7,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { stripeService, CREDIT_PACKAGES } from './stripe.service';
 import { authenticate } from '../../core/auth/middleware';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../core/database';
 
 export default async function paymentRoutes(app: FastifyInstance) {
   /**
