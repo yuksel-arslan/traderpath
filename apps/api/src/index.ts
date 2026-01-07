@@ -24,6 +24,7 @@ import analysisRoutes from './modules/analysis/analysis.routes';
 import creditRoutes from './modules/credits/credit.routes';
 import rewardRoutes from './modules/rewards/reward.routes';
 import alertRoutes from './modules/notifications/alert.routes';
+import { notificationService } from './modules/notifications/notification.service';
 import { reportRoutes } from './modules/reports/report.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import costRoutes from './modules/costs/cost.routes';
@@ -388,7 +389,16 @@ async function startOutcomeTracker() {
     }
   }, 10 * 60 * 1000); // 10 minutes
 
-  logger.info('✓ Outcome tracker started (30s live, 5m expired, 10m caution)');
+  // Check price alerts every 15 seconds
+  setInterval(async () => {
+    try {
+      await notificationService.checkAlerts();
+    } catch (error) {
+      logger.error(error, 'Alert checker error');
+    }
+  }, 15 * 1000); // 15 seconds
+
+  logger.info('✓ Outcome tracker started (30s live, 5m expired, 10m caution, 15s alerts)');
 }
 
 const start = async () => {

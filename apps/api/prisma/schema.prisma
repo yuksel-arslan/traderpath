@@ -288,6 +288,14 @@ model PriceAlert {
   targetPrice  Decimal  @map("target_price") @db.Decimal(20, 8)
   direction    AlertDirection
 
+  // Alert type for trade plan alerts
+  alertType    AlertType @default(CUSTOM) @map("alert_type")
+  reportId     String?   @map("report_id") @db.Uuid
+  note         String?   @db.VarChar(255)
+
+  // Notification channels (stored as JSON array: ["browser", "telegram", "discord", "tradingview"])
+  channels     Json      @default("[\"browser\"]")
+
   isTriggered  Boolean  @default(false) @map("is_triggered")
   triggeredAt  DateTime? @map("triggered_at")
 
@@ -297,12 +305,22 @@ model PriceAlert {
   createdAt    DateTime @default(now()) @map("created_at")
 
   @@index([userId, isActive])
+  @@index([symbol, isActive, isTriggered])
   @@map("price_alerts")
 }
 
 enum AlertDirection {
   ABOVE
   BELOW
+}
+
+enum AlertType {
+  ENTRY
+  TP1
+  TP2
+  TP3
+  SL
+  CUSTOM
 }
 
 // ===========================================
