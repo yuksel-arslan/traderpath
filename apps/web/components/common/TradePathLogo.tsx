@@ -39,7 +39,7 @@ export function TradePathLogo({
       {/* Logo Text */}
       {showText && (
         <div className="flex flex-col">
-          <span className={`${s.text} font-bold text-slate-800 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-amber-400 dark:via-orange-500 dark:to-red-500`}>
+          <span className={`${s.text} font-bold gradient-text-rg-animate`}>
             TradePath
           </span>
           {showTagline && (
