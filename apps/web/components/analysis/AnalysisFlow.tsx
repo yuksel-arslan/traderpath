@@ -161,6 +161,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
   const [results, setResults] = useState<Record<number, unknown>>({});
   const [error, setError] = useState<string | null>(null);
   const [reportSaved, setReportSaved] = useState(false);
+  const [savedAnalysisId, setSavedAnalysisId] = useState<string | null>(null);
   const saveAttemptedRef = useRef(false);
 
   const getAuthHeaders = useCallback(() => {
@@ -215,10 +216,12 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
       const verdict = results[7] as { action?: string; verdict?: string; overallScore?: number } | undefined;
       const tradePlan = results[5] as { direction?: string } | undefined;
 
+      const generatedAnalysisId = `analysis_${Date.now()}_${symbol}`;
+
       const reportData = {
         symbol,
         generatedAt: new Date().toISOString(),
-        analysisId: `analysis_${Date.now()}_${symbol}`,
+        analysisId: generatedAnalysisId,
         marketPulse: results[1],
         assetScan: results[2],
         safetyCheck: results[3],
@@ -236,6 +239,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
         },
         body: JSON.stringify({
           symbol,
+          analysisId: generatedAnalysisId,
           reportData,
           verdict: verdict?.action || verdict?.verdict || 'N/A',
           score: verdict?.overallScore || 0,
@@ -246,7 +250,8 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
 
       if (response.ok) {
         setReportSaved(true);
-        console.log('Report auto-saved successfully');
+        setSavedAnalysisId(generatedAnalysisId);
+        console.log('Report auto-saved successfully with analysisId:', generatedAnalysisId);
       }
     } catch (error) {
       console.error('Failed to auto-save report:', error);
@@ -486,7 +491,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
                       <span>Report saved - View in Reports page</span>
                     </div>
                   )}
-                  <DownloadReportButton analysisData={results} symbol={symbol} analysisId={(results[7] as { analysisId?: string })?.analysisId} />
+                  <DownloadReportButton analysisData={results} symbol={symbol} analysisId={savedAnalysisId || undefined} />
                 </div>
               )}
 
