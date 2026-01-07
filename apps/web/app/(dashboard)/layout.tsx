@@ -37,8 +37,8 @@ const PriceTicker = dynamic(
 const mainNav = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
-  { name: 'AI Experts', href: '/ai-expert', icon: Brain },
   { name: 'Reports', href: '/reports', icon: FileText },
+  { name: 'AI Experts', href: '/ai-expert', icon: Brain },
 ];
 
 // İkincil navigasyon (dropdown içinde)
