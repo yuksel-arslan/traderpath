@@ -153,6 +153,177 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
   );
 }
 
+// Analysis Steps Data
+const ANALYSIS_STEPS = [
+  {
+    name: 'Market Pulse',
+    icon: Globe,
+    color: 'text-blue-500',
+    bg: 'bg-blue-500/10',
+    border: 'border-blue-500/30',
+    description: 'Analyzes overall crypto market sentiment including Bitcoin dominance, total market cap trends, fear & greed index, and institutional flow data to determine if market conditions favor your trade.',
+    details: [
+      'Bitcoin dominance & market cap analysis',
+      'Fear & Greed Index evaluation',
+      'Institutional money flow tracking',
+      'Overall market trend direction'
+    ]
+  },
+  {
+    name: 'Asset Scan',
+    icon: BarChart3,
+    color: 'text-cyan-500',
+    bg: 'bg-cyan-500/10',
+    border: 'border-cyan-500/30',
+    description: 'Deep technical analysis of the specific coin including support/resistance levels, volume analysis, RSI, MACD, moving averages, and price action patterns on multiple timeframes.',
+    details: [
+      'Support & resistance level identification',
+      'RSI, MACD, and momentum indicators',
+      'Volume profile analysis',
+      'Multi-timeframe pattern recognition'
+    ]
+  },
+  {
+    name: 'Safety',
+    icon: Shield,
+    color: 'text-green-500',
+    bg: 'bg-green-500/10',
+    border: 'border-green-500/30',
+    description: 'Risk assessment checking for market manipulation signs, unusual whale activity, exchange inflow/outflow anomalies, and potential rug pull indicators to protect your investment.',
+    details: [
+      'Whale wallet movement monitoring',
+      'Exchange inflow/outflow analysis',
+      'Manipulation pattern detection',
+      'Rug pull risk assessment'
+    ]
+  },
+  {
+    name: 'Timing',
+    icon: Clock,
+    color: 'text-yellow-500',
+    bg: 'bg-yellow-500/10',
+    border: 'border-yellow-500/30',
+    description: 'Optimal entry timing analysis considering upcoming events, funding rates, liquidation levels, and historical volatility patterns to find the best moment to enter.',
+    details: [
+      'Funding rate analysis',
+      'Liquidation level mapping',
+      'Event calendar consideration',
+      'Volatility pattern recognition'
+    ]
+  },
+  {
+    name: 'Trade Plan',
+    icon: Target,
+    color: 'text-purple-500',
+    bg: 'bg-purple-500/10',
+    border: 'border-purple-500/30',
+    description: 'Generates precise entry price, take-profit targets (TP1, TP2, TP3), and stop-loss levels based on risk/reward ratios and key technical levels.',
+    details: [
+      'Optimal entry price calculation',
+      'Multiple take-profit targets (TP1, TP2, TP3)',
+      'Strategic stop-loss placement',
+      'Risk/reward ratio optimization'
+    ]
+  },
+  {
+    name: 'Trap Check',
+    icon: AlertTriangle,
+    color: 'text-orange-500',
+    bg: 'bg-orange-500/10',
+    border: 'border-orange-500/30',
+    description: 'Detects potential bull/bear traps, fake breakouts, stop-loss hunting zones, and manipulation patterns that could invalidate the trade setup.',
+    details: [
+      'Bull/bear trap identification',
+      'Fake breakout detection',
+      'Stop-loss hunting zone alerts',
+      'Market maker pattern analysis'
+    ]
+  },
+  {
+    name: 'Verdict',
+    icon: CheckCircle,
+    color: 'text-emerald-500',
+    bg: 'bg-emerald-500/10',
+    border: 'border-emerald-500/30',
+    description: 'Final decision combining all 6 analysis steps into a clear GO (strong setup), WAIT (uncertain conditions), or AVOID (high risk) recommendation with confidence score.',
+    details: [
+      'Aggregated analysis score',
+      'Clear GO / WAIT / AVOID decision',
+      'Confidence percentage',
+      'Key factors summary'
+    ]
+  },
+];
+
+// Analysis Steps Grid Component with Centered Modal Popup
+function AnalysisStepsGrid() {
+  const [activeStep, setActiveStep] = useState<number | null>(null);
+
+  return (
+    <>
+      <div className="bg-card border rounded-xl p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+          {ANALYSIS_STEPS.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={idx}
+                className="flex flex-col items-center text-center p-2 rounded-lg hover:bg-accent/50 transition cursor-pointer"
+                onMouseEnter={() => setActiveStep(idx)}
+                onMouseLeave={() => setActiveStep(null)}
+              >
+                <div className={`w-9 h-9 ${item.bg} rounded-lg flex items-center justify-center mb-1`}>
+                  <Icon className={`w-4 h-4 ${item.color}`} />
+                </div>
+                <span className="text-[11px] font-medium">{item.name}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Centered Modal Popup */}
+      {activeStep !== null && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
+            {(() => {
+              const item = ANALYSIS_STEPS[activeStep];
+              const Icon = item.icon;
+              return (
+                <>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-12 h-12 ${item.bg} ${item.border} border rounded-xl flex items-center justify-center`}>
+                      <Icon className={`w-6 h-6 ${item.color}`} />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-bold">{item.name}</h4>
+                      <span className="text-xs text-muted-foreground">Step {activeStep + 1} of 7</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                    {item.description}
+                  </p>
+                  <div className="space-y-2">
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Key Features</h5>
+                    <ul className="space-y-1.5">
+                      {item.details.map((detail, i) => (
+                        <li key={i} className="flex items-center gap-2 text-sm">
+                          <CheckCircle className={`w-3.5 h-3.5 ${item.color} flex-shrink-0`} />
+                          <span>{detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function LandingPage() {
   const [livePrices, setLivePrices] = useState<LivePrice[]>([]);
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
@@ -476,87 +647,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* 7 Steps Grid */}
-                <div className="bg-card border rounded-xl p-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-                    {[
-                      {
-                        name: 'Market Pulse',
-                        icon: Globe,
-                        color: 'text-blue-500',
-                        bg: 'bg-blue-500/10',
-                        description: 'Analyzes overall crypto market sentiment including Bitcoin dominance, total market cap trends, fear & greed index, and institutional flow data to determine if market conditions favor your trade.'
-                      },
-                      {
-                        name: 'Asset Scan',
-                        icon: BarChart3,
-                        color: 'text-cyan-500',
-                        bg: 'bg-cyan-500/10',
-                        description: 'Deep technical analysis of the specific coin including support/resistance levels, volume analysis, RSI, MACD, moving averages, and price action patterns on multiple timeframes.'
-                      },
-                      {
-                        name: 'Safety',
-                        icon: Shield,
-                        color: 'text-green-500',
-                        bg: 'bg-green-500/10',
-                        description: 'Risk assessment checking for market manipulation signs, unusual whale activity, exchange inflow/outflow anomalies, and potential rug pull indicators to protect your investment.'
-                      },
-                      {
-                        name: 'Timing',
-                        icon: Clock,
-                        color: 'text-yellow-500',
-                        bg: 'bg-yellow-500/10',
-                        description: 'Optimal entry timing analysis considering upcoming events, funding rates, liquidation levels, and historical volatility patterns to find the best moment to enter.'
-                      },
-                      {
-                        name: 'Trade Plan',
-                        icon: Target,
-                        color: 'text-purple-500',
-                        bg: 'bg-purple-500/10',
-                        description: 'Generates precise entry price, take-profit targets (TP1, TP2, TP3), and stop-loss levels based on risk/reward ratios and key technical levels.'
-                      },
-                      {
-                        name: 'Trap Check',
-                        icon: AlertTriangle,
-                        color: 'text-orange-500',
-                        bg: 'bg-orange-500/10',
-                        description: 'Detects potential bull/bear traps, fake breakouts, stop-loss hunting zones, and manipulation patterns that could invalidate the trade setup.'
-                      },
-                      {
-                        name: 'Verdict',
-                        icon: CheckCircle,
-                        color: 'text-emerald-500',
-                        bg: 'bg-emerald-500/10',
-                        description: 'Final decision combining all 6 analysis steps into a clear GO (strong setup), WAIT (uncertain conditions), or AVOID (high risk) recommendation with confidence score.'
-                      },
-                    ].map((item, idx) => {
-                      const Icon = item.icon;
-                      return (
-                        <div key={idx} className="relative group">
-                          <div className="flex flex-col items-center text-center p-2 rounded-lg hover:bg-accent/50 transition cursor-pointer">
-                            <div className={`w-9 h-9 ${item.bg} rounded-lg flex items-center justify-center mb-1`}>
-                              <Icon className={`w-4 h-4 ${item.color}`} />
-                            </div>
-                            <span className="text-[11px] font-medium">{item.name}</span>
-                          </div>
-                          {/* Tooltip Popup */}
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-popover border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className={`w-6 h-6 ${item.bg} rounded flex items-center justify-center`}>
-                                <Icon className={`w-3 h-3 ${item.color}`} />
-                              </div>
-                              <span className="font-semibold text-sm">{item.name}</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
-                            {/* Arrow */}
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
-                              <div className="border-8 border-transparent border-t-popover" />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                <AnalysisStepsGrid />
               </div>
             </div>
 
