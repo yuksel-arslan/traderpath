@@ -36,7 +36,11 @@ import {
   History,
   Share2,
   PieChart,
-  Calendar
+  Calendar,
+  Bell,
+  MessageCircle,
+  Send,
+  Smartphone
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
@@ -402,6 +406,46 @@ const REPORTING_FEATURES = [
   },
 ];
 
+// Alerts Features Data - Social media and messaging alerts
+const ALERTS_FEATURES = [
+  {
+    name: 'Telegram Alerts',
+    icon: Send,
+    color: 'text-blue-400',
+    bg: 'bg-blue-400/10',
+    border: 'border-blue-400/30',
+    description: 'Get instant analysis results and trade signals delivered to your Telegram. Join our channel or set up private bot notifications.',
+    highlights: ['Instant notifications', 'Private bot option', 'Channel broadcasts', 'Custom filters']
+  },
+  {
+    name: 'Discord Alerts',
+    icon: MessageCircle,
+    color: 'text-indigo-500',
+    bg: 'bg-indigo-500/10',
+    border: 'border-indigo-500/30',
+    description: 'Connect with our Discord community. Receive alerts in dedicated channels and discuss trades with fellow traders.',
+    highlights: ['Community channels', 'Role-based alerts', 'Discussion threads', 'Voice updates']
+  },
+  {
+    name: 'Push Notifications',
+    icon: Smartphone,
+    color: 'text-green-500',
+    bg: 'bg-green-500/10',
+    border: 'border-green-500/30',
+    description: 'Never miss an important signal. Get push notifications directly to your mobile device for time-sensitive alerts.',
+    highlights: ['Mobile alerts', 'Priority levels', 'Sound customization', 'Do not disturb']
+  },
+  {
+    name: 'Price Alerts',
+    icon: Bell,
+    color: 'text-yellow-500',
+    bg: 'bg-yellow-500/10',
+    border: 'border-yellow-500/30',
+    description: 'Set custom price alerts for any coin. Get notified when your target prices or analysis conditions are met.',
+    highlights: ['Custom thresholds', 'Multi-coin tracking', 'Condition triggers', 'TP/SL monitoring']
+  },
+];
+
 // Analysis Steps Grid Component (Simple version for How it Works section)
 function AnalysisStepsGrid() {
   return (
@@ -426,11 +470,12 @@ function AnalysisStepsGrid() {
   );
 }
 
-// Features Section Component with Two Main Features
+// Features Section Component with Four Main Features
 function FeaturesSection() {
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [activeExpert, setActiveExpert] = useState<number | null>(null);
   const [activeReport, setActiveReport] = useState<number | null>(null);
+  const [activeAlert, setActiveAlert] = useState<number | null>(null);
 
   return (
     <>
@@ -626,6 +671,65 @@ function FeaturesSection() {
                 Download as <span className="text-cyan-500 font-medium">PDF</span>, receive via <span className="text-blue-500 font-medium">email</span>,
                 or access from your <span className="text-green-500 font-medium">dashboard</span> anytime.
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature 4: Alerts */}
+      <section className="py-20 bg-gradient-to-b from-yellow-500/5 via-orange-500/5 to-transparent">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <span className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-full text-yellow-500 text-sm font-medium mb-4">
+              <Bell className="w-4 h-4" />
+              Feature 4
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
+              Smart Alerts
+              <Send className="w-8 h-8 text-blue-400" />
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Stay connected wherever you are. Get instant notifications via Telegram, Discord, and push notifications when important signals are triggered.
+            </p>
+          </div>
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {ALERTS_FEATURES.map((feature, idx) => {
+                const FeatureIcon = feature.icon;
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => setActiveAlert(idx)}
+                    className={`p-6 bg-card border-2 rounded-xl hover:shadow-xl transition cursor-pointer group ${feature.border}`}
+                  >
+                    <div className={`w-14 h-14 ${feature.bg} rounded-xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition`}>
+                      <FeatureIcon className={`w-7 h-7 ${feature.color}`} />
+                    </div>
+                    <h3 className="font-bold text-lg mb-2 text-center">{feature.name}</h3>
+                    <p className="text-sm text-muted-foreground text-center line-clamp-2">{feature.description.split('.')[0]}.</p>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-8 p-4 bg-card border rounded-xl">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-blue-400/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Send className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">Telegram & Discord:</span> Join our community channels or set up private bot notifications for personalized alerts.
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-yellow-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Bell className="w-4 h-4 text-yellow-500" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">Real-time Updates:</span> Get notified when your analyses hit TP/SL targets or when market conditions change.
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -835,6 +939,69 @@ function FeaturesSection() {
                   <div className="bg-accent/50 rounded-lg p-4 border border-border">
                     <p className="text-sm text-muted-foreground">
                       <span className="font-semibold text-foreground">Availability:</span> This feature is included with all TradePath accounts. No additional cost or subscription required.
+                    </p>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Alert Feature Modal */}
+      {activeAlert !== null && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setActiveAlert(null)}
+        >
+          <div
+            className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-md w-full animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {(() => {
+              const feature = ALERTS_FEATURES[activeAlert];
+              const FeatureIcon = feature.icon;
+              return (
+                <>
+                  {/* Header */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-16 h-16 ${feature.bg} ${feature.border} border-2 rounded-xl flex items-center justify-center flex-shrink-0`}>
+                      <FeatureIcon className={`w-8 h-8 ${feature.color}`} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-xl font-bold">{feature.name}</h4>
+                      <p className={`text-sm ${feature.color} font-medium`}>Smart Alerts</p>
+                    </div>
+                    <button
+                      onClick={() => setActiveAlert(null)}
+                      className="text-muted-foreground hover:text-foreground transition"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-sm leading-relaxed mb-4">
+                    {feature.description}
+                  </p>
+
+                  {/* Highlights */}
+                  <div className={`${feature.bg} rounded-lg p-4 mb-4`}>
+                    <h5 className={`text-xs font-semibold uppercase tracking-wide ${feature.color} mb-3`}>Key Features</h5>
+                    <div className="grid grid-cols-2 gap-2">
+                      {feature.highlights.map((item, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm">
+                          <CheckCircle className={`w-4 h-4 ${feature.color} flex-shrink-0`} />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* How to Connect */}
+                  <div className="bg-accent/50 rounded-lg p-4 border border-border">
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-semibold text-foreground">Get Started:</span> Connect your account from the dashboard settings. Join our Telegram channel or Discord server to start receiving alerts immediately.
                     </p>
                   </div>
                 </>
