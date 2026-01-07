@@ -26,7 +26,11 @@ import {
   ChevronDown,
   Play,
   Brain,
-  Sparkles
+  Sparkles,
+  LineChart,
+  Crosshair,
+  Radar,
+  ShieldAlert
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
@@ -291,7 +295,7 @@ const AI_EXPERTS = [
   {
     name: 'ARIA',
     title: 'Chief Technical Analyst',
-    avatar: '📊',
+    icon: LineChart,
     color: 'text-blue-500',
     bg: 'bg-blue-500/10',
     border: 'border-blue-500/30',
@@ -302,7 +306,7 @@ const AI_EXPERTS = [
   {
     name: 'NEXUS',
     title: 'Chief Risk Officer',
-    avatar: '🛡️',
+    icon: Crosshair,
     color: 'text-green-500',
     bg: 'bg-green-500/10',
     border: 'border-green-500/30',
@@ -313,7 +317,7 @@ const AI_EXPERTS = [
   {
     name: 'ORACLE',
     title: 'On-Chain Intelligence Director',
-    avatar: '🔮',
+    icon: Radar,
     color: 'text-purple-500',
     bg: 'bg-purple-500/10',
     border: 'border-purple-500/30',
@@ -324,7 +328,7 @@ const AI_EXPERTS = [
   {
     name: 'SENTINEL',
     title: 'Security & Fraud Prevention Lead',
-    avatar: '🔍',
+    icon: ShieldAlert,
     color: 'text-orange-500',
     bg: 'bg-orange-500/10',
     border: 'border-orange-500/30',
@@ -378,18 +382,23 @@ function AnalysisStepsGrid() {
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {AI_EXPERTS.map((expert, idx) => (
-            <div
-              key={idx}
-              className={`flex flex-col items-center text-center p-3 rounded-lg ${expert.bg} border ${expert.border} hover:scale-105 transition cursor-pointer`}
-              onMouseEnter={() => setActiveExpert(idx)}
-              onMouseLeave={() => setActiveExpert(null)}
-            >
-              <span className="text-2xl mb-1">{expert.avatar}</span>
-              <span className="text-[11px] font-semibold">{expert.name}</span>
-              <span className="text-[9px] text-muted-foreground">{expert.title.split(' ')[0]}</span>
-            </div>
-          ))}
+          {AI_EXPERTS.map((expert, idx) => {
+            const ExpertIcon = expert.icon;
+            return (
+              <div
+                key={idx}
+                className={`flex flex-col items-center text-center p-3 rounded-lg ${expert.bg} border ${expert.border} hover:scale-105 transition cursor-pointer`}
+                onMouseEnter={() => setActiveExpert(idx)}
+                onMouseLeave={() => setActiveExpert(null)}
+              >
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-1 ${expert.bg}`}>
+                  <ExpertIcon className={`w-5 h-5 ${expert.color}`} />
+                </div>
+                <span className="text-[11px] font-semibold">{expert.name}</span>
+                <span className="text-[9px] text-muted-foreground">{expert.title.split(' ')[0]}</span>
+              </div>
+            );
+          })}
         </div>
         <p className="text-xs text-center text-muted-foreground mt-3 italic">
           Hover over each expert to learn what they analyze
@@ -461,12 +470,13 @@ function AnalysisStepsGrid() {
           <div className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
             {(() => {
               const expert = AI_EXPERTS[activeExpert];
+              const ExpertIcon = expert.icon;
               return (
                 <>
                   {/* Header */}
                   <div className="flex items-center gap-3 mb-3">
                     <div className={`w-14 h-14 ${expert.bg} ${expert.border} border-2 rounded-xl flex items-center justify-center flex-shrink-0`}>
-                      <span className="text-3xl">{expert.avatar}</span>
+                      <ExpertIcon className={`w-7 h-7 ${expert.color}`} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
