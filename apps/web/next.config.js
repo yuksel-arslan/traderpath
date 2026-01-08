@@ -1,14 +1,25 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
+
+  // Environment variables exposed to the browser
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
+  },
 
   // Experimental features for faster navigation
   experimental: {
     optimizePackageImports: ['lucide-react', 'recharts', '@tanstack/react-query'],
   },
 
-  // Proxy API requests to the backend
+  // Proxy API requests to the backend (development only)
+  // In production, frontend calls API directly via NEXT_PUBLIC_API_URL
   async rewrites() {
+    // Skip rewrites in production - frontend will call API directly
+    if (process.env.NODE_ENV === 'production') {
+      return [];
+    }
     return [
       {
         source: '/api/:path*',

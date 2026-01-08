@@ -3,6 +3,9 @@
 // Handles fetch requests with proper error handling
 // ===========================================
 
+// API base URL - uses environment variable in production
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+
 interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
@@ -18,6 +21,21 @@ interface ApiError extends Error {
 }
 
 /**
+ * Get full API URL - prepends base URL for production
+ */
+function getApiUrl(url: string): string {
+  // If URL is already absolute, return as-is
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  // In production, prepend the API base URL for /api routes
+  if (API_BASE_URL && url.startsWith('/api')) {
+    return `${API_BASE_URL}${url}`;
+  }
+  return url;
+}
+
+/**
  * Safe fetch wrapper that handles non-JSON responses
  * and provides consistent error handling
  */
@@ -25,7 +43,8 @@ export async function safeFetch<T = unknown>(
   url: string,
   options?: RequestInit
 ): Promise<{ response: Response; data: ApiResponse<T> }> {
-  const response = await fetch(url, {
+  const fullUrl = getApiUrl(url);
+  const response = await fetch(fullUrl, {
     ...options,
     headers: {
       'Content-Type': 'application/json',

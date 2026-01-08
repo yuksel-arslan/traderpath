@@ -14,6 +14,9 @@ const envSchema = z.object({
   APP_URL: z.string().url().default('http://localhost:3000'),
   API_URL: z.string().url().default('http://localhost:4000'),
 
+  // CORS - comma-separated list of allowed origins (optional)
+  CORS_ORIGINS: z.string().optional(),
+
   // Database (optional - using JSON file storage)
   DATABASE_URL: z.string().optional(),
 
@@ -71,10 +74,12 @@ export const config = {
   appUrl: env.APP_URL,
   apiUrl: env.API_URL,
 
-  // CORS
-  corsOrigins: env.NODE_ENV === 'production'
-    ? [env.APP_URL]
-    : ['http://localhost:3000', 'http://localhost:5173'],
+  // CORS - use CORS_ORIGINS env var or fall back to APP_URL in production
+  corsOrigins: env.CORS_ORIGINS
+    ? env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+    : env.NODE_ENV === 'production'
+      ? [env.APP_URL]
+      : ['http://localhost:3000', 'http://localhost:5173'],
 
   // Database
   databaseUrl: env.DATABASE_URL,
