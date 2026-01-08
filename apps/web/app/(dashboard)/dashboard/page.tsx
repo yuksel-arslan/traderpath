@@ -1048,7 +1048,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">7-Step Analysis</h2>
-                <p className="text-gray-500 dark:text-slate-400 text-sm">Each step uses independently verified algorithms</p>
+                <p className="text-gray-500 dark:text-slate-400 text-sm">Average scores from {platformStats?.accuracy.sampleSize ?? 0} verified analyses</p>
               </div>
             </div>
             <Link
@@ -1130,6 +1130,11 @@ export default function DashboardPage() {
                               ))}
                             </div>
                           </div>
+                          <div className="mt-2 pt-2 border-t border-slate-700">
+                            <p className="text-[10px] text-slate-400">
+                              <span className="font-medium">Score:</span> Average from past analyses. Updates when new analyses are completed.
+                            </p>
+                          </div>
                         </div>
                       </div>
 
@@ -1194,6 +1199,11 @@ export default function DashboardPage() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Avg Score Label */}
+                      <p className="text-center text-[10px] text-gray-400 dark:text-slate-500 -mt-1 mb-2">
+                        {stepHasData ? 'Avg. Score' : 'No data yet'}
+                      </p>
 
                       {/* Metrics Tags */}
                       <div className="flex flex-wrap gap-1">
