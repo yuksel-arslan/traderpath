@@ -10,6 +10,10 @@ interface EmailOptions {
   subject: string;
   html: string;
   text?: string;
+  attachments?: Array<{
+    filename: string;
+    content: string; // Base64 encoded content
+  }>;
 }
 
 interface ReportEmailData {
@@ -36,6 +40,17 @@ interface ScheduledReportEmailData {
   generatedAt: string;
 }
 
+interface PdfReportEmailData {
+  userName: string;
+  symbol: string;
+  verdict: string;
+  score: number;
+  direction: string;
+  generatedAt: string;
+  pdfBase64: string; // Base64 encoded PDF
+  fileName: string;
+}
+
 class EmailService {
   private readonly FROM_EMAIL = 'TradePath <noreply@tradepath.app>';
   private readonly RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -51,19 +66,26 @@ class EmailService {
     }
 
     try {
+      const emailPayload: Record<string, unknown> = {
+        from: this.FROM_EMAIL,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+      };
+
+      // Add attachments if provided
+      if (options.attachments && options.attachments.length > 0) {
+        emailPayload.attachments = options.attachments;
+      }
+
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.RESEND_API_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          from: this.FROM_EMAIL,
-          to: options.to,
-          subject: options.subject,
-          html: options.html,
-          text: options.text,
-        }),
+        body: JSON.stringify(emailPayload),
       });
 
       if (!response.ok) {
@@ -405,6 +427,236 @@ Generated on ${data.generatedAt}
 
 ---
 TradePath - Professional Trading Analysis
+    `.trim();
+  }
+
+  /**
+   * Send PDF analysis report to user with attachment
+   */
+  async sendPdfReport(email: string, data: PdfReportEmailData): Promise<{ success: boolean; error?: string }> {
+    const html = this.generatePdfReportEmailHtml(data);
+    const text = this.generatePdfReportEmailText(data);
+
+    const result = await this.sendEmail({
+      to: email,
+      subject: `📊 TradePath ${data.symbol}/USDT Analiz Raporu - ${data.verdict}`,
+      html,
+      text,
+      attachments: [
+        {
+          filename: data.fileName,
+          content: data.pdfBase64,
+        },
+      ],
+    });
+
+    return { success: result.success, error: result.error };
+  }
+
+  /**
+   * Generate HTML email for PDF report
+   */
+  private generatePdfReportEmailHtml(data: PdfReportEmailData): string {
+    const isLong = data.direction?.toLowerCase() === 'long';
+    const verdictColor = data.verdict === 'GO' ? '#22c55e' :
+                        data.verdict === 'WAIT' ? '#f59e0b' : '#ef4444';
+    const directionColor = isLong ? '#22c55e' : '#ef4444';
+    const directionIcon = isLong ? '▲' : '▼';
+    const directionText = isLong ? 'BULLISH' : 'BEARISH';
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradePath Analiz Raporu</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+
+          <!-- Header with gradient -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #dc2626 0%, #f59e0b 50%, #22c55e 100%); padding: 30px; text-align: center;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="text-align: center;">
+                    <h1 style="margin: 0; color: white; font-size: 32px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                      Trade<span style="color: #fef3c7;">Path</span>
+                    </h1>
+                    <p style="margin: 8px 0 0; color: rgba(255,255,255,0.95); font-size: 14px; letter-spacing: 1px;">
+                      From Charts to Clarity
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 35px;">
+              <p style="color: #475569; font-size: 16px; margin: 0 0 25px; line-height: 1.6;">
+                Merhaba <strong style="color: #1e293b;">${data.userName}</strong>,
+              </p>
+
+              <p style="color: #64748b; font-size: 15px; margin: 0 0 30px; line-height: 1.6;">
+                Talep ettiğiniz <strong style="color: #1e293b;">${data.symbol}/USDT</strong> analiz raporu hazırlandı ve bu e-postaya eklendi.
+              </p>
+
+              <!-- Report Summary Card -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 25px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td width="50%" style="vertical-align: top;">
+                          <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Analiz Edilen</p>
+                          <p style="margin: 0; color: #1e293b; font-size: 28px; font-weight: bold;">${data.symbol}/USDT</p>
+                        </td>
+                        <td width="50%" style="text-align: right; vertical-align: top;">
+                          <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Yön</p>
+                          <p style="margin: 0; color: ${directionColor}; font-size: 20px; font-weight: bold;">
+                            ${directionIcon} ${directionText}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <div style="border-top: 1px solid #e2e8f0; margin: 20px 0; padding-top: 20px;">
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td width="50%">
+                            <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Karar</p>
+                            <span style="display: inline-block; background: ${verdictColor}20; color: ${verdictColor}; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 14px;">
+                              ${data.verdict}
+                            </span>
+                          </td>
+                          <td width="50%" style="text-align: right;">
+                            <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Güven Skoru</p>
+                            <p style="margin: 0; color: #1e293b; font-size: 24px; font-weight: bold;">${data.score}<span style="color: #94a3b8; font-size: 16px;">/100</span></p>
+                          </td>
+                        </tr>
+                      </table>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Attachment Notice -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: #f0fdf4; border-radius: 12px; border: 1px solid #bbf7d0; margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td width="40" style="vertical-align: top;">
+                          <div style="width: 36px; height: 36px; background: #22c55e; border-radius: 8px; text-align: center; line-height: 36px;">
+                            <span style="color: white; font-size: 18px;">📎</span>
+                          </div>
+                        </td>
+                        <td style="padding-left: 15px;">
+                          <p style="margin: 0 0 4px; color: #166534; font-weight: 600; font-size: 15px;">PDF Rapor Ekte</p>
+                          <p style="margin: 0; color: #15803d; font-size: 13px;">${data.fileName}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Report Contents -->
+              <p style="color: #64748b; font-size: 14px; margin: 0 0 15px; font-weight: 600;">Rapor İçeriği:</p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 8px 0; color: #475569; font-size: 14px;">
+                    <span style="color: #22c55e; margin-right: 10px;">✓</span> 7 Adımlı Analiz (Market Pulse, Asset Scan, Safety Check...)
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #475569; font-size: 14px;">
+                    <span style="color: #22c55e; margin-right: 10px;">✓</span> Trade Plan (Entry, Stop Loss, Take Profit seviyeleri)
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #475569; font-size: 14px;">
+                    <span style="color: #22c55e; margin-right: 10px;">✓</span> Fiyat Grafiği
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #475569; font-size: 14px;">
+                    <span style="color: #22c55e; margin-right: 10px;">✓</span> AI Expert Yorumları
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Footer Note -->
+              <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 30px 0 0; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                Bu rapor ${data.generatedAt} tarihinde oluşturulmuştur.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #64748b; font-size: 13px; margin: 0 0 10px; font-weight: 600;">
+                TradePath - Professional Trading Analysis
+              </p>
+              <p style="color: #94a3b8; font-size: 11px; margin: 0;">
+                Bu e-posta, talep ettiğiniz analiz raporu için otomatik olarak gönderilmiştir.
+              </p>
+              <p style="color: #cbd5e1; font-size: 10px; margin: 15px 0 0;">
+                ⚠️ Bu rapor yatırım tavsiyesi niteliği taşımamaktadır. İşlem yapmadan önce kendi araştırmanızı yapın.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+  }
+
+  /**
+   * Generate plain text email for PDF report
+   */
+  private generatePdfReportEmailText(data: PdfReportEmailData): string {
+    const directionText = data.direction?.toLowerCase() === 'long' ? 'BULLISH' : 'BEARISH';
+
+    return `
+TradePath Analiz Raporu
+=======================
+
+Merhaba ${data.userName},
+
+Talep ettiğiniz ${data.symbol}/USDT analiz raporu hazırlandı ve bu e-postaya eklendi.
+
+RAPOR ÖZETİ:
+• Coin: ${data.symbol}/USDT
+• Yön: ${directionText}
+• Karar: ${data.verdict}
+• Skor: ${data.score}/100
+
+RAPOR İÇERİĞİ:
+✓ 7 Adımlı Analiz (Market Pulse, Asset Scan, Safety Check...)
+✓ Trade Plan (Entry, Stop Loss, Take Profit seviyeleri)
+✓ Fiyat Grafiği
+✓ AI Expert Yorumları
+
+PDF Dosyası: ${data.fileName}
+
+Bu rapor ${data.generatedAt} tarihinde oluşturulmuştur.
+
+---
+TradePath - Professional Trading Analysis
+
+⚠️ Bu rapor yatırım tavsiyesi niteliği taşımamaktadır.
+İşlem yapmadan önce kendi araştırmanızı yapın.
     `.trim();
   }
 }

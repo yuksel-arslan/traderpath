@@ -8,6 +8,7 @@ import { prisma } from '../../core/database';
 import { authenticate } from '../../core/auth/middleware';
 import { calculateExpiredOutcomes, getRealAccuracy, calculateReportOutcome } from './outcome.service';
 import { notificationService } from '../notifications/notification.service';
+import { emailService } from '../email/email.service';
 
 // Admin emails - their reports are public and visible to all users
 const ADMIN_EMAILS = ['contact@yukselarslan.com'];
@@ -1039,6 +1040,85 @@ export async function reportRoutes(fastify: FastifyInstance) {
         fastify.log.error(error);
         return reply.code(500).send({
           error: { code: 'SERVER_ERROR', message: 'Failed to check outcomes' },
+        });
+      }
+    }
+  );
+
+  // ===========================================
+  // POST /api/reports/send-email - Send PDF report via email
+  // ===========================================
+  interface SendEmailBody {
+    symbol: string;
+    verdict: string;
+    score: number;
+    direction: string;
+    generatedAt: string;
+    pdfBase64: string;
+    fileName: string;
+  }
+
+  fastify.post<{ Body: SendEmailBody }>(
+    '/api/reports/send-email',
+    { preHandler: authenticate },
+    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+      try {
+        const userId = request.user?.id;
+        if (!userId) {
+          return reply.code(401).send({
+            error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+          });
+        }
+
+        const { symbol, verdict, score, direction, generatedAt, pdfBase64, fileName } = request.body;
+
+        // Validate required fields
+        if (!symbol || !pdfBase64 || !fileName) {
+          return reply.code(400).send({
+            error: { code: 'INVALID_INPUT', message: 'Missing required fields: symbol, pdfBase64, fileName' },
+          });
+        }
+
+        // Get user's email
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true, name: true },
+        });
+
+        if (!user?.email) {
+          return reply.code(400).send({
+            error: { code: 'NO_EMAIL', message: 'User email not found' },
+          });
+        }
+
+        // Send the PDF report via email
+        const result = await emailService.sendPdfReport(user.email, {
+          userName: user.name || 'Trader',
+          symbol,
+          verdict: verdict || 'N/A',
+          score: score || 0,
+          direction: direction || 'long',
+          generatedAt: generatedAt || new Date().toLocaleString('tr-TR'),
+          pdfBase64,
+          fileName,
+        });
+
+        if (!result.success) {
+          fastify.log.error({ error: result.error }, 'Failed to send PDF email');
+          return reply.code(500).send({
+            error: { code: 'EMAIL_FAILED', message: 'Failed to send email', details: result.error },
+          });
+        }
+
+        return reply.send({
+          success: true,
+          message: 'Report sent successfully to ' + user.email,
+          data: { email: user.email },
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to send report email' },
         });
       }
     }

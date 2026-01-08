@@ -569,8 +569,14 @@ async function renderPageToCanvas(html: string): Promise<HTMLCanvasElement> {
   return canvas;
 }
 
+// Return type for PDF generation
+interface PdfResult {
+  base64: string;
+  fileName: string;
+}
+
 // Main export function - 3 Page PDF
-export async function generateAnalysisReport(data: AnalysisReportData, captureChart: boolean = true): Promise<void> {
+export async function generateAnalysisReport(data: AnalysisReportData, captureChart: boolean = true): Promise<PdfResult | void> {
   // Capture chart if needed
   if (captureChart && !data.chartImage) {
     console.log('Attempting to capture chart...');
@@ -610,9 +616,20 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
   const imgData3 = canvas3.toDataURL('image/png');
   pdf.addImage(imgData3, 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-  // Save
-  const filename = `TradePath_${data.symbol}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-  pdf.save(filename);
+  // Generate filename
+  const fileName = `TradePath_${data.symbol}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+
+  // Get PDF as base64 for email (remove data:application/pdf;base64, prefix)
+  const pdfBase64 = pdf.output('datauristring').split(',')[1];
+
+  // Save to user's device
+  pdf.save(fileName);
+
+  // Return PDF data for email sending
+  return {
+    base64: pdfBase64,
+    fileName,
+  };
 }
 
 export type { AnalysisReportData as ReportData };
