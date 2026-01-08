@@ -781,15 +781,10 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
       const cautionTotal = cautionCorrect + cautionIncorrect;
       const cautionAccuracy = cautionTotal > 0 ? Number(((cautionCorrect / cautionTotal) * 100).toFixed(1)) : 0;
 
-      // Count reports with trade plan (from all reports, not period-filtered)
-      const allReportsWithData = await db.report.findMany({
-        select: { reportData: true }
-      });
-      const reportsWithTradePlan = allReportsWithData.filter(r => {
-        const rd = r.reportData as Record<string, unknown> | null;
-        return rd && rd.tradePlan;
-      }).length;
-      const totalAllReports = allReportsWithData.length;
+      // "With Plan" = GO signals only (analyses with actionable trade plans)
+      // WAIT/AVOID don't count as "with plan" since they recommend NOT trading
+      const reportsWithTradePlan = goSignalReports.length;
+      const totalAllReports = allReportsForSignals.length;
 
       // Trigger background outcome calculations (don't await)
       calculateExpiredOutcomes().catch(err => console.error('Background outcome calculation failed:', err));
