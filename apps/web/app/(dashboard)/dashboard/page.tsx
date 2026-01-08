@@ -77,7 +77,8 @@ interface PlatformStats {
     goCorrect: number;
     goIncorrect: number;
     pending: number;
-    total: number;
+    totalVerified: number;
+    totalSignals: number;
     description: string;
   };
   // Caution Rate: Success rate of WAIT/AVOID recommendations
@@ -86,7 +87,8 @@ interface PlatformStats {
     cautionCorrect: number;
     cautionIncorrect: number;
     pending: number;
-    total: number;
+    totalVerified: number;
+    totalSignals: number;
     description: string;
   };
   // Analysis coverage
@@ -769,7 +771,7 @@ export default function DashboardPage() {
                         <span className="text-xs text-gray-500 dark:text-slate-400">Caution</span>
                       </div>
                       <div className="text-xl font-bold text-gray-900 dark:text-white">
-                        {(platformStats?.cautionRate?.total ?? 0) > 0 ? `${platformStats?.cautionRate?.rate ?? 0}%` : '—'}
+                        {(platformStats?.cautionRate?.totalVerified ?? 0) > 0 ? `${platformStats?.cautionRate?.rate ?? 0}%` : '—'}
                       </div>
                     </div>
                     <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10">
@@ -1503,9 +1505,9 @@ export default function DashboardPage() {
                 "text-xl font-bold",
                 (platformStats?.goSignalRate?.rate ?? 0) >= 60 ? "text-green-600 dark:text-green-400" :
                 (platformStats?.goSignalRate?.rate ?? 0) >= 40 ? "text-yellow-600 dark:text-yellow-400" :
-                (platformStats?.goSignalRate?.total ?? 0) === 0 ? "text-gray-400" : "text-red-600 dark:text-red-400"
+                (platformStats?.goSignalRate?.totalVerified ?? 0) === 0 ? "text-gray-400" : "text-red-600 dark:text-red-400"
               )}>
-                {(platformStats?.goSignalRate?.total ?? 0) > 0 ? `${platformStats?.goSignalRate?.rate}%` : '—'}
+                {(platformStats?.goSignalRate?.totalVerified ?? 0) > 0 ? `${platformStats?.goSignalRate?.rate}%` : '—'}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -1521,6 +1523,10 @@ export default function DashboardPage() {
                 <div className="text-lg font-bold text-gray-600 dark:text-slate-300">{platformStats?.goSignalRate?.pending ?? 0}</div>
                 <div className="text-[10px] text-gray-500 dark:text-slate-400">Pending</div>
               </div>
+            </div>
+            <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t border-emerald-200/50 dark:border-emerald-500/20">
+              <span className="text-gray-500 dark:text-slate-400">Total GO Signals</span>
+              <span className="font-semibold text-gray-700 dark:text-slate-300">{platformStats?.goSignalRate?.totalSignals ?? 0}</span>
             </div>
           </div>
         </div>
@@ -1543,9 +1549,9 @@ export default function DashboardPage() {
                 "text-xl font-bold",
                 (platformStats?.cautionRate?.rate ?? 0) >= 60 ? "text-green-600 dark:text-green-400" :
                 (platformStats?.cautionRate?.rate ?? 0) >= 40 ? "text-yellow-600 dark:text-yellow-400" :
-                (platformStats?.cautionRate?.total ?? 0) === 0 ? "text-gray-400" : "text-red-600 dark:text-red-400"
+                (platformStats?.cautionRate?.totalVerified ?? 0) === 0 ? "text-gray-400" : "text-red-600 dark:text-red-400"
               )}>
-                {(platformStats?.cautionRate?.total ?? 0) > 0 ? `${platformStats?.cautionRate?.rate}%` : '—'}
+                {(platformStats?.cautionRate?.totalVerified ?? 0) > 0 ? `${platformStats?.cautionRate?.rate}%` : '—'}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -1561,6 +1567,10 @@ export default function DashboardPage() {
                 <div className="text-lg font-bold text-gray-600 dark:text-slate-300">{platformStats?.cautionRate?.pending ?? 0}</div>
                 <div className="text-[10px] text-gray-500 dark:text-slate-400">Pending</div>
               </div>
+            </div>
+            <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t border-amber-200/50 dark:border-amber-500/20">
+              <span className="text-gray-500 dark:text-slate-400">Total WAIT/AVOID</span>
+              <span className="font-semibold text-gray-700 dark:text-slate-300">{platformStats?.cautionRate?.totalSignals ?? 0}</span>
             </div>
           </div>
         </div>

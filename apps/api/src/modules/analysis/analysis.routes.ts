@@ -748,40 +748,38 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
       // Average confidence is the average report score
       const avgConfidence = calcAvg(allScores);
 
-      // Get caution rate for WAIT/AVOID signals
-      const cautionData = await getCautionRate();
-
-      // Calculate GO signal accuracy (GO + CONDITIONAL_GO verdicts with outcomes)
-      const allReportsWithOutcomes = await db.report.findMany({
-        where: {
-          outcome: { in: ['correct', 'incorrect'] }
-        },
+      // Get all reports with their outcomes and verdicts for signal accuracy calculation
+      const allReportsForSignals = await db.report.findMany({
         select: { outcome: true, verdict: true }
       });
 
-      // Filter to GO/CONDITIONAL_GO signals (not WAIT/AVOID)
-      const filteredGoSignals = allReportsWithOutcomes.filter(r => {
-        const v = r.verdict.toLowerCase();
+      // Helper to check if verdict is a GO signal
+      const isGoSignal = (verdict: string) => {
+        const v = verdict.toLowerCase();
         return (v.includes('go') || v.includes('conditional')) && !v.includes('wait') && !v.includes('avoid');
-      });
+      };
 
-      const goCorrect = filteredGoSignals.filter(r => r.outcome === 'correct').length;
-      const goIncorrect = filteredGoSignals.filter(r => r.outcome === 'incorrect').length;
+      // Helper to check if verdict is a WAIT/AVOID signal
+      const isCautionSignal = (verdict: string) => {
+        const v = verdict.toLowerCase();
+        return v.includes('wait') || v.includes('avoid');
+      };
+
+      // GO Signal statistics (GO + CONDITIONAL_GO)
+      const goSignalReports = allReportsForSignals.filter(r => isGoSignal(r.verdict));
+      const goCorrect = goSignalReports.filter(r => r.outcome === 'correct').length;
+      const goIncorrect = goSignalReports.filter(r => r.outcome === 'incorrect').length;
+      const goPending = goSignalReports.filter(r => !r.outcome || r.outcome === 'pending').length;
       const goTotal = goCorrect + goIncorrect;
       const goAccuracy = goTotal > 0 ? Number(((goCorrect / goTotal) * 100).toFixed(1)) : 0;
 
-      // Count pending GO signals (not yet verified)
-      const allPendingReports = await db.report.findMany({
-        where: {
-          outcome: null
-        },
-        select: { verdict: true }
-      });
-
-      const goPending = allPendingReports.filter(r => {
-        const v = r.verdict.toLowerCase();
-        return (v.includes('go') || v.includes('conditional')) && !v.includes('wait') && !v.includes('avoid');
-      }).length;
+      // WAIT/AVOID Signal statistics
+      const cautionSignalReports = allReportsForSignals.filter(r => isCautionSignal(r.verdict));
+      const cautionCorrect = cautionSignalReports.filter(r => r.outcome === 'caution_correct').length;
+      const cautionIncorrect = cautionSignalReports.filter(r => r.outcome === 'caution_incorrect').length;
+      const cautionPending = cautionSignalReports.filter(r => !r.outcome || r.outcome === 'pending').length;
+      const cautionTotal = cautionCorrect + cautionIncorrect;
+      const cautionAccuracy = cautionTotal > 0 ? Number(((cautionCorrect / cautionTotal) * 100).toFixed(1)) : 0;
 
       // Count reports with trade plan
       const reportsWithTradePlan = reports.filter(r => {
@@ -844,16 +842,18 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
             goCorrect,
             goIncorrect,
             pending: goPending,
-            total: goTotal,
+            totalVerified: goTotal,
+            totalSignals: goSignalReports.length, // Should match verdicts.go + verdicts.conditional_go
             description: 'Success rate of GO/CONDITIONAL_GO signals (TP hit vs SL hit)'
           },
           // Caution Rate: How often WAIT/AVOID recommendations were correct
           cautionRate: {
-            rate: cautionData.rate,
-            cautionCorrect: cautionData.cautionCorrect,
-            cautionIncorrect: cautionData.cautionIncorrect,
-            pending: cautionData.pending,
-            total: cautionData.total,
+            rate: cautionAccuracy,
+            cautionCorrect,
+            cautionIncorrect,
+            pending: cautionPending,
+            totalVerified: cautionTotal,
+            totalSignals: cautionSignalReports.length, // Should match verdicts.wait + verdicts.avoid
             description: 'Success rate of WAIT/AVOID recommendations'
           },
           verdicts: verdictDistribution,
