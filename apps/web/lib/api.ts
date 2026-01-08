@@ -4,7 +4,10 @@
 // ===========================================
 
 // API base URL - uses environment variable in production
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+// In development, leave empty to use Next.js proxy rewrites
+const API_BASE_URL = process.env.NODE_ENV === 'production'
+  ? (process.env.NEXT_PUBLIC_API_URL || '')
+  : '';
 
 interface ApiResponse<T = unknown> {
   success: boolean;
@@ -21,7 +24,8 @@ interface ApiError extends Error {
 }
 
 /**
- * Get full API URL - prepends base URL for production
+ * Get full API URL - prepends base URL for production only
+ * In development, returns the URL as-is to use Next.js proxy rewrites
  */
 export function getApiUrl(url: string): string {
   // If URL is already absolute, return as-is
