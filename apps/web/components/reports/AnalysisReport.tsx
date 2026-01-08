@@ -141,9 +141,9 @@ const commonStyles = `
   .coin-logo { width: 36px; height: 36px; border-radius: 50%; object-fit: contain; }
   .coin-info { text-align: left; }
   .coin-symbol { font-size: 12px; font-weight: bold; color: #1e293b; }
-  .coin-badge { display: inline-flex; align-items: center; justify-content: center; padding: 2px 8px; border-radius: 10px; font-size: 8px; font-weight: bold; margin-top: 2px; }
-  .badge-green { background: #dcfce7; color: #16a34a; }
-  .badge-red { background: #fee2e2; color: #dc2626; }
+  .coin-badge { display: inline-flex; align-items: center; font-size: 9px; font-weight: bold; margin-top: 2px; }
+  .badge-green { color: #16a34a; }
+  .badge-red { color: #dc2626; }
   .coin-score { font-size: 8px; color: #64748b; margin-top: 2px; }
 
   /* Page Title for pages 2 & 3 */
