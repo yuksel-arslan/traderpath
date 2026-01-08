@@ -54,12 +54,12 @@ const STEP_ENDPOINTS: Record<number, { url: string; method: string }> = {
   2: { url: '/api/analysis/asset-scan', method: 'POST' },
   3: { url: '/api/analysis/safety-check', method: 'POST' },
   4: { url: '/api/analysis/timing', method: 'POST' },
-  5: { url: '/api/analysis/trade-plan', method: 'POST' },
-  6: { url: '/api/analysis/trap-check', method: 'POST' },
+  5: { url: '/api/analysis/trap-check', method: 'POST' },
+  6: { url: '/api/analysis/trade-plan', method: 'POST' },
   7: { url: '/api/analysis/full', method: 'POST' },
 };
 
-// Step definitions
+// Step definitions - NEW ORDER: Trap Check before Trade Plan (decision before plan)
 const STEPS = [
   {
     id: 1,
@@ -111,18 +111,6 @@ const STEPS = [
   },
   {
     id: 5,
-    name: 'Trade Plan',
-    icon: FileText,
-    color: 'indigo',
-    cost: CREDIT_COSTS.STEP_TRADE_PLAN,
-    shortDesc: 'Execution strategy',
-    fullDesc: 'Complete trade execution plan with entries, exits, and position sizing.',
-    whyMatters: 'Professional traders never enter without a plan. We calculate your exact levels.',
-    checks: ['DCA Entry Levels', 'Stop Loss', 'Take Profit Targets', 'Risk/Reward'],
-    duration: '~8 sec',
-  },
-  {
-    id: 6,
     name: 'Trap Check',
     icon: AlertTriangle,
     color: 'red',
@@ -132,6 +120,18 @@ const STEPS = [
     whyMatters: 'The market loves to trap retail traders. We scan for fakeouts and stop hunts.',
     checks: ['Bull Trap Detection', 'Bear Trap Detection', 'Liquidity Zones', 'Stop Hunt'],
     duration: '~7 sec',
+  },
+  {
+    id: 6,
+    name: 'Trade Plan',
+    icon: FileText,
+    color: 'indigo',
+    cost: CREDIT_COSTS.STEP_TRADE_PLAN,
+    shortDesc: 'Execution strategy',
+    fullDesc: 'Complete trade execution plan with entries, exits, and position sizing. Only generated for GO signals.',
+    whyMatters: 'Professional traders never enter without a plan. We calculate your exact levels based on all previous analysis.',
+    checks: ['DCA Entry Levels', 'Stop Loss', 'Take Profit Targets', 'Risk/Reward'],
+    duration: '~8 sec',
   },
   {
     id: 7,
@@ -264,8 +264,9 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
 
       // Build report data from results
       // Note: tradePlan can be null for WAIT/AVOID verdicts (new integrated flow)
+      // NEW ORDER: Trap Check (5) before Trade Plan (6)
       const verdict = results[7] as { action?: string; verdict?: string; overallScore?: number; analysisId?: string; hasTradePlan?: boolean } | undefined;
-      const tradePlan = results[5] as { direction?: string } | null;
+      const tradePlan = results[6] as { direction?: string } | null;
 
       // Use the analysisId from the verdict API response (consistent with FinalVerdict component)
       // This ensures the AI Expert page can find the report using the same ID
@@ -280,8 +281,8 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
         assetScan: results[2],
         safetyCheck: results[3],
         timing: results[4],
-        tradePlan: results[5],
-        trapCheck: results[6],
+        trapCheck: results[5],
+        tradePlan: results[6],
         verdict: results[7],
       };
 
@@ -382,14 +383,14 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
       const steps = analysisData.steps;
 
       // Note: tradePlan can be null for WAIT/AVOID verdicts
-      // This is the new integrated flow where decision comes BEFORE trade plan
+      // NEW ORDER: Trap Check (5) before Trade Plan (6) - decision before plan
       const allResults: Record<number, unknown> = {
         1: steps.marketPulse,
         2: steps.assetScan,
         3: steps.safetyCheck,
         4: steps.timing,
-        5: steps.tradePlan, // Can be null for WAIT/AVOID
-        6: steps.trapCheck,
+        5: steps.trapCheck,
+        6: steps.tradePlan, // Can be null for WAIT/AVOID
         7: { ...steps.verdict, preliminaryVerdict: steps.preliminaryVerdict },
       };
 
@@ -666,9 +667,10 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
               {activeStep === 2 && <AssetScanner data={results[2]} symbol={symbol} />}
               {activeStep === 3 && <SafetyCheck data={results[3]} symbol={symbol} />}
               {activeStep === 4 && <TimingAnalysis data={results[4]} symbol={symbol} />}
-              {activeStep === 5 && (
-                results[5] ? (
-                  <TradePlan data={results[5]} symbol={symbol} />
+              {activeStep === 5 && <TrapCheck data={results[5]} symbol={symbol} />}
+              {activeStep === 6 && (
+                results[6] ? (
+                  <TradePlan data={results[6]} symbol={symbol} />
                 ) : (
                   <div className="p-6 bg-muted/30 rounded-lg text-center">
                     <AlertTriangle className="w-8 h-8 mx-auto mb-3 text-amber-500" />
@@ -680,7 +682,6 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
                   </div>
                 )
               )}
-              {activeStep === 6 && <TrapCheck data={results[6]} symbol={symbol} />}
               {activeStep === 7 && <FinalVerdict data={results[7]} symbol={symbol} allResults={results} />}
 
               {/* Download Report Button */}
@@ -695,14 +696,14 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
                   <DownloadReportButton analysisData={results} symbol={symbol} analysisId={savedAnalysisId || undefined} />
 
                   {/* Hidden TradePlanChart for PDF capture - positioned off-screen but in DOM */}
-                  {results[5] && (
+                  {results[6] && (
                     <div style={{ position: 'fixed', left: '-9999px', top: '0', width: '800px', background: '#fff' }}>
                       <TradePlanChart
                         symbol={symbol}
-                        entries={(results[5] as { entries?: Array<{ price: number }> })?.entries}
-                        stopLoss={(results[5] as { stopLoss?: { price: number; percentage: number } })?.stopLoss}
-                        takeProfits={(results[5] as { takeProfits?: Array<{ price: number; percentage: number }> })?.takeProfits}
-                        direction={(results[5] as { direction?: string })?.direction || 'long'}
+                        entries={(results[6] as { entries?: Array<{ price: number }> })?.entries}
+                        stopLoss={(results[6] as { stopLoss?: { price: number; percentage: number } })?.stopLoss}
+                        takeProfits={(results[6] as { takeProfits?: Array<{ price: number; percentage: number }> })?.takeProfits}
+                        direction={(results[6] as { direction?: string })?.direction || 'long'}
                         currentPrice={(results[2] as { currentPrice?: number })?.currentPrice}
                       />
                     </div>
@@ -788,16 +789,16 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
                   {step.id === 2 && <AssetScanner data={results[2] as Parameters<typeof AssetScanner>[0]['data']} symbol={symbol} />}
                   {step.id === 3 && <SafetyCheck data={results[3] as Parameters<typeof SafetyCheck>[0]['data']} symbol={symbol} />}
                   {step.id === 4 && <TimingAnalysis data={results[4] as Parameters<typeof TimingAnalysis>[0]['data']} symbol={symbol} />}
-                  {step.id === 5 && (
-                    results[5] ? (
-                      <TradePlan data={results[5] as Parameters<typeof TradePlan>[0]['data']} symbol={symbol} />
+                  {step.id === 5 && <TrapCheck data={results[5] as Parameters<typeof TrapCheck>[0]['data']} symbol={symbol} />}
+                  {step.id === 6 && (
+                    results[6] ? (
+                      <TradePlan data={results[6] as Parameters<typeof TradePlan>[0]['data']} symbol={symbol} />
                     ) : (
                       <div className="p-4 bg-muted/30 rounded-lg text-center">
                         <p className="text-sm text-muted-foreground">No trade plan generated (WAIT/AVOID verdict)</p>
                       </div>
                     )
                   )}
-                  {step.id === 6 && <TrapCheck data={results[6] as Parameters<typeof TrapCheck>[0]['data']} symbol={symbol} />}
                 </div>
               </div>
             );
