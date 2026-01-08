@@ -2,7 +2,7 @@
 
 // ===========================================
 // AI Experts Selection Page
-// Choose which AI expert to chat with (3 credits each)
+// Choose which AI expert to chat with (5 credits each)
 // ===========================================
 
 import { useState, useEffect } from 'react';
@@ -44,7 +44,7 @@ const AI_EXPERTS = [
     borderDark: 'dark:border-blue-500/30',
     gradientFrom: '#3b82f6',
     gradientTo: '#60a5fa',
-    creditCost: 3,
+    creditCost: 5,
   },
   {
     id: 'nexus',
@@ -63,7 +63,7 @@ const AI_EXPERTS = [
     borderDark: 'dark:border-amber-500/30',
     gradientFrom: '#f59e0b',
     gradientTo: '#fbbf24',
-    creditCost: 3,
+    creditCost: 5,
   },
   {
     id: 'oracle',
@@ -82,7 +82,7 @@ const AI_EXPERTS = [
     borderDark: 'dark:border-purple-500/30',
     gradientFrom: '#a855f7',
     gradientTo: '#c084fc',
-    creditCost: 3,
+    creditCost: 5,
   },
   {
     id: 'sentinel',
@@ -101,7 +101,7 @@ const AI_EXPERTS = [
     borderDark: 'dark:border-red-500/30',
     gradientFrom: '#ef4444',
     gradientTo: '#f87171',
-    creditCost: 3,
+    creditCost: 5,
   },
 ];
 
@@ -393,7 +393,7 @@ export default function AIExpertsPage() {
             </span>
           ) : (
             <span className="text-gray-700 dark:text-slate-300">
-              Each message costs <span className="text-amber-600 dark:text-amber-400 font-bold">3 credits</span> - powered by TradePath examples
+              Each message costs <span className="text-amber-600 dark:text-amber-400 font-bold">5 credits</span> - powered by TradePath examples
             </span>
           )}
         </div>

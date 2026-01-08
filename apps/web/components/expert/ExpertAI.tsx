@@ -122,7 +122,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
 
       if (!res.ok) {
         if (res.status === 402) {
-          setError('Insufficient credits. Expert AI requires 3 credits.');
+          setError('Insufficient credits. Expert AI requires 5 credits.');
         } else {
           setError(data.error?.message || 'An error occurred');
         }
@@ -190,7 +190,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-lg border border-amber-500/20">
                   <Coins className="w-4 h-4 text-amber-500" />
-                  <span className="text-sm font-medium text-amber-500">3 Credits</span>
+                  <span className="text-sm font-medium text-amber-500">5 Credits</span>
                 </div>
                 <button
                   onClick={onClose}
@@ -432,7 +432,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                   ) : (
                     <>
                       <Send className="w-5 h-5" />
-                      <span className="hidden sm:inline">Ask (3 Credits)</span>
+                      <span className="hidden sm:inline">Ask (5 Credits)</span>
                     </>
                   )}
                 </button>
@@ -471,7 +471,7 @@ export function ExpertAITrigger({ onClick, className }: ExpertAITriggerProps) {
         Expert AI
       </span>
       <span className="text-xs px-1.5 py-0.5 bg-amber-500/10 text-amber-500 rounded ml-1">
-        3 Credits
+        5 Credits
       </span>
     </button>
   );

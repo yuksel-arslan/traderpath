@@ -95,9 +95,12 @@ export const CREDIT_COSTS = {
 
   // Features
   PRICE_ALERT: 1,
-  AI_CHAT_QUESTION: 2,
-  PDF_REPORT: 25,  // Professional comprehensive report
-  REPORT_TRANSLATION: 3,  // Translate PDF to user's language
+  AI_CHAT_QUESTION: 5,     // AI Expert consultation per message
+  AI_EXPERT_QUESTION: 5,   // Alias for AI_CHAT_QUESTION
+  ADD_TO_REPORT: 2,        // Add AI insight to report
+  PDF_REPORT: 10,          // Professional comprehensive report
+  REPORT_TRANSLATION: 5,   // Translate PDF to user's language
+  EMAIL_SEND: 5,           // Send report via email
   WATCHLIST_SLOT: 3,
   AUTO_REFRESH_HOUR: 5,
 } as const;

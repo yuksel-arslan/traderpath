@@ -297,7 +297,7 @@ function AnswerFooter({
         return;
       }
 
-      // Deduct 25 credits for full report
+      // Deduct 10 credits for full report
       const creditRes = await fetch('/api/credits/deduct', {
         method: 'POST',
         headers: {
@@ -305,7 +305,7 @@ function AnswerFooter({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          amount: 25,
+          amount: 10,
           reason: 'Full PDF Report Download',
           analysisId
         }),
@@ -314,7 +314,7 @@ function AnswerFooter({
       if (!creditRes.ok) {
         const creditData = await creditRes.json();
         if (creditData.error?.code === 'INSUFFICIENT_CREDITS') {
-          setDownloadError('Insufficient credits (need 25)');
+          setDownloadError('Insufficient credits (need 10)');
         } else {
           setDownloadError(creditData.error?.message || 'Failed to deduct credits');
         }
@@ -429,7 +429,7 @@ function AnswerFooter({
             <>
               <Sparkles className="w-5 h-5" />
               Download Full Report
-              <span className="ml-1 px-2 py-0.5 bg-white/20 rounded text-xs">25 credits</span>
+              <span className="ml-1 px-2 py-0.5 bg-white/20 rounded text-xs">10 credits</span>
             </>
           )}
         </button>
@@ -716,7 +716,7 @@ export default function AIExpertChatPage() {
                 ) : (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full text-amber-600 text-sm">
                     <Zap className="w-4 h-4" />
-                    3 credits/msg
+                    5 credits/msg
                   </div>
                 )}
               </div>
@@ -891,7 +891,7 @@ export default function AIExpertChatPage() {
           {!hasEnoughCredits && (
             <div className="flex items-center gap-2 mb-3 p-4 bg-destructive/10 text-destructive rounded-xl text-sm border border-destructive/20">
               <AlertCircle className="w-5 h-5" />
-              <span>You need at least 3 credits to chat with this expert.</span>
+              <span>You need at least 5 credits to chat with this expert.</span>
               <Link href="/credits" className="underline font-semibold ml-auto">
                 Buy Credits
               </Link>
@@ -950,7 +950,7 @@ export default function AIExpertChatPage() {
             ) : (
               <span className="flex items-center gap-1">
                 <Zap className="w-3 h-3 text-amber-500" />
-                3 credits/msg
+                5 credits/msg
               </span>
             )}
             <span>•</span>

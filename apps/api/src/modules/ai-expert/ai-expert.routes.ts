@@ -1,6 +1,6 @@
 // ===========================================
 // AI Expert Routes
-// API endpoints for AI expert chat (3 credits)
+// API endpoints for AI expert chat (5 credits per message)
 // ===========================================
 
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
@@ -43,7 +43,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
         success: true,
         data: {
           experts,
-          creditCost: CREDIT_COSTS.AI_EXPERT_QUESTION, // 3 credits
+          creditCost: CREDIT_COSTS.AI_EXPERT_QUESTION, // 5 credits
         },
       });
     }
@@ -111,15 +111,15 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
           totalQuestions: questions.length,
           pricing: {
             stage1_education: { cost: 0, description: 'FREE - Learn the concept' },
-            stage2_analysis: { cost: 3, description: 'Real coin analysis' },
-            add_to_report: { cost: 2, description: 'Add to report' },
-            send_email: { cost: 1, description: 'Send via email' },
+            stage2_analysis: { cost: CREDIT_COSTS.AI_EXPERT_QUESTION, description: 'Real coin analysis' },
+            add_to_report: { cost: CREDIT_COSTS.ADD_TO_REPORT, description: 'Add to report' },
+            send_email: { cost: CREDIT_COSTS.EMAIL_SEND, description: 'Send via email' },
           },
           howItWorks: {
             step1: '🎓 Ask a question → Get FREE educational answer',
-            step2: '📊 Choose a coin → 3 credits for real analysis',
-            step3: '📋 Add to report → 2 credits',
-            step4: '📧 Send email → 1 credit',
+            step2: `📊 Choose a coin → ${CREDIT_COSTS.AI_EXPERT_QUESTION} credits for real analysis`,
+            step3: `📋 Add to report → ${CREDIT_COSTS.ADD_TO_REPORT} credits`,
+            step4: `📧 Send email → ${CREDIT_COSTS.EMAIL_SEND} credits`,
           },
         },
       });
@@ -157,7 +157,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
             name: expert.name,
             role: expert.role,
           },
-          creditCost: CREDIT_COSTS.AI_EXPERT_QUESTION, // 3 credits
+          creditCost: CREDIT_COSTS.AI_EXPERT_QUESTION, // 5 credits
           suggestedQuestions: suggestedQuestions.slice(0, 5), // Top 5 questions
         },
       });
@@ -166,7 +166,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
 
   // ===========================================
   // POST /api/ai-expert/chat
-  // Chat with AI Expert - 3 credits per message
+  // Chat with AI Expert - 5 credits per message
   // ===========================================
   fastify.post(
     '/api/ai-expert/chat',
@@ -211,7 +211,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
 
       // Check if user is admin (free access) - isAdmin is set by authenticate middleware
       const isAdmin = (request as any).user?.isAdmin === true;
-      const cost = isAdmin ? 0 : CREDIT_COSTS.AI_EXPERT_QUESTION; // 3 credits (free for admin)
+      const cost = isAdmin ? 0 : CREDIT_COSTS.AI_EXPERT_QUESTION; // 5 credits (free for admin)
 
       let chargeResult = { success: true, newBalance: 0 };
 
@@ -232,7 +232,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
             success: false,
             error: {
               code: 'INSUFFICIENT_CREDITS',
-              message: 'Insufficient credits. AI Expert requires 3 credits per message.',
+              message: `Insufficient credits. AI Expert requires ${CREDIT_COSTS.AI_EXPERT_QUESTION} credits per message.`,
               required: cost,
               current: chargeResult.newBalance,
             },
@@ -325,8 +325,8 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // 2 credits to add to report
-      const cost = 2;
+      // Credits to add to report
+      const cost = CREDIT_COSTS.ADD_TO_REPORT;
       const chargeResult = await creditService.charge(
         userId,
         cost,
@@ -339,7 +339,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
           success: false,
           error: {
             code: 'INSUFFICIENT_CREDITS',
-            message: 'Adding to report requires 2 credits.',
+            message: `Adding to report requires ${CREDIT_COSTS.ADD_TO_REPORT} credits.`,
             required: cost,
           },
         });
@@ -430,8 +430,8 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // 1 credit to send email
-      const cost = 1;
+      // Credits to send email
+      const cost = CREDIT_COSTS.EMAIL_SEND;
       const chargeResult = await creditService.charge(
         userId,
         cost,
@@ -444,7 +444,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
           success: false,
           error: {
             code: 'INSUFFICIENT_CREDITS',
-            message: 'Sending email requires 1 credit.',
+            message: `Sending email requires ${CREDIT_COSTS.EMAIL_SEND} credits.`,
             required: cost,
           },
         });

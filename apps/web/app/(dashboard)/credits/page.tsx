@@ -29,7 +29,10 @@ const PACKAGE_ICONS: Record<string, any> = {
 
 const CREDIT_COSTS = [
   { action: 'Full Analysis (7-Step)', credits: '25' },
+  { action: 'PDF Report', credits: '10' },
   { action: 'AI Expert Chat', credits: '5' },
+  { action: 'Translation', credits: '5' },
+  { action: 'Email Sending', credits: '5' },
   { action: 'Price Alert', credits: '1' },
 ];
 
