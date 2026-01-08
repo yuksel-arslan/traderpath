@@ -502,9 +502,10 @@ declare module 'fastify' {
     user?: {
       id: string;
       email: string;
-      name?: string;
-      level?: number;
+      name: string;
+      level: number;
       isAdmin?: boolean;
+      firebaseUid?: string;
     };
   }
 }

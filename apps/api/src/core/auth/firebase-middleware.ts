@@ -9,19 +9,7 @@ import { prisma } from '../database';
 // Admin emails with free unlimited access
 const ADMIN_EMAILS = ['contact@yukselarslan.com'];
 
-// Extend FastifyRequest to include user
-declare module 'fastify' {
-  interface FastifyRequest {
-    user?: {
-      id: string;
-      email: string;
-      name: string;
-      level: number;
-      isAdmin?: boolean;
-      firebaseUid?: string;
-    };
-  }
-}
+// User type is declared in src/index.ts
 
 /**
  * Decode Firebase ID token (without verification for development)
