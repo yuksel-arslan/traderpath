@@ -26,6 +26,7 @@ import {
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TradePathLogo } from '../../components/common/TradePathLogo';
 import { cn } from '../../lib/utils';
+import { getApiUrl } from '../../lib/api';
 
 // Lazy load PriceTicker
 const PriceTicker = dynamic(
@@ -88,7 +89,7 @@ export default function DashboardLayout({
     queryFn: async () => {
       if (!token) return { isAdmin: false };
 
-      const res = await fetch('/api/auth/me', {
+      const res = await fetch(getApiUrl('/api/auth/me'), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return { isAdmin: false };
@@ -108,7 +109,7 @@ export default function DashboardLayout({
     queryFn: async () => {
       if (!token) return [];
 
-      const res = await fetch('/api/alerts', {
+      const res = await fetch(getApiUrl('/api/alerts'), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return [];

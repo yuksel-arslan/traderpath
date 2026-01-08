@@ -23,7 +23,7 @@ interface ApiError extends Error {
 /**
  * Get full API URL - prepends base URL for production
  */
-function getApiUrl(url: string): string {
+export function getApiUrl(url: string): string {
   // If URL is already absolute, return as-is
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return url;

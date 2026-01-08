@@ -40,6 +40,7 @@ import {
 import { AreaChart, Area, ResponsiveContainer, Tooltip, ReferenceLine, defs } from 'recharts';
 import { cn } from '../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
+import { getApiUrl } from '../../../lib/api';
 
 // ===========================================
 // Types
@@ -565,14 +566,14 @@ export default function DashboardPage() {
 
       // Fetch all data in parallel
       const [platformRes, statsRes, reportsRes, creditsRes] = await Promise.all([
-        fetch(`/api/analysis/platform-stats?period=${stepPeriod}`),
-        fetch('/api/analysis/statistics', {
+        fetch(getApiUrl(`/api/analysis/platform-stats?period=${stepPeriod}`)),
+        fetch(getApiUrl('/api/analysis/statistics'), {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch('/api/reports?limit=20', {
+        fetch(getApiUrl('/api/reports?limit=20'), {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch('/api/user/credits', {
+        fetch(getApiUrl('/api/user/credits'), {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);

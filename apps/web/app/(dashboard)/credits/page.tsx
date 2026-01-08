@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Gem, Zap, Crown, Rocket, Star, Loader2, CreditCard, History } from 'lucide-react';
+import { getApiUrl } from '../../../lib/api';
 
 interface CreditPackage {
   id: string;
@@ -56,8 +57,8 @@ export default function CreditsPage() {
 
       // Fetch packages and balance in parallel
       const [packagesRes, balanceRes] = await Promise.all([
-        fetch('/api/payments/packages'),
-        token ? fetch('/api/user/credits', {
+        fetch(getApiUrl('/api/payments/packages')),
+        token ? fetch(getApiUrl('/api/user/credits'), {
           headers: { Authorization: `Bearer ${token}` },
         }) : Promise.resolve(null),
       ]);
@@ -97,7 +98,7 @@ export default function CreditsPage() {
         return;
       }
 
-      const response = await fetch('/api/payments/create-checkout-session', {
+      const response = await fetch(getApiUrl('/api/payments/create-checkout-session'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

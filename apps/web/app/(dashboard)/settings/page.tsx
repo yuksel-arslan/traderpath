@@ -29,6 +29,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
+import { getApiUrl } from '../../../lib/api';
 
 interface UserProfile {
   id: string;
@@ -79,7 +80,7 @@ export default function SettingsPage() {
         }
 
         // Fetch user profile
-        const userResponse = await fetch('/api/auth/me', {
+        const userResponse = await fetch(getApiUrl('/api/auth/me'), {
           headers: { 'Authorization': `Bearer ${token}` },
         });
 
@@ -101,7 +102,7 @@ export default function SettingsPage() {
         }
 
         // Fetch settings
-        const settingsResponse = await fetch('/api/user/settings', {
+        const settingsResponse = await fetch(getApiUrl('/api/user/settings'), {
           headers: { 'Authorization': `Bearer ${token}` },
         });
 
@@ -113,7 +114,7 @@ export default function SettingsPage() {
         }
 
         // Fetch notification/webhook settings
-        const alertSettingsResponse = await fetch('/api/alerts/settings', {
+        const alertSettingsResponse = await fetch(getApiUrl('/api/alerts/settings'), {
           headers: { 'Authorization': `Bearer ${token}` },
         });
 
@@ -195,7 +196,7 @@ export default function SettingsPage() {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      await fetch('/api/user/settings', {
+      await fetch(getApiUrl('/api/user/settings'), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -217,7 +218,7 @@ export default function SettingsPage() {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch('/api/alerts/settings', {
+      const response = await fetch(getApiUrl('/api/alerts/settings'), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -245,7 +246,7 @@ export default function SettingsPage() {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch('/api/alerts/test', {
+      const response = await fetch(getApiUrl('/api/alerts/test'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

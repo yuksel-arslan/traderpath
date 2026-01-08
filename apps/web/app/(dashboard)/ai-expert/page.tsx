@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '../../../lib/utils';
+import { getApiUrl } from '../../../lib/api';
 
 // AI Expert definitions - World-Class Professionals
 const AI_EXPERTS = [
@@ -128,7 +129,7 @@ export default function AIExpertsPage() {
         const token = localStorage.getItem('accessToken');
         if (!token) return;
 
-        const res = await fetch('/api/ai-expert/stats', {
+        const res = await fetch(getApiUrl('/api/ai-expert/stats'), {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -150,7 +151,7 @@ export default function AIExpertsPage() {
       const token = localStorage.getItem('accessToken');
       if (!token) return { balance: 0 };
 
-      const res = await fetch('/api/credits/balance', {
+      const res = await fetch(getApiUrl('/api/credits/balance'), {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await res.json();
@@ -165,7 +166,7 @@ export default function AIExpertsPage() {
       const token = localStorage.getItem('accessToken');
       if (!token) return { isAdmin: false };
 
-      const res = await fetch('/api/auth/me', {
+      const res = await fetch(getApiUrl('/api/auth/me'), {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await res.json();
