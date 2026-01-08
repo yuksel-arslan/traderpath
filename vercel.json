@@ -1,27 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "cd ../.. && pnpm install && pnpm turbo build --filter=@tradepath/web",
-  "outputDirectory": ".next",
-  "installCommand": "echo 'Install handled by buildCommand'",
-  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- . ../../packages/types",
-  "regions": ["fra1"],
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm turbo build --filter=@tradepath/web",
+  "outputDirectory": "apps/web/.next",
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        }
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" }
       ]
     }
   ]
