@@ -5,7 +5,7 @@
 // Professional design to build user confidence
 // ===========================================
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -69,6 +69,7 @@ interface PlatformStats {
     methodology: 'outcome-verified' | 'score-based' | string;
     sampleSize?: number; // Number of analyses used for accuracy calculation
     outcomeVerifiedCount?: number; // Number of analyses with verified outcomes
+    period?: 'D' | 'W' | 'M' | 'all'; // Time period for step scores
   };
   // Caution Rate: Success rate of WAIT/AVOID recommendations
   cautionRate?: {
@@ -514,6 +515,7 @@ export default function DashboardPage() {
   const [credits, setCredits] = useState(0);
   const [outcomeViewMode, setOutcomeViewMode] = useState<'card' | 'list'>('card');
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly'>('daily');
+  const [stepPeriod, setStepPeriod] = useState<'D' | 'W' | 'M' | 'all'>('all');
 
   const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     try {
@@ -546,7 +548,7 @@ export default function DashboardPage() {
 
       // Fetch all data in parallel
       const [platformRes, statsRes, reportsRes, creditsRes] = await Promise.all([
-        fetch('/api/analysis/platform-stats'),
+        fetch(`/api/analysis/platform-stats?period=${stepPeriod}`),
         fetch('/api/analysis/statistics', {
           headers: { Authorization: `Bearer ${token}` },
         }),
@@ -629,10 +631,17 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, stepPeriod]);
+
+  // Track if period changed to force refresh
+  const prevPeriodRef = useRef(stepPeriod);
 
   useEffect(() => {
-    fetchDashboardData();
+    // Force refresh if period changed (not initial load)
+    const periodChanged = prevPeriodRef.current !== stepPeriod;
+    prevPeriodRef.current = stepPeriod;
+
+    fetchDashboardData(periodChanged); // Force refresh when period changes
 
     // Auto-refresh every 5 minutes to pick up new analyses
     const refreshInterval = setInterval(() => {
@@ -640,7 +649,7 @@ export default function DashboardPage() {
     }, 5 * 60 * 1000);
 
     return () => clearInterval(refreshInterval);
-  }, [fetchDashboardData]);
+  }, [fetchDashboardData, stepPeriod]);
 
   if (loading) {
     return (
@@ -1055,10 +1064,29 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">7-Step Analysis</h2>
-                <p className="text-gray-500 dark:text-slate-400 text-sm">Average scores from {platformStats?.accuracy.sampleSize ?? 0} verified analyses</p>
+                <p className="text-gray-500 dark:text-slate-400 text-sm">
+                  {stepPeriod === 'all' ? 'All time' : stepPeriod === 'D' ? 'Last 24h' : stepPeriod === 'W' ? 'Last 7 days' : 'Last 30 days'} average from {platformStats?.accuracy.sampleSize ?? 0} analyses
+                </p>
               </div>
             </div>
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-3">
+              {/* Period Filter Buttons */}
+              <div className="flex items-center bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
+                {(['D', 'W', 'M', 'all'] as const).map((period) => (
+                  <button
+                    key={period}
+                    onClick={() => setStepPeriod(period)}
+                    className={cn(
+                      "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                      stepPeriod === period
+                        ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
+                        : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
+                    )}
+                  >
+                    {period === 'all' ? 'All' : period}
+                  </button>
+                ))}
+              </div>
               <button
                 onClick={() => fetchDashboardData(true)}
                 className="p-2.5 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition"

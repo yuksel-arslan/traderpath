@@ -526,14 +526,29 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
    * GET /api/analysis/platform-stats
    * Platform-wide statistics for trust building (public)
    * All data is calculated from real database records (Report table)
+   * Query params:
+   *   - period: 'D' (24h), 'W' (7 days), 'M' (30 days), 'all' (no filter)
    */
-  app.get('/platform-stats', async (_request: FastifyRequest, reply: FastifyReply) => {
+  app.get('/platform-stats', async (request: FastifyRequest<{ Querystring: { period?: string } }>, reply: FastifyReply) => {
     try {
       const db = app.prisma;
 
+      // Parse period filter
+      const period = (request.query.period || 'all').toUpperCase();
+      const now = Date.now();
+      let periodFilterDate: Date | null = null;
+
+      if (period === 'D') {
+        periodFilterDate = new Date(now - 24 * 60 * 60 * 1000); // 24 hours
+      } else if (period === 'W') {
+        periodFilterDate = new Date(now - 7 * 24 * 60 * 60 * 1000); // 7 days
+      } else if (period === 'M') {
+        periodFilterDate = new Date(now - 30 * 24 * 60 * 60 * 1000); // 30 days
+      }
+
       // Get platform-wide statistics
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+      const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
       const [
         totalUsers,
@@ -584,10 +599,16 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
 
       // Get reports with full reportData to extract step scores
       // Only get reports that have analysis data (not expert_analysis type)
+      // Filter by period if specified
+      const reportWhereClause: { verdict: { not: string }; generatedAt?: { gte: Date } } = {
+        verdict: { not: 'expert_analysis' }
+      };
+      if (periodFilterDate) {
+        reportWhereClause.generatedAt = { gte: periodFilterDate };
+      }
+
       const reports = await db.report.findMany({
-        where: {
-          verdict: { not: 'expert_analysis' }
-        },
+        where: reportWhereClause,
         select: {
           reportData: true,
           score: true
@@ -776,7 +797,8 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
             lastUpdated: new Date().toISOString(),
             methodology: realSampleSize > 0 ? 'outcome-verified' : 'score-based',
             sampleSize: realSampleSize > 0 ? realSampleSize : sampleSize,
-            outcomeVerifiedCount: realSampleSize
+            outcomeVerifiedCount: realSampleSize,
+            period: period === 'ALL' ? 'all' : period // D, W, M, or all
           },
           // Caution Rate: How often WAIT/AVOID recommendations were correct
           cautionRate: {
