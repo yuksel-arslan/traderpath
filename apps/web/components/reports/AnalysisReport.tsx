@@ -62,6 +62,27 @@ function formatPrice(price: number): string {
   return `$${price.toFixed(6)}`;
 }
 
+// Get coin color based on symbol
+function getCoinColor(symbol: string): string {
+  const colors: Record<string, string> = {
+    'BTC': '#F7931A',
+    'ETH': '#627EEA',
+    'BNB': '#F3BA2F',
+    'SOL': '#00FFA3',
+    'XRP': '#23292F',
+    'ADA': '#0033AD',
+    'DOGE': '#C2A633',
+    'DOT': '#E6007A',
+    'AVAX': '#E84142',
+    'MATIC': '#8247E5',
+    'LINK': '#2A5ADA',
+    'UNI': '#FF007A',
+    'ATOM': '#2E3148',
+    'LTC': '#BFBBBB',
+  };
+  return colors[symbol.toUpperCase()] || '#6366f1';
+}
+
 // Parse AI Expert comments into separate experts
 function parseExpertComments(comment: string): Array<{ name: string; content: string }> {
   if (!comment) return [];
@@ -118,21 +139,23 @@ const commonStyles = `
   .page { width: 595px; height: 842px; padding: 30px; position: relative; }
 
   /* Header - Only Page 1 */
-  .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; }
   .header-left { }
   .logo { font-size: 18px; font-weight: bold; }
   .logo-red { color: #dc2626; }
   .logo-green { color: #16a34a; }
   .motto { font-size: 8px; color: #64748b; margin-top: 2px; }
-  .header-center { text-align: center; }
+  .header-center { text-align: center; flex: 1; }
   .report-title { font-size: 16px; font-weight: bold; color: #1e293b; }
   .report-date { font-size: 8px; color: #94a3b8; margin-top: 3px; }
-  .header-right { text-align: right; }
-  .coin-symbol { font-size: 16px; font-weight: bold; }
-  .coin-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 9px; font-weight: bold; margin-top: 3px; }
+  .header-right { display: flex; align-items: flex-start; gap: 10px; }
+  .coin-logo { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: bold; }
+  .coin-info { text-align: left; }
+  .coin-symbol { font-size: 12px; font-weight: bold; color: #1e293b; }
+  .coin-badge { display: inline-flex; align-items: center; justify-content: center; padding: 2px 8px; border-radius: 10px; font-size: 8px; font-weight: bold; margin-top: 2px; }
   .badge-green { background: #dcfce7; color: #16a34a; }
   .badge-red { background: #fee2e2; color: #dc2626; }
-  .coin-score { font-size: 9px; color: #64748b; margin-top: 3px; }
+  .coin-score { font-size: 8px; color: #64748b; margin-top: 2px; }
 
   /* Page Title for pages 2 & 3 */
   .page-title { font-size: 12px; font-weight: bold; color: #64748b; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
@@ -183,15 +206,15 @@ const commonStyles = `
   .chart-image { width: 100%; height: 320px; object-fit: contain; background: #fff; display: block; }
   .chart-placeholder { height: 320px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px; background: #f8fafc; }
 
-  /* AI Expert Section */
-  .expert-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
-  .expert-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .expert-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-  .expert-icon svg { width: 22px; height: 22px; }
+  /* AI Expert Section - Full content */
+  .expert-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+  .expert-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .expert-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .expert-icon svg { width: 20px; height: 20px; }
   .expert-info { flex: 1; }
-  .expert-name { font-weight: bold; font-size: 11px; color: #1e293b; }
-  .expert-role { font-size: 9px; font-weight: 500; margin-top: 1px; }
-  .expert-content { background: #f8fafc; border-radius: 6px; padding: 10px; font-size: 9px; color: #475569; line-height: 1.6; }
+  .expert-name { font-weight: bold; font-size: 10px; color: #1e293b; }
+  .expert-role { font-size: 8px; font-weight: 500; margin-top: 1px; }
+  .expert-content { background: #f8fafc; border-radius: 6px; padding: 8px; font-size: 8px; color: #475569; line-height: 1.5; }
   .no-expert { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; text-align: center; color: #94a3b8; font-size: 10px; }
 
   /* Expert colors */
@@ -205,13 +228,14 @@ const commonStyles = `
   .expert-sentinel .expert-role { color: #f97316; }
 
   /* Footer/Disclaimer */
-  .disclaimer-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 10px; margin-top: 10px; }
-  .disclaimer-title { font-size: 9px; font-weight: bold; color: #dc2626; margin-bottom: 4px; }
-  .disclaimer-text { font-size: 7px; color: #7f1d1d; line-height: 1.5; }
+  .disclaimer-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 8px; margin-top: 8px; }
+  .disclaimer-title { font-size: 8px; font-weight: bold; color: #dc2626; margin-bottom: 3px; }
+  .disclaimer-text { font-size: 6px; color: #7f1d1d; line-height: 1.4; }
 `;
 
 // Generate header HTML - Only for Page 1
 function generateHeader(data: AnalysisReportData, isLong: boolean, score: number): string {
+  const coinColor = getCoinColor(data.symbol);
   return `
     <div class="header">
       <div class="header-left">
@@ -223,9 +247,12 @@ function generateHeader(data: AnalysisReportData, isLong: boolean, score: number
         <div class="report-date">${data.generatedAt}</div>
       </div>
       <div class="header-right">
-        <div class="coin-symbol">${data.symbol}/USDT</div>
-        <div class="coin-badge ${isLong ? 'badge-green' : 'badge-red'}">${isLong ? '▲ BULLISH' : '▼ BEARISH'}</div>
-        <div class="coin-score">Score: ${score}/100</div>
+        <div class="coin-logo" style="background: ${coinColor};">${data.symbol.slice(0, 1)}</div>
+        <div class="coin-info">
+          <div class="coin-symbol">${data.symbol}/USDT</div>
+          <div class="coin-badge ${isLong ? 'badge-green' : 'badge-red'}">${isLong ? '▲ BULLISH' : '▼ BEARISH'}</div>
+          <div class="coin-score">Score: ${score}/100</div>
+        </div>
       </div>
     </div>
   `;
@@ -408,7 +435,7 @@ function generatePage2HTML(data: AnalysisReportData): string {
 </body></html>`;
 }
 
-// PAGE 3: AI Expert Comments
+// PAGE 3: AI Expert Comments - Full content without truncation
 function generatePage3HTML(data: AnalysisReportData): string {
   const experts = parseExpertComments(data.aiExpertComment || '');
 
@@ -439,6 +466,10 @@ function generatePage3HTML(data: AnalysisReportData): string {
     }
   };
 
+  // Calculate max characters per expert based on number of experts
+  const numExperts = experts.length || 1;
+  const maxCharsPerExpert = numExperts <= 2 ? 800 : numExperts === 3 ? 500 : 350;
+
   const expertsHTML = experts.length > 0 ? experts.map(expert => {
     const config = expertConfig[expert.name] || {
       role: 'AI Expert',
@@ -446,6 +477,9 @@ function generatePage3HTML(data: AnalysisReportData): string {
       icon: expertIcons.NEXUS,
       colorClass: 'expert-nexus'
     };
+    const content = expert.content.length > maxCharsPerExpert
+      ? expert.content.slice(0, maxCharsPerExpert) + '...'
+      : expert.content;
     return `
     <div class="expert-box">
       <div class="expert-header">
@@ -455,7 +489,7 @@ function generatePage3HTML(data: AnalysisReportData): string {
           <div class="expert-role">${config.role}</div>
         </div>
       </div>
-      <div class="expert-content">${expert.content.slice(0, 400)}${expert.content.length > 400 ? '...' : ''}</div>
+      <div class="expert-content">${content}</div>
     </div>
   `}).join('') : '<div class="no-expert">No AI Expert comments available for this analysis.</div>';
 
@@ -471,7 +505,7 @@ function generatePage3HTML(data: AnalysisReportData): string {
     <div class="disclaimer-box">
       <div class="disclaimer-title">Risk Disclaimer</div>
       <div class="disclaimer-text">
-        This report is generated by TradePath AI for educational and informational purposes only. It does not constitute financial advice, investment recommendation, or an offer to buy or sell any financial instruments. Cryptocurrency trading involves substantial risk of loss and is not suitable for all investors. Past performance is not indicative of future results. Always conduct your own research and consult with a qualified financial advisor before making any investment decisions. TradePath and its affiliates are not responsible for any losses incurred based on information provided in this report.
+        This report is generated by TradePath AI for educational and informational purposes only. It does not constitute financial advice, investment recommendation, or an offer to buy or sell any financial instruments. Cryptocurrency trading involves substantial risk of loss and is not suitable for all investors. Past performance is not indicative of future results. Always conduct your own research and consult with a qualified financial advisor before making any investment decisions.
       </div>
     </div>
 
