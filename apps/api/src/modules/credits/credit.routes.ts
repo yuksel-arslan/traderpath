@@ -106,4 +106,44 @@ export default async function creditRoutes(app: FastifyInstance) {
       data: { costs: CREDIT_COSTS },
     });
   });
+
+  /**
+   * POST /api/credits/deduct
+   * Deduct credits for a service (e.g., full report download)
+   */
+  const deductSchema = z.object({
+    amount: z.number().min(1).max(1000),
+    reason: z.string().min(1).max(200),
+    analysisId: z.string().optional(),
+  });
+
+  app.post('/deduct', async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = request.user!.id;
+    const body = deductSchema.parse(request.body);
+
+    const result = await creditService.charge(
+      userId,
+      body.amount,
+      body.reason,
+      body.analysisId ? { analysisId: body.analysisId } : undefined
+    );
+
+    if (!result.success) {
+      return reply.status(402).send({
+        success: false,
+        error: {
+          code: 'INSUFFICIENT_CREDITS',
+          message: `You need ${body.amount} credits. Current balance: ${result.newBalance}`,
+        },
+      });
+    }
+
+    return reply.send({
+      success: true,
+      data: {
+        creditsDeducted: body.amount,
+        newBalance: result.newBalance,
+      },
+    });
+  });
 }

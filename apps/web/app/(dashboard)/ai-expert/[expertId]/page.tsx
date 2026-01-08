@@ -231,7 +231,7 @@ interface ChatResponse {
   };
 }
 
-// Answer Footer Component - Simple Add to Report button (no dropdown)
+// Answer Footer Component - Add to Report + Download Full Report buttons
 function AnswerFooter({
   content,
   analysisId,
@@ -244,6 +244,8 @@ function AnswerFooter({
   const [loading, setLoading] = useState(false);
   const [added, setAdded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const handleAddToReport = async () => {
     if (!analysisId) return;
@@ -282,59 +284,156 @@ function AnswerFooter({
     }
   };
 
+  const handleDownloadFullReport = async () => {
+    if (!analysisId) return;
+
+    setDownloading(true);
+    setDownloadError(null);
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setDownloadError('Not authenticated');
+        return;
+      }
+
+      // Deduct 25 credits for full report
+      const creditRes = await fetch('/api/credits/deduct', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: 25,
+          reason: 'Full PDF Report Download',
+          analysisId
+        }),
+      });
+
+      if (!creditRes.ok) {
+        const creditData = await creditRes.json();
+        if (creditData.error?.code === 'INSUFFICIENT_CREDITS') {
+          setDownloadError('Insufficient credits (need 25)');
+        } else {
+          setDownloadError(creditData.error?.message || 'Failed to deduct credits');
+        }
+        return;
+      }
+
+      // Fetch report data
+      const reportRes = await fetch(`/api/reports/by-analysis/${analysisId}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!reportRes.ok) {
+        setDownloadError('Report not found');
+        return;
+      }
+
+      const reportData = await reportRes.json();
+      if (!reportData.data?.reportData) {
+        setDownloadError('Report data not found');
+        return;
+      }
+
+      // Generate PDF
+      const { generateAnalysisReport } = await import('../../../../components/reports/AnalysisReport');
+      await generateAnalysisReport({
+        ...reportData.data.reportData,
+        aiExpertComment: reportData.data.aiExpertComment || content,
+      });
+
+    } catch (err) {
+      console.error('Failed to download report:', err);
+      setDownloadError('Failed to generate PDF');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
-    <div className="mt-4 flex flex-col sm:flex-row gap-2">
-      {/* Add to Report Button - Only show if analysisId is available */}
-      {analysisId && (
+    <div className="mt-4 space-y-2">
+      <div className="flex flex-col sm:flex-row gap-2">
+        {/* Add to Report Button - Only show if analysisId is available and not added yet */}
+        {analysisId && !added && (
+          <button
+            onClick={handleAddToReport}
+            disabled={loading}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition",
+              error
+                ? "bg-red-500/10 text-red-600 border border-red-500/20"
+                : "bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20"
+            )}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Adding...
+              </>
+            ) : error ? (
+              <>
+                <AlertCircle className="w-4 h-4" />
+                {error}
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4" />
+                Add to Report
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Full Analysis Link - show when no analysisId */}
+        {!analysisId && (
+          <Link
+            href="/analyze"
+            className="flex items-center justify-between flex-1 px-4 py-2.5 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl hover:border-green-500/40 transition group"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-green-500" />
+              <span className="text-sm">
+                Run <span className="font-semibold text-green-600 dark:text-green-400">Full Analysis</span>
+              </span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-green-500 group-hover:translate-x-1 transition-transform" />
+          </Link>
+        )}
+      </div>
+
+      {/* Download Full Report Button - Show after comment is added */}
+      {added && analysisId && (
         <button
-          onClick={handleAddToReport}
-          disabled={added || loading}
+          onClick={handleDownloadFullReport}
+          disabled={downloading}
           className={cn(
-            "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition",
-            added
-              ? "bg-green-500/10 text-green-600 border border-green-500/20"
-              : error
+            "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition",
+            downloadError
               ? "bg-red-500/10 text-red-600 border border-red-500/20"
-              : "bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20"
+              : "bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:from-emerald-600 hover:to-green-600 shadow-lg shadow-green-500/25"
           )}
         >
-          {loading ? (
+          {downloading ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Adding...
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Generating PDF...
             </>
-          ) : added ? (
+          ) : downloadError ? (
             <>
-              <Check className="w-4 h-4" />
-              Added to Report
-            </>
-          ) : error ? (
-            <>
-              <AlertCircle className="w-4 h-4" />
-              {error}
+              <AlertCircle className="w-5 h-5" />
+              {downloadError}
             </>
           ) : (
             <>
-              <Plus className="w-4 h-4" />
-              Add to Report
+              <Sparkles className="w-5 h-5" />
+              Download Full Report
+              <span className="ml-1 px-2 py-0.5 bg-white/20 rounded text-xs">25 credits</span>
             </>
           )}
         </button>
       )}
-
-      {/* Full Analysis Link */}
-      <Link
-        href="/analyze"
-        className="flex items-center justify-between flex-1 px-4 py-2.5 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl hover:border-green-500/40 transition group"
-      >
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-green-500" />
-          <span className="text-sm">
-            Run <span className="font-semibold text-green-600 dark:text-green-400">Full Analysis</span>
-          </span>
-        </div>
-        <ChevronRight className="w-4 h-4 text-green-500 group-hover:translate-x-1 transition-transform" />
-      </Link>
     </div>
   );
 }
