@@ -751,6 +751,52 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
       // Get caution rate for WAIT/AVOID signals
       const cautionData = await getCautionRate();
 
+      // Calculate GO signal accuracy (GO + CONDITIONAL_GO verdicts with outcomes)
+      const goSignals = await db.report.findMany({
+        where: {
+          OR: [
+            { verdict: { contains: 'go', mode: 'insensitive' } },
+            { verdict: { equals: 'GO', mode: 'insensitive' } },
+            { verdict: { contains: 'conditional', mode: 'insensitive' } }
+          ],
+          verdict: { not: { contains: 'wait', mode: 'insensitive' } },
+          outcome: { in: ['correct', 'incorrect'] }
+        },
+        select: { outcome: true, verdict: true }
+      });
+
+      // Filter to ensure only GO/CONDITIONAL_GO (not WAIT/AVOID)
+      const filteredGoSignals = goSignals.filter(r => {
+        const v = r.verdict.toLowerCase();
+        return (v.includes('go') || v.includes('conditional')) && !v.includes('wait') && !v.includes('avoid');
+      });
+
+      const goCorrect = filteredGoSignals.filter(r => r.outcome === 'correct').length;
+      const goIncorrect = filteredGoSignals.filter(r => r.outcome === 'incorrect').length;
+      const goTotal = goCorrect + goIncorrect;
+      const goAccuracy = goTotal > 0 ? Number(((goCorrect / goTotal) * 100).toFixed(1)) : 0;
+
+      // Count pending GO signals (not yet verified)
+      const goPending = await db.report.count({
+        where: {
+          OR: [
+            { verdict: { contains: 'go', mode: 'insensitive' } },
+            { verdict: { equals: 'GO', mode: 'insensitive' } },
+            { verdict: { contains: 'conditional', mode: 'insensitive' } }
+          ],
+          verdict: {
+            not: { contains: 'wait', mode: 'insensitive' }
+          },
+          outcome: null
+        }
+      });
+
+      // Count reports with trade plan
+      const reportsWithTradePlan = reports.filter(r => {
+        const rd = r.reportData as Record<string, unknown> | null;
+        return rd && rd.tradePlan;
+      }).length;
+
       // Trigger background outcome calculations (don't await)
       calculateExpiredOutcomes().catch(err => console.error('Background outcome calculation failed:', err));
       calculateCautionOutcomes().catch(err => console.error('Background caution calculation failed:', err));
@@ -800,6 +846,15 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
             outcomeVerifiedCount: realSampleSize,
             period: period === 'ALL' ? 'all' : period // D, W, M, or all
           },
+          // GO Signal Rate: How often GO/CONDITIONAL_GO recommendations were correct
+          goSignalRate: {
+            rate: goAccuracy,
+            goCorrect,
+            goIncorrect,
+            pending: goPending,
+            total: goTotal,
+            description: 'Success rate of GO/CONDITIONAL_GO signals (TP hit vs SL hit)'
+          },
           // Caution Rate: How often WAIT/AVOID recommendations were correct
           cautionRate: {
             rate: cautionData.rate,
@@ -810,6 +865,14 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
             description: 'Success rate of WAIT/AVOID recommendations'
           },
           verdicts: verdictDistribution,
+          // Analysis coverage
+          coverage: {
+            totalReports: reports.length,
+            withTradePlan: reportsWithTradePlan,
+            tradePlanPercentage: reports.length > 0
+              ? Number(((reportsWithTradePlan / reports.length) * 100).toFixed(1))
+              : 0
+          },
           dataQuality: {
             dataSourcesCount: 12,
             indicatorsUsed: 47,

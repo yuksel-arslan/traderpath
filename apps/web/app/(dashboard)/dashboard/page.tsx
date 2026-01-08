@@ -71,6 +71,15 @@ interface PlatformStats {
     outcomeVerifiedCount?: number; // Number of analyses with verified outcomes
     period?: 'D' | 'W' | 'M' | 'all'; // Time period for step scores
   };
+  // GO Signal Rate: Success rate of GO/CONDITIONAL_GO signals
+  goSignalRate?: {
+    rate: number;
+    goCorrect: number;
+    goIncorrect: number;
+    pending: number;
+    total: number;
+    description: string;
+  };
   // Caution Rate: Success rate of WAIT/AVOID recommendations
   cautionRate?: {
     rate: number;
@@ -79,6 +88,12 @@ interface PlatformStats {
     pending: number;
     total: number;
     description: string;
+  };
+  // Analysis coverage
+  coverage?: {
+    totalReports: number;
+    withTradePlan: number;
+    tradePlanPercentage: number;
   };
   verdicts: {
     go: number;
@@ -1464,6 +1479,128 @@ export default function DashboardPage() {
                 </Link>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== SECTION 3.5: Signal Accuracy Details ===== */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* GO Signal Accuracy */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-500/10 dark:to-green-500/10 border border-emerald-200/50 dark:border-emerald-500/20 p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h4 className="font-bold text-gray-900 dark:text-white">GO Signals</h4>
+              <p className="text-xs text-gray-500 dark:text-slate-400">Trade recommendations</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600 dark:text-slate-300">Accuracy</span>
+              <span className={cn(
+                "text-xl font-bold",
+                (platformStats?.goSignalRate?.rate ?? 0) >= 60 ? "text-green-600 dark:text-green-400" :
+                (platformStats?.goSignalRate?.rate ?? 0) >= 40 ? "text-yellow-600 dark:text-yellow-400" :
+                (platformStats?.goSignalRate?.total ?? 0) === 0 ? "text-gray-400" : "text-red-600 dark:text-red-400"
+              )}>
+                {(platformStats?.goSignalRate?.total ?? 0) > 0 ? `${platformStats?.goSignalRate?.rate}%` : '—'}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
+                <div className="text-lg font-bold text-green-600 dark:text-green-400">{platformStats?.goSignalRate?.goCorrect ?? 0}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400">TP Hit</div>
+              </div>
+              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
+                <div className="text-lg font-bold text-red-600 dark:text-red-400">{platformStats?.goSignalRate?.goIncorrect ?? 0}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400">SL Hit</div>
+              </div>
+              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
+                <div className="text-lg font-bold text-gray-600 dark:text-slate-300">{platformStats?.goSignalRate?.pending ?? 0}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400">Pending</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* WAIT/AVOID Accuracy */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 border border-amber-200/50 dark:border-amber-500/20 p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
+              <Shield className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h4 className="font-bold text-gray-900 dark:text-white">WAIT/AVOID</h4>
+              <p className="text-xs text-gray-500 dark:text-slate-400">Caution signals</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600 dark:text-slate-300">Accuracy</span>
+              <span className={cn(
+                "text-xl font-bold",
+                (platformStats?.cautionRate?.rate ?? 0) >= 60 ? "text-green-600 dark:text-green-400" :
+                (platformStats?.cautionRate?.rate ?? 0) >= 40 ? "text-yellow-600 dark:text-yellow-400" :
+                (platformStats?.cautionRate?.total ?? 0) === 0 ? "text-gray-400" : "text-red-600 dark:text-red-400"
+              )}>
+                {(platformStats?.cautionRate?.total ?? 0) > 0 ? `${platformStats?.cautionRate?.rate}%` : '—'}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
+                <div className="text-lg font-bold text-green-600 dark:text-green-400">{platformStats?.cautionRate?.cautionCorrect ?? 0}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400">Correct</div>
+              </div>
+              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
+                <div className="text-lg font-bold text-red-600 dark:text-red-400">{platformStats?.cautionRate?.cautionIncorrect ?? 0}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400">Missed</div>
+              </div>
+              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
+                <div className="text-lg font-bold text-gray-600 dark:text-slate-300">{platformStats?.cautionRate?.pending ?? 0}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400">Pending</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Trade Plan Coverage */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 border border-blue-200/50 dark:border-blue-500/20 p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <Target className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h4 className="font-bold text-gray-900 dark:text-white">Trade Plans</h4>
+              <p className="text-xs text-gray-500 dark:text-slate-400">Analysis coverage</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600 dark:text-slate-300">Coverage</span>
+              <span className={cn(
+                "text-xl font-bold",
+                (platformStats?.coverage?.tradePlanPercentage ?? 0) >= 80 ? "text-green-600 dark:text-green-400" :
+                (platformStats?.coverage?.tradePlanPercentage ?? 0) >= 50 ? "text-yellow-600 dark:text-yellow-400" :
+                "text-gray-400"
+              )}>
+                {(platformStats?.coverage?.totalReports ?? 0) > 0 ? `${platformStats?.coverage?.tradePlanPercentage}%` : '—'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
+                <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{platformStats?.coverage?.withTradePlan ?? 0}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400">With Plan</div>
+              </div>
+              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
+                <div className="text-lg font-bold text-gray-600 dark:text-slate-300">{platformStats?.coverage?.totalReports ?? 0}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400">Total</div>
+              </div>
+            </div>
+            <p className="text-[10px] text-gray-400 dark:text-slate-500 text-center mt-2">
+              Only reports with trade plans can be verified
+            </p>
           </div>
         </div>
       </div>
