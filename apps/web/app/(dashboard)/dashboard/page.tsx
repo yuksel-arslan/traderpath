@@ -1640,101 +1640,161 @@ export default function DashboardPage() {
               {/* List View */}
               {outcomeViewMode === 'list' && (
                 <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-                  {/* Table Header */}
-                  <div className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-3 bg-gray-200/50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
-                    <div className="col-span-2">Asset</div>
-                    <div className="col-span-1 text-center">Direction</div>
-                    <div className="col-span-2 text-right">Entry</div>
-                    <div className="col-span-2 text-right">Current</div>
-                    <div className="col-span-2 text-right">P/L</div>
-                    <div className="col-span-1 text-center">Status</div>
-                    <div className="col-span-2 text-right">Date</div>
-                  </div>
+                  {/* Scrollable Table Container */}
+                  <div className="overflow-x-auto">
+                    {/* Table Header */}
+                    <div className="min-w-[900px] grid grid-cols-[120px_70px_60px_90px_90px_80px_80px_70px_70px_70px_90px] gap-2 px-4 py-3 bg-gray-200/50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10 text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                      <div>Asset</div>
+                      <div className="text-center">Direction</div>
+                      <div className="text-center">Score</div>
+                      <div className="text-right">Entry</div>
+                      <div className="text-right">Current</div>
+                      <div className="text-right">SL</div>
+                      <div className="text-right">TP</div>
+                      <div className="text-center">P/L</div>
+                      <div className="text-center">TP Prog</div>
+                      <div className="text-center">Status</div>
+                      <div className="text-right">Date</div>
+                    </div>
 
-                  {/* Table Body */}
-                  <div className="divide-y divide-gray-200 dark:divide-white/5">
-                    {recentOutcomes.map((outcome) => (
-                      <div
-                        key={outcome.id}
-                        className={cn(
-                          "grid grid-cols-2 md:grid-cols-12 gap-2 md:gap-4 px-4 py-3 hover:bg-gray-200/50 dark:hover:bg-white/5 transition-colors",
-                          outcome.outcome === 'correct' && "bg-green-50/50 dark:bg-green-500/5",
-                          outcome.outcome === 'incorrect' && "bg-red-50/50 dark:bg-red-500/5"
-                        )}
-                      >
-                        {/* Asset */}
-                        <div className="col-span-1 md:col-span-2 flex items-center gap-2">
-                          <img
-                            src={getCoinIcon(outcome.symbol)}
-                            alt={outcome.symbol}
-                            className="w-7 h-7 rounded-lg shadow object-contain"
-                            onError={(e) => {
-                              e.currentTarget.src = FALLBACK_COIN_ICON;
-                            }}
-                          />
-                          <span className="font-semibold text-gray-900 dark:text-white text-sm">{outcome.symbol}</span>
-                        </div>
+                    {/* Table Body */}
+                    <div className="divide-y divide-gray-200 dark:divide-white/5">
+                      {recentOutcomes.map((outcome) => {
+                        // Calculate TP Progress
+                        let tpProgress = 0;
+                        if (outcome.outcome === 'correct') {
+                          tpProgress = 100;
+                        } else if (outcome.entryPrice && outcome.currentPrice && outcome.takeProfit1) {
+                          const isLong = outcome.direction === 'long' || outcome.direction === 'LONG';
+                          const totalDistance = isLong
+                            ? (outcome.takeProfit1 - outcome.entryPrice)
+                            : (outcome.entryPrice - outcome.takeProfit1);
+                          const coveredDistance = isLong
+                            ? (outcome.currentPrice - outcome.entryPrice)
+                            : (outcome.entryPrice - outcome.currentPrice);
+                          tpProgress = totalDistance !== 0
+                            ? Math.min(100, Math.max(0, (coveredDistance / totalDistance) * 100))
+                            : 0;
+                        }
 
-                        {/* Direction */}
-                        <div className="col-span-1 md:col-span-1 flex items-center justify-end md:justify-center">
-                          {outcome.direction ? (
-                            <span className={cn(
-                              "px-2 py-0.5 rounded text-xs font-bold",
-                              outcome.direction === 'long' || outcome.direction === 'LONG'
-                                ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400"
-                                : "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                            )}>
-                              {outcome.direction === 'long' || outcome.direction === 'LONG' ? 'LONG' : 'SHORT'}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 dark:text-slate-500 text-xs">—</span>
-                          )}
-                        </div>
+                        return (
+                          <div
+                            key={outcome.id}
+                            className={cn(
+                              "min-w-[900px] grid grid-cols-[120px_70px_60px_90px_90px_80px_80px_70px_70px_70px_90px] gap-2 px-4 py-2.5 hover:bg-gray-200/50 dark:hover:bg-white/5 transition-colors items-center",
+                              outcome.outcome === 'correct' && "bg-green-50/50 dark:bg-green-500/5",
+                              outcome.outcome === 'incorrect' && "bg-red-50/50 dark:bg-red-500/5"
+                            )}
+                          >
+                            {/* Asset */}
+                            <div className="flex items-center gap-2">
+                              <img
+                                src={getCoinIcon(outcome.symbol)}
+                                alt={outcome.symbol}
+                                className="w-6 h-6 rounded-lg shadow object-contain"
+                                onError={(e) => {
+                                  e.currentTarget.src = FALLBACK_COIN_ICON;
+                                }}
+                              />
+                              <span className="font-semibold text-gray-900 dark:text-white text-sm">{outcome.symbol}</span>
+                            </div>
 
-                        {/* Entry Price */}
-                        <div className="hidden md:flex md:col-span-2 items-center justify-end font-mono text-sm text-gray-700 dark:text-slate-300">
-                          {outcome.entryPrice ? `$${outcome.entryPrice.toFixed(2)}` : '—'}
-                        </div>
+                            {/* Direction */}
+                            <div className="flex items-center justify-center">
+                              {outcome.direction ? (
+                                <span className={cn(
+                                  "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                                  outcome.direction === 'long' || outcome.direction === 'LONG'
+                                    ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400"
+                                    : "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                                )}>
+                                  {outcome.direction === 'long' || outcome.direction === 'LONG' ? 'LONG' : 'SHORT'}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 dark:text-slate-500 text-xs">—</span>
+                              )}
+                            </div>
 
-                        {/* Current Price */}
-                        <div className="hidden md:flex md:col-span-2 items-center justify-end font-mono text-sm text-gray-700 dark:text-slate-300">
-                          {outcome.currentPrice ? `$${outcome.currentPrice.toFixed(2)}` : '—'}
-                        </div>
+                            {/* Score */}
+                            <div className="flex items-center justify-center">
+                              <span className={cn(
+                                "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                                (outcome.score || 0) >= 7 ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400" :
+                                (outcome.score || 0) >= 5 ? "bg-yellow-200/80 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400" :
+                                "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                              )}>
+                                {((outcome.score || 0) * 10).toFixed(0)}%
+                              </span>
+                            </div>
 
-                        {/* P/L */}
-                        <div className="col-span-1 md:col-span-2 flex items-center justify-start md:justify-end">
-                          {outcome.unrealizedPnL !== undefined ? (
-                            <span className={cn(
-                              "px-2 py-1 rounded-lg font-bold text-sm",
-                              outcome.unrealizedPnL >= 0
-                                ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400"
-                                : "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                            )}>
-                              {outcome.unrealizedPnL >= 0 ? '+' : ''}{outcome.unrealizedPnL.toFixed(2)}%
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 dark:text-slate-500 text-sm">—</span>
-                          )}
-                        </div>
+                            {/* Entry Price */}
+                            <div className="text-right font-mono text-xs text-gray-700 dark:text-slate-300">
+                              {outcome.entryPrice ? `$${outcome.entryPrice.toFixed(2)}` : '—'}
+                            </div>
 
-                        {/* Status */}
-                        <div className="col-span-1 md:col-span-1 flex items-center justify-end md:justify-center">
-                          <span className={cn(
-                            "px-2 py-0.5 rounded-lg text-[10px] font-bold",
-                            outcome.outcome === 'correct' && "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400",
-                            outcome.outcome === 'incorrect' && "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400",
-                            outcome.outcome === 'pending' && "bg-blue-200/80 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
-                          )}>
-                            {outcome.outcome === 'correct' ? 'TP' : outcome.outcome === 'incorrect' ? 'SL' : 'LIVE'}
-                          </span>
-                        </div>
+                            {/* Current Price */}
+                            <div className="text-right font-mono text-xs text-gray-700 dark:text-slate-300">
+                              {outcome.currentPrice ? `$${outcome.currentPrice.toFixed(2)}` : '—'}
+                            </div>
 
-                        {/* Date */}
-                        <div className="hidden md:flex md:col-span-2 items-center justify-end text-xs text-gray-500 dark:text-slate-400">
-                          {outcome.createdAtDisplay}
-                        </div>
-                      </div>
-                    ))}
+                            {/* Stop Loss */}
+                            <div className="text-right font-mono text-xs text-red-600 dark:text-red-400">
+                              {outcome.stopLoss ? `$${outcome.stopLoss.toFixed(2)}` : '—'}
+                            </div>
+
+                            {/* Take Profit */}
+                            <div className="text-right font-mono text-xs text-green-600 dark:text-green-400">
+                              {outcome.takeProfit1 ? `$${outcome.takeProfit1.toFixed(2)}` : '—'}
+                            </div>
+
+                            {/* P/L */}
+                            <div className="flex items-center justify-center">
+                              {outcome.unrealizedPnL !== undefined ? (
+                                <span className={cn(
+                                  "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                                  outcome.unrealizedPnL >= 0
+                                    ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400"
+                                    : "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                                )}>
+                                  {outcome.unrealizedPnL >= 0 ? '+' : ''}{outcome.unrealizedPnL.toFixed(1)}%
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 dark:text-slate-500 text-xs">—</span>
+                              )}
+                            </div>
+
+                            {/* TP Progress */}
+                            <div className="flex items-center justify-center">
+                              <span className={cn(
+                                "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                                tpProgress >= 80 ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400" :
+                                tpProgress >= 50 ? "bg-yellow-200/80 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400" :
+                                "bg-blue-200/80 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                              )}>
+                                {tpProgress.toFixed(0)}%
+                              </span>
+                            </div>
+
+                            {/* Status */}
+                            <div className="flex items-center justify-center">
+                              <span className={cn(
+                                "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                                outcome.outcome === 'correct' && "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400",
+                                outcome.outcome === 'incorrect' && "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400",
+                                outcome.outcome === 'pending' && "bg-blue-200/80 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                              )}>
+                                {outcome.outcome === 'correct' ? 'TP HIT' : outcome.outcome === 'incorrect' ? 'SL HIT' : 'LIVE'}
+                              </span>
+                            </div>
+
+                            {/* Date */}
+                            <div className="text-right text-[10px] text-gray-500 dark:text-slate-400">
+                              {outcome.createdAtDisplay}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
