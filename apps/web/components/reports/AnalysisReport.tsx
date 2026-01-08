@@ -62,26 +62,15 @@ function formatPrice(price: number): string {
   return `$${price.toFixed(6)}`;
 }
 
-// Get coin color based on symbol
-function getCoinColor(symbol: string): string {
-  const colors: Record<string, string> = {
-    'BTC': '#F7931A',
-    'ETH': '#627EEA',
-    'BNB': '#F3BA2F',
-    'SOL': '#00FFA3',
-    'XRP': '#23292F',
-    'ADA': '#0033AD',
-    'DOGE': '#C2A633',
-    'DOT': '#E6007A',
-    'AVAX': '#E84142',
-    'MATIC': '#8247E5',
-    'LINK': '#2A5ADA',
-    'UNI': '#FF007A',
-    'ATOM': '#2E3148',
-    'LTC': '#BFBBBB',
-  };
-  return colors[symbol.toUpperCase()] || '#6366f1';
+// Get coin icon URL from CDN
+function getCoinIconUrl(symbol: string): string {
+  const upperSymbol = symbol.toUpperCase();
+  // Using cryptocurrency-icons CDN (reliable source)
+  return `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${upperSymbol.toLowerCase()}.png`;
 }
+
+// Fallback icon as data URI
+const FALLBACK_COIN_ICON = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="45" fill="%236366f1"/%3E%3Ctext x="50" y="65" font-size="40" fill="white" text-anchor="middle" font-weight="bold"%3E%3F%3C/text%3E%3C/svg%3E';
 
 // Parse AI Expert comments into separate experts
 function parseExpertComments(comment: string): Array<{ name: string; content: string }> {
@@ -149,7 +138,7 @@ const commonStyles = `
   .report-title { font-size: 16px; font-weight: bold; color: #1e293b; }
   .report-date { font-size: 8px; color: #94a3b8; margin-top: 3px; }
   .header-right { display: flex; align-items: flex-start; gap: 10px; }
-  .coin-logo { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: bold; }
+  .coin-logo { width: 36px; height: 36px; border-radius: 50%; object-fit: contain; }
   .coin-info { text-align: left; }
   .coin-symbol { font-size: 12px; font-weight: bold; color: #1e293b; }
   .coin-badge { display: inline-flex; align-items: center; justify-content: center; padding: 2px 8px; border-radius: 10px; font-size: 8px; font-weight: bold; margin-top: 2px; }
@@ -235,7 +224,7 @@ const commonStyles = `
 
 // Generate header HTML - Only for Page 1
 function generateHeader(data: AnalysisReportData, isLong: boolean, score: number): string {
-  const coinColor = getCoinColor(data.symbol);
+  const coinIconUrl = getCoinIconUrl(data.symbol);
   return `
     <div class="header">
       <div class="header-left">
@@ -247,7 +236,7 @@ function generateHeader(data: AnalysisReportData, isLong: boolean, score: number
         <div class="report-date">${data.generatedAt}</div>
       </div>
       <div class="header-right">
-        <div class="coin-logo" style="background: ${coinColor};">${data.symbol.slice(0, 1)}</div>
+        <img src="${coinIconUrl}" class="coin-logo" alt="${data.symbol}" onerror="this.src='${FALLBACK_COIN_ICON}'" />
         <div class="coin-info">
           <div class="coin-symbol">${data.symbol}/USDT</div>
           <div class="coin-badge ${isLong ? 'badge-green' : 'badge-red'}">${isLong ? '▲ BULLISH' : '▼ BEARISH'}</div>
