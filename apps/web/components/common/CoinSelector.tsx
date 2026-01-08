@@ -2,9 +2,18 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, ChevronDown, TrendingUp, Clock, X } from 'lucide-react';
+import { Search, ChevronDown, TrendingUp, Clock, X, AlertTriangle, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { CoinIcon } from './CoinIcon';
+
+// Recent analysis info for duplicate warning
+interface RecentAnalysis {
+  symbol: string;
+  generatedAt: string;
+  hoursAgo: number;
+  direction?: string;
+  score?: number;
+}
 
 // Coin data
 const ALL_COINS = [
@@ -42,6 +51,9 @@ const ALL_COINS = [
 
 const POPULAR_COINS = ALL_COINS.filter(c => c.popular);
 
+// Minimum hours between analyses for the same coin (to avoid unnecessary duplicates)
+const MIN_HOURS_BETWEEN_ANALYSES = 4;
+
 export function CoinSelector() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -51,6 +63,11 @@ export function CoinSelector() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Duplicate analysis warning state
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+  const [recentAnalysis, setRecentAnalysis] = useState<RecentAnalysis | null>(null);
+  const [isCheckingRecent, setIsCheckingRecent] = useState(false);
+
   // Load recent coins from localStorage
   useEffect(() => {
     const stored = localStorage.getItem('recentCoins');
@@ -58,6 +75,45 @@ export function CoinSelector() {
       setRecentCoins(JSON.parse(stored));
     }
   }, []);
+
+  // Check for recent analysis of selected coin
+  const checkRecentAnalysis = async (symbol: string): Promise<RecentAnalysis | null> => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return null;
+
+      const response = await fetch(`/api/reports?limit=10&offset=0`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      if (!data.success || !data.data?.reports) return null;
+
+      // Find the most recent analysis for this symbol
+      const recentReport = data.data.reports.find(
+        (r: { symbol: string }) => r.symbol.toUpperCase() === symbol.toUpperCase()
+      );
+
+      if (!recentReport) return null;
+
+      const generatedAt = new Date(recentReport.generatedAt);
+      const now = new Date();
+      const hoursAgo = (now.getTime() - generatedAt.getTime()) / (1000 * 60 * 60);
+
+      return {
+        symbol: recentReport.symbol,
+        generatedAt: recentReport.generatedAt,
+        hoursAgo,
+        direction: recentReport.direction,
+        score: recentReport.score,
+      };
+    } catch (error) {
+      console.error('Failed to check recent analysis:', error);
+      return null;
+    }
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -95,10 +151,36 @@ export function CoinSelector() {
     localStorage.setItem('recentCoins', JSON.stringify(updated));
   };
 
-  const handleAnalyze = () => {
-    if (selectedCoin) {
+  const handleAnalyze = async () => {
+    if (!selectedCoin) return;
+
+    setIsCheckingRecent(true);
+
+    // Check for recent analysis of this coin
+    const recent = await checkRecentAnalysis(selectedCoin.symbol);
+
+    setIsCheckingRecent(false);
+
+    if (recent && recent.hoursAgo < MIN_HOURS_BETWEEN_ANALYSES) {
+      // Show warning for recent analysis
+      setRecentAnalysis(recent);
+      setShowDuplicateWarning(true);
+    } else {
+      // No recent analysis, proceed directly
       router.push(`/analyze/${selectedCoin.symbol}`);
     }
+  };
+
+  const handleProceedAnyway = () => {
+    if (selectedCoin) {
+      setShowDuplicateWarning(false);
+      router.push(`/analyze/${selectedCoin.symbol}`);
+    }
+  };
+
+  const handleCancelAnalysis = () => {
+    setShowDuplicateWarning(false);
+    setRecentAnalysis(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -251,10 +333,15 @@ export function CoinSelector() {
       {/* Analyze Button */}
       <button
         onClick={handleAnalyze}
-        disabled={!selectedCoin}
+        disabled={!selectedCoin || isCheckingRecent}
         className="w-full py-3.5 px-4 bg-slate-200 dark:bg-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:scale-[1.02] transition-all border border-slate-300 dark:border-slate-600"
       >
-        {selectedCoin ? (
+        {isCheckingRecent ? (
+          <span className="flex items-center justify-center gap-2 text-slate-600 dark:text-slate-300 font-medium">
+            <RefreshCw className="w-5 h-5 animate-spin" />
+            Checking...
+          </span>
+        ) : selectedCoin ? (
           <span className="flex items-center justify-center gap-2 gradient-text-rg-animate font-semibold">
             <TrendingUp className="w-5 h-5" />
             Start {selectedCoin.symbol} Analysis
@@ -263,6 +350,109 @@ export function CoinSelector() {
           <span className="text-slate-500 dark:text-slate-400 font-medium">Select a coin to analyze</span>
         )}
       </button>
+
+      {/* Duplicate Analysis Warning Modal */}
+      {showDuplicateWarning && recentAnalysis && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Warning Header */}
+            <div className="bg-amber-500 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Yakın Zamanda Analiz Edildi</h3>
+                  <p className="text-sm text-white/80">Bu coin zaten analiz edilmiş</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Warning Content */}
+            <div className="p-6">
+              <div className="mb-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <CoinIcon symbol={recentAnalysis.symbol} size={40} />
+                  <div>
+                    <div className="font-semibold text-lg">{recentAnalysis.symbol}/USDT</div>
+                    <div className="text-sm text-muted-foreground">
+                      {recentAnalysis.hoursAgo < 1
+                        ? `${Math.round(recentAnalysis.hoursAgo * 60)} dakika önce`
+                        : `${recentAnalysis.hoursAgo.toFixed(1)} saat önce`
+                      } analiz edildi
+                    </div>
+                  </div>
+                </div>
+
+                {/* Previous Analysis Info */}
+                <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Önceki Yön:</span>
+                    <span className={cn(
+                      "font-medium px-2 py-0.5 rounded",
+                      recentAnalysis.direction === 'long'
+                        ? 'bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400'
+                        : 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'
+                    )}>
+                      {recentAnalysis.direction?.toUpperCase() || 'N/A'}
+                    </span>
+                  </div>
+                  {recentAnalysis.score && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Önceki Skor:</span>
+                      <span className={cn(
+                        "font-medium px-2 py-0.5 rounded",
+                        (recentAnalysis.score * 10) >= 70 ? 'bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400' :
+                        (recentAnalysis.score * 10) >= 50 ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' :
+                        'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'
+                      )}>
+                        {(recentAnalysis.score * 10).toFixed(0)}%
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Tarih:</span>
+                    <span className="font-medium text-foreground">
+                      {new Date(recentAnalysis.generatedAt).toLocaleString('tr-TR', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Yeni analiz yapmak <strong>1 kredi</strong> harcayacaktır.
+                  Kısa süre içinde piyasa koşulları önemli ölçüde değişmediyse, mevcut analizi kullanmanız önerilir.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCancelAnalysis}
+                  className="flex-1 px-4 py-2.5 border border-border rounded-lg font-medium text-foreground hover:bg-muted transition"
+                >
+                  İptal
+                </button>
+                <button
+                  onClick={handleProceedAnyway}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition",
+                    "bg-gradient-to-r from-amber-500 to-orange-500 text-white",
+                    "hover:from-amber-600 hover:to-orange-600"
+                  )}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Yine de Analiz Et
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
