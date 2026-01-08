@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { authenticate } from '../../core/auth/middleware';
 import { creditService } from '../credits/credit.service';
 import { expertService } from './expert.service';
-import { CREDIT_COSTS } from '@tradepath/types';
+import { creditCostsService } from '../costs/credit-costs.service';
 
 export default async function expertRoutes(app: FastifyInstance) {
   /**
@@ -25,7 +25,7 @@ export default async function expertRoutes(app: FastifyInstance) {
     const userId = request.user!.id;
     const body = askSchema.parse(request.body);
 
-    const cost = CREDIT_COSTS.AI_EXPERT_QUESTION;
+    const cost = await creditCostsService.getCreditCost('AI_EXPERT_QUESTION');
 
     // Check and charge credits
     const chargeResult = await creditService.charge(userId, cost, 'expert_ai_question', {
@@ -37,7 +37,7 @@ export default async function expertRoutes(app: FastifyInstance) {
         success: false,
         error: {
           code: 'CREDIT_001',
-          message: 'Insufficient credits. Expert AI requires 3 credits.',
+          message: `Insufficient credits. Expert AI requires ${cost} credits.`,
           required: cost,
         },
       });

@@ -9,7 +9,7 @@ import { costService } from '../costs/cost.service';
 import { prisma } from '../../core/database';
 import { analysisEngine } from '../analysis/analysis.engine';
 import { creditService } from '../credits/credit.service';
-import { CREDIT_COSTS } from '@tradepath/types';
+import { creditCostsService } from '../costs/credit-costs.service';
 
 // Gemini API configuration
 const GEMINI_API_KEY = config.gemini.apiKey;
@@ -1603,8 +1603,8 @@ FORMAT: Just your professional synthesis. Start directly with your unified recom
       };
     }
 
-    // Check and charge credits (25 credits for full analysis)
-    const cost = CREDIT_COSTS.BUNDLE_FULL_ANALYSIS;
+    // Check and charge credits (dynamic cost for full analysis)
+    const cost = await creditCostsService.getCreditCost('BUNDLE_FULL_ANALYSIS');
     const chargeResult = await creditService.charge(userId, cost, 'expert_panel_analysis', {
       symbol: upperSymbol,
     });

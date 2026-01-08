@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { authenticate } from '../../core/auth/middleware';
 import { creditService } from '../credits/credit.service';
 import { translationService, SUPPORTED_LANGUAGES } from './translation.service';
-import { CREDIT_COSTS } from '@tradepath/types';
+import { creditCostsService } from '../costs/credit-costs.service';
 
 const translateSchema = z.object({
   texts: z.record(z.string()),
@@ -21,12 +21,13 @@ export async function translationRoutes(fastify: FastifyInstance) {
   // Get supported languages
   // ===========================================
   fastify.get('/api/translation/languages', async (_request, reply: FastifyReply) => {
+    const cost = await creditCostsService.getCreditCost('REPORT_TRANSLATION');
     return reply.send({
       success: true,
       data: {
         languages: SUPPORTED_LANGUAGES,
         defaultLanguage: 'en',
-        cost: CREDIT_COSTS.REPORT_TRANSLATION,
+        cost,
       },
     });
   });
@@ -48,7 +49,7 @@ export async function translationRoutes(fastify: FastifyInstance) {
     const body = translateSchema.parse(request.body);
 
     // Check if user has enough credits
-    const cost = CREDIT_COSTS.REPORT_TRANSLATION;
+    const cost = await creditCostsService.getCreditCost('REPORT_TRANSLATION');
     const chargeResult = await creditService.charge(userId, cost, 'report_translation', {
       targetLanguage: body.targetLanguage,
       textCount: Object.keys(body.texts).length,
@@ -102,11 +103,12 @@ export async function translationRoutes(fastify: FastifyInstance) {
     const { textLength } = request.body as { textLength: number };
 
     const estimatedCostUsd = translationService.estimateTranslationCost(textLength || 1000);
+    const creditCost = await creditCostsService.getCreditCost('REPORT_TRANSLATION');
 
     return reply.send({
       success: true,
       data: {
-        creditCost: CREDIT_COSTS.REPORT_TRANSLATION,
+        creditCost,
         estimatedApiCostUsd: estimatedCostUsd.toFixed(6),
       },
     });

@@ -25,6 +25,55 @@ async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
 
 export default async function costRoutes(app: FastifyInstance) {
   // ===========================================
+  // GET /api/costs/credit-costs - Get credit costs (PUBLIC)
+  // Used by frontend to display prices
+  // ===========================================
+  app.get('/credit-costs', async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { creditCostsService } = await import('./credit-costs.service');
+      const costs = await creditCostsService.getCreditCosts();
+
+      return reply.send({
+        success: true,
+        data: {
+          // Analysis Steps
+          steps: {
+            marketPulse: costs.STEP_MARKET_PULSE,
+            assetScanner: costs.STEP_ASSET_SCANNER,
+            safetyCheck: costs.STEP_SAFETY_CHECK,
+            timing: costs.STEP_TIMING,
+            tradePlan: costs.STEP_TRADE_PLAN,
+            trapCheck: costs.STEP_TRAP_CHECK,
+            finalVerdict: costs.STEP_FINAL_VERDICT,
+          },
+          // Bundles
+          bundles: {
+            fullAnalysis: costs.BUNDLE_FULL_ANALYSIS,
+            quickCheck: costs.BUNDLE_QUICK_CHECK,
+            smartEntry: costs.BUNDLE_SMART_ENTRY,
+          },
+          // Features
+          features: {
+            aiExpert: costs.AI_EXPERT_QUESTION,
+            pdfReport: costs.PDF_REPORT,
+            translation: costs.REPORT_TRANSLATION,
+            emailSend: costs.EMAIL_SEND,
+            addToReport: costs.ADD_TO_REPORT,
+            priceAlert: costs.PRICE_ALERT,
+            watchlistSlot: costs.WATCHLIST_SLOT,
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Get credit costs error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'COST_ERROR', message: 'Failed to get credit costs' },
+      });
+    }
+  });
+
+  // ===========================================
   // GET /api/costs/summary - Get cost summary
   // ===========================================
   app.get('/summary', {

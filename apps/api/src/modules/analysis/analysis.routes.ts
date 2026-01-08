@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { authenticate, optionalAuth } from '../../core/auth/middleware';
 import { creditService } from '../credits/credit.service';
 import { costService } from '../costs/cost.service';
-import { CREDIT_COSTS } from '@tradepath/types';
+import { creditCostsService } from '../costs/credit-costs.service';
 import { analysisEngine } from './analysis.engine';
 import { config } from '../../core/config';
 import { getCautionRate, calculateCautionOutcomes, calculateExpiredOutcomes } from '../reports/outcome.service';
@@ -137,7 +137,7 @@ Be concise and actionable.`;
     const userId = request.user!.id;
     const body = assetScanSchema.parse(request.body);
 
-    const cost = CREDIT_COSTS.STEP_ASSET_SCANNER;
+    const cost = await creditCostsService.getCreditCost('STEP_ASSET_SCANNER');
     const chargeResult = await creditService.charge(userId, cost, 'analysis_step_2', {
       symbol: body.symbol,
     });
@@ -189,7 +189,7 @@ Be concise and give a trading perspective.`;
     const userId = request.user!.id;
     const body = assetScanSchema.parse(request.body);
 
-    const cost = CREDIT_COSTS.STEP_SAFETY_CHECK;
+    const cost = await creditCostsService.getCreditCost('STEP_SAFETY_CHECK');
     const chargeResult = await creditService.charge(userId, cost, 'analysis_step_3', {
       symbol: body.symbol,
     });
@@ -243,7 +243,7 @@ Focus on risk assessment and trading implications.`;
     const userId = request.user!.id;
     const body = assetScanSchema.parse(request.body);
 
-    const cost = CREDIT_COSTS.STEP_TIMING;
+    const cost = await creditCostsService.getCreditCost('STEP_TIMING');
     const chargeResult = await creditService.charge(userId, cost, 'analysis_step_4', {
       symbol: body.symbol,
     });
@@ -302,7 +302,7 @@ Be specific about when to enter.`;
     const userId = request.user!.id;
     const body = tradePlanSchema.parse(request.body);
 
-    const cost = CREDIT_COSTS.STEP_TRADE_PLAN;
+    const cost = await creditCostsService.getCreditCost('STEP_TRADE_PLAN');
     const chargeResult = await creditService.charge(userId, cost, 'analysis_step_5', {
       symbol: body.symbol,
     });
@@ -360,7 +360,7 @@ Give practical trading advice.`;
     const userId = request.user!.id;
     const body = assetScanSchema.parse(request.body);
 
-    const cost = CREDIT_COSTS.STEP_TRAP_CHECK;
+    const cost = await creditCostsService.getCreditCost('STEP_TRAP_CHECK');
     const chargeResult = await creditService.charge(userId, cost, 'analysis_step_6', {
       symbol: body.symbol,
     });
@@ -419,7 +419,7 @@ Warn about potential traps and give protective advice.`;
     const userId = request.user!.id;
     const body = fullAnalysisSchema.parse(request.body);
 
-    const cost = CREDIT_COSTS.BUNDLE_FULL_ANALYSIS;
+    const cost = await creditCostsService.getCreditCost('BUNDLE_FULL_ANALYSIS');
     const chargeResult = await creditService.charge(userId, cost, 'analysis_full', {
       symbol: body.symbol,
     });

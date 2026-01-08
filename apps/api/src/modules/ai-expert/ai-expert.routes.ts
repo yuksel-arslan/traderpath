@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { authenticate } from '../../core/auth/middleware';
 import { creditService } from '../credits/credit.service';
 import { aiExpertService } from './ai-expert.service';
-import { CREDIT_COSTS } from '@tradepath/types';
+import { creditCostsService } from '../costs/credit-costs.service';
 import { prisma } from '../../core/database';
 
 // Request validation schemas
@@ -38,12 +38,13 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
     '/api/ai-expert/experts',
     async (_request: FastifyRequest, reply: FastifyReply) => {
       const experts = aiExpertService.getAllExperts();
+      const creditCost = await creditCostsService.getCreditCost('AI_EXPERT_QUESTION');
 
       return reply.send({
         success: true,
         data: {
           experts,
-          creditCost: CREDIT_COSTS.AI_EXPERT_QUESTION, // 5 credits
+          creditCost,
         },
       });
     }
@@ -99,6 +100,13 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
         practical: questions.filter(q => q.category === 'practical'),
       };
 
+      // Get dynamic credit costs
+      const [aiExpertCost, addToReportCost, emailSendCost] = await Promise.all([
+        creditCostsService.getCreditCost('AI_EXPERT_QUESTION'),
+        creditCostsService.getCreditCost('ADD_TO_REPORT'),
+        creditCostsService.getCreditCost('EMAIL_SEND'),
+      ]);
+
       return reply.send({
         success: true,
         data: {
@@ -111,15 +119,15 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
           totalQuestions: questions.length,
           pricing: {
             stage1_education: { cost: 0, description: 'FREE - Learn the concept' },
-            stage2_analysis: { cost: CREDIT_COSTS.AI_EXPERT_QUESTION, description: 'Real coin analysis' },
-            add_to_report: { cost: CREDIT_COSTS.ADD_TO_REPORT, description: 'Add to report' },
-            send_email: { cost: CREDIT_COSTS.EMAIL_SEND, description: 'Send via email' },
+            stage2_analysis: { cost: aiExpertCost, description: 'Real coin analysis' },
+            add_to_report: { cost: addToReportCost, description: 'Add to report' },
+            send_email: { cost: emailSendCost, description: 'Send via email' },
           },
           howItWorks: {
             step1: '🎓 Ask a question → Get FREE educational answer',
-            step2: `📊 Choose a coin → ${CREDIT_COSTS.AI_EXPERT_QUESTION} credits for real analysis`,
-            step3: `📋 Add to report → ${CREDIT_COSTS.ADD_TO_REPORT} credits`,
-            step4: `📧 Send email → ${CREDIT_COSTS.EMAIL_SEND} credits`,
+            step2: `📊 Choose a coin → ${aiExpertCost} credits for real analysis`,
+            step3: `📋 Add to report → ${addToReportCost} credits`,
+            step4: `📧 Send email → ${emailSendCost} credits`,
           },
         },
       });
@@ -148,6 +156,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
 
       // Get suggested questions for this expert
       const suggestedQuestions = aiExpertService.getSuggestedQuestions(expertId as any);
+      const creditCost = await creditCostsService.getCreditCost('AI_EXPERT_QUESTION');
 
       return reply.send({
         success: true,
@@ -157,7 +166,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
             name: expert.name,
             role: expert.role,
           },
-          creditCost: CREDIT_COSTS.AI_EXPERT_QUESTION, // 5 credits
+          creditCost,
           suggestedQuestions: suggestedQuestions.slice(0, 5), // Top 5 questions
         },
       });
@@ -211,7 +220,8 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
 
       // Check if user is admin (free access) - isAdmin is set by authenticate middleware
       const isAdmin = (request as any).user?.isAdmin === true;
-      const cost = isAdmin ? 0 : CREDIT_COSTS.AI_EXPERT_QUESTION; // 5 credits (free for admin)
+      const aiExpertCost = await creditCostsService.getCreditCost('AI_EXPERT_QUESTION');
+      const cost = isAdmin ? 0 : aiExpertCost;
 
       let chargeResult = { success: true, newBalance: 0 };
 
@@ -232,7 +242,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
             success: false,
             error: {
               code: 'INSUFFICIENT_CREDITS',
-              message: `Insufficient credits. AI Expert requires ${CREDIT_COSTS.AI_EXPERT_QUESTION} credits per message.`,
+              message: `Insufficient credits. AI Expert requires ${aiExpertCost} credits per message.`,
               required: cost,
               current: chargeResult.newBalance,
             },
@@ -326,7 +336,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
       }
 
       // Credits to add to report
-      const cost = CREDIT_COSTS.ADD_TO_REPORT;
+      const cost = await creditCostsService.getCreditCost('ADD_TO_REPORT');
       const chargeResult = await creditService.charge(
         userId,
         cost,
@@ -339,7 +349,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
           success: false,
           error: {
             code: 'INSUFFICIENT_CREDITS',
-            message: `Adding to report requires ${CREDIT_COSTS.ADD_TO_REPORT} credits.`,
+            message: `Adding to report requires ${cost} credits.`,
             required: cost,
           },
         });
@@ -431,7 +441,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
       }
 
       // Credits to send email
-      const cost = CREDIT_COSTS.EMAIL_SEND;
+      const cost = await creditCostsService.getCreditCost('EMAIL_SEND');
       const chargeResult = await creditService.charge(
         userId,
         cost,
@@ -444,7 +454,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
           success: false,
           error: {
             code: 'INSUFFICIENT_CREDITS',
-            message: `Sending email requires ${CREDIT_COSTS.EMAIL_SEND} credits.`,
+            message: `Sending email requires ${cost} credits.`,
             required: cost,
           },
         });

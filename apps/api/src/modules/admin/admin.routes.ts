@@ -525,6 +525,144 @@ export default async function adminRoutes(app: FastifyInstance) {
       message: 'Package deleted successfully',
     });
   });
+
+  // ===========================================
+  // GET /api/admin/credit-costs - Get all credit costs
+  // ===========================================
+  app.get('/credit-costs', {
+    preHandler: requireAdmin,
+  }, async (_request: FastifyRequest, reply: FastifyReply) => {
+    const { creditCostsService } = await import('../costs/credit-costs.service');
+
+    const costs = await creditCostsService.getCreditCosts();
+    const defaults = creditCostsService.getDefaultCreditCosts();
+
+    // Also get raw settings from database for display
+    const settings = await prisma.costSettings.findUnique({
+      where: { id: 'default' },
+    });
+
+    return reply.send({
+      success: true,
+      data: {
+        costs,
+        defaults,
+        raw: settings ? {
+          // Analysis Steps
+          creditCostMarketPulse: settings.creditCostMarketPulse,
+          creditCostAssetScanner: settings.creditCostAssetScanner,
+          creditCostSafetyCheck: settings.creditCostSafetyCheck,
+          creditCostTiming: settings.creditCostTiming,
+          creditCostTradePlan: settings.creditCostTradePlan,
+          creditCostTrapCheck: settings.creditCostTrapCheck,
+          creditCostFinalVerdict: settings.creditCostFinalVerdict,
+          // Bundles
+          creditCostFullAnalysis: settings.creditCostFullAnalysis,
+          creditCostQuickCheck: settings.creditCostQuickCheck,
+          creditCostSmartEntry: settings.creditCostSmartEntry,
+          // Features
+          creditCostAiExpert: settings.creditCostAiExpert,
+          creditCostPdfReport: settings.creditCostPdfReport,
+          creditCostTranslation: settings.creditCostTranslation,
+          creditCostEmailSend: settings.creditCostEmailSend,
+          creditCostAddToReport: settings.creditCostAddToReport,
+          creditCostPriceAlert: settings.creditCostPriceAlert,
+          creditCostWatchlistSlot: settings.creditCostWatchlistSlot,
+        } : null,
+        updatedAt: settings?.updatedAt,
+      },
+    });
+  });
+
+  // ===========================================
+  // PATCH /api/admin/credit-costs - Update credit costs
+  // ===========================================
+  app.patch('/credit-costs', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { creditCostsService } = await import('../costs/credit-costs.service');
+
+    const body = request.body as {
+      // Analysis Steps
+      creditCostMarketPulse?: number;
+      creditCostAssetScanner?: number;
+      creditCostSafetyCheck?: number;
+      creditCostTiming?: number;
+      creditCostTradePlan?: number;
+      creditCostTrapCheck?: number;
+      creditCostFinalVerdict?: number;
+      // Bundles
+      creditCostFullAnalysis?: number;
+      creditCostQuickCheck?: number;
+      creditCostSmartEntry?: number;
+      // Features
+      creditCostAiExpert?: number;
+      creditCostPdfReport?: number;
+      creditCostTranslation?: number;
+      creditCostEmailSend?: number;
+      creditCostAddToReport?: number;
+      creditCostPriceAlert?: number;
+      creditCostWatchlistSlot?: number;
+    };
+
+    // Validate all values are non-negative integers
+    for (const [key, value] of Object.entries(body)) {
+      if (value !== undefined) {
+        if (!Number.isInteger(value) || value < 0) {
+          return reply.status(400).send({
+            success: false,
+            error: { code: 'INVALID_VALUE', message: `${key} must be a non-negative integer` },
+          });
+        }
+      }
+    }
+
+    const costs = await creditCostsService.updateCreditCosts(body);
+
+    return reply.send({
+      success: true,
+      data: { costs },
+      message: 'Credit costs updated successfully',
+    });
+  });
+
+  // ===========================================
+  // POST /api/admin/credit-costs/reset - Reset credit costs to defaults
+  // ===========================================
+  app.post('/credit-costs/reset', {
+    preHandler: requireAdmin,
+  }, async (_request: FastifyRequest, reply: FastifyReply) => {
+    const { creditCostsService } = await import('../costs/credit-costs.service');
+
+    const defaults = creditCostsService.getDefaultCreditCosts();
+
+    // Reset all costs to defaults
+    const costs = await creditCostsService.updateCreditCosts({
+      creditCostMarketPulse: defaults.STEP_MARKET_PULSE,
+      creditCostAssetScanner: defaults.STEP_ASSET_SCANNER,
+      creditCostSafetyCheck: defaults.STEP_SAFETY_CHECK,
+      creditCostTiming: defaults.STEP_TIMING,
+      creditCostTradePlan: defaults.STEP_TRADE_PLAN,
+      creditCostTrapCheck: defaults.STEP_TRAP_CHECK,
+      creditCostFinalVerdict: defaults.STEP_FINAL_VERDICT,
+      creditCostFullAnalysis: defaults.BUNDLE_FULL_ANALYSIS,
+      creditCostQuickCheck: defaults.BUNDLE_QUICK_CHECK,
+      creditCostSmartEntry: defaults.BUNDLE_SMART_ENTRY,
+      creditCostAiExpert: defaults.AI_EXPERT_QUESTION,
+      creditCostPdfReport: defaults.PDF_REPORT,
+      creditCostTranslation: defaults.REPORT_TRANSLATION,
+      creditCostEmailSend: defaults.EMAIL_SEND,
+      creditCostAddToReport: defaults.ADD_TO_REPORT,
+      creditCostPriceAlert: defaults.PRICE_ALERT,
+      creditCostWatchlistSlot: defaults.WATCHLIST_SLOT,
+    });
+
+    return reply.send({
+      success: true,
+      data: { costs },
+      message: 'Credit costs reset to defaults',
+    });
+  });
 }
 
 // Helper functions

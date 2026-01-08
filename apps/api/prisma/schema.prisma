@@ -529,6 +529,33 @@ model CostSettings {
   minCreditPriceUsd     Decimal  @default(0.05) @map("min_credit_price_usd") @db.Decimal(10, 4)
   maxCreditPriceUsd     Decimal  @default(0.50) @map("max_credit_price_usd") @db.Decimal(10, 4)
 
+  // =============================================
+  // Credit Costs for Operations (Admin Configurable)
+  // =============================================
+
+  // Analysis Steps
+  creditCostMarketPulse    Int @default(0) @map("credit_cost_market_pulse")
+  creditCostAssetScanner   Int @default(2) @map("credit_cost_asset_scanner")
+  creditCostSafetyCheck    Int @default(5) @map("credit_cost_safety_check")
+  creditCostTiming         Int @default(3) @map("credit_cost_timing")
+  creditCostTradePlan      Int @default(5) @map("credit_cost_trade_plan")
+  creditCostTrapCheck      Int @default(5) @map("credit_cost_trap_check")
+  creditCostFinalVerdict   Int @default(0) @map("credit_cost_final_verdict")
+
+  // Bundles
+  creditCostFullAnalysis   Int @default(25) @map("credit_cost_full_analysis")
+  creditCostQuickCheck     Int @default(5) @map("credit_cost_quick_check")
+  creditCostSmartEntry     Int @default(12) @map("credit_cost_smart_entry")
+
+  // Features
+  creditCostAiExpert       Int @default(10) @map("credit_cost_ai_expert")
+  creditCostPdfReport      Int @default(5) @map("credit_cost_pdf_report")
+  creditCostTranslation    Int @default(5) @map("credit_cost_translation")
+  creditCostEmailSend      Int @default(5) @map("credit_cost_email_send")
+  creditCostAddToReport    Int @default(2) @map("credit_cost_add_to_report")
+  creditCostPriceAlert     Int @default(1) @map("credit_cost_price_alert")
+  creditCostWatchlistSlot  Int @default(3) @map("credit_cost_watchlist_slot")
+
   // Auto-pricing settings
   autoPricingEnabled    Boolean  @default(false) @map("auto_pricing_enabled")
   autoPricingInterval   Int      @default(24) @map("auto_pricing_interval") // hours

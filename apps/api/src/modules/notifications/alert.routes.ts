@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { prisma } from '../../core/database';
 import { authenticate } from '../../core/auth/middleware';
 import { creditService } from '../credits/credit.service';
-import { CREDIT_COSTS } from '@tradepath/types';
+import { creditCostsService } from '../costs/credit-costs.service';
 import { notificationService } from './notification.service';
 
 export default async function alertRoutes(app: FastifyInstance) {
@@ -46,7 +46,7 @@ export default async function alertRoutes(app: FastifyInstance) {
     const body = createSchema.parse(request.body);
 
     // Charge credits
-    const cost = CREDIT_COSTS.PRICE_ALERT;
+    const cost = await creditCostsService.getCreditCost('PRICE_ALERT');
     const chargeResult = await creditService.charge(userId, cost, 'price_alert', {
       symbol: body.symbol,
       targetPrice: body.targetPrice,

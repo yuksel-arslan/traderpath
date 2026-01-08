@@ -318,6 +318,27 @@ CREATE TABLE "cost_settings" (
     "credit_price_usd" DECIMAL(10,4) NOT NULL DEFAULT 0.10,
     "min_credit_price_usd" DECIMAL(10,4) NOT NULL DEFAULT 0.05,
     "max_credit_price_usd" DECIMAL(10,4) NOT NULL DEFAULT 0.50,
+    -- Credit Costs for Analysis Steps
+    "credit_cost_market_pulse" INTEGER NOT NULL DEFAULT 0,
+    "credit_cost_asset_scanner" INTEGER NOT NULL DEFAULT 2,
+    "credit_cost_safety_check" INTEGER NOT NULL DEFAULT 5,
+    "credit_cost_timing" INTEGER NOT NULL DEFAULT 3,
+    "credit_cost_trade_plan" INTEGER NOT NULL DEFAULT 5,
+    "credit_cost_trap_check" INTEGER NOT NULL DEFAULT 5,
+    "credit_cost_final_verdict" INTEGER NOT NULL DEFAULT 0,
+    -- Credit Costs for Bundles
+    "credit_cost_full_analysis" INTEGER NOT NULL DEFAULT 25,
+    "credit_cost_quick_check" INTEGER NOT NULL DEFAULT 5,
+    "credit_cost_smart_entry" INTEGER NOT NULL DEFAULT 12,
+    -- Credit Costs for Features
+    "credit_cost_ai_expert" INTEGER NOT NULL DEFAULT 10,
+    "credit_cost_pdf_report" INTEGER NOT NULL DEFAULT 5,
+    "credit_cost_translation" INTEGER NOT NULL DEFAULT 5,
+    "credit_cost_email_send" INTEGER NOT NULL DEFAULT 5,
+    "credit_cost_add_to_report" INTEGER NOT NULL DEFAULT 2,
+    "credit_cost_price_alert" INTEGER NOT NULL DEFAULT 1,
+    "credit_cost_watchlist_slot" INTEGER NOT NULL DEFAULT 3,
+    -- Auto-pricing settings
     "auto_pricing_enabled" BOOLEAN NOT NULL DEFAULT false,
     "auto_pricing_interval" INTEGER NOT NULL DEFAULT 24,
     "last_price_update" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
