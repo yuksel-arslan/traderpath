@@ -781,11 +781,15 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
       const cautionTotal = cautionCorrect + cautionIncorrect;
       const cautionAccuracy = cautionTotal > 0 ? Number(((cautionCorrect / cautionTotal) * 100).toFixed(1)) : 0;
 
-      // Count reports with trade plan
-      const reportsWithTradePlan = reports.filter(r => {
+      // Count reports with trade plan (from all reports, not period-filtered)
+      const allReportsWithData = await db.report.findMany({
+        select: { reportData: true }
+      });
+      const reportsWithTradePlan = allReportsWithData.filter(r => {
         const rd = r.reportData as Record<string, unknown> | null;
         return rd && rd.tradePlan;
       }).length;
+      const totalAllReports = allReportsWithData.length;
 
       // Trigger background outcome calculations (don't await)
       calculateExpiredOutcomes().catch(err => console.error('Background outcome calculation failed:', err));
@@ -857,12 +861,12 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
             description: 'Success rate of WAIT/AVOID recommendations'
           },
           verdicts: verdictDistribution,
-          // Analysis coverage
+          // Analysis coverage (uses all reports, not period-filtered)
           coverage: {
-            totalReports: reports.length,
+            totalReports: totalAllReports,
             withTradePlan: reportsWithTradePlan,
-            tradePlanPercentage: reports.length > 0
-              ? Number(((reportsWithTradePlan / reports.length) * 100).toFixed(1))
+            tradePlanPercentage: totalAllReports > 0
+              ? Number(((reportsWithTradePlan / totalAllReports) * 100).toFixed(1))
               : 0
           },
           dataQuality: {
