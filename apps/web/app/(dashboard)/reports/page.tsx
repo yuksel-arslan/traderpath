@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CoinIcon } from '../../../components/common/CoinIcon';
+import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
 import { TradePlanChart } from '../../../components/charts/TradePlanChart';
 import {
   FileText,
@@ -948,9 +949,14 @@ Bu analize göre risk değerlendirmeni ve önerilerini paylaşır mısın?`;
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b bg-gray-100 dark:bg-slate-900/50">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 via-amber-500 to-green-500 flex items-center justify-center text-white font-bold">
-                  {chartModal.report.symbol.slice(0, 2)}
-                </div>
+                <img
+                  src={getCoinIcon(chartModal.report.symbol)}
+                  alt={chartModal.report.symbol}
+                  className="w-10 h-10 rounded-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.src = FALLBACK_COIN_ICON;
+                  }}
+                />
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-xl font-bold">{chartModal.report.symbol}/USDT</h2>

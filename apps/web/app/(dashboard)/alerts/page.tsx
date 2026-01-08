@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Clock
 } from 'lucide-react';
+import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
 
 interface PriceAlert {
   id: string;
@@ -227,9 +228,14 @@ export default function AlertsPage() {
             >
               <div className="flex items-center gap-4">
                 {/* Coin Icon */}
-                <div className="w-10 h-10 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-full flex items-center justify-center text-white font-bold">
-                  {alert.symbol.charAt(0)}
-                </div>
+                <img
+                  src={getCoinIcon(alert.symbol)}
+                  alt={alert.symbol}
+                  className="w-10 h-10 rounded-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.src = FALLBACK_COIN_ICON;
+                  }}
+                />
 
                 {/* Alert Info */}
                 <div>

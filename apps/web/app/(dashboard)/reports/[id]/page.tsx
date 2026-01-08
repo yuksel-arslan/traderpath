@@ -26,6 +26,7 @@ import {
   LineChart,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
+import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../lib/coin-icons';
 import { TradePlanChart } from '../../../../components/analysis/TradePlanChart';
 
 interface ReportData {
@@ -192,9 +193,14 @@ export default function ReportViewPage() {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold text-lg">
-                {report.symbol.charAt(0)}
-              </div>
+              <img
+                src={getCoinIcon(report.symbol)}
+                alt={report.symbol}
+                className="w-12 h-12 rounded-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = FALLBACK_COIN_ICON;
+                }}
+              />
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">{report.symbol}/USDT Analysis</h1>
                 <p className="text-sm text-gray-500 dark:text-slate-400">{report.generatedAt}</p>

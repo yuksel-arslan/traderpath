@@ -47,6 +47,7 @@ import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TradePathLogo } from '../../components/common/TradePathLogo';
 import { CREDIT_PACKAGES } from '../../lib/pricing-config';
 import { LiveAnalysisPreview } from '../../components/marketing/LiveAnalysisPreview';
+import { getCoinIcon, FALLBACK_COIN_ICON } from '../../lib/coin-icons';
 
 // Coins to display in the ticker
 const TICKER_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX'];
@@ -1473,9 +1474,14 @@ export default function LandingPage() {
                     ].map((item, index) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-accent/50 rounded-lg">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-amber-500/20 rounded-full flex items-center justify-center font-bold text-sm">
-                            {item.coin.charAt(0)}
-                          </div>
+                          <img
+                            src={getCoinIcon(item.coin)}
+                            alt={item.coin}
+                            className="w-8 h-8 rounded-full object-contain"
+                            onError={(e) => {
+                              e.currentTarget.src = FALLBACK_COIN_ICON;
+                            }}
+                          />
                           <div>
                             <p className="font-medium">{item.coin}/USDT</p>
                             <p className="text-xs text-muted-foreground">{item.time}</p>

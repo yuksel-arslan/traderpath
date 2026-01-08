@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip, ReferenceLine, defs } from 'recharts';
 import { cn } from '../../../lib/utils';
+import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
 
 // ===========================================
 // Types
@@ -1502,16 +1503,14 @@ export default function DashboardPage() {
                       {/* Header: Symbol & Status */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <div className={cn(
-                            "relative w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-sm shadow-lg",
-                            outcome.symbol === 'BTC' ? 'bg-gradient-to-br from-amber-400 to-amber-600' :
-                            outcome.symbol === 'ETH' ? 'bg-gradient-to-br from-blue-400 to-blue-600' :
-                            outcome.symbol === 'SOL' ? 'bg-gradient-to-br from-purple-400 to-purple-600' :
-                            outcome.symbol === 'BNB' ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' :
-                            'bg-gradient-to-br from-gray-400 to-gray-600'
-                          )}>
-                            {outcome.symbol.charAt(0)}
-                          </div>
+                          <img
+                            src={getCoinIcon(outcome.symbol)}
+                            alt={outcome.symbol}
+                            className="w-8 h-8 rounded-lg shadow-lg object-contain"
+                            onError={(e) => {
+                              e.currentTarget.src = FALLBACK_COIN_ICON;
+                            }}
+                          />
                           <div>
                             <div className="flex items-center gap-1.5">
                               <span className="font-semibold text-gray-900 dark:text-white text-sm">{outcome.symbol}</span>
@@ -1620,16 +1619,14 @@ export default function DashboardPage() {
                       >
                         {/* Asset */}
                         <div className="col-span-1 md:col-span-2 flex items-center gap-2">
-                          <div className={cn(
-                            "w-7 h-7 rounded-lg flex items-center justify-center font-bold text-white text-xs shadow",
-                            outcome.symbol === 'BTC' ? 'bg-gradient-to-br from-amber-400 to-amber-600' :
-                            outcome.symbol === 'ETH' ? 'bg-gradient-to-br from-blue-400 to-blue-600' :
-                            outcome.symbol === 'SOL' ? 'bg-gradient-to-br from-purple-400 to-purple-600' :
-                            outcome.symbol === 'BNB' ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' :
-                            'bg-gradient-to-br from-gray-400 to-gray-600'
-                          )}>
-                            {outcome.symbol.charAt(0)}
-                          </div>
+                          <img
+                            src={getCoinIcon(outcome.symbol)}
+                            alt={outcome.symbol}
+                            className="w-7 h-7 rounded-lg shadow object-contain"
+                            onError={(e) => {
+                              e.currentTarget.src = FALLBACK_COIN_ICON;
+                            }}
+                          />
                           <span className="font-semibold text-gray-900 dark:text-white text-sm">{outcome.symbol}</span>
                         </div>
 
