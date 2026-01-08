@@ -1688,14 +1688,15 @@ export default function DashboardPage() {
 
           {recentOutcomes.length > 0 ? (
             <>
-              {/* Card View */}
+              {/* Card View - Horizontal scroll, single row */}
               {outcomeViewMode === 'card' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                <div className="overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
+                  <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
                   {recentOutcomes.map((outcome) => (
                     <div
                       key={outcome.id}
                       className={cn(
-                        "group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border transition-all duration-300 hover:shadow-lg",
+                        "group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border transition-all duration-300 hover:shadow-lg flex-shrink-0 w-[280px]",
                         outcome.outcome === 'correct' && "border-green-300/50 dark:border-green-500/30 bg-green-100/80 dark:bg-green-500/5",
                         outcome.outcome === 'incorrect' && "border-red-300/50 dark:border-red-500/30 bg-red-100/80 dark:bg-red-500/5",
                         outcome.outcome === 'pending' && "border-gray-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/30"
@@ -1835,16 +1836,17 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   ))}
+                  </div>
                 </div>
               )}
 
-              {/* List View */}
+              {/* List View - 5 rows with vertical scroll */}
               {outcomeViewMode === 'list' && (
                 <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
                   {/* Scrollable Table Container */}
                   <div className="overflow-x-auto">
                     {/* Table Header */}
-                    <div className="min-w-[900px] grid grid-cols-[120px_70px_60px_90px_90px_80px_80px_70px_70px_70px_90px] gap-2 px-4 py-3 bg-gray-200/50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10 text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                    <div className="min-w-[900px] grid grid-cols-[120px_70px_60px_90px_90px_80px_80px_70px_70px_70px_90px] gap-2 px-4 py-3 bg-gray-200/50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10 text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider sticky top-0 z-10">
                       <div>Asset</div>
                       <div className="text-center">Direction</div>
                       <div className="text-center">Score</div>
@@ -1858,8 +1860,8 @@ export default function DashboardPage() {
                       <div className="text-right">Date</div>
                     </div>
 
-                    {/* Table Body */}
-                    <div className="divide-y divide-gray-200 dark:divide-white/5">
+                    {/* Table Body - Max 5 rows visible, vertical scroll */}
+                    <div className="divide-y divide-gray-200 dark:divide-white/5 max-h-[220px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
                       {recentOutcomes.map((outcome) => {
                         // Calculate TP Progress
                         let tpProgress = 0;
