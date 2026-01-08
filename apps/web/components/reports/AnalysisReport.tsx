@@ -92,6 +92,25 @@ function parseExpertComments(comment: string): Array<{ name: string; content: st
   return experts;
 }
 
+// Step icons as SVG paths (matching web app)
+const stepIcons = {
+  marketPulse: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+  assetScan: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+  safety: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  timing: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  tradePlan: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
+  trapCheck: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  verdict: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`
+};
+
+// AI Expert icons
+const expertIcons = {
+  ARIA: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+  NEXUS: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>`,
+  ORACLE: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  SENTINEL: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
+};
+
 // Common CSS styles
 const commonStyles = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -127,13 +146,25 @@ const commonStyles = `
   .page-number { position: absolute; bottom: 15px; right: 30px; font-size: 8px; color: #94a3b8; }
   .page-footer { position: absolute; bottom: 15px; left: 30px; font-size: 7px; color: #94a3b8; }
 
-  /* 7-Step Analysis - Clean design */
-  .step-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; }
-  .step-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
-  .step-num { font-size: 11px; font-weight: bold; color: #3b82f6; min-width: 18px; }
-  .step-title { font-weight: 600; font-size: 11px; flex: 1; }
+  /* 7-Step Analysis */
+  .step-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+  .step-header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .step-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .step-icon svg { width: 18px; height: 18px; }
+  .step-info { flex: 1; }
+  .step-top { display: flex; align-items: center; gap: 8px; }
+  .step-num { font-size: 10px; font-weight: 600; color: #64748b; }
+  .step-title { font-weight: 600; font-size: 11px; color: #1e293b; }
+  .step-subtitle { font-size: 8px; color: #94a3b8; margin-top: 1px; }
   .step-status { font-size: 9px; font-weight: 600; }
-  .step-desc { font-size: 9px; color: #475569; line-height: 1.5; padding-left: 26px; }
+  .step-desc { font-size: 9px; color: #475569; line-height: 1.5; margin-top: 6px; padding-left: 38px; }
+
+  /* Icon backgrounds */
+  .icon-blue { background: #dbeafe; }
+  .icon-purple { background: #f3e8ff; }
+  .icon-green { background: #dcfce7; }
+  .icon-amber { background: #fef3c7; }
+  .icon-red { background: #fee2e2; }
 
   /* Trade Plan Section */
   .trade-plan-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
@@ -152,16 +183,28 @@ const commonStyles = `
   .chart-image { width: 100%; height: 320px; object-fit: contain; background: #fff; display: block; }
   .chart-placeholder { height: 320px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px; background: #f8fafc; }
 
-  /* AI Expert Section - Compact */
-  .expert-box { background: linear-gradient(135deg, #fefce8, #fef3c7); border: 1px solid #fbbf24; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
-  .expert-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .expert-avatar { width: 28px; height: 28px; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold; }
-  .expert-name { font-weight: bold; color: #92400e; font-size: 10px; }
-  .expert-role { font-size: 8px; color: #a16207; }
-  .expert-content { background: rgba(255,255,255,0.8); border-radius: 6px; padding: 8px; font-size: 8px; color: #78350f; line-height: 1.5; }
+  /* AI Expert Section */
+  .expert-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+  .expert-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .expert-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+  .expert-icon svg { width: 22px; height: 22px; }
+  .expert-info { flex: 1; }
+  .expert-name { font-weight: bold; font-size: 11px; color: #1e293b; }
+  .expert-role { font-size: 9px; font-weight: 500; margin-top: 1px; }
+  .expert-content { background: #f8fafc; border-radius: 6px; padding: 10px; font-size: 9px; color: #475569; line-height: 1.6; }
   .no-expert { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; text-align: center; color: #94a3b8; font-size: 10px; }
 
-  /* Footer/Disclaimer - Compact */
+  /* Expert colors */
+  .expert-aria { background: #dbeafe; }
+  .expert-aria .expert-role { color: #3b82f6; }
+  .expert-nexus { background: #dcfce7; }
+  .expert-nexus .expert-role { color: #10b981; }
+  .expert-oracle { background: #f3e8ff; }
+  .expert-oracle .expert-role { color: #a855f7; }
+  .expert-sentinel { background: #ffedd5; }
+  .expert-sentinel .expert-role { color: #f97316; }
+
+  /* Footer/Disclaimer */
   .disclaimer-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 10px; margin-top: 10px; }
   .disclaimer-title { font-size: 9px; font-weight: bold; color: #dc2626; margin-bottom: 4px; }
   .disclaimer-text { font-size: 7px; color: #7f1d1d; line-height: 1.5; }
@@ -200,50 +243,71 @@ function generatePage1HTML(data: AnalysisReportData): string {
 
   const steps = [
     {
-      num: 1,
+      num: 'Step 1',
       title: 'Market Pulse',
+      subtitle: 'Understanding the Big Picture',
+      icon: stepIcons.marketPulse,
+      iconClass: 'icon-blue',
       status: data.marketPulse.trend?.direction === 'bullish' ? 'Bullish' : data.marketPulse.trend?.direction === 'bearish' ? 'Bearish' : 'Neutral',
       statusColor: data.marketPulse.trend?.direction === 'bullish' ? '#16a34a' : data.marketPulse.trend?.direction === 'bearish' ? '#dc2626' : '#d97706',
       description: `Fear & Greed Index at ${data.marketPulse.fearGreedIndex} (${data.marketPulse.fearGreedLabel}). BTC Dominance: ${data.marketPulse.btcDominance?.toFixed(1)}%. Market trend shows ${data.marketPulse.trend?.direction || 'neutral'} momentum.`
     },
     {
-      num: 2,
+      num: 'Step 2',
       title: 'Asset Scan',
+      subtitle: 'Deep Technical Analysis',
+      icon: stepIcons.assetScan,
+      iconClass: 'icon-purple',
       status: data.assetScan.priceChange24h >= 2 ? 'Strong' : data.assetScan.priceChange24h >= 0 ? 'Stable' : data.assetScan.priceChange24h >= -2 ? 'Weak' : 'Declining',
       statusColor: data.assetScan.priceChange24h >= 0 ? '#16a34a' : '#dc2626',
       description: `Current price ${formatPrice(data.assetScan.currentPrice)} with ${data.assetScan.priceChange24h >= 0 ? '+' : ''}${data.assetScan.priceChange24h?.toFixed(2)}% change in 24h. RSI: ${data.assetScan.indicators?.rsi?.toFixed(0) || '-'}, MACD: ${data.assetScan.indicators?.macd?.histogram > 0 ? 'Bullish' : 'Bearish'}.`
     },
     {
-      num: 3,
+      num: 'Step 3',
       title: 'Safety Check',
+      subtitle: 'Risk & Manipulation Detection',
+      icon: stepIcons.safety,
+      iconClass: 'icon-green',
       status: data.safetyCheck.riskLevel === 'low' ? 'Safe' : data.safetyCheck.riskLevel === 'high' ? 'Risky' : 'Caution',
       statusColor: data.safetyCheck.riskLevel === 'low' ? '#16a34a' : data.safetyCheck.riskLevel === 'high' ? '#dc2626' : '#d97706',
       description: `Risk level: ${data.safetyCheck.riskLevel}. Whale activity bias: ${data.safetyCheck.whaleActivity?.bias || 'neutral'}. Pump/dump risk: ${data.safetyCheck.manipulation?.pumpDumpRisk || 'low'}.`
     },
     {
-      num: 4,
-      title: 'Timing Analysis',
+      num: 'Step 4',
+      title: 'Timing',
+      subtitle: 'Optimal Entry Window',
+      icon: stepIcons.timing,
+      iconClass: 'icon-amber',
       status: data.timing.tradeNow ? 'Trade Now' : 'Wait',
       statusColor: data.timing.tradeNow ? '#16a34a' : '#d97706',
       description: data.timing.reason || (data.timing.tradeNow ? 'Market conditions are favorable for entry. Technical indicators align with trade direction.' : 'Wait for better entry. Current market structure suggests patience.')
     },
     {
-      num: 5,
+      num: 'Step 5',
       title: 'Trade Plan',
+      subtitle: 'Your Execution Strategy',
+      icon: stepIcons.tradePlan,
+      iconClass: 'icon-green',
       status: 'Ready',
       statusColor: '#16a34a',
       description: `${isLong ? 'Long' : 'Short'} position with ${data.tradePlan.riskReward?.toFixed(1)}:1 risk-reward. Entry: ${formatPrice(data.tradePlan.averageEntry)}, Stop: ${formatPrice(data.tradePlan.stopLoss?.price)}.`
     },
     {
-      num: 6,
-      title: 'Trap Detection',
+      num: 'Step 6',
+      title: 'Trap Check',
+      subtitle: 'Avoiding Common Pitfalls',
+      icon: stepIcons.trapCheck,
+      iconClass: 'icon-red',
       status: (data.trapCheck?.traps?.bullTrap || data.trapCheck?.traps?.bearTrap) ? 'Warning' : 'Clear',
       statusColor: (data.trapCheck?.traps?.bullTrap || data.trapCheck?.traps?.bearTrap) ? '#dc2626' : '#16a34a',
       description: `Bull trap: ${data.trapCheck?.traps?.bullTrap ? 'Detected' : 'None'}. Bear trap: ${data.trapCheck?.traps?.bearTrap ? 'Detected' : 'None'}. Fakeout risk: ${data.trapCheck?.traps?.fakeoutRisk || 'low'}.`
     },
     {
-      num: 7,
+      num: 'Step 7',
       title: 'Final Verdict',
+      subtitle: 'The Final Decision',
+      icon: stepIcons.verdict,
+      iconClass: 'icon-green',
       status: `${isLong ? 'LONG' : 'SHORT'} (${score}/100)`,
       statusColor: isLong ? '#16a34a' : '#dc2626',
       description: data.verdict.aiSummary || `Analysis recommends ${isLong ? 'long' : 'short'} position with ${score}/100 confidence. ${data.timing.tradeNow ? 'Entry timing favorable.' : 'Consider waiting.'}`
@@ -253,8 +317,14 @@ function generatePage1HTML(data: AnalysisReportData): string {
   const stepsHTML = steps.map(step => `
     <div class="step-box">
       <div class="step-header">
-        <div class="step-num">${step.num}.</div>
-        <div class="step-title">${step.title}</div>
+        <div class="step-icon ${step.iconClass}">${step.icon}</div>
+        <div class="step-info">
+          <div class="step-top">
+            <div class="step-num">${step.num}</div>
+            <div class="step-title">${step.title}</div>
+          </div>
+          <div class="step-subtitle">${step.subtitle}</div>
+        </div>
         <div class="step-status" style="color: ${step.statusColor};">${step.status}</div>
       </div>
       <div class="step-desc">${step.description}</div>
@@ -338,29 +408,56 @@ function generatePage2HTML(data: AnalysisReportData): string {
 </body></html>`;
 }
 
-// PAGE 3: AI Expert Comments - Compact layout
+// PAGE 3: AI Expert Comments
 function generatePage3HTML(data: AnalysisReportData): string {
   const experts = parseExpertComments(data.aiExpertComment || '');
 
-  const expertRoles: Record<string, string> = {
-    'ARIA': 'Technical Analysis',
-    'ORACLE': 'Market Intelligence',
-    'SENTINEL': 'Risk Assessment',
-    'NEXUS': 'AI Engine'
+  const expertConfig: Record<string, { role: string; desc: string; icon: string; colorClass: string }> = {
+    'ARIA': {
+      role: 'Technical Analysis Mentor',
+      desc: 'Your go-to mentor for all things technical analysis.',
+      icon: expertIcons.ARIA,
+      colorClass: 'expert-aria'
+    },
+    'NEXUS': {
+      role: 'Risk Management Mentor',
+      desc: 'Your mentor for smart money management.',
+      icon: expertIcons.NEXUS,
+      colorClass: 'expert-nexus'
+    },
+    'ORACLE': {
+      role: 'On-Chain Intelligence Mentor',
+      desc: 'Your guide to understanding on-chain data.',
+      icon: expertIcons.ORACLE,
+      colorClass: 'expert-oracle'
+    },
+    'SENTINEL': {
+      role: 'Security & Safety Mentor',
+      desc: 'Your protector in the crypto world.',
+      icon: expertIcons.SENTINEL,
+      colorClass: 'expert-sentinel'
+    }
   };
 
-  const expertsHTML = experts.length > 0 ? experts.map(expert => `
+  const expertsHTML = experts.length > 0 ? experts.map(expert => {
+    const config = expertConfig[expert.name] || {
+      role: 'AI Expert',
+      desc: '',
+      icon: expertIcons.NEXUS,
+      colorClass: 'expert-nexus'
+    };
+    return `
     <div class="expert-box">
       <div class="expert-header">
-        <div class="expert-avatar">${expert.name.charAt(0)}</div>
-        <div>
+        <div class="expert-icon ${config.colorClass}">${config.icon}</div>
+        <div class="expert-info">
           <div class="expert-name">${expert.name}</div>
-          <div class="expert-role">${expertRoles[expert.name] || 'AI Expert'}</div>
+          <div class="expert-role">${config.role}</div>
         </div>
       </div>
-      <div class="expert-content">${expert.content.slice(0, 450)}${expert.content.length > 450 ? '...' : ''}</div>
+      <div class="expert-content">${expert.content.slice(0, 400)}${expert.content.length > 400 ? '...' : ''}</div>
     </div>
-  `).join('') : '<div class="no-expert">No AI Expert comments available for this analysis.</div>';
+  `}).join('') : '<div class="no-expert">No AI Expert comments available for this analysis.</div>';
 
   return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><style>${commonStyles}</style></head>
