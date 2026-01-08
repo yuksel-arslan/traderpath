@@ -521,6 +521,7 @@ export function DownloadReportButton({
             <>
               <FileDown className="w-4 h-4" />
               Download PDF
+              <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded">+5</span>
             </>
           )}
         </button>
@@ -628,6 +629,7 @@ export function DownloadReportButton({
                         <>
                           <Send className="w-4 h-4" />
                           Gönder
+                          <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded">+5</span>
                         </>
                       )}
                     </button>

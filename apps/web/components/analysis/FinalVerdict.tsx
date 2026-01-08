@@ -388,6 +388,7 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
           <MessageSquare className="w-5 h-5" />
           Ask AI Expert to Review Full Analysis
           <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">NEXUS</span>
+          <span className="text-xs bg-black/20 px-2 py-0.5 rounded-full">+10 Kredi</span>
         </button>
       </div>
 

@@ -424,7 +424,7 @@ export function CoinSelector() {
                 </div>
 
                 <p className="mt-4 text-sm text-muted-foreground">
-                  Yeni analiz yapmak <strong>1 kredi</strong> harcayacaktır.
+                  Yeni analiz yapmak <strong>25 kredi</strong> harcayacaktır.
                   Kısa süre içinde piyasa koşulları önemli ölçüde değişmediyse, mevcut analizi kullanmanız önerilir.
                 </p>
               </div>
