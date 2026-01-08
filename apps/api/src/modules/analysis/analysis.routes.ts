@@ -752,21 +752,15 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
       const cautionData = await getCautionRate();
 
       // Calculate GO signal accuracy (GO + CONDITIONAL_GO verdicts with outcomes)
-      const goSignals = await db.report.findMany({
+      const allReportsWithOutcomes = await db.report.findMany({
         where: {
-          OR: [
-            { verdict: { contains: 'go', mode: 'insensitive' } },
-            { verdict: { equals: 'GO', mode: 'insensitive' } },
-            { verdict: { contains: 'conditional', mode: 'insensitive' } }
-          ],
-          verdict: { not: { contains: 'wait', mode: 'insensitive' } },
           outcome: { in: ['correct', 'incorrect'] }
         },
         select: { outcome: true, verdict: true }
       });
 
-      // Filter to ensure only GO/CONDITIONAL_GO (not WAIT/AVOID)
-      const filteredGoSignals = goSignals.filter(r => {
+      // Filter to GO/CONDITIONAL_GO signals (not WAIT/AVOID)
+      const filteredGoSignals = allReportsWithOutcomes.filter(r => {
         const v = r.verdict.toLowerCase();
         return (v.includes('go') || v.includes('conditional')) && !v.includes('wait') && !v.includes('avoid');
       });
@@ -777,19 +771,17 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
       const goAccuracy = goTotal > 0 ? Number(((goCorrect / goTotal) * 100).toFixed(1)) : 0;
 
       // Count pending GO signals (not yet verified)
-      const goPending = await db.report.count({
+      const allPendingReports = await db.report.findMany({
         where: {
-          OR: [
-            { verdict: { contains: 'go', mode: 'insensitive' } },
-            { verdict: { equals: 'GO', mode: 'insensitive' } },
-            { verdict: { contains: 'conditional', mode: 'insensitive' } }
-          ],
-          verdict: {
-            not: { contains: 'wait', mode: 'insensitive' }
-          },
           outcome: null
-        }
+        },
+        select: { verdict: true }
       });
+
+      const goPending = allPendingReports.filter(r => {
+        const v = r.verdict.toLowerCase();
+        return (v.includes('go') || v.includes('conditional')) && !v.includes('wait') && !v.includes('avoid');
+      }).length;
 
       // Count reports with trade plan
       const reportsWithTradePlan = reports.filter(r => {
