@@ -432,28 +432,45 @@ Warn about potential traps and give protective advice.`;
     }
 
     try {
-      // Run all analysis steps in parallel for better performance
-      const [marketPulse, assetScan, safetyCheck, timing, tradePlan, trapCheck] = await Promise.all([
+      // Step 1-5: Run all prerequisite analysis steps in parallel
+      const [marketPulse, assetScan, safetyCheck, timing, trapCheck] = await Promise.all([
         analysisEngine.getMarketPulse(),
         analysisEngine.scanAsset(body.symbol),
         analysisEngine.safetyCheck(body.symbol),
         analysisEngine.timingAnalysis(body.symbol),
-        analysisEngine.tradePlan(body.symbol, body.accountSize),
         analysisEngine.trapCheck(body.symbol),
       ]);
 
-      // Generate final verdict
-      const verdict = await analysisEngine.finalVerdict(body.symbol, {
+      // Step 6: Preliminary Verdict - decides GO/WAIT/AVOID BEFORE trade plan
+      const preliminaryVerdict = analysisEngine.preliminaryVerdict(body.symbol, {
         marketPulse,
         assetScan,
         safetyCheck,
         timing,
-        tradePlan,
         trapCheck,
       });
 
-      // Get comprehensive AI summary with updated property names
-      const aiPrompt = `You are a senior crypto analyst. Give a comprehensive trading recommendation for ${body.symbol} in English (4-5 sentences):
+      // Step 7: Integrated Trade Plan - only generated for GO/CONDITIONAL_GO signals
+      // Uses ALL previous step data for intelligent decision making
+      const tradePlan = await analysisEngine.integratedTradePlan(
+        body.symbol,
+        preliminaryVerdict,
+        { marketPulse, assetScan, safetyCheck, timing, trapCheck },
+        body.accountSize
+      );
+
+      // Step 8: Final Verdict - combines everything
+      const verdict = analysisEngine.getFinalVerdict(
+        body.symbol,
+        preliminaryVerdict,
+        { marketPulse, assetScan, safetyCheck, timing, trapCheck },
+        tradePlan
+      );
+
+      // Build AI prompt based on whether trade plan exists
+      let aiPrompt: string;
+      if (tradePlan) {
+        aiPrompt = `You are a senior crypto analyst. Give a comprehensive trading recommendation for ${body.symbol} in English (4-5 sentences):
 
 Market Analysis:
 - Fear & Greed: ${marketPulse.fearGreedIndex} (${marketPulse.fearGreedLabel})
@@ -475,18 +492,47 @@ Risk Assessment:
 - Trap Risk: ${trapCheck.riskLevel}
 - Bull/Bear Trap: ${trapCheck.traps.bullTrap ? 'Bull Trap Warning' : trapCheck.traps.bearTrap ? 'Bear Trap Warning' : 'None'}
 
-Trade Plan:
-- Direction: ${tradePlan.direction.toUpperCase()}
+Trade Plan (Sources: ${tradePlan.sources.direction.join(', ')}):
+- Direction: ${tradePlan.direction.toUpperCase()} (Confidence: ${tradePlan.confidence.toFixed(0)}%)
 - Average Entry: $${tradePlan.averageEntry}
-- Stop Loss: $${tradePlan.stopLoss.price} (${tradePlan.stopLoss.percentage}% risk)
+- Entry Sources: ${tradePlan.sources.entries.join(', ')}
+- Stop Loss: $${tradePlan.stopLoss.price} (${tradePlan.stopLoss.percentage}% risk) - ${tradePlan.stopLoss.safetyAdjusted ? 'Safety adjusted' : 'Standard'}
 - Take Profit 1: $${tradePlan.takeProfits[0]?.price ?? tradePlan.averageEntry}
 - Risk/Reward: ${tradePlan.riskReward}:1
 - Win Rate: ${tradePlan.winRateEstimate}%
+- Position Size: ${tradePlan.positionSizePercent}% of portfolio
 
 Final Verdict: ${verdict.verdict.toUpperCase()} (Score: ${verdict.overallScore}/10)
 Recommendation: ${verdict.recommendation}
 
 Give a clear, actionable trading recommendation with specific entry, stop loss, and target prices.`;
+      } else {
+        // No trade plan - WAIT/AVOID verdict
+        aiPrompt = `You are a senior crypto analyst. Explain why trading ${body.symbol} is NOT recommended right now (3-4 sentences):
+
+Market Analysis:
+- Fear & Greed: ${marketPulse.fearGreedIndex} (${marketPulse.fearGreedLabel})
+- Market Regime: ${marketPulse.marketRegime}
+- Trend: ${marketPulse.trend.direction} (${marketPulse.trend.strength}% strength)
+
+Asset Analysis:
+- Price: $${assetScan.currentPrice}
+- 24h Change: ${assetScan.priceChange24h.toFixed(2)}%
+- RSI: ${assetScan.indicators.rsi}
+
+Risk Assessment:
+- Safety Risk Level: ${safetyCheck.riskLevel}
+- Manipulation Risk: ${safetyCheck.manipulation.pumpDumpRisk}
+- Trap Risk: ${trapCheck.riskLevel}
+
+Decision Factors:
+${preliminaryVerdict.reasons.filter(r => !r.positive).map(r => `- ${r.factor} (${r.source})`).join('\n')}
+
+Final Verdict: ${verdict.verdict.toUpperCase()} (Score: ${verdict.overallScore}/10)
+Direction Confidence: ${preliminaryVerdict.confidence.toFixed(0)}%
+
+Explain the key risks and what conditions would need to change before trading this asset.`;
+      }
 
       const aiResult = await getGeminiInsight(aiPrompt, 'analysis_full', userId, body.symbol);
       const aiVerdict = aiResult.text;
@@ -500,13 +546,15 @@ Give a clear, actionable trading recommendation with specific entry, stop loss, 
           expiresAt: verdict.expiresAt,
           overallScore: verdict.overallScore,
           verdict: verdict.verdict,
+          hasTradePlan: verdict.hasTradePlan,
           steps: {
             marketPulse,
             assetScan,
             safetyCheck,
             timing,
-            tradePlan,
+            tradePlan, // Will be null for WAIT/AVOID
             trapCheck,
+            preliminaryVerdict, // New: includes direction sources and reasons
             verdict: { ...verdict, aiVerdict },
           },
         },

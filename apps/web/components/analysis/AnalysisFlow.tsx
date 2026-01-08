@@ -263,8 +263,9 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
       if (!token) return;
 
       // Build report data from results
-      const verdict = results[7] as { action?: string; verdict?: string; overallScore?: number; analysisId?: string } | undefined;
-      const tradePlan = results[5] as { direction?: string } | undefined;
+      // Note: tradePlan can be null for WAIT/AVOID verdicts (new integrated flow)
+      const verdict = results[7] as { action?: string; verdict?: string; overallScore?: number; analysisId?: string; hasTradePlan?: boolean } | undefined;
+      const tradePlan = results[5] as { direction?: string } | null;
 
       // Use the analysisId from the verdict API response (consistent with FinalVerdict component)
       // This ensures the AI Expert page can find the report using the same ID
@@ -380,14 +381,16 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
       const analysisData = data.data;
       const steps = analysisData.steps;
 
+      // Note: tradePlan can be null for WAIT/AVOID verdicts
+      // This is the new integrated flow where decision comes BEFORE trade plan
       const allResults: Record<number, unknown> = {
         1: steps.marketPulse,
         2: steps.assetScan,
         3: steps.safetyCheck,
         4: steps.timing,
-        5: steps.tradePlan,
+        5: steps.tradePlan, // Can be null for WAIT/AVOID
         6: steps.trapCheck,
-        7: steps.verdict,
+        7: { ...steps.verdict, preliminaryVerdict: steps.preliminaryVerdict },
       };
 
       if (skipAnimation) {
@@ -663,7 +666,20 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
               {activeStep === 2 && <AssetScanner data={results[2]} symbol={symbol} />}
               {activeStep === 3 && <SafetyCheck data={results[3]} symbol={symbol} />}
               {activeStep === 4 && <TimingAnalysis data={results[4]} symbol={symbol} />}
-              {activeStep === 5 && <TradePlan data={results[5]} symbol={symbol} />}
+              {activeStep === 5 && (
+                results[5] ? (
+                  <TradePlan data={results[5]} symbol={symbol} />
+                ) : (
+                  <div className="p-6 bg-muted/30 rounded-lg text-center">
+                    <AlertTriangle className="w-8 h-8 mx-auto mb-3 text-amber-500" />
+                    <p className="font-medium">No Trade Plan Generated</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Trade plans are only generated for GO or CONDITIONAL_GO signals.
+                      Current verdict recommends WAIT or AVOID.
+                    </p>
+                  </div>
+                )
+              )}
               {activeStep === 6 && <TrapCheck data={results[6]} symbol={symbol} />}
               {activeStep === 7 && <FinalVerdict data={results[7]} symbol={symbol} allResults={results} />}
 
@@ -772,7 +788,15 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
                   {step.id === 2 && <AssetScanner data={results[2] as Parameters<typeof AssetScanner>[0]['data']} symbol={symbol} />}
                   {step.id === 3 && <SafetyCheck data={results[3] as Parameters<typeof SafetyCheck>[0]['data']} symbol={symbol} />}
                   {step.id === 4 && <TimingAnalysis data={results[4] as Parameters<typeof TimingAnalysis>[0]['data']} symbol={symbol} />}
-                  {step.id === 5 && <TradePlan data={results[5] as Parameters<typeof TradePlan>[0]['data']} symbol={symbol} />}
+                  {step.id === 5 && (
+                    results[5] ? (
+                      <TradePlan data={results[5] as Parameters<typeof TradePlan>[0]['data']} symbol={symbol} />
+                    ) : (
+                      <div className="p-4 bg-muted/30 rounded-lg text-center">
+                        <p className="text-sm text-muted-foreground">No trade plan generated (WAIT/AVOID verdict)</p>
+                      </div>
+                    )
+                  )}
                   {step.id === 6 && <TrapCheck data={results[6] as Parameters<typeof TrapCheck>[0]['data']} symbol={symbol} />}
                 </div>
               </div>

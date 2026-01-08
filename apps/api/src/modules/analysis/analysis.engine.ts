@@ -228,7 +228,7 @@ interface TimingResult {
   score: number;
 }
 
-// Step 5 Types
+// Step 5 Types (Enhanced - uses all previous step data)
 interface TradePlanResult {
   symbol: string;
   direction: 'long' | 'short';
@@ -237,17 +237,20 @@ interface TradePlanResult {
     price: number;
     percentage: number;
     type: 'limit' | 'stop_limit';
+    source: string; // Where this entry came from
   }>;
   averageEntry: number;
   stopLoss: {
     price: number;
     percentage: number;
     reason: string;
+    safetyAdjusted: boolean; // Was it adjusted based on Safety Check?
   };
   takeProfits: Array<{
     price: number;
     percentage: number;
     reason: string;
+    source: string; // Where this target came from
   }>;
   riskReward: number;
   winRateEstimate: number;
@@ -258,6 +261,15 @@ interface TradePlanResult {
     trailPercent: number;
   };
   score: number;
+  // New: Source tracking for transparency
+  sources: {
+    direction: string[];
+    entries: string[];
+    stopLoss: string[];
+    targets: string[];
+  };
+  // New: Confidence from integrated analysis
+  confidence: number;
 }
 
 // Step 6 Types
@@ -286,7 +298,28 @@ interface TrapCheckResult {
   score: number;
 }
 
-// Step 7 Types
+// Step 6 Types - Preliminary Verdict (decides BEFORE trade plan)
+interface PreliminaryVerdictResult {
+  verdict: 'go' | 'conditional_go' | 'wait' | 'avoid';
+  direction: 'long' | 'short' | null; // null if WAIT/AVOID
+  confidence: number;
+  score: number; // Pre-trade-plan score
+  reasons: Array<{
+    factor: string;
+    positive: boolean;
+    impact: 'high' | 'medium' | 'low';
+    source: string; // Which step this came from
+  }>;
+  shouldGenerateTradePlan: boolean;
+  directionSources: Array<{
+    source: string;
+    direction: 'long' | 'short';
+    weight: number;
+    reason: string;
+  }>;
+}
+
+// Step 7 Types - Final Verdict (after trade plan, if generated)
 interface FinalVerdictResult {
   overallScore: number;
   verdict: 'go' | 'conditional_go' | 'wait' | 'avoid';
@@ -304,6 +337,8 @@ interface FinalVerdictResult {
   analysisId: string;
   createdAt: string;
   expiresAt: string;
+  // New: Reference to trade plan (null if WAIT/AVOID)
+  hasTradePlan: boolean;
 }
 
 // ===========================================
@@ -1995,9 +2030,9 @@ export const analysisEngine = {
       : levels.resistance[0] || currentPrice * 1.05;
 
     const entries: TradePlanResult['entries'] = [
-      { price: roundPrice(entry1), percentage: 40, type: 'limit' },
-      { price: roundPrice(entry2), percentage: 35, type: 'limit' },
-      { price: roundPrice(entry3), percentage: 25, type: 'stop_limit' },
+      { price: roundPrice(entry1), percentage: 40, type: 'limit', source: 'Current price' },
+      { price: roundPrice(entry2), percentage: 35, type: 'limit', source: 'DCA level' },
+      { price: roundPrice(entry3), percentage: 25, type: 'stop_limit', source: 'Support/Resistance' },
     ];
 
     const averageEntry = roundPrice(
@@ -2021,6 +2056,7 @@ export const analysisEngine = {
       price: roundPrice(stopPrice),
       percentage: parseFloat(stopPercentage.toFixed(2)),
       reason: `ATR-based stop (${atr.toFixed(2)} ATR) + support/resistance level`,
+      safetyAdjusted: false,
     };
 
     // Take profit levels (R:R based)
@@ -2030,16 +2066,19 @@ export const analysisEngine = {
         price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 1.5 : averageEntry - riskAmount * 1.5),
         percentage: 30,
         reason: '1.5R - First take profit',
+        source: '1.5R calculation',
       },
       {
         price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 2.5 : averageEntry - riskAmount * 2.5),
         percentage: 40,
         reason: '2.5R - Main target',
+        source: '2.5R calculation',
       },
       {
         price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 4 : averageEntry - riskAmount * 4),
         percentage: 30,
         reason: '4R - Extended target',
+        source: '4R calculation',
       },
     ];
 
@@ -2091,6 +2130,14 @@ export const analysisEngine = {
       riskAmount: riskAmountUsd,
       trailingStop,
       score,
+      // Legacy compatibility fields
+      sources: {
+        direction: ['4H Trend Analysis'],
+        entries: ['Current price', 'DCA level', 'Support/Resistance'],
+        stopLoss: ['ATR calculation'],
+        targets: ['R:R calculation'],
+      },
+      confidence: trend.strength,
     };
   },
 
@@ -2235,30 +2282,558 @@ export const analysisEngine = {
   },
 
   // =========================================
-  // Step 7: Final Verdict (FREE)
+  // Step 6: Preliminary Verdict (NEW - decides BEFORE trade plan)
   // =========================================
-  async finalVerdict(
+  preliminaryVerdict(
     symbol: string,
+    steps: {
+      marketPulse: MarketPulseResult;
+      assetScan: AssetScanResult;
+      safetyCheck: SafetyCheckResult;
+      timing: TimingResult;
+      trapCheck: TrapCheckResult;
+    }
+  ): PreliminaryVerdictResult {
+    const { marketPulse, assetScan, safetyCheck, timing, trapCheck } = steps;
+
+    // Collect reasons for decision
+    const reasons: PreliminaryVerdictResult['reasons'] = [];
+
+    // ===== DIRECTION DETERMINATION =====
+    const directionSources: PreliminaryVerdictResult['directionSources'] = [];
+
+    // 1. Asset Scanner Daily Trend (40% weight)
+    const dailyTrend = assetScan.timeframes.find(t => t.tf === '1D');
+    if (dailyTrend && dailyTrend.strength >= 50) {
+      directionSources.push({
+        source: 'Asset Scanner (Daily)',
+        direction: dailyTrend.trend === 'bearish' ? 'short' : 'long',
+        weight: 0.4,
+        reason: `Daily trend ${dailyTrend.trend} with ${dailyTrend.strength}% strength`
+      });
+    }
+
+    // 2. Asset Scanner 4H Trend (30% weight)
+    const h4Trend = assetScan.timeframes.find(t => t.tf === '4H');
+    if (h4Trend && h4Trend.strength >= 50) {
+      directionSources.push({
+        source: 'Asset Scanner (4H)',
+        direction: h4Trend.trend === 'bearish' ? 'short' : 'long',
+        weight: 0.3,
+        reason: `4H trend ${h4Trend.trend} with ${h4Trend.strength}% strength`
+      });
+    }
+
+    // 3. Market Pulse Regime (20% weight)
+    if (marketPulse.marketRegime !== 'neutral') {
+      directionSources.push({
+        source: 'Market Pulse',
+        direction: marketPulse.marketRegime === 'risk_on' ? 'long' : 'short',
+        weight: 0.2,
+        reason: `Market regime is ${marketPulse.marketRegime}`
+      });
+    }
+
+    // 4. Market Pulse Trend (10% weight)
+    if (marketPulse.trend.direction !== 'neutral' && marketPulse.trend.strength >= 50) {
+      directionSources.push({
+        source: 'Market Pulse Trend',
+        direction: marketPulse.trend.direction === 'bearish' ? 'short' : 'long',
+        weight: 0.1,
+        reason: `Market trend ${marketPulse.trend.direction}`
+      });
+    }
+
+    // Calculate weighted direction
+    let longWeight = 0;
+    let shortWeight = 0;
+    directionSources.forEach(ds => {
+      if (ds.direction === 'long') longWeight += ds.weight;
+      else shortWeight += ds.weight;
+    });
+
+    // Direction decision
+    let direction: 'long' | 'short' | null = null;
+    let directionConfidence = 0;
+    if (longWeight > shortWeight && longWeight >= 0.5) {
+      direction = 'long';
+      directionConfidence = longWeight / (longWeight + shortWeight) * 100;
+    } else if (shortWeight > longWeight && shortWeight >= 0.5) {
+      direction = 'short';
+      directionConfidence = shortWeight / (longWeight + shortWeight) * 100;
+    }
+
+    // ===== SCORE CALCULATION (without trade plan) =====
+    // Weights: Market Pulse 20%, Asset Scanner 25%, Safety 25%, Timing 15%, Trap 15%
+    const score = parseFloat((
+      marketPulse.score * 0.20 +
+      assetScan.score * 0.25 +
+      safetyCheck.score * 0.25 +
+      timing.score * 0.15 +
+      trapCheck.score * 0.15
+    ).toFixed(1));
+
+    // ===== COLLECT REASONS =====
+
+    // Market Pulse reasons
+    if (marketPulse.marketRegime === 'risk_on') {
+      reasons.push({ factor: 'Risk-on market environment', positive: true, impact: 'high', source: 'Market Pulse' });
+    } else if (marketPulse.marketRegime === 'risk_off') {
+      reasons.push({ factor: 'Risk-off market environment', positive: false, impact: 'high', source: 'Market Pulse' });
+    }
+
+    // Asset Scanner reasons
+    if (dailyTrend && dailyTrend.strength >= 70) {
+      reasons.push({ factor: `Strong ${dailyTrend.trend} daily trend`, positive: dailyTrend.trend !== 'bearish' || direction === 'short', impact: 'high', source: 'Asset Scanner' });
+    }
+    if (assetScan.indicators.rsi > 70) {
+      reasons.push({ factor: 'Overbought (RSI > 70)', positive: false, impact: 'medium', source: 'Asset Scanner' });
+    } else if (assetScan.indicators.rsi < 30) {
+      reasons.push({ factor: 'Oversold (RSI < 30)', positive: direction === 'long', impact: 'medium', source: 'Asset Scanner' });
+    }
+
+    // Safety Check reasons
+    if (safetyCheck.riskLevel === 'low') {
+      reasons.push({ factor: 'Low manipulation risk', positive: true, impact: 'high', source: 'Safety Check' });
+    } else if (safetyCheck.riskLevel === 'high') {
+      reasons.push({ factor: 'High manipulation risk', positive: false, impact: 'high', source: 'Safety Check' });
+    }
+    if (safetyCheck.manipulation.pumpDumpRisk === 'high') {
+      reasons.push({ factor: 'High pump & dump risk', positive: false, impact: 'high', source: 'Safety Check' });
+    }
+
+    // Timing reasons
+    if (timing.tradeNow) {
+      reasons.push({ factor: 'Good entry timing', positive: true, impact: 'medium', source: 'Timing' });
+    } else if (timing.waitFor) {
+      reasons.push({ factor: `Wait for: ${timing.waitFor.event}`, positive: false, impact: 'medium', source: 'Timing' });
+    }
+
+    // Trap Check reasons
+    if (trapCheck.traps.bullTrap) {
+      reasons.push({ factor: 'Bull trap detected', positive: false, impact: 'high', source: 'Trap Check' });
+    }
+    if (trapCheck.traps.bearTrap) {
+      reasons.push({ factor: 'Bear trap detected', positive: false, impact: 'high', source: 'Trap Check' });
+    }
+    if (trapCheck.riskLevel === 'high') {
+      reasons.push({ factor: 'High trap risk', positive: false, impact: 'high', source: 'Trap Check' });
+    }
+
+    // ===== VERDICT DETERMINATION =====
+    let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
+    let shouldGenerateTradePlan = false;
+
+    // AVOID conditions (highest priority)
+    if (safetyCheck.riskLevel === 'high' ||
+        safetyCheck.manipulation.pumpDumpRisk === 'high' ||
+        (trapCheck.riskLevel === 'high' && (trapCheck.traps.bullTrap || trapCheck.traps.bearTrap))) {
+      verdict = 'avoid';
+      direction = null;
+      shouldGenerateTradePlan = false;
+    }
+    // GO conditions
+    else if (score >= 7.0 &&
+             direction !== null &&
+             directionConfidence >= 60 &&
+             safetyCheck.riskLevel === 'low' &&
+             trapCheck.riskLevel !== 'high') {
+      verdict = 'go';
+      shouldGenerateTradePlan = true;
+    }
+    // CONDITIONAL_GO conditions
+    // Note: safetyCheck.riskLevel is already not 'high' due to AVOID check above
+    else if (score >= 5.5 &&
+             direction !== null &&
+             directionConfidence >= 50) {
+      verdict = 'conditional_go';
+      shouldGenerateTradePlan = true;
+    }
+    // WAIT conditions (conflicting signals or low confidence)
+    else if (direction === null || directionConfidence < 50 || score < 5.5) {
+      verdict = 'wait';
+      direction = null;
+      shouldGenerateTradePlan = false;
+    }
+
+    // Final confidence calculation
+    const confidence = direction !== null
+      ? parseFloat((directionConfidence * (score / 10)).toFixed(1))
+      : 0;
+
+    return {
+      verdict,
+      direction,
+      confidence,
+      score,
+      reasons,
+      shouldGenerateTradePlan,
+      directionSources
+    };
+  },
+
+  // =========================================
+  // Step 7: Integrated Trade Plan (only if GO/CONDITIONAL_GO)
+  // Uses ALL previous step data for intelligent decisions
+  // =========================================
+  async integratedTradePlan(
+    symbol: string,
+    preliminaryVerdict: PreliminaryVerdictResult,
+    steps: {
+      marketPulse: MarketPulseResult;
+      assetScan: AssetScanResult;
+      safetyCheck: SafetyCheckResult;
+      timing: TimingResult;
+      trapCheck: TrapCheckResult;
+    },
+    accountSize: number = 10000
+  ): Promise<TradePlanResult | null> {
+    // Don't generate trade plan if not GO/CONDITIONAL_GO
+    if (!preliminaryVerdict.shouldGenerateTradePlan || !preliminaryVerdict.direction) {
+      return null;
+    }
+
+    const { marketPulse, assetScan, safetyCheck, timing, trapCheck } = steps;
+    const direction = preliminaryVerdict.direction;
+    const currentPrice = assetScan.currentPrice;
+
+    // Track sources for transparency
+    const sources: TradePlanResult['sources'] = {
+      direction: preliminaryVerdict.directionSources.map(ds => ds.source),
+      entries: [],
+      stopLoss: [],
+      targets: []
+    };
+
+    // ===== ENTRY LEVELS (from Timing + Asset Scanner) =====
+    const entries: TradePlanResult['entries'] = [];
+
+    // Primary entry from Timing's optimal entry
+    if (timing.optimalEntry) {
+      entries.push({
+        price: roundPrice(timing.optimalEntry),
+        percentage: 50,
+        type: 'limit',
+        source: 'Timing optimal entry'
+      });
+      sources.entries.push('Timing optimal entry');
+    } else {
+      entries.push({
+        price: roundPrice(currentPrice),
+        percentage: 50,
+        type: 'limit',
+        source: 'Current price'
+      });
+      sources.entries.push('Current price');
+    }
+
+    // Secondary entries from Timing's entry zones
+    if (timing.entryZones && timing.entryZones.length > 0) {
+      const sortedZones = [...timing.entryZones].sort((a, b) => b.quality - a.quality);
+      const bestZone = sortedZones[0];
+      if (bestZone) {
+        const zoneEntry = direction === 'long' ? bestZone.priceLow : bestZone.priceHigh;
+        entries.push({
+          price: roundPrice(zoneEntry),
+          percentage: 30,
+          type: 'limit',
+          source: 'Timing entry zone'
+        });
+        sources.entries.push('Timing entry zone');
+      }
+    }
+
+    // Third entry from support/resistance levels
+    const supportLevel = assetScan.levels.support[0];
+    const resistanceLevel = assetScan.levels.resistance[0];
+    if (direction === 'long' && supportLevel !== undefined) {
+      entries.push({
+        price: roundPrice(supportLevel),
+        percentage: 20,
+        type: 'stop_limit',
+        source: 'Asset Scanner support'
+      });
+      sources.entries.push('Asset Scanner support');
+    } else if (direction === 'short' && resistanceLevel !== undefined) {
+      entries.push({
+        price: roundPrice(resistanceLevel),
+        percentage: 20,
+        type: 'stop_limit',
+        source: 'Asset Scanner resistance'
+      });
+      sources.entries.push('Asset Scanner resistance');
+    }
+
+    // Normalize percentages if needed
+    const totalPct = entries.reduce((sum, e) => sum + e.percentage, 0);
+    if (totalPct !== 100) {
+      entries.forEach(e => e.percentage = Math.round(e.percentage / totalPct * 100));
+    }
+
+    // Calculate average entry
+    const averageEntry = roundPrice(
+      entries.reduce((sum, e) => sum + e.price * (e.percentage / 100), 0)
+    );
+
+    // ===== STOP LOSS (from Safety Check + ATR + Trap Check) =====
+    const atr = assetScan.indicators.atr;
+
+    // Base ATR multiplier based on safety level
+    let atrMultiplier: number;
+    switch (safetyCheck.riskLevel) {
+      case 'low': atrMultiplier = 1.5; break;
+      case 'medium': atrMultiplier = 2.0; break;
+      case 'high': atrMultiplier = 2.5; break;
+      default: atrMultiplier = 2.0;
+    }
+    sources.stopLoss.push(`ATR × ${atrMultiplier} (Safety: ${safetyCheck.riskLevel})`);
+
+    let stopPrice: number;
+    let safetyAdjusted = false;
+
+    if (direction === 'long') {
+      // Base stop from ATR
+      stopPrice = averageEntry - (atr * atrMultiplier);
+
+      // Adjust for trap zones - don't place stop inside trap zones
+      if (trapCheck.traps.stopHuntZones.length > 0) {
+        const nearestStopHunt = trapCheck.traps.stopHuntZones.find(z => z < averageEntry && z > stopPrice);
+        if (nearestStopHunt) {
+          stopPrice = nearestStopHunt - (atr * 0.5); // Place below the stop hunt zone
+          safetyAdjusted = true;
+          sources.stopLoss.push('Adjusted below stop hunt zone');
+        }
+      }
+
+      // Use support level if it's better positioned
+      const support2 = assetScan.levels.support[1];
+      if (support2 !== undefined) {
+        const supportStop = support2 - (atr * 0.3);
+        if (supportStop > stopPrice && supportStop < averageEntry) {
+          stopPrice = supportStop;
+          sources.stopLoss.push('Asset Scanner support level');
+        }
+      }
+    } else {
+      // Short direction
+      stopPrice = averageEntry + (atr * atrMultiplier);
+
+      // Adjust for trap zones
+      if (trapCheck.traps.stopHuntZones.length > 0) {
+        const nearestStopHunt = trapCheck.traps.stopHuntZones.find(z => z > averageEntry && z < stopPrice);
+        if (nearestStopHunt) {
+          stopPrice = nearestStopHunt + (atr * 0.5);
+          safetyAdjusted = true;
+          sources.stopLoss.push('Adjusted above stop hunt zone');
+        }
+      }
+
+      // Use resistance level if it's better positioned
+      const resistance2 = assetScan.levels.resistance[1];
+      if (resistance2 !== undefined) {
+        const resistanceStop = resistance2 + (atr * 0.3);
+        if (resistanceStop < stopPrice && resistanceStop > averageEntry) {
+          stopPrice = resistanceStop;
+          sources.stopLoss.push('Asset Scanner resistance level');
+        }
+      }
+    }
+
+    const stopPercentage = Math.abs((stopPrice - averageEntry) / averageEntry * 100);
+
+    // ===== TAKE PROFIT (from Asset Scanner levels) =====
+    const takeProfits: TradePlanResult['takeProfits'] = [];
+    const riskAmount = Math.abs(averageEntry - stopPrice);
+
+    if (direction === 'long') {
+      // TP1: First resistance or 1.5R
+      const tp1FromResistance = assetScan.levels.resistance[0];
+      const tp1From15R = averageEntry + (riskAmount * 1.5);
+      const tp1 = tp1FromResistance && tp1FromResistance > averageEntry
+        ? Math.min(tp1FromResistance, tp1From15R)
+        : tp1From15R;
+      takeProfits.push({
+        price: roundPrice(tp1),
+        percentage: 40,
+        reason: '1.5R or first resistance',
+        source: tp1FromResistance ? 'Asset Scanner resistance' : '1.5R calculation'
+      });
+      sources.targets.push(tp1FromResistance ? 'Asset Scanner resistance 1' : '1.5R');
+
+      // TP2: Second resistance or 2.5R
+      const tp2FromResistance = assetScan.levels.resistance[1];
+      const tp2From25R = averageEntry + (riskAmount * 2.5);
+      const tp2 = tp2FromResistance && tp2FromResistance > tp1
+        ? Math.min(tp2FromResistance, tp2From25R)
+        : tp2From25R;
+      takeProfits.push({
+        price: roundPrice(tp2),
+        percentage: 35,
+        reason: '2.5R or second resistance',
+        source: tp2FromResistance ? 'Asset Scanner resistance' : '2.5R calculation'
+      });
+      sources.targets.push(tp2FromResistance ? 'Asset Scanner resistance 2' : '2.5R');
+
+      // TP3: 4R extended target
+      takeProfits.push({
+        price: roundPrice(averageEntry + (riskAmount * 4)),
+        percentage: 25,
+        reason: '4R extended target',
+        source: '4R calculation'
+      });
+      sources.targets.push('4R extended');
+    } else {
+      // Short direction - use support levels
+      const tp1FromSupport = assetScan.levels.support[0];
+      const tp1From15R = averageEntry - (riskAmount * 1.5);
+      const tp1 = tp1FromSupport && tp1FromSupport < averageEntry
+        ? Math.max(tp1FromSupport, tp1From15R)
+        : tp1From15R;
+      takeProfits.push({
+        price: roundPrice(tp1),
+        percentage: 40,
+        reason: '1.5R or first support',
+        source: tp1FromSupport ? 'Asset Scanner support' : '1.5R calculation'
+      });
+      sources.targets.push(tp1FromSupport ? 'Asset Scanner support 1' : '1.5R');
+
+      const tp2FromSupport = assetScan.levels.support[1];
+      const tp2From25R = averageEntry - (riskAmount * 2.5);
+      const tp2 = tp2FromSupport && tp2FromSupport < tp1
+        ? Math.max(tp2FromSupport, tp2From25R)
+        : tp2From25R;
+      takeProfits.push({
+        price: roundPrice(tp2),
+        percentage: 35,
+        reason: '2.5R or second support',
+        source: tp2FromSupport ? 'Asset Scanner support' : '2.5R calculation'
+      });
+      sources.targets.push(tp2FromSupport ? 'Asset Scanner support 2' : '2.5R');
+
+      takeProfits.push({
+        price: roundPrice(averageEntry - (riskAmount * 4)),
+        percentage: 25,
+        reason: '4R extended target',
+        source: '4R calculation'
+      });
+      sources.targets.push('4R extended');
+    }
+
+    // ===== RISK/REWARD CALCULATION =====
+    const avgTP = takeProfits.reduce(
+      (sum, tp) => sum + Math.abs(tp.price - averageEntry) * (tp.percentage / 100),
+      0
+    );
+    const riskReward = parseFloat((avgTP / riskAmount).toFixed(2));
+
+    // ===== POSITION SIZE (from Safety + Confidence) =====
+    let baseRiskPercent = 2.0; // Base 2% risk
+
+    // Adjust based on safety score
+    if (safetyCheck.score >= 8) baseRiskPercent += 0.5;
+    else if (safetyCheck.score < 5) baseRiskPercent -= 0.5;
+
+    // Adjust based on confidence
+    if (preliminaryVerdict.confidence >= 80) baseRiskPercent += 0.5;
+    else if (preliminaryVerdict.confidence < 50) baseRiskPercent -= 0.5;
+
+    // Adjust based on market volatility
+    if (marketPulse.marketRegime === 'risk_off') baseRiskPercent -= 0.5;
+
+    // Clamp to 1-3% range
+    baseRiskPercent = Math.max(1, Math.min(3, baseRiskPercent));
+
+    const riskAmountUsd = accountSize * (baseRiskPercent / 100);
+    const positionSizePercent = parseFloat(
+      ((riskAmountUsd / riskAmount) * averageEntry / accountSize * 100).toFixed(2)
+    );
+
+    // ===== WIN RATE ESTIMATE =====
+    let winRateEstimate = 50;
+    if (preliminaryVerdict.confidence >= 70) winRateEstimate += 10;
+    if (safetyCheck.riskLevel === 'low') winRateEstimate += 5;
+    if (timing.tradeNow) winRateEstimate += 5;
+    if (riskReward >= 2) winRateEstimate += 5;
+    winRateEstimate = Math.min(75, Math.max(35, winRateEstimate));
+
+    // ===== SCORE CALCULATION =====
+    let score = 5;
+    if (riskReward >= 2) score += 1;
+    if (riskReward >= 3) score += 1;
+    if (preliminaryVerdict.confidence >= 60) score += 1;
+    if (winRateEstimate >= 60) score += 1;
+    if (stopPercentage <= 5) score += 0.5;
+    if (safetyCheck.riskLevel === 'low') score += 0.5;
+    score = parseFloat(Math.max(1, Math.min(10, score)).toFixed(1));
+
+    return {
+      symbol,
+      direction,
+      type: 'limit',
+      entries,
+      averageEntry,
+      stopLoss: {
+        price: roundPrice(stopPrice),
+        percentage: parseFloat(stopPercentage.toFixed(2)),
+        reason: sources.stopLoss.join(' + '),
+        safetyAdjusted
+      },
+      takeProfits,
+      riskReward,
+      winRateEstimate,
+      positionSizePercent,
+      riskAmount: riskAmountUsd,
+      trailingStop: {
+        activateAfter: 'When TP1 is reached',
+        trailPercent: parseFloat((atr / averageEntry * 100).toFixed(2))
+      },
+      score,
+      sources,
+      confidence: preliminaryVerdict.confidence
+    };
+  },
+
+  // =========================================
+  // Step 8: Final Verdict (FREE) - Uses preliminary verdict + optional trade plan
+  // =========================================
+  getFinalVerdict(
+    symbol: string,
+    preliminaryVerdict: PreliminaryVerdictResult,
     allSteps: {
       marketPulse: MarketPulseResult;
       assetScan: AssetScanResult;
       safetyCheck: SafetyCheckResult;
       timing: TimingResult;
-      tradePlan: TradePlanResult;
       trapCheck: TrapCheckResult;
-    }
-  ): Promise<FinalVerdictResult> {
-    const { marketPulse, assetScan, safetyCheck, timing, tradePlan, trapCheck } = allSteps;
+    },
+    tradePlan: TradePlanResult | null
+  ): FinalVerdictResult {
+    const { marketPulse, assetScan, safetyCheck, timing, trapCheck } = allSteps;
+    const hasTradePlan = tradePlan !== null;
 
-    // Component scores with weights (matching technical spec)
-    const componentScores: FinalVerdictResult['componentScores'] = [
-      { step: 'Market Pulse', score: marketPulse.score, weight: 0.15 },
-      { step: 'Asset Scanner', score: assetScan.score, weight: 0.20 },
-      { step: 'Safety Check', score: safetyCheck.score, weight: 0.20 },
-      { step: 'Timing', score: timing.score, weight: 0.15 },
-      { step: 'Trade Plan', score: tradePlan.score, weight: 0.15 },
-      { step: 'Trap Check', score: trapCheck.score, weight: 0.15 },
-    ];
+    // Component scores with weights - adjust if no trade plan
+    let componentScores: FinalVerdictResult['componentScores'];
+
+    if (hasTradePlan && tradePlan) {
+      // With trade plan: original weights
+      componentScores = [
+        { step: 'Market Pulse', score: marketPulse.score, weight: 0.15 },
+        { step: 'Asset Scanner', score: assetScan.score, weight: 0.20 },
+        { step: 'Safety Check', score: safetyCheck.score, weight: 0.20 },
+        { step: 'Timing', score: timing.score, weight: 0.15 },
+        { step: 'Trade Plan', score: tradePlan.score, weight: 0.15 },
+        { step: 'Trap Check', score: trapCheck.score, weight: 0.15 },
+      ];
+    } else {
+      // Without trade plan: redistribute weights
+      componentScores = [
+        { step: 'Market Pulse', score: marketPulse.score, weight: 0.20 },
+        { step: 'Asset Scanner', score: assetScan.score, weight: 0.25 },
+        { step: 'Safety Check', score: safetyCheck.score, weight: 0.25 },
+        { step: 'Timing', score: timing.score, weight: 0.15 },
+        { step: 'Trap Check', score: trapCheck.score, weight: 0.15 },
+      ];
+    }
 
     // Calculate weighted overall score
     const overallScore = parseFloat(
@@ -2267,88 +2842,44 @@ export const analysisEngine = {
         .toFixed(1)
     );
 
-    // Confidence factors
-    const confidenceFactors: FinalVerdictResult['confidenceFactors'] = [];
+    // Confidence factors - use reasons from preliminary verdict
+    const confidenceFactors: FinalVerdictResult['confidenceFactors'] = preliminaryVerdict.reasons.map(r => ({
+      factor: r.factor,
+      positive: r.positive,
+      impact: r.impact
+    }));
 
-    // Market conditions
-    if (marketPulse.marketRegime === 'risk_on') {
-      confidenceFactors.push({ factor: 'Risk-on market environment', positive: true, impact: 'high' });
-    } else if (marketPulse.marketRegime === 'risk_off') {
-      confidenceFactors.push({ factor: 'Risk-off market environment', positive: false, impact: 'high' });
-    }
-
-    // Trend alignment
-    const mainTrend = assetScan.timeframes.find((t) => t.tf === '4H');
-    if (mainTrend?.trend === 'bullish' && mainTrend.strength >= 70) {
-      confidenceFactors.push({ factor: 'Strong bullish trend', positive: true, impact: 'high' });
-    } else if (mainTrend?.trend === 'bearish' && mainTrend.strength >= 70) {
-      confidenceFactors.push({ factor: 'Strong bearish trend', positive: false, impact: 'high' });
-    }
-
-    // Safety
-    if (safetyCheck.riskLevel === 'low') {
-      confidenceFactors.push({ factor: 'Low manipulation risk', positive: true, impact: 'medium' });
-    } else if (safetyCheck.riskLevel === 'high') {
-      confidenceFactors.push({ factor: 'High manipulation risk', positive: false, impact: 'high' });
-    }
-
-    // Timing
-    if (timing.tradeNow) {
-      confidenceFactors.push({ factor: 'Good entry timing', positive: true, impact: 'medium' });
-    }
-
-    // RSI
-    if (assetScan.indicators.rsi >= 30 && assetScan.indicators.rsi <= 70) {
-      confidenceFactors.push({ factor: 'RSI in normal zone', positive: true, impact: 'low' });
-    } else if (assetScan.indicators.rsi > 70) {
-      confidenceFactors.push({ factor: 'Overbought zone', positive: false, impact: 'medium' });
-    } else {
-      confidenceFactors.push({ factor: 'Oversold zone', positive: true, impact: 'medium' });
-    }
-
-    // Traps
-    if (trapCheck.riskLevel === 'high') {
-      confidenceFactors.push({ factor: 'High trap risk', positive: false, impact: 'high' });
-    }
-
-    // Risk/Reward
-    if (tradePlan.riskReward >= 2.5) {
+    // Add trade plan specific factors
+    if (hasTradePlan && tradePlan && tradePlan.riskReward >= 2.5) {
       confidenceFactors.push({ factor: `Good R:R ratio (${tradePlan.riskReward})`, positive: true, impact: 'medium' });
     }
 
-    // Determine verdict
-    let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
-
-    if (overallScore >= 7.5 && safetyCheck.riskLevel !== 'high' && trapCheck.riskLevel !== 'high') {
-      verdict = 'go';
-    } else if (overallScore >= 6 && safetyCheck.riskLevel !== 'high') {
-      verdict = 'conditional_go';
-    } else if (overallScore < 4 || safetyCheck.riskLevel === 'high') {
-      verdict = 'avoid';
-    }
+    // Use verdict from preliminary verdict (decision was already made)
+    const verdict = preliminaryVerdict.verdict;
 
     // Generate recommendation
     let recommendation = '';
 
-    if (verdict === 'go') {
+    if (verdict === 'go' && tradePlan) {
       const targetPrice = tradePlan.takeProfits[1]?.price ?? tradePlan.takeProfits[0]?.price ?? tradePlan.averageEntry;
       recommendation = `Conditions are favorable for ${symbol}. ${tradePlan.direction.toUpperCase()} position can be opened. ` +
         `Entry: $${tradePlan.averageEntry}, Stop: $${tradePlan.stopLoss.price}, ` +
         `Target: $${targetPrice}. ` +
         `Risk: ${tradePlan.positionSizePercent.toFixed(1)}% of portfolio.`;
-    } else if (verdict === 'conditional_go') {
+    } else if (verdict === 'conditional_go' && tradePlan) {
       recommendation = `Cautious approach recommended for ${symbol}. ` +
         `${timing.waitFor ? 'Wait for ' + timing.waitFor.event + '. ' : ''}` +
-        `If opening position, start small and scale in gradually.`;
+        `If opening position, start small and scale in gradually. ` +
+        `Suggested direction: ${tradePlan.direction.toUpperCase()}.`;
     } else if (verdict === 'wait') {
       recommendation = `Waiting recommended for ${symbol}. ` +
         `${timing.waitFor ? 'Wait for ' + timing.waitFor.event + '. ' : 'Wait for better conditions. '}` +
-        `Current score: ${overallScore}/10.`;
+        `Current score: ${overallScore}/10. No trade plan generated.`;
     } else {
       recommendation = `Opening position not recommended for ${symbol}. ` +
         `${safetyCheck.riskLevel === 'high' ? 'High manipulation risk. ' : ''}` +
         `${trapCheck.riskLevel === 'high' ? 'Trap risk present. ' : ''}` +
-        `Wait until conditions improve.`;
+        `Wait until conditions improve. No trade plan generated.`;
     }
 
     const now = new Date();
@@ -2363,7 +2894,44 @@ export const analysisEngine = {
       analysisId: randomUUID(),
       createdAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
+      hasTradePlan,
     };
+  },
+
+  // =========================================
+  // Legacy: Old finalVerdict for backwards compatibility
+  // TODO: Remove after migrating all callers
+  // =========================================
+  async finalVerdict(
+    symbol: string,
+    allSteps: {
+      marketPulse: MarketPulseResult;
+      assetScan: AssetScanResult;
+      safetyCheck: SafetyCheckResult;
+      timing: TimingResult;
+      tradePlan: TradePlanResult;
+      trapCheck: TrapCheckResult;
+    }
+  ): Promise<FinalVerdictResult> {
+    const { marketPulse, assetScan, safetyCheck, timing, tradePlan, trapCheck } = allSteps;
+
+    // Create a preliminary verdict from the existing data for compatibility
+    const preliminaryVerdict = this.preliminaryVerdict(symbol, {
+      marketPulse,
+      assetScan,
+      safetyCheck,
+      timing,
+      trapCheck
+    });
+
+    // Use the new function
+    return this.getFinalVerdict(symbol, preliminaryVerdict, {
+      marketPulse,
+      assetScan,
+      safetyCheck,
+      timing,
+      trapCheck
+    }, tradePlan);
   },
 };
 
