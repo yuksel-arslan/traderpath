@@ -22,9 +22,13 @@ const REPORT_LANGUAGES = {
   zh: '中文',
   ja: '日本語',
   ko: '한국어',
+  ar: 'العربية',
+  hi: 'हिन्दी',
+  it: 'Italiano',
+  nl: 'Nederlands',
 } as const;
 
-const TRANSLATION_CREDIT_COST = 3;
+const TRANSLATION_CREDIT_COST = 10;
 
 // Define the report data type inline to avoid import issues
 interface AnalysisReportData {
