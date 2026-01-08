@@ -6,7 +6,8 @@
 // With optional language translation and email sending
 // ===========================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FileDown, Loader2, Check, Globe, ChevronDown, Mail, X, Send } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -251,6 +252,12 @@ export function DownloadReportButton({
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [lastPdfData, setLastPdfData] = useState<{ base64: string; fileName: string; reportData: AnalysisReportData } | null>(null);
+
+  // Client-side mounting state for portal
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Check if translation is needed (not English)
   const needsTranslation = selectedLanguage !== 'en';
@@ -519,8 +526,8 @@ export function DownloadReportButton({
         </button>
       </div>
 
-      {/* Email Modal */}
-      {showEmailModal && (
+      {/* Email Modal - Rendered via Portal to avoid hydration issues */}
+      {mounted && showEmailModal && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
@@ -629,7 +636,8 @@ export function DownloadReportButton({
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
