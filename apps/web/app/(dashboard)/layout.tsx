@@ -75,50 +75,51 @@ export default function DashboardLayout({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
 
+  // Get token once for all queries
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    setToken(localStorage.getItem('accessToken'));
+  }, []);
+
   // Fetch user profile to check admin status
   const { data: userData } = useQuery<UserProfile>({
-    queryKey: ['user-profile-nav'],
+    queryKey: ['user-profile-nav', token],
     queryFn: async () => {
-      const token = localStorage.getItem('accessToken');
       if (!token) return { isAdmin: false };
 
-      try {
-        const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return { isAdmin: false };
-        const result = await res.json();
-        return { isAdmin: result.data?.user?.isAdmin || false };
-      } catch {
-        return { isAdmin: false };
-      }
+      const res = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return { isAdmin: false };
+      const result = await res.json();
+      return { isAdmin: result.data?.user?.isAdmin || false };
     },
+    enabled: !!token,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: false,
   });
 
   const isAdmin = userData?.isAdmin || false;
 
   // Fetch alerts for notification
   const { data: alertsData } = useQuery<PriceAlert[]>({
-    queryKey: ['alerts-notifications'],
+    queryKey: ['alerts-notifications', token],
     queryFn: async () => {
-      const token = localStorage.getItem('accessToken');
       if (!token) return [];
 
-      try {
-        const res = await fetch('/api/alerts', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return [];
-        const result = await res.json();
-        // Handle both array and object responses
-        const data = result.data;
-        return Array.isArray(data) ? data : [];
-      } catch {
-        return [];
-      }
+      const res = await fetch('/api/alerts', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      const result = await res.json();
+      // Handle both array and object responses
+      const data = result.data;
+      return Array.isArray(data) ? data : [];
     },
+    enabled: !!token,
     refetchInterval: 30000, // Refresh every 30 seconds
+    retry: false,
   });
 
   // Ensure alerts is always an array

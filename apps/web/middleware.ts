@@ -17,6 +17,7 @@ const protectedRoutes = [
   '/settings',
   '/analysis',
   '/admin',
+  '/ai-expert',
 ];
 
 // Routes that should redirect to dashboard if already authenticated
