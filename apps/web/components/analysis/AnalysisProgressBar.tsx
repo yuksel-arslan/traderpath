@@ -28,13 +28,14 @@ interface Step {
   gradient: string;
 }
 
+// Step order: Trap Check (5) before Trade Plan (6) - decision before plan
 const STEPS: Step[] = [
   { id: 1, name: 'Market Pulse', shortName: 'Market', icon: TrendingUp, color: 'blue', gradient: 'from-blue-500 to-blue-600' },
   { id: 2, name: 'Asset Scanner', shortName: 'Scanner', icon: BarChart3, color: 'cyan', gradient: 'from-cyan-500 to-cyan-600' },
   { id: 3, name: 'Safety Check', shortName: 'Safety', icon: Shield, color: 'amber', gradient: 'from-amber-500 to-amber-600' },
   { id: 4, name: 'Timing', shortName: 'Timing', icon: Clock, color: 'purple', gradient: 'from-purple-500 to-purple-600' },
-  { id: 5, name: 'Trade Plan', shortName: 'Plan', icon: Target, color: 'indigo', gradient: 'from-indigo-500 to-indigo-600' },
-  { id: 6, name: 'Trap Check', shortName: 'Trap', icon: AlertTriangle, color: 'orange', gradient: 'from-orange-500 to-orange-600' },
+  { id: 5, name: 'Trap Check', shortName: 'Trap', icon: AlertTriangle, color: 'orange', gradient: 'from-orange-500 to-orange-600' },
+  { id: 6, name: 'Trade Plan', shortName: 'Plan', icon: Target, color: 'indigo', gradient: 'from-indigo-500 to-indigo-600' },
   { id: 7, name: 'Final Verdict', shortName: 'Verdict', icon: CheckCircle, color: 'emerald', gradient: 'from-emerald-500 to-emerald-600' },
 ];
 
