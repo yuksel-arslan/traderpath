@@ -633,6 +633,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboardData();
+
+    // Auto-refresh every 5 minutes to pick up new analyses
+    const refreshInterval = setInterval(() => {
+      fetchDashboardData(true); // Force refresh, bypass cache
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(refreshInterval);
   }, [fetchDashboardData]);
 
   if (loading) {
@@ -1051,13 +1058,22 @@ export default function DashboardPage() {
                 <p className="text-gray-500 dark:text-slate-400 text-sm">Average scores from {platformStats?.accuracy.sampleSize ?? 0} verified analyses</p>
               </div>
             </div>
-            <Link
-              href="/analyze"
-              className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white rounded-xl font-semibold transition shadow-lg shadow-cyan-500/25"
-            >
-              Start Analysis
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+            <div className="hidden sm:flex items-center gap-2">
+              <button
+                onClick={() => fetchDashboardData(true)}
+                className="p-2.5 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition"
+                title="Refresh data"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
+              <Link
+                href="/analyze"
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white rounded-xl font-semibold transition shadow-lg shadow-cyan-500/25"
+              >
+                Start Analysis
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
 
           {/* Steps - Full Width Grid */}
