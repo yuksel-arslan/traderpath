@@ -21,6 +21,21 @@ interface CreditBalance {
   freeAnalysesTotal: number;
 }
 
+interface CreditCosts {
+  bundles: {
+    fullAnalysis: number;
+    quickCheck: number;
+    smartEntry: number;
+  };
+  features: {
+    aiExpert: number;
+    pdfReport: number;
+    translation: number;
+    emailSend: number;
+    priceAlert: number;
+  };
+}
+
 const PACKAGE_ICONS: Record<string, any> = {
   starter: Zap,
   trader: Star,
@@ -28,19 +43,11 @@ const PACKAGE_ICONS: Record<string, any> = {
   whale: Rocket,
 };
 
-const CREDIT_COSTS = [
-  { action: 'Full Analysis (7-Step)', credits: '25' },
-  { action: 'PDF Report', credits: '10' },
-  { action: 'AI Expert Chat', credits: '5' },
-  { action: 'Translation', credits: '5' },
-  { action: 'Email Sending', credits: '5' },
-  { action: 'Price Alert', credits: '1' },
-];
-
 export default function CreditsPage() {
   const router = useRouter();
   const [packages, setPackages] = useState<CreditPackage[]>([]);
   const [balance, setBalance] = useState<CreditBalance | null>(null);
+  const [creditCosts, setCreditCosts] = useState<CreditCosts | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
@@ -55,12 +62,13 @@ export default function CreditsPage() {
       const token = localStorage.getItem('accessToken');
       // Note: Middleware handles authentication redirect, so we just skip fetch if no token
 
-      // Fetch packages and balance in parallel
-      const [packagesRes, balanceRes] = await Promise.all([
+      // Fetch packages, balance, and credit costs in parallel
+      const [packagesRes, balanceRes, costsRes] = await Promise.all([
         fetch(getApiUrl('/api/payments/packages')),
         token ? fetch(getApiUrl('/api/user/credits'), {
           headers: { Authorization: `Bearer ${token}` },
         }) : Promise.resolve(null),
+        fetch(getApiUrl('/api/costs/credit-costs')),
       ]);
 
       if (packagesRes.ok) {
@@ -75,6 +83,13 @@ export default function CreditsPage() {
           freeAnalysesRemaining: data.freeAnalysesRemaining || 0,
           freeAnalysesTotal: data.freeAnalysesTotal || 5,
         });
+      }
+
+      if (costsRes.ok) {
+        const data = await costsRes.json();
+        if (data.data) {
+          setCreditCosts(data.data);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch data:', err);
@@ -251,14 +266,63 @@ export default function CreditsPage() {
       <div className="max-w-2xl mx-auto">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 text-center">Credit Costs</h2>
         <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl divide-y divide-gray-200 dark:divide-slate-700">
-          {CREDIT_COSTS.map((item) => (
-            <div key={item.action} className="flex justify-between p-4">
-              <span className="text-gray-700 dark:text-slate-300">{item.action}</span>
-              <span className="font-medium text-gray-900 dark:text-white">
-                {item.credits} credits
-              </span>
-            </div>
-          ))}
+          {/* Analysis Bundles */}
+          <div className="p-4 bg-gray-50 dark:bg-slate-700/30">
+            <p className="text-sm font-semibold text-gray-500 dark:text-slate-400">Analysis</p>
+          </div>
+          <div className="flex justify-between p-4">
+            <span className="text-gray-700 dark:text-slate-300">Full Analysis (7-Step)</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {creditCosts?.bundles?.fullAnalysis ?? 25} credits
+            </span>
+          </div>
+          <div className="flex justify-between p-4">
+            <span className="text-gray-700 dark:text-slate-300">Quick Check</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {creditCosts?.bundles?.quickCheck ?? 5} credits
+            </span>
+          </div>
+          <div className="flex justify-between p-4">
+            <span className="text-gray-700 dark:text-slate-300">Smart Entry</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {creditCosts?.bundles?.smartEntry ?? 12} credits
+            </span>
+          </div>
+
+          {/* Features */}
+          <div className="p-4 bg-gray-50 dark:bg-slate-700/30">
+            <p className="text-sm font-semibold text-gray-500 dark:text-slate-400">Features</p>
+          </div>
+          <div className="flex justify-between p-4">
+            <span className="text-gray-700 dark:text-slate-300">AI Expert Chat</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {creditCosts?.features?.aiExpert ?? 10} credits
+            </span>
+          </div>
+          <div className="flex justify-between p-4">
+            <span className="text-gray-700 dark:text-slate-300">PDF Report</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {creditCosts?.features?.pdfReport ?? 5} credits
+            </span>
+          </div>
+          <div className="flex justify-between p-4">
+            <span className="text-gray-700 dark:text-slate-300">Translation</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {creditCosts?.features?.translation ?? 5} credits
+            </span>
+          </div>
+          <div className="flex justify-between p-4">
+            <span className="text-gray-700 dark:text-slate-300">Email Sending</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {creditCosts?.features?.emailSend ?? 5} credits
+            </span>
+          </div>
+          <div className="flex justify-between p-4">
+            <span className="text-gray-700 dark:text-slate-300">Price Alert</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {creditCosts?.features?.priceAlert ?? 1} credits
+            </span>
+          </div>
         </div>
       </div>
 
