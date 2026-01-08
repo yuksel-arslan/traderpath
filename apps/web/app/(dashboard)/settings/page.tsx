@@ -72,8 +72,9 @@ export default function SettingsPage() {
     const fetchUserData = async () => {
       try {
         const token = localStorage.getItem('accessToken');
+        // Note: Middleware handles authentication redirect
         if (!token) {
-          router.push('/login');
+          setIsLoadingUser(false);
           return;
         }
 
@@ -93,9 +94,9 @@ export default function SettingsPage() {
             setUser(profileData);
           }
         } else if (userResponse.status === 401) {
-          // Token expired or invalid
+          // Token expired or invalid - middleware will handle redirect on next navigation
           localStorage.removeItem('accessToken');
-          router.push('/login');
+          setIsLoadingUser(false);
           return;
         }
 

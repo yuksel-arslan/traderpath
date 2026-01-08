@@ -52,17 +52,14 @@ export default function CreditsPage() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
+      // Note: Middleware handles authentication redirect, so we just skip fetch if no token
 
       // Fetch packages and balance in parallel
       const [packagesRes, balanceRes] = await Promise.all([
         fetch('/api/payments/packages'),
-        fetch('/api/user/credits', {
+        token ? fetch('/api/user/credits', {
           headers: { Authorization: `Bearer ${token}` },
-        }),
+        }) : Promise.resolve(null),
       ]);
 
       if (packagesRes.ok) {
@@ -70,7 +67,7 @@ export default function CreditsPage() {
         setPackages(data.data?.packages || []);
       }
 
-      if (balanceRes.ok) {
+      if (balanceRes && balanceRes.ok) {
         const data = await balanceRes.json();
         setBalance({
           credits: data.credits || 0,
@@ -95,7 +92,8 @@ export default function CreditsPage() {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
-        router.push('/login');
+        setError('Please log in to purchase credits');
+        setPurchasing(false);
         return;
       }
 

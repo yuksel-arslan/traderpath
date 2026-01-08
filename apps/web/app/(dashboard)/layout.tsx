@@ -33,19 +33,19 @@ const PriceTicker = dynamic(
   { ssr: false, loading: () => <div className="w-full h-10 bg-card/50 border-b border-border/50" /> }
 );
 
-// Ana navigasyon öğeleri
+// Ana navigasyon öğeleri - Tüm linkler görünür
 const mainNav = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'AI Experts', href: '/ai-expert', icon: Brain },
-];
-
-// İkincil navigasyon (dropdown içinde)
-const secondaryNav = [
   { name: 'Rewards', href: '/rewards', icon: Gift },
   { name: 'Credits', href: '/credits', icon: Coins },
   { name: 'Alerts', href: '/alerts', icon: Bell },
+];
+
+// User menu items (Settings, Admin, Logout)
+const userMenuNav = [
   { name: 'Settings', href: '/settings', icon: Settings },
   { name: 'Admin', href: '/admin', icon: Server },
 ];
@@ -60,6 +60,10 @@ interface PriceAlert {
   createdAt: string;
 }
 
+interface UserProfile {
+  isAdmin: boolean;
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -70,6 +74,29 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
+
+  // Fetch user profile to check admin status
+  const { data: userData } = useQuery<UserProfile>({
+    queryKey: ['user-profile-nav'],
+    queryFn: async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return { isAdmin: false };
+
+      try {
+        const res = await fetch('/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return { isAdmin: false };
+        const result = await res.json();
+        return { isAdmin: result.data?.user?.isAdmin || false };
+      } catch {
+        return { isAdmin: false };
+      }
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  const isAdmin = userData?.isAdmin || false;
 
   // Fetch alerts for notification
   const { data: alertsData } = useQuery<PriceAlert[]>({
@@ -289,10 +316,12 @@ export default function DashboardLayout({
                 {userMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
-                    {/* Secondary Nav Items */}
+                  <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                    {/* Settings & Admin (Admin only visible for admins) */}
                     <div className="p-2 border-b border-border">
-                      {secondaryNav.map((item) => (
+                      {userMenuNav
+                        .filter(item => item.name !== 'Admin' || isAdmin)
+                        .map((item) => (
                         <Link
                           key={item.name}
                           href={item.href}
@@ -342,7 +371,7 @@ export default function DashboardLayout({
           {mobileMenuOpen && (
             <nav className="md:hidden border-t border-border animate-in fade-in slide-in-from-top-1 duration-150">
               <div className="py-3 space-y-1">
-                {[...mainNav, ...secondaryNav].map((item) => (
+                {[...mainNav, ...userMenuNav.filter(item => item.name !== 'Admin' || isAdmin)].map((item) => (
                   <Link
                     key={item.name}
                     href={item.href}

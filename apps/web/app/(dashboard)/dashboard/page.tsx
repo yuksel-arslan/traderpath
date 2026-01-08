@@ -786,7 +786,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* RIGHT COLUMN: Profit Trend + Credits (full height) */}
+                {/* RIGHT COLUMN: Profit Trend (full height) */}
                 <div className="flex-1 flex gap-3 min-h-[140px]">
                   {/* Premium Profit Sparkline - Daily/Weekly P&L Toggle */}
                   {(() => {
@@ -1041,15 +1041,6 @@ export default function DashboardPage() {
                       </div>
                     );
                   })()}
-
-                  {/* Credits - Full Height */}
-                  <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-500/10 dark:to-amber-600/5 rounded-xl p-4 border border-amber-200/50 dark:border-amber-500/20 flex flex-col justify-center items-center min-w-[100px]">
-                    <Sparkles className="w-6 h-6 text-amber-500 mb-2" />
-                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-1">Credits</span>
-                    <div className="text-3xl font-black text-amber-600 dark:text-amber-400">
-                      {credits}
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>

@@ -152,9 +152,10 @@ export default function AdminPage() {
 
     try {
       const token = localStorage.getItem('accessToken');
+      // Note: Middleware handles authentication redirect
       if (!token) {
         setError('Authentication required. Please log in.');
-        router.push('/login');
+        setIsLoading(false);
         return;
       }
 
