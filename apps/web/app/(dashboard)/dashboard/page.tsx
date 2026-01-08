@@ -1554,39 +1554,84 @@ export default function DashboardPage() {
                         </div>
                       )}
 
-                      {/* P/L Display */}
-                      {outcome.unrealizedPnL !== undefined && (
+                      {/* Score, P/L, TP Progress Display - Same style as Reports page */}
+                      <div className="flex items-center justify-between gap-1.5 p-2 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-gray-200/50 dark:border-white/5">
+                        {/* Score */}
                         <div className={cn(
-                          "text-center py-2 rounded-lg font-bold text-sm",
-                          outcome.unrealizedPnL >= 0
-                            ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400"
-                            : "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                          "text-center px-2 py-1 rounded-lg flex-1",
+                          (outcome.score || 0) >= 7 ? "bg-green-100 dark:bg-green-500/20" :
+                          (outcome.score || 0) >= 5 ? "bg-yellow-100 dark:bg-yellow-500/20" : "bg-red-100 dark:bg-red-500/20"
                         )}>
-                          {outcome.unrealizedPnL >= 0 ? '+' : ''}{outcome.unrealizedPnL.toFixed(2)}%
+                          <div className="text-[9px] text-gray-500 dark:text-muted-foreground">Score</div>
+                          <div className={cn(
+                            "font-bold text-xs",
+                            (outcome.score || 0) >= 7 ? "text-green-600 dark:text-green-400" :
+                            (outcome.score || 0) >= 5 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"
+                          )}>
+                            {((outcome.score || 0) * 10).toFixed(0)}%
+                          </div>
                         </div>
-                      )}
 
-                      {/* Fallback: Show priceChange if no live data */}
-                      {!outcome.unrealizedPnL && outcome.priceChange !== undefined && (
+                        <div className="text-gray-300 dark:text-muted-foreground/30">|</div>
+
+                        {/* P/L */}
                         <div className={cn(
-                          "mt-2 text-sm font-medium text-right",
-                          outcome.priceChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                          "text-center px-2 py-1 rounded-lg flex-1",
+                          (outcome.unrealizedPnL || 0) >= 0
+                            ? "bg-green-100 dark:bg-green-500/20"
+                            : "bg-red-100 dark:bg-red-500/20"
                         )}>
-                          {outcome.priceChange >= 0 ? '+' : ''}{outcome.priceChange.toFixed(2)}%
+                          <div className="text-[9px] text-gray-500 dark:text-muted-foreground">P/L</div>
+                          <div className={cn(
+                            "font-bold text-xs",
+                            (outcome.unrealizedPnL || 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                          )}>
+                            {(outcome.unrealizedPnL || 0) >= 0 ? '+' : ''}{(outcome.unrealizedPnL || 0).toFixed(2)}%
+                          </div>
                         </div>
-                      )}
 
-                      {/* TP/SL Levels (compact) */}
-                      {(outcome.stopLoss || outcome.takeProfit1) && (
-                        <div className="mt-2 flex items-center justify-between text-[9px] font-medium">
-                          {outcome.stopLoss && (
-                            <span className="text-red-500 dark:text-red-400">SL: ${outcome.stopLoss.toFixed(2)}</span>
-                          )}
-                          {outcome.takeProfit1 && (
-                            <span className="text-green-500 dark:text-green-400">TP: ${outcome.takeProfit1.toFixed(2)}</span>
-                          )}
-                        </div>
-                      )}
+                        <div className="text-gray-300 dark:text-muted-foreground/30">|</div>
+
+                        {/* TP Progress */}
+                        {(() => {
+                          // Calculate TP progress
+                          let tpProgress = 0;
+                          if (outcome.outcome === 'correct') {
+                            tpProgress = 100;
+                          } else if (outcome.entryPrice && outcome.currentPrice && outcome.takeProfit1) {
+                            const isLong = outcome.direction === 'long' || outcome.direction === 'LONG';
+                            const totalDistance = isLong
+                              ? (outcome.takeProfit1 - outcome.entryPrice)
+                              : (outcome.entryPrice - outcome.takeProfit1);
+                            const coveredDistance = isLong
+                              ? (outcome.currentPrice - outcome.entryPrice)
+                              : (outcome.entryPrice - outcome.currentPrice);
+                            tpProgress = totalDistance !== 0
+                              ? Math.min(100, Math.max(0, (coveredDistance / totalDistance) * 100))
+                              : 0;
+                          }
+
+                          return (
+                            <div className={cn(
+                              "text-center px-2 py-1 rounded-lg flex-1",
+                              tpProgress >= 80 ? "bg-green-100 dark:bg-green-500/20" :
+                              tpProgress >= 50 ? "bg-yellow-100 dark:bg-yellow-500/20" : "bg-blue-100 dark:bg-blue-500/20"
+                            )}>
+                              <div className="text-[9px] text-gray-500 dark:text-muted-foreground flex items-center justify-center gap-0.5">
+                                <Target className="w-2.5 h-2.5" />
+                                TP
+                              </div>
+                              <div className={cn(
+                                "font-bold text-xs",
+                                tpProgress >= 80 ? "text-green-600 dark:text-green-400" :
+                                tpProgress >= 50 ? "text-yellow-600 dark:text-yellow-400" : "text-blue-600 dark:text-blue-400"
+                              )}>
+                                {tpProgress.toFixed(0)}%
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
                     </div>
                   ))}
                 </div>
