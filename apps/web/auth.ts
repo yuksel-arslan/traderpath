@@ -1,5 +1,5 @@
 // ===========================================
-// Auth.js Configuration
+// Auth.js Full Configuration (with Database)
 // ===========================================
 
 import NextAuth from 'next-auth';
@@ -7,19 +7,13 @@ import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
 import { Pool } from '@neondatabase/serverless';
 import bcrypt from 'bcryptjs';
+import { authConfig } from './auth.config';
 
 // Create Neon pool for database operations
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  // No adapter needed - using JWT strategy with manual user handling
-  session: {
-    strategy: 'jwt',
-  },
-  pages: {
-    signIn: '/login',
-    error: '/login',
-  },
+  ...authConfig,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -78,6 +72,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
+    ...authConfig.callbacks,
     async jwt({ token, user, account, profile }) {
       // Initial sign in with credentials
       if (user) {
@@ -129,15 +124,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       return token;
     },
-    async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.id as string || token.sub as string;
-        (session.user as any).isAdmin = token.isAdmin || false;
-      }
-      return session;
-    },
   },
-  trustHost: true,
 });
 
 // Type augmentation for session

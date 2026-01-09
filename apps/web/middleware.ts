@@ -1,52 +1,15 @@
 // ===========================================
 // Next.js Middleware with Auth.js
+// Uses edge-compatible auth config
 // ===========================================
 
-import { auth } from '@/auth';
+import NextAuth from 'next-auth';
+import { authConfig } from './auth.config';
 
-// Routes that require authentication
-const protectedRoutes = [
-  '/dashboard',
-  '/analyze',
-  '/reports',
-  '/rewards',
-  '/credits',
-  '/alerts',
-  '/settings',
-  '/analysis',
-  '/admin',
-  '/ai-expert',
-];
+// Create auth middleware from edge-compatible config
+const { auth } = NextAuth(authConfig);
 
-// Routes that should redirect to dashboard if already authenticated
-const authRoutes = ['/login', '/register', '/forgot-password'];
-
-export default auth((req) => {
-  const { pathname } = req.nextUrl;
-  const isAuthenticated = !!req.auth;
-
-  // Check if current path is protected
-  const isProtectedRoute = protectedRoutes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
-  );
-
-  // Check if current path is auth route
-  const isAuthRoute = authRoutes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
-  );
-
-  // Redirect to login if accessing protected route without authentication
-  if (isProtectedRoute && !isAuthenticated) {
-    const loginUrl = new URL('/login', req.url);
-    return Response.redirect(loginUrl);
-  }
-
-  // Redirect to dashboard if accessing auth route while authenticated
-  if (isAuthRoute && isAuthenticated) {
-    const dashboardUrl = new URL('/dashboard', req.url);
-    return Response.redirect(dashboardUrl);
-  }
-});
+export default auth;
 
 export const config = {
   matcher: [
@@ -56,8 +19,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
-     * - api/auth (Auth.js routes)
+     * - api routes
      */
-    '/((?!_next/static|_next/image|favicon.ico|public|api/auth).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public|api).*)',
   ],
 };
