@@ -22,7 +22,8 @@ const nextConfig = {
     }
     return [
       {
-        source: '/api/:path*',
+        // Exclude /api/auth/* and /api/token from rewrite (handled by Next.js)
+        source: '/api/:path((?!auth|token).*)',
         destination: 'http://127.0.0.1:4000/api/:path*',
       },
     ];
