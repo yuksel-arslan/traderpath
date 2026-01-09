@@ -5,7 +5,6 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
-import { NeonAdapter } from '@auth/neon-adapter';
 import { Pool } from '@neondatabase/serverless';
 import bcrypt from 'bcryptjs';
 
@@ -13,9 +12,9 @@ import bcrypt from 'bcryptjs';
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: NeonAdapter(pool),
+  // No adapter needed - using JWT strategy with manual user handling
   session: {
-    strategy: 'jwt', // Use JWT for session (works with Edge runtime)
+    strategy: 'jwt',
   },
   pages: {
     signIn: '/login',
@@ -25,14 +24,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      profile(profile) {
-        return {
-          id: profile.sub,
-          name: profile.name,
-          email: profile.email,
-          image: profile.picture,
-        };
-      },
     }),
     Credentials({
       name: 'credentials',
@@ -87,25 +78,52 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
-      // Initial sign in
+    async jwt({ token, user, account, profile }) {
+      // Initial sign in with credentials
       if (user) {
         token.id = user.id;
         token.isAdmin = (user as any).isAdmin || false;
       }
 
-      // For OAuth, fetch admin status from DB
-      if (account && account.provider !== 'credentials') {
+      // Google OAuth sign in - find or create user
+      if (account?.provider === 'google' && profile?.email) {
         try {
-          const result = await pool.query(
-            'SELECT is_admin FROM users WHERE id = $1',
-            [token.id || token.sub]
+          // Check if user exists
+          let result = await pool.query(
+            'SELECT id, is_admin FROM users WHERE email = $1',
+            [profile.email]
           );
-          if (result.rows[0]) {
-            token.isAdmin = result.rows[0].is_admin;
+
+          let dbUser = result.rows[0];
+
+          // Create user if doesn't exist
+          if (!dbUser) {
+            const insertResult = await pool.query(
+              `INSERT INTO users (id, email, name, avatar_url, created_at, updated_at)
+               VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())
+               RETURNING id, is_admin`,
+              [profile.email, profile.name, profile.picture]
+            );
+            dbUser = insertResult.rows[0];
+
+            // Create credit balance for new user
+            await pool.query(
+              `INSERT INTO credit_balances (user_id, balance, daily_free_remaining, daily_reset_at, lifetime_earned, lifetime_spent, lifetime_purchased, updated_at)
+               VALUES ($1, 25, 5, NOW(), 25, 0, 0, NOW())`,
+              [dbUser.id]
+            );
           }
+
+          token.id = dbUser.id;
+          token.isAdmin = dbUser.is_admin || false;
+
+          // Update last login
+          await pool.query(
+            'UPDATE users SET last_login_at = NOW() WHERE id = $1',
+            [dbUser.id]
+          );
         } catch (e) {
-          console.error('Error fetching admin status:', e);
+          console.error('Error handling Google sign in:', e);
         }
       }
 
@@ -117,37 +135,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         (session.user as any).isAdmin = token.isAdmin || false;
       }
       return session;
-    },
-    async signIn({ user, account }) {
-      // For OAuth providers, create credit balance if new user
-      if (account?.provider === 'google') {
-        const result = await pool.query(
-          'SELECT id FROM credit_balances WHERE user_id = $1',
-          [user.id]
-        );
-
-        if (result.rows.length === 0) {
-          await pool.query(
-            `INSERT INTO credit_balances (user_id, balance, daily_free_remaining, daily_reset_at, lifetime_earned, lifetime_spent, lifetime_purchased, updated_at)
-             VALUES ($1, 25, 5, NOW(), 25, 0, 0, NOW())`,
-            [user.id]
-          );
-        }
-      }
-      return true;
-    },
-  },
-  events: {
-    async createUser({ user }) {
-      // Create credit balance for new users
-      if (user.id) {
-        await pool.query(
-          `INSERT INTO credit_balances (user_id, balance, daily_free_remaining, daily_reset_at, lifetime_earned, lifetime_spent, lifetime_purchased, updated_at)
-           VALUES ($1, 25, 5, NOW(), 25, 0, 0, NOW())
-           ON CONFLICT (user_id) DO NOTHING`,
-          [user.id]
-        );
-      }
     },
   },
   trustHost: true,
