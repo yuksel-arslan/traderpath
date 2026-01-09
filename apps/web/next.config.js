@@ -41,12 +41,20 @@ const nextConfig = {
         destination: 'http://127.0.0.1:4000/api/analysis/:path*',
       },
       {
+        source: '/api/reports',
+        destination: 'http://127.0.0.1:4000/api/reports',
+      },
+      {
         source: '/api/reports/:path*',
         destination: 'http://127.0.0.1:4000/api/reports/:path*',
       },
       {
         source: '/api/credits/:path*',
         destination: 'http://127.0.0.1:4000/api/credits/:path*',
+      },
+      {
+        source: '/api/alerts',
+        destination: 'http://127.0.0.1:4000/api/alerts',
       },
       {
         source: '/api/alerts/:path*',
