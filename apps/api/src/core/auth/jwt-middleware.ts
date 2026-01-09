@@ -1,6 +1,6 @@
 // ===========================================
 // Authentication Middleware
-// Verifies Auth.js JWT tokens
+// Verifies JWT tokens
 // ===========================================
 
 import { FastifyRequest, FastifyReply } from 'fastify';
@@ -39,7 +39,7 @@ async function verifyJwtToken(token: string): Promise<{ id: string; email?: stri
  * Authentication middleware
  * Verifies JWT token and attaches user to request
  */
-export async function firebaseAuth(
+export async function authenticate(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
@@ -71,7 +71,7 @@ export async function firebaseAuth(
     }
 
     // Find user by ID or email
-    let user = await prisma.user.findFirst({
+    const user = await prisma.user.findFirst({
       where: {
         OR: [
           ...(decoded.id ? [{ id: decoded.id }] : []),
@@ -104,7 +104,6 @@ export async function firebaseAuth(
     request.user = {
       ...user,
       isAdmin,
-      firebaseUid: decoded.id, // Keep for backward compatibility
     };
   } catch (error) {
     console.error('Auth error:', error);
@@ -122,7 +121,7 @@ export async function firebaseAuth(
  * Optional authentication middleware
  * Attaches user if token is valid, but doesn't require it
  */
-export async function optionalFirebaseAuth(
+export async function optionalAuth(
   request: FastifyRequest,
   _reply: FastifyReply
 ): Promise<void> {
@@ -160,7 +159,6 @@ export async function optionalFirebaseAuth(
       request.user = {
         ...user,
         isAdmin,
-        firebaseUid: decoded.id,
       };
     }
   } catch {
