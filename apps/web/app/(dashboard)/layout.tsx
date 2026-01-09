@@ -80,8 +80,25 @@ export default function DashboardLayout({
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    setToken(localStorage.getItem('accessToken'));
+    // Get token on mount
+    const storedToken = localStorage.getItem('accessToken');
+    setToken(storedToken);
+
+    // Listen for storage changes (e.g., login in another tab)
+    const handleStorage = () => {
+      setToken(localStorage.getItem('accessToken'));
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
+
+  // Also check token on pathname change (after login redirect)
+  useEffect(() => {
+    const storedToken = localStorage.getItem('accessToken');
+    if (storedToken && storedToken !== token) {
+      setToken(storedToken);
+    }
+  }, [pathname, token]);
 
   // Fetch user profile to check admin status
   const { data: userData } = useQuery<UserProfile>({
