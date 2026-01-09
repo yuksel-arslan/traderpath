@@ -258,7 +258,7 @@ export default async function authRoutes(app: FastifyInstance) {
             email: user.email,
             name: user.name,
             level: user.level,
-            avatarUrl: user.avatarUrl,
+            avatarUrl: user.image,
             isAdmin,
           },
           token,
@@ -369,7 +369,7 @@ export default async function authRoutes(app: FastifyInstance) {
             data: {
               email: email.toLowerCase(),
               name: name || email.split('@')[0],
-              avatarUrl: picture,
+              image: picture,
               googleId,
               referralCode,
             },
@@ -393,12 +393,12 @@ export default async function authRoutes(app: FastifyInstance) {
         }) as typeof user;
       } else {
         // Update existing user's Google info if needed
-        if (!user.googleId || !user.avatarUrl) {
+        if (!user.googleId || !user.image) {
           user = await prisma.user.update({
             where: { id: user.id },
             data: {
               googleId: user.googleId || googleId,
-              avatarUrl: user.avatarUrl || picture,
+              image: user.image || picture,
             },
             include: { creditBalance: true },
           });
@@ -426,7 +426,7 @@ export default async function authRoutes(app: FastifyInstance) {
             id: user!.id,
             email: user!.email,
             name: user!.name,
-            avatarUrl: user!.avatarUrl,
+            avatarUrl: user!.image,
             level: user!.level,
             isAdmin,
           },
@@ -490,7 +490,7 @@ export default async function authRoutes(app: FastifyInstance) {
             id: user.id,
             email: user.email,
             name: user.name,
-            avatarUrl: user.avatarUrl,
+            avatarUrl: user.image,
             level: user.level,
             xp: user.xp,
             streakDays: user.streakDays,
@@ -556,7 +556,7 @@ export default async function authRoutes(app: FastifyInstance) {
               where: { id: user.id },
               data: {
                 googleId: providerId,
-                avatarUrl: user.avatarUrl || image,
+                image: user.image || image,
               },
               include: { creditBalance: true },
             });
@@ -573,7 +573,7 @@ export default async function authRoutes(app: FastifyInstance) {
                 email: email.toLowerCase(),
                 name: name || email.split('@')[0],
                 googleId: provider === 'google' ? providerId : undefined,
-                avatarUrl: image,
+                image: image,
                 referralCode,
               },
             });
@@ -616,7 +616,7 @@ export default async function authRoutes(app: FastifyInstance) {
             email: user!.email,
             name: user!.name,
             level: user!.level,
-            avatarUrl: user!.avatarUrl || image,
+            avatarUrl: user!.image || image,
             isAdmin,
           },
           accessToken: token,
