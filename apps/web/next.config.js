@@ -21,10 +21,48 @@ const nextConfig = {
       return [];
     }
     return [
+      // Token endpoint - handled by Next.js
+      // Auth login/logout/register/oauth - handled by Next.js
+      // Everything else goes to backend
       {
-        // Exclude /api/auth/* and /api/token from rewrite (handled by Next.js)
-        source: '/api/:path((?!auth|token).*)',
-        destination: 'http://127.0.0.1:4000/api/:path*',
+        source: '/api/auth/me',
+        destination: 'http://127.0.0.1:4000/api/auth/me',
+      },
+      {
+        source: '/api/auth/google',
+        destination: 'http://127.0.0.1:4000/api/auth/google',
+      },
+      {
+        source: '/api/users/:path*',
+        destination: 'http://127.0.0.1:4000/api/users/:path*',
+      },
+      {
+        source: '/api/analyses/:path*',
+        destination: 'http://127.0.0.1:4000/api/analyses/:path*',
+      },
+      {
+        source: '/api/credits/:path*',
+        destination: 'http://127.0.0.1:4000/api/credits/:path*',
+      },
+      {
+        source: '/api/alerts/:path*',
+        destination: 'http://127.0.0.1:4000/api/alerts/:path*',
+      },
+      {
+        source: '/api/rewards/:path*',
+        destination: 'http://127.0.0.1:4000/api/rewards/:path*',
+      },
+      {
+        source: '/api/payments/:path*',
+        destination: 'http://127.0.0.1:4000/api/payments/:path*',
+      },
+      {
+        source: '/api/admin/:path*',
+        destination: 'http://127.0.0.1:4000/api/admin/:path*',
+      },
+      {
+        source: '/api/binance/:path*',
+        destination: 'http://127.0.0.1:4000/api/binance/:path*',
       },
     ];
   },

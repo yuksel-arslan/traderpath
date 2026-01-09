@@ -85,11 +85,11 @@ export default function DashboardLayout({
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await authFetch('/api/users/me');
+        const res = await authFetch('/api/auth/me');
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.data) {
-            setUser(data.data);
+            setUser(data.data.user || data.data);
           }
         }
       } catch (error) {
