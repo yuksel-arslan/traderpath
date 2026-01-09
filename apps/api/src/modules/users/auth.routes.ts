@@ -517,6 +517,135 @@ export default async function authRoutes(app: FastifyInstance) {
   });
 
   /**
+   * POST /api/auth/oauth
+   * OAuth login/register (for redirect-based OAuth flow)
+   */
+  const oauthSchema = z.object({
+    provider: z.string(),
+    providerId: z.string(),
+    email: z.string().email(),
+    name: z.string().optional(),
+    image: z.string().optional(),
+  });
+
+  app.post('/oauth', async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const body = oauthSchema.parse(request.body);
+      const { provider, providerId, email, name, image } = body;
+
+      // Check if user exists by provider ID or email
+      let user = provider === 'google'
+        ? await prisma.user.findUnique({
+            where: { googleId: providerId },
+            include: { creditBalance: true },
+          })
+        : null;
+      let isNewUser = false;
+
+      if (!user) {
+        // Check by email
+        user = await prisma.user.findUnique({
+          where: { email: email.toLowerCase() },
+          include: { creditBalance: true },
+        });
+
+        if (user) {
+          // Link OAuth account to existing user
+          if (provider === 'google' && !user.googleId) {
+            user = await prisma.user.update({
+              where: { id: user.id },
+              data: {
+                googleId: providerId,
+                avatarUrl: user.avatarUrl || image,
+              },
+              include: { creditBalance: true },
+            });
+          }
+        } else {
+          // Create new user
+          isNewUser = true;
+          const referralCode = nanoid(8).toUpperCase();
+          const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
+
+          user = await prisma.$transaction(async (tx) => {
+            const newUser = await tx.user.create({
+              data: {
+                email: email.toLowerCase(),
+                name: name || email.split('@')[0],
+                googleId: provider === 'google' ? providerId : undefined,
+                avatarUrl: image,
+                referralCode,
+              },
+            });
+
+            await tx.creditBalance.create({
+              data: {
+                userId: newUser.id,
+                balance: isAdmin ? 999999 : 25,
+                lifetimeEarned: isAdmin ? 999999 : 25,
+              },
+            });
+
+            return tx.user.findUnique({
+              where: { id: newUser.id },
+              include: { creditBalance: true },
+            });
+          }) as typeof user;
+        }
+      }
+
+      // Update last login
+      await prisma.user.update({
+        where: { id: user!.id },
+        data: { lastLoginAt: new Date() },
+      });
+
+      // Generate JWT token
+      const token = app.jwt.sign(
+        { id: user!.id },
+        { expiresIn: config.jwtExpiresIn }
+      );
+
+      const isAdmin = ADMIN_EMAILS.includes(user!.email);
+
+      return reply.send({
+        success: true,
+        data: {
+          user: {
+            id: user!.id,
+            email: user!.email,
+            name: user!.name,
+            level: user!.level,
+            avatarUrl: user!.avatarUrl || image,
+            isAdmin,
+          },
+          accessToken: token,
+          credits: isAdmin ? 999999 : user!.creditBalance?.balance || 25,
+          isNewUser,
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: error.errors[0]?.message || 'Invalid input',
+          },
+        });
+      }
+      console.error('OAuth error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: {
+          code: 'SERVER_ERROR',
+          message: 'An error occurred during OAuth authentication',
+        },
+      });
+    }
+  });
+
+  /**
    * POST /api/auth/logout
    * Logout user (client-side token removal, but we can invalidate if needed)
    */
