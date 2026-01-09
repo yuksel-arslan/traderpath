@@ -24,6 +24,7 @@ model User {
   name          String?  @db.VarChar(100)
   image         String?  @map("avatar_url")
   isAdmin       Boolean  @default(false) @map("is_admin")
+  googleId      String?  @unique @map("google_id") @db.VarChar(255)
 
   // Gamification
   level         Int      @default(1)
