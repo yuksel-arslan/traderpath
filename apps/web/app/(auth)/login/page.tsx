@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
-import { loginWithEmail, loginWithGoogle } from '@/lib/firebase';
+import { getApiUrl } from '@/lib/api';
 
 // Helper to store auth token securely
 function storeAuthToken(token: string) {
@@ -15,12 +15,12 @@ function storeAuthToken(token: string) {
 }
 
 // Helper to store user data
-function storeUserData(user: { uid: string; email: string | null; displayName: string | null; photoURL: string | null }) {
+function storeUserData(user: { id: string; email: string; name: string | null; avatarUrl?: string | null }) {
   localStorage.setItem('user', JSON.stringify({
-    id: user.uid,
+    id: user.id,
     email: user.email,
-    name: user.displayName,
-    avatarUrl: user.photoURL,
+    name: user.name,
+    avatarUrl: user.avatarUrl,
   }));
 }
 
@@ -42,42 +42,103 @@ export default function LoginPage() {
     }
   }, [searchParams]);
 
-  // Handle form submission
+  // Handle form submission - call backend API
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
     setSuccessMessage('');
 
-    const result = await loginWithEmail(email.trim().toLowerCase(), password);
+    try {
+      const response = await fetch(getApiUrl('/api/auth/login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      });
 
-    if (result.success && result.user && result.token) {
-      storeAuthToken(result.token);
-      storeUserData(result.user);
-      router.push('/dashboard');
-    } else {
-      setError(result.error || 'Login failed. Please try again.');
+      const data = await response.json();
+
+      if (response.ok && data.success && data.data) {
+        storeAuthToken(data.data.token);
+        storeUserData(data.data.user);
+        router.push('/dashboard');
+      } else {
+        setError(data.error?.message || 'Login failed. Please try again.');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Network error. Please check your connection.');
     }
 
     setIsLoading(false);
   };
 
-  // Handle Google Sign-In
+  // Handle Google Sign-In - use backend Google auth
   const handleGoogleClick = async () => {
     setIsGoogleLoading(true);
     setError('');
 
-    const result = await loginWithGoogle();
+    try {
+      // Load Google Sign-In script dynamically
+      const { google } = window as any;
+      if (!google) {
+        // Load Google Identity Services
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
 
-    if (result.success && result.user && result.token) {
-      storeAuthToken(result.token);
-      storeUserData(result.user);
-      router.push('/dashboard');
-    } else {
-      setError(result.error || 'Google sign-in failed. Please try again.');
+        await new Promise((resolve) => {
+          script.onload = resolve;
+        });
+      }
+
+      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+      if (!clientId) {
+        setError('Google Sign-In is not configured.');
+        setIsGoogleLoading(false);
+        return;
+      }
+
+      // Initialize and prompt Google Sign-In
+      (window as any).google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (response: any) => {
+          try {
+            // Send credential to backend
+            const res = await fetch(getApiUrl('/api/auth/google'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ credential: response.credential }),
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success && data.data) {
+              storeAuthToken(data.data.token);
+              storeUserData(data.data.user);
+              router.push('/dashboard');
+            } else {
+              setError(data.error?.message || 'Google sign-in failed.');
+            }
+          } catch (err) {
+            console.error('Google auth error:', err);
+            setError('Google sign-in failed. Please try again.');
+          }
+          setIsGoogleLoading(false);
+        },
+      });
+
+      (window as any).google.accounts.id.prompt();
+    } catch (err) {
+      console.error('Google sign-in error:', err);
+      setError('Google sign-in failed. Please try again.');
+      setIsGoogleLoading(false);
     }
-
-    setIsGoogleLoading(false);
   };
 
   return (
