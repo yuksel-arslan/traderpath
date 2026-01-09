@@ -1,6 +1,6 @@
 // ===========================================
-// Next.js Middleware - Simple Cookie Check
-// Auth.js doesn't work well in Edge, use simple cookie check
+// Next.js Middleware - Cookie-based Auth Check
+// Simple and secure authentication middleware
 // ===========================================
 
 import { NextResponse } from 'next/server';
@@ -26,14 +26,9 @@ const authPaths = ['/login', '/register', '/forgot-password'];
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Check for Auth.js session cookie
-  // Auth.js uses 'authjs.session-token' or 'next-auth.session-token'
-  const sessionCookie = request.cookies.get('authjs.session-token') ||
-                        request.cookies.get('next-auth.session-token') ||
-                        request.cookies.get('__Secure-authjs.session-token') ||
-                        request.cookies.get('__Secure-next-auth.session-token');
-
-  const isLoggedIn = !!sessionCookie?.value;
+  // Check for our auth session cookie
+  const sessionCookie = request.cookies.get('auth-session');
+  const isLoggedIn = sessionCookie?.value === 'true';
 
   // Check if current path is protected
   const isProtected = protectedPaths.some(path =>

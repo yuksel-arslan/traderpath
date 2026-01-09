@@ -1,10 +1,9 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
@@ -26,7 +25,7 @@ import {
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TradePathLogo } from '../../components/common/TradePathLogo';
 import { cn } from '../../lib/utils';
-import { getApiUrl } from '../../lib/api';
+import { authFetch, clearAuthToken } from '../../lib/api';
 
 // Lazy load PriceTicker
 const PriceTicker = dynamic(
@@ -61,6 +60,15 @@ interface PriceAlert {
   createdAt: string;
 }
 
+// User type
+interface UserInfo {
+  id: string;
+  email: string;
+  name?: string;
+  image?: string;
+  isAdmin?: boolean;
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -68,29 +76,42 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
+  const [user, setUser] = useState<UserInfo | null>(null);
 
-  // Get admin status from session
-  const isAdmin = (session?.user as any)?.isAdmin || false;
+  // Fetch user info
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await authFetch('/api/users/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.data) {
+            setUser(data.data);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch user:', error);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  // Get admin status from user
+  const isAdmin = user?.isAdmin || false;
 
   // Fetch alerts for notification
   const { data: alertsData } = useQuery<PriceAlert[]>({
     queryKey: ['alerts-notifications'],
     queryFn: async () => {
-      if (!session) return [];
-
-      const res = await fetch(getApiUrl('/api/alerts'), {
-        credentials: 'include',
-      });
+      const res = await authFetch('/api/alerts');
       if (!res.ok) return [];
       const result = await res.json();
       const data = result.data;
       return Array.isArray(data) ? data : [];
     },
-    enabled: !!session,
     staleTime: 60 * 1000,
     refetchInterval: 60000,
     retry: false,
@@ -102,8 +123,14 @@ export default function DashboardLayout({
   const activeAlerts = alerts.filter((a: PriceAlert) => !a.triggered);
 
   const handleLogout = async () => {
-    await signOut({ redirect: false });
-    router.push('/');
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      clearAuthToken();
+      router.push('/');
+      router.refresh();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
@@ -279,8 +306,8 @@ export default function DashboardLayout({
                   className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent"
                 >
                   <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center">
-                    {session?.user?.image ? (
-                      <img src={session.user.image} alt="" className="w-8 h-8 rounded-full" />
+                    {user?.image ? (
+                      <img src={user.image} alt="" className="w-8 h-8 rounded-full" />
                     ) : (
                       <User className="w-4 h-4 text-primary-foreground" />
                     )}
@@ -296,10 +323,10 @@ export default function DashboardLayout({
                   <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                   <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
                     {/* User info */}
-                    {session?.user && (
+                    {user && (
                       <div className="p-3 border-b border-border">
-                        <p className="text-sm font-medium truncate">{session.user.name || 'User'}</p>
-                        <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
+                        <p className="text-sm font-medium truncate">{user.name || 'User'}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                       </div>
                     )}
                     {/* Settings & Admin (Admin only visible for admins) */}

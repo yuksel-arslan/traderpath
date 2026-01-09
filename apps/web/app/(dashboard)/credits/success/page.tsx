@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle, Loader2, XCircle, ArrowRight, Gem } from 'lucide-react';
-import { authFetch } from '../../../lib/api';
+import { authFetch } from '../../../../lib/api';
 
 interface SessionStatus {
   status: string;

@@ -1,20 +1,20 @@
 // ===========================================
 // Auth Token Hook
-// Provides the Auth.js JWT for API calls
+// Provides the JWT token for API calls
 // ===========================================
 
-import { useSession } from 'next-auth/react';
 import { useCallback, useEffect, useState } from 'react';
 
 let cachedToken: string | null = null;
 let tokenFetchPromise: Promise<string | null> | null = null;
 
 /**
- * Hook to get the Auth.js JWT token for API calls
+ * Hook to get the JWT token for API calls
  */
 export function useAuthToken() {
-  const { data: session, status } = useSession();
   const [token, setToken] = useState<string | null>(cachedToken);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const fetchToken = useCallback(async () => {
     // If already fetching, wait for that promise
@@ -50,13 +50,25 @@ export function useAuthToken() {
   }, []);
 
   useEffect(() => {
-    if (status === 'authenticated' && session && !token) {
-      fetchToken().then(setToken);
-    } else if (status === 'unauthenticated') {
+    // Check if user has auth-session cookie
+    const hasSession = document.cookie.includes('auth-session=true');
+
+    if (hasSession && !token) {
+      fetchToken().then((t) => {
+        setToken(t);
+        setIsAuthenticated(!!t);
+        setIsLoading(false);
+      });
+    } else if (!hasSession) {
       cachedToken = null;
       setToken(null);
+      setIsAuthenticated(false);
+      setIsLoading(false);
+    } else {
+      setIsAuthenticated(!!token);
+      setIsLoading(false);
     }
-  }, [status, session, token, fetchToken]);
+  }, [token, fetchToken]);
 
   // Return a function that gets the token (refreshing if needed)
   const getToken = useCallback(async (): Promise<string | null> => {
@@ -67,8 +79,8 @@ export function useAuthToken() {
   return {
     token,
     getToken,
-    isLoading: status === 'loading',
-    isAuthenticated: status === 'authenticated',
+    isLoading,
+    isAuthenticated,
   };
 }
 

@@ -16,7 +16,7 @@ import {
   Star,
 } from 'lucide-react';
 import Link from 'next/link';
-import { authFetch } from '../../../lib/api';
+import { authFetch } from '../../../../lib/api';
 
 interface CreditPackage {
   id: string;
