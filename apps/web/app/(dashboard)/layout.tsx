@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -76,34 +76,17 @@ export default function DashboardLayout({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
 
-  // Get token once for all queries
-  const [token, setToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Get token on mount
-    const storedToken = localStorage.getItem('accessToken');
-    setToken(storedToken);
-
-    // Listen for storage changes (e.g., login in another tab)
-    const handleStorage = () => {
-      setToken(localStorage.getItem('accessToken'));
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+  // Get token directly from localStorage - simpler and more reliable
+  const getToken = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('accessToken');
   }, []);
-
-  // Also check token on pathname change (after login redirect)
-  useEffect(() => {
-    const storedToken = localStorage.getItem('accessToken');
-    if (storedToken && storedToken !== token) {
-      setToken(storedToken);
-    }
-  }, [pathname, token]);
 
   // Fetch user profile to check admin status
   const { data: userData } = useQuery<UserProfile>({
-    queryKey: ['user-profile-nav', token],
+    queryKey: ['user-profile-nav'],
     queryFn: async () => {
+      const token = getToken();
       if (!token) return { isAdmin: false };
 
       const res = await fetch(getApiUrl('/api/auth/me'), {
@@ -113,17 +96,17 @@ export default function DashboardLayout({
       const result = await res.json();
       return { isAdmin: result.data?.user?.isAdmin || false };
     },
-    enabled: !!token,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     retry: false,
   });
 
   const isAdmin = userData?.isAdmin || false;
 
-  // Fetch alerts for notification
+  // Fetch alerts for notification - less frequent refresh
   const { data: alertsData } = useQuery<PriceAlert[]>({
-    queryKey: ['alerts-notifications', token],
+    queryKey: ['alerts-notifications'],
     queryFn: async () => {
+      const token = getToken();
       if (!token) return [];
 
       const res = await fetch(getApiUrl('/api/alerts'), {
@@ -131,12 +114,11 @@ export default function DashboardLayout({
       });
       if (!res.ok) return [];
       const result = await res.json();
-      // Handle both array and object responses
       const data = result.data;
       return Array.isArray(data) ? data : [];
     },
-    enabled: !!token,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    staleTime: 60 * 1000, // Cache for 1 minute
+    refetchInterval: 60000, // Refresh every 60 seconds
     retry: false,
   });
 
