@@ -62,6 +62,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Send to backend for OAuth login/register
+    console.log('Sending to backend:', { API_URL, email: googleUser.email, providerId: googleUser.id });
+
     const backendResponse = await fetch(`${API_URL}/api/auth/oauth`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -75,10 +77,12 @@ export async function GET(request: NextRequest) {
     });
 
     const backendData = await backendResponse.json();
+    console.log('Backend response:', { status: backendResponse.status, data: backendData });
 
     if (!backendResponse.ok || !backendData.success) {
       console.error('Backend OAuth failed:', backendData);
-      return NextResponse.redirect(new URL('/login?error=backend_error', baseUrl));
+      const errorCode = backendData.error?.code || 'backend_error';
+      return NextResponse.redirect(new URL(`/login?error=${errorCode}`, baseUrl));
     }
 
     const { accessToken } = backendData.data || {};
