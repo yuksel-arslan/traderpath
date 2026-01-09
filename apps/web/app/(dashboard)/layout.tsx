@@ -1,9 +1,10 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
@@ -21,7 +22,6 @@ import {
   Server,
   Brain,
   TrendingDown,
-  Clock,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TradePathLogo } from '../../components/common/TradePathLogo';
@@ -34,7 +34,7 @@ const PriceTicker = dynamic(
   { ssr: false, loading: () => <div className="w-full h-10 bg-card/50 border-b border-border/50" /> }
 );
 
-// Ana navigasyon öğeleri - Tüm linkler görünür
+// Main navigation items
 const mainNav = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
@@ -61,10 +61,6 @@ interface PriceAlert {
   createdAt: string;
 }
 
-interface UserProfile {
-  isAdmin: boolean;
-}
-
 export default function DashboardLayout({
   children,
 }: {
@@ -72,53 +68,31 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
 
-  // Get token directly from localStorage - simpler and more reliable
-  const getToken = useCallback(() => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('accessToken');
-  }, []);
+  // Get admin status from session
+  const isAdmin = (session?.user as any)?.isAdmin || false;
 
-  // Fetch user profile to check admin status
-  const { data: userData } = useQuery<UserProfile>({
-    queryKey: ['user-profile-nav'],
-    queryFn: async () => {
-      const token = getToken();
-      if (!token) return { isAdmin: false };
-
-      const res = await fetch(getApiUrl('/api/auth/me'), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return { isAdmin: false };
-      const result = await res.json();
-      return { isAdmin: result.data?.user?.isAdmin || false };
-    },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    retry: false,
-  });
-
-  const isAdmin = userData?.isAdmin || false;
-
-  // Fetch alerts for notification - less frequent refresh
+  // Fetch alerts for notification
   const { data: alertsData } = useQuery<PriceAlert[]>({
     queryKey: ['alerts-notifications'],
     queryFn: async () => {
-      const token = getToken();
-      if (!token) return [];
+      if (!session) return [];
 
       const res = await fetch(getApiUrl('/api/alerts'), {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       if (!res.ok) return [];
       const result = await res.json();
       const data = result.data;
       return Array.isArray(data) ? data : [];
     },
-    staleTime: 60 * 1000, // Cache for 1 minute
-    refetchInterval: 60000, // Refresh every 60 seconds
+    enabled: !!session,
+    staleTime: 60 * 1000,
+    refetchInterval: 60000,
     retry: false,
   });
 
@@ -127,17 +101,16 @@ export default function DashboardLayout({
   const triggeredAlerts = alerts.filter((a: PriceAlert) => a.triggered);
   const activeAlerts = alerts.filter((a: PriceAlert) => !a.triggered);
 
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('accessToken');
-    document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
     router.push('/');
-  }, [router]);
+  };
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Price Ticker - En üstte */}
+      {/* Price Ticker */}
       <PriceTicker />
 
       {/* Header */}
@@ -306,7 +279,11 @@ export default function DashboardLayout({
                   className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent"
                 >
                   <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center">
-                    <User className="w-4 h-4 text-primary-foreground" />
+                    {session?.user?.image ? (
+                      <img src={session.user.image} alt="" className="w-8 h-8 rounded-full" />
+                    ) : (
+                      <User className="w-4 h-4 text-primary-foreground" />
+                    )}
                   </div>
                   <ChevronDown className={cn(
                     "w-4 h-4 text-muted-foreground transition-transform hidden sm:block",
@@ -318,6 +295,13 @@ export default function DashboardLayout({
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                   <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                    {/* User info */}
+                    {session?.user && (
+                      <div className="p-3 border-b border-border">
+                        <p className="text-sm font-medium truncate">{session.user.name || 'User'}</p>
+                        <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
+                      </div>
+                    )}
                     {/* Settings & Admin (Admin only visible for admins) */}
                     <div className="p-2 border-b border-border">
                       {userMenuNav

@@ -1,10 +1,8 @@
 // ===========================================
-// Next.js Middleware
-// Protects dashboard routes - redirects to welcome page if not authenticated
+// Next.js Middleware with Auth.js
 // ===========================================
 
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { auth } from '@/auth';
 
 // Routes that require authentication
 const protectedRoutes = [
@@ -23,43 +21,9 @@ const protectedRoutes = [
 // Routes that should redirect to dashboard if already authenticated
 const authRoutes = ['/login', '/register', '/forgot-password'];
 
-// Helper to check if token is present (basic validation)
-function hasValidToken(request: NextRequest): boolean {
-  const accessToken = request.cookies.get('accessToken')?.value;
-
-  if (!accessToken) {
-    return false;
-  }
-
-  // Basic JWT format validation (should have 3 parts separated by dots)
-  const parts = accessToken.split('.');
-  if (parts.length !== 3) {
-    return false;
-  }
-
-  // Check if token is not expired (basic check)
-  try {
-    // Decode the payload part (middle section)
-    const payload = JSON.parse(
-      Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()
-    );
-
-    // Check expiration
-    if (payload.exp && payload.exp * 1000 < Date.now()) {
-      return false;
-    }
-
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Get token validity
-  const isAuthenticated = hasValidToken(request);
+export default auth((req) => {
+  const { pathname } = req.nextUrl;
+  const isAuthenticated = !!req.auth;
 
   // Check if current path is protected
   const isProtectedRoute = protectedRoutes.some(
@@ -71,21 +35,18 @@ export function middleware(request: NextRequest) {
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 
-  // Redirect to welcome page if accessing protected route without valid token
+  // Redirect to login if accessing protected route without authentication
   if (isProtectedRoute && !isAuthenticated) {
-    // Clear invalid token cookie
-    const response = NextResponse.redirect(new URL('/', request.url));
-    response.cookies.delete('accessToken');
-    return response;
+    const loginUrl = new URL('/login', req.url);
+    return Response.redirect(loginUrl);
   }
 
-  // Redirect to dashboard if accessing auth route with valid token
+  // Redirect to dashboard if accessing auth route while authenticated
   if (isAuthRoute && isAuthenticated) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    const dashboardUrl = new URL('/dashboard', req.url);
+    return Response.redirect(dashboardUrl);
   }
-
-  return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: [
@@ -95,8 +56,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
-     * - api routes (handled by backend)
+     * - api/auth (Auth.js routes)
      */
-    '/((?!_next/static|_next/image|favicon.ico|public|api).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public|api/auth).*)',
   ],
 };

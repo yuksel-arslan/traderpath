@@ -1,28 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
-import { getApiUrl } from '@/lib/api';
-
-// Helper to store auth token securely
-function storeAuthToken(token: string) {
-  localStorage.setItem('accessToken', token);
-  // Set cookie with secure flags
-  const isSecure = window.location.protocol === 'https:';
-  document.cookie = `accessToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax${isSecure ? '; Secure' : ''}`;
-}
-
-// Helper to store user data
-function storeUserData(user: { id: string; email: string; name: string | null; avatarUrl?: string | null }) {
-  localStorage.setItem('user', JSON.stringify({
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    avatarUrl: user.avatarUrl,
-  }));
-}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,14 +17,22 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Check for success messages from registration
+  // Check for success/error messages from URL
   useEffect(() => {
     if (searchParams.get('registered') === 'true') {
       setSuccessMessage('Account created successfully! Please sign in.');
     }
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      if (errorParam === 'CredentialsSignin') {
+        setError('Invalid email or password');
+      } else {
+        setError('An error occurred. Please try again.');
+      }
+    }
   }, [searchParams]);
 
-  // Handle form submission - call backend API
+  // Handle form submission with Auth.js
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -50,90 +40,33 @@ export default function LoginPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(getApiUrl('/api/auth/login'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          password,
-        }),
+      const result = await signIn('credentials', {
+        email: email.trim().toLowerCase(),
+        password,
+        redirect: false,
       });
 
-      const data = await response.json();
-
-      if (response.ok && data.success && data.data) {
-        storeAuthToken(data.data.token);
-        storeUserData(data.data.user);
+      if (result?.error) {
+        setError(result.error === 'CredentialsSignin' ? 'Invalid email or password' : result.error);
+      } else if (result?.ok) {
         router.push('/dashboard');
-      } else {
-        setError(data.error?.message || 'Login failed. Please try again.');
+        router.refresh();
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError('Network error. Please check your connection.');
+      setError('Network error. Please try again.');
     }
 
     setIsLoading(false);
   };
 
-  // Handle Google Sign-In - use backend Google auth
+  // Handle Google Sign-In
   const handleGoogleClick = async () => {
     setIsGoogleLoading(true);
     setError('');
 
     try {
-      // Load Google Sign-In script dynamically
-      const { google } = window as any;
-      if (!google) {
-        // Load Google Identity Services
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true;
-        script.defer = true;
-        document.head.appendChild(script);
-
-        await new Promise((resolve) => {
-          script.onload = resolve;
-        });
-      }
-
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-      if (!clientId) {
-        setError('Google Sign-In is not configured.');
-        setIsGoogleLoading(false);
-        return;
-      }
-
-      // Initialize and prompt Google Sign-In
-      (window as any).google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async (response: any) => {
-          try {
-            // Send credential to backend
-            const res = await fetch(getApiUrl('/api/auth/google'), {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ credential: response.credential }),
-            });
-
-            const data = await res.json();
-
-            if (res.ok && data.success && data.data) {
-              storeAuthToken(data.data.token);
-              storeUserData(data.data.user);
-              router.push('/dashboard');
-            } else {
-              setError(data.error?.message || 'Google sign-in failed.');
-            }
-          } catch (err) {
-            console.error('Google auth error:', err);
-            setError('Google sign-in failed. Please try again.');
-          }
-          setIsGoogleLoading(false);
-        },
-      });
-
-      (window as any).google.accounts.id.prompt();
+      await signIn('google', { callbackUrl: '/dashboard' });
     } catch (err) {
       console.error('Google sign-in error:', err);
       setError('Google sign-in failed. Please try again.');
@@ -192,7 +125,7 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="********"
                   required
                   autoComplete="current-password"
                   className="w-full pl-10 pr-10 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"

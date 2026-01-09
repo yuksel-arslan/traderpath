@@ -1,27 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, User, Eye, EyeOff, Loader2, Gift, Check, X } from 'lucide-react';
-import { getApiUrl } from '@/lib/api';
-
-// Helper to store auth token securely
-function storeAuthToken(token: string) {
-  localStorage.setItem('accessToken', token);
-  const isSecure = window.location.protocol === 'https:';
-  document.cookie = `accessToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax${isSecure ? '; Secure' : ''}`;
-}
-
-// Helper to store user data
-function storeUserData(user: { id: string; email: string; name: string | null; avatarUrl?: string | null }) {
-  localStorage.setItem('user', JSON.stringify({
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    avatarUrl: user.avatarUrl,
-  }));
-}
 
 // Password strength checker
 function getPasswordStrength(password: string): { score: number; checks: { hasLength: boolean; hasUpper: boolean; hasLower: boolean; hasNumber: boolean } } {
@@ -66,7 +49,8 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      const response = await fetch(getApiUrl('/api/auth/register'), {
+      // Register via our API
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -79,10 +63,9 @@ export default function RegisterPage() {
 
       const data = await response.json();
 
-      if (response.ok && data.success && data.data) {
-        storeAuthToken(data.data.token);
-        storeUserData(data.data.user);
-        router.push('/dashboard');
+      if (response.ok && data.success) {
+        // Redirect to login with success message
+        router.push('/login?registered=true');
       } else {
         setError(data.error?.message || 'Registration failed. Please try again.');
       }
@@ -99,56 +82,7 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      // Load Google Sign-In script dynamically
-      const { google } = window as any;
-      if (!google) {
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true;
-        script.defer = true;
-        document.head.appendChild(script);
-
-        await new Promise((resolve) => {
-          script.onload = resolve;
-        });
-      }
-
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-      if (!clientId) {
-        setError('Google Sign-In is not configured.');
-        setIsGoogleLoading(false);
-        return;
-      }
-
-      // Initialize and prompt Google Sign-In
-      (window as any).google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async (response: any) => {
-          try {
-            const res = await fetch(getApiUrl('/api/auth/google'), {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ credential: response.credential }),
-            });
-
-            const data = await res.json();
-
-            if (res.ok && data.success && data.data) {
-              storeAuthToken(data.data.token);
-              storeUserData(data.data.user);
-              router.push('/dashboard');
-            } else {
-              setError(data.error?.message || 'Google sign-up failed.');
-            }
-          } catch (err) {
-            console.error('Google auth error:', err);
-            setError('Google sign-up failed. Please try again.');
-          }
-          setIsGoogleLoading(false);
-        },
-      });
-
-      (window as any).google.accounts.id.prompt();
+      await signIn('google', { callbackUrl: '/dashboard' });
     } catch (err) {
       console.error('Google sign-up error:', err);
       setError('Google sign-up failed. Please try again.');

@@ -3,11 +3,48 @@
 // ===========================================
 
 import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting database seed...');
+
+  // Seed Admin User
+  const adminEmail = 'contact@yukselarslan.com';
+  const adminPassword = 'Admin123!'; // Change this after first login!
+
+  const existingAdmin = await prisma.user.findUnique({
+    where: { email: adminEmail },
+  });
+
+  if (!existingAdmin) {
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    const admin = await prisma.user.create({
+      data: {
+        email: adminEmail,
+        name: 'Admin',
+        password: hashedPassword,
+        creditBalance: {
+          create: {
+            balance: 10000,
+            freeAnalysesRemaining: 99,
+            freeAnalysesTotal: 99,
+          },
+        },
+      },
+    });
+    console.log(`✅ Created admin user: ${admin.email}`);
+    console.log(`   Password: ${adminPassword}`);
+  } else {
+    // Update password if user exists
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    await prisma.user.update({
+      where: { email: adminEmail },
+      data: { password: hashedPassword },
+    });
+    console.log(`✅ Updated admin password for: ${adminEmail}`);
+  }
 
   // Seed Credit Packages
   const packages = [
