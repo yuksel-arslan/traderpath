@@ -33,12 +33,16 @@ const nextConfig = {
         destination: 'http://127.0.0.1:4000/api/auth/google',
       },
       {
-        source: '/api/users/:path*',
-        destination: 'http://127.0.0.1:4000/api/users/:path*',
+        source: '/api/user/:path*',
+        destination: 'http://127.0.0.1:4000/api/user/:path*',
       },
       {
-        source: '/api/analyses/:path*',
-        destination: 'http://127.0.0.1:4000/api/analyses/:path*',
+        source: '/api/analysis/:path*',
+        destination: 'http://127.0.0.1:4000/api/analysis/:path*',
+      },
+      {
+        source: '/api/reports/:path*',
+        destination: 'http://127.0.0.1:4000/api/reports/:path*',
       },
       {
         source: '/api/analysis/:path*',

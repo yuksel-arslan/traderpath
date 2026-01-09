@@ -1,11 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRewardsStore } from '../stores/useRewardsStore';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+// Use relative URLs to leverage Next.js rewrites in development
+// In production, getApiUrl handles the API_URL prefix
+const getApiUrl = (url: string): string => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (apiUrl && process.env.NODE_ENV === 'production') {
+    return `${apiUrl}${url}`;
+  }
+  return url;
+};
 
 async function fetchWithAuth(url: string, options: RequestInit = {}) {
   const token = localStorage.getItem('accessToken');
-  const res = await fetch(`${API_URL}${url}`, {
+  const res = await fetch(getApiUrl(url), {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -150,7 +158,7 @@ export function useUserLevel() {
   return useQuery({
     queryKey: ['user', 'level'],
     queryFn: async () => {
-      const res = await fetchWithAuth('/api/users/me');
+      const res = await fetchWithAuth('/api/user/me');
       return res.data;
     },
     staleTime: 1000 * 60 * 5,
