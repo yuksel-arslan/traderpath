@@ -471,6 +471,117 @@ export default async function authRoutesPg(app: FastifyInstance) {
   });
 
   /**
+   * POST /api/auth/oauth
+   * OAuth login/register (for redirect-based OAuth flow)
+   */
+  const oauthSchema = z.object({
+    provider: z.string(),
+    providerId: z.string(),
+    email: z.string().email(),
+    name: z.string().optional(),
+    image: z.string().optional(),
+  });
+
+  app.post('/oauth', async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const body = oauthSchema.parse(request.body);
+      const { provider, providerId, email, name, image } = body;
+
+      // Check if user exists by provider ID or email
+      let user = provider === 'google'
+        ? await pgDb.users.findByGoogleId(providerId)
+        : null;
+      let isNewUser = false;
+
+      if (!user) {
+        // Check by email
+        user = await pgDb.users.findByEmail(email);
+
+        if (user) {
+          // Link OAuth account to existing user
+          if (provider === 'google') {
+            await pgDb.query(
+              `UPDATE users SET google_id = $1, avatar_url = COALESCE(avatar_url, $2), updated_at = NOW() WHERE id = $3`,
+              [providerId, image, user.id]
+            );
+          }
+        } else {
+          // Create new user
+          isNewUser = true;
+          const referralCode = nanoid(8).toUpperCase();
+
+          user = await transaction(async (client) => {
+            const { rows: [newUser] } = await client.query(
+              `INSERT INTO users (email, name, google_id, avatar_url, referral_code)
+               VALUES (LOWER($1), $2, $3, $4, $5)
+               RETURNING *`,
+              [email, name || email.split('@')[0], provider === 'google' ? providerId : null, image, referralCode]
+            );
+
+            const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
+            await client.query(
+              `INSERT INTO credit_balances (user_id, balance, lifetime_earned)
+               VALUES ($1, $2, $2)`,
+              [newUser.id, isAdmin ? 999999 : 25]
+            );
+
+            return newUser;
+          });
+        }
+      }
+
+      // Update last login
+      await pgDb.users.updateLastLogin(user.id);
+
+      // Get current credit balance
+      const creditBalance = await pgDb.credits.getBalance(user.id);
+
+      // Generate JWT token
+      const token = app.jwt.sign(
+        { id: user.id },
+        { expiresIn: config.jwtExpiresIn }
+      );
+
+      const isAdmin = ADMIN_EMAILS.includes(user.email);
+
+      return reply.send({
+        success: true,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            level: user.level || 1,
+            avatarUrl: user.avatar_url || image,
+            isAdmin,
+          },
+          accessToken: token,
+          credits: isAdmin ? 999999 : creditBalance?.balance || 25,
+          isNewUser,
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: error.errors[0]?.message || 'Invalid input',
+          },
+        });
+      }
+      console.error('OAuth error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: {
+          code: 'SERVER_ERROR',
+          message: 'An error occurred during OAuth sign-in',
+        },
+      });
+    }
+  });
+
+  /**
    * POST /api/auth/logout
    * Logout (client-side token removal acknowledgment)
    */
