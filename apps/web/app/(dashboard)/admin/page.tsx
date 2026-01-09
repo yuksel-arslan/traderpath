@@ -26,9 +26,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import Link from 'next/link';
-
-// API URL configuration
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+import { authFetch } from '../../../lib/api';
 
 interface HealthCheck {
   status: 'healthy' | 'degraded' | 'down';
@@ -151,21 +149,11 @@ export default function AdminPage() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('accessToken');
-      // Note: Middleware handles authentication redirect
-      if (!token) {
-        setError('Authentication required. Please log in.');
-        setIsLoading(false);
-        return;
-      }
-
-      const headers = { 'Authorization': `Bearer ${token}` };
-
       const [healthRes, systemRes, statsRes, activityRes] = await Promise.all([
-        fetch(`${API_URL}/api/admin/health`, { headers }),
-        fetch(`${API_URL}/api/admin/system`, { headers }),
-        fetch(`${API_URL}/api/admin/stats`, { headers }),
-        fetch(`${API_URL}/api/admin/activity`, { headers }),
+        authFetch('/api/admin/health'),
+        authFetch('/api/admin/system'),
+        authFetch('/api/admin/stats'),
+        authFetch('/api/admin/activity'),
       ]);
 
       if (healthRes.status === 403) {
@@ -200,18 +188,13 @@ export default function AdminPage() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
       const params = new URLSearchParams({
         limit: '20',
         offset: String(userPage * 20),
         search: userSearch,
       });
 
-      const response = await fetch(`${API_URL}/api/admin/users?${params}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await authFetch(`/api/admin/users?${params}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -241,12 +224,7 @@ export default function AdminPage() {
   // Fetch credit costs
   const fetchCreditCosts = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
-      const response = await fetch(`${API_URL}/api/admin/credit-costs`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await authFetch('/api/admin/credit-costs');
 
       if (response.ok) {
         const data = await response.json();
@@ -266,15 +244,8 @@ export default function AdminPage() {
     setCostsSaved(false);
 
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
-      const response = await fetch(`${API_URL}/api/admin/credit-costs`, {
+      const response = await authFetch('/api/admin/credit-costs', {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(editingCosts),
       });
 
@@ -298,12 +269,8 @@ export default function AdminPage() {
 
     setSavingCosts(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
-      const response = await fetch(`${API_URL}/api/admin/credit-costs/reset`, {
+      const response = await authFetch('/api/admin/credit-costs/reset', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
       });
 
       if (response.ok) {
@@ -324,10 +291,8 @@ export default function AdminPage() {
     }
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_URL}/api/admin/maintenance/cleanup`, {
+      const response = await authFetch('/api/admin/maintenance/cleanup', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
       });
 
       if (response.ok) {
@@ -347,13 +312,8 @@ export default function AdminPage() {
     }
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_URL}/api/admin/cache/clear`, {
+      const response = await authFetch('/api/admin/cache/clear', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ pattern: '*' }),
       });
 

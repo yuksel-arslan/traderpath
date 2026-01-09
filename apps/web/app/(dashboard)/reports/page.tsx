@@ -35,6 +35,7 @@ import {
   ArrowDown,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
+import { authFetch } from '../../../lib/api';
 
 interface Report {
   id: string;
@@ -209,15 +210,7 @@ export default function ReportsPage() {
   const fetchReports = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
-      const response = await fetch(`/api/reports?limit=${pagination.limit}&offset=${pagination.offset}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await authFetch(`/api/reports?limit=${pagination.limit}&offset=${pagination.offset}`);
 
       if (response.ok) {
         const data: ReportsResponse = await response.json();
@@ -244,12 +237,8 @@ export default function ReportsPage() {
     if (!confirm('Are you sure you want to delete this report?')) return;
 
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
-      const response = await fetch(`/api/reports/${id}`, {
+      const response = await authFetch(`/api/reports/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
       });
 
       if (response.ok) {
@@ -262,13 +251,8 @@ export default function ReportsPage() {
 
   const handleDownload = async (report: Report) => {
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
       // Fetch full report data
-      const response = await fetch(`/api/reports/${report.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await authFetch(`/api/reports/${report.id}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -292,13 +276,8 @@ export default function ReportsPage() {
     }
 
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
       // Fetch full report data to build context
-      const response = await fetch(`/api/reports/${report.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await authFetch(`/api/reports/${report.id}`);
 
       if (response.ok) {
         const data = await response.json();

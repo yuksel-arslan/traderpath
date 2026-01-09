@@ -9,6 +9,66 @@ const API_BASE_URL = process.env.NODE_ENV === 'production'
   ? (process.env.NEXT_PUBLIC_API_URL || '')
   : '';
 
+// Token cache for API calls
+let authTokenCache: string | null = null;
+let tokenFetchPromise: Promise<string | null> | null = null;
+
+/**
+ * Get the Auth.js JWT token for API calls
+ */
+export async function getAuthToken(): Promise<string | null> {
+  // Return cached token if available
+  if (authTokenCache) return authTokenCache;
+
+  // If already fetching, wait for that
+  if (tokenFetchPromise) return tokenFetchPromise;
+
+  // Fetch new token
+  tokenFetchPromise = fetch('/api/token')
+    .then(async (res) => {
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data.success && data.data?.token) {
+        authTokenCache = data.data.token;
+        return authTokenCache;
+      }
+      return null;
+    })
+    .catch(() => null)
+    .finally(() => {
+      tokenFetchPromise = null;
+    });
+
+  return tokenFetchPromise;
+}
+
+/**
+ * Clear the auth token cache (call on logout)
+ */
+export function clearAuthToken() {
+  authTokenCache = null;
+}
+
+/**
+ * Authenticated fetch wrapper - automatically adds Auth.js token
+ */
+export async function authFetch(url: string, options?: RequestInit): Promise<Response> {
+  const token = await getAuthToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options?.headers,
+  };
+
+  if (token) {
+    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+  }
+
+  return fetch(getApiUrl(url), {
+    ...options,
+    headers,
+  });
+}
+
 interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;

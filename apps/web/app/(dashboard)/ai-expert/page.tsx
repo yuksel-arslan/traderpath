@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '../../../lib/utils';
-import { getApiUrl } from '../../../lib/api';
+import { authFetch } from '../../../lib/api';
 
 // AI Expert definitions - World-Class Professionals
 const AI_EXPERTS = [
@@ -126,12 +126,7 @@ export default function AIExpertsPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return;
-
-        const res = await fetch(getApiUrl('/api/ai-expert/stats'), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await authFetch('/api/ai-expert/stats');
         if (res.ok) {
           const data = await res.json();
           setExpertStats(data.data || data);
@@ -148,12 +143,7 @@ export default function AIExpertsPage() {
   const { data: credits } = useQuery({
     queryKey: ['credits'],
     queryFn: async () => {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return { balance: 0 };
-
-      const res = await fetch(getApiUrl('/api/credits/balance'), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await authFetch('/api/credits/balance');
       const result = await res.json();
       return result.data || { balance: 0 };
     },
@@ -163,12 +153,7 @@ export default function AIExpertsPage() {
   const { data: user } = useQuery({
     queryKey: ['user'],
     queryFn: async () => {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return { isAdmin: false };
-
-      const res = await fetch(getApiUrl('/api/auth/me'), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await authFetch('/api/auth/me');
       const result = await res.json();
       return result.data?.user || { isAdmin: false };
     },

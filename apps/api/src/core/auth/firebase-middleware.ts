@@ -1,42 +1,60 @@
 // ===========================================
-// Firebase Authentication Middleware
-// Verifies Firebase ID tokens
+// Authentication Middleware
+// Verifies Auth.js JWT tokens
 // ===========================================
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../database';
+import * as jose from 'jose';
 
 // Admin emails with free unlimited access
 const ADMIN_EMAILS = ['contact@yukselarslan.com'];
 
-// User type is declared in src/index.ts
+// Auth.js secret for JWT verification
+const AUTH_SECRET = process.env.AUTH_SECRET || '';
 
 /**
- * Decode Firebase ID token (without verification for development)
- * In production, use firebase-admin to properly verify tokens
+ * Verify and decode Auth.js JWT token
  */
-function decodeFirebaseToken(token: string): { uid: string; email?: string; name?: string } | null {
+async function verifyAuthJsToken(token: string): Promise<{ id: string; email?: string; name?: string; isAdmin?: boolean } | null> {
   try {
-    // Firebase ID tokens are JWTs with 3 parts
+    // Auth.js uses a specific JWT format
+    // First try to decode as Auth.js token
+    if (AUTH_SECRET) {
+      const secret = new TextEncoder().encode(AUTH_SECRET);
+      const { payload } = await jose.jwtVerify(token, secret, {
+        algorithms: ['HS256'],
+      });
+
+      return {
+        id: (payload.id as string) || (payload.sub as string),
+        email: payload.email as string,
+        name: payload.name as string,
+        isAdmin: payload.isAdmin as boolean,
+      };
+    }
+
+    // Fallback: decode without verification (development only)
     const parts = token.split('.');
     if (parts.length !== 3) return null;
 
-    // Decode the payload (second part)
     const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
 
     return {
-      uid: payload.user_id || payload.sub,
+      id: payload.id || payload.sub || payload.user_id,
       email: payload.email,
       name: payload.name,
+      isAdmin: payload.isAdmin,
     };
-  } catch {
+  } catch (e) {
+    console.error('Token verification error:', e);
     return null;
   }
 }
 
 /**
- * Firebase Authentication middleware
- * Verifies Firebase ID token and attaches user to request
+ * Authentication middleware
+ * Verifies JWT token and attaches user to request
  */
 export async function firebaseAuth(
   request: FastifyRequest,
@@ -57,24 +75,24 @@ export async function firebaseAuth(
 
     const token = authHeader.substring(7);
 
-    // Decode Firebase token
-    const decoded = decodeFirebaseToken(token);
-    if (!decoded || !decoded.uid) {
+    // Verify and decode token
+    const decoded = await verifyAuthJsToken(token);
+    if (!decoded || (!decoded.id && !decoded.email)) {
       return reply.status(401).send({
         success: false,
         error: {
           code: 'AUTH_002',
-          message: 'Invalid token format',
+          message: 'Invalid token',
         },
       });
     }
 
-    // Try to find user by Firebase UID or email
+    // Find user by ID or email
     let user = await prisma.user.findFirst({
       where: {
         OR: [
-          { googleId: decoded.uid },
-          { email: decoded.email },
+          ...(decoded.id ? [{ id: decoded.id }] : []),
+          ...(decoded.email ? [{ email: decoded.email }] : []),
         ],
       },
       select: {
@@ -82,39 +100,9 @@ export async function firebaseAuth(
         email: true,
         name: true,
         level: true,
+        isAdmin: true,
       },
     });
-
-    // If user doesn't exist, create them (auto-registration)
-    if (!user && decoded.email) {
-      user = await prisma.user.create({
-        data: {
-          email: decoded.email,
-          name: decoded.name || decoded.email.split('@')[0],
-          googleId: decoded.uid,
-          password: '', // No password for Firebase users
-          level: 1,
-        },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          level: true,
-        },
-      });
-
-      // Create initial credit balance
-      try {
-        await prisma.creditBalance.create({
-          data: {
-            userId: user.id,
-            balance: 25, // Welcome credits
-          },
-        });
-      } catch {
-        // Credit balance might already exist
-      }
-    }
 
     if (!user) {
       return reply.status(401).send({
@@ -126,13 +114,17 @@ export async function firebaseAuth(
       });
     }
 
-    // Check if user is admin
-    const isAdmin = ADMIN_EMAILS.includes(user.email);
+    // Check if user is admin (from DB or hardcoded list)
+    const isAdmin = user.isAdmin || ADMIN_EMAILS.includes(user.email);
 
     // Attach user to request
-    request.user = { ...user, isAdmin, firebaseUid: decoded.uid };
+    request.user = {
+      ...user,
+      isAdmin,
+      firebaseUid: decoded.id, // Keep for backward compatibility
+    };
   } catch (error) {
-    console.error('Firebase auth error:', error);
+    console.error('Auth error:', error);
     return reply.status(401).send({
       success: false,
       error: {
@@ -144,7 +136,7 @@ export async function firebaseAuth(
 }
 
 /**
- * Optional Firebase authentication middleware
+ * Optional authentication middleware
  * Attaches user if token is valid, but doesn't require it
  */
 export async function optionalFirebaseAuth(
@@ -158,17 +150,17 @@ export async function optionalFirebaseAuth(
     }
 
     const token = authHeader.substring(7);
-    const decoded = decodeFirebaseToken(token);
+    const decoded = await verifyAuthJsToken(token);
 
-    if (!decoded || !decoded.uid) {
+    if (!decoded || (!decoded.id && !decoded.email)) {
       return;
     }
 
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          { googleId: decoded.uid },
-          { email: decoded.email },
+          ...(decoded.id ? [{ id: decoded.id }] : []),
+          ...(decoded.email ? [{ email: decoded.email }] : []),
         ],
       },
       select: {
@@ -176,12 +168,17 @@ export async function optionalFirebaseAuth(
         email: true,
         name: true,
         level: true,
+        isAdmin: true,
       },
     });
 
     if (user) {
-      const isAdmin = ADMIN_EMAILS.includes(user.email);
-      request.user = { ...user, isAdmin, firebaseUid: decoded.uid };
+      const isAdmin = user.isAdmin || ADMIN_EMAILS.includes(user.email);
+      request.user = {
+        ...user,
+        isAdmin,
+        firebaseUid: decoded.id,
+      };
     }
   } catch {
     // Ignore errors for optional auth

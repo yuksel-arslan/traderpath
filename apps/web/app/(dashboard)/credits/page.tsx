@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Gem, Zap, Crown, Rocket, Star, Loader2, CreditCard, History } from 'lucide-react';
-import { getApiUrl } from '../../../lib/api';
+import { getApiUrl, authFetch } from '../../../lib/api';
 
 interface CreditPackage {
   id: string;
@@ -59,15 +59,10 @@ export default function CreditsPage() {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      // Note: Middleware handles authentication redirect, so we just skip fetch if no token
-
       // Fetch packages, balance, and credit costs in parallel
       const [packagesRes, balanceRes, costsRes] = await Promise.all([
         fetch(getApiUrl('/api/payments/packages')),
-        token ? fetch(getApiUrl('/api/user/credits'), {
-          headers: { Authorization: `Bearer ${token}` },
-        }) : Promise.resolve(null),
+        authFetch('/api/user/credits'),
         fetch(getApiUrl('/api/costs/credit-costs')),
       ]);
 
@@ -76,7 +71,7 @@ export default function CreditsPage() {
         setPackages(data.data?.packages || []);
       }
 
-      if (balanceRes && balanceRes.ok) {
+      if (balanceRes.ok) {
         const data = await balanceRes.json();
         setBalance({
           credits: data.credits || 0,
@@ -106,19 +101,8 @@ export default function CreditsPage() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        setError('Please log in to purchase credits');
-        setPurchasing(false);
-        return;
-      }
-
-      const response = await fetch(getApiUrl('/api/payments/create-checkout-session'), {
+      const response = await authFetch('/api/payments/create-checkout-session', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ packageId: selectedPackage }),
       });
 

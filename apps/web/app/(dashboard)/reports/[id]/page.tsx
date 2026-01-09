@@ -28,6 +28,7 @@ import {
 import { cn } from '../../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../lib/coin-icons';
 import { TradePlanChart } from '../../../../components/analysis/TradePlanChart';
+import { authFetch } from '../../../../lib/api';
 
 interface ReportData {
   symbol: string;
@@ -95,15 +96,7 @@ export default function ReportViewPage() {
   useEffect(() => {
     const fetchReport = async () => {
       try {
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-          router.push('/login');
-          return;
-        }
-
-        const response = await fetch(`/api/reports/${reportId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await authFetch(`/api/reports/${reportId}`);
 
         if (!response.ok) throw new Error('Failed to load report');
 

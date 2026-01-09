@@ -18,7 +18,7 @@ import {
   Timer,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import { getApiUrl } from '../../../lib/api';
+import { authFetch } from '../../../lib/api';
 
 // Lazy load heavy components
 const RecentAnalyses = dynamic(
@@ -40,12 +40,7 @@ export default function AnalyzePage() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
-      const statsRes = await fetch(getApiUrl('/api/analysis/statistics'), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const statsRes = await authFetch('/api/analysis/statistics');
 
       if (statsRes.ok) {
         const statsData = await statsRes.json();

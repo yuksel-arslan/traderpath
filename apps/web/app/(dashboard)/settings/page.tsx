@@ -29,7 +29,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
-import { getApiUrl } from '../../../lib/api';
+import { authFetch } from '../../../lib/api';
 
 interface UserProfile {
   id: string;
@@ -72,17 +72,8 @@ export default function SettingsPage() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const token = localStorage.getItem('accessToken');
-        // Note: Middleware handles authentication redirect
-        if (!token) {
-          setIsLoadingUser(false);
-          return;
-        }
-
         // Fetch user profile
-        const userResponse = await fetch(getApiUrl('/api/auth/me'), {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const userResponse = await authFetch('/api/auth/me');
 
         if (userResponse.ok) {
           const userData = await userResponse.json();
@@ -95,16 +86,13 @@ export default function SettingsPage() {
             setUser(profileData);
           }
         } else if (userResponse.status === 401) {
-          // Token expired or invalid - middleware will handle redirect on next navigation
-          localStorage.removeItem('accessToken');
+          // Token expired or invalid - middleware will handle redirect
           setIsLoadingUser(false);
           return;
         }
 
         // Fetch settings
-        const settingsResponse = await fetch(getApiUrl('/api/user/settings'), {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const settingsResponse = await authFetch('/api/user/settings');
 
         if (settingsResponse.ok) {
           const settingsData = await settingsResponse.json();
@@ -114,9 +102,7 @@ export default function SettingsPage() {
         }
 
         // Fetch notification/webhook settings
-        const alertSettingsResponse = await fetch(getApiUrl('/api/alerts/settings'), {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const alertSettingsResponse = await authFetch('/api/alerts/settings');
 
         if (alertSettingsResponse.ok) {
           const alertData = await alertSettingsResponse.json();
@@ -193,15 +179,8 @@ export default function SettingsPage() {
   const handleSaveReportSettings = async () => {
     setIsSavingReportSettings(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
-      await fetch(getApiUrl('/api/user/settings'), {
+      await authFetch('/api/user/settings', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
         body: JSON.stringify({ reportValidityPeriods }),
       });
     } catch (error) {
@@ -215,15 +194,8 @@ export default function SettingsPage() {
     setIsSavingWebhooks(true);
     setWebhookSaveStatus('idle');
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
-      const response = await fetch(getApiUrl('/api/alerts/settings'), {
+      const response = await authFetch('/api/alerts/settings', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
         body: JSON.stringify(webhookSettings),
       });
 
@@ -243,15 +215,8 @@ export default function SettingsPage() {
 
   const handleTestWebhook = async (channel: 'telegram' | 'discord' | 'tradingview') => {
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
-      const response = await fetch(getApiUrl('/api/alerts/test'), {
+      const response = await authFetch('/api/alerts/test', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
         body: JSON.stringify({ channel }),
       });
 

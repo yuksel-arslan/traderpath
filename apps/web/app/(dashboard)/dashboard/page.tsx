@@ -40,7 +40,7 @@ import {
 import { AreaChart, Area, ResponsiveContainer, Tooltip, ReferenceLine, defs } from 'recharts';
 import { cn } from '../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
-import { getApiUrl } from '../../../lib/api';
+import { getApiUrl, authFetch } from '../../../lib/api';
 
 // ===========================================
 // Types
@@ -537,12 +537,6 @@ export default function DashboardPage() {
 
   const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
       // Check cache first (unless force refresh)
       if (!forceRefresh) {
         try {
@@ -564,18 +558,12 @@ export default function DashboardPage() {
         }
       }
 
-      // Fetch all data in parallel
+      // Fetch all data in parallel using authFetch
       const [platformRes, statsRes, reportsRes, creditsRes] = await Promise.all([
         fetch(getApiUrl(`/api/analysis/platform-stats?period=${stepPeriod}`)),
-        fetch(getApiUrl('/api/analysis/statistics'), {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(getApiUrl('/api/reports?limit=20'), {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(getApiUrl('/api/user/credits'), {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        authFetch('/api/analysis/statistics'),
+        authFetch('/api/reports?limit=20'),
+        authFetch('/api/user/credits'),
       ]);
 
       let newPlatformStats = null;

@@ -18,6 +18,7 @@ import {
   Target,
 } from 'lucide-react';
 import Link from 'next/link';
+import { authFetch } from '../../../../lib/api';
 
 interface CostSettings {
   creditPriceUsd: number;
@@ -92,17 +93,9 @@ export default function CostsPage() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        setError('Authentication required');
-        return;
-      }
-
-      const headers = { 'Authorization': `Bearer ${token}` };
-
       const [summaryRes, settingsRes] = await Promise.all([
-        fetch('/api/costs/summary', { headers }),
-        fetch('/api/costs/settings', { headers }),
+        authFetch('/api/costs/summary'),
+        authFetch('/api/costs/settings'),
       ]);
 
       if (summaryRes.status === 403) {
@@ -143,13 +136,8 @@ export default function CostsPage() {
   const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/costs/settings', {
+      const response = await authFetch('/api/costs/settings', {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(editSettings),
       });
 
@@ -171,10 +159,8 @@ export default function CostsPage() {
     }
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/costs/apply-recommendation', {
+      const response = await authFetch('/api/costs/apply-recommendation', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
       });
 
       if (response.ok) {
@@ -194,10 +180,8 @@ export default function CostsPage() {
 
   const handleRunAutoPricing = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/costs/run-auto-pricing', {
+      const response = await authFetch('/api/costs/run-auto-pricing', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
       });
 
       if (response.ok) {

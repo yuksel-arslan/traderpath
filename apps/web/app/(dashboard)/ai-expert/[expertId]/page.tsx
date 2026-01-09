@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { cn } from '../../../../lib/utils';
+import { authFetch } from '../../../../lib/api';
 
 // AI Expert definitions with 10 smart questions each
 const AI_EXPERTS = {
@@ -254,18 +255,8 @@ function AnswerFooter({
     setError(null);
 
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        setError('Not authenticated');
-        return;
-      }
-
-      const res = await fetch(`/api/reports/by-analysis/${analysisId}/ai-expert-comment`, {
+      const res = await authFetch(`/api/reports/by-analysis/${analysisId}/ai-expert-comment`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ comment: content }),
       });
 
@@ -291,19 +282,9 @@ function AnswerFooter({
     setDownloadError(null);
 
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        setDownloadError('Not authenticated');
-        return;
-      }
-
       // Deduct 10 credits for full report
-      const creditRes = await fetch('/api/credits/deduct', {
+      const creditRes = await authFetch('/api/credits/deduct', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           amount: 10,
           reason: 'Full PDF Report Download',
@@ -322,9 +303,7 @@ function AnswerFooter({
       }
 
       // Fetch report data
-      const reportRes = await fetch(`/api/reports/by-analysis/${analysisId}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const reportRes = await authFetch(`/api/reports/by-analysis/${analysisId}`);
 
       if (!reportRes.ok) {
         setDownloadError('Report not found');
@@ -493,18 +472,11 @@ export default function AIExpertChatPage() {
     if (!currentAnalysisId || commentSavedRef.current) return;
 
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
       console.log('Saving AI Expert comment for analysisId:', currentAnalysisId);
 
       // Find report by analysisId and save comment
-      const res = await fetch(`/api/reports/by-analysis/${currentAnalysisId}/ai-expert-comment`, {
+      const res = await authFetch(`/api/reports/by-analysis/${currentAnalysisId}/ai-expert-comment`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ comment }),
       });
 
@@ -530,12 +502,8 @@ export default function AIExpertChatPage() {
   const { data: credits } = useQuery({
     queryKey: ['credits'],
     queryFn: async () => {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return { balance: 0 };
-
-      const res = await fetch('/api/credits/balance', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await authFetch('/api/credits/balance');
+      if (!res.ok) return { balance: 0 };
       const result = await res.json();
       return result.data || { balance: 0 };
     },
@@ -545,12 +513,8 @@ export default function AIExpertChatPage() {
   const { data: user } = useQuery({
     queryKey: ['user'],
     queryFn: async () => {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return { isAdmin: false };
-
-      const res = await fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await authFetch('/api/auth/me');
+      if (!res.ok) return { isAdmin: false };
       const result = await res.json();
       return result.data?.user || { isAdmin: false };
     },
@@ -559,15 +523,8 @@ export default function AIExpertChatPage() {
   // Chat mutation
   const chatMutation = useMutation({
     mutationFn: async (message: string): Promise<ChatResponse> => {
-      const token = localStorage.getItem('accessToken');
-      if (!token) throw new Error('Not authenticated');
-
-      const res = await fetch('/api/ai-expert/chat', {
+      const res = await authFetch('/api/ai-expert/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           expertId,
           message,

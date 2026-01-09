@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle, Loader2, XCircle, ArrowRight, Gem } from 'lucide-react';
+import { authFetch } from '../../../lib/api';
 
 interface SessionStatus {
   status: string;
@@ -32,15 +33,7 @@ export default function PaymentSuccessPage() {
 
   const verifyPayment = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
-      const response = await fetch(`/api/payments/session/${sessionId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await authFetch(`/api/payments/session/${sessionId}`);
 
       if (!response.ok) {
         throw new Error('Failed to verify payment');

@@ -16,6 +16,7 @@ import {
   Star,
 } from 'lucide-react';
 import Link from 'next/link';
+import { authFetch } from '../../../lib/api';
 
 interface CreditPackage {
   id: string;
@@ -65,15 +66,7 @@ export default function AdminPricingPage() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        setError('Authentication required');
-        return;
-      }
-
-      const response = await fetch('/api/admin/packages', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await authFetch('/api/admin/packages');
 
       if (response.status === 403) {
         setError('Admin access required');
@@ -125,16 +118,11 @@ export default function AdminPricingPage() {
     setIsSaving(true);
 
     try {
-      const token = localStorage.getItem('accessToken');
       const url = isCreating ? '/api/admin/packages' : `/api/admin/packages/${editingPackage.id}`;
       const method = isCreating ? 'POST' : 'PATCH';
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           name: editingPackage.name,
           credits: editingPackage.credits,
@@ -167,10 +155,8 @@ export default function AdminPricingPage() {
     if (!confirm('Are you sure you want to delete this package?')) return;
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/admin/packages/${id}`, {
+      const response = await authFetch(`/api/admin/packages/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
       });
 
       if (response.ok) {
@@ -186,13 +172,8 @@ export default function AdminPricingPage() {
 
   const handleToggleActive = async (pkg: CreditPackage) => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/admin/packages/${pkg.id}`, {
+      const response = await authFetch(`/api/admin/packages/${pkg.id}`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ isActive: !pkg.isActive }),
       });
 
