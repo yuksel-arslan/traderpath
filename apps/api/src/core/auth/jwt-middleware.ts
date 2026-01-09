@@ -1,39 +1,13 @@
 // ===========================================
 // Authentication Middleware
-// Verifies JWT tokens
+// Verifies JWT tokens using Fastify JWT
 // ===========================================
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../database';
-import * as jose from 'jose';
 
 // Admin emails with free unlimited access
 const ADMIN_EMAILS = ['contact@yukselarslan.com'];
-
-// JWT secret - must match the secret used in Fastify JWT config
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret-key-minimum-32-characters-long';
-
-/**
- * Verify and decode JWT token
- */
-async function verifyJwtToken(token: string): Promise<{ id: string; email?: string; name?: string; isAdmin?: boolean } | null> {
-  try {
-    const secret = new TextEncoder().encode(JWT_SECRET);
-    const { payload } = await jose.jwtVerify(token, secret, {
-      algorithms: ['HS256'],
-    });
-
-    return {
-      id: (payload.id as string) || (payload.sub as string),
-      email: payload.email as string,
-      name: payload.name as string,
-      isAdmin: payload.isAdmin as boolean,
-    };
-  } catch (e) {
-    console.error('Token verification error:', e);
-    return null;
-  }
-}
 
 /**
  * Authentication middleware
@@ -44,23 +18,10 @@ export async function authenticate(
   reply: FastifyReply
 ): Promise<void> {
   try {
-    // Get token from header
-    const authHeader = request.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return reply.status(401).send({
-        success: false,
-        error: {
-          code: 'AUTH_001',
-          message: 'No token provided',
-        },
-      });
-    }
+    // Use Fastify's built-in JWT verification
+    const decoded = await request.jwtVerify<{ id: string }>();
 
-    const token = authHeader.substring(7);
-
-    // Verify and decode token
-    const decoded = await verifyJwtToken(token);
-    if (!decoded || (!decoded.id && !decoded.email)) {
+    if (!decoded?.id) {
       return reply.status(401).send({
         success: false,
         error: {
@@ -70,14 +31,9 @@ export async function authenticate(
       });
     }
 
-    // Find user by ID or email
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          ...(decoded.id ? [{ id: decoded.id }] : []),
-          ...(decoded.email ? [{ email: decoded.email }] : []),
-        ],
-      },
+    // Find user by ID
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
       select: {
         id: true,
         email: true,
@@ -110,8 +66,8 @@ export async function authenticate(
     return reply.status(401).send({
       success: false,
       error: {
-        code: 'AUTH_004',
-        message: 'Authentication failed',
+        code: 'AUTH_001',
+        message: 'Authentication required',
       },
     });
   }
@@ -131,20 +87,15 @@ export async function optionalAuth(
       return;
     }
 
-    const token = authHeader.substring(7);
-    const decoded = await verifyJwtToken(token);
+    // Use Fastify's built-in JWT verification
+    const decoded = await request.jwtVerify<{ id: string }>();
 
-    if (!decoded || (!decoded.id && !decoded.email)) {
+    if (!decoded?.id) {
       return;
     }
 
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          ...(decoded.id ? [{ id: decoded.id }] : []),
-          ...(decoded.email ? [{ email: decoded.email }] : []),
-        ],
-      },
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
       select: {
         id: true,
         email: true,
