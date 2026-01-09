@@ -1,9 +1,9 @@
 // ===========================================
 // Authentication Middleware
-// Re-exports Firebase authentication
+// Re-exports JWT authentication
 // ===========================================
 
-// Export Firebase middleware as the default authentication
-export { firebaseAuth as authenticate, optionalFirebaseAuth as optionalAuth } from './firebase-middleware';
+// Export JWT middleware as the default authentication
+export { authenticate, optionalAuth } from './jwt-middleware';
 
 // User type is declared in src/index.ts

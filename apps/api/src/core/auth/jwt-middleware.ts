@@ -1,6 +1,6 @@
 // ===========================================
 // Authentication Middleware
-// Verifies Auth.js JWT tokens
+// Verifies JWT tokens
 // ===========================================
 
 import { FastifyRequest, FastifyReply } from 'fastify';
@@ -10,41 +10,24 @@ import * as jose from 'jose';
 // Admin emails with free unlimited access
 const ADMIN_EMAILS = ['contact@yukselarslan.com'];
 
-// Auth.js secret for JWT verification
-const AUTH_SECRET = process.env.AUTH_SECRET || '';
+// JWT secret - must match the secret used in Fastify JWT config
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret-key-minimum-32-characters-long';
 
 /**
- * Verify and decode Auth.js JWT token
+ * Verify and decode JWT token
  */
-async function verifyAuthJsToken(token: string): Promise<{ id: string; email?: string; name?: string; isAdmin?: boolean } | null> {
+async function verifyJwtToken(token: string): Promise<{ id: string; email?: string; name?: string; isAdmin?: boolean } | null> {
   try {
-    // Auth.js uses a specific JWT format
-    // First try to decode as Auth.js token
-    if (AUTH_SECRET) {
-      const secret = new TextEncoder().encode(AUTH_SECRET);
-      const { payload } = await jose.jwtVerify(token, secret, {
-        algorithms: ['HS256'],
-      });
-
-      return {
-        id: (payload.id as string) || (payload.sub as string),
-        email: payload.email as string,
-        name: payload.name as string,
-        isAdmin: payload.isAdmin as boolean,
-      };
-    }
-
-    // Fallback: decode without verification (development only)
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const { payload } = await jose.jwtVerify(token, secret, {
+      algorithms: ['HS256'],
+    });
 
     return {
-      id: payload.id || payload.sub || payload.user_id,
-      email: payload.email,
-      name: payload.name,
-      isAdmin: payload.isAdmin,
+      id: (payload.id as string) || (payload.sub as string),
+      email: payload.email as string,
+      name: payload.name as string,
+      isAdmin: payload.isAdmin as boolean,
     };
   } catch (e) {
     console.error('Token verification error:', e);
@@ -56,7 +39,7 @@ async function verifyAuthJsToken(token: string): Promise<{ id: string; email?: s
  * Authentication middleware
  * Verifies JWT token and attaches user to request
  */
-export async function firebaseAuth(
+export async function authenticate(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
@@ -76,7 +59,7 @@ export async function firebaseAuth(
     const token = authHeader.substring(7);
 
     // Verify and decode token
-    const decoded = await verifyAuthJsToken(token);
+    const decoded = await verifyJwtToken(token);
     if (!decoded || (!decoded.id && !decoded.email)) {
       return reply.status(401).send({
         success: false,
@@ -88,7 +71,7 @@ export async function firebaseAuth(
     }
 
     // Find user by ID or email
-    let user = await prisma.user.findFirst({
+    const user = await prisma.user.findFirst({
       where: {
         OR: [
           ...(decoded.id ? [{ id: decoded.id }] : []),
@@ -121,7 +104,6 @@ export async function firebaseAuth(
     request.user = {
       ...user,
       isAdmin,
-      firebaseUid: decoded.id, // Keep for backward compatibility
     };
   } catch (error) {
     console.error('Auth error:', error);
@@ -139,7 +121,7 @@ export async function firebaseAuth(
  * Optional authentication middleware
  * Attaches user if token is valid, but doesn't require it
  */
-export async function optionalFirebaseAuth(
+export async function optionalAuth(
   request: FastifyRequest,
   _reply: FastifyReply
 ): Promise<void> {
@@ -150,7 +132,7 @@ export async function optionalFirebaseAuth(
     }
 
     const token = authHeader.substring(7);
-    const decoded = await verifyAuthJsToken(token);
+    const decoded = await verifyJwtToken(token);
 
     if (!decoded || (!decoded.id && !decoded.email)) {
       return;
@@ -177,7 +159,6 @@ export async function optionalFirebaseAuth(
       request.user = {
         ...user,
         isAdmin,
-        firebaseUid: decoded.id,
       };
     }
   } catch {

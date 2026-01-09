@@ -23,7 +23,16 @@ export default function LoginPage() {
     }
     const errorParam = searchParams.get('error');
     if (errorParam) {
-      setError('An error occurred. Please try again.');
+      const errorMessages: Record<string, string> = {
+        oauth_not_configured: 'Google login is not configured. Please contact support.',
+        no_code: 'Authorization failed. Please try again.',
+        token_exchange_failed: 'Failed to authenticate with Google. Please try again.',
+        no_email: 'Could not get email from Google. Please check your Google account.',
+        backend_error: 'Server error during login. Please try again.',
+        no_token: 'Authentication failed. Please try again.',
+        oauth_error: 'OAuth error occurred. Please try again.',
+      };
+      setError(errorMessages[errorParam] || `Login error: ${errorParam}`);
     }
   }, [searchParams]);
 

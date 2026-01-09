@@ -505,7 +505,6 @@ declare module 'fastify' {
       name: string;
       level: number;
       isAdmin?: boolean;
-      firebaseUid?: string;
     };
   }
 }
