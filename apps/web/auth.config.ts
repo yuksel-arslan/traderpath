@@ -1,11 +1,10 @@
 // ===========================================
 // Auth.js Edge-Compatible Configuration
 // This file is used by middleware (Edge runtime)
+// NO OAuth providers here - they don't work in Edge
 // ===========================================
 
 import type { NextAuthConfig } from 'next-auth';
-import Credentials from 'next-auth/providers/credentials';
-import Google from 'next-auth/providers/google';
 
 export const authConfig: NextAuthConfig = {
   session: {
@@ -15,21 +14,8 @@ export const authConfig: NextAuthConfig = {
     signIn: '/login',
     error: '/login',
   },
-  providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    // Credentials provider placeholder for Edge
-    // Real implementation is in auth.ts
-    Credentials({
-      credentials: {
-        email: {},
-        password: {},
-      },
-      authorize: () => null, // Actual auth happens in auth.ts
-    }),
-  ],
+  // No providers in edge config - they're added in auth.ts
+  providers: [],
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
