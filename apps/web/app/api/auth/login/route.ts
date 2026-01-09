@@ -36,9 +36,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract token and user from response
-    const { accessToken, user } = data.data || {};
+    // Backend returns 'token', not 'accessToken'
+    const { token, user } = data.data || {};
 
-    if (!accessToken) {
+    if (!token) {
       return NextResponse.json(
         { success: false, error: { code: 'AUTH_ERROR', message: 'No token received' } },
         { status: 500 }
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     // Set httpOnly cookie for secure token storage
     // This prevents XSS attacks from accessing the token
-    res.cookies.set('auth-token', accessToken, {
+    res.cookies.set('auth-token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
