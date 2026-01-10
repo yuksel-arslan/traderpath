@@ -573,10 +573,12 @@ export default function DashboardPage() {
       }
 
       // Fetch all data in parallel using authFetch
+      // Include tradeType filter in API calls
+      const tradeTypeQuery = tradeTypeFilter !== 'all' ? tradeTypeFilter : '';
       const [platformRes, statsRes, reportsRes, creditsRes] = await Promise.all([
-        fetch(getApiUrl(`/api/analysis/platform-stats?period=${stepPeriod}`)),
+        fetch(getApiUrl(`/api/analysis/platform-stats?period=${stepPeriod}${tradeTypeQuery ? `&tradeType=${tradeTypeQuery}` : ''}`)),
         authFetch('/api/analysis/statistics'),
-        authFetch('/api/reports?limit=20'),
+        authFetch(`/api/reports?limit=20${tradeTypeQuery ? `&tradeType=${tradeTypeQuery}` : ''}`),
         authFetch('/api/user/credits'),
       ]);
 
@@ -673,17 +675,20 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [router, stepPeriod]);
+  }, [router, stepPeriod, tradeTypeFilter]);
 
-  // Track if period changed to force refresh
+  // Track if period or trade type changed to force refresh
   const prevPeriodRef = useRef(stepPeriod);
+  const prevTradeTypeRef = useRef(tradeTypeFilter);
 
   useEffect(() => {
-    // Force refresh if period changed (not initial load)
+    // Force refresh if period or trade type changed (not initial load)
     const periodChanged = prevPeriodRef.current !== stepPeriod;
+    const tradeTypeChanged = prevTradeTypeRef.current !== tradeTypeFilter;
     prevPeriodRef.current = stepPeriod;
+    prevTradeTypeRef.current = tradeTypeFilter;
 
-    fetchDashboardData(periodChanged); // Force refresh when period changes
+    fetchDashboardData(periodChanged || tradeTypeChanged); // Force refresh when filters change
 
     // Auto-refresh every 5 minutes to pick up new analyses
     const refreshInterval = setInterval(() => {
@@ -691,7 +696,7 @@ export default function DashboardPage() {
     }, 5 * 60 * 1000);
 
     return () => clearInterval(refreshInterval);
-  }, [fetchDashboardData, stepPeriod]);
+  }, [fetchDashboardData, stepPeriod, tradeTypeFilter]);
 
   if (loading) {
     return (
@@ -718,6 +723,58 @@ export default function DashboardPage() {
 
   return (
     <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-8">
+
+      {/* ===== GLOBAL TRADE TYPE FILTER ===== */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-gray-600 dark:text-slate-400">Filter by Trade Type:</span>
+          <div className="flex items-center bg-gray-100/80 dark:bg-white/5 rounded-xl p-1 border border-gray-200 dark:border-white/10">
+            <button
+              onClick={() => setTradeTypeFilter('all')}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                tradeTypeFilter === 'all'
+                  ? "bg-white dark:bg-slate-700 shadow-sm text-gray-900 dark:text-white"
+                  : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
+              )}
+            >
+              All
+            </button>
+            {(Object.entries(TRADE_TYPE_CONFIG) as [TradeType, typeof TRADE_TYPE_CONFIG[TradeType]][]).map(([type, config]) => {
+              const Icon = config.icon;
+              return (
+                <button
+                  key={type}
+                  onClick={() => setTradeTypeFilter(type)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5",
+                    tradeTypeFilter === type
+                      ? `bg-white dark:bg-slate-700 shadow-sm ${
+                          config.color === 'purple' ? 'text-purple-600 dark:text-purple-400' :
+                          config.color === 'blue' ? 'text-blue-600 dark:text-blue-400' :
+                          'text-amber-600 dark:text-amber-400'
+                        }`
+                      : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
+                  )}
+                >
+                  <Icon className="w-4 h-4" />
+                  {config.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {tradeTypeFilter !== 'all' && (
+          <div className={cn(
+            "px-3 py-1 rounded-full text-xs font-medium",
+            tradeTypeFilter === 'scalping' ? "bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400" :
+            tradeTypeFilter === 'dayTrade' ? "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400" :
+            "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400"
+          )}>
+            Showing {TRADE_TYPE_CONFIG[tradeTypeFilter].label} data only
+          </div>
+        )}
+      </div>
 
       {/* ===== SECTION 1: Compact Platform Performance ===== */}
       <div className="relative overflow-hidden rounded-3xl">
@@ -1688,42 +1745,6 @@ export default function DashboardPage() {
                 >
                   <List className="w-4 h-4" />
                 </button>
-              </div>
-              {/* Trade Type Filter */}
-              <div className="flex items-center bg-gray-100/80 dark:bg-white/5 rounded-lg p-1 border border-gray-200 dark:border-white/10">
-                <button
-                  onClick={() => setTradeTypeFilter('all')}
-                  className={cn(
-                    "px-2.5 py-1 rounded-md text-xs font-medium transition-all",
-                    tradeTypeFilter === 'all'
-                      ? "bg-white dark:bg-slate-700 shadow-sm text-gray-900 dark:text-white"
-                      : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
-                  )}
-                >
-                  All
-                </button>
-                {(Object.entries(TRADE_TYPE_CONFIG) as [TradeType, typeof TRADE_TYPE_CONFIG[TradeType]][]).map(([type, config]) => {
-                  const Icon = config.icon;
-                  return (
-                    <button
-                      key={type}
-                      onClick={() => setTradeTypeFilter(type)}
-                      className={cn(
-                        "px-2.5 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1",
-                        tradeTypeFilter === type
-                          ? `bg-white dark:bg-slate-700 shadow-sm ${
-                              config.color === 'purple' ? 'text-purple-600 dark:text-purple-400' :
-                              config.color === 'blue' ? 'text-blue-600 dark:text-blue-400' :
-                              'text-amber-600 dark:text-amber-400'
-                            }`
-                          : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
-                      )}
-                    >
-                      <Icon className="w-3 h-3" />
-                      <span className="hidden sm:inline">{config.label}</span>
-                    </button>
-                  );
-                })}
               </div>
               {/* Status Legends */}
               <div className="hidden sm:flex items-center gap-3 text-sm">

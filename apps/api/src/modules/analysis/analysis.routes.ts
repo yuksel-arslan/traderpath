@@ -586,13 +586,19 @@ Explain the key risks and what conditions would need to change before trading th
    * All data is calculated from real database records (Report table)
    * Query params:
    *   - period: 'D' (24h), 'W' (7 days), 'M' (30 days), 'all' (no filter)
+   *   - tradeType: 'scalping', 'dayTrade', 'swing', or 'all' (no filter)
    */
-  app.get('/platform-stats', async (request: FastifyRequest<{ Querystring: { period?: string } }>, reply: FastifyReply) => {
+  app.get('/platform-stats', async (request: FastifyRequest<{ Querystring: { period?: string; tradeType?: string } }>, reply: FastifyReply) => {
     try {
       const db = app.prisma;
 
       // Parse period filter
       const period = (request.query.period || 'all').toUpperCase();
+
+      // Parse trade type filter
+      const tradeType = request.query.tradeType || 'all';
+      const validTradeTypes = ['scalping', 'dayTrade', 'swing'];
+      const tradeTypeFilter = validTradeTypes.includes(tradeType) ? tradeType : null;
       const now = Date.now();
       let periodFilterDate: Date | null = null;
 
@@ -608,6 +614,9 @@ Explain the key risks and what conditions would need to change before trading th
       const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
       const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
+      // Base where clause for trade type filter
+      const tradeTypeWhere = tradeTypeFilter ? { tradeType: tradeTypeFilter } : {};
+
       const [
         totalUsers,
         totalReports,
@@ -615,14 +624,16 @@ Explain the key risks and what conditions would need to change before trading th
         monthlyReports
       ] = await Promise.all([
         db.user.count(),
-        db.report.count(),
+        db.report.count({ where: tradeTypeWhere }),
         db.report.count({
           where: {
+            ...tradeTypeWhere,
             generatedAt: { gte: sevenDaysAgo }
           }
         }),
         db.report.count({
           where: {
+            ...tradeTypeWhere,
             generatedAt: { gte: thirtyDaysAgo }
           }
         })
@@ -631,6 +642,7 @@ Explain the key risks and what conditions would need to change before trading th
       // Get real verdict distribution from Report table
       const verdictCounts = await db.report.groupBy({
         by: ['verdict'],
+        where: tradeTypeWhere,
         _count: { verdict: true }
       });
 
@@ -657,12 +669,15 @@ Explain the key risks and what conditions would need to change before trading th
 
       // Get reports with full reportData to extract step scores
       // Only get reports that have analysis data (not expert_analysis type)
-      // Filter by period if specified
-      const reportWhereClause: { verdict: { not: string }; generatedAt?: { gte: Date } } = {
+      // Filter by period and trade type if specified
+      const reportWhereClause: { verdict: { not: string }; generatedAt?: { gte: Date }; tradeType?: string } = {
         verdict: { not: 'expert_analysis' }
       };
       if (periodFilterDate) {
         reportWhereClause.generatedAt = { gte: periodFilterDate };
+      }
+      if (tradeTypeFilter) {
+        reportWhereClause.tradeType = tradeTypeFilter;
       }
 
       const reports = await db.report.findMany({
@@ -762,6 +777,7 @@ Explain the key risks and what conditions would need to change before trading th
       // Accuracy = TP hits / (TP hits + SL hits) * 100
       const reportsWithOutcomes = await db.report.findMany({
         where: {
+          ...tradeTypeWhere,
           outcome: { in: ['correct', 'incorrect'] } // Only closed trades
         },
         select: { outcome: true, stepOutcomes: true }
@@ -808,6 +824,7 @@ Explain the key risks and what conditions would need to change before trading th
 
       // Get all reports with their outcomes and verdicts for signal accuracy calculation
       const allReportsForSignals = await db.report.findMany({
+        where: tradeTypeWhere,
         select: { outcome: true, verdict: true }
       });
 
@@ -891,7 +908,8 @@ Explain the key risks and what conditions would need to change before trading th
             methodology: realSampleSize > 0 ? 'outcome-verified' : 'score-based',
             sampleSize: realSampleSize > 0 ? realSampleSize : sampleSize,
             outcomeVerifiedCount: realSampleSize,
-            period: period === 'ALL' ? 'all' : period // D, W, M, or all
+            period: period === 'ALL' ? 'all' : period, // D, W, M, or all
+            tradeType: tradeTypeFilter || 'all' // scalping, dayTrade, swing, or all
           },
           // GO Signal Rate: How often GO/CONDITIONAL_GO recommendations were correct
           goSignalRate: {
