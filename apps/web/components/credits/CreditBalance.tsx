@@ -58,17 +58,27 @@ async function fetchBalance(): Promise<CreditBalanceData> {
 export function CreditBalance() {
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['credits'],
     queryFn: fetchBalance,
-    refetchInterval: 60000, // Refetch every minute
-    staleTime: 30000, // Consider data stale after 30 seconds
+    staleTime: 5 * 60 * 1000, // 5 minutes - credits don't change often
+    gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
+    refetchOnMount: false, // Don't refetch on navigation
+    refetchOnWindowFocus: false,
   });
+
+  // Refetch when dropdown opens (if data is stale)
+  const handleDropdownToggle = () => {
+    if (!showDropdown) {
+      refetch(); // Refresh when opening
+    }
+    setShowDropdown(!showDropdown);
+  };
 
   return (
     <div className="relative">
       <button
-        onClick={() => setShowDropdown(!showDropdown)}
+        onClick={handleDropdownToggle}
         className={cn(
           'flex items-center gap-2 px-4 py-2 rounded-full',
           'bg-gradient-to-r from-amber-500/10 to-yellow-500/10',

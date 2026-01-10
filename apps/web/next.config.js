@@ -85,8 +85,20 @@ const nextConfig = {
         destination: 'http://127.0.0.1:4000/api/expert/:path*',
       },
       {
+        source: '/api/ai-expert/:path*',
+        destination: 'http://127.0.0.1:4000/api/ai-expert/:path*',
+      },
+      {
         source: '/api/translation/:path*',
         destination: 'http://127.0.0.1:4000/api/translation/:path*',
+      },
+      {
+        source: '/api/costs/:path*',
+        destination: 'http://127.0.0.1:4000/api/costs/:path*',
+      },
+      {
+        source: '/api/security/:path*',
+        destination: 'http://127.0.0.1:4000/api/security/:path*',
       },
     ];
   },
