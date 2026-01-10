@@ -128,7 +128,7 @@ const commonStyles = `
   .page { width: 595px; height: 842px; padding: 30px; position: relative; }
 
   /* Header - Only Page 1 */
-  .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; }
+  .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; }
   .header-left { }
   .logo { font-size: 18px; font-weight: bold; }
   .logo-red { color: #dc2626; }
@@ -137,7 +137,7 @@ const commonStyles = `
   .header-center { text-align: center; flex: 1; }
   .report-title { font-size: 16px; font-weight: bold; color: #1e293b; }
   .report-date { font-size: 8px; color: #94a3b8; margin-top: 3px; }
-  .header-right { display: flex; align-items: flex-start; gap: 10px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
   .coin-logo { width: 36px; height: 36px; border-radius: 50%; object-fit: contain; }
   .coin-info { text-align: left; }
   .coin-symbol { font-size: 12px; font-weight: bold; color: #1e293b; }
