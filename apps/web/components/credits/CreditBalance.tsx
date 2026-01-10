@@ -13,17 +13,13 @@ import Link from 'next/link';
 
 interface CreditBalanceData {
   balance: number;
-  dailyFreeRemaining: number;
 }
 
 async function fetchBalance(): Promise<CreditBalanceData> {
   const token = await getAuthToken();
 
   if (!token) {
-    return {
-      balance: 0,
-      dailyFreeRemaining: 5,
-    };
+    return { balance: 0 };
   }
 
   try {
@@ -35,23 +31,13 @@ async function fetchBalance(): Promise<CreditBalanceData> {
 
     if (response.ok) {
       const result = await response.json();
-      return {
-        balance: result.data?.balance || 0,
-        dailyFreeRemaining: result.data?.dailyFreeRemaining ?? 5,
-      };
+      return { balance: result.data?.balance || 0 };
     }
 
-    // If unauthorized or error, return defaults
-    return {
-      balance: 0,
-      dailyFreeRemaining: 5,
-    };
+    return { balance: 0 };
   } catch (error) {
     console.error('Failed to fetch credit balance:', error);
-    return {
-      balance: 0,
-      dailyFreeRemaining: 5,
-    };
+    return { balance: 0 };
   }
 }
 
@@ -106,10 +92,6 @@ export function CreditBalance() {
               <span className="text-2xl font-bold text-amber-600">
                 {data?.balance || 0}
               </span>
-            </div>
-
-            <div className="text-xs text-muted-foreground mb-4">
-              Daily free credits remaining: {data?.dailyFreeRemaining || 0}/5
             </div>
 
             <div className="space-y-2">

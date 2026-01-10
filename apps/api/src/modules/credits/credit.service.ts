@@ -39,28 +39,12 @@ export class CreditService {
         data: {
           userId,
           balance: 25, // Welcome bonus
-          dailyFreeRemaining: 5,
-        },
-      });
-    }
-
-    // Check if daily reset needed
-    const now = new Date();
-    const resetAt = new Date(balance.dailyResetAt);
-    if (now.toDateString() !== resetAt.toDateString()) {
-      balance = await prisma.creditBalance.update({
-        where: { userId },
-        data: {
-          dailyFreeRemaining: 5,
-          dailyResetAt: now,
         },
       });
     }
 
     const result: CreditBalance = {
       balance: balance.balance,
-      dailyFreeRemaining: balance.dailyFreeRemaining,
-      dailyResetAt: balance.dailyResetAt,
       lifetimeEarned: balance.lifetimeEarned,
       lifetimeSpent: balance.lifetimeSpent,
       lifetimePurchased: balance.lifetimePurchased,

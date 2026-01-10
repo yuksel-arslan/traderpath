@@ -44,8 +44,6 @@ CREATE UNIQUE INDEX "users_referral_code_key" ON "users"("referral_code");
 CREATE TABLE "credit_balances" (
     "user_id" UUID NOT NULL,
     "balance" INTEGER NOT NULL DEFAULT 25,
-    "daily_free_remaining" INTEGER NOT NULL DEFAULT 5,
-    "daily_reset_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "lifetime_earned" INTEGER NOT NULL DEFAULT 25,
     "lifetime_spent" INTEGER NOT NULL DEFAULT 0,
     "lifetime_purchased" INTEGER NOT NULL DEFAULT 0,

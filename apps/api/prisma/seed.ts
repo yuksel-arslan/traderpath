@@ -28,8 +28,6 @@ async function main() {
         creditBalance: {
           create: {
             balance: 10000,
-            freeAnalysesRemaining: 99,
-            freeAnalysesTotal: 99,
           },
         },
       },

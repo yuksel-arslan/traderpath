@@ -17,8 +17,6 @@ interface CreditPackage {
 
 interface CreditBalance {
   credits: number;
-  freeAnalysesRemaining: number;
-  freeAnalysesTotal: number;
 }
 
 interface CreditCosts {
@@ -75,8 +73,6 @@ export default function CreditsPage() {
         const data = await balanceRes.json();
         setBalance({
           credits: data.credits || 0,
-          freeAnalysesRemaining: data.freeAnalysesRemaining || 0,
-          freeAnalysesTotal: data.freeAnalysesTotal || 5,
         });
       }
 
@@ -155,9 +151,6 @@ export default function CreditsPage() {
                 {balance?.credits || 0} Credits
               </p>
             </div>
-          </div>
-          <div className="text-right text-sm text-gray-500 dark:text-slate-400">
-            <p>Daily free: {balance?.freeAnalysesRemaining || 0}/{balance?.freeAnalysesTotal || 5}</p>
           </div>
         </div>
       </div>

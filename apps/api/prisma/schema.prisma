@@ -227,8 +227,6 @@ model CreditBalance {
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   balance          Int      @default(25)
-  dailyFreeRemaining Int    @default(5) @map("daily_free_remaining")
-  dailyResetAt     DateTime @default(now()) @map("daily_reset_at")
 
   lifetimeEarned   Int      @default(25) @map("lifetime_earned")
   lifetimeSpent    Int      @default(0) @map("lifetime_spent")
