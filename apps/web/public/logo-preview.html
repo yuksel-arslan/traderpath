@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradePath Logo Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0a0a0a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 60px;
+      padding: 40px;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    /* SVG Logo Icon */
+    .logo-icon {
+      width: 80px;
+      height: 80px;
+    }
+
+    .logo-icon-sm {
+      width: 48px;
+      height: 48px;
+    }
+
+    .logo-icon-lg {
+      width: 120px;
+      height: 120px;
+    }
+
+    /* Brand Text Container */
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* TradePath Text */
+    .brand-name {
+      font-family: 'Playfair Display', 'Times New Roman', Georgia, serif;
+      font-size: 48px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, #E8C599 0%, #D4A574 30%, #C9956C 60%, #A67C3D 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .brand-name-sm {
+      font-size: 28px;
+    }
+
+    .brand-name-lg {
+      font-size: 64px;
+    }
+
+    /* Motto Text */
+    .motto {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: #E8D5C4;
+      font-weight: 300;
+      margin-top: 6px;
+    }
+
+    .motto-sm {
+      font-size: 9px;
+      letter-spacing: 0.3em;
+    }
+
+    .motto-lg {
+      font-size: 16px;
+    }
+
+    /* Section Labels */
+    .section-label {
+      color: #64748b;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      margin-bottom: 20px;
+    }
+
+    .section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Light background variant */
+    .light-bg {
+      background: #ffffff;
+      padding: 40px 60px;
+      border-radius: 16px;
+    }
+
+    .light-bg .motto {
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Main Logo - Dark Background -->
+  <div class="section">
+    <div class="section-label">Dark Background (Default)</div>
+    <div class="logo-container">
+      <svg class="logo-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="goldGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#E8C599" />
+            <stop offset="30%" stop-color="#D4A574" />
+            <stop offset="60%" stop-color="#C9956C" />
+            <stop offset="100%" stop-color="#8B6914" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M12 22
+             Q12 12, 25 12
+             L75 12
+             Q88 12, 88 22
+             Q88 32, 75 32
+             L60 32
+             L60 40
+             Q60 55, 72 70
+             Q82 82, 72 90
+             Q62 96, 50 85
+             Q40 74, 40 55
+             L40 32
+             L25 32
+             Q12 32, 12 22
+             Z"
+          fill="url(#goldGradient1)"
+        />
+      </svg>
+      <div class="brand-text">
+        <span class="brand-name">TradePath</span>
+        <span class="motto">From Charts to Clarity</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Light Background Variant -->
+  <div class="section">
+    <div class="section-label">Light Background (For PDF)</div>
+    <div class="logo-container light-bg">
+      <svg class="logo-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="goldGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#C9956C" />
+            <stop offset="30%" stop-color="#B8834F" />
+            <stop offset="60%" stop-color="#A67C3D" />
+            <stop offset="100%" stop-color="#8B6914" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M12 22
+             Q12 12, 25 12
+             L75 12
+             Q88 12, 88 22
+             Q88 32, 75 32
+             L60 32
+             L60 40
+             Q60 55, 72 70
+             Q82 82, 72 90
+             Q62 96, 50 85
+             Q40 74, 40 55
+             L40 32
+             L25 32
+             Q12 32, 12 22
+             Z"
+          fill="url(#goldGradient2)"
+        />
+      </svg>
+      <div class="brand-text">
+        <span class="brand-name">TradePath</span>
+        <span class="motto">From Charts to Clarity</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Small Size -->
+  <div class="section">
+    <div class="section-label">Small Size</div>
+    <div class="logo-container">
+      <svg class="logo-icon-sm" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="goldGradient3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#E8C599" />
+            <stop offset="30%" stop-color="#D4A574" />
+            <stop offset="60%" stop-color="#C9956C" />
+            <stop offset="100%" stop-color="#8B6914" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M12 22 Q12 12, 25 12 L75 12 Q88 12, 88 22 Q88 32, 75 32 L60 32 L60 40 Q60 55, 72 70 Q82 82, 72 90 Q62 96, 50 85 Q40 74, 40 55 L40 32 L25 32 Q12 32, 12 22 Z"
+          fill="url(#goldGradient3)"
+        />
+      </svg>
+      <div class="brand-text">
+        <span class="brand-name brand-name-sm">TradePath</span>
+        <span class="motto motto-sm">From Charts to Clarity</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Large Size -->
+  <div class="section">
+    <div class="section-label">Large Size</div>
+    <div class="logo-container">
+      <svg class="logo-icon-lg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="goldGradient4" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#E8C599" />
+            <stop offset="30%" stop-color="#D4A574" />
+            <stop offset="60%" stop-color="#C9956C" />
+            <stop offset="100%" stop-color="#8B6914" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M12 22 Q12 12, 25 12 L75 12 Q88 12, 88 22 Q88 32, 75 32 L60 32 L60 40 Q60 55, 72 70 Q82 82, 72 90 Q62 96, 50 85 Q40 74, 40 55 L40 32 L25 32 Q12 32, 12 22 Z"
+          fill="url(#goldGradient4)"
+        />
+      </svg>
+      <div class="brand-text">
+        <span class="brand-name brand-name-lg">TradePath</span>
+        <span class="motto motto-lg">From Charts to Clarity</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Icon Only -->
+  <div class="section">
+    <div class="section-label">Icon Only</div>
+    <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="goldGradient5" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#E8C599" />
+          <stop offset="30%" stop-color="#D4A574" />
+          <stop offset="60%" stop-color="#C9956C" />
+          <stop offset="100%" stop-color="#8B6914" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M12 22 Q12 12, 25 12 L75 12 Q88 12, 88 22 Q88 32, 75 32 L60 32 L60 40 Q60 55, 72 70 Q82 82, 72 90 Q62 96, 50 85 Q40 74, 40 55 L40 32 L25 32 Q12 32, 12 22 Z"
+        fill="url(#goldGradient5)"
+      />
+    </svg>
+  </div>
+
+</body>
+</html>
