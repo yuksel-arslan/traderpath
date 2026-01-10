@@ -41,8 +41,11 @@ import { TradePlanChart } from './TradePlanChart';
 import { DownloadReportButton } from '../reports/DownloadReportButton';
 import { AnalysisProgressBar } from './AnalysisProgressBar';
 
+type TradeType = 'scalping' | 'dayTrade' | 'swing';
+
 interface AnalysisFlowProps {
   symbol: string;
+  tradeType?: TradeType;
   interval?: string;
   accountSize?: number;
   onComplete?: () => void;
@@ -166,7 +169,7 @@ const STORAGE_KEYS = {
 
 type AnalysisMode = 'educational' | 'quick';
 
-export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onComplete, onCreditsUpdate }: AnalysisFlowProps) {
+export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', accountSize = 10000, onComplete, onCreditsUpdate }: AnalysisFlowProps) {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [activeStep, setActiveStep] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'intro' | 'result'>('intro');
@@ -235,7 +238,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
     };
 
     if (endpoint.method === 'POST') {
-      options.body = JSON.stringify({ symbol, accountSize, interval });
+      options.body = JSON.stringify({ symbol, accountSize, interval, tradeType });
     }
 
     const response = await fetch(endpoint.url, options);
@@ -256,7 +259,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
     }
 
     return data.data;
-  }, [symbol, accountSize, interval, getAuthHeaders, onCreditsUpdate]);
+  }, [symbol, accountSize, interval, tradeType, getAuthHeaders, onCreditsUpdate]);
 
   // Auto-save report when all 7 steps are completed
   const saveReportToDatabase = useCallback(async () => {
@@ -370,7 +373,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
       const response = await fetch('/api/analysis/full', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ symbol, accountSize }),
+        body: JSON.stringify({ symbol, accountSize, tradeType }),
       });
 
       const data = await response.json();
