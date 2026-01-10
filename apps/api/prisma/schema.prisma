@@ -583,6 +583,7 @@ model Report {
   verdict      String   @db.VarChar(50)
   score        Decimal  @db.Decimal(3, 1)
   direction    String?  @db.VarChar(10) // 'long' or 'short'
+  tradeType    String?  @map("trade_type") @db.VarChar(20) // 'scalping', 'dayTrade', 'swing'
 
   // Price at time of analysis (for outcome comparison)
   entryPrice   Decimal? @map("entry_price") @db.Decimal(20, 8)
@@ -606,6 +607,7 @@ model Report {
   @@index([expiresAt])
   @@index([outcome])
   @@index([isPublic])
+  @@index([tradeType])
   @@map("reports")
 }
 

@@ -136,6 +136,9 @@ async function saveReportToDatabase(reportData: AnalysisReportData, interval: st
     const token = await getAuthToken();
     if (!token) return false;
 
+    // Extract tradeType from reportData if available
+    const tradeType = (reportData as Record<string, unknown>).tradeType as string | undefined;
+
     const response = await fetch('/api/reports', {
       method: 'POST',
       headers: {
@@ -150,6 +153,7 @@ async function saveReportToDatabase(reportData: AnalysisReportData, interval: st
         score: reportData.verdict.overallScore,
         direction: reportData.tradePlan.direction,
         interval: interval,
+        tradeType: tradeType || null, // Include tradeType if available
       }),
     });
 

@@ -304,11 +304,12 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
         body: JSON.stringify({
           symbol,
           analysisId: reportAnalysisId,
-          reportData,
+          reportData: { ...reportData, tradeType }, // Include tradeType in reportData
           verdict: verdict?.action || verdict?.verdict || 'N/A',
           score: verdict?.overallScore || 0,
           direction: tradePlan?.direction || null,
           interval: '1h', // 50 periods × 1h = 50 hours (~2 days) validity
+          tradeType, // Send tradeType separately for direct DB storage
         }),
       });
 
