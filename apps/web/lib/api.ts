@@ -119,7 +119,7 @@ export async function safeFetch<T = unknown>(
   // Check if response is JSON
   const contentType = response.headers.get('content-type');
   if (!contentType?.includes('application/json')) {
-    const error = new Error('Sunucu hatası. Lütfen tekrar deneyin.') as ApiError;
+    const error = new Error('Server error. Please try again.') as ApiError;
     error.code = 'SERVER_ERROR';
     error.status = response.status;
     throw error;

@@ -117,7 +117,7 @@ export default async function contractSecurityRoutes(fastify: FastifyInstance) {
       if (!chargeResult.success) {
         return reply.status(402).send({
           success: false,
-          error: { code: 'INSUFFICIENT_CREDITS', message: 'Yetersiz kredi', required: creditCost },
+          error: { code: 'INSUFFICIENT_CREDITS', message: 'Insufficient credits', required: creditCost },
         });
       }
 
@@ -177,7 +177,7 @@ export default async function contractSecurityRoutes(fastify: FastifyInstance) {
       if (!chargeResult.success) {
         return reply.status(402).send({
           success: false,
-          error: { code: 'INSUFFICIENT_CREDITS', message: 'Yetersiz kredi', required: creditCost },
+          error: { code: 'INSUFFICIENT_CREDITS', message: 'Insufficient credits', required: creditCost },
         });
       }
 
@@ -238,7 +238,7 @@ export default async function contractSecurityRoutes(fastify: FastifyInstance) {
       if (!chargeResult.success) {
         return reply.status(402).send({
           success: false,
-          error: { code: 'INSUFFICIENT_CREDITS', message: 'Yetersiz kredi', required: creditCost },
+          error: { code: 'INSUFFICIENT_CREDITS', message: 'Insufficient credits', required: creditCost },
         });
       }
 
@@ -296,7 +296,7 @@ export default async function contractSecurityRoutes(fastify: FastifyInstance) {
       if (!chargeResult.success) {
         return reply.status(402).send({
           success: false,
-          error: { code: 'INSUFFICIENT_CREDITS', message: 'Yetersiz kredi', required: creditCost },
+          error: { code: 'INSUFFICIENT_CREDITS', message: 'Insufficient credits', required: creditCost },
         });
       }
 

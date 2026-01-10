@@ -299,40 +299,40 @@ export default function ReportsPage() {
           const reportData = data.data.reportData;
 
           // Build comprehensive context
-          const contextMessage = `Bu analiz hakkında uzman görüşünü istiyorum:
+          const contextMessage = `I would like your expert opinion on this analysis:
 
-[${report.symbol}/USDT ANALİZ ÖZETİ]
-Tarih: ${reportData.generatedAt || report.generatedAt}
-Skor: ${(report.score * 10).toFixed(0)}/100
-Yön: ${report.direction?.toUpperCase() || 'N/A'}
+[${report.symbol}/USDT ANALYSIS SUMMARY]
+Date: ${reportData.generatedAt || report.generatedAt}
+Score: ${(report.score * 10).toFixed(0)}/100
+Direction: ${report.direction?.toUpperCase() || 'N/A'}
 
-[ADIM 1: Market Pulse]
+[STEP 1: Market Pulse]
 Fear & Greed: ${reportData.marketPulse?.fearGreedIndex || 'N/A'} (${reportData.marketPulse?.fearGreedLabel || 'N/A'})
 BTC Dominance: ${reportData.marketPulse?.btcDominance?.toFixed(1) || 'N/A'}%
 
-[ADIM 2: Asset Scanner]
-Fiyat: $${reportData.assetScan?.currentPrice || 'N/A'}
+[STEP 2: Asset Scanner]
+Price: $${reportData.assetScan?.currentPrice || 'N/A'}
 RSI: ${reportData.assetScan?.indicators?.rsi?.toFixed(0) || 'N/A'}
 
-[ADIM 3: Safety Check]
-Risk Seviyesi: ${reportData.safetyCheck?.riskLevel || 'N/A'}
+[STEP 3: Safety Check]
+Risk Level: ${reportData.safetyCheck?.riskLevel || 'N/A'}
 
-[ADIM 4: Timing]
-Trade Now: ${reportData.timing?.tradeNow ? 'Evet' : 'Hayır'}
+[STEP 4: Timing]
+Trade Now: ${reportData.timing?.tradeNow ? 'Yes' : 'No'}
 
-[ADIM 5: Trade Plan]
+[STEP 5: Trade Plan]
 Entry: $${reportData.tradePlan?.averageEntry || report.entryPrice || 'N/A'}
 Stop Loss: $${reportData.tradePlan?.stopLoss?.price || report.stopLoss || 'N/A'}
 Take Profit: $${reportData.tradePlan?.takeProfits?.[0]?.price || report.takeProfit1 || 'N/A'}
 
-[ADIM 6: Trap Check]
-Bull Trap: ${reportData.trapCheck?.traps?.bullTrap ? 'Evet' : 'Hayır'}
-Bear Trap: ${reportData.trapCheck?.traps?.bearTrap ? 'Evet' : 'Hayır'}
+[STEP 6: Trap Check]
+Bull Trap: ${reportData.trapCheck?.traps?.bullTrap ? 'Yes' : 'No'}
+Bear Trap: ${reportData.trapCheck?.traps?.bearTrap ? 'Yes' : 'No'}
 
-[ADIM 7: Final Verdict]
-Karar: ${reportData.verdict?.action || report.verdict}
+[STEP 7: Final Verdict]
+Decision: ${reportData.verdict?.action || report.verdict}
 
-Bu analize göre risk değerlendirmeni ve önerilerini paylaşır mısın?`;
+Could you share your risk assessment and recommendations based on this analysis?`;
 
           // Store context in sessionStorage
           sessionStorage.setItem('aiExpertContext', contextMessage);
