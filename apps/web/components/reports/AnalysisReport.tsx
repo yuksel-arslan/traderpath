@@ -498,7 +498,7 @@ function generatePage3HTML(data: AnalysisReportData): string {
 </body></html>`;
 }
 
-// Chart capture function
+// Chart capture function - Forces light background for PDF
 export async function captureChartAsImage(): Promise<string | null> {
   try {
     const element = document.getElementById('trade-plan-chart');
@@ -513,6 +513,65 @@ export async function captureChartAsImage(): Promise<string | null> {
       logging: false,
       useCORS: true,
       allowTaint: true,
+      onclone: (clonedDoc) => {
+        // Force light mode styling on the cloned element for PDF capture
+        const clonedElement = clonedDoc.getElementById('trade-plan-chart');
+        if (clonedElement) {
+          // Force white background on main container
+          clonedElement.style.backgroundColor = '#ffffff';
+          clonedElement.style.color = '#1e293b';
+
+          // Fix all child elements with dark backgrounds
+          const allElements = clonedElement.querySelectorAll('*');
+          allElements.forEach((el) => {
+            const htmlEl = el as HTMLElement;
+            const computedStyle = window.getComputedStyle(el);
+
+            // Replace dark backgrounds with light ones
+            if (computedStyle.backgroundColor) {
+              const bgColor = computedStyle.backgroundColor;
+              // If background is dark (rgba with low values or transparent)
+              if (bgColor.includes('rgba') || bgColor === 'transparent' ||
+                  bgColor.includes('rgb(') && isDarkColor(bgColor)) {
+                htmlEl.style.backgroundColor = '#ffffff';
+              }
+            }
+
+            // Make text dark
+            if (computedStyle.color) {
+              const textColor = computedStyle.color;
+              if (textColor.includes('rgba') && textColor.includes('255')) {
+                htmlEl.style.color = '#1e293b';
+              }
+            }
+          });
+
+          // Specifically fix known elements
+          // Header gradient background
+          const header = clonedElement.querySelector('.border-b');
+          if (header) {
+            (header as HTMLElement).style.background = 'linear-gradient(to right, #ffffff, #f8fafc)';
+          }
+
+          // Legend and summary sections
+          const mutedSections = clonedElement.querySelectorAll('.bg-muted\\/20, .bg-card\\/80');
+          mutedSections.forEach((section) => {
+            (section as HTMLElement).style.backgroundColor = '#f8fafc';
+          });
+
+          // Border colors
+          const borderedElements = clonedElement.querySelectorAll('[class*="border"]');
+          borderedElements.forEach((el) => {
+            (el as HTMLElement).style.borderColor = '#e2e8f0';
+          });
+
+          // Text colors - make them visible on white
+          const mutedText = clonedElement.querySelectorAll('.text-muted-foreground');
+          mutedText.forEach((el) => {
+            (el as HTMLElement).style.color = '#64748b';
+          });
+        }
+      },
     });
 
     return canvas.toDataURL('image/png');
@@ -520,6 +579,20 @@ export async function captureChartAsImage(): Promise<string | null> {
     console.error('Chart capture failed:', error);
     return null;
   }
+}
+
+// Helper to check if a color is dark
+function isDarkColor(color: string): boolean {
+  const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if (match) {
+    const r = parseInt(match[1]);
+    const g = parseInt(match[2]);
+    const b = parseInt(match[3]);
+    // Calculate luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance < 0.5;
+  }
+  return false;
 }
 
 // Render HTML to canvas
