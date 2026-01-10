@@ -42,8 +42,6 @@ export interface LevelInfo {
 
 export interface CreditBalance {
   balance: number;
-  dailyFreeRemaining: number;
-  dailyResetAt: Date;
   lifetimeEarned: number;
   lifetimeSpent: number;
   lifetimePurchased: number;

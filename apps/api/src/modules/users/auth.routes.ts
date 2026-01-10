@@ -19,6 +19,10 @@ import {
   createEmailVerificationToken,
 } from '../../core/auth/security.service';
 import { emailService } from '../email/email.service';
+import { creditService } from '../credits/credit.service';
+
+// First login bonus amount
+const FIRST_LOGIN_BONUS = 100;
 
 // Admin emails with free unlimited access
 const ADMIN_EMAILS = ['contact@yukselarslan.com'];
@@ -55,11 +59,36 @@ export default async function authRoutes(app: FastifyInstance) {
     password: passwordSchema,
     name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name must be less than 50 characters'),
     referralCode: z.string().optional(),
+    recaptchaToken: z.string().optional(),
   });
 
   app.post('/register', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const body = registerSchema.parse(request.body);
+
+      // Verify reCAPTCHA to ensure human user
+      if (body.recaptchaToken) {
+        const captchaResult = await verifyRecaptcha(body.recaptchaToken, 'register');
+        if (!captchaResult.success) {
+          return reply.status(400).send({
+            success: false,
+            error: {
+              code: 'CAPTCHA_FAILED',
+              message: 'Verification failed. Please complete the CAPTCHA.',
+            },
+          });
+        }
+        // Optional: Check score for reCAPTCHA v3
+        if (captchaResult.score !== undefined && captchaResult.score < 0.5) {
+          return reply.status(400).send({
+            success: false,
+            error: {
+              code: 'CAPTCHA_LOW_SCORE',
+              message: 'Verification failed. Please try again.',
+            },
+          });
+        }
+      }
 
       // Check if email exists
       const existing = await prisma.user.findUnique({
@@ -103,6 +132,7 @@ export default async function authRoutes(app: FastifyInstance) {
             name: body.name,
             referralCode,
             referredById,
+            registrationEmail: body.email.toLowerCase(), // Store original registration email
           },
         });
 
@@ -324,9 +354,32 @@ export default async function authRoutes(app: FastifyInstance) {
           {
             ip: ipAddress,
             device: userAgent,
-            time: new Date().toLocaleString('tr-TR'),
+            time: new Date().toLocaleString('en-US'),
           }
         ).catch(console.error);
+      }
+
+      // Award first login bonus if not already received
+      let isFirstLogin = false;
+      let updatedCredits = user.creditBalance?.balance || 0;
+
+      if (!user.firstLoginBonusReceived) {
+        isFirstLogin = true;
+        // Award first login bonus
+        const bonusResult = await creditService.add(
+          user.id,
+          FIRST_LOGIN_BONUS,
+          'BONUS',
+          'first_login_bonus',
+          { message: 'Welcome bonus for first login' }
+        );
+        updatedCredits = bonusResult.newBalance;
+
+        // Mark first login bonus as received
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { firstLoginBonusReceived: true },
+        });
       }
 
       // Generate JWT token
@@ -351,8 +404,10 @@ export default async function authRoutes(app: FastifyInstance) {
             twoFactorEnabled: user.twoFactorEnabled,
           },
           token,
-          credits: isAdmin ? 999999 : user.creditBalance?.balance || 0,
+          credits: isAdmin ? 999999 : updatedCredits,
           newDeviceLogin: suspiciousCheck.suspicious,
+          isFirstLogin,
+          firstLoginBonus: isFirstLogin ? FIRST_LOGIN_BONUS : undefined,
         },
       });
     } catch (error) {
@@ -462,6 +517,7 @@ export default async function authRoutes(app: FastifyInstance) {
               image: picture,
               googleId,
               referralCode,
+              registrationEmail: email.toLowerCase(), // Store original registration email
             },
             include: { creditBalance: true },
           });
@@ -501,6 +557,29 @@ export default async function authRoutes(app: FastifyInstance) {
         data: { lastLoginAt: new Date() },
       });
 
+      // Award first login bonus if not already received
+      let isFirstLogin = false;
+      let updatedCredits = user!.creditBalance?.balance || 0;
+
+      if (!user!.firstLoginBonusReceived) {
+        isFirstLogin = true;
+        // Award first login bonus
+        const bonusResult = await creditService.add(
+          user!.id,
+          FIRST_LOGIN_BONUS,
+          'BONUS',
+          'first_login_bonus',
+          { message: 'Welcome bonus for first login' }
+        );
+        updatedCredits = bonusResult.newBalance;
+
+        // Mark first login bonus as received
+        await prisma.user.update({
+          where: { id: user!.id },
+          data: { firstLoginBonusReceived: true },
+        });
+      }
+
       // Generate JWT token
       const token = app.jwt.sign(
         { id: user!.id },
@@ -521,8 +600,10 @@ export default async function authRoutes(app: FastifyInstance) {
             isAdmin,
           },
           token,
-          credits: isAdmin ? 999999 : user!.creditBalance?.balance || 0,
+          credits: isAdmin ? 999999 : updatedCredits,
           isNewUser,
+          isFirstLogin,
+          firstLoginBonus: isFirstLogin ? FIRST_LOGIN_BONUS : undefined,
         },
       });
     } catch (error) {
@@ -665,6 +746,7 @@ export default async function authRoutes(app: FastifyInstance) {
                 googleId: provider === 'google' ? providerId : undefined,
                 image: image,
                 referralCode,
+                registrationEmail: email.toLowerCase(), // Store original registration email
               },
             });
 
@@ -690,6 +772,29 @@ export default async function authRoutes(app: FastifyInstance) {
         data: { lastLoginAt: new Date() },
       });
 
+      // Award first login bonus if not already received
+      let isFirstLogin = false;
+      let updatedCredits = user!.creditBalance?.balance || 0;
+
+      if (!user!.firstLoginBonusReceived) {
+        isFirstLogin = true;
+        // Award first login bonus
+        const bonusResult = await creditService.add(
+          user!.id,
+          FIRST_LOGIN_BONUS,
+          'BONUS',
+          'first_login_bonus',
+          { message: 'Welcome bonus for first login' }
+        );
+        updatedCredits = bonusResult.newBalance;
+
+        // Mark first login bonus as received
+        await prisma.user.update({
+          where: { id: user!.id },
+          data: { firstLoginBonusReceived: true },
+        });
+      }
+
       // Generate JWT token
       const token = app.jwt.sign(
         { id: user!.id },
@@ -710,8 +815,10 @@ export default async function authRoutes(app: FastifyInstance) {
             isAdmin,
           },
           accessToken: token,
-          credits: isAdmin ? 999999 : user!.creditBalance?.balance || 25,
+          credits: isAdmin ? 999999 : updatedCredits,
           isNewUser,
+          isFirstLogin,
+          firstLoginBonus: isFirstLogin ? FIRST_LOGIN_BONUS : undefined,
         },
       });
     } catch (error) {

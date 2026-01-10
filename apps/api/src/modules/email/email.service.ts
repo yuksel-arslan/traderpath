@@ -111,7 +111,7 @@ class EmailService {
 
     const result = await this.sendEmail({
       to: email,
-      subject: `TradePath ${data.symbol} Uzman Analiz Raporu - ${data.expertName}`,
+      subject: `TradePath ${data.symbol} Expert Analysis Report - ${data.expertName}`,
       html,
       text,
     });
@@ -129,7 +129,7 @@ class EmailService {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TradePath Uzman Raporu</title>
+  <title>TradePath Expert Report</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 40px 20px;">
@@ -143,7 +143,7 @@ class EmailService {
                 TradePath
               </h1>
               <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
-                Uzman AI Analiz Raporu
+                Expert AI Analysis Report
               </p>
             </td>
           </tr>
@@ -152,7 +152,7 @@ class EmailService {
           <tr>
             <td style="padding: 30px;">
               <p style="color: #94a3b8; font-size: 16px; margin: 0 0 20px;">
-                Merhaba ${data.userName},
+                Hello ${data.userName},
               </p>
 
               <!-- Symbol Badge -->
@@ -161,14 +161,14 @@ class EmailService {
                   ${data.symbol}
                 </span>
                 <p style="color: rgba(255,255,255,0.8); margin: 10px 0 0; font-size: 14px;">
-                  ${data.expertName} Analizi
+                  ${data.expertName} Analysis
                 </p>
               </div>
 
               <!-- Expert Insights -->
               <div style="background-color: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 25px; border-left: 4px solid #3b82f6;">
                 <h3 style="color: #3b82f6; margin: 0 0 15px; font-size: 18px;">
-                  Uzman Görüşü
+                  Expert Opinion
                 </h3>
                 <p style="color: #e2e8f0; font-size: 15px; line-height: 1.6; margin: 0; white-space: pre-wrap;">
 ${data.expertInsights}
@@ -178,13 +178,13 @@ ${data.expertInsights}
               <!-- CTA Button -->
               <div style="text-align: center; margin: 30px 0;">
                 <a href="${data.reportUrl}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; text-decoration: none; padding: 15px 40px; border-radius: 8px; font-weight: bold; font-size: 16px;">
-                  Tam Raporu Görüntüle
+                  View Full Report
                 </a>
               </div>
 
               <!-- Footer Note -->
               <p style="color: #64748b; font-size: 13px; text-align: center; margin: 20px 0 0;">
-                Bu rapor ${data.generatedAt} tarihinde oluşturulmuştur.
+                This report was generated on ${data.generatedAt}.
               </p>
             </td>
           </tr>
@@ -196,7 +196,7 @@ ${data.expertInsights}
                 TradePath - Professional Trading Analysis
               </p>
               <p style="color: #475569; font-size: 11px; margin: 10px 0 0;">
-                Bu e-posta, talep ettiğiniz analiz raporu için gönderilmiştir.
+                This email was sent for your requested analysis report.
               </p>
             </td>
           </tr>
@@ -214,19 +214,19 @@ ${data.expertInsights}
    */
   private generateReportEmailText(data: ReportEmailData): string {
     return `
-TradePath Uzman Analiz Raporu
+TradePath Expert Analysis Report
 =============================
 
-Merhaba ${data.userName},
+Hello ${data.userName},
 
-${data.symbol} için ${data.expertName} analiz raporunuz hazır.
+Your ${data.expertName} analysis report for ${data.symbol} is ready.
 
-UZMAN GÖRÜŞÜ:
+EXPERT OPINION:
 ${data.expertInsights}
 
-Tam raporu görüntülemek için: ${data.reportUrl}
+View full report: ${data.reportUrl}
 
-Bu rapor ${data.generatedAt} tarihinde oluşturulmuştur.
+This report was generated on ${data.generatedAt}.
 
 ---
 TradePath - Professional Trading Analysis
@@ -439,7 +439,7 @@ TradePath - Professional Trading Analysis
 
     const result = await this.sendEmail({
       to: email,
-      subject: `📊 TradePath ${data.symbol}/USDT Analiz Raporu - ${data.verdict}`,
+      subject: `📊 TradePath ${data.symbol}/USDT Analysis Report - ${data.verdict}`,
       html,
       text,
       attachments: [
@@ -470,7 +470,7 @@ TradePath - Professional Trading Analysis
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TradePath Analiz Raporu</title>
+  <title>TradePath Analysis Report</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
@@ -500,11 +500,11 @@ TradePath - Professional Trading Analysis
           <tr>
             <td style="padding: 35px;">
               <p style="color: #475569; font-size: 16px; margin: 0 0 25px; line-height: 1.6;">
-                Merhaba <strong style="color: #1e293b;">${data.userName}</strong>,
+                Hello <strong style="color: #1e293b;">${data.userName}</strong>,
               </p>
 
               <p style="color: #64748b; font-size: 15px; margin: 0 0 30px; line-height: 1.6;">
-                Talep ettiğiniz <strong style="color: #1e293b;">${data.symbol}/USDT</strong> analiz raporu hazırlandı ve bu e-postaya eklendi.
+                Your requested <strong style="color: #1e293b;">${data.symbol}/USDT</strong> analysis report has been prepared and attached to this email.
               </p>
 
               <!-- Report Summary Card -->
@@ -514,11 +514,11 @@ TradePath - Professional Trading Analysis
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td width="50%" style="vertical-align: top;">
-                          <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Analiz Edilen</p>
+                          <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Analyzed</p>
                           <p style="margin: 0; color: #1e293b; font-size: 28px; font-weight: bold;">${data.symbol}/USDT</p>
                         </td>
                         <td width="50%" style="text-align: right; vertical-align: top;">
-                          <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Yön</p>
+                          <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Direction</p>
                           <p style="margin: 0; color: ${directionColor}; font-size: 20px; font-weight: bold;">
                             ${directionIcon} ${directionText}
                           </p>
@@ -530,13 +530,13 @@ TradePath - Professional Trading Analysis
                       <table width="100%" cellpadding="0" cellspacing="0">
                         <tr>
                           <td width="50%">
-                            <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Karar</p>
+                            <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Verdict</p>
                             <span style="display: inline-block; background: ${verdictColor}20; color: ${verdictColor}; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 14px;">
                               ${data.verdict}
                             </span>
                           </td>
                           <td width="50%" style="text-align: right;">
-                            <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Güven Skoru</p>
+                            <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Confidence Score</p>
                             <p style="margin: 0; color: #1e293b; font-size: 24px; font-weight: bold;">${data.score}<span style="color: #94a3b8; font-size: 16px;">/100</span></p>
                           </td>
                         </tr>
@@ -558,7 +558,7 @@ TradePath - Professional Trading Analysis
                           </div>
                         </td>
                         <td style="padding-left: 15px;">
-                          <p style="margin: 0 0 4px; color: #166534; font-weight: 600; font-size: 15px;">PDF Rapor Ekte</p>
+                          <p style="margin: 0 0 4px; color: #166534; font-weight: 600; font-size: 15px;">PDF Report Attached</p>
                           <p style="margin: 0; color: #15803d; font-size: 13px;">${data.fileName}</p>
                         </td>
                       </tr>
@@ -568,33 +568,33 @@ TradePath - Professional Trading Analysis
               </table>
 
               <!-- Report Contents -->
-              <p style="color: #64748b; font-size: 14px; margin: 0 0 15px; font-weight: 600;">Rapor İçeriği:</p>
+              <p style="color: #64748b; font-size: 14px; margin: 0 0 15px; font-weight: 600;">Report Contents:</p>
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
                 <tr>
                   <td style="padding: 8px 0; color: #475569; font-size: 14px;">
-                    <span style="color: #22c55e; margin-right: 10px;">✓</span> 7 Adımlı Analiz (Market Pulse, Asset Scan, Safety Check...)
+                    <span style="color: #22c55e; margin-right: 10px;">✓</span> 7-Step Analysis (Market Pulse, Asset Scan, Safety Check...)
                   </td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #475569; font-size: 14px;">
-                    <span style="color: #22c55e; margin-right: 10px;">✓</span> Trade Plan (Entry, Stop Loss, Take Profit seviyeleri)
+                    <span style="color: #22c55e; margin-right: 10px;">✓</span> Trade Plan (Entry, Stop Loss, Take Profit levels)
                   </td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #475569; font-size: 14px;">
-                    <span style="color: #22c55e; margin-right: 10px;">✓</span> Fiyat Grafiği
+                    <span style="color: #22c55e; margin-right: 10px;">✓</span> Price Chart
                   </td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #475569; font-size: 14px;">
-                    <span style="color: #22c55e; margin-right: 10px;">✓</span> AI Expert Yorumları
+                    <span style="color: #22c55e; margin-right: 10px;">✓</span> AI Expert Commentary
                   </td>
                 </tr>
               </table>
 
               <!-- Footer Note -->
               <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 30px 0 0; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-                Bu rapor ${data.generatedAt} tarihinde oluşturulmuştur.
+                This report was generated on ${data.generatedAt}.
               </p>
             </td>
           </tr>
@@ -606,10 +606,10 @@ TradePath - Professional Trading Analysis
                 TradePath - Professional Trading Analysis
               </p>
               <p style="color: #94a3b8; font-size: 11px; margin: 0;">
-                Bu e-posta, talep ettiğiniz analiz raporu için otomatik olarak gönderilmiştir.
+                This email was automatically sent for your requested analysis report.
               </p>
               <p style="color: #cbd5e1; font-size: 10px; margin: 15px 0 0;">
-                ⚠️ Bu rapor yatırım tavsiyesi niteliği taşımamaktadır. İşlem yapmadan önce kendi araştırmanızı yapın.
+                ⚠️ This report does not constitute investment advice. Do your own research before trading.
               </p>
             </td>
           </tr>
@@ -629,34 +629,34 @@ TradePath - Professional Trading Analysis
     const directionText = data.direction?.toLowerCase() === 'long' ? 'BULLISH' : 'BEARISH';
 
     return `
-TradePath Analiz Raporu
+TradePath Analysis Report
 =======================
 
-Merhaba ${data.userName},
+Hello ${data.userName},
 
-Talep ettiğiniz ${data.symbol}/USDT analiz raporu hazırlandı ve bu e-postaya eklendi.
+Your requested ${data.symbol}/USDT analysis report has been prepared and attached to this email.
 
-RAPOR ÖZETİ:
+REPORT SUMMARY:
 • Coin: ${data.symbol}/USDT
-• Yön: ${directionText}
-• Karar: ${data.verdict}
-• Skor: ${data.score}/100
+• Direction: ${directionText}
+• Verdict: ${data.verdict}
+• Score: ${data.score}/100
 
-RAPOR İÇERİĞİ:
-✓ 7 Adımlı Analiz (Market Pulse, Asset Scan, Safety Check...)
-✓ Trade Plan (Entry, Stop Loss, Take Profit seviyeleri)
-✓ Fiyat Grafiği
-✓ AI Expert Yorumları
+REPORT CONTENTS:
+✓ 7-Step Analysis (Market Pulse, Asset Scan, Safety Check...)
+✓ Trade Plan (Entry, Stop Loss, Take Profit levels)
+✓ Price Chart
+✓ AI Expert Commentary
 
-PDF Dosyası: ${data.fileName}
+PDF File: ${data.fileName}
 
-Bu rapor ${data.generatedAt} tarihinde oluşturulmuştur.
+This report was generated on ${data.generatedAt}.
 
 ---
 TradePath - Professional Trading Analysis
 
-⚠️ Bu rapor yatırım tavsiyesi niteliği taşımamaktadır.
-İşlem yapmadan önce kendi araştırmanızı yapın.
+⚠️ This report does not constitute investment advice.
+Do your own research before trading.
     `.trim();
   }
 
@@ -678,7 +678,7 @@ TradePath - Professional Trading Analysis
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Email Doğrulama - TradePath</title>
+  <title>Email Verification - TradePath</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
@@ -692,7 +692,7 @@ TradePath - Professional Trading Analysis
                 TradePath
               </h1>
               <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
-                Email Doğrulama
+                Email Verification
               </p>
             </td>
           </tr>
@@ -701,30 +701,30 @@ TradePath - Professional Trading Analysis
           <tr>
             <td style="padding: 40px;">
               <p style="color: #475569; font-size: 16px; margin: 0 0 25px;">
-                Merhaba <strong style="color: #1e293b;">${userName}</strong>,
+                Hello <strong style="color: #1e293b;">${userName}</strong>,
               </p>
 
               <p style="color: #64748b; font-size: 15px; margin: 0 0 30px; line-height: 1.6;">
-                TradePath hesabınızı oluşturduğunuz için teşekkür ederiz! Email adresinizi doğrulamak için aşağıdaki butona tıklayın.
+                Thank you for creating your TradePath account! Click the button below to verify your email address.
               </p>
 
               <!-- CTA Button -->
               <div style="text-align: center; margin: 35px 0;">
                 <a href="${verificationUrl}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; text-decoration: none; padding: 16px 50px; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);">
-                  ✓ Email Adresimi Doğrula
+                  ✓ Verify My Email
                 </a>
               </div>
 
               <!-- Security Note -->
               <div style="background: #fef3c7; border-radius: 8px; padding: 15px; margin: 25px 0; border-left: 4px solid #f59e0b;">
                 <p style="color: #92400e; font-size: 13px; margin: 0; line-height: 1.5;">
-                  <strong>Güvenlik Notu:</strong> Bu link 24 saat içinde geçerliliğini yitirecektir. Eğer bu işlemi siz yapmadıysanız, bu emaili görmezden gelebilirsiniz.
+                  <strong>Security Note:</strong> This link will expire in 24 hours. If you did not request this, you can ignore this email.
                 </p>
               </div>
 
               <!-- Link Alternative -->
               <p style="color: #94a3b8; font-size: 12px; margin: 25px 0 0; word-break: break-all;">
-                Buton çalışmıyorsa bu linki tarayıcınıza yapıştırın:<br>
+                If the button doesn't work, paste this link in your browser:<br>
                 <a href="${verificationUrl}" style="color: #3b82f6;">${verificationUrl}</a>
               </p>
             </td>
@@ -737,7 +737,7 @@ TradePath - Professional Trading Analysis
                 TradePath - Professional Trading Analysis
               </p>
               <p style="color: #94a3b8; font-size: 11px; margin: 10px 0 0;">
-                Bu email otomatik olarak gönderilmiştir. Lütfen yanıtlamayın.
+                This email was sent automatically. Please do not reply.
               </p>
             </td>
           </tr>
@@ -750,16 +750,16 @@ TradePath - Professional Trading Analysis
     `.trim();
 
     const text = `
-Merhaba ${userName},
+Hello ${userName},
 
-TradePath hesabınızı oluşturduğunuz için teşekkür ederiz!
+Thank you for creating your TradePath account!
 
-Email adresinizi doğrulamak için aşağıdaki linki tarayıcınızda açın:
+To verify your email address, open this link in your browser:
 ${verificationUrl}
 
-Bu link 24 saat içinde geçerliliğini yitirecektir.
+This link will expire in 24 hours.
 
-Eğer bu işlemi siz yapmadıysanız, bu emaili görmezden gelebilirsiniz.
+If you did not request this, you can ignore this email.
 
 ---
 TradePath - Professional Trading Analysis
@@ -767,7 +767,7 @@ TradePath - Professional Trading Analysis
 
     const result = await this.sendEmail({
       to: email,
-      subject: '✓ Email Adresinizi Doğrulayın - TradePath',
+      subject: '✓ Verify Your Email - TradePath',
       html,
       text,
     });
@@ -789,7 +789,7 @@ TradePath - Professional Trading Analysis
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Şifre Sıfırlama - TradePath</title>
+  <title>Password Reset - TradePath</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
@@ -803,7 +803,7 @@ TradePath - Professional Trading Analysis
                 TradePath
               </h1>
               <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
-                🔐 Şifre Sıfırlama
+                🔐 Password Reset
               </p>
             </td>
           </tr>
@@ -812,30 +812,30 @@ TradePath - Professional Trading Analysis
           <tr>
             <td style="padding: 40px;">
               <p style="color: #475569; font-size: 16px; margin: 0 0 25px;">
-                Merhaba <strong style="color: #1e293b;">${userName}</strong>,
+                Hello <strong style="color: #1e293b;">${userName}</strong>,
               </p>
 
               <p style="color: #64748b; font-size: 15px; margin: 0 0 30px; line-height: 1.6;">
-                Hesabınız için şifre sıfırlama talebinde bulundunuz. Şifrenizi sıfırlamak için aşağıdaki butona tıklayın.
+                You requested a password reset for your account. Click the button below to reset your password.
               </p>
 
               <!-- CTA Button -->
               <div style="text-align: center; margin: 35px 0;">
                 <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; text-decoration: none; padding: 16px 50px; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);">
-                  🔑 Şifremi Sıfırla
+                  🔑 Reset My Password
                 </a>
               </div>
 
               <!-- Security Note -->
               <div style="background: #fef2f2; border-radius: 8px; padding: 15px; margin: 25px 0; border-left: 4px solid #ef4444;">
                 <p style="color: #991b1b; font-size: 13px; margin: 0; line-height: 1.5;">
-                  <strong>⚠️ Önemli:</strong> Bu link 1 saat içinde geçerliliğini yitirecektir. Eğer şifre sıfırlama talebinde bulunmadıysanız, bu emaili görmezden gelin ve hesabınızı güvende tutmak için şifrenizi değiştirmeyi düşünün.
+                  <strong>⚠️ Important:</strong> This link will expire in 1 hour. If you did not request a password reset, please ignore this email and consider changing your password to keep your account secure.
                 </p>
               </div>
 
               <!-- Link Alternative -->
               <p style="color: #94a3b8; font-size: 12px; margin: 25px 0 0; word-break: break-all;">
-                Buton çalışmıyorsa bu linki tarayıcınıza yapıştırın:<br>
+                If the button doesn't work, paste this link in your browser:<br>
                 <a href="${resetUrl}" style="color: #3b82f6;">${resetUrl}</a>
               </p>
             </td>
@@ -848,7 +848,7 @@ TradePath - Professional Trading Analysis
                 TradePath - Professional Trading Analysis
               </p>
               <p style="color: #94a3b8; font-size: 11px; margin: 10px 0 0;">
-                Bu email şifre sıfırlama talebiniz üzerine gönderilmiştir.
+                This email was sent in response to your password reset request.
               </p>
             </td>
           </tr>
@@ -861,16 +861,16 @@ TradePath - Professional Trading Analysis
     `.trim();
 
     const text = `
-Merhaba ${userName},
+Hello ${userName},
 
-Hesabınız için şifre sıfırlama talebinde bulundunuz.
+You requested a password reset for your account.
 
-Şifrenizi sıfırlamak için aşağıdaki linki tarayıcınızda açın:
+To reset your password, open this link in your browser:
 ${resetUrl}
 
-Bu link 1 saat içinde geçerliliğini yitirecektir.
+This link will expire in 1 hour.
 
-Eğer şifre sıfırlama talebinde bulunmadıysanız, bu emaili görmezden gelin.
+If you did not request a password reset, please ignore this email.
 
 ---
 TradePath - Professional Trading Analysis
@@ -878,7 +878,7 @@ TradePath - Professional Trading Analysis
 
     const result = await this.sendEmail({
       to: email,
-      subject: '🔐 Şifre Sıfırlama Talebi - TradePath',
+      subject: '🔐 Password Reset Request - TradePath',
       html,
       text,
     });
@@ -899,7 +899,7 @@ TradePath - Professional Trading Analysis
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>2FA Aktifleştirildi - TradePath</title>
+  <title>2FA Enabled - TradePath</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
@@ -926,31 +926,31 @@ TradePath - Professional Trading Analysis
                   <span style="font-size: 40px; line-height: 80px;">✓</span>
                 </div>
                 <h2 style="color: #22c55e; font-size: 24px; margin: 0;">
-                  İki Faktörlü Doğrulama Aktif!
+                  Two-Factor Authentication Enabled!
                 </h2>
               </div>
 
               <p style="color: #475569; font-size: 16px; margin: 0 0 25px;">
-                Merhaba <strong style="color: #1e293b;">${userName}</strong>,
+                Hello <strong style="color: #1e293b;">${userName}</strong>,
               </p>
 
               <p style="color: #64748b; font-size: 15px; margin: 0 0 20px; line-height: 1.6;">
-                Hesabınız için iki faktörlü doğrulama (2FA) başarıyla aktifleştirildi. Artık hesabınız ekstra bir güvenlik katmanıyla korunuyor.
+                Two-factor authentication (2FA) has been successfully enabled for your account. Your account is now protected with an extra layer of security.
               </p>
 
               <div style="background: #f0fdf4; border-radius: 8px; padding: 20px; margin: 25px 0; border: 1px solid #bbf7d0;">
                 <p style="color: #166534; font-size: 14px; margin: 0 0 10px; font-weight: bold;">
-                  Önemli Hatırlatmalar:
+                  Important Reminders:
                 </p>
                 <ul style="color: #15803d; font-size: 13px; margin: 0; padding-left: 20px; line-height: 1.8;">
-                  <li>Yedek kodlarınızı güvenli bir yerde saklayın</li>
-                  <li>Authenticator uygulamanızı kaybetmeyin</li>
-                  <li>Her giriş yapışınızda 2FA kodu istenecektir</li>
+                  <li>Keep your backup codes in a safe place</li>
+                  <li>Don't lose your authenticator app</li>
+                  <li>A 2FA code will be required for each login</li>
                 </ul>
               </div>
 
               <p style="color: #94a3b8; font-size: 13px; margin: 25px 0 0; text-align: center;">
-                Eğer bu işlemi siz yapmadıysanız, lütfen derhal hesabınızı kontrol edin.
+                If you did not perform this action, please check your account immediately.
               </p>
             </td>
           </tr>
@@ -972,18 +972,18 @@ TradePath - Professional Trading Analysis
     `.trim();
 
     const text = `
-Merhaba ${userName},
+Hello ${userName},
 
-Hesabınız için iki faktörlü doğrulama (2FA) başarıyla aktifleştirildi!
+Two-factor authentication (2FA) has been successfully enabled for your account!
 
-Artık hesabınız ekstra bir güvenlik katmanıyla korunuyor.
+Your account is now protected with an extra layer of security.
 
-Önemli Hatırlatmalar:
-- Yedek kodlarınızı güvenli bir yerde saklayın
-- Authenticator uygulamanızı kaybetmeyin
-- Her giriş yapışınızda 2FA kodu istenecektir
+Important Reminders:
+- Keep your backup codes in a safe place
+- Don't lose your authenticator app
+- A 2FA code will be required for each login
 
-Eğer bu işlemi siz yapmadıysanız, lütfen derhal hesabınızı kontrol edin.
+If you did not perform this action, please check your account immediately.
 
 ---
 TradePath - Professional Trading Analysis
@@ -991,7 +991,7 @@ TradePath - Professional Trading Analysis
 
     const result = await this.sendEmail({
       to: email,
-      subject: '🛡️ İki Faktörlü Doğrulama Aktifleştirildi - TradePath',
+      subject: '🛡️ Two-Factor Authentication Enabled - TradePath',
       html,
       text,
     });
@@ -1013,7 +1013,7 @@ TradePath - Professional Trading Analysis
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Güvenlik Uyarısı - TradePath</title>
+  <title>Security Alert - TradePath</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
@@ -1027,7 +1027,7 @@ TradePath - Professional Trading Analysis
                 TradePath
               </h1>
               <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
-                ⚠️ Güvenlik Uyarısı
+                ⚠️ Security Alert
               </p>
             </td>
           </tr>
@@ -1040,53 +1040,53 @@ TradePath - Professional Trading Analysis
                   <span style="font-size: 40px; line-height: 80px;">⚠️</span>
                 </div>
                 <h2 style="color: #d97706; font-size: 24px; margin: 0;">
-                  Yeni Cihaz Girişi Tespit Edildi
+                  New Device Login Detected
                 </h2>
               </div>
 
               <p style="color: #475569; font-size: 16px; margin: 0 0 25px;">
-                Merhaba <strong style="color: #1e293b;">${userName}</strong>,
+                Hello <strong style="color: #1e293b;">${userName}</strong>,
               </p>
 
               <p style="color: #64748b; font-size: 15px; margin: 0 0 20px; line-height: 1.6;">
-                Hesabınıza yeni bir cihazdan veya konumdan giriş yapıldı. Eğer bu siz değilseniz, lütfen derhal şifrenizi değiştirin.
+                A login to your account was detected from a new device or location. If this wasn't you, please change your password immediately.
               </p>
 
               <div style="background: #fef3c7; border-radius: 8px; padding: 20px; margin: 25px 0; border: 1px solid #fcd34d;">
                 <p style="color: #92400e; font-size: 14px; margin: 0 0 15px; font-weight: bold;">
-                  Giriş Detayları:
+                  Login Details:
                 </p>
                 <table width="100%" style="color: #78350f; font-size: 13px;">
                   <tr>
-                    <td style="padding: 5px 0;"><strong>IP Adresi:</strong></td>
+                    <td style="padding: 5px 0;"><strong>IP Address:</strong></td>
                     <td style="padding: 5px 0;">${loginDetails.ip}</td>
                   </tr>
                   ${loginDetails.location ? `
                   <tr>
-                    <td style="padding: 5px 0;"><strong>Konum:</strong></td>
+                    <td style="padding: 5px 0;"><strong>Location:</strong></td>
                     <td style="padding: 5px 0;">${loginDetails.location}</td>
                   </tr>
                   ` : ''}
                   ${loginDetails.device ? `
                   <tr>
-                    <td style="padding: 5px 0;"><strong>Cihaz:</strong></td>
+                    <td style="padding: 5px 0;"><strong>Device:</strong></td>
                     <td style="padding: 5px 0;">${loginDetails.device}</td>
                   </tr>
                   ` : ''}
                   <tr>
-                    <td style="padding: 5px 0;"><strong>Zaman:</strong></td>
+                    <td style="padding: 5px 0;"><strong>Time:</strong></td>
                     <td style="padding: 5px 0;">${loginDetails.time}</td>
                   </tr>
                 </table>
               </div>
 
               <p style="color: #64748b; font-size: 14px; margin: 0; line-height: 1.6;">
-                Eğer bu giriş size aitse, bu uyarıyı görmezden gelebilirsiniz. Aksi takdirde:
+                If this login was you, you can ignore this alert. Otherwise:
               </p>
               <ul style="color: #475569; font-size: 14px; margin: 15px 0; padding-left: 20px;">
-                <li>Şifrenizi hemen değiştirin</li>
-                <li>Tüm oturumları sonlandırın</li>
-                <li>İki faktörlü doğrulamayı aktifleştirin</li>
+                <li>Change your password immediately</li>
+                <li>End all sessions</li>
+                <li>Enable two-factor authentication</li>
               </ul>
             </td>
           </tr>
@@ -1108,22 +1108,22 @@ TradePath - Professional Trading Analysis
     `.trim();
 
     const text = `
-Merhaba ${userName},
+Hello ${userName},
 
-Hesabınıza yeni bir cihazdan veya konumdan giriş yapıldı.
+A login to your account was detected from a new device or location.
 
-Giriş Detayları:
-- IP Adresi: ${loginDetails.ip}
-${loginDetails.location ? `- Konum: ${loginDetails.location}` : ''}
-${loginDetails.device ? `- Cihaz: ${loginDetails.device}` : ''}
-- Zaman: ${loginDetails.time}
+Login Details:
+- IP Address: ${loginDetails.ip}
+${loginDetails.location ? `- Location: ${loginDetails.location}` : ''}
+${loginDetails.device ? `- Device: ${loginDetails.device}` : ''}
+- Time: ${loginDetails.time}
 
-Eğer bu giriş size aitse, bu uyarıyı görmezden gelebilirsiniz.
+If this login was you, you can ignore this alert.
 
-Aksi takdirde:
-- Şifrenizi hemen değiştirin
-- Tüm oturumları sonlandırın
-- İki faktörlü doğrulamayı aktifleştirin
+Otherwise:
+- Change your password immediately
+- End all sessions
+- Enable two-factor authentication
 
 ---
 TradePath - Professional Trading Analysis
@@ -1131,7 +1131,7 @@ TradePath - Professional Trading Analysis
 
     const result = await this.sendEmail({
       to: email,
-      subject: '⚠️ Yeni Cihaz Girişi Tespit Edildi - TradePath',
+      subject: '⚠️ New Device Login Detected - TradePath',
       html,
       text,
     });

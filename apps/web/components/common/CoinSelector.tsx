@@ -14,6 +14,8 @@ interface RecentAnalysis {
   hoursAgo: number;
   direction?: string;
   score?: number;
+  interval?: string;
+  tradeType?: string;
 }
 
 // Coin data
@@ -58,6 +60,28 @@ const MIN_HOURS_BETWEEN_ANALYSES = 4;
 // Trade type definition
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
 
+// Trade type to interval mapping
+const TRADE_TYPE_INTERVALS: Record<TradeType, string[]> = {
+  scalping: ['5m', '15m'],
+  dayTrade: ['1h', '4h'],
+  swing: ['1d', '1D'],
+};
+
+// Trade type labels
+const TRADE_TYPE_LABELS: Record<TradeType, string> = {
+  scalping: 'Scalping',
+  dayTrade: 'Day Trade',
+  swing: 'Swing',
+};
+
+// Get trade type from interval
+function getTradeTypeFromInterval(interval: string): TradeType | null {
+  if (interval === '5m' || interval === '15m') return 'scalping';
+  if (interval === '1h' || interval === '4h') return 'dayTrade';
+  if (interval === '1d' || interval === '1D') return 'swing';
+  return null;
+}
+
 interface CoinSelectorProps {
   tradeType?: TradeType;
 }
@@ -84,38 +108,49 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
     }
   }, []);
 
-  // Check for recent analysis of selected coin
+  // Check for recent analysis of selected coin with same timeframe
   const checkRecentAnalysis = async (symbol: string): Promise<RecentAnalysis | null> => {
     try {
       const token = await getAuthToken();
       if (!token) return null;
 
-      const response = await fetch(`/api/reports?limit=5&offset=0&symbol=${symbol}`, {
+      // Fetch from analysis history instead of reports
+      const response = await fetch(`/api/analysis/history?limit=20`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
       if (!response.ok) return null;
 
       const data = await response.json();
-      if (!data.success || !data.data?.reports) return null;
+      if (!data.success || !data.data?.analyses) return null;
 
-      // Find the most recent analysis for this symbol
-      const recentReport = data.data.reports.find(
-        (r: { symbol: string }) => r.symbol.toUpperCase() === symbol.toUpperCase()
+      // Get intervals for current trade type
+      const currentIntervals = TRADE_TYPE_INTERVALS[tradeType];
+
+      // Find the most recent analysis for this symbol with the same timeframe
+      const recentAnalysis = data.data.analyses.find(
+        (a: { symbol: string; interval: string }) =>
+          a.symbol.toUpperCase() === symbol.toUpperCase() &&
+          currentIntervals.includes(a.interval)
       );
 
-      if (!recentReport) return null;
+      if (!recentAnalysis) return null;
 
-      const generatedAt = new Date(recentReport.generatedAt);
+      const generatedAt = new Date(recentAnalysis.createdAt);
       const now = new Date();
       const hoursAgo = (now.getTime() - generatedAt.getTime()) / (1000 * 60 * 60);
 
+      // Get the trade type from interval
+      const analysisTradeType = getTradeTypeFromInterval(recentAnalysis.interval);
+
       return {
-        symbol: recentReport.symbol,
-        generatedAt: recentReport.generatedAt,
+        symbol: recentAnalysis.symbol,
+        generatedAt: recentAnalysis.createdAt,
         hoursAgo,
-        direction: recentReport.direction,
-        score: recentReport.score,
+        direction: recentAnalysis.direction,
+        score: recentAnalysis.totalScore,
+        interval: recentAnalysis.interval,
+        tradeType: analysisTradeType || undefined,
       };
     } catch (error) {
       console.error('Failed to check recent analysis:', error);
@@ -207,8 +242,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
         <button
           onClick={() => {
             setIsOpen(!isOpen);
-            // Focus immediately without delay for better responsiveness
-            requestAnimationFrame(() => inputRef.current?.focus());
+            setTimeout(() => inputRef.current?.focus(), 100);
           }}
           className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-background border-2 border-border rounded-lg hover:border-primary/50 transition-colors"
         >
@@ -362,7 +396,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
 
       {/* Duplicate Analysis Warning Modal */}
       {showDuplicateWarning && recentAnalysis && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Warning Header */}
             <div className="bg-amber-500 p-4">
@@ -371,8 +405,10 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
                   <AlertTriangle className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Yakın Zamanda Analiz Edildi</h3>
-                  <p className="text-sm text-white/80">Bu coin zaten analiz edilmiş</p>
+                  <h3 className="text-lg font-bold text-white">Recently Analyzed</h3>
+                  <p className="text-sm text-white/80">
+                    This coin was already analyzed for {recentAnalysis.tradeType ? TRADE_TYPE_LABELS[recentAnalysis.tradeType as TradeType] : 'this timeframe'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -385,10 +421,11 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
                   <div>
                     <div className="font-semibold text-lg">{recentAnalysis.symbol}/USDT</div>
                     <div className="text-sm text-muted-foreground">
-                      {recentAnalysis.hoursAgo < 1
-                        ? `${Math.round(recentAnalysis.hoursAgo * 60)} dakika önce`
-                        : `${recentAnalysis.hoursAgo.toFixed(1)} saat önce`
-                      } analiz edildi
+                      Analyzed {recentAnalysis.hoursAgo < 1
+                        ? `${Math.round(recentAnalysis.hoursAgo * 60)} minutes ago`
+                        : `${recentAnalysis.hoursAgo.toFixed(1)} hours ago`
+                      }
+                      {recentAnalysis.interval && ` (${recentAnalysis.interval})`}
                     </div>
                   </div>
                 </div>
@@ -396,7 +433,13 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
                 {/* Previous Analysis Info */}
                 <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Önceki Yön:</span>
+                    <span className="text-muted-foreground">Timeframe:</span>
+                    <span className="font-medium px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                      {recentAnalysis.tradeType ? TRADE_TYPE_LABELS[recentAnalysis.tradeType as TradeType] : recentAnalysis.interval || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Previous Direction:</span>
                     <span className={cn(
                       "font-medium px-2 py-0.5 rounded",
                       recentAnalysis.direction === 'long'
@@ -408,7 +451,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
                   </div>
                   {recentAnalysis.score && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Önceki Skor:</span>
+                      <span className="text-muted-foreground">Previous Score:</span>
                       <span className={cn(
                         "font-medium px-2 py-0.5 rounded",
                         (recentAnalysis.score * 10) >= 70 ? 'bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400' :
@@ -420,9 +463,9 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
                     </div>
                   )}
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Tarih:</span>
+                    <span className="text-muted-foreground">Date:</span>
                     <span className="font-medium text-foreground">
-                      {new Date(recentAnalysis.generatedAt).toLocaleString('tr-TR', {
+                      {new Date(recentAnalysis.generatedAt).toLocaleString('en-US', {
                         day: 'numeric',
                         month: 'short',
                         hour: '2-digit',
@@ -433,8 +476,8 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
                 </div>
 
                 <p className="mt-4 text-sm text-muted-foreground">
-                  Yeni analiz yapmak <strong>25 kredi</strong> harcayacaktır.
-                  Kısa süre içinde piyasa koşulları önemli ölçüde değişmediyse, mevcut analizi kullanmanız önerilir.
+                  A new analysis will cost <strong>25 credits</strong>.
+                  If market conditions haven&apos;t changed significantly, consider using the existing analysis.
                 </p>
               </div>
 
@@ -444,7 +487,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
                   onClick={handleCancelAnalysis}
                   className="flex-1 px-4 py-2.5 border border-border rounded-lg font-medium text-foreground hover:bg-muted transition"
                 >
-                  İptal
+                  Cancel
                 </button>
                 <button
                   onClick={handleProceedAnyway}
@@ -455,7 +498,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
                   )}
                 >
                   <RefreshCw className="w-4 h-4" />
-                  Yine de Analiz Et
+                  Analyze Anyway
                 </button>
               </div>
             </div>

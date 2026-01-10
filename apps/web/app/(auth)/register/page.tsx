@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, User, Eye, EyeOff, Loader2, Gift, Check, X } from 'lucide-react';
+import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 // Password strength checker
 function getPasswordStrength(password: string): { score: number; checks: { hasLength: boolean; hasUpper: boolean; hasLower: boolean; hasNumber: boolean } } {
@@ -19,6 +20,7 @@ function getPasswordStrength(password: string): { score: number; checks: { hasLe
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { executeRecaptcha } = useRecaptcha();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -48,6 +50,9 @@ export default function RegisterPage() {
     setError('');
 
     try {
+      // Execute reCAPTCHA verification
+      const recaptchaToken = await executeRecaptcha('register');
+
       // Register via our API
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -57,6 +62,7 @@ export default function RegisterPage() {
           password,
           name: name.trim(),
           referralCode: referralCode.trim() || undefined,
+          recaptchaToken: recaptchaToken || undefined,
         }),
       });
 
@@ -105,7 +111,7 @@ export default function RegisterPage() {
           <div className="mb-6 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
             <div className="flex items-center gap-2 text-green-600">
               <Gift className="w-5 h-5" />
-              <span className="font-medium">Get 25 free credits on signup!</span>
+              <span className="font-medium">Get 125 free credits! (25 on signup + 100 on first login)</span>
             </div>
           </div>
 

@@ -495,6 +495,9 @@ Warn about potential traps and give protective advice.`;
         },
       });
 
+      // Check for daily analysis bonus (1 credit per 10 analyses)
+      await creditService.checkDailyAnalysisBonus(userId);
+
       // Build AI prompt based on whether trade plan exists
       const tradeTypeLabel = body.tradeType === 'scalping' ? 'scalping (1-15 min)' : body.tradeType === 'dayTrade' ? 'day trading (1-8 hours)' : 'swing trading (2-14 days)';
       let aiPrompt: string;
