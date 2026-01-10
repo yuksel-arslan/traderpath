@@ -74,6 +74,34 @@ interface TradePlanLevels {
 }
 
 // TradingView Widget Component with Trade Plan Overlay
+// Script caching for better performance
+let tradingViewScriptLoaded = false;
+let tradingViewScriptLoading = false;
+const scriptLoadCallbacks: (() => void)[] = [];
+
+function loadTradingViewScript(callback: () => void) {
+  if (tradingViewScriptLoaded && typeof (window as any).TradingView !== 'undefined') {
+    callback();
+    return;
+  }
+
+  scriptLoadCallbacks.push(callback);
+
+  if (tradingViewScriptLoading) return;
+
+  tradingViewScriptLoading = true;
+  const script = document.createElement('script');
+  script.src = 'https://s3.tradingview.com/tv.js';
+  script.async = true;
+  script.onload = () => {
+    tradingViewScriptLoaded = true;
+    tradingViewScriptLoading = false;
+    scriptLoadCallbacks.forEach(cb => cb());
+    scriptLoadCallbacks.length = 0;
+  };
+  document.head.appendChild(script);
+}
+
 function TradingViewChart({
   symbol,
   interval,
@@ -86,10 +114,7 @@ function TradingViewChart({
   const containerId = `tradingview_${symbol}_${interval}`;
 
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://s3.tradingview.com/tv.js';
-    script.async = true;
-    script.onload = () => {
+    loadTradingViewScript(() => {
       if (typeof (window as any).TradingView !== 'undefined') {
         new (window as any).TradingView.widget({
           autosize: true,
@@ -110,8 +135,7 @@ function TradingViewChart({
           studies: [],
         });
       }
-    };
-    document.head.appendChild(script);
+    });
 
     return () => {
       const container = document.getElementById(containerId);

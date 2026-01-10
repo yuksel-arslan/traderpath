@@ -7,9 +7,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { CoinSelector } from '../../../components/common/CoinSelector';
-import { CreditBalance } from '../../../components/credits/CreditBalance';
-import { TradeTypeSelector, TradeType } from '../../../components/analysis/TradeTypeSelector';
 import {
   BarChart3,
   Target,
@@ -20,8 +17,20 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
+import { CreditBalance } from '../../../components/credits/CreditBalance';
+import type { TradeType } from '../../../components/analysis/TradeTypeSelector';
 
-// Lazy load heavy components
+// Lazy load heavy components for better performance
+const CoinSelector = dynamic(
+  () => import('../../../components/common/CoinSelector').then(mod => ({ default: mod.CoinSelector })),
+  { ssr: false, loading: () => <div className="h-24 bg-muted/30 rounded-lg animate-pulse" /> }
+);
+
+const TradeTypeSelector = dynamic(
+  () => import('../../../components/analysis/TradeTypeSelector').then(mod => ({ default: mod.TradeTypeSelector })),
+  { ssr: false, loading: () => <div className="h-32 bg-muted/30 rounded-lg animate-pulse" /> }
+);
+
 const RecentAnalyses = dynamic(
   () => import('../../../components/analysis/RecentAnalyses').then(mod => ({ default: mod.RecentAnalyses })),
   { ssr: false, loading: () => <div className="h-40 bg-muted/30 rounded-lg animate-pulse" /> }

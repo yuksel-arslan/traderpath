@@ -90,7 +90,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
       const token = await getAuthToken();
       if (!token) return null;
 
-      const response = await fetch(`/api/reports?limit=10&offset=0`, {
+      const response = await fetch(`/api/reports?limit=5&offset=0&symbol=${symbol}`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
@@ -207,7 +207,8 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
         <button
           onClick={() => {
             setIsOpen(!isOpen);
-            setTimeout(() => inputRef.current?.focus(), 100);
+            // Focus immediately without delay for better responsiveness
+            requestAnimationFrame(() => inputRef.current?.focus());
           }}
           className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-background border-2 border-border rounded-lg hover:border-primary/50 transition-colors"
         >
@@ -361,7 +362,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
 
       {/* Duplicate Analysis Warning Modal */}
       {showDuplicateWarning && recentAnalysis && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
           <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Warning Header */}
             <div className="bg-amber-500 p-4">

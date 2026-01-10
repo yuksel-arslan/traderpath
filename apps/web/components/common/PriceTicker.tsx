@@ -57,7 +57,7 @@ export function PriceTicker() {
     };
 
     fetchPrices();
-    const interval = setInterval(fetchPrices, 30000); // Update every 30 seconds
+    const interval = setInterval(fetchPrices, 60000); // Update every 60 seconds for better performance
 
     return () => clearInterval(interval);
   }, []);

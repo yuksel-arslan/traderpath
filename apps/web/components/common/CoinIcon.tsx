@@ -47,7 +47,7 @@ export function CoinIcon({ symbol, size = 32, className = '' }: CoinIconProps) {
           setError(true);
           setLoading(false);
         }}
-        unoptimized // Required for external images
+        loading="lazy" // Lazy load images for better performance
       />
     </div>
   );
