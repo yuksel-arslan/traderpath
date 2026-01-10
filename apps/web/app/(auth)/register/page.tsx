@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, User, Eye, EyeOff, Loader2, Gift, Check, X } from 'lucide-react';
-import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 // Password strength checker
 function getPasswordStrength(password: string): { score: number; checks: { hasLength: boolean; hasUpper: boolean; hasLower: boolean; hasNumber: boolean } } {
@@ -20,7 +19,6 @@ function getPasswordStrength(password: string): { score: number; checks: { hasLe
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { executeRecaptcha } = useRecaptcha();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -50,9 +48,6 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      // Execute reCAPTCHA verification
-      const recaptchaToken = await executeRecaptcha('register');
-
       // Register via our API
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -62,7 +57,6 @@ export default function RegisterPage() {
           password,
           name: name.trim(),
           referralCode: referralCode.trim() || undefined,
-          recaptchaToken: recaptchaToken || undefined,
         }),
       });
 
