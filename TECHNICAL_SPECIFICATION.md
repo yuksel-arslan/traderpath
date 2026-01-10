@@ -1252,6 +1252,78 @@ User Request (symbol)
 └──────────────────┘
 ```
 
+### 7.4 Trade Type Configuration Matrix
+
+TradePath supports three distinct trade types, each with optimized timeframes, indicators, and analysis parameters.
+
+#### Summary Matrix
+
+| Trade Type | Timeframes | Candles | Hold Period | Risk | Credit Cost | Key Indicators |
+|------------|------------|---------|-------------|------|-------------|----------------|
+| **Scalping** | 1m, 5m, 15m | 10-100 | 1-15 min | High | 3 | RSI(7), STOCH_RSI, ATR(7), VWAP, SUPERTREND(7,2), ORDER_FLOW, SQUEEZE |
+| **Day Trade** | 15m, 1h, 4h | 12-96 | 1-8 hours | Medium | 2 | RSI(14), MACD, ICHIMOKU, ADX, STOCHASTIC, BOLLINGER, OBV |
+| **Swing** | 4h, 1d, 1w | 7-90 | 2-14 days | Low | 1 | ICHIMOKU, EMA(50/200), RSI(14), MACD, AD, WHALE_ACTIVITY, TSI |
+
+#### Step → Indicator Category Mapping
+
+| Step | Primary Indicators | Focus Area |
+|------|-------------------|------------|
+| **Step 1: Market Pulse** | ADX, ICHIMOKU, EMA, BOLLINGER | Market direction and volatility state |
+| **Step 2: Asset Scan** | VWAP, OBV, CMF, AD, LIQUIDITY_SCORE | Asset health and accumulation patterns |
+| **Step 3: Safety Check** | SPOOFING, ORDER_FLOW, WHALE_ACTIVITY, SQUEEZE | Risk detection and manipulation warning |
+| **Step 4: Timing** | RSI, STOCHASTIC, STOCH_RSI, MACD, SUPERTREND | Optimal entry/exit timing |
+| **Step 5: Trade Plan** | ATR, PSAR, KELTNER, DONCHIAN | SL/TP calculation and position sizing |
+| **Step 6: Trap Check** | OBV, RSI, MACD, FORCE_INDEX, AD | Volume/price divergence and trap detection |
+| **Step 7: Verdict** | ADX, RSI, ATR (subset) | Final confidence score and recommendation |
+
+#### Detailed Configuration: SCALPING (1-15 minutes)
+
+| Step | Timeframes (candles) | Indicators |
+|------|---------------------|------------|
+| 1. Market Pulse | 1m(60), 5m(30), 15m(20) | ATR(14), BOLLINGER(20,2), RELATIVE_VOLUME, EMA(9), EMA(21) |
+| 2. Asset Scan | 1m(100), 5m(50) | VWAP, LIQUIDITY_SCORE, BID_ASK_SPREAD, VOLUME_SPIKE, SLIPPAGE_ESTIMATE |
+| 3. Safety Check | 1m(60), 5m(30) | SPOOFING_DETECTION, ORDER_FLOW_IMBALANCE, SQUEEZE, WHALE_ACTIVITY, CMF |
+| 4. Timing | 1m(60), 5m(20) | RSI(7), STOCH_RSI(14,3,3), MACD(12,26,9), SUPERTREND(7,2), KELTNER |
+| 5. Trade Plan | 1m(30), 5m(15) | ATR(7), PSAR, BOLLINGER, VWAP |
+| 6. Trap Check | 1m(30), 5m(15) | OBV, ORDER_FLOW_IMBALANCE, MFI(14), FORCE_INDEX |
+| 7. Verdict | 1m(10) | ADX(14), RSI(7), ATR(7) |
+
+#### Detailed Configuration: DAY TRADE (1-8 hours)
+
+| Step | Timeframes (candles) | Indicators |
+|------|---------------------|------------|
+| 1. Market Pulse | 15m(96), 1h(48), 4h(30) | ICHIMOKU, ADX(14), EMA(20/50/200), BOLLINGER |
+| 2. Asset Scan | 1h(72), 4h(42) | VWAP, OBV, LIQUIDITY_SCORE, AROON(25), CMF, PVT |
+| 3. Safety Check | 15m(48), 1h(24), 4h(12) | HISTORICAL_VOLATILITY, ATR, WHALE_ACTIVITY, MFI, SQUEEZE, MARKET_IMPACT |
+| 4. Timing | 15m(48), 1h(24) | RSI(14), STOCHASTIC(14,3,3), MACD, SUPERTREND(10,3), CCI, WILLIAMS_R |
+| 5. Trade Plan | 15m(24), 1h(12) | ATR(14), PSAR, KELTNER, DONCHIAN, VWAP |
+| 6. Trap Check | 15m(24), 1h(12) | OBV, RSI(14), MACD, AD, ORDER_FLOW_IMBALANCE |
+| 7. Verdict | 15m(12), 1h(6) | ADX(14), RSI(14), ATR(14), SUPERTREND |
+
+#### Detailed Configuration: SWING (2-14 days)
+
+| Step | Timeframes (candles) | Indicators |
+|------|---------------------|------------|
+| 1. Market Pulse | 4h(90), 1d(60), 1w(20) | ICHIMOKU, ADX(14), EMA(50/200), SMA(50/200), BOLLINGER |
+| 2. Asset Scan | 1d(90), 1w(26) | OBV, AD, CMF, PVT, AROON(25), WHALE_ACTIVITY, VWMA |
+| 3. Safety Check | 4h(42), 1d(30), 1w(12) | HISTORICAL_VOLATILITY, ATR, BOLLINGER, LIQUIDITY_SCORE, MFI, MARKET_IMPACT |
+| 4. Timing | 4h(60), 1d(30) | RSI(14), STOCHASTIC, STOCH_RSI, MACD, SUPERTREND, TSI, ULTIMATE |
+| 5. Trade Plan | 4h(30), 1d(14) | ATR(14), PSAR, DONCHIAN, ICHIMOKU, KELTNER |
+| 6. Trap Check | 4h(30), 1d(14) | OBV, RSI(14), MACD, AD, ROC, FORCE_INDEX |
+| 7. Verdict | 4h(12), 1d(7) | ADX(14), ICHIMOKU, RSI(14), ATR(14) |
+
+#### Indicator Categories
+
+**40+ Technical Indicators organized by category:**
+
+| Category | Indicators |
+|----------|-----------|
+| **Trend** | EMA, SMA, MACD, ADX, SUPERTREND, ICHIMOKU, PSAR, AROON, VWMA |
+| **Momentum** | RSI, STOCHASTIC, STOCH_RSI, CCI, WILLIAMS_R, ROC, MFI, ULTIMATE, TSI |
+| **Volatility** | BOLLINGER, ATR, KELTNER, DONCHIAN, HISTORICAL_VOLATILITY, SQUEEZE |
+| **Volume** | OBV, VWAP, AD, CMF, FORCE_INDEX, EOM, PVT, RELATIVE_VOLUME, VOLUME_SPIKE |
+| **Advanced** | ORDER_FLOW_IMBALANCE, BID_ASK_SPREAD, DEPTH_RATIO, SLIPPAGE_ESTIMATE, MARKET_IMPACT, LIQUIDITY_SCORE, SPOOFING_DETECTION, WHALE_ACTIVITY |
+
 ---
 
 ## 8. Frontend Architecture
