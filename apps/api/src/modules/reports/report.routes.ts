@@ -1134,4 +1134,328 @@ export async function reportRoutes(fastify: FastifyInstance) {
       }
     }
   );
+
+  // ===========================================
+  // POST /api/reports/send-html-email - Send HTML report via email (5 credits)
+  // ===========================================
+  interface SendHtmlEmailBody {
+    reportId: string;
+    reportData: {
+      symbol: string;
+      generatedAt: string;
+      analysisId?: string;
+      marketPulse?: Record<string, unknown>;
+      assetScan?: Record<string, unknown>;
+      safetyCheck?: Record<string, unknown>;
+      timing?: Record<string, unknown>;
+      tradePlan?: Record<string, unknown>;
+      trapCheck?: Record<string, unknown>;
+      verdict?: Record<string, unknown>;
+      aiExpertComment?: string;
+    };
+  }
+
+  const HTML_EMAIL_CREDIT_COST = 5;
+
+  fastify.post<{ Body: SendHtmlEmailBody }>(
+    '/api/reports/send-html-email',
+    { preHandler: authenticate },
+    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+      try {
+        const userId = request.user?.id;
+        if (!userId) {
+          return reply.code(401).send({
+            error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+          });
+        }
+
+        const { reportId, reportData } = request.body;
+
+        if (!reportId || !reportData) {
+          return reply.code(400).send({
+            error: { code: 'INVALID_INPUT', message: 'Missing required fields: reportId, reportData' },
+          });
+        }
+
+        // Get user's email and credits
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true, name: true },
+        });
+
+        if (!user?.email) {
+          return reply.code(400).send({
+            error: { code: 'NO_EMAIL', message: 'User email not found' },
+          });
+        }
+
+        // Check user credits
+        const creditBalance = await prisma.creditBalance.findUnique({
+          where: { userId },
+          select: { balance: true },
+        });
+
+        const currentBalance = creditBalance?.balance || 0;
+        if (currentBalance < HTML_EMAIL_CREDIT_COST) {
+          return reply.code(402).send({
+            error: {
+              code: 'INSUFFICIENT_CREDITS',
+              message: `Not enough credits. Required: ${HTML_EMAIL_CREDIT_COST}, Available: ${currentBalance}`,
+            },
+          });
+        }
+
+        // Generate HTML email content
+        const htmlContent = generateReportHtmlEmail(reportData, user.name || 'Trader');
+
+        // Send the email
+        const result = await emailService.sendEmail({
+          to: user.email,
+          subject: `📊 ${reportData.symbol}/USDT Analysis Report - TradePath`,
+          html: htmlContent,
+          text: `Your ${reportData.symbol}/USDT analysis report from TradePath. View this email in HTML format for best experience.`,
+        });
+
+        if (!result.success) {
+          fastify.log.error({ error: result.error }, 'Failed to send HTML email');
+          return reply.code(500).send({
+            error: { code: 'EMAIL_FAILED', message: 'Failed to send email', details: result.error },
+          });
+        }
+
+        // Deduct credits after successful send
+        await prisma.creditBalance.update({
+          where: { userId },
+          data: {
+            balance: { decrement: HTML_EMAIL_CREDIT_COST },
+            lifetimeSpent: { increment: HTML_EMAIL_CREDIT_COST },
+          },
+        });
+
+        fastify.log.info({ userId, email: user.email, credits: HTML_EMAIL_CREDIT_COST }, 'HTML report email sent');
+
+        return reply.send({
+          success: true,
+          message: 'Report sent successfully to ' + user.email,
+          data: {
+            email: user.email,
+            creditsUsed: HTML_EMAIL_CREDIT_COST,
+          },
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to send report email' },
+        });
+      }
+    }
+  );
+}
+
+// Generate HTML email content for report
+function generateReportHtmlEmail(
+  data: SendHtmlEmailBody['reportData'],
+  userName: string
+): string {
+  const symbol = data.symbol || 'N/A';
+  const generatedAt = data.generatedAt || new Date().toLocaleString('tr-TR');
+  const verdict = data.verdict as Record<string, unknown> | undefined;
+  const tradePlan = data.tradePlan as Record<string, unknown> | undefined;
+  const assetScan = data.assetScan as Record<string, unknown> | undefined;
+  const marketPulse = data.marketPulse as Record<string, unknown> | undefined;
+  const safetyCheck = data.safetyCheck as Record<string, unknown> | undefined;
+  const timing = data.timing as Record<string, unknown> | undefined;
+  const trapCheck = data.trapCheck as Record<string, unknown> | undefined;
+
+  const direction = (tradePlan?.direction as string) || 'long';
+  const isLong = direction === 'long';
+  const score = ((verdict?.overallScore as number) || 0) * 10;
+  const action = (verdict?.action as string) || 'N/A';
+
+  const formatPrice = (price: number | undefined): string => {
+    if (!price) return '$0';
+    if (price >= 1000) return `$${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+    if (price >= 1) return `$${price.toFixed(2)}`;
+    if (price >= 0.01) return `$${price.toFixed(4)}`;
+    return `$${price.toFixed(6)}`;
+  };
+
+  const entryPrice = tradePlan?.averageEntry as number | undefined;
+  const stopLoss = (tradePlan?.stopLoss as Record<string, unknown>)?.price as number | undefined;
+  const takeProfits = tradePlan?.takeProfits as Array<{ price: number }> | undefined;
+  const currentPrice = assetScan?.currentPrice as number | undefined;
+  const priceChange24h = assetScan?.priceChange24h as number | undefined;
+  const rsi = (assetScan?.indicators as Record<string, unknown>)?.rsi as number | undefined;
+  const fearGreedIndex = marketPulse?.fearGreedIndex as number | undefined;
+  const fearGreedLabel = marketPulse?.fearGreedLabel as string | undefined;
+  const btcDominance = marketPulse?.btcDominance as number | undefined;
+  const riskLevel = safetyCheck?.riskLevel as string | undefined;
+  const tradeNow = timing?.tradeNow as boolean | undefined;
+  const traps = trapCheck?.traps as Record<string, unknown> | undefined;
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${symbol}/USDT Analysis Report</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0f172a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #0f172a; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">
+                📊 ${symbol}/USDT Analysis
+              </h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">
+                Generated: ${generatedAt}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Score & Direction -->
+          <tr>
+            <td style="padding: 30px;">
+              <table width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center">
+                    <div style="display: inline-block; background-color: ${isLong ? '#10b981' : '#ef4444'}20; border-radius: 50px; padding: 15px 30px;">
+                      <span style="font-size: 36px; font-weight: bold; color: ${isLong ? '#10b981' : '#ef4444'};">
+                        ${score}/100
+                      </span>
+                      <span style="display: block; color: ${isLong ? '#10b981' : '#ef4444'}; font-size: 16px; font-weight: 600; margin-top: 5px;">
+                        ${isLong ? '▲ LONG' : '▼ SHORT'} • ${action}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Trade Plan -->
+          <tr>
+            <td style="padding: 0 30px 20px;">
+              <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
+                💰 Trade Plan
+              </h2>
+              <table width="100%" cellspacing="0" cellpadding="10" style="background-color: #334155; border-radius: 8px;">
+                <tr>
+                  <td style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">Entry</td>
+                  <td style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">Stop Loss</td>
+                  <td style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">TP1</td>
+                  <td style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">TP2</td>
+                  <td style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">TP3</td>
+                </tr>
+                <tr>
+                  <td style="color: #22d3ee; font-size: 14px; font-weight: 600;">${formatPrice(entryPrice)}</td>
+                  <td style="color: #ef4444; font-size: 14px; font-weight: 600;">${formatPrice(stopLoss)}</td>
+                  <td style="color: #10b981; font-size: 14px; font-weight: 600;">${formatPrice(takeProfits?.[0]?.price)}</td>
+                  <td style="color: #10b981; font-size: 14px; font-weight: 600;">${formatPrice(takeProfits?.[1]?.price)}</td>
+                  <td style="color: #10b981; font-size: 14px; font-weight: 600;">${formatPrice(takeProfits?.[2]?.price)}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Analysis Summary -->
+          <tr>
+            <td style="padding: 0 30px 20px;">
+              <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
+                📈 Analysis Summary
+              </h2>
+              <table width="100%" cellspacing="10" cellpadding="0">
+                <tr>
+                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
+                    <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Current Price</span>
+                    <div style="color: #ffffff; font-size: 16px; font-weight: 600; margin-top: 4px;">
+                      ${formatPrice(currentPrice)}
+                      <span style="color: ${(priceChange24h || 0) >= 0 ? '#10b981' : '#ef4444'}; font-size: 12px;">
+                        ${(priceChange24h || 0) >= 0 ? '+' : ''}${priceChange24h?.toFixed(2) || '0'}%
+                      </span>
+                    </div>
+                  </td>
+                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
+                    <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">RSI</span>
+                    <div style="color: #ffffff; font-size: 16px; font-weight: 600; margin-top: 4px;">
+                      ${rsi?.toFixed(0) || 'N/A'}
+                      <span style="color: #94a3b8; font-size: 12px;">
+                        ${rsi ? (rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral') : ''}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
+                    <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Fear & Greed</span>
+                    <div style="color: #ffffff; font-size: 16px; font-weight: 600; margin-top: 4px;">
+                      ${fearGreedIndex || 'N/A'}
+                      <span style="color: #94a3b8; font-size: 12px;">${fearGreedLabel || ''}</span>
+                    </div>
+                  </td>
+                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
+                    <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">BTC Dominance</span>
+                    <div style="color: #ffffff; font-size: 16px; font-weight: 600; margin-top: 4px;">
+                      ${btcDominance?.toFixed(1) || 'N/A'}%
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
+                    <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Risk Level</span>
+                    <div style="color: ${riskLevel === 'low' ? '#10b981' : riskLevel === 'high' ? '#ef4444' : '#f59e0b'}; font-size: 16px; font-weight: 600; margin-top: 4px; text-transform: uppercase;">
+                      ${riskLevel || 'N/A'}
+                    </div>
+                  </td>
+                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
+                    <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Timing</span>
+                    <div style="color: ${tradeNow ? '#10b981' : '#f59e0b'}; font-size: 16px; font-weight: 600; margin-top: 4px;">
+                      ${tradeNow ? '✅ Good Entry' : '⏳ Wait'}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          ${data.aiExpertComment ? `
+          <!-- AI Expert Comment -->
+          <tr>
+            <td style="padding: 0 30px 20px;">
+              <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
+                🤖 AI Expert Review
+              </h2>
+              <div style="background-color: #334155; border-radius: 8px; padding: 15px; border-left: 4px solid #f59e0b;">
+                <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">
+                  ${data.aiExpertComment}
+                </p>
+              </div>
+            </td>
+          </tr>
+          ` : ''}
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #0f172a; padding: 20px 30px; text-align: center; border-top: 1px solid #334155;">
+              <p style="color: #64748b; font-size: 12px; margin: 0;">
+                This report was sent from <span style="color: #10b981;">Trade</span><span style="color: #ef4444;">Path</span>
+              </p>
+              <p style="color: #475569; font-size: 11px; margin: 10px 0 0;">
+                This is not financial advice. Always do your own research before trading.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
