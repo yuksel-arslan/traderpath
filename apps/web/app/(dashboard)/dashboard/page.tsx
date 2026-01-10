@@ -561,6 +561,8 @@ export default function DashboardPage() {
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly'>('daily');
   const [stepPeriod, setStepPeriod] = useState<'D' | 'W' | 'M' | 'all'>('all');
   const [tradeTypeFilter, setTradeTypeFilter] = useState<TradeType | 'all'>('all');
+  const [nextCandleRefresh, setNextCandleRefresh] = useState<number | null>(null);
+  const candleRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     try {
@@ -588,10 +590,10 @@ export default function DashboardPage() {
       // Fetch all data in parallel using authFetch
       // Include tradeType filter in API calls
       const tradeTypeQuery = tradeTypeFilter !== 'all' ? tradeTypeFilter : '';
-      const [platformRes, statsRes, analysesRes, creditsRes] = await Promise.all([
+      const [platformRes, statsRes, livePricesRes, creditsRes] = await Promise.all([
         fetch(getApiUrl(`/api/analysis/platform-stats?period=${stepPeriod}${tradeTypeQuery ? `&tradeType=${tradeTypeQuery}` : ''}`)),
         authFetch('/api/analysis/statistics'),
-        authFetch('/api/analysis/history?limit=20'),
+        authFetch('/api/analysis/live-prices'), // Use live-prices endpoint for current prices
         authFetch('/api/user/credits'),
       ]);
 
@@ -599,7 +601,7 @@ export default function DashboardPage() {
       console.log('[Dashboard] API Response Status:', {
         platform: platformRes.status,
         stats: statsRes.status,
-        analyses: analysesRes.status,
+        livePrices: livePricesRes.status,
         credits: creditsRes.status,
       });
 
@@ -628,11 +630,18 @@ export default function DashboardPage() {
         console.warn('[Dashboard] User stats failed:', statsRes.status);
       }
 
-      // Process analyses from analysis history
-      if (analysesRes.ok) {
-        const data = await analysesRes.json();
-        console.log('[Dashboard] Analyses raw response:', data);
+      // Process analyses from live-prices endpoint (includes current price and P/L)
+      if (livePricesRes.ok) {
+        const data = await livePricesRes.json();
+        console.log('[Dashboard] Live prices raw response:', data);
         const analyses = data.data?.analyses || [];
+        const nextRefresh = data.data?.nextRefresh;
+
+        // Set next candle refresh time
+        if (nextRefresh) {
+          setNextCandleRefresh(nextRefresh);
+        }
+
         newRecentOutcomes = analyses.map((a: any) => {
           // Normalize verdict
           const rawVerdict = (a.verdict || '').toLowerCase().replace(/[^a-z_]/g, '');
@@ -653,15 +662,15 @@ export default function DashboardPage() {
             verdict,
             score: a.totalScore || 0,
             outcome: 'pending' as const, // analyses don't track outcome yet
-            priceChange: undefined,
+            priceChange: a.unrealizedPnL,
             createdAt: a.createdAt, // Raw ISO date
             createdAtDisplay: new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             expiresAt: a.expiresAt,
             tradeType,
             direction: a.direction,
             entryPrice: a.entryPrice,
-            currentPrice: undefined, // Not available from analyses
-            unrealizedPnL: undefined, // Not available from analyses
+            currentPrice: a.currentPrice, // Live price from Binance
+            unrealizedPnL: a.unrealizedPnL, // Calculated P/L
             stopLoss: a.stopLoss,
             takeProfit1: a.takeProfit1,
             takeProfit2: a.takeProfit2,
@@ -669,9 +678,9 @@ export default function DashboardPage() {
           };
         });
         setRecentOutcomes(newRecentOutcomes);
-        console.log('[Dashboard] Analyses count:', newRecentOutcomes.length);
+        console.log('[Dashboard] Live analyses count:', newRecentOutcomes.length, 'Next refresh:', nextRefresh ? new Date(nextRefresh).toLocaleTimeString() : 'N/A');
       } else {
-        console.warn('[Dashboard] Analyses failed:', analysesRes.status);
+        console.warn('[Dashboard] Live prices failed:', livePricesRes.status);
       }
 
       // Process credits
@@ -718,13 +727,42 @@ export default function DashboardPage() {
 
     fetchDashboardData(periodChanged || tradeTypeChanged); // Force refresh when filters change
 
-    // Auto-refresh every 5 minutes to pick up new analyses
+    // Fallback: Auto-refresh every 5 minutes if candle close timer fails
     const refreshInterval = setInterval(() => {
       fetchDashboardData(true); // Force refresh, bypass cache
     }, 5 * 60 * 1000);
 
     return () => clearInterval(refreshInterval);
   }, [fetchDashboardData, stepPeriod, tradeTypeFilter]);
+
+  // Candle-close based refresh: Set timer to refresh at next candle close
+  useEffect(() => {
+    if (!nextCandleRefresh) return;
+
+    // Clear previous timer
+    if (candleRefreshTimerRef.current) {
+      clearTimeout(candleRefreshTimerRef.current);
+    }
+
+    const now = Date.now();
+    const timeUntilRefresh = nextCandleRefresh - now;
+
+    // Only set timer if the next refresh is in the future and within 4 hours
+    if (timeUntilRefresh > 0 && timeUntilRefresh < 4 * 60 * 60 * 1000) {
+      console.log(`[Dashboard] Next candle refresh in ${Math.round(timeUntilRefresh / 1000)}s at ${new Date(nextCandleRefresh).toLocaleTimeString()}`);
+
+      candleRefreshTimerRef.current = setTimeout(() => {
+        console.log('[Dashboard] Candle closed! Refreshing live prices...');
+        fetchDashboardData(true); // Force refresh at candle close
+      }, timeUntilRefresh + 1000); // Add 1 second buffer to ensure candle is closed
+    }
+
+    return () => {
+      if (candleRefreshTimerRef.current) {
+        clearTimeout(candleRefreshTimerRef.current);
+      }
+    };
+  }, [nextCandleRefresh, fetchDashboardData]);
 
   if (loading) {
     return (

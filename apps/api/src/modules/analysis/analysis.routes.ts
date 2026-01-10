@@ -710,6 +710,148 @@ Explain the key risks and what conditions would need to change before trading th
   });
 
   /**
+   * GET /api/analysis/live-prices
+   * Get current prices for user's analyses with trade plans
+   * Returns current price and unrealized P/L for each analysis
+   */
+  app.get('/live-prices', {
+    preHandler: authenticate,
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const userId = request.user!.id;
+
+      // Get user's analyses with trade plans (have entry price)
+      const analyses = await app.prisma.analysis.findMany({
+        where: {
+          userId,
+          expiresAt: { gt: new Date() }, // Only active analyses
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        select: {
+          id: true,
+          symbol: true,
+          interval: true,
+          totalScore: true,
+          step5Result: true, // tradePlan
+          step7Result: true, // verdict
+          createdAt: true,
+          expiresAt: true,
+        },
+      });
+
+      if (analyses.length === 0) {
+        return reply.send({
+          success: true,
+          data: { analyses: [], nextRefresh: null },
+        });
+      }
+
+      // Extract unique symbols
+      const symbols = [...new Set(analyses.map(a => a.symbol))];
+
+      // Fetch current prices from Binance
+      const prices: Record<string, number> = {};
+      try {
+        const pairs = symbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
+        const response = await fetch(
+          `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          for (const item of data) {
+            const symbol = item.symbol.replace('USDT', '');
+            prices[symbol] = parseFloat(item.price);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch prices:', err);
+      }
+
+      // Calculate next candle close time based on intervals present
+      const intervals = [...new Set(analyses.map(a => a.interval))];
+      const nextCandleCloses: Record<string, number> = {};
+      const now = Date.now();
+
+      for (const interval of intervals) {
+        if (!interval) continue;
+        let intervalMs = 0;
+        if (interval === '5m') intervalMs = 5 * 60 * 1000;
+        else if (interval === '15m') intervalMs = 15 * 60 * 1000;
+        else if (interval === '1h') intervalMs = 60 * 60 * 1000;
+        else if (interval === '4h') intervalMs = 4 * 60 * 60 * 1000;
+        else if (interval === '1d' || interval === '1D') intervalMs = 24 * 60 * 60 * 1000;
+
+        if (intervalMs > 0) {
+          // Calculate next candle close (aligned to interval)
+          const nextClose = Math.ceil(now / intervalMs) * intervalMs;
+          nextCandleCloses[interval] = nextClose;
+        }
+      }
+
+      // Find the soonest candle close for refresh timing
+      const allNextCloses = Object.values(nextCandleCloses);
+      const nextRefresh = allNextCloses.length > 0 ? Math.min(...allNextCloses) : null;
+
+      // Enrich analyses with current price and P/L
+      const enrichedAnalyses = analyses.map(a => {
+        const tradePlan = a.step5Result as Record<string, unknown> | null;
+        const verdictData = a.step7Result as Record<string, unknown> | null;
+
+        const entryPrice = tradePlan?.averageEntry as number || tradePlan?.entryPrice as number || null;
+        const direction = (tradePlan?.direction as string || 'long').toLowerCase();
+        const currentPrice = prices[a.symbol] || null;
+
+        let unrealizedPnL: number | null = null;
+        if (entryPrice && currentPrice) {
+          const pnlPercent = ((currentPrice - entryPrice) / entryPrice) * 100;
+          unrealizedPnL = direction === 'short' ? -pnlPercent : pnlPercent;
+        }
+
+        const stopLossData = tradePlan?.stopLoss as Record<string, unknown> | null;
+        const takeProfits = tradePlan?.takeProfits as Array<{ price: number }> | null;
+
+        return {
+          id: a.id,
+          symbol: a.symbol,
+          interval: a.interval,
+          totalScore: a.totalScore,
+          direction,
+          entryPrice,
+          currentPrice,
+          unrealizedPnL,
+          stopLoss: stopLossData?.price || null,
+          takeProfit1: takeProfits?.[0]?.price || null,
+          takeProfit2: takeProfits?.[1]?.price || null,
+          takeProfit3: takeProfits?.[2]?.price || null,
+          verdict: verdictData?.verdict || 'N/A',
+          hasTradePlan: !!tradePlan && !!entryPrice,
+          nextCandleClose: a.interval ? nextCandleCloses[a.interval] : null,
+          createdAt: a.createdAt,
+          expiresAt: a.expiresAt,
+        };
+      });
+
+      return reply.send({
+        success: true,
+        data: {
+          analyses: enrichedAnalyses,
+          prices,
+          nextRefresh,
+          nextCandleCloses,
+          serverTime: now,
+        },
+      });
+    } catch (error) {
+      console.error('Live prices error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'FETCH_ERROR', message: 'Failed to fetch live prices' },
+      });
+    }
+  });
+
+  /**
    * GET /api/analysis/platform-stats
    * Platform-wide statistics for trust building (public)
    * All data is calculated from real database records (Report table)
