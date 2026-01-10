@@ -19,6 +19,7 @@ import { healthRoutes, trackRequest } from './core/health';
 
 // Import routes
 import authRoutes from './modules/users/auth.routes';
+import securityRoutes from './modules/users/security.routes';
 import userRoutes from './modules/users/user.routes';
 import analysisRoutes from './modules/analysis/analysis.routes';
 import creditRoutes from './modules/credits/credit.routes';
@@ -259,6 +260,10 @@ await app.register(healthRoutes);
 // Auth routes (some public, some protected)
 app.register(authRoutes, { prefix: '/api/v1/auth' });
 app.register(authRoutes, { prefix: '/api/auth' }); // Legacy support
+
+// Security routes (email verification, password reset, 2FA)
+app.register(securityRoutes, { prefix: '/api/v1/auth' });
+app.register(securityRoutes, { prefix: '/api/auth' }); // Legacy support
 
 // Protected routes
 app.register(userRoutes, { prefix: '/api/v1/user' });

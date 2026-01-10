@@ -26,6 +26,35 @@ model User {
   isAdmin       Boolean  @default(false) @map("is_admin")
   googleId      String?  @unique @map("google_id") @db.VarChar(255)
 
+  // ===========================================
+  // Email Verification
+  // ===========================================
+  emailVerificationToken   String?   @unique @map("email_verification_token") @db.VarChar(255)
+  emailVerificationExpires DateTime? @map("email_verification_expires")
+
+  // ===========================================
+  // Password Reset
+  // ===========================================
+  passwordResetToken   String?   @unique @map("password_reset_token") @db.VarChar(255)
+  passwordResetExpires DateTime? @map("password_reset_expires")
+
+  // ===========================================
+  // Two-Factor Authentication (2FA)
+  // ===========================================
+  twoFactorEnabled     Boolean   @default(false) @map("two_factor_enabled")
+  twoFactorSecret      String?   @map("two_factor_secret") @db.VarChar(255)
+  twoFactorBackupCodes String[]  @default([]) @map("two_factor_backup_codes")
+
+  // ===========================================
+  // Account Security & Lockout
+  // ===========================================
+  accountLocked       Boolean   @default(false) @map("account_locked")
+  accountLockedUntil  DateTime? @map("account_locked_until")
+  loginAttempts       Int       @default(0) @map("login_attempts")
+  lastLoginIp         String?   @map("last_login_ip") @db.VarChar(45)
+  lastLoginDevice     String?   @map("last_login_device") @db.VarChar(500)
+  lastLoginLocation   String?   @map("last_login_location") @db.VarChar(255)
+
   // Gamification
   level         Int      @default(1)
   xp            Int      @default(0)
@@ -51,6 +80,9 @@ model User {
   // Auth.js Relations
   accounts      Account[]
   sessions      Session[]
+
+  // Security Relations
+  loginAuditLogs LoginAuditLog[]
 
   // App Relations
   creditBalance    CreditBalance?
@@ -109,6 +141,72 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+// ===========================================
+// Security & Audit Logging
+// ===========================================
+
+model LoginAuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String?  @map("user_id") @db.Uuid
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  email        String   @db.VarChar(255) // Store email even if user is deleted
+  eventType    LoginEventType @map("event_type")
+
+  // Request details
+  ipAddress    String   @map("ip_address") @db.VarChar(45)
+  userAgent    String?  @map("user_agent") @db.VarChar(500)
+  location     String?  @db.VarChar(255) // "City, Country" from IP geolocation
+
+  // Additional context
+  success      Boolean  @default(false)
+  failureReason String? @map("failure_reason") @db.VarChar(255)
+  metadata     Json     @default("{}")
+
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([email])
+  @@index([ipAddress])
+  @@index([eventType])
+  @@index([createdAt(sort: Desc)])
+  @@map("login_audit_logs")
+}
+
+enum LoginEventType {
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  LOGIN_BLOCKED
+  LOGOUT
+  PASSWORD_RESET_REQUEST
+  PASSWORD_RESET_SUCCESS
+  EMAIL_VERIFICATION_SENT
+  EMAIL_VERIFIED
+  TWO_FACTOR_ENABLED
+  TWO_FACTOR_DISABLED
+  TWO_FACTOR_SUCCESS
+  TWO_FACTOR_FAILED
+  ACCOUNT_LOCKED
+  ACCOUNT_UNLOCKED
+  SUSPICIOUS_LOGIN
+  NEW_DEVICE_LOGIN
+}
+
+model TokenBlacklist {
+  id           String   @id @default(uuid()) @db.Uuid
+  token        String   @unique @db.VarChar(500) // JWT token hash
+  userId       String   @map("user_id") @db.Uuid
+  reason       String   @db.VarChar(100) // 'logout', 'password_change', 'security', 'admin'
+  expiresAt    DateTime @map("expires_at") // When the original token would have expired
+
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("token_blacklist")
 }
 
 // ===========================================

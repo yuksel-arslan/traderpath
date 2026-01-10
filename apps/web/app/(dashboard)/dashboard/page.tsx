@@ -566,6 +566,14 @@ export default function DashboardPage() {
         authFetch('/api/user/credits'),
       ]);
 
+      // Debug: Log API responses
+      console.log('[Dashboard] API Response Status:', {
+        platform: platformRes.status,
+        stats: statsRes.status,
+        reports: reportsRes.status,
+        credits: creditsRes.status,
+      });
+
       let newPlatformStats = null;
       let newUserStats = null;
       let newRecentOutcomes: RecentOutcome[] = [];
@@ -576,6 +584,9 @@ export default function DashboardPage() {
         const data = await platformRes.json();
         newPlatformStats = data.data;
         setPlatformStats(newPlatformStats);
+        console.log('[Dashboard] Platform stats loaded:', !!newPlatformStats);
+      } else {
+        console.warn('[Dashboard] Platform stats failed:', platformRes.status);
       }
 
       // Process user stats
@@ -583,11 +594,15 @@ export default function DashboardPage() {
         const data = await statsRes.json();
         newUserStats = data;
         setUserStats(newUserStats);
+        console.log('[Dashboard] User stats loaded:', newUserStats);
+      } else {
+        console.warn('[Dashboard] User stats failed:', statsRes.status);
       }
 
       // Process reports for live tracking outcomes
       if (reportsRes.ok) {
         const data = await reportsRes.json();
+        console.log('[Dashboard] Reports raw response:', data);
         const reports = data.data?.reports || [];
         newRecentOutcomes = reports.map((r: any) => ({
           id: r.id,
@@ -609,6 +624,9 @@ export default function DashboardPage() {
           takeProfit3: r.takeProfit3,
         }));
         setRecentOutcomes(newRecentOutcomes);
+        console.log('[Dashboard] Reports count:', newRecentOutcomes.length);
+      } else {
+        console.warn('[Dashboard] Reports failed:', reportsRes.status);
       }
 
       // Process credits
@@ -616,6 +634,9 @@ export default function DashboardPage() {
         const data = await creditsRes.json();
         newCredits = data.credits || 0;
         setCredits(newCredits);
+        console.log('[Dashboard] Credits loaded:', newCredits);
+      } else {
+        console.warn('[Dashboard] Credits failed:', creditsRes.status);
       }
 
       // Save to cache
