@@ -498,7 +498,7 @@ function generatePage3HTML(data: AnalysisReportData): string {
       </div>
     </div>
 
-    <div class="page-footer">© 2024 TradePath. All rights reserved. • www.tradepath.io</div>
+    <div class="page-footer">© 2026 TradePath. All rights reserved. • www.tradepath.yukselarslan.com</div>
     <div class="page-number">Page 3 of 3</div>
   </div>
 </body></html>`;
