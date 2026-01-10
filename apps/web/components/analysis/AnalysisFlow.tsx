@@ -366,9 +366,10 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
     setViewMode('intro');
 
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch('/api/analysis/full', {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers,
         body: JSON.stringify({ symbol, accountSize }),
       });
 
