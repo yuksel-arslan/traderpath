@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
+import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { executeRecaptcha } = useRecaptcha();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -44,12 +46,16 @@ export default function LoginPage() {
     setSuccessMessage('');
 
     try {
+      // Execute reCAPTCHA verification
+      const recaptchaToken = await executeRecaptcha('login');
+
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           password,
+          recaptchaToken: recaptchaToken || undefined,
         }),
       });
 

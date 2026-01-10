@@ -55,6 +55,12 @@ model User {
   lastLoginDevice     String?   @map("last_login_device") @db.VarChar(500)
   lastLoginLocation   String?   @map("last_login_location") @db.VarChar(255)
 
+  // ===========================================
+  // First Login & Registration Tracking
+  // ===========================================
+  registrationEmail       String?   @map("registration_email") @db.VarChar(255)  // Original email used at registration
+  firstLoginBonusReceived Boolean   @default(false) @map("first_login_bonus_received")  // Track if first login bonus was given
+
   // Gamification
   level         Int      @default(1)
   xp            Int      @default(0)
