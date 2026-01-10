@@ -575,10 +575,10 @@ export default function DashboardPage() {
       // Fetch all data in parallel using authFetch
       // Include tradeType filter in API calls
       const tradeTypeQuery = tradeTypeFilter !== 'all' ? tradeTypeFilter : '';
-      const [platformRes, statsRes, reportsRes, creditsRes] = await Promise.all([
+      const [platformRes, statsRes, analysesRes, creditsRes] = await Promise.all([
         fetch(getApiUrl(`/api/analysis/platform-stats?period=${stepPeriod}${tradeTypeQuery ? `&tradeType=${tradeTypeQuery}` : ''}`)),
         authFetch('/api/analysis/statistics'),
-        authFetch(`/api/reports?limit=20${tradeTypeQuery ? `&tradeType=${tradeTypeQuery}` : ''}`),
+        authFetch('/api/analysis/history?limit=20'),
         authFetch('/api/user/credits'),
       ]);
 
@@ -586,7 +586,7 @@ export default function DashboardPage() {
       console.log('[Dashboard] API Response Status:', {
         platform: platformRes.status,
         stats: statsRes.status,
-        reports: reportsRes.status,
+        analyses: analysesRes.status,
         credits: creditsRes.status,
       });
 
@@ -615,35 +615,50 @@ export default function DashboardPage() {
         console.warn('[Dashboard] User stats failed:', statsRes.status);
       }
 
-      // Process reports for live tracking outcomes
-      if (reportsRes.ok) {
-        const data = await reportsRes.json();
-        console.log('[Dashboard] Reports raw response:', data);
-        const reports = data.data?.reports || [];
-        newRecentOutcomes = reports.map((r: any) => ({
-          id: r.id,
-          symbol: r.symbol,
-          verdict: r.verdict,
-          score: r.score || 7,
-          outcome: r.outcome || 'pending',
-          priceChange: r.unrealizedPnL,
-          createdAt: r.generatedAt, // Keep raw ISO date for chart calculations
-          createdAtDisplay: new Date(r.generatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          expiresAt: r.expiresAt,
-          tradeType: r.tradeType,
-          direction: r.direction,
-          entryPrice: r.entryPrice,
-          currentPrice: r.currentPrice,
-          unrealizedPnL: r.unrealizedPnL,
-          stopLoss: r.stopLoss,
-          takeProfit1: r.takeProfit1,
-          takeProfit2: r.takeProfit2,
-          takeProfit3: r.takeProfit3,
-        }));
+      // Process analyses from analysis history
+      if (analysesRes.ok) {
+        const data = await analysesRes.json();
+        console.log('[Dashboard] Analyses raw response:', data);
+        const analyses = data.data?.analyses || [];
+        newRecentOutcomes = analyses.map((a: any) => {
+          // Normalize verdict
+          const rawVerdict = (a.verdict || '').toLowerCase().replace(/[^a-z_]/g, '');
+          let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
+          if (rawVerdict === 'go' || rawVerdict === 'go!') verdict = 'go';
+          else if (rawVerdict === 'conditional_go' || rawVerdict === 'conditionalgo') verdict = 'conditional_go';
+          else if (rawVerdict === 'avoid' || rawVerdict === 'no_go' || rawVerdict === 'nogo') verdict = 'avoid';
+
+          // Map interval to trade type
+          let tradeType: TradeType | undefined;
+          if (a.interval === '5m' || a.interval === '15m') tradeType = 'scalping';
+          else if (a.interval === '1h' || a.interval === '4h') tradeType = 'dayTrade';
+          else if (a.interval === '1d' || a.interval === '1D') tradeType = 'swing';
+
+          return {
+            id: a.id,
+            symbol: a.symbol,
+            verdict,
+            score: a.totalScore || 0,
+            outcome: 'pending' as const, // analyses don't track outcome yet
+            priceChange: undefined,
+            createdAt: a.createdAt, // Raw ISO date
+            createdAtDisplay: new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            expiresAt: a.expiresAt,
+            tradeType,
+            direction: a.direction,
+            entryPrice: a.entryPrice,
+            currentPrice: undefined, // Not available from analyses
+            unrealizedPnL: undefined, // Not available from analyses
+            stopLoss: a.stopLoss,
+            takeProfit1: a.takeProfit1,
+            takeProfit2: a.takeProfit2,
+            takeProfit3: a.takeProfit3,
+          };
+        });
         setRecentOutcomes(newRecentOutcomes);
-        console.log('[Dashboard] Reports count:', newRecentOutcomes.length);
+        console.log('[Dashboard] Analyses count:', newRecentOutcomes.length);
       } else {
-        console.warn('[Dashboard] Reports failed:', reportsRes.status);
+        console.warn('[Dashboard] Analyses failed:', analysesRes.status);
       }
 
       // Process credits

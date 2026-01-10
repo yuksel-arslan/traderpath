@@ -625,22 +625,33 @@ Explain the key risks and what conditions would need to change before trading th
           creditsSpent: true,
           createdAt: true,
           expiresAt: true,
+          step5Result: true, // Contains tradePlan info
           step7Result: true, // Contains verdict info
         },
       });
 
       const total = await app.prisma.analysis.count({ where: { userId } });
 
-      // Extract verdict from step7Result for each analysis
+      // Extract verdict and tradePlan from step results for each analysis
       const enrichedAnalyses = analyses.map((a) => {
         const verdictData = a.step7Result as Record<string, unknown> | null;
+        const tradePlan = a.step5Result as Record<string, unknown> | null;
+        const stopLossData = tradePlan?.stopLoss as Record<string, unknown> | null;
+        const takeProfits = tradePlan?.takeProfits as Array<{ price: number; percentage: number }> | null;
+
         return {
           id: a.id,
           symbol: a.symbol,
           interval: a.interval,
           totalScore: a.totalScore,
           verdict: verdictData?.verdict || 'N/A',
-          hasTradePlan: verdictData?.hasTradePlan || false,
+          hasTradePlan: verdictData?.hasTradePlan || !!tradePlan,
+          direction: tradePlan?.direction || null,
+          entryPrice: tradePlan?.averageEntry || tradePlan?.entryPrice || null,
+          stopLoss: stopLossData?.price || null,
+          takeProfit1: takeProfits?.[0]?.price || null,
+          takeProfit2: takeProfits?.[1]?.price || null,
+          takeProfit3: takeProfits?.[2]?.price || null,
           creditsSpent: a.creditsSpent,
           createdAt: a.createdAt,
           expiresAt: a.expiresAt,
