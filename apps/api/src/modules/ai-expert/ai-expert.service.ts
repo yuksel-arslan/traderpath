@@ -1042,9 +1042,8 @@ export class AIExpertService {
     const isAnalysisRequest = this.isAnalysisRequest(request.message);
 
     if (detectedSymbol && isAnalysisRequest) {
-      // Detect language from message
-      const isTurkish = /[çğıöşüÇĞİÖŞÜ]|analiz|değerlendir|incele|nasıl|almalı|satmalı/i.test(request.message);
-      const language = isTurkish ? 'tr' : 'en';
+      // Always use English for expert panel analysis
+      const language = 'en';
 
       // Run Expert Panel analysis
       const panelResult = await this.analyzeWithExpertPanel({
