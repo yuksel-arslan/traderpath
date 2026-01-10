@@ -1,17 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { CheckCircle, Zap, Crown, Gem, ArrowRight, HelpCircle } from 'lucide-react';
+import { CheckCircle, Zap, Crown, Star, TrendingUp, Rocket, ArrowRight, HelpCircle } from 'lucide-react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { cn } from '../../../lib/utils';
 import { CREDIT_PACKAGES, ANALYSIS_COSTS, ANALYSIS_BUNDLES, FREE_SIGNUP_CREDITS } from '../../../lib/pricing-config';
 
-// Icon mapping for packages
+// Icon mapping for packages by ID
 const PACKAGE_ICONS: Record<string, typeof Zap> = {
-  blue: Zap,
-  purple: Crown,
-  amber: Gem,
-  green: Crown,
+  starter: Zap,
+  trader: Star,
+  pro: TrendingUp,
+  whale: Rocket,
 };
 
 const FAQS = [
@@ -140,54 +140,35 @@ export default function PricingPage() {
           <p className="text-muted-foreground text-center mb-8">
             Choose the package that fits your trading style
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {CREDIT_PACKAGES.map((pkg) => {
-              const Icon = PACKAGE_ICONS[pkg.color] || Zap;
+              const Icon = PACKAGE_ICONS[pkg.id] || Zap;
               return (
                 <div
                   key={pkg.id}
                   className={cn(
-                    'bg-card rounded-lg border p-6 relative',
-                    pkg.popular && 'border-primary ring-2 ring-primary'
+                    'bg-card rounded-xl border-2 p-6 relative text-center transition hover:shadow-lg',
+                    pkg.popular ? 'border-amber-500 ring-2 ring-amber-500 ring-offset-2 ring-offset-background' : 'border-border hover:border-primary/50'
                   )}
                 >
                   {pkg.popular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-full">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">
                       MOST POPULAR
                     </div>
                   )}
-                  <div className={cn(
-                    'w-12 h-12 rounded-lg flex items-center justify-center mb-4',
-                    pkg.color === 'blue' && 'bg-blue-500/20',
-                    pkg.color === 'purple' && 'bg-purple-500/20',
-                    pkg.color === 'amber' && 'bg-amber-500/20',
-                    pkg.color === 'green' && 'bg-green-500/20'
-                  )}>
-                    <Icon className={cn(
-                      'w-6 h-6',
-                      pkg.color === 'blue' && 'text-blue-500',
-                      pkg.color === 'purple' && 'text-purple-500',
-                      pkg.color === 'amber' && 'text-amber-500',
-                      pkg.color === 'green' && 'text-green-500'
-                    )} />
+                  <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-accent flex items-center justify-center">
+                    <Icon className="w-7 h-7 text-muted-foreground" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-1">{pkg.name}</h3>
-                  <div className="flex items-baseline gap-1 mb-1">
-                    <span className="text-3xl font-bold">${pkg.price}</span>
+                  <h3 className="text-xl font-bold mb-2">{pkg.name}</h3>
+                  <div className="text-3xl font-bold text-primary mb-1">
+                    {pkg.credits}
+                    {pkg.bonus > 0 && (
+                      <span className="text-lg text-amber-500 ml-1">+{pkg.bonus}</span>
+                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {pkg.credits}{pkg.bonus > 0 && ` + ${pkg.bonus} bonus`} credits
-                    <br />
-                    <span className="text-xs">${pkg.pricePerCredit.toFixed(2)}/credit</span>
-                  </p>
-                  <ul className="space-y-2 mb-6">
-                    {pkg.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span className="text-muted-foreground">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="text-sm text-muted-foreground mb-4">credits</p>
+                  <div className="text-2xl font-bold mb-1">{pkg.priceDisplay}</div>
+                  <p className="text-sm text-muted-foreground mb-6">{pkg.perCredit}/credit</p>
                   <Link
                     href="/register"
                     className={cn(
