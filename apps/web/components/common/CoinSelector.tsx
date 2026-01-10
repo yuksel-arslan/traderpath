@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ChevronDown, TrendingUp, Clock, X, AlertTriangle, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { getAuthToken } from '../../lib/api';
 import { CoinIcon } from './CoinIcon';
 
 // Recent analysis info for duplicate warning
@@ -79,7 +80,7 @@ export function CoinSelector() {
   // Check for recent analysis of selected coin
   const checkRecentAnalysis = async (symbol: string): Promise<RecentAnalysis | null> => {
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = await getAuthToken();
       if (!token) return null;
 
       const response = await fetch(`/api/reports?limit=10&offset=0`, {

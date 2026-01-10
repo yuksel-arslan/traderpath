@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FileDown, Loader2, Check, Globe, ChevronDown, Mail, X, Send } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { getAuthToken } from '../../lib/api';
 
 // Available languages for PDF reports
 const REPORT_LANGUAGES = {
@@ -112,7 +113,7 @@ interface DownloadReportButtonProps {
 // Fetch existing AI Expert comment from report
 async function fetchAiExpertComment(analysisId: string): Promise<string | null> {
   try {
-    const token = localStorage.getItem('accessToken');
+    const token = await getAuthToken();
     if (!token) return null;
 
     const response = await fetch(`/api/reports/by-analysis/${analysisId}`, {
@@ -132,7 +133,7 @@ async function fetchAiExpertComment(analysisId: string): Promise<string | null> 
 // Save report to database
 async function saveReportToDatabase(reportData: AnalysisReportData, interval: string = '1h'): Promise<boolean> {
   try {
-    const token = localStorage.getItem('accessToken');
+    const token = await getAuthToken();
     if (!token) return false;
 
     const response = await fetch('/api/reports', {
@@ -165,7 +166,7 @@ async function translateReportContent(
   targetLanguage: string
 ): Promise<Record<string, string> | null> {
   try {
-    const token = localStorage.getItem('accessToken');
+    const token = await getAuthToken();
     if (!token) return null;
 
     const response = await fetch('/api/translation/translate', {
@@ -200,7 +201,7 @@ async function sendReportEmail(
   fileName: string
 ): Promise<{ success: boolean; email?: string; error?: string }> {
   try {
-    const token = localStorage.getItem('accessToken');
+    const token = await getAuthToken();
     if (!token) return { success: false, error: 'Not authenticated' };
 
     const response = await fetch('/api/reports/send-email', {

@@ -14,6 +14,7 @@ import {
   XCircle,
   Clock
 } from 'lucide-react';
+import { getAuthToken } from '../../lib/api';
 
 interface AnalysisStatistics {
   totalAnalyses: number;
@@ -36,7 +37,7 @@ export function AnalysisStats() {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = await getAuthToken();
       const response = await fetch('/api/analysis/statistics', {
         headers: {
           'Authorization': `Bearer ${token}`,

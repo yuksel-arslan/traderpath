@@ -13,6 +13,7 @@ import {
   Coins,
   Calendar
 } from 'lucide-react';
+import { getAuthToken } from '../../lib/api';
 
 interface CoinPerformance {
   symbol: string;
@@ -54,7 +55,7 @@ export function PerformanceMetrics() {
 
   const fetchPerformance = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = await getAuthToken();
       const response = await fetch('/api/analysis/performance', {
         headers: {
           'Authorization': `Bearer ${token}`,

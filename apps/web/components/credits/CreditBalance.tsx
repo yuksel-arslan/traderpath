@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Gem, Plus, History } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '../../lib/utils';
+import { getAuthToken } from '../../lib/api';
 import Link from 'next/link';
 
 interface CreditBalanceData {
@@ -16,7 +17,7 @@ interface CreditBalanceData {
 }
 
 async function fetchBalance(): Promise<CreditBalanceData> {
-  const token = localStorage.getItem('accessToken');
+  const token = await getAuthToken();
 
   if (!token) {
     return {

@@ -15,6 +15,7 @@ import {
   ArrowDown,
 } from 'lucide-react';
 import Link from 'next/link';
+import { getAuthToken } from '../../lib/api';
 
 interface TakeProfit {
   level: 'TP1' | 'TP2' | 'TP3';
@@ -61,7 +62,7 @@ export function LiveTrackingPanel({ className = '' }: LiveTrackingPanelProps) {
     setError(null);
 
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = await getAuthToken();
       if (!token) {
         setError('Please log in to view live tracking');
         return;
