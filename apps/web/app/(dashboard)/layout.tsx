@@ -39,8 +39,8 @@ const mainNav = [
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'AI Experts', href: '/ai-expert', icon: Brain },
-  { name: 'Rewards', href: '/rewards', icon: Gift },
   { name: 'Credits', href: '/credits', icon: Coins },
+  { name: 'Rewards', href: '/rewards', icon: Gift },
   { name: 'Alerts', href: '/alerts', icon: Bell },
 ];
 
