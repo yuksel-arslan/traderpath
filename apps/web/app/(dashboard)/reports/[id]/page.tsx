@@ -147,30 +147,30 @@ export default function ReportViewPage() {
     );
   }
 
-  const isLong = report.tradePlan.direction === 'long';
+  const isLong = report.tradePlan?.direction === 'long';
   const isBullish = isLong;
-  const score = report.verdict.overallScore * 10; // Convert to 100 scale
+  const score = (report.verdict?.overallScore || 0) * 10; // Convert to 100 scale
 
   // Determine status labels
-  const marketStatus = report.marketPulse.trend?.direction === 'bullish' ? 'Bullish' :
-                       report.marketPulse.trend?.direction === 'bearish' ? 'Bearish' : 'Neutral';
+  const marketStatus = report.marketPulse?.trend?.direction === 'bullish' ? 'Bullish' :
+                       report.marketPulse?.trend?.direction === 'bearish' ? 'Bearish' : 'Neutral';
 
-  const assetStatus = report.assetScan.priceChange24h >= 2 ? 'Strong' :
-                      report.assetScan.priceChange24h >= 0 ? 'Stable' :
-                      report.assetScan.priceChange24h >= -2 ? 'Weak' : 'Declining';
+  const assetStatus = (report.assetScan?.priceChange24h || 0) >= 2 ? 'Strong' :
+                      (report.assetScan?.priceChange24h || 0) >= 0 ? 'Stable' :
+                      (report.assetScan?.priceChange24h || 0) >= -2 ? 'Weak' : 'Declining';
 
-  const safetyStatus = report.safetyCheck.riskLevel === 'low' ? 'Safe' :
-                       report.safetyCheck.riskLevel === 'high' ? 'Risky' : 'Caution';
+  const safetyStatus = report.safetyCheck?.riskLevel === 'low' ? 'Safe' :
+                       report.safetyCheck?.riskLevel === 'high' ? 'Risky' : 'Caution';
 
-  const timingStatus = report.timing.tradeNow ? 'Good' : 'Wait';
+  const timingStatus = report.timing?.tradeNow ? 'Good' : 'Wait';
 
-  const planStatus = report.tradePlan.averageEntry ? 'Ready' : 'Pending';
+  const planStatus = report.tradePlan?.averageEntry ? 'Ready' : 'Pending';
 
   const trapStatus = report.trapCheck?.traps?.bullTrap || report.trapCheck?.traps?.bearTrap ? 'Warning' :
                      report.trapCheck?.traps?.fakeoutRisk === 'high' ? 'Caution' : 'Clear';
 
   // MACD description
-  const macdDesc = report.assetScan.indicators?.macd?.histogram > 0 ? 'Bullish crossover forming' : 'Bearish momentum';
+  const macdDesc = (report.assetScan?.indicators?.macd?.histogram || 0) > 0 ? 'Bullish crossover forming' : 'Bearish momentum';
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-200px)] p-4">
@@ -226,7 +226,7 @@ export default function ReportViewPage() {
                 )}>{marketStatus}</span>
               </div>
               <p className="text-sm text-gray-500 dark:text-slate-400">
-                Fear & Greed: {report.marketPulse.fearGreedIndex} ({report.marketPulse.fearGreedLabel}) • BTC Dominance: {report.marketPulse.btcDominance?.toFixed(1)}%
+                Fear & Greed: {report.marketPulse?.fearGreedIndex || 0} ({report.marketPulse?.fearGreedLabel || 'N/A'}) • BTC Dominance: {report.marketPulse?.btcDominance?.toFixed(1) || '0'}%
               </p>
             </div>
 
@@ -245,7 +245,7 @@ export default function ReportViewPage() {
                 )}>{assetStatus}</span>
               </div>
               <p className="text-sm text-gray-500 dark:text-slate-400">
-                Price: {formatPrice(report.assetScan.currentPrice)} • 24h: {report.assetScan.priceChange24h >= 0 ? '+' : ''}{report.assetScan.priceChange24h?.toFixed(2)}%
+                Price: {formatPrice(report.assetScan?.currentPrice)} • 24h: {(report.assetScan?.priceChange24h || 0) >= 0 ? '+' : ''}{report.assetScan?.priceChange24h?.toFixed(2) || '0'}%
               </p>
             </div>
 
@@ -262,7 +262,7 @@ export default function ReportViewPage() {
                 )}>{safetyStatus}</span>
               </div>
               <p className="text-sm text-gray-500 dark:text-slate-400">
-                {report.safetyCheck.manipulation?.pumpDumpRisk === 'low' ? 'No manipulation detected' : 'Manipulation risk detected'} • Whale activity: {report.safetyCheck.whaleActivity?.bias || 'neutral'}
+                {report.safetyCheck?.manipulation?.pumpDumpRisk === 'low' ? 'No manipulation detected' : 'Manipulation risk detected'} • Whale activity: {report.safetyCheck?.whaleActivity?.bias || 'neutral'}
               </p>
             </div>
 
@@ -279,7 +279,7 @@ export default function ReportViewPage() {
                 )}>{timingStatus}</span>
               </div>
               <p className="text-sm text-gray-500 dark:text-slate-400">
-                RSI: {report.assetScan.indicators?.rsi?.toFixed(0) || 'N/A'} • MACD: {macdDesc}
+                RSI: {report.assetScan?.indicators?.rsi?.toFixed(0) || 'N/A'} • MACD: {macdDesc}
               </p>
             </div>
 
@@ -296,7 +296,7 @@ export default function ReportViewPage() {
                 )}>{planStatus}</span>
               </div>
               <p className="text-sm text-gray-500 dark:text-slate-400">
-                Entry: {formatPrice(report.tradePlan.averageEntry)} • TP: {formatPrice(report.tradePlan.takeProfits?.[0]?.price)} • SL: {formatPrice(report.tradePlan.stopLoss?.price)}
+                Entry: {formatPrice(report.tradePlan?.averageEntry)} • TP: {formatPrice(report.tradePlan?.takeProfits?.[0]?.price)} • SL: {formatPrice(report.tradePlan?.stopLoss?.price)}
               </p>
             </div>
 
@@ -326,11 +326,11 @@ export default function ReportViewPage() {
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle className={cn("w-5 h-5", isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")} />
               <span className={cn("font-semibold", isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
-                Final Verdict: {report.tradePlan.direction?.toUpperCase()} Recommended
+                Final Verdict: {report.tradePlan?.direction?.toUpperCase() || 'N/A'} Recommended
               </span>
             </div>
             <p className="text-sm text-gray-600 dark:text-slate-300">
-              {report.verdict.aiSummary || `Market conditions favor ${isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(report.tradePlan.averageEntry)} with ${report.tradePlan.riskReward?.toFixed(1)}:1 risk-reward ratio. Set stop-loss at ${formatPrice(report.tradePlan.stopLoss?.price)} to protect against downside.`}
+              {report.verdict?.aiSummary || `Market conditions favor ${isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(report.tradePlan?.averageEntry)} with ${report.tradePlan?.riskReward?.toFixed(1) || '0'}:1 risk-reward ratio. Set stop-loss at ${formatPrice(report.tradePlan?.stopLoss?.price)} to protect against downside.`}
             </p>
           </div>
 
