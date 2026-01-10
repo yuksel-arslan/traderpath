@@ -2,13 +2,14 @@
 
 // ===========================================
 // Analyze Landing Page
-// With Statistics Cards & Coin Selector
+// With Statistics Cards, Trade Type Selector & Coin Selector
 // ===========================================
 
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { CoinSelector } from '../../../components/common/CoinSelector';
 import { CreditBalance } from '../../../components/credits/CreditBalance';
+import { TradeTypeSelector, TradeType } from '../../../components/analysis/TradeTypeSelector';
 import {
   BarChart3,
   Target,
@@ -37,6 +38,7 @@ interface AnalysisStats {
 
 export default function AnalyzePage() {
   const [stats, setStats] = useState<AnalysisStats | null>(null);
+  const [tradeType, setTradeType] = useState<TradeType>('dayTrade');
 
   const fetchStats = useCallback(async () => {
     try {
@@ -126,10 +128,20 @@ export default function AnalyzePage() {
 
         {/* Main Content */}
         <div className="space-y-6">
+          {/* Trade Type Selector */}
+          <div className="bg-gray-50 dark:bg-slate-900/50 border border-gray-200 dark:border-slate-700/30 rounded-xl p-6">
+            <TradeTypeSelector
+              value={tradeType}
+              onChange={setTradeType}
+              variant="cards"
+              showCreditCost={true}
+            />
+          </div>
+
           {/* Coin Selector */}
           <div className="bg-gray-50 dark:bg-slate-900/50 border border-gray-200 dark:border-slate-700/30 rounded-xl p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Trading Pair</h2>
-            <CoinSelector />
+            <CoinSelector tradeType={tradeType} />
           </div>
 
           {/* Recent Analyses */}
