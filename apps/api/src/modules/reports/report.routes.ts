@@ -22,6 +22,7 @@ interface SaveReportBody {
   direction?: string;
   interval?: string; // e.g., '4h', '1h', '1d'
   entryPrice?: number; // Price at time of analysis
+  tradeType?: string; // 'scalping', 'dayTrade', 'swing'
 }
 
 // Extract entry price from report data - comprehensive search
@@ -81,7 +82,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
           });
         }
 
-        const { symbol, analysisId, reportData, verdict, score, direction, interval = '4h', entryPrice } = request.body;
+        const { symbol, analysisId, reportData, verdict, score, direction, interval = '4h', entryPrice, tradeType } = request.body;
 
         if (!symbol || !reportData || !verdict || score === undefined) {
           return reply.code(400).send({
@@ -104,6 +105,9 @@ export async function reportRoutes(fastify: FastifyInstance) {
         // Extract entry price from reportData if not provided
         const finalEntryPrice = entryPrice || extractEntryPrice(reportData);
 
+        // Extract tradeType from reportData if not provided
+        const finalTradeType = tradeType || (reportData?.tradeType as string) || null;
+
         const report = await prisma.report.create({
           data: {
             userId,
@@ -115,6 +119,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
             direction,
             expiresAt,
             entryPrice: finalEntryPrice,
+            tradeType: finalTradeType, // 'scalping', 'dayTrade', 'swing'
             isPublic: isAdmin, // Admin reports are visible to all users
           },
         });
@@ -228,6 +233,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
             verdict: true,
             score: true,
             direction: true,
+            tradeType: true,
             generatedAt: true,
             expiresAt: true,
             downloadCount: true,
@@ -257,6 +263,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
             verdict: true,
             score: true,
             direction: true,
+            tradeType: true,
             generatedAt: true,
             expiresAt: true,
             downloadCount: true,
@@ -338,12 +345,16 @@ export async function reportRoutes(fastify: FastifyInstance) {
             unrealizedPnL = direction === 'short' ? -pnlPercent : pnlPercent;
           }
 
+          // Extract tradeType from report or reportData
+          const tradeType = report.tradeType || (reportData?.tradeType as string) || null;
+
           return {
             id: report.id,
             symbol: report.symbol,
             verdict: report.verdict,
             score: report.score,
             direction: report.direction,
+            tradeType,
             generatedAt: report.generatedAt,
             expiresAt: report.expiresAt,
             downloadCount: report.downloadCount,
