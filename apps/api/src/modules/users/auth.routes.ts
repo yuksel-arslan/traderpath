@@ -10,6 +10,15 @@ import { nanoid } from 'nanoid';
 import { OAuth2Client } from 'google-auth-library';
 import { prisma } from '../../core/database';
 import { config } from '../../core/config';
+import {
+  checkAccountLockout,
+  recordFailedLogin,
+  recordSuccessfulLogin,
+  verifyRecaptcha,
+  checkSuspiciousActivity,
+  createEmailVerificationToken,
+} from '../../core/auth/security.service';
+import { emailService } from '../email/email.service';
 
 // Admin emails with free unlimited access
 const ADMIN_EMAILS = ['contact@yukselarslan.com'];
@@ -139,6 +148,18 @@ export default async function authRoutes(app: FastifyInstance) {
         return newUser;
       });
 
+      // Send email verification
+      const BASE_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      const verificationResult = await createEmailVerificationToken(user.id);
+      if (verificationResult.success && verificationResult.token) {
+        const verificationUrl = `${BASE_URL}/verify-email?token=${verificationResult.token}`;
+        emailService.sendEmailVerification(
+          user.email,
+          user.name || body.name,
+          verificationUrl
+        ).catch(console.error);
+      }
+
       // Generate JWT token
       const token = app.jwt.sign(
         { id: user.id },
@@ -156,9 +177,11 @@ export default async function authRoutes(app: FastifyInstance) {
             name: user.name,
             level: user.level,
             isAdmin,
+            emailVerified: false,
           },
           token,
           credits: isAdmin ? 999999 : 25 + (referredById ? 20 : 0),
+          message: 'Please check your email to verify your account.',
         },
       });
     } catch (error) {
@@ -186,29 +209,66 @@ export default async function authRoutes(app: FastifyInstance) {
   /**
    * POST /api/auth/login
    * Login with email and password
+   * Includes account lockout, 2FA, and audit logging
    */
   const loginSchema = z.object({
     email: z.string().email('Invalid email address'),
     password: z.string().min(1, 'Password is required'),
+    recaptchaToken: z.string().optional(),
   });
 
   app.post('/login', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const body = loginSchema.parse(request.body);
+      const email = body.email.toLowerCase();
+      const ipAddress = request.ip;
+      const userAgent = request.headers['user-agent'];
+
+      // Verify reCAPTCHA if provided
+      if (body.recaptchaToken) {
+        const captchaResult = await verifyRecaptcha(body.recaptchaToken, 'login');
+        if (!captchaResult.success) {
+          return reply.status(400).send({
+            success: false,
+            error: {
+              code: 'CAPTCHA_FAILED',
+              message: 'reCAPTCHA verification failed. Please try again.',
+            },
+          });
+        }
+      }
+
+      // Check account lockout
+      const lockoutStatus = await checkAccountLockout(email);
+      if (lockoutStatus.isLocked) {
+        const minutesRemaining = lockoutStatus.lockedUntil
+          ? Math.ceil((lockoutStatus.lockedUntil.getTime() - Date.now()) / 60000)
+          : 30;
+        return reply.status(423).send({
+          success: false,
+          error: {
+            code: 'ACCOUNT_LOCKED',
+            message: `Account is temporarily locked. Try again in ${minutesRemaining} minutes.`,
+            lockedUntil: lockoutStatus.lockedUntil,
+          },
+        });
+      }
 
       // Find user by email
       const user = await prisma.user.findUnique({
-        where: { email: body.email.toLowerCase() },
+        where: { email },
         include: { creditBalance: true },
       });
 
       if (!user) {
-        // Use generic message to prevent email enumeration
+        // Record failed attempt (even for non-existent email)
+        await recordFailedLogin(email, ipAddress, userAgent, 'User not found');
         return reply.status(401).send({
           success: false,
           error: {
             code: 'AUTH_INVALID',
             message: 'Invalid email or password',
+            attemptsRemaining: lockoutStatus.attemptsRemaining - 1,
           },
         });
       }
@@ -227,20 +287,47 @@ export default async function authRoutes(app: FastifyInstance) {
       // Verify password
       const valid = await bcrypt.compare(body.password, user.passwordHash);
       if (!valid) {
+        const result = await recordFailedLogin(email, ipAddress, userAgent, 'Invalid password');
         return reply.status(401).send({
           success: false,
           error: {
             code: 'AUTH_INVALID',
             message: 'Invalid email or password',
+            attemptsRemaining: result.attemptsRemaining,
+            isLocked: result.isLocked,
           },
         });
       }
 
-      // Update last login
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { lastLoginAt: new Date() },
-      });
+      // Check if 2FA is enabled
+      if (user.twoFactorEnabled) {
+        // Return partial success - user needs to complete 2FA
+        return reply.send({
+          success: true,
+          data: {
+            requiresTwoFactor: true,
+            userId: user.id,
+          },
+        });
+      }
+
+      // Record successful login
+      await recordSuccessfulLogin(user.id, email, ipAddress, userAgent);
+
+      // Check for suspicious activity
+      const suspiciousCheck = await checkSuspiciousActivity(user.id, ipAddress);
+      if (suspiciousCheck.suspicious) {
+        // Send alert email (but don't block login)
+        emailService.sendSuspiciousLoginAlert(
+          user.email,
+          user.name || 'User',
+          {
+            ip: ipAddress,
+            device: userAgent,
+            time: new Date().toLocaleString('tr-TR'),
+          }
+        ).catch(console.error);
+      }
 
       // Generate JWT token
       const token = app.jwt.sign(
@@ -260,9 +347,12 @@ export default async function authRoutes(app: FastifyInstance) {
             level: user.level,
             avatarUrl: user.image,
             isAdmin,
+            emailVerified: !!user.emailVerified,
+            twoFactorEnabled: user.twoFactorEnabled,
           },
           token,
           credits: isAdmin ? 999999 : user.creditBalance?.balance || 0,
+          newDeviceLogin: suspiciousCheck.suspicious,
         },
       });
     } catch (error) {
