@@ -1,15 +1,24 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { AnalysisFlow } from '../../../../components/analysis/AnalysisFlow';
 import { CreditBalance } from '../../../../components/credits/CreditBalance';
 
+// Trade type labels for display
+const TRADE_TYPE_LABELS: Record<string, string> = {
+  scalping: 'Scalping',
+  dayTrade: 'Day Trade',
+  swing: 'Swing Trade',
+};
+
 export default function AnalyzePage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const symbol = params.symbol as string;
+  const tradeType = (searchParams.get('tradeType') as 'scalping' | 'dayTrade' | 'swing') || 'dayTrade';
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceChange, setPriceChange] = useState<number>(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -59,7 +68,12 @@ export default function AnalyzePage() {
           </Link>
           <div>
             <h1 className="text-3xl font-bold">{symbol}/USDT</h1>
-            <p className="text-muted-foreground">7-Step Trading Analysis</p>
+            <p className="text-muted-foreground">
+              7-Step Trading Analysis
+              <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary text-sm rounded-full">
+                {TRADE_TYPE_LABELS[tradeType]}
+              </span>
+            </p>
           </div>
         </div>
 
@@ -93,7 +107,7 @@ export default function AnalyzePage() {
       </div>
 
       {/* Analysis Flow */}
-      <AnalysisFlow symbol={symbol} />
+      <AnalysisFlow symbol={symbol} tradeType={tradeType} />
     </div>
   );
 }
