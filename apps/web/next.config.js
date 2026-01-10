@@ -80,6 +80,14 @@ const nextConfig = {
         source: '/api/binance/:path*',
         destination: 'http://127.0.0.1:4000/api/binance/:path*',
       },
+      {
+        source: '/api/expert/:path*',
+        destination: 'http://127.0.0.1:4000/api/expert/:path*',
+      },
+      {
+        source: '/api/translation/:path*',
+        destination: 'http://127.0.0.1:4000/api/translation/:path*',
+      },
     ];
   },
 
