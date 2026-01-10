@@ -24,6 +24,7 @@ import {
   Target,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { getAuthToken } from '../../lib/api';
 
 interface Example {
   type: 'analysis' | 'quiz' | 'pattern';
@@ -82,8 +83,8 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
     }
   }, [question]);
 
-  const getAuthHeaders = () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const getAuthHeaders = async () => {
+    const token = await getAuthToken();
     return {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -92,8 +93,9 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
 
   const fetchSuggestedQuestions = async () => {
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch('/api/expert/suggested-questions', {
-        headers: getAuthHeaders(),
+        headers,
       });
       const data = await res.json();
       if (data.success) {
@@ -112,9 +114,10 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
     setShowSuggestions(false);
 
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch('/api/expert/ask', {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers,
         body: JSON.stringify({ question: question.trim() }),
       });
 

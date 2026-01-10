@@ -28,6 +28,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { getAuthToken } from '../../lib/api';
 import { CREDIT_COSTS } from '@tradepath/types';
 import { MarketPulse } from './MarketPulse';
 import { AssetScanner } from './AssetScanner';
@@ -214,8 +215,8 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
     setIsFirstTimeUser(false);
   }, []);
 
-  const getAuthHeaders = useCallback(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const getAuthHeaders = useCallback(async () => {
+    const token = await getAuthToken();
     return {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -226,9 +227,11 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
     const endpoint = STEP_ENDPOINTS[stepId];
     if (!endpoint) throw new Error('Invalid step');
 
+    const headers = await getAuthHeaders();
+
     const options: RequestInit = {
       method: endpoint.method,
-      headers: getAuthHeaders(),
+      headers,
     };
 
     if (endpoint.method === 'POST') {
@@ -239,6 +242,9 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
     const data = await response.json();
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Authentication required. Please login again.');
+      }
       if (response.status === 402) {
         throw new Error('Insufficient credits. Please purchase more credits.');
       }
@@ -250,7 +256,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
     }
 
     return data.data;
-  }, [symbol, accountSize, getAuthHeaders, onCreditsUpdate]);
+  }, [symbol, accountSize, interval, getAuthHeaders, onCreditsUpdate]);
 
   // Auto-save report when all 7 steps are completed
   const saveReportToDatabase = useCallback(async () => {
@@ -259,7 +265,7 @@ export function AnalysisFlow({ symbol, interval = '4h', accountSize = 10000, onC
     saveAttemptedRef.current = true;
 
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = await getAuthToken();
       if (!token) return;
 
       // Build report data from results

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRewardsStore } from '../stores/useRewardsStore';
+import { getAuthToken } from '../lib/api';
 
 // Use relative URLs to leverage Next.js rewrites in development
 // In production, getApiUrl handles the API_URL prefix
@@ -12,7 +13,7 @@ const getApiUrl = (url: string): string => {
 };
 
 async function fetchWithAuth(url: string, options: RequestInit = {}) {
-  const token = localStorage.getItem('accessToken');
+  const token = await getAuthToken();
   const res = await fetch(getApiUrl(url), {
     ...options,
     headers: {

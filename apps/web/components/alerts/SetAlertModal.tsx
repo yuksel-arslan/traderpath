@@ -22,6 +22,7 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { getAuthToken } from '../../lib/api';
 
 interface TradePlanData {
   symbol: string;
@@ -80,7 +81,7 @@ export function SetAlertModal({ isOpen, onClose, tradePlan }: SetAlertModalProps
 
   const createAlertsMutation = useMutation({
     mutationFn: async () => {
-      const token = localStorage.getItem('accessToken');
+      const token = await getAuthToken();
       if (!token) throw new Error('Not authenticated');
 
       const takeProfits: number[] = [];

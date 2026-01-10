@@ -15,6 +15,7 @@ import {
 import Link from 'next/link';
 import { CoinIcon } from '../common/CoinIcon';
 import { cn } from '../../lib/utils';
+import { getAuthToken } from '../../lib/api';
 
 interface RecentAnalysis {
   id: string;
@@ -53,7 +54,7 @@ export function RecentAnalyses() {
       setLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('accessToken');
+      const token = await getAuthToken();
       if (!token) {
         setAnalyses([]);
         return;
