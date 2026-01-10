@@ -251,8 +251,9 @@ function generatePageTitle(data: AnalysisReportData): string {
 
 // PAGE 1: 7-Step Analysis
 function generatePage1HTML(data: AnalysisReportData): string {
-  const isLong = data.tradePlan.direction === 'long';
-  const score = Math.round((data.verdict.overallScore || 0) * 10);
+  const isLong = data.tradePlan?.direction === 'long';
+  const score = Math.round((data.verdict?.overallScore || 0) * 10);
+  const priceChange = data.assetScan?.priceChange24h || 0;
 
   const steps = [
     {
@@ -261,9 +262,9 @@ function generatePage1HTML(data: AnalysisReportData): string {
       subtitle: 'Understanding the Big Picture',
       icon: stepIcons.marketPulse,
       iconClass: 'icon-blue',
-      status: data.marketPulse.trend?.direction === 'bullish' ? 'Bullish' : data.marketPulse.trend?.direction === 'bearish' ? 'Bearish' : 'Neutral',
-      statusColor: data.marketPulse.trend?.direction === 'bullish' ? '#16a34a' : data.marketPulse.trend?.direction === 'bearish' ? '#dc2626' : '#d97706',
-      description: `Fear & Greed Index at ${data.marketPulse.fearGreedIndex} (${data.marketPulse.fearGreedLabel}). BTC Dominance: ${data.marketPulse.btcDominance?.toFixed(1)}%. Market trend shows ${data.marketPulse.trend?.direction || 'neutral'} momentum.`
+      status: data.marketPulse?.trend?.direction === 'bullish' ? 'Bullish' : data.marketPulse?.trend?.direction === 'bearish' ? 'Bearish' : 'Neutral',
+      statusColor: data.marketPulse?.trend?.direction === 'bullish' ? '#16a34a' : data.marketPulse?.trend?.direction === 'bearish' ? '#dc2626' : '#d97706',
+      description: `Fear & Greed Index at ${data.marketPulse?.fearGreedIndex || 0} (${data.marketPulse?.fearGreedLabel || 'N/A'}). BTC Dominance: ${data.marketPulse?.btcDominance?.toFixed(1) || '0'}%. Market trend shows ${data.marketPulse?.trend?.direction || 'neutral'} momentum.`
     },
     {
       num: 'Step 2',
@@ -271,9 +272,9 @@ function generatePage1HTML(data: AnalysisReportData): string {
       subtitle: 'Deep Technical Analysis',
       icon: stepIcons.assetScan,
       iconClass: 'icon-purple',
-      status: data.assetScan.priceChange24h >= 2 ? 'Strong' : data.assetScan.priceChange24h >= 0 ? 'Stable' : data.assetScan.priceChange24h >= -2 ? 'Weak' : 'Declining',
-      statusColor: data.assetScan.priceChange24h >= 0 ? '#16a34a' : '#dc2626',
-      description: `Current price ${formatPrice(data.assetScan.currentPrice)} with ${data.assetScan.priceChange24h >= 0 ? '+' : ''}${data.assetScan.priceChange24h?.toFixed(2)}% change in 24h. RSI: ${data.assetScan.indicators?.rsi?.toFixed(0) || '-'}, MACD: ${data.assetScan.indicators?.macd?.histogram > 0 ? 'Bullish' : 'Bearish'}.`
+      status: priceChange >= 2 ? 'Strong' : priceChange >= 0 ? 'Stable' : priceChange >= -2 ? 'Weak' : 'Declining',
+      statusColor: priceChange >= 0 ? '#16a34a' : '#dc2626',
+      description: `Current price ${formatPrice(data.assetScan?.currentPrice)} with ${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)}% change in 24h. RSI: ${data.assetScan?.indicators?.rsi?.toFixed(0) || '-'}, MACD: ${(data.assetScan?.indicators?.macd?.histogram || 0) > 0 ? 'Bullish' : 'Bearish'}.`
     },
     {
       num: 'Step 3',
@@ -281,9 +282,9 @@ function generatePage1HTML(data: AnalysisReportData): string {
       subtitle: 'Risk & Manipulation Detection',
       icon: stepIcons.safety,
       iconClass: 'icon-green',
-      status: data.safetyCheck.riskLevel === 'low' ? 'Safe' : data.safetyCheck.riskLevel === 'high' ? 'Risky' : 'Caution',
-      statusColor: data.safetyCheck.riskLevel === 'low' ? '#16a34a' : data.safetyCheck.riskLevel === 'high' ? '#dc2626' : '#d97706',
-      description: `Risk level: ${data.safetyCheck.riskLevel}. Whale activity bias: ${data.safetyCheck.whaleActivity?.bias || 'neutral'}. Pump/dump risk: ${data.safetyCheck.manipulation?.pumpDumpRisk || 'low'}.`
+      status: data.safetyCheck?.riskLevel === 'low' ? 'Safe' : data.safetyCheck?.riskLevel === 'high' ? 'Risky' : 'Caution',
+      statusColor: data.safetyCheck?.riskLevel === 'low' ? '#16a34a' : data.safetyCheck?.riskLevel === 'high' ? '#dc2626' : '#d97706',
+      description: `Risk level: ${data.safetyCheck?.riskLevel || 'unknown'}. Whale activity bias: ${data.safetyCheck?.whaleActivity?.bias || 'neutral'}. Pump/dump risk: ${data.safetyCheck?.manipulation?.pumpDumpRisk || 'low'}.`
     },
     {
       num: 'Step 4',
@@ -291,9 +292,9 @@ function generatePage1HTML(data: AnalysisReportData): string {
       subtitle: 'Optimal Entry Window',
       icon: stepIcons.timing,
       iconClass: 'icon-amber',
-      status: data.timing.tradeNow ? 'Trade Now' : 'Wait',
-      statusColor: data.timing.tradeNow ? '#16a34a' : '#d97706',
-      description: data.timing.reason || (data.timing.tradeNow ? 'Market conditions are favorable for entry. Technical indicators align with trade direction.' : 'Wait for better entry. Current market structure suggests patience.')
+      status: data.timing?.tradeNow ? 'Trade Now' : 'Wait',
+      statusColor: data.timing?.tradeNow ? '#16a34a' : '#d97706',
+      description: data.timing?.reason || (data.timing?.tradeNow ? 'Market conditions are favorable for entry. Technical indicators align with trade direction.' : 'Wait for better entry. Current market structure suggests patience.')
     },
     {
       num: 'Step 5',
@@ -303,7 +304,7 @@ function generatePage1HTML(data: AnalysisReportData): string {
       iconClass: 'icon-green',
       status: 'Ready',
       statusColor: '#16a34a',
-      description: `${isLong ? 'Long' : 'Short'} position with ${data.tradePlan.riskReward?.toFixed(1)}:1 risk-reward. Entry: ${formatPrice(data.tradePlan.averageEntry)}, Stop: ${formatPrice(data.tradePlan.stopLoss?.price)}.`
+      description: `${isLong ? 'Long' : 'Short'} position with ${data.tradePlan?.riskReward?.toFixed(1) || '0'}:1 risk-reward. Entry: ${formatPrice(data.tradePlan?.averageEntry)}, Stop: ${formatPrice(data.tradePlan?.stopLoss?.price)}.`
     },
     {
       num: 'Step 6',
@@ -323,7 +324,7 @@ function generatePage1HTML(data: AnalysisReportData): string {
       iconClass: 'icon-green',
       status: `${isLong ? 'LONG' : 'SHORT'} (${score}/100)`,
       statusColor: isLong ? '#16a34a' : '#dc2626',
-      description: data.verdict.aiSummary || `Analysis recommends ${isLong ? 'long' : 'short'} position with ${score}/100 confidence. ${data.timing.tradeNow ? 'Entry timing favorable.' : 'Consider waiting.'}`
+      description: data.verdict?.aiSummary || `Analysis recommends ${isLong ? 'long' : 'short'} position with ${score}/100 confidence. ${data.timing?.tradeNow ? 'Entry timing favorable.' : 'Consider waiting.'}`
     }
   ];
 
@@ -359,7 +360,7 @@ function generatePage1HTML(data: AnalysisReportData): string {
 
 // PAGE 2: Trade Plan & Chart
 function generatePage2HTML(data: AnalysisReportData): string {
-  const isLong = data.tradePlan.direction === 'long';
+  const isLong = data.tradePlan?.direction === 'long';
 
   return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><style>${commonStyles}</style></head>
@@ -372,32 +373,32 @@ function generatePage2HTML(data: AnalysisReportData): string {
     <div class="trade-plan-box">
       <div class="trade-plan-header">
         <div class="trade-plan-title">${data.symbol}/USDT Trade Setup</div>
-        <div style="font-size: 9px; color: #64748b;">R:R <strong>${data.tradePlan.riskReward?.toFixed(1)}:1</strong> • Win Rate <strong>${data.tradePlan.winRateEstimate || 50}%</strong></div>
+        <div style="font-size: 9px; color: #64748b;">R:R <strong>${data.tradePlan?.riskReward?.toFixed(1) || '0'}:1</strong> • Win Rate <strong>${data.tradePlan?.winRateEstimate || 50}%</strong></div>
       </div>
       <div class="trade-plan-grid">
         <div class="trade-item">
           <div class="trade-label">Entry Price</div>
-          <div class="trade-value text-blue">${formatPrice(data.tradePlan.averageEntry)}</div>
+          <div class="trade-value text-blue">${formatPrice(data.tradePlan?.averageEntry)}</div>
         </div>
         <div class="trade-item">
           <div class="trade-label">Stop Loss</div>
-          <div class="trade-value text-red">${formatPrice(data.tradePlan.stopLoss?.price)}</div>
-          <div style="font-size: 7px; color: #dc2626; margin-top: 2px;">-${data.tradePlan.stopLoss?.percentage?.toFixed(1) || '5'}%</div>
+          <div class="trade-value text-red">${formatPrice(data.tradePlan?.stopLoss?.price)}</div>
+          <div style="font-size: 7px; color: #dc2626; margin-top: 2px;">-${data.tradePlan?.stopLoss?.percentage?.toFixed(1) || '5'}%</div>
         </div>
         <div class="trade-item">
           <div class="trade-label">Take Profit 1</div>
-          <div class="trade-value text-green">${formatPrice(data.tradePlan.takeProfits?.[0]?.price)}</div>
-          <div style="font-size: 7px; color: #16a34a; margin-top: 2px;">+${data.tradePlan.takeProfits?.[0]?.percentage?.toFixed(1) || '5'}%</div>
+          <div class="trade-value text-green">${formatPrice(data.tradePlan?.takeProfits?.[0]?.price)}</div>
+          <div style="font-size: 7px; color: #16a34a; margin-top: 2px;">+${data.tradePlan?.takeProfits?.[0]?.percentage?.toFixed(1) || '5'}%</div>
         </div>
         <div class="trade-item">
           <div class="trade-label">Take Profit 2</div>
-          <div class="trade-value text-green">${formatPrice(data.tradePlan.takeProfits?.[1]?.price)}</div>
-          <div style="font-size: 7px; color: #16a34a; margin-top: 2px;">+${data.tradePlan.takeProfits?.[1]?.percentage?.toFixed(1) || '10'}%</div>
+          <div class="trade-value text-green">${formatPrice(data.tradePlan?.takeProfits?.[1]?.price)}</div>
+          <div style="font-size: 7px; color: #16a34a; margin-top: 2px;">+${data.tradePlan?.takeProfits?.[1]?.percentage?.toFixed(1) || '10'}%</div>
         </div>
         <div class="trade-item">
           <div class="trade-label">Take Profit 3</div>
-          <div class="trade-value text-green">${formatPrice(data.tradePlan.takeProfits?.[2]?.price)}</div>
-          <div style="font-size: 7px; color: #16a34a; margin-top: 2px;">+${data.tradePlan.takeProfits?.[2]?.percentage?.toFixed(1) || '15'}%</div>
+          <div class="trade-value text-green">${formatPrice(data.tradePlan?.takeProfits?.[2]?.price)}</div>
+          <div style="font-size: 7px; color: #16a34a; margin-top: 2px;">+${data.tradePlan?.takeProfits?.[2]?.percentage?.toFixed(1) || '15'}%</div>
         </div>
         <div class="trade-item">
           <div class="trade-label">Direction</div>
