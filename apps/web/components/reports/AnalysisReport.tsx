@@ -498,7 +498,7 @@ function generatePage3HTML(data: AnalysisReportData): string {
 </body></html>`;
 }
 
-// Chart capture function - Forces light background for PDF
+// Chart capture function - Captures the canvas directly from lightweight-charts
 export async function captureChartAsImage(): Promise<string | null> {
   try {
     const element = document.getElementById('trade-plan-chart');
@@ -507,74 +507,94 @@ export async function captureChartAsImage(): Promise<string | null> {
       return null;
     }
 
-    const canvas = await html2canvas(element, {
+    // Find the canvas element inside the chart (lightweight-charts creates canvas elements)
+    const chartCanvas = element.querySelector('canvas');
+    if (!chartCanvas) {
+      console.log('Chart canvas not found, using html2canvas fallback');
+      // Fallback to html2canvas if no canvas found
+      const canvas = await html2canvas(element, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+      });
+      return canvas.toDataURL('image/png');
+    }
+
+    // Create a new canvas with white background that includes the chart and surrounding elements
+    const containerRect = element.getBoundingClientRect();
+    const combinedCanvas = document.createElement('canvas');
+    const scale = 2;
+    combinedCanvas.width = containerRect.width * scale;
+    combinedCanvas.height = containerRect.height * scale;
+    const ctx = combinedCanvas.getContext('2d');
+    if (!ctx) return null;
+
+    // Fill with white background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, combinedCanvas.width, combinedCanvas.height);
+
+    // Scale for high DPI
+    ctx.scale(scale, scale);
+
+    // Capture the entire element with html2canvas but ignore the canvas
+    const html2canvasResult = await html2canvas(element, {
       backgroundColor: '#ffffff',
-      scale: 2,
+      scale: 1,
       logging: false,
       useCORS: true,
       allowTaint: true,
+      ignoreElements: (el) => el.tagName === 'CANVAS',
       onclone: (clonedDoc) => {
-        // Force light mode styling on the cloned element for PDF capture
         const clonedElement = clonedDoc.getElementById('trade-plan-chart');
         if (clonedElement) {
-          // Force white background on main container
           clonedElement.style.backgroundColor = '#ffffff';
           clonedElement.style.color = '#1e293b';
 
-          // Fix all child elements with dark backgrounds
-          const allElements = clonedElement.querySelectorAll('*');
-          allElements.forEach((el) => {
-            const htmlEl = el as HTMLElement;
-            const computedStyle = window.getComputedStyle(el);
-
-            // Replace dark backgrounds with light ones
-            if (computedStyle.backgroundColor) {
-              const bgColor = computedStyle.backgroundColor;
-              // If background is dark (rgba with low values or transparent)
-              if (bgColor.includes('rgba') || bgColor === 'transparent' ||
-                  bgColor.includes('rgb(') && isDarkColor(bgColor)) {
-                htmlEl.style.backgroundColor = '#ffffff';
-              }
-            }
-
-            // Make text dark
-            if (computedStyle.color) {
-              const textColor = computedStyle.color;
-              if (textColor.includes('rgba') && textColor.includes('255')) {
-                htmlEl.style.color = '#1e293b';
-              }
-            }
-          });
-
-          // Specifically fix known elements
-          // Header gradient background
+          // Fix header
           const header = clonedElement.querySelector('.border-b');
           if (header) {
             (header as HTMLElement).style.background = 'linear-gradient(to right, #ffffff, #f8fafc)';
           }
 
-          // Legend and summary sections
+          // Fix muted sections
           const mutedSections = clonedElement.querySelectorAll('.bg-muted\\/20, .bg-card\\/80');
           mutedSections.forEach((section) => {
             (section as HTMLElement).style.backgroundColor = '#f8fafc';
           });
 
-          // Border colors
-          const borderedElements = clonedElement.querySelectorAll('[class*="border"]');
-          borderedElements.forEach((el) => {
-            (el as HTMLElement).style.borderColor = '#e2e8f0';
-          });
-
-          // Text colors - make them visible on white
+          // Fix text colors
           const mutedText = clonedElement.querySelectorAll('.text-muted-foreground');
           mutedText.forEach((el) => {
             (el as HTMLElement).style.color = '#64748b';
+          });
+
+          // Fix borders
+          const borderedElements = clonedElement.querySelectorAll('[class*="border"]');
+          borderedElements.forEach((el) => {
+            (el as HTMLElement).style.borderColor = '#e2e8f0';
           });
         }
       },
     });
 
-    return canvas.toDataURL('image/png');
+    // Draw the html2canvas result (without the chart canvas)
+    ctx.drawImage(html2canvasResult, 0, 0);
+
+    // Now draw the chart canvas in its correct position
+    const chartCanvasRect = chartCanvas.getBoundingClientRect();
+    const offsetX = chartCanvasRect.left - containerRect.left;
+    const offsetY = chartCanvasRect.top - containerRect.top;
+
+    // Draw white background behind the chart
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(offsetX, offsetY, chartCanvasRect.width, chartCanvasRect.height);
+
+    // Draw the chart canvas
+    ctx.drawImage(chartCanvas, offsetX, offsetY, chartCanvasRect.width, chartCanvasRect.height);
+
+    return combinedCanvas.toDataURL('image/png');
   } catch (error) {
     console.error('Chart capture failed:', error);
     return null;
