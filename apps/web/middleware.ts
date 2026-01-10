@@ -28,7 +28,18 @@ export function middleware(request: NextRequest) {
 
   // Check for our auth session cookie
   const sessionCookie = request.cookies.get('auth-session');
+  const authTokenCookie = request.cookies.get('auth-token');
   const isLoggedIn = sessionCookie?.value === 'true';
+
+  // Debug: Log auth state for protected routes
+  if (process.env.NODE_ENV === 'development') {
+    const isProtectedPath = ['/dashboard', '/analyze', '/reports', '/rewards', '/credits', '/alerts', '/settings', '/analysis', '/admin', '/ai-expert'].some(
+      p => pathname === p || pathname.startsWith(`${p}/`)
+    );
+    if (isProtectedPath) {
+      console.log(`[Middleware] Path: ${pathname}, auth-session: ${sessionCookie?.value}, auth-token: ${authTokenCookie ? 'present' : 'missing'}, isLoggedIn: ${isLoggedIn}`);
+    }
+  }
 
   // Check if current path is protected
   const isProtected = protectedPaths.some(path =>
