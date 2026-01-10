@@ -540,8 +540,8 @@ export function DownloadReportButton({
                     <Mail className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-white">Raporu E-posta ile Gönder</h3>
-                    <p className="text-sm text-white/80">PDF raporunuz hazır!</p>
+                    <h3 className="text-lg font-bold text-white">Send Report via Email</h3>
+                    <p className="text-sm text-white/80">Your PDF report is ready!</p>
                   </div>
                 </div>
                 <button
@@ -560,27 +560,27 @@ export function DownloadReportButton({
                   <div className="w-16 h-16 bg-green-100 dark:bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
                   </div>
-                  <h4 className="text-lg font-semibold text-foreground mb-2">E-posta Gönderildi!</h4>
+                  <h4 className="text-lg font-semibold text-foreground mb-2">Email Sent!</h4>
                   <p className="text-sm text-muted-foreground">
-                    {symbol}/USDT analiz raporunuz e-posta adresinize başarıyla gönderildi.
+                    Your {symbol}/USDT analysis report has been successfully sent to your email.
                   </p>
                 </div>
               ) : (
                 <>
                   <div className="mb-6">
                     <p className="text-muted-foreground mb-4">
-                      <span className="font-semibold text-foreground">{symbol}/USDT</span> analiz raporunuz indirildi.
-                      Bu raporu kayıtlı e-posta adresinize de göndermek ister misiniz?
+                      Your <span className="font-semibold text-foreground">{symbol}/USDT</span> analysis report has been downloaded.
+                      Would you like to send this report to your registered email address?
                     </p>
 
                     {/* Report Summary */}
                     <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Dosya:</span>
+                        <span className="text-muted-foreground">File:</span>
                         <span className="font-medium text-foreground">{lastPdfData?.fileName}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Karar:</span>
+                        <span className="text-muted-foreground">Decision:</span>
                         <span className={cn(
                           "font-medium px-2 py-0.5 rounded",
                           lastPdfData?.reportData.verdict.action === 'GO' ? 'bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400' :
@@ -591,7 +591,7 @@ export function DownloadReportButton({
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Skor:</span>
+                        <span className="text-muted-foreground">Score:</span>
                         <span className="font-medium text-foreground">{lastPdfData?.reportData.verdict.overallScore}/100</span>
                       </div>
                     </div>
@@ -609,7 +609,7 @@ export function DownloadReportButton({
                       onClick={handleCloseModal}
                       className="flex-1 px-4 py-2.5 border border-border rounded-lg font-medium text-foreground hover:bg-muted transition"
                     >
-                      Hayır, Teşekkürler
+                      No, Thanks
                     </button>
                     <button
                       onClick={handleSendEmail}
@@ -624,12 +624,12 @@ export function DownloadReportButton({
                       {isSendingEmail ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          Gönderiliyor...
+                          Sending...
                         </>
                       ) : (
                         <>
                           <Send className="w-4 h-4" />
-                          Gönder
+                          Send
                           <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded">+5</span>
                         </>
                       )}
