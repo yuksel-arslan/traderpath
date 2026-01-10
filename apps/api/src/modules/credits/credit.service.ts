@@ -257,6 +257,64 @@ export class CreditService {
   getCost(serviceType: keyof typeof CREDIT_COSTS): number {
     return CREDIT_COSTS[serviceType];
   }
+
+  /**
+   * Check and award daily analysis bonus
+   * Award 1 credit for every 10 analyses completed today
+   */
+  async checkDailyAnalysisBonus(userId: string): Promise<{ awarded: boolean; credits: number }> {
+    // Admins don't need bonus
+    if (await this.isAdmin(userId)) {
+      return { awarded: false, credits: 0 };
+    }
+
+    // Get today's start
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Count today's completed analyses
+    const todayAnalysisCount = await prisma.analysis.count({
+      where: {
+        userId,
+        createdAt: { gte: today },
+        stepsCompleted: { has: 7 }, // Only count completed analyses
+      },
+    });
+
+    // Calculate how many bonuses should have been awarded (1 per 10 analyses)
+    const bonusesEarned = Math.floor(todayAnalysisCount / 10);
+
+    if (bonusesEarned === 0) {
+      return { awarded: false, credits: 0 };
+    }
+
+    // Check how many bonuses were already awarded today
+    const todayBonusTransactions = await prisma.creditTransaction.count({
+      where: {
+        userId,
+        source: 'daily_10_analysis_bonus',
+        createdAt: { gte: today },
+      },
+    });
+
+    // Award new bonuses if needed
+    const newBonuses = bonusesEarned - todayBonusTransactions;
+    if (newBonuses > 0) {
+      await this.add(
+        userId,
+        newBonuses, // 1 credit per 10 analyses bonus
+        'BONUS',
+        'daily_10_analysis_bonus',
+        {
+          message: `Bonus for completing ${bonusesEarned * 10} analyses today`,
+          analysisCount: todayAnalysisCount,
+        }
+      );
+      return { awarded: true, credits: newBonuses };
+    }
+
+    return { awarded: false, credits: 0 };
+  }
 }
 
 export const creditService = new CreditService();
