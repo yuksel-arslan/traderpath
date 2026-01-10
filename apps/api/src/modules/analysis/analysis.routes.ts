@@ -475,6 +475,26 @@ Warn about potential traps and give protective advice.`;
         tradePlan
       );
 
+      // Save analysis to database (regardless of verdict)
+      const tradeConfig = getTradeConfig(body.tradeType);
+      const savedAnalysis = await app.prisma.analysis.create({
+        data: {
+          userId,
+          symbol: body.symbol,
+          interval: tradeConfig.primaryTimeframe,
+          stepsCompleted: [1, 2, 3, 4, 5, 6, 7],
+          step1Result: marketPulse as object,
+          step2Result: assetScan as object,
+          step3Result: safetyCheck as object,
+          step4Result: timing as object,
+          step5Result: tradePlan as object || null,
+          step6Result: trapCheck as object,
+          step7Result: { ...verdict, preliminaryVerdict } as object,
+          totalScore: verdict.overallScore,
+          creditsSpent: cost,
+        },
+      });
+
       // Build AI prompt based on whether trade plan exists
       const tradeTypeLabel = body.tradeType === 'scalping' ? 'scalping (1-15 min)' : body.tradeType === 'dayTrade' ? 'day trading (1-8 hours)' : 'swing trading (2-14 days)';
       let aiPrompt: string;
@@ -549,7 +569,7 @@ Explain the key risks and what conditions would need to change before trading th
       return reply.send({
         success: true,
         data: {
-          analysisId: verdict.analysisId,
+          analysisId: savedAnalysis.id, // Use saved analysis ID from database
           symbol: body.symbol,
           tradeType: body.tradeType, // Include trade type in response
           timestamp: verdict.createdAt,
@@ -576,6 +596,104 @@ Explain the key risks and what conditions would need to change before trading th
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: 'Failed to complete analysis' },
+      });
+    }
+  });
+
+  /**
+   * GET /api/analysis/history
+   * List user's past analyses (saved to database)
+   */
+  app.get('/history', {
+    preHandler: authenticate,
+  }, async (request: FastifyRequest<{ Querystring: { limit?: string; offset?: string } }>, reply: FastifyReply) => {
+    try {
+      const userId = request.user!.id;
+      const limit = Math.min(parseInt(request.query.limit || '20'), 50);
+      const offset = parseInt(request.query.offset || '0');
+
+      const analyses = await app.prisma.analysis.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+        select: {
+          id: true,
+          symbol: true,
+          interval: true,
+          totalScore: true,
+          creditsSpent: true,
+          createdAt: true,
+          expiresAt: true,
+          step7Result: true, // Contains verdict info
+        },
+      });
+
+      const total = await app.prisma.analysis.count({ where: { userId } });
+
+      // Extract verdict from step7Result for each analysis
+      const enrichedAnalyses = analyses.map((a) => {
+        const verdictData = a.step7Result as Record<string, unknown> | null;
+        return {
+          id: a.id,
+          symbol: a.symbol,
+          interval: a.interval,
+          totalScore: a.totalScore,
+          verdict: verdictData?.verdict || 'N/A',
+          hasTradePlan: verdictData?.hasTradePlan || false,
+          creditsSpent: a.creditsSpent,
+          createdAt: a.createdAt,
+          expiresAt: a.expiresAt,
+        };
+      });
+
+      return reply.send({
+        success: true,
+        data: {
+          analyses: enrichedAnalyses,
+          pagination: { total, limit, offset },
+        },
+      });
+    } catch (error) {
+      console.error('Analysis history error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'FETCH_ERROR', message: 'Failed to fetch analysis history' },
+      });
+    }
+  });
+
+  /**
+   * GET /api/analysis/:id
+   * Get a specific analysis by ID
+   */
+  app.get('/:id', {
+    preHandler: authenticate,
+  }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    try {
+      const userId = request.user!.id;
+      const { id } = request.params;
+
+      const analysis = await app.prisma.analysis.findFirst({
+        where: { id, userId },
+      });
+
+      if (!analysis) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'Analysis not found' },
+        });
+      }
+
+      return reply.send({
+        success: true,
+        data: analysis,
+      });
+    } catch (error) {
+      console.error('Get analysis error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'FETCH_ERROR', message: 'Failed to fetch analysis' },
       });
     }
   });
