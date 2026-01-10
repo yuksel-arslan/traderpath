@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -79,30 +79,35 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
-  const [user, setUser] = useState<UserInfo | null>(null);
 
-  // Fetch user info
-  useEffect(() => {
-    const fetchUser = async () => {
+  // Fetch user info with React Query (cached, no refetch on navigation)
+  const { data: user } = useQuery<UserInfo | null>({
+    queryKey: ['user-info'],
+    queryFn: async () => {
       try {
         const res = await authFetch('/api/auth/me');
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.data) {
-            setUser(data.data.user || data.data);
+            return data.data.user || data.data;
           }
         }
-      } catch (error) {
-        console.error('Failed to fetch user:', error);
+        return null;
+      } catch {
+        return null;
       }
-    };
-    fetchUser();
-  }, []);
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes - user info rarely changes
+    gcTime: 30 * 60 * 1000, // 30 minutes garbage collection
+    refetchOnMount: false, // Don't refetch on navigation
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
 
   // Get admin status from user
   const isAdmin = user?.isAdmin || false;
 
-  // Fetch alerts for notification
+  // Fetch alerts only when notification menu is open (no background polling)
   const { data: alertsData } = useQuery<PriceAlert[]>({
     queryKey: ['alerts-notifications'],
     queryFn: async () => {
@@ -112,8 +117,9 @@ export default function DashboardLayout({
       const data = result.data;
       return Array.isArray(data) ? data : [];
     },
-    staleTime: 60 * 1000,
-    refetchInterval: 60000,
+    staleTime: 2 * 60 * 1000, // 2 minutes stale time
+    enabled: notificationMenuOpen, // Only fetch when dropdown is open
+    refetchOnMount: false,
     retry: false,
   });
 
