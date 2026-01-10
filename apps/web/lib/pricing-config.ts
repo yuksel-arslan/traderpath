@@ -1,5 +1,6 @@
 // Centralized pricing configuration
 // Update credit packages here - changes will reflect on all pages
+// These must match stripe.service.ts in the API
 
 export interface CreditPackage {
   id: string;
@@ -7,7 +8,8 @@ export interface CreditPackage {
   credits: number;
   bonus: number;
   price: number;
-  pricePerCredit: number;
+  priceDisplay: string;
+  perCredit: string;
   popular?: boolean;
   features: string[];
   color: 'blue' | 'purple' | 'amber' | 'green';
@@ -16,11 +18,12 @@ export interface CreditPackage {
 export const CREDIT_PACKAGES: CreditPackage[] = [
   {
     id: 'starter',
-    name: 'Starter',
+    name: 'Starter Pack',
     credits: 50,
     bonus: 0,
-    price: 14.99,
-    pricePerCredit: 0.30,
+    price: 7.99,
+    priceDisplay: '$7.99',
+    perCredit: '$0.16',
     features: [
       '50 analysis credits',
       'All 7 analysis steps',
@@ -30,15 +33,16 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
     color: 'blue',
   },
   {
-    id: 'popular',
-    name: 'Popular',
-    credits: 120,
-    bonus: 10,
-    price: 29.99,
-    pricePerCredit: 0.23,
+    id: 'trader',
+    name: 'Trader Pack',
+    credits: 150,
+    bonus: 15,
+    price: 19.99,
+    priceDisplay: '$19.99',
+    perCredit: '$0.12',
     popular: true,
     features: [
-      '120 + 10 bonus credits',
+      '150 + 15 bonus credits',
       'All 7 analysis steps',
       'Priority analysis queue',
       'Priority support',
@@ -47,18 +51,35 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
   },
   {
     id: 'pro',
-    name: 'Pro',
-    credits: 300,
-    bonus: 30,
-    price: 59.99,
-    pricePerCredit: 0.18,
+    name: 'Pro Pack',
+    credits: 400,
+    bonus: 60,
+    price: 44.99,
+    priceDisplay: '$44.99',
+    perCredit: '$0.10',
     features: [
-      '300 + 30 bonus credits',
+      '400 + 60 bonus credits',
       'All 7 analysis steps',
       'AI chat support',
       'API access',
     ],
     color: 'amber',
+  },
+  {
+    id: 'whale',
+    name: 'Whale Pack',
+    credits: 1000,
+    bonus: 200,
+    price: 89.99,
+    priceDisplay: '$89.99',
+    perCredit: '$0.08',
+    features: [
+      '1000 + 200 bonus credits',
+      'All 7 analysis steps',
+      'VIP support',
+      'Early access to new features',
+    ],
+    color: 'green',
   },
 ];
 

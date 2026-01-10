@@ -40,7 +40,8 @@ import {
   Bell,
   MessageCircle,
   Send,
-  Smartphone
+  Smartphone,
+  Rocket
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
@@ -1586,46 +1587,59 @@ export default function LandingPage() {
               Pay only for what you use. No subscriptions, no hidden fees.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {CREDIT_PACKAGES.map((plan, index) => (
-              <div
-                key={plan.id}
-                className={`p-6 bg-card border rounded-lg relative ${
-                  plan.popular ? 'border-primary ring-2 ring-primary' : ''
-                }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-full">
-                    MOST POPULAR
-                  </div>
-                )}
-                <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
-                <p className="text-3xl font-bold mb-4">
-                  ${plan.price}
-                  <span className="text-sm font-normal text-muted-foreground">
-                    {' '}/ {plan.credits} credits
-                  </span>
-                </p>
-                <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                      <span className="text-muted-foreground">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/register"
-                  className={`block w-full py-3 rounded-lg font-semibold text-center transition ${
-                    plan.popular
-                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                      : 'border hover:bg-accent'
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            {CREDIT_PACKAGES.map((plan) => {
+              const IconMap: Record<string, any> = {
+                starter: Zap,
+                trader: Star,
+                pro: TrendingUp,
+                whale: Rocket,
+              };
+              const Icon = IconMap[plan.id] || Zap;
+
+              return (
+                <div
+                  key={plan.id}
+                  className={`p-6 bg-card border-2 rounded-xl relative text-center transition hover:shadow-lg ${
+                    plan.popular ? 'border-amber-500 ring-2 ring-amber-500 ring-offset-2 ring-offset-background' : 'border-border hover:border-primary/50'
                   }`}
                 >
-                  Get Started
-                </Link>
-              </div>
-            ))}
+                  {plan.popular && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">
+                      MOST POPULAR
+                    </div>
+                  )}
+
+                  <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-accent flex items-center justify-center">
+                    <Icon className="w-7 h-7 text-muted-foreground" />
+                  </div>
+
+                  <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+
+                  <div className="text-3xl font-bold text-primary mb-1">
+                    {plan.credits}
+                    {plan.bonus > 0 && (
+                      <span className="text-lg text-amber-500 ml-1">+{plan.bonus}</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">credits</p>
+
+                  <div className="text-2xl font-bold mb-1">{plan.priceDisplay}</div>
+                  <p className="text-sm text-muted-foreground mb-6">{plan.perCredit}/credit</p>
+
+                  <Link
+                    href="/register"
+                    className={`block w-full py-3 rounded-lg font-semibold text-center transition ${
+                      plan.popular
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                        : 'border hover:bg-accent'
+                    }`}
+                  >
+                    Get Started
+                  </Link>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
