@@ -55,7 +55,14 @@ const POPULAR_COINS = ALL_COINS.filter(c => c.popular);
 // Minimum hours between analyses for the same coin (to avoid unnecessary duplicates)
 const MIN_HOURS_BETWEEN_ANALYSES = 4;
 
-export function CoinSelector() {
+// Trade type definition
+type TradeType = 'scalping' | 'dayTrade' | 'swing';
+
+interface CoinSelectorProps {
+  tradeType?: TradeType;
+}
+
+export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -168,14 +175,14 @@ export function CoinSelector() {
       setShowDuplicateWarning(true);
     } else {
       // No recent analysis, proceed directly
-      router.push(`/analyze/${selectedCoin.symbol}`);
+      router.push(`/analyze/${selectedCoin.symbol}?tradeType=${tradeType}`);
     }
   };
 
   const handleProceedAnyway = () => {
     if (selectedCoin) {
       setShowDuplicateWarning(false);
-      router.push(`/analyze/${selectedCoin.symbol}`);
+      router.push(`/analyze/${selectedCoin.symbol}?tradeType=${tradeType}`);
     }
   };
 
