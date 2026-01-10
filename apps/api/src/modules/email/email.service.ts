@@ -659,6 +659,485 @@ TradePath - Professional Trading Analysis
 İşlem yapmadan önce kendi araştırmanızı yapın.
     `.trim();
   }
+
+  // ===========================================
+  // Security Email Templates
+  // ===========================================
+
+  /**
+   * Send email verification link
+   */
+  async sendEmailVerification(
+    email: string,
+    userName: string,
+    verificationUrl: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Doğrulama - TradePath</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); padding: 30px; text-align: center;">
+              <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
+                TradePath
+              </h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
+                Email Doğrulama
+              </p>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <p style="color: #475569; font-size: 16px; margin: 0 0 25px;">
+                Merhaba <strong style="color: #1e293b;">${userName}</strong>,
+              </p>
+
+              <p style="color: #64748b; font-size: 15px; margin: 0 0 30px; line-height: 1.6;">
+                TradePath hesabınızı oluşturduğunuz için teşekkür ederiz! Email adresinizi doğrulamak için aşağıdaki butona tıklayın.
+              </p>
+
+              <!-- CTA Button -->
+              <div style="text-align: center; margin: 35px 0;">
+                <a href="${verificationUrl}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; text-decoration: none; padding: 16px 50px; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);">
+                  ✓ Email Adresimi Doğrula
+                </a>
+              </div>
+
+              <!-- Security Note -->
+              <div style="background: #fef3c7; border-radius: 8px; padding: 15px; margin: 25px 0; border-left: 4px solid #f59e0b;">
+                <p style="color: #92400e; font-size: 13px; margin: 0; line-height: 1.5;">
+                  <strong>Güvenlik Notu:</strong> Bu link 24 saat içinde geçerliliğini yitirecektir. Eğer bu işlemi siz yapmadıysanız, bu emaili görmezden gelebilirsiniz.
+                </p>
+              </div>
+
+              <!-- Link Alternative -->
+              <p style="color: #94a3b8; font-size: 12px; margin: 25px 0 0; word-break: break-all;">
+                Buton çalışmıyorsa bu linki tarayıcınıza yapıştırın:<br>
+                <a href="${verificationUrl}" style="color: #3b82f6;">${verificationUrl}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #64748b; font-size: 13px; margin: 0;">
+                TradePath - Professional Trading Analysis
+              </p>
+              <p style="color: #94a3b8; font-size: 11px; margin: 10px 0 0;">
+                Bu email otomatik olarak gönderilmiştir. Lütfen yanıtlamayın.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+
+    const text = `
+Merhaba ${userName},
+
+TradePath hesabınızı oluşturduğunuz için teşekkür ederiz!
+
+Email adresinizi doğrulamak için aşağıdaki linki tarayıcınızda açın:
+${verificationUrl}
+
+Bu link 24 saat içinde geçerliliğini yitirecektir.
+
+Eğer bu işlemi siz yapmadıysanız, bu emaili görmezden gelebilirsiniz.
+
+---
+TradePath - Professional Trading Analysis
+    `.trim();
+
+    const result = await this.sendEmail({
+      to: email,
+      subject: '✓ Email Adresinizi Doğrulayın - TradePath',
+      html,
+      text,
+    });
+
+    return { success: result.success, error: result.error };
+  }
+
+  /**
+   * Send password reset link
+   */
+  async sendPasswordReset(
+    email: string,
+    userName: string,
+    resetUrl: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Şifre Sıfırlama - TradePath</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; text-align: center;">
+              <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
+                TradePath
+              </h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
+                🔐 Şifre Sıfırlama
+              </p>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <p style="color: #475569; font-size: 16px; margin: 0 0 25px;">
+                Merhaba <strong style="color: #1e293b;">${userName}</strong>,
+              </p>
+
+              <p style="color: #64748b; font-size: 15px; margin: 0 0 30px; line-height: 1.6;">
+                Hesabınız için şifre sıfırlama talebinde bulundunuz. Şifrenizi sıfırlamak için aşağıdaki butona tıklayın.
+              </p>
+
+              <!-- CTA Button -->
+              <div style="text-align: center; margin: 35px 0;">
+                <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; text-decoration: none; padding: 16px 50px; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);">
+                  🔑 Şifremi Sıfırla
+                </a>
+              </div>
+
+              <!-- Security Note -->
+              <div style="background: #fef2f2; border-radius: 8px; padding: 15px; margin: 25px 0; border-left: 4px solid #ef4444;">
+                <p style="color: #991b1b; font-size: 13px; margin: 0; line-height: 1.5;">
+                  <strong>⚠️ Önemli:</strong> Bu link 1 saat içinde geçerliliğini yitirecektir. Eğer şifre sıfırlama talebinde bulunmadıysanız, bu emaili görmezden gelin ve hesabınızı güvende tutmak için şifrenizi değiştirmeyi düşünün.
+                </p>
+              </div>
+
+              <!-- Link Alternative -->
+              <p style="color: #94a3b8; font-size: 12px; margin: 25px 0 0; word-break: break-all;">
+                Buton çalışmıyorsa bu linki tarayıcınıza yapıştırın:<br>
+                <a href="${resetUrl}" style="color: #3b82f6;">${resetUrl}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #64748b; font-size: 13px; margin: 0;">
+                TradePath - Professional Trading Analysis
+              </p>
+              <p style="color: #94a3b8; font-size: 11px; margin: 10px 0 0;">
+                Bu email şifre sıfırlama talebiniz üzerine gönderilmiştir.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+
+    const text = `
+Merhaba ${userName},
+
+Hesabınız için şifre sıfırlama talebinde bulundunuz.
+
+Şifrenizi sıfırlamak için aşağıdaki linki tarayıcınızda açın:
+${resetUrl}
+
+Bu link 1 saat içinde geçerliliğini yitirecektir.
+
+Eğer şifre sıfırlama talebinde bulunmadıysanız, bu emaili görmezden gelin.
+
+---
+TradePath - Professional Trading Analysis
+    `.trim();
+
+    const result = await this.sendEmail({
+      to: email,
+      subject: '🔐 Şifre Sıfırlama Talebi - TradePath',
+      html,
+      text,
+    });
+
+    return { success: result.success, error: result.error };
+  }
+
+  /**
+   * Send 2FA enabled notification
+   */
+  async sendTwoFactorEnabled(
+    email: string,
+    userName: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2FA Aktifleştirildi - TradePath</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 30px; text-align: center;">
+              <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
+                TradePath
+              </h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
+                🛡️ Güvenlik Bildirimi
+              </p>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                  <span style="font-size: 40px; line-height: 80px;">✓</span>
+                </div>
+                <h2 style="color: #22c55e; font-size: 24px; margin: 0;">
+                  İki Faktörlü Doğrulama Aktif!
+                </h2>
+              </div>
+
+              <p style="color: #475569; font-size: 16px; margin: 0 0 25px;">
+                Merhaba <strong style="color: #1e293b;">${userName}</strong>,
+              </p>
+
+              <p style="color: #64748b; font-size: 15px; margin: 0 0 20px; line-height: 1.6;">
+                Hesabınız için iki faktörlü doğrulama (2FA) başarıyla aktifleştirildi. Artık hesabınız ekstra bir güvenlik katmanıyla korunuyor.
+              </p>
+
+              <div style="background: #f0fdf4; border-radius: 8px; padding: 20px; margin: 25px 0; border: 1px solid #bbf7d0;">
+                <p style="color: #166534; font-size: 14px; margin: 0 0 10px; font-weight: bold;">
+                  Önemli Hatırlatmalar:
+                </p>
+                <ul style="color: #15803d; font-size: 13px; margin: 0; padding-left: 20px; line-height: 1.8;">
+                  <li>Yedek kodlarınızı güvenli bir yerde saklayın</li>
+                  <li>Authenticator uygulamanızı kaybetmeyin</li>
+                  <li>Her giriş yapışınızda 2FA kodu istenecektir</li>
+                </ul>
+              </div>
+
+              <p style="color: #94a3b8; font-size: 13px; margin: 25px 0 0; text-align: center;">
+                Eğer bu işlemi siz yapmadıysanız, lütfen derhal hesabınızı kontrol edin.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #64748b; font-size: 13px; margin: 0;">
+                TradePath - Professional Trading Analysis
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+
+    const text = `
+Merhaba ${userName},
+
+Hesabınız için iki faktörlü doğrulama (2FA) başarıyla aktifleştirildi!
+
+Artık hesabınız ekstra bir güvenlik katmanıyla korunuyor.
+
+Önemli Hatırlatmalar:
+- Yedek kodlarınızı güvenli bir yerde saklayın
+- Authenticator uygulamanızı kaybetmeyin
+- Her giriş yapışınızda 2FA kodu istenecektir
+
+Eğer bu işlemi siz yapmadıysanız, lütfen derhal hesabınızı kontrol edin.
+
+---
+TradePath - Professional Trading Analysis
+    `.trim();
+
+    const result = await this.sendEmail({
+      to: email,
+      subject: '🛡️ İki Faktörlü Doğrulama Aktifleştirildi - TradePath',
+      html,
+      text,
+    });
+
+    return { success: result.success, error: result.error };
+  }
+
+  /**
+   * Send suspicious login alert
+   */
+  async sendSuspiciousLoginAlert(
+    email: string,
+    userName: string,
+    loginDetails: { ip: string; location?: string; device?: string; time: string }
+  ): Promise<{ success: boolean; error?: string }> {
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Güvenlik Uyarısı - TradePath</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center;">
+              <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
+                TradePath
+              </h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
+                ⚠️ Güvenlik Uyarısı
+              </p>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                  <span style="font-size: 40px; line-height: 80px;">⚠️</span>
+                </div>
+                <h2 style="color: #d97706; font-size: 24px; margin: 0;">
+                  Yeni Cihaz Girişi Tespit Edildi
+                </h2>
+              </div>
+
+              <p style="color: #475569; font-size: 16px; margin: 0 0 25px;">
+                Merhaba <strong style="color: #1e293b;">${userName}</strong>,
+              </p>
+
+              <p style="color: #64748b; font-size: 15px; margin: 0 0 20px; line-height: 1.6;">
+                Hesabınıza yeni bir cihazdan veya konumdan giriş yapıldı. Eğer bu siz değilseniz, lütfen derhal şifrenizi değiştirin.
+              </p>
+
+              <div style="background: #fef3c7; border-radius: 8px; padding: 20px; margin: 25px 0; border: 1px solid #fcd34d;">
+                <p style="color: #92400e; font-size: 14px; margin: 0 0 15px; font-weight: bold;">
+                  Giriş Detayları:
+                </p>
+                <table width="100%" style="color: #78350f; font-size: 13px;">
+                  <tr>
+                    <td style="padding: 5px 0;"><strong>IP Adresi:</strong></td>
+                    <td style="padding: 5px 0;">${loginDetails.ip}</td>
+                  </tr>
+                  ${loginDetails.location ? `
+                  <tr>
+                    <td style="padding: 5px 0;"><strong>Konum:</strong></td>
+                    <td style="padding: 5px 0;">${loginDetails.location}</td>
+                  </tr>
+                  ` : ''}
+                  ${loginDetails.device ? `
+                  <tr>
+                    <td style="padding: 5px 0;"><strong>Cihaz:</strong></td>
+                    <td style="padding: 5px 0;">${loginDetails.device}</td>
+                  </tr>
+                  ` : ''}
+                  <tr>
+                    <td style="padding: 5px 0;"><strong>Zaman:</strong></td>
+                    <td style="padding: 5px 0;">${loginDetails.time}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <p style="color: #64748b; font-size: 14px; margin: 0; line-height: 1.6;">
+                Eğer bu giriş size aitse, bu uyarıyı görmezden gelebilirsiniz. Aksi takdirde:
+              </p>
+              <ul style="color: #475569; font-size: 14px; margin: 15px 0; padding-left: 20px;">
+                <li>Şifrenizi hemen değiştirin</li>
+                <li>Tüm oturumları sonlandırın</li>
+                <li>İki faktörlü doğrulamayı aktifleştirin</li>
+              </ul>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #64748b; font-size: 13px; margin: 0;">
+                TradePath - Professional Trading Analysis
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+
+    const text = `
+Merhaba ${userName},
+
+Hesabınıza yeni bir cihazdan veya konumdan giriş yapıldı.
+
+Giriş Detayları:
+- IP Adresi: ${loginDetails.ip}
+${loginDetails.location ? `- Konum: ${loginDetails.location}` : ''}
+${loginDetails.device ? `- Cihaz: ${loginDetails.device}` : ''}
+- Zaman: ${loginDetails.time}
+
+Eğer bu giriş size aitse, bu uyarıyı görmezden gelebilirsiniz.
+
+Aksi takdirde:
+- Şifrenizi hemen değiştirin
+- Tüm oturumları sonlandırın
+- İki faktörlü doğrulamayı aktifleştirin
+
+---
+TradePath - Professional Trading Analysis
+    `.trim();
+
+    const result = await this.sendEmail({
+      to: email,
+      subject: '⚠️ Yeni Cihaz Girişi Tespit Edildi - TradePath',
+      html,
+      text,
+    });
+
+    return { success: result.success, error: result.error };
+  }
 }
 
 export const emailService = new EmailService();
