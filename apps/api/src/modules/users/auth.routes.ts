@@ -14,7 +14,6 @@ import {
   checkAccountLockout,
   recordFailedLogin,
   recordSuccessfulLogin,
-  verifyRecaptcha,
   checkSuspiciousActivity,
   createEmailVerificationToken,
 } from '../../core/auth/security.service';
@@ -59,36 +58,11 @@ export default async function authRoutes(app: FastifyInstance) {
     password: passwordSchema,
     name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name must be less than 50 characters'),
     referralCode: z.string().optional(),
-    recaptchaToken: z.string().optional(),
   });
 
   app.post('/register', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const body = registerSchema.parse(request.body);
-
-      // Verify reCAPTCHA to ensure human user
-      if (body.recaptchaToken) {
-        const captchaResult = await verifyRecaptcha(body.recaptchaToken, 'register');
-        if (!captchaResult.success) {
-          return reply.status(400).send({
-            success: false,
-            error: {
-              code: 'CAPTCHA_FAILED',
-              message: 'Verification failed. Please complete the CAPTCHA.',
-            },
-          });
-        }
-        // Optional: Check score for reCAPTCHA v3
-        if (captchaResult.score !== undefined && captchaResult.score < 0.5) {
-          return reply.status(400).send({
-            success: false,
-            error: {
-              code: 'CAPTCHA_LOW_SCORE',
-              message: 'Verification failed. Please try again.',
-            },
-          });
-        }
-      }
 
       // Check if email exists
       const existing = await prisma.user.findUnique({
@@ -244,7 +218,6 @@ export default async function authRoutes(app: FastifyInstance) {
   const loginSchema = z.object({
     email: z.string().email('Invalid email address'),
     password: z.string().min(1, 'Password is required'),
-    recaptchaToken: z.string().optional(),
   });
 
   app.post('/login', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -253,20 +226,6 @@ export default async function authRoutes(app: FastifyInstance) {
       const email = body.email.toLowerCase();
       const ipAddress = request.ip;
       const userAgent = request.headers['user-agent'];
-
-      // Verify reCAPTCHA if provided
-      if (body.recaptchaToken) {
-        const captchaResult = await verifyRecaptcha(body.recaptchaToken, 'login');
-        if (!captchaResult.success) {
-          return reply.status(400).send({
-            success: false,
-            error: {
-              code: 'CAPTCHA_FAILED',
-              message: 'reCAPTCHA verification failed. Please try again.',
-            },
-          });
-        }
-      }
 
       // Check account lockout
       const lockoutStatus = await checkAccountLockout(email);
