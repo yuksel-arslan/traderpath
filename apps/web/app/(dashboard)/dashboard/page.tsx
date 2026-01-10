@@ -36,6 +36,7 @@ import {
   LayoutGrid,
   List,
   Info,
+  Calendar,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -54,6 +55,17 @@ const PnLChart = dynamic(
 import { cn } from '../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
 import { getApiUrl, authFetch } from '../../../lib/api';
+
+// ===========================================
+// Trade Type Configuration
+// ===========================================
+type TradeType = 'scalping' | 'dayTrade' | 'swing';
+
+const TRADE_TYPE_CONFIG: Record<TradeType, { label: string; icon: typeof Zap; color: string }> = {
+  scalping: { label: 'Scalping', icon: Zap, color: 'purple' },
+  dayTrade: { label: 'Day Trade', icon: Activity, color: 'blue' },
+  swing: { label: 'Swing', icon: Calendar, color: 'amber' },
+};
 
 // ===========================================
 // Types
@@ -154,6 +166,7 @@ interface RecentOutcome {
   expiresAt?: string;
   isExpired?: boolean;
   hoursRemaining?: number;
+  tradeType?: TradeType;
   // Live tracking fields
   direction?: string;
   entryPrice?: number;
@@ -547,6 +560,7 @@ export default function DashboardPage() {
   const [outcomeViewMode, setOutcomeViewMode] = useState<'card' | 'list'>('card');
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly'>('daily');
   const [stepPeriod, setStepPeriod] = useState<'D' | 'W' | 'M' | 'all'>('all');
+  const [tradeTypeFilter, setTradeTypeFilter] = useState<TradeType | 'all'>('all');
 
   const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     try {
@@ -627,6 +641,7 @@ export default function DashboardPage() {
           createdAt: r.generatedAt, // Keep raw ISO date for chart calculations
           createdAtDisplay: new Date(r.generatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           expiresAt: r.expiresAt,
+          tradeType: r.tradeType,
           direction: r.direction,
           entryPrice: r.entryPrice,
           currentPrice: r.currentPrice,
@@ -708,6 +723,11 @@ export default function DashboardPage() {
 
   // Check if we have real data (sampleSize > 0 means real analyses exist)
   const hasRealData = (platformStats?.accuracy.sampleSize ?? 0) > 0 || totalVerdicts > 0;
+
+  // Filter outcomes by trade type
+  const filteredOutcomes = tradeTypeFilter === 'all'
+    ? recentOutcomes
+    : recentOutcomes.filter(o => o.tradeType === tradeTypeFilter);
 
   return (
     <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-8">
@@ -839,7 +859,7 @@ export default function DashboardPage() {
                     const dailyPnL: Record<string, number[]> = {};
                     days.forEach(day => { dailyPnL[day] = []; });
 
-                    recentOutcomes
+                    filteredOutcomes
                       .filter(o => o.unrealizedPnL !== undefined && o.createdAt)
                       .forEach(o => {
                         const tradeDate = new Date(o.createdAt);
@@ -894,7 +914,7 @@ export default function DashboardPage() {
 
                     const chartData = pnlViewMode === 'daily' ? dailyChartData : weeklyChartData;
 
-                    const allTrades = recentOutcomes.filter(o => o.unrealizedPnL !== undefined && o.createdAt);
+                    const allTrades = filteredOutcomes.filter(o => o.unrealizedPnL !== undefined && o.createdAt);
                     const relevantTrades = pnlViewMode === 'daily'
                       ? allTrades.filter(o => new Date(o.createdAt).toISOString().split('T')[0] === todayStr)
                       : allTrades.filter(o => days.includes(new Date(o.createdAt).toISOString().split('T')[0]));
@@ -1581,6 +1601,42 @@ export default function DashboardPage() {
                   <List className="w-4 h-4" />
                 </button>
               </div>
+              {/* Trade Type Filter */}
+              <div className="flex items-center bg-gray-100/80 dark:bg-white/5 rounded-lg p-1 border border-gray-200 dark:border-white/10">
+                <button
+                  onClick={() => setTradeTypeFilter('all')}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md text-xs font-medium transition-all",
+                    tradeTypeFilter === 'all'
+                      ? "bg-white dark:bg-slate-700 shadow-sm text-gray-900 dark:text-white"
+                      : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
+                  )}
+                >
+                  All
+                </button>
+                {(Object.entries(TRADE_TYPE_CONFIG) as [TradeType, typeof TRADE_TYPE_CONFIG[TradeType]][]).map(([type, config]) => {
+                  const Icon = config.icon;
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => setTradeTypeFilter(type)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1",
+                        tradeTypeFilter === type
+                          ? `bg-white dark:bg-slate-700 shadow-sm ${
+                              config.color === 'purple' ? 'text-purple-600 dark:text-purple-400' :
+                              config.color === 'blue' ? 'text-blue-600 dark:text-blue-400' :
+                              'text-amber-600 dark:text-amber-400'
+                            }`
+                          : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
+                      )}
+                    >
+                      <Icon className="w-3 h-3" />
+                      <span className="hidden sm:inline">{config.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
               {/* Status Legends */}
               <div className="hidden sm:flex items-center gap-3 text-sm">
                 <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-100/80 dark:bg-green-500/10 rounded-full border border-green-200/50 dark:border-green-500/20">
@@ -1599,13 +1655,13 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {recentOutcomes.length > 0 ? (
+          {filteredOutcomes.length > 0 ? (
             <>
               {/* Card View - Horizontal scroll, single row */}
               {outcomeViewMode === 'card' && (
                 <div className="overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
                   <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
-                  {recentOutcomes.map((outcome) => (
+                  {filteredOutcomes.map((outcome) => (
                     <div
                       key={outcome.id}
                       className={cn(
@@ -1775,7 +1831,7 @@ export default function DashboardPage() {
 
                     {/* Table Body - Max 5 rows visible, vertical scroll */}
                     <div className="divide-y divide-gray-200 dark:divide-white/5 max-h-[220px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
-                      {recentOutcomes.map((outcome) => {
+                      {filteredOutcomes.map((outcome) => {
                         // Calculate TP Progress
                         let tpProgress = 0;
                         if (outcome.outcome === 'correct') {
