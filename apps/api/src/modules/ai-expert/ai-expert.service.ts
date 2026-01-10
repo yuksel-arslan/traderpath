@@ -10,6 +10,7 @@ import { prisma } from '../../core/database';
 import { analysisEngine } from '../analysis/analysis.engine';
 import { creditService } from '../credits/credit.service';
 import { creditCostsService } from '../costs/credit-costs.service';
+import { getTradingKnowledgeForAI } from './trading-knowledge-base';
 
 // Gemini API configuration
 const GEMINI_API_KEY = config.gemini.apiKey;
@@ -121,6 +122,8 @@ When users ask about trading concepts:
 - NEVER offer to analyze - direct them to Analyze page
 
 ⚠️ REMINDER: Frontend adds action buttons automatically. No CTAs needed.
+
+${getTradingKnowledgeForAI()}
 `;
 
 // ===========================================
