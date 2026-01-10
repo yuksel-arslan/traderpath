@@ -6,7 +6,52 @@
 
 import { randomBytes, createHash } from 'crypto';
 import { prisma } from '../database';
-import { LoginEventType } from '@prisma/client';
+
+// Define LoginEventType locally (mirrors Prisma enum)
+// This allows the code to work even if Prisma client isn't generated
+export type LoginEventType =
+  | 'LOGIN_SUCCESS'
+  | 'LOGIN_FAILED'
+  | 'LOGIN_BLOCKED'
+  | 'LOGOUT'
+  | 'PASSWORD_CHANGE'
+  | 'PASSWORD_RESET_SUCCESS'
+  | 'TWO_FACTOR_ENABLED'
+  | 'TWO_FACTOR_DISABLED'
+  | 'ACCOUNT_LOCKED'
+  | 'ACCOUNT_UNLOCKED'
+  | 'SUSPICIOUS_ACTIVITY'
+  | 'EMAIL_VERIFIED';
+
+// ===========================================
+// Database Compatibility Helper
+// ===========================================
+
+let securityFieldsExist: boolean | null = null;
+
+/**
+ * Check if security fields exist in the database
+ */
+async function checkSecurityFieldsExist(): Promise<boolean> {
+  if (securityFieldsExist !== null) return securityFieldsExist;
+
+  try {
+    // Try to check if the column exists
+    const result = await prisma.$queryRaw<Array<{ column_name: string }>>`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'users' AND column_name = 'email_verification_token'
+    `;
+    securityFieldsExist = result.length > 0;
+  } catch {
+    securityFieldsExist = false;
+  }
+
+  if (!securityFieldsExist) {
+    console.warn('[Security] Security fields not found in database. Run the SQL migration: prisma/migrations/manual_security_migration.sql');
+  }
+
+  return securityFieldsExist;
+}
 
 // ===========================================
 // Configuration
@@ -76,17 +121,22 @@ interface EmailVerificationResult {
  */
 export async function createEmailVerificationToken(userId: string): Promise<EmailVerificationResult> {
   try {
+    const fieldsExist = await checkSecurityFieldsExist();
+    if (!fieldsExist) {
+      return { success: false, error: 'Security features not yet enabled. Database migration required.' };
+    }
+
     const token = generateSecureToken();
     const hashedToken = hashToken(token);
     const expiresAt = new Date(Date.now() + SECURITY_CONFIG.EMAIL_VERIFICATION_EXPIRES_HOURS * 60 * 60 * 1000);
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        emailVerificationToken: hashedToken,
-        emailVerificationExpires: expiresAt,
-      },
-    });
+    // Use raw SQL to avoid Prisma client type issues
+    await prisma.$executeRaw`
+      UPDATE "users"
+      SET email_verification_token = ${hashedToken},
+          email_verification_expires = ${expiresAt}
+      WHERE id = ${userId}
+    `;
 
     return { success: true, token };
   } catch (error) {
