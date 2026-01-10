@@ -6,13 +6,8 @@ import {
   TrendingUp,
   TrendingDown,
   RefreshCw,
-  CheckCircle2,
-  XCircle,
-  Timer,
   Target,
-  Eye
 } from 'lucide-react';
-import Link from 'next/link';
 import { CoinIcon } from '../common/CoinIcon';
 import { cn } from '../../lib/utils';
 import { getAuthToken } from '../../lib/api';
@@ -31,6 +26,7 @@ interface RecentAnalysis {
   stopLoss?: number;
   takeProfit1?: number;
   isSample?: boolean;
+  hasTradePlan?: boolean;
 }
 
 const verdictConfig = {
@@ -60,8 +56,8 @@ export function RecentAnalyses() {
         return;
       }
 
-      // Fetch from reports API for richer data
-      const response = await fetch('/api/reports?limit=10', {
+      // Fetch from analysis history API (analyses table)
+      const response = await fetch('/api/analysis/history?limit=10', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -69,28 +65,39 @@ export function RecentAnalyses() {
 
       if (response.ok) {
         const result = await response.json();
-        const reports = result.data?.reports || [];
+        const analyses = result.data?.analyses || [];
 
         // Map to RecentAnalysis format
-        const mapped = reports.map((r: any) => ({
-          id: r.id,
-          symbol: r.symbol,
-          verdict: r.verdict || 'wait',
-          score: r.score || 0,
-          direction: r.direction,
-          createdAt: new Date(r.generatedAt).toLocaleDateString('en-US', {
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
-          outcome: r.outcome,
-          entryPrice: r.entryPrice,
-          currentPrice: r.currentPrice,
-          unrealizedPnL: r.unrealizedPnL,
-          stopLoss: r.stopLoss,
-          takeProfit1: r.takeProfit1,
-        }));
+        const mapped = analyses.map((a: any) => {
+          // Normalize verdict to lowercase and map to valid values
+          const rawVerdict = (a.verdict || '').toLowerCase().replace(/[^a-z_]/g, '');
+          let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
+          if (rawVerdict === 'go' || rawVerdict === 'go!') verdict = 'go';
+          else if (rawVerdict === 'conditional_go' || rawVerdict === 'conditional go' || rawVerdict === 'conditionalgo') verdict = 'conditional_go';
+          else if (rawVerdict === 'avoid' || rawVerdict === 'no_go' || rawVerdict === 'nogo') verdict = 'avoid';
+          else if (rawVerdict === 'wait') verdict = 'wait';
+
+          return {
+            id: a.id,
+            symbol: a.symbol,
+            verdict,
+            score: a.totalScore || 0,
+            direction: a.direction,
+            createdAt: new Date(a.createdAt).toLocaleDateString('en-US', {
+              day: 'numeric',
+              month: 'short',
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+            outcome: null, // analyses don't track outcome yet
+            entryPrice: a.entryPrice,
+            currentPrice: null, // would need live price fetch
+            unrealizedPnL: null,
+            stopLoss: a.stopLoss,
+            takeProfit1: a.takeProfit1,
+            hasTradePlan: a.hasTradePlan,
+          };
+        });
 
         setAnalyses(mapped);
       } else if (response.status === 401) {
@@ -145,34 +152,11 @@ export function RecentAnalyses() {
     <div className="bg-card rounded-lg border divide-y divide-border max-h-[320px] overflow-y-auto">
       {analyses.map((analysis) => {
         const config = verdictConfig[analysis.verdict] || verdictConfig.wait;
-        const isActive = !analysis.outcome || analysis.outcome === 'pending';
-
-        // Calculate TP progress for active trades
-        let tpProgress = 0;
-        if (isActive && analysis.entryPrice && analysis.currentPrice && analysis.takeProfit1) {
-          const entry = analysis.entryPrice;
-          const current = analysis.currentPrice;
-          const tp1 = analysis.takeProfit1;
-          const isLong = analysis.direction === 'long';
-
-          const totalDistance = isLong ? (tp1 - entry) : (entry - tp1);
-          const coveredDistance = isLong ? (current - entry) : (entry - current);
-          tpProgress = totalDistance !== 0
-            ? Math.min(100, Math.max(0, (coveredDistance / totalDistance) * 100))
-            : 0;
-        }
 
         return (
-          <Link
+          <div
             key={analysis.id}
-            href={`/reports/${analysis.id}`}
-            className={cn(
-              "flex items-center justify-between p-3 hover:bg-accent/50 transition-colors relative",
-              // Dynamic background based on status
-              analysis.outcome === 'correct' && "bg-green-500/5",
-              analysis.outcome === 'incorrect' && "bg-red-500/5",
-              isActive && "bg-blue-500/5"
-            )}
+            className="flex items-center justify-between p-3 hover:bg-accent/30 transition-colors relative"
           >
             {/* Left: Coin Info */}
             <div className="flex items-center gap-3 min-w-0">
@@ -180,6 +164,13 @@ export function RecentAnalyses() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-semibold text-sm">{analysis.symbol}</span>
+                  {/* Verdict Badge */}
+                  <span className={cn(
+                    "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                    config.bg, config.color
+                  )}>
+                    {config.label}
+                  </span>
                   {/* Direction Badge */}
                   {analysis.direction && (
                     <span className={cn(
@@ -195,30 +186,11 @@ export function RecentAnalyses() {
                       )}
                     </span>
                   )}
-                  {/* Status Badge */}
-                  {analysis.outcome === 'correct' && (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-400 flex items-center gap-0.5">
-                      <CheckCircle2 className="w-3 h-3" />
-                      TP
-                    </span>
-                  )}
-                  {analysis.outcome === 'incorrect' && (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 flex items-center gap-0.5">
-                      <XCircle className="w-3 h-3" />
-                      SL
-                    </span>
-                  )}
-                  {isActive && (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 flex items-center gap-0.5">
-                      <Timer className="w-3 h-3" />
-                      LIVE
-                    </span>
-                  )}
-                  {/* Sample Report Badge */}
-                  {analysis.isSample && (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400 flex items-center gap-0.5">
-                      <Eye className="w-3 h-3" />
-                      SAMPLE
+                  {/* Trade Plan Badge */}
+                  {analysis.hasTradePlan && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 flex items-center gap-0.5">
+                      <Target className="w-3 h-3" />
+                      Plan
                     </span>
                   )}
                 </div>
@@ -226,29 +198,12 @@ export function RecentAnalyses() {
               </div>
             </div>
 
-            {/* Right: Stats */}
+            {/* Right: Score */}
             <div className="flex items-center gap-2 shrink-0">
-              {/* P/L Display */}
-              {analysis.unrealizedPnL !== undefined && (
-                <div className={cn(
-                  "px-2 py-1 rounded text-xs font-bold min-w-[50px] text-center",
-                  analysis.unrealizedPnL >= 0
-                    ? "bg-green-500/20 text-green-400"
-                    : "bg-red-500/20 text-red-400"
-                )}>
-                  {analysis.unrealizedPnL >= 0 ? '+' : ''}{analysis.unrealizedPnL.toFixed(1)}%
-                </div>
-              )}
-
-              {/* TP Progress for active */}
-              {isActive && analysis.takeProfit1 && tpProgress > 0 && (
-                <div className={cn(
-                  "px-2 py-1 rounded text-xs font-bold min-w-[40px] text-center flex items-center gap-1",
-                  tpProgress >= 80 ? "bg-green-500/20 text-green-400" :
-                  tpProgress >= 50 ? "bg-yellow-500/20 text-yellow-400" : "bg-blue-500/20 text-blue-400"
-                )}>
-                  <Target className="w-3 h-3" />
-                  {tpProgress.toFixed(0)}%
+              {/* Entry Price */}
+              {analysis.entryPrice && (
+                <div className="px-2 py-1 rounded text-xs font-medium text-muted-foreground bg-muted/50">
+                  ${analysis.entryPrice < 1 ? analysis.entryPrice.toFixed(6) : analysis.entryPrice.toFixed(2)}
                 </div>
               )}
 
@@ -260,11 +215,8 @@ export function RecentAnalyses() {
               )}>
                 {(analysis.score * 10).toFixed(0)}%
               </div>
-
-              {/* View Icon */}
-              <Eye className="w-4 h-4 text-muted-foreground" />
             </div>
-          </Link>
+          </div>
         );
       })}
     </div>
