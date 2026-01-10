@@ -10,6 +10,7 @@ import { costService } from '../costs/cost.service';
 import { creditCostsService } from '../costs/credit-costs.service';
 import { analysisEngine } from './analysis.engine';
 import { config } from '../../core/config';
+import { TradeType, getTradeConfig, getStepConfig } from './config/trade-config';
 import { getCautionRate, calculateCautionOutcomes, calculateExpiredOutcomes } from '../reports/outcome.service';
 
 // Gemini response with usage data
@@ -123,12 +124,16 @@ Be concise and actionable.`;
     }
   });
 
+  // Common schema with tradeType support
+  const tradeTypeSchema = z.enum(['scalping', 'dayTrade', 'swing']).default('dayTrade');
+
   /**
    * POST /api/analysis/asset-scan
    * Step 2: Asset Scanner (2 credits)
    */
   const assetScanSchema = z.object({
     symbol: z.string().toUpperCase(),
+    tradeType: tradeTypeSchema,
   });
 
   app.post('/asset-scan', {
@@ -150,9 +155,9 @@ Be concise and actionable.`;
     }
 
     try {
-      const data = await analysisEngine.scanAsset(body.symbol);
+      const data = await analysisEngine.scanAsset(body.symbol, body.tradeType);
 
-      const aiPrompt = `You are a crypto analyst. Give a brief 2-3 sentence analysis for ${body.symbol} in English:
+      const aiPrompt = `You are a crypto analyst. Give a brief 2-3 sentence analysis for ${body.symbol} (${body.tradeType} timeframe) in English:
 - Price: $${data.currentPrice}
 - RSI: ${data.indicators.rsi}
 - MACD Histogram: ${data.indicators.macd.histogram > 0 ? 'Positive' : 'Negative'}
@@ -202,9 +207,9 @@ Be concise and give a trading perspective.`;
     }
 
     try {
-      const data = await analysisEngine.safetyCheck(body.symbol);
+      const data = await analysisEngine.safetyCheck(body.symbol, body.tradeType);
 
-      const aiPrompt = `You are a crypto risk analyst. Analyze this safety data for ${body.symbol} and give 2-3 sentences in English:
+      const aiPrompt = `You are a crypto risk analyst. Analyze this safety data for ${body.symbol} (${body.tradeType}) and give 2-3 sentences in English:
 - Risk Level: ${data.riskLevel}
 - Pump/Dump Risk: ${data.manipulation.pumpDumpRisk}
 - Whale Activity: ${data.whaleActivity.bias} (Net flow: $${Math.round(data.whaleActivity.netFlowUsd).toLocaleString()})
@@ -256,10 +261,10 @@ Focus on risk assessment and trading implications.`;
     }
 
     try {
-      const data = await analysisEngine.timingAnalysis(body.symbol);
+      const data = await analysisEngine.timingAnalysis(body.symbol, body.tradeType);
 
       const bestZone = data.entryZones[0];
-      const aiPrompt = `You are a crypto timing analyst. Give brief entry advice for ${body.symbol} in English (2-3 sentences):
+      const aiPrompt = `You are a crypto timing analyst. Give brief entry advice for ${body.symbol} (${body.tradeType}) in English (2-3 sentences):
 - Current Price: $${data.currentPrice}
 - Optimal Entry: $${data.optimalEntry}
 - Trade Now: ${data.tradeNow ? 'Yes' : 'No'}
@@ -294,6 +299,7 @@ Be specific about when to enter.`;
   const tradePlanSchema = z.object({
     symbol: z.string().toUpperCase(),
     accountSize: z.number().optional().default(10000),
+    tradeType: tradeTypeSchema,
   });
 
   app.post('/trade-plan', {
@@ -315,10 +321,10 @@ Be specific about when to enter.`;
     }
 
     try {
-      const data = await analysisEngine.tradePlan(body.symbol, body.accountSize);
+      const data = await analysisEngine.tradePlan(body.symbol, body.accountSize, body.tradeType);
 
       const tpPrices = data.takeProfits.map(tp => `$${tp.price}`).join(', ');
-      const aiPrompt = `You are a crypto trade planner. Summarize this trade plan for ${body.symbol} in English (2-3 sentences):
+      const aiPrompt = `You are a crypto trade planner. Summarize this trade plan for ${body.symbol} (${body.tradeType}) in English (2-3 sentences):
 - Direction: ${data.direction.toUpperCase()}
 - Entry Type: ${data.type}
 - Average Entry: $${data.averageEntry}
@@ -373,9 +379,9 @@ Give practical trading advice.`;
     }
 
     try {
-      const data = await analysisEngine.trapCheck(body.symbol);
+      const data = await analysisEngine.trapCheck(body.symbol, body.tradeType);
 
-      const aiPrompt = `You are a crypto trap analyst. Analyze trap risk for ${body.symbol} in English (2-3 sentences):
+      const aiPrompt = `You are a crypto trap analyst. Analyze trap risk for ${body.symbol} (${body.tradeType}) in English (2-3 sentences):
 - Risk Level: ${data.riskLevel}
 - Bull Trap: ${data.traps.bullTrap ? `Yes at $${data.traps.bullTrapZone}` : 'No'}
 - Bear Trap: ${data.traps.bearTrap ? `Yes at $${data.traps.bearTrapZone}` : 'No'}
@@ -411,6 +417,7 @@ Warn about potential traps and give protective advice.`;
   const fullAnalysisSchema = z.object({
     symbol: z.string().toUpperCase(),
     accountSize: z.number().optional().default(10000),
+    tradeType: tradeTypeSchema,
   });
 
   app.post('/full', {
@@ -433,12 +440,13 @@ Warn about potential traps and give protective advice.`;
 
     try {
       // Step 1-5: Run all prerequisite analysis steps in parallel
+      // All steps use trade type specific timeframes and indicators
       const [marketPulse, assetScan, safetyCheck, timing, trapCheck] = await Promise.all([
         analysisEngine.getMarketPulse(),
-        analysisEngine.scanAsset(body.symbol),
-        analysisEngine.safetyCheck(body.symbol),
-        analysisEngine.timingAnalysis(body.symbol),
-        analysisEngine.trapCheck(body.symbol),
+        analysisEngine.scanAsset(body.symbol, body.tradeType),
+        analysisEngine.safetyCheck(body.symbol, body.tradeType),
+        analysisEngine.timingAnalysis(body.symbol, body.tradeType),
+        analysisEngine.trapCheck(body.symbol, body.tradeType),
       ]);
 
       // Step 6: Preliminary Verdict - decides GO/WAIT/AVOID BEFORE trade plan
@@ -468,9 +476,10 @@ Warn about potential traps and give protective advice.`;
       );
 
       // Build AI prompt based on whether trade plan exists
+      const tradeTypeLabel = body.tradeType === 'scalping' ? 'scalping (1-15 min)' : body.tradeType === 'dayTrade' ? 'day trading (1-8 hours)' : 'swing trading (2-14 days)';
       let aiPrompt: string;
       if (tradePlan) {
-        aiPrompt = `You are a senior crypto analyst. Give a comprehensive trading recommendation for ${body.symbol} in English (4-5 sentences):
+        aiPrompt = `You are a senior crypto analyst. Give a comprehensive ${tradeTypeLabel} recommendation for ${body.symbol} in English (4-5 sentences):
 
 Market Analysis:
 - Fear & Greed: ${marketPulse.fearGreedIndex} (${marketPulse.fearGreedLabel})
@@ -508,7 +517,7 @@ Recommendation: ${verdict.recommendation}
 Give a clear, actionable trading recommendation with specific entry, stop loss, and target prices.`;
       } else {
         // No trade plan - WAIT/AVOID verdict
-        aiPrompt = `You are a senior crypto analyst. Explain why trading ${body.symbol} is NOT recommended right now (3-4 sentences):
+        aiPrompt = `You are a senior crypto analyst. Explain why ${tradeTypeLabel} ${body.symbol} is NOT recommended right now (3-4 sentences):
 
 Market Analysis:
 - Fear & Greed: ${marketPulse.fearGreedIndex} (${marketPulse.fearGreedLabel})
@@ -542,6 +551,7 @@ Explain the key risks and what conditions would need to change before trading th
         data: {
           analysisId: verdict.analysisId,
           symbol: body.symbol,
+          tradeType: body.tradeType, // Include trade type in response
           timestamp: verdict.createdAt,
           expiresAt: verdict.expiresAt,
           overallScore: verdict.overallScore,

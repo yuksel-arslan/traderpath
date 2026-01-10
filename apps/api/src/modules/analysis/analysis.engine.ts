@@ -6,6 +6,7 @@
 import { randomUUID } from 'crypto';
 import { config } from '../../core/config';
 import { contractSecurityService } from '../security/contract-security.service';
+import { TradeType, getTradeConfig, getStepConfig, Timeframe } from './config/trade-config';
 
 // ===========================================
 // Price Formatting Utility
@@ -32,6 +33,42 @@ function roundPrice(price: number): number {
     // SHIB-like: $0.00002345
     return Math.round(price * 100000000000) / 100000000000;
   }
+}
+
+// ===========================================
+// Trade Type Timeframe Configuration
+// ===========================================
+
+interface TradeTypeTimeframes {
+  primary: string;
+  secondary: string;
+  confirmation: string;
+  candleCounts: { primary: number; secondary: number; confirmation: number };
+}
+
+const TRADE_TYPE_TIMEFRAMES: Record<TradeType, TradeTypeTimeframes> = {
+  scalping: {
+    primary: '1m',
+    secondary: '5m',
+    confirmation: '15m',
+    candleCounts: { primary: 100, secondary: 50, confirmation: 30 },
+  },
+  dayTrade: {
+    primary: '15m',
+    secondary: '1h',
+    confirmation: '4h',
+    candleCounts: { primary: 96, secondary: 48, confirmation: 24 },
+  },
+  swing: {
+    primary: '4h',
+    secondary: '1d',
+    confirmation: '1w',
+    candleCounts: { primary: 90, secondary: 60, confirmation: 12 },
+  },
+};
+
+function getTimeframesForTradeType(tradeType: TradeType = 'dayTrade'): TradeTypeTimeframes {
+  return TRADE_TYPE_TIMEFRAMES[tradeType] || TRADE_TYPE_TIMEFRAMES.dayTrade;
 }
 
 // ===========================================
@@ -1384,13 +1421,21 @@ export const analysisEngine = {
   // =========================================
   // Step 2: Asset Scanner (2 credits)
   // =========================================
-  async scanAsset(symbol: string): Promise<AssetScanResult> {
-    const [ticker, candles1d, candles4h, candles1h] = await Promise.all([
+  async scanAsset(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<AssetScanResult> {
+    const tf = getTimeframesForTradeType(tradeType);
+
+    // Fetch candles based on trade type timeframes
+    const [ticker, candlesPrimary, candlesSecondary, candlesConfirmation] = await Promise.all([
       fetch24hTicker(symbol),
-      fetchKlines(symbol, '1d', 200),
-      fetchKlines(symbol, '4h', 200),
-      fetchKlines(symbol, '1h', 200),
+      fetchKlines(symbol, tf.primary, tf.candleCounts.primary),
+      fetchKlines(symbol, tf.secondary, tf.candleCounts.secondary),
+      fetchKlines(symbol, tf.confirmation, tf.candleCounts.confirmation),
     ]);
+
+    // For higher timeframe analysis (needed for trends), also fetch daily candles if not already
+    const candles1d = tf.secondary === '1d' ? candlesSecondary : await fetchKlines(symbol, '1d', 100);
+    const candles4h = tf.primary === '4h' ? candlesPrimary : (tf.confirmation === '4h' ? candlesConfirmation : await fetchKlines(symbol, '4h', 50));
+    const candles1h = tf.secondary === '1h' ? candlesSecondary : (tf.primary === '15m' ? await fetchKlines(symbol, '1h', 48) : candlesPrimary);
 
     // Multi-timeframe trend analysis
     const trend1d = calculateTrend(candles1d);
@@ -1531,14 +1576,19 @@ export const analysisEngine = {
   // =========================================
   // Step 3: Safety Check (5 credits)
   // =========================================
-  async safetyCheck(symbol: string): Promise<SafetyCheckResult> {
-    const [ticker, candles1h, orderBook, recentTrades, newsSentiment] = await Promise.all([
+  async safetyCheck(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<SafetyCheckResult> {
+    const tf = getTimeframesForTradeType(tradeType);
+
+    const [ticker, candlesPrimary, orderBook, recentTrades, newsSentiment] = await Promise.all([
       fetch24hTicker(symbol),
-      fetchKlines(symbol, '1h', 100),
+      fetchKlines(symbol, tf.primary, tf.candleCounts.primary),
       fetchOrderBook(symbol, 100),
       fetchRecentTrades(symbol, 500),
       fetchNewsSentiment(symbol),
     ]);
+
+    // Use primary timeframe candles for safety analysis
+    const candles1h = candlesPrimary;
 
     const volumes = candles1h.map((c) => c.volume);
     const avgVolume = volumes.length > 0 ? volumes.slice(-24).reduce((a, b) => a + b, 0) / Math.min(24, volumes.length) : 1;
@@ -1839,12 +1889,18 @@ export const analysisEngine = {
   // =========================================
   // Step 4: Timing (3 credits)
   // =========================================
-  async timingAnalysis(symbol: string): Promise<TimingResult> {
-    const [ticker, candles4h, candles1h] = await Promise.all([
+  async timingAnalysis(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<TimingResult> {
+    const tf = getTimeframesForTradeType(tradeType);
+
+    const [ticker, candlesPrimary, candlesSecondary] = await Promise.all([
       fetch24hTicker(symbol),
-      fetchKlines(symbol, '4h', 100),
-      fetchKlines(symbol, '1h', 100),
+      fetchKlines(symbol, tf.primary, tf.candleCounts.primary),
+      fetchKlines(symbol, tf.secondary, tf.candleCounts.secondary),
     ]);
+
+    // Use trade-type appropriate timeframes for analysis
+    const candles4h = candlesPrimary;
+    const candles1h = candlesSecondary;
 
     const prices4h = candles4h.map((c) => c.close);
     const prices1h = candles1h.map((c) => c.close);
@@ -2007,11 +2063,16 @@ export const analysisEngine = {
   // =========================================
   // Step 5: Trade Plan (5 credits)
   // =========================================
-  async tradePlan(symbol: string, accountSize: number = 10000): Promise<TradePlanResult> {
-    const [ticker, candles4h] = await Promise.all([
+  async tradePlan(symbol: string, accountSize: number = 10000, tradeType: TradeType = 'dayTrade'): Promise<TradePlanResult> {
+    const tf = getTimeframesForTradeType(tradeType);
+
+    const [ticker, candlesPrimary] = await Promise.all([
       fetch24hTicker(symbol),
-      fetchKlines(symbol, '4h', 100),
+      fetchKlines(symbol, tf.primary, tf.candleCounts.primary),
     ]);
+
+    // Use trade-type appropriate timeframe
+    const candles4h = candlesPrimary;
 
     const trend = calculateTrend(candles4h);
     const levels = findSupportResistance(candles4h);
@@ -2144,12 +2205,18 @@ export const analysisEngine = {
   // =========================================
   // Step 6: Trap Check (5 credits)
   // =========================================
-  async trapCheck(symbol: string): Promise<TrapCheckResult> {
-    const [ticker, candles4h, candles1h] = await Promise.all([
+  async trapCheck(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<TrapCheckResult> {
+    const tf = getTimeframesForTradeType(tradeType);
+
+    const [ticker, candlesPrimary, candlesSecondary] = await Promise.all([
       fetch24hTicker(symbol),
-      fetchKlines(symbol, '4h', 100),
-      fetchKlines(symbol, '1h', 48),
+      fetchKlines(symbol, tf.primary, tf.candleCounts.primary),
+      fetchKlines(symbol, tf.secondary, tf.candleCounts.secondary),
     ]);
+
+    // Use trade-type appropriate timeframes
+    const candles4h = candlesPrimary;
+    const candles1h = candlesSecondary;
 
     const prices4h = candles4h.map((c) => c.close);
     const prices1h = candles1h.map((c) => c.close);
