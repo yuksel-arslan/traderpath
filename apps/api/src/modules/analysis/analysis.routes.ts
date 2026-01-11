@@ -1765,6 +1765,7 @@ Explain the key risks and what conditions would need to change before trading th
               { name: 'EMV', category: 'volume', color: '#22C55E' },
               { name: 'CHAIKIN', category: 'volume', color: '#A855F7' }, // Pro volume momentum
               { name: 'ADL', category: 'volume', color: '#EC4899' }, // Accumulation/Distribution
+              { name: 'KVO', category: 'volume', color: '#F43F5E' }, // Klinger Volume Oscillator
             ],
             4: [ // Timing - fast momentum (execution timing)
               { name: 'STOCHASTIC_FAST', category: 'momentum', color: '#EF4444' },
@@ -1774,6 +1775,7 @@ Explain the key risks and what conditions would need to change before trading th
               { name: 'CMO', category: 'momentum', color: '#F97316' },
               { name: 'ROC_5', category: 'momentum', color: '#3B82F6' },
               { name: 'RVI', category: 'momentum', color: '#A855F7' }, // Vigor Index
+              { name: 'TSI', category: 'momentum', color: '#F43F5E' }, // True Strength Index
             ],
             5: [ // Trade Plan - tight stops (risk management)
               { name: 'ATR_7', category: 'volatility', color: '#F59E0B' },
@@ -1782,6 +1784,7 @@ Explain the key risks and what conditions would need to change before trading th
               { name: 'DEMA', category: 'trend', color: '#EC4899' },
               { name: 'TEMA', category: 'trend', color: '#06B6D4' },
               { name: 'STDDEV', category: 'volatility', color: '#8B5CF6' }, // Volatility measure
+              { name: 'VP', category: 'advanced', color: '#F43F5E' }, // Volume Profile POC/VAH/VAL
             ],
             6: [ // Trap Check - quick reversals (trap detection)
               { name: 'RSI_7', category: 'momentum', color: '#F59E0B' },
@@ -1790,6 +1793,7 @@ Explain the key risks and what conditions would need to change before trading th
               { name: 'TRIX', category: 'momentum', color: '#8B5CF6' },
               { name: 'PPO', category: 'momentum', color: '#14B8A6' },
               { name: 'CV', category: 'volatility', color: '#A855F7' }, // Chaikin Volatility
+              { name: 'MASS', category: 'advanced', color: '#F43F5E' }, // Mass Index reversal
             ],
             7: [],
           };
@@ -1816,6 +1820,7 @@ Explain the key risks and what conditions would need to change before trading th
               { name: 'ICHIMOKU', category: 'trend', color: '#EC4899' },
               { name: 'ADX', category: 'trend', color: '#A855F7' },
               { name: 'CHOP', category: 'volatility', color: '#22C55E' }, // Market structure
+              { name: 'KST', category: 'momentum', color: '#F43F5E' }, // Long-term momentum
             ],
             3: [ // Safety Check - accumulation/distribution (smart money flow)
               { name: 'OBV', category: 'volume', color: '#14B8A6' },
@@ -1826,6 +1831,7 @@ Explain the key risks and what conditions would need to change before trading th
               { name: 'EMV', category: 'volume', color: '#22C55E' },
               { name: 'ADL', category: 'volume', color: '#A855F7' }, // Key for institutions
               { name: 'CHAIKIN', category: 'volume', color: '#EC4899' }, // Pro volume analysis
+              { name: 'KVO', category: 'volume', color: '#F43F5E' }, // Klinger Volume Oscillator
             ],
             4: [ // Timing - trend momentum (position timing)
               { name: 'STOCHASTIC', category: 'momentum', color: '#EF4444' },
@@ -1835,6 +1841,7 @@ Explain the key risks and what conditions would need to change before trading th
               { name: 'COPPOCK', category: 'momentum', color: '#F97316' },
               { name: 'UO', category: 'momentum', color: '#A855F7' },
               { name: 'RVI', category: 'momentum', color: '#EC4899' }, // Market vigor
+              { name: 'TSI', category: 'momentum', color: '#F43F5E' }, // True Strength Index
             ],
             5: [ // Trade Plan - wide stops (position sizing)
               { name: 'ATR_21', category: 'volatility', color: '#F59E0B' },
@@ -1844,6 +1851,8 @@ Explain the key risks and what conditions would need to change before trading th
               { name: 'EMA_50', category: 'trend', color: '#3B82F6' },
               { name: 'EMA_200', category: 'trend', color: '#EC4899' },
               { name: 'STDDEV', category: 'volatility', color: '#06B6D4' }, // Risk measurement
+              { name: 'VP', category: 'advanced', color: '#F43F5E' }, // Volume Profile
+              { name: 'AVWAP', category: 'advanced', color: '#7C3AED' }, // Anchored VWAP
             ],
             6: [ // Trap Check - trend reversals (reversal detection)
               { name: 'RSI_21', category: 'momentum', color: '#F59E0B' },
@@ -1853,6 +1862,7 @@ Explain the key risks and what conditions would need to change before trading th
               { name: 'TRIX', category: 'momentum', color: '#14B8A6' },
               { name: 'PPO', category: 'momentum', color: '#F97316' },
               { name: 'CV', category: 'volatility', color: '#A855F7' }, // Volatility change
+              { name: 'MASS', category: 'advanced', color: '#F43F5E' }, // Mass Index reversal
             ],
             7: [],
           };
@@ -1888,6 +1898,7 @@ Explain the key risks and what conditions would need to change before trading th
             { name: 'ELDER_RAY', category: 'advanced', color: '#EF4444' },
             { name: 'ADL', category: 'volume', color: '#A855F7' }, // Accumulation/Distribution
             { name: 'CHAIKIN', category: 'volume', color: '#EC4899' }, // Volume momentum
+            { name: 'KVO', category: 'volume', color: '#F43F5E' }, // Klinger Volume Oscillator
           ],
           4: [ // Timing - momentum signals (entry/exit timing)
             { name: 'STOCHASTIC', category: 'momentum', color: '#EF4444' },
@@ -1897,6 +1908,7 @@ Explain the key risks and what conditions would need to change before trading th
             { name: 'CMO', category: 'momentum', color: '#F97316' },
             { name: 'AROON', category: 'trend', color: '#14B8A6' },
             { name: 'RVI', category: 'momentum', color: '#EC4899' }, // Vigor Index
+            { name: 'TSI', category: 'momentum', color: '#F43F5E' }, // True Strength Index
           ],
           5: [ // Trade Plan - risk management (position management)
             { name: 'ATR', category: 'volatility', color: '#F59E0B' },
@@ -1906,6 +1918,8 @@ Explain the key risks and what conditions would need to change before trading th
             { name: 'HMA', category: 'trend', color: '#3B82F6' },
             { name: 'DEMA', category: 'trend', color: '#EC4899' },
             { name: 'STDDEV', category: 'volatility', color: '#06B6D4' }, // Volatility measure
+            { name: 'VP', category: 'advanced', color: '#F43F5E' }, // Volume Profile
+            { name: 'AVWAP', category: 'advanced', color: '#7C3AED' }, // Anchored VWAP
           ],
           6: [ // Trap Check - reversal detection (trap avoidance)
             { name: 'RSI', category: 'momentum', color: '#F59E0B' },
@@ -1915,6 +1929,7 @@ Explain the key risks and what conditions would need to change before trading th
             { name: 'PPO', category: 'momentum', color: '#14B8A6' },
             { name: 'DPO', category: 'momentum', color: '#F97316' },
             { name: 'CV', category: 'volatility', color: '#A855F7' }, // Chaikin Volatility
+            { name: 'MASS', category: 'advanced', color: '#F43F5E' }, // Mass Index reversal
           ],
           7: [],
         };
@@ -3629,6 +3644,404 @@ Explain the key risks and what conditions would need to change before trading th
           };
         }
 
+        // =====================================================
+        // INSTITUTIONAL-GRADE INDICATORS
+        // =====================================================
+
+        // Volume Profile (Simplified) - Price levels with volume concentration
+        if (upperName === 'VOLUME_PROFILE' || upperName === 'VP') {
+          if (data.length < 50) return null;
+
+          // Find price range
+          const highs = data.map((d: { high: number }) => d.high);
+          const lows = data.map((d: { low: number }) => d.low);
+          const maxPrice = Math.max(...highs);
+          const minPrice = Math.min(...lows);
+          const priceRange = maxPrice - minPrice;
+          const numBins = 20;
+          const binSize = priceRange / numBins;
+
+          // Create volume profile bins
+          const volumeProfile: number[] = new Array(numBins).fill(0);
+          for (const candle of data) {
+            const d = candle as { high: number; low: number; close: number; volume: number };
+            const avgPrice = (d.high + d.low + d.close) / 3;
+            const binIndex = Math.min(numBins - 1, Math.floor((avgPrice - minPrice) / binSize));
+            volumeProfile[binIndex] += d.volume;
+          }
+
+          // Find POC (Point of Control) - price level with highest volume
+          const maxVolume = Math.max(...volumeProfile);
+          const pocIndex = volumeProfile.indexOf(maxVolume);
+          const pocPrice = minPrice + (pocIndex + 0.5) * binSize;
+
+          // Find Value Area (70% of volume)
+          const totalVolume = volumeProfile.reduce((a, b) => a + b, 0);
+          const targetVolume = totalVolume * 0.7;
+          let vaVolume = volumeProfile[pocIndex];
+          let vaHigh = pocIndex, vaLow = pocIndex;
+
+          while (vaVolume < targetVolume) {
+            const upperVol = vaHigh < numBins - 1 ? volumeProfile[vaHigh + 1] : 0;
+            const lowerVol = vaLow > 0 ? volumeProfile[vaLow - 1] : 0;
+            if (upperVol >= lowerVol && vaHigh < numBins - 1) {
+              vaHigh++;
+              vaVolume += upperVol;
+            } else if (vaLow > 0) {
+              vaLow--;
+              vaVolume += lowerVol;
+            } else break;
+          }
+
+          const vahPrice = minPrice + (vaHigh + 1) * binSize;
+          const valPrice = minPrice + vaLow * binSize;
+          const currentPrice = data[data.length - 1]?.close ?? pocPrice;
+
+          return {
+            values: volumeProfile,
+            currentValue: pocPrice,
+            signal: currentPrice > vahPrice ? 'bullish' : currentPrice < valPrice ? 'bearish' : 'neutral',
+            signalStrength: Math.min(100, Math.abs(currentPrice - pocPrice) / priceRange * 200),
+            referenceLines: [
+              { value: pocPrice, label: 'POC', color: '#EF4444' },
+              { value: vahPrice, label: 'VAH', color: '#22C55E' },
+              { value: valPrice, label: 'VAL', color: '#3B82F6' },
+            ],
+            metadata: { poc: pocPrice, vah: vahPrice, val: valPrice, priceInValueArea: currentPrice >= valPrice && currentPrice <= vahPrice }
+          };
+        }
+
+        // Klinger Volume Oscillator - Volume-based trend
+        if (upperName === 'KVO' || upperName === 'KLINGER') {
+          if (data.length < 55) return null;
+
+          const hlc3 = data.map((d: { high: number; low: number; close: number }) => (d.high + d.low + d.close) / 3);
+          const dm: number[] = [];
+          const trend: number[] = [];
+          const vf: number[] = [];
+
+          for (let i = 1; i < data.length; i++) {
+            const curr = data[i] as { high: number; low: number; close: number; volume: number };
+            const prev = data[i - 1] as { high: number; low: number; close: number };
+            dm.push(curr.high - curr.low);
+            trend.push(hlc3[i] > hlc3[i - 1] ? 1 : -1);
+
+            const cm = dm[dm.length - 1] ?? 0;
+            const prevCm = dm[dm.length - 2] ?? cm;
+            const cmRatio = prevCm !== 0 ? Math.abs((cm - prevCm) / prevCm) : 0;
+            const trendVal = trend[trend.length - 1] ?? 1;
+            vf.push(curr.volume * Math.abs(2 * cmRatio - 1) * trendVal * 100);
+          }
+
+          // EMA of VF
+          const calcEma = (values: number[], period: number) => {
+            const mult = 2 / (period + 1);
+            const ema: number[] = [values[0] ?? 0];
+            for (let i = 1; i < values.length; i++) {
+              ema.push((values[i] - (ema[i - 1] ?? 0)) * mult + (ema[i - 1] ?? 0));
+            }
+            return ema;
+          };
+
+          const ema34 = calcEma(vf, 34);
+          const ema55 = calcEma(vf, 55);
+
+          const kvoValues: number[] = [];
+          for (let i = 54; i < vf.length; i++) {
+            kvoValues.push((ema34[i] ?? 0) - (ema55[i] ?? 0));
+          }
+
+          // Signal line (13-period EMA)
+          const signalLine = calcEma(kvoValues, 13);
+
+          if (kvoValues.length === 0) return null;
+          const currentKvo = kvoValues[kvoValues.length - 1] ?? 0;
+          const currentSignal = signalLine[signalLine.length - 1] ?? 0;
+
+          return {
+            values: kvoValues,
+            currentValue: currentKvo,
+            signal: currentKvo > currentSignal && currentKvo > 0 ? 'bullish' :
+                   currentKvo < currentSignal && currentKvo < 0 ? 'bearish' : 'neutral',
+            signalStrength: Math.min(100, Math.abs(currentKvo - currentSignal) / 1000000),
+            secondaryValues: signalLine,
+            secondaryLabel: 'Signal',
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: { kvo: currentKvo, signal: currentSignal, crossover: currentKvo > currentSignal }
+          };
+        }
+
+        // Mass Index - Trend reversal detection
+        if (upperName === 'MASS' || upperName === 'MASS_INDEX') {
+          const emaPeriod = 9, sumPeriod = 25;
+          if (data.length < emaPeriod * 2 + sumPeriod) return null;
+
+          const hlRange = data.map((d: { high: number; low: number }) => d.high - d.low);
+
+          // Calculate single EMA
+          const calcEma = (values: number[], period: number) => {
+            const mult = 2 / (period + 1);
+            const ema: number[] = [values[0] ?? 0];
+            for (let i = 1; i < values.length; i++) {
+              ema.push((values[i] - (ema[i - 1] ?? 0)) * mult + (ema[i - 1] ?? 0));
+            }
+            return ema;
+          };
+
+          const ema1 = calcEma(hlRange, emaPeriod);
+          const ema2 = calcEma(ema1, emaPeriod);
+
+          // Calculate ratio and sum
+          const massValues: number[] = [];
+          for (let i = sumPeriod + emaPeriod * 2 - 2; i < ema2.length; i++) {
+            let sum = 0;
+            for (let j = 0; j < sumPeriod; j++) {
+              const e1 = ema1[i - j] ?? 1;
+              const e2 = ema2[i - j] ?? 1;
+              sum += e2 !== 0 ? e1 / e2 : 1;
+            }
+            massValues.push(sum);
+          }
+
+          if (massValues.length === 0) return null;
+          const currentMass = massValues[massValues.length - 1] ?? 25;
+          const prevMass = massValues[massValues.length - 2] ?? currentMass;
+
+          // Reversal bulge: above 27, then drops below 26.5
+          const isReversalBulge = currentMass < 26.5 && prevMass > 27;
+
+          return {
+            values: massValues,
+            currentValue: currentMass,
+            signal: isReversalBulge ? 'bearish' : currentMass > 27 ? 'neutral' : 'neutral',
+            signalStrength: currentMass > 27 ? Math.min(100, (currentMass - 27) * 20) : 50,
+            referenceLines: [
+              { value: 27, label: 'Bulge', color: '#EF4444' },
+              { value: 26.5, label: 'Trigger', color: '#F59E0B' },
+            ],
+            metadata: { reversalBulge: isReversalBulge, bulgeForming: currentMass > 27 }
+          };
+        }
+
+        // True Strength Index (TSI) - Double-smoothed momentum
+        if (upperName === 'TSI') {
+          const longPeriod = 25, shortPeriod = 13, signalPeriod = 7;
+          if (data.length < longPeriod + shortPeriod + signalPeriod) return null;
+
+          const closes = data.map((d: { close: number }) => d.close);
+          const changes: number[] = [];
+          for (let i = 1; i < closes.length; i++) {
+            changes.push(closes[i] - closes[i - 1]);
+          }
+
+          // Double-smooth the price change
+          const calcEma = (values: number[], period: number) => {
+            const mult = 2 / (period + 1);
+            const ema: number[] = [values[0] ?? 0];
+            for (let i = 1; i < values.length; i++) {
+              ema.push((values[i] - (ema[i - 1] ?? 0)) * mult + (ema[i - 1] ?? 0));
+            }
+            return ema;
+          };
+
+          const ema1 = calcEma(changes, longPeriod);
+          const ema2 = calcEma(ema1, shortPeriod);
+
+          // Double-smooth the absolute price change
+          const absChanges = changes.map(c => Math.abs(c));
+          const absEma1 = calcEma(absChanges, longPeriod);
+          const absEma2 = calcEma(absEma1, shortPeriod);
+
+          // Calculate TSI
+          const tsiValues: number[] = [];
+          const offset = longPeriod + shortPeriod - 2;
+          for (let i = offset; i < ema2.length; i++) {
+            const num = ema2[i] ?? 0;
+            const den = absEma2[i] ?? 1;
+            tsiValues.push(den !== 0 ? (num / den) * 100 : 0);
+          }
+
+          // Signal line
+          const signalLine = calcEma(tsiValues, signalPeriod);
+
+          if (tsiValues.length === 0) return null;
+          const currentTsi = tsiValues[tsiValues.length - 1] ?? 0;
+          const currentSignal = signalLine[signalLine.length - 1] ?? 0;
+
+          return {
+            values: tsiValues,
+            currentValue: currentTsi,
+            signal: currentTsi > currentSignal && currentTsi > 0 ? 'bullish' :
+                   currentTsi < currentSignal && currentTsi < 0 ? 'bearish' : 'neutral',
+            signalStrength: Math.min(100, Math.abs(currentTsi)),
+            secondaryValues: signalLine,
+            secondaryLabel: 'Signal',
+            referenceLines: [
+              { value: 25, label: 'Overbought', color: '#EF4444' },
+              { value: -25, label: 'Oversold', color: '#22C55E' },
+              { value: 0, label: 'Zero', color: '#6B7280' },
+            ],
+            metadata: { tsi: currentTsi, signal: currentSignal }
+          };
+        }
+
+        // Know Sure Thing (KST) - Long-term momentum
+        if (upperName === 'KST') {
+          const roc1 = 10, roc2 = 15, roc3 = 20, roc4 = 30;
+          const sma1 = 10, sma2 = 10, sma3 = 10, sma4 = 15;
+          const signalPeriod = 9;
+          if (data.length < roc4 + sma4 + signalPeriod) return null;
+
+          const closes = data.map((d: { close: number }) => d.close);
+
+          // Calculate ROC for each period
+          const calcRoc = (period: number): number[] => {
+            const roc: number[] = [];
+            for (let i = period; i < closes.length; i++) {
+              const prev = closes[i - period];
+              roc.push(prev !== 0 ? ((closes[i] - prev) / prev) * 100 : 0);
+            }
+            return roc;
+          };
+
+          // Calculate SMA
+          const calcSma = (values: number[], period: number): number[] => {
+            const sma: number[] = [];
+            for (let i = period - 1; i < values.length; i++) {
+              sma.push(values.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0) / period);
+            }
+            return sma;
+          };
+
+          const roc1Vals = calcRoc(roc1);
+          const roc2Vals = calcRoc(roc2);
+          const roc3Vals = calcRoc(roc3);
+          const roc4Vals = calcRoc(roc4);
+
+          const sma1Vals = calcSma(roc1Vals, sma1);
+          const sma2Vals = calcSma(roc2Vals, sma2);
+          const sma3Vals = calcSma(roc3Vals, sma3);
+          const sma4Vals = calcSma(roc4Vals, sma4);
+
+          // Align arrays and calculate KST
+          const minLen = Math.min(sma1Vals.length, sma2Vals.length, sma3Vals.length, sma4Vals.length);
+          const kstValues: number[] = [];
+          for (let i = 0; i < minLen; i++) {
+            const offset1 = sma1Vals.length - minLen;
+            const offset2 = sma2Vals.length - minLen;
+            const offset3 = sma3Vals.length - minLen;
+            const offset4 = sma4Vals.length - minLen;
+            const kst = (sma1Vals[i + offset1] ?? 0) * 1 +
+                       (sma2Vals[i + offset2] ?? 0) * 2 +
+                       (sma3Vals[i + offset3] ?? 0) * 3 +
+                       (sma4Vals[i + offset4] ?? 0) * 4;
+            kstValues.push(kst);
+          }
+
+          // Signal line
+          const signalLine = calcSma(kstValues, signalPeriod);
+
+          if (kstValues.length === 0) return null;
+          const currentKst = kstValues[kstValues.length - 1] ?? 0;
+          const currentSignal = signalLine[signalLine.length - 1] ?? 0;
+
+          return {
+            values: kstValues,
+            currentValue: currentKst,
+            signal: currentKst > currentSignal && currentKst > 0 ? 'bullish' :
+                   currentKst < currentSignal && currentKst < 0 ? 'bearish' : 'neutral',
+            signalStrength: Math.min(100, Math.abs(currentKst - currentSignal) * 5),
+            secondaryValues: signalLine,
+            secondaryLabel: 'Signal',
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: { kst: currentKst, signal: currentSignal, crossover: currentKst > currentSignal }
+          };
+        }
+
+        // Anchored VWAP - VWAP from significant point
+        if (upperName === 'AVWAP' || upperName === 'ANCHORED_VWAP') {
+          if (data.length < 20) return null;
+
+          // Find swing low/high as anchor point (last 50 candles)
+          const lookback = Math.min(50, data.length);
+          const recentData = data.slice(-lookback);
+
+          // Find lowest low as anchor
+          let anchorIdx = 0;
+          let lowestLow = Infinity;
+          for (let i = 0; i < recentData.length; i++) {
+            const d = recentData[i] as { low: number };
+            if (d.low < lowestLow) {
+              lowestLow = d.low;
+              anchorIdx = i;
+            }
+          }
+
+          // Calculate VWAP from anchor
+          const avwapValues: number[] = [];
+          let cumVolume = 0, cumVwap = 0;
+
+          for (let i = anchorIdx; i < recentData.length; i++) {
+            const d = recentData[i] as { high: number; low: number; close: number; volume: number };
+            const typicalPrice = (d.high + d.low + d.close) / 3;
+            cumVolume += d.volume;
+            cumVwap += typicalPrice * d.volume;
+            avwapValues.push(cumVolume > 0 ? cumVwap / cumVolume : typicalPrice);
+          }
+
+          if (avwapValues.length === 0) return null;
+          const currentAvwap = avwapValues[avwapValues.length - 1] ?? 0;
+          const currentPrice = recentData[recentData.length - 1]?.close ?? currentAvwap;
+
+          return {
+            values: avwapValues,
+            currentValue: currentAvwap,
+            signal: currentPrice > currentAvwap * 1.01 ? 'bullish' :
+                   currentPrice < currentAvwap * 0.99 ? 'bearish' : 'neutral',
+            signalStrength: currentAvwap !== 0 ? Math.min(100, Math.abs((currentPrice - currentAvwap) / currentAvwap) * 500) : 0,
+            referenceLines: [{ value: currentAvwap, label: 'AVWAP', color: '#8B5CF6' }],
+            metadata: { anchorPrice: lowestLow, daysFromAnchor: recentData.length - anchorIdx }
+          };
+        }
+
+        // Price Oscillator
+        if (upperName === 'PO' || upperName === 'PRICE_OSCILLATOR') {
+          const fast = 12, slow = 26;
+          if (data.length < slow) return null;
+
+          const closes = data.map((d: { close: number }) => d.close);
+
+          const calcEma = (values: number[], period: number) => {
+            const mult = 2 / (period + 1);
+            const ema: number[] = [values[0] ?? 0];
+            for (let i = 1; i < values.length; i++) {
+              ema.push((values[i] - (ema[i - 1] ?? 0)) * mult + (ema[i - 1] ?? 0));
+            }
+            return ema;
+          };
+
+          const fastEma = calcEma(closes, fast);
+          const slowEma = calcEma(closes, slow);
+
+          const poValues: number[] = [];
+          for (let i = slow - 1; i < closes.length; i++) {
+            const sEma = slowEma[i] ?? 1;
+            poValues.push(sEma !== 0 ? ((fastEma[i] ?? 0) - sEma) / sEma * 100 : 0);
+          }
+
+          if (poValues.length === 0) return null;
+          const currentPo = poValues[poValues.length - 1] ?? 0;
+
+          return {
+            values: poValues,
+            currentValue: currentPo,
+            signal: currentPo > 0 ? 'bullish' : currentPo < 0 ? 'bearish' : 'neutral',
+            signalStrength: Math.min(100, Math.abs(currentPo) * 10),
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: {}
+          };
+        }
+
         return null;
       };
 
@@ -3675,6 +4088,14 @@ Explain the key risks and what conditions would need to change before trading th
         if (name === 'AD' || name === 'ADL') return `A/D Line ${signal === 'bullish' ? 'rising - accumulation phase' : 'falling - distribution phase'}. Confirms volume participation.`;
         if (name.includes('STDDEV') || name === 'STD') return `Standard Deviation ${currentValue > 0 ? 'indicates' : 'shows'} ${signal === 'bearish' ? 'high volatility - increase caution' : signal === 'bullish' ? 'low volatility - potential breakout setup' : 'normal volatility'}.`;
         if (name === 'CV' || name.includes('CHAIKIN_VOLATILITY')) return `Chaikin Volatility ${currentValue > 0 ? 'expanding - high volatility' : 'contracting - low volatility'}. ${Math.abs(currentValue) > 25 ? 'Significant change detected' : 'Normal range'}.`;
+        // Institutional-grade indicator interpretations
+        if (name.includes('VOLUME_PROFILE') || name === 'VP') return `Volume Profile shows POC at ${currentValue.toFixed(2)}. ${signal === 'bullish' ? 'Price above Value Area High - bullish breakout' : signal === 'bearish' ? 'Price below Value Area Low - bearish breakdown' : 'Price within Value Area - fair value zone'}. Institutional support/resistance.`;
+        if (name.includes('KVO') || name.includes('KLINGER')) return `Klinger Volume Oscillator ${signal === 'bullish' ? 'positive with bullish crossover - institutional accumulation' : signal === 'bearish' ? 'negative with bearish crossover - institutional distribution' : 'neutral - no clear institutional bias'}. Smart money flow indicator.`;
+        if (name.includes('MASS')) return `Mass Index at ${currentValue.toFixed(1)}. ${currentValue > 27 ? 'Reversal bulge forming - potential trend reversal ahead' : 'Normal range - trend continuation likely'}. Reversal detection indicator.`;
+        if (name === 'TSI') return `True Strength Index at ${currentValue.toFixed(1)}. ${signal === 'bullish' ? 'Positive momentum with bullish crossover' : signal === 'bearish' ? 'Negative momentum with bearish crossover' : 'Neutral momentum'}. Double-smoothed momentum for cleaner signals.`;
+        if (name === 'KST') return `Know Sure Thing at ${currentValue.toFixed(1)}. ${signal === 'bullish' ? 'Long-term momentum turning bullish' : signal === 'bearish' ? 'Long-term momentum turning bearish' : 'Long-term momentum neutral'}. Multi-timeframe momentum composite.`;
+        if (name.includes('AVWAP') || name.includes('ANCHORED')) return `Anchored VWAP at ${currentValue.toFixed(2)}. ${signal === 'bullish' ? 'Price above AVWAP - institutional buyers in control' : signal === 'bearish' ? 'Price below AVWAP - institutional sellers dominant' : 'Price at AVWAP - equilibrium level'}. Key institutional reference level.`;
+        if (name.includes('PRICE_OSCILLATOR') || name === 'PO') return `Price Oscillator at ${currentValue.toFixed(2)}%. ${signal === 'bullish' ? 'Positive - short-term momentum above long-term' : signal === 'bearish' ? 'Negative - short-term momentum below long-term' : 'Near zero - momentum consolidating'}.`;
 
         return `${name} indicates ${signalText} at current levels.`;
       };
