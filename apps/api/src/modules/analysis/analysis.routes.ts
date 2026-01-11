@@ -1732,38 +1732,59 @@ Explain the key risks and what conditions would need to change before trading th
         volume: parseFloat(k[5] as string),
       }));
 
-      // Define indicators per step based on trade type
+      // Define indicators per step based on trade type (40+ indicators total)
       const stepIndicators: Record<number, { name: string; category: string; color: string }[]> = {
-        1: [ // Market Pulse - sentiment indicators
+        1: [ // Market Pulse - trend & sentiment indicators
           { name: 'EMA_20', category: 'trend', color: '#3B82F6' },
           { name: 'EMA_50', category: 'trend', color: '#8B5CF6' },
+          { name: 'EMA_100', category: 'trend', color: '#06B6D4' },
+          { name: 'EMA_200', category: 'trend', color: '#EC4899' },
+          { name: 'SMA_50', category: 'trend', color: '#F97316' },
+          { name: 'SMA_200', category: 'trend', color: '#14B8A6' },
+          { name: 'ICHIMOKU', category: 'trend', color: '#8B5CF6' },
         ],
         2: [ // Asset Scanner - core technical indicators
           { name: 'RSI', category: 'momentum', color: '#F59E0B' },
           { name: 'MACD', category: 'trend', color: '#10B981' },
           { name: 'BOLLINGER', category: 'volatility', color: '#6366F1' },
-          { name: 'EMA_20', category: 'trend', color: '#3B82F6' },
-          { name: 'SMA_50', category: 'trend', color: '#EC4899' },
+          { name: 'KELTNER', category: 'volatility', color: '#EC4899' },
+          { name: 'DONCHIAN', category: 'volatility', color: '#06B6D4' },
+          { name: 'VWAP', category: 'volume', color: '#F97316' },
+          { name: 'PIVOT', category: 'advanced', color: '#8B5CF6' },
         ],
-        3: [ // Safety Check - volume & activity
+        3: [ // Safety Check - volume & activity indicators
           { name: 'OBV', category: 'volume', color: '#14B8A6' },
           { name: 'MFI', category: 'volume', color: '#F97316' },
           { name: 'CMF', category: 'volume', color: '#8B5CF6' },
+          { name: 'FORCE_INDEX', category: 'volume', color: '#3B82F6' },
+          { name: 'EMV', category: 'volume', color: '#22C55E' },
+          { name: 'ELDER_RAY', category: 'advanced', color: '#EF4444' },
         ],
-        4: [ // Timing - momentum & timing
+        4: [ // Timing - momentum & timing indicators
           { name: 'STOCHASTIC', category: 'momentum', color: '#EF4444' },
           { name: 'CCI', category: 'momentum', color: '#06B6D4' },
           { name: 'WILLIAMS_R', category: 'momentum', color: '#84CC16' },
+          { name: 'UO', category: 'momentum', color: '#A855F7' },
+          { name: 'CMO', category: 'momentum', color: '#F97316' },
+          { name: 'DPO', category: 'momentum', color: '#3B82F6' },
+          { name: 'AROON', category: 'trend', color: '#14B8A6' },
         ],
-        5: [ // Trade Plan - volatility & risk
+        5: [ // Trade Plan - volatility & risk management
           { name: 'ATR', category: 'volatility', color: '#F59E0B' },
           { name: 'SUPERTREND', category: 'trend', color: '#22C55E' },
           { name: 'ADX', category: 'trend', color: '#A855F7' },
+          { name: 'PSAR', category: 'trend', color: '#EF4444' },
+          { name: 'HMA', category: 'trend', color: '#3B82F6' },
+          { name: 'DEMA', category: 'trend', color: '#EC4899' },
+          { name: 'TEMA', category: 'trend', color: '#06B6D4' },
         ],
-        6: [ // Trap Check - divergence detection
+        6: [ // Trap Check - divergence & reversal detection
           { name: 'RSI', category: 'momentum', color: '#F59E0B' },
           { name: 'STOCH_RSI', category: 'momentum', color: '#EC4899' },
           { name: 'ROC', category: 'momentum', color: '#06B6D4' },
+          { name: 'TRIX', category: 'momentum', color: '#8B5CF6' },
+          { name: 'PPO', category: 'momentum', color: '#14B8A6' },
+          { name: 'COPPOCK', category: 'momentum', color: '#F97316' },
         ],
         7: [], // Final Verdict - aggregation only
       };
@@ -2414,6 +2435,750 @@ Explain the key risks and what conditions would need to change before trading th
           };
         }
 
+        // =====================================================
+        // NEW INDICATORS (23 additional)
+        // =====================================================
+
+        // VWAP - Volume Weighted Average Price
+        if (upperName === 'VWAP') {
+          if (data.length < 20) return null;
+          const vwapValues: number[] = [];
+          let cumVolume = 0, cumVwap = 0;
+          for (let i = 0; i < data.length; i++) {
+            const d = data[i];
+            if (d) {
+              const typicalPrice = (d.high + d.low + d.close) / 3;
+              cumVolume += d.volume;
+              cumVwap += typicalPrice * d.volume;
+              vwapValues.push(cumVolume > 0 ? cumVwap / cumVolume : typicalPrice);
+            }
+          }
+          if (vwapValues.length === 0) return null;
+          const currentVwap = vwapValues[vwapValues.length - 1] ?? 0;
+          const currentPrice = data[data.length - 1]?.close ?? currentVwap;
+          return {
+            values: vwapValues,
+            currentValue: currentVwap,
+            signal: currentPrice > currentVwap ? 'bullish' : 'bearish',
+            signalStrength: currentVwap !== 0 ? Math.min(100, Math.abs((currentPrice - currentVwap) / currentVwap * 100) * 20) : 50,
+            metadata: { priceVsVwap: currentVwap !== 0 ? ((currentPrice - currentVwap) / currentVwap * 100).toFixed(2) : '0' }
+          };
+        }
+
+        // Keltner Channels
+        if (upperName === 'KELTNER') {
+          const period = 20, mult = 2;
+          if (data.length < period + 14) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+
+          // Calculate EMA
+          const multiplier = 2 / (period + 1);
+          let ema = closes.slice(0, period).reduce((a: number, b: number) => a + b, 0) / period;
+          const emaValues: number[] = [ema];
+          for (let i = period; i < closes.length; i++) {
+            ema = (closes[i] - ema) * multiplier + ema;
+            emaValues.push(ema);
+          }
+
+          // Calculate ATR
+          const trValues: number[] = [];
+          for (let i = 1; i < data.length; i++) {
+            const curr = data[i], prev = data[i - 1];
+            if (curr && prev) {
+              trValues.push(Math.max(curr.high - curr.low, Math.abs(curr.high - prev.close), Math.abs(curr.low - prev.close)));
+            }
+          }
+          let atr = trValues.slice(0, 14).reduce((a, b) => a + b, 0) / 14;
+          const atrValues: number[] = [atr];
+          for (let i = 14; i < trValues.length; i++) {
+            const tr = trValues[i] ?? 0;
+            atr = (atr * 13 + tr) / 14;
+            atrValues.push(atr);
+          }
+
+          const offset = Math.max(0, emaValues.length - atrValues.length);
+          const upperBand: number[] = [], lowerBand: number[] = [], middleBand: number[] = [];
+          for (let i = 0; i < atrValues.length; i++) {
+            const emaVal = emaValues[i + offset] ?? 0;
+            const atrVal = atrValues[i] ?? 0;
+            middleBand.push(emaVal);
+            upperBand.push(emaVal + mult * atrVal);
+            lowerBand.push(emaVal - mult * atrVal);
+          }
+          if (middleBand.length === 0) return null;
+
+          const currentPrice = closes[closes.length - 1] ?? 0;
+          const currentMiddle = middleBand[middleBand.length - 1] ?? 0;
+          const currentUpper = upperBand[upperBand.length - 1] ?? 0;
+          const currentLower = lowerBand[lowerBand.length - 1] ?? 0;
+
+          return {
+            values: middleBand,
+            currentValue: currentMiddle,
+            signal: currentPrice > currentUpper ? 'bearish' : currentPrice < currentLower ? 'bullish' : 'neutral',
+            signalStrength: 50,
+            secondaryValues: upperBand,
+            secondaryLabel: 'Upper Band',
+            metadata: { upper: currentUpper, lower: currentLower, middle: currentMiddle }
+          };
+        }
+
+        // Donchian Channels
+        if (upperName === 'DONCHIAN') {
+          const period = 20;
+          if (data.length < period) return null;
+          const upperBand: number[] = [], lowerBand: number[] = [], middleBand: number[] = [];
+          for (let i = period - 1; i < data.length; i++) {
+            const slice = data.slice(i - period + 1, i + 1);
+            const high = Math.max(...slice.map((d: { high: number }) => d.high));
+            const low = Math.min(...slice.map((d: { low: number }) => d.low));
+            upperBand.push(high);
+            lowerBand.push(low);
+            middleBand.push((high + low) / 2);
+          }
+          if (middleBand.length === 0) return null;
+          const currentPrice = data[data.length - 1]?.close ?? 0;
+          const currentMiddle = middleBand[middleBand.length - 1] ?? 0;
+          const currentUpper = upperBand[upperBand.length - 1] ?? 0;
+          const currentLower = lowerBand[lowerBand.length - 1] ?? 0;
+
+          return {
+            values: middleBand,
+            currentValue: currentMiddle,
+            signal: currentPrice >= currentUpper ? 'bullish' : currentPrice <= currentLower ? 'bearish' : 'neutral',
+            signalStrength: 50,
+            secondaryValues: upperBand,
+            secondaryLabel: 'Upper Channel',
+            metadata: { upper: currentUpper, lower: currentLower, breakout: currentPrice >= currentUpper || currentPrice <= currentLower }
+          };
+        }
+
+        // Ichimoku Cloud
+        if (upperName === 'ICHIMOKU') {
+          if (data.length < 52) return null;
+          const tenkanPeriod = 9, kijunPeriod = 26, senkouBPeriod = 52;
+
+          const calcHL = (arr: typeof data, period: number, idx: number) => {
+            const slice = arr.slice(Math.max(0, idx - period + 1), idx + 1);
+            const high = Math.max(...slice.map((d: { high: number }) => d.high));
+            const low = Math.min(...slice.map((d: { low: number }) => d.low));
+            return (high + low) / 2;
+          };
+
+          const tenkan: number[] = [], kijun: number[] = [], senkouA: number[] = [], senkouB: number[] = [];
+          for (let i = senkouBPeriod - 1; i < data.length; i++) {
+            const tenkanVal = calcHL(data, tenkanPeriod, i);
+            const kijunVal = calcHL(data, kijunPeriod, i);
+            const senkouBVal = calcHL(data, senkouBPeriod, i);
+            tenkan.push(tenkanVal);
+            kijun.push(kijunVal);
+            senkouA.push((tenkanVal + kijunVal) / 2);
+            senkouB.push(senkouBVal);
+          }
+          if (tenkan.length === 0) return null;
+
+          const currentTenkan = tenkan[tenkan.length - 1] ?? 0;
+          const currentKijun = kijun[kijun.length - 1] ?? 0;
+          const currentPrice = data[data.length - 1]?.close ?? 0;
+          const currentSenkouA = senkouA[senkouA.length - 1] ?? 0;
+          const currentSenkouB = senkouB[senkouB.length - 1] ?? 0;
+          const cloudTop = Math.max(currentSenkouA, currentSenkouB);
+          const cloudBottom = Math.min(currentSenkouA, currentSenkouB);
+
+          let signal: string;
+          if (currentPrice > cloudTop && currentTenkan > currentKijun) signal = 'bullish';
+          else if (currentPrice < cloudBottom && currentTenkan < currentKijun) signal = 'bearish';
+          else signal = 'neutral';
+
+          return {
+            values: tenkan,
+            currentValue: currentTenkan,
+            signal,
+            signalStrength: signal !== 'neutral' ? 70 : 40,
+            secondaryValues: kijun,
+            secondaryLabel: 'Kijun-sen',
+            metadata: { tenkan: currentTenkan, kijun: currentKijun, senkouA: currentSenkouA, senkouB: currentSenkouB, cloudTop, cloudBottom }
+          };
+        }
+
+        // Pivot Points
+        if (upperName === 'PIVOT') {
+          if (data.length < 2) return null;
+          const pivotValues: number[] = [];
+          for (let i = 1; i < data.length; i++) {
+            const prev = data[i - 1];
+            if (prev) {
+              const pivot = (prev.high + prev.low + prev.close) / 3;
+              pivotValues.push(pivot);
+            }
+          }
+          if (pivotValues.length === 0) return null;
+          const currentPivot = pivotValues[pivotValues.length - 1] ?? 0;
+          const prevCandle = data[data.length - 2];
+          const currentPrice = data[data.length - 1]?.close ?? 0;
+          const r1 = prevCandle ? 2 * currentPivot - prevCandle.low : currentPivot;
+          const s1 = prevCandle ? 2 * currentPivot - prevCandle.high : currentPivot;
+
+          return {
+            values: pivotValues,
+            currentValue: currentPivot,
+            signal: currentPrice > r1 ? 'bullish' : currentPrice < s1 ? 'bearish' : 'neutral',
+            signalStrength: 50,
+            referenceLines: [
+              { value: r1, label: 'R1', color: '#EF4444' },
+              { value: currentPivot, label: 'Pivot', color: '#6B7280' },
+              { value: s1, label: 'S1', color: '#22C55E' },
+            ],
+            metadata: { pivot: currentPivot, r1, s1 }
+          };
+        }
+
+        // Force Index
+        if (upperName === 'FORCE_INDEX') {
+          const period = 13;
+          if (data.length < period + 1) return null;
+          const forceRaw: number[] = [];
+          for (let i = 1; i < data.length; i++) {
+            const curr = data[i], prev = data[i - 1];
+            if (curr && prev) {
+              forceRaw.push((curr.close - prev.close) * curr.volume);
+            }
+          }
+          // EMA of force
+          const multiplier = 2 / (period + 1);
+          let ema = forceRaw.slice(0, period).reduce((a, b) => a + b, 0) / period;
+          const forceValues: number[] = [ema];
+          for (let i = period; i < forceRaw.length; i++) {
+            ema = (forceRaw[i] - ema) * multiplier + ema;
+            forceValues.push(ema);
+          }
+          if (forceValues.length === 0) return null;
+          const currentForce = forceValues[forceValues.length - 1] ?? 0;
+
+          return {
+            values: forceValues,
+            currentValue: currentForce,
+            signal: currentForce > 0 ? 'bullish' : 'bearish',
+            signalStrength: Math.min(100, Math.abs(currentForce) / 1000000),
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: {}
+          };
+        }
+
+        // Ease of Movement (EMV)
+        if (upperName === 'EMV') {
+          const period = 14;
+          if (data.length < period + 1) return null;
+          const emvRaw: number[] = [];
+          for (let i = 1; i < data.length; i++) {
+            const curr = data[i], prev = data[i - 1];
+            if (curr && prev && curr.volume > 0) {
+              const dm = ((curr.high + curr.low) / 2) - ((prev.high + prev.low) / 2);
+              const br = (curr.volume / 100000000) / (curr.high - curr.low || 1);
+              emvRaw.push(dm / br);
+            }
+          }
+          // SMA of EMV
+          const emvValues: number[] = [];
+          for (let i = period - 1; i < emvRaw.length; i++) {
+            emvValues.push(emvRaw.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0) / period);
+          }
+          if (emvValues.length === 0) return null;
+          const currentEmv = emvValues[emvValues.length - 1] ?? 0;
+
+          return {
+            values: emvValues,
+            currentValue: currentEmv,
+            signal: currentEmv > 0 ? 'bullish' : 'bearish',
+            signalStrength: Math.min(100, Math.abs(currentEmv) * 10),
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: {}
+          };
+        }
+
+        // Elder Ray (Bull/Bear Power)
+        if (upperName === 'ELDER_RAY') {
+          const period = 13;
+          if (data.length < period) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+
+          // EMA
+          const multiplier = 2 / (period + 1);
+          let ema = closes.slice(0, period).reduce((a: number, b: number) => a + b, 0) / period;
+          const bullPower: number[] = [], bearPower: number[] = [];
+
+          for (let i = period; i < data.length; i++) {
+            ema = (closes[i] - ema) * multiplier + ema;
+            const d = data[i];
+            if (d) {
+              bullPower.push(d.high - ema);
+              bearPower.push(d.low - ema);
+            }
+          }
+          if (bullPower.length === 0) return null;
+          const currentBull = bullPower[bullPower.length - 1] ?? 0;
+          const currentBear = bearPower[bearPower.length - 1] ?? 0;
+
+          return {
+            values: bullPower,
+            currentValue: currentBull,
+            signal: currentBull > 0 && currentBear > (bearPower[bearPower.length - 2] ?? 0) ? 'bullish' :
+                   currentBear < 0 && currentBull < (bullPower[bullPower.length - 2] ?? 0) ? 'bearish' : 'neutral',
+            signalStrength: 50,
+            secondaryValues: bearPower,
+            secondaryLabel: 'Bear Power',
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: { bullPower: currentBull, bearPower: currentBear }
+          };
+        }
+
+        // Ultimate Oscillator
+        if (upperName === 'UO') {
+          if (data.length < 28 + 1) return null;
+          const bp: number[] = [], tr: number[] = [];
+          for (let i = 1; i < data.length; i++) {
+            const curr = data[i], prev = data[i - 1];
+            if (curr && prev) {
+              bp.push(curr.close - Math.min(curr.low, prev.close));
+              tr.push(Math.max(curr.high, prev.close) - Math.min(curr.low, prev.close));
+            }
+          }
+
+          const calcAvg = (arr1: number[], arr2: number[], period: number, idx: number) => {
+            const sum1 = arr1.slice(idx - period + 1, idx + 1).reduce((a, b) => a + b, 0);
+            const sum2 = arr2.slice(idx - period + 1, idx + 1).reduce((a, b) => a + b, 0);
+            return sum2 > 0 ? sum1 / sum2 : 0;
+          };
+
+          const uoValues: number[] = [];
+          for (let i = 27; i < bp.length; i++) {
+            const avg7 = calcAvg(bp, tr, 7, i);
+            const avg14 = calcAvg(bp, tr, 14, i);
+            const avg28 = calcAvg(bp, tr, 28, i);
+            uoValues.push(100 * (4 * avg7 + 2 * avg14 + avg28) / 7);
+          }
+          if (uoValues.length === 0) return null;
+          const currentUo = uoValues[uoValues.length - 1] ?? 50;
+
+          return {
+            values: uoValues,
+            currentValue: currentUo,
+            signal: currentUo < 30 ? 'bullish' : currentUo > 70 ? 'bearish' : 'neutral',
+            signalStrength: currentUo < 30 ? 30 - currentUo : currentUo > 70 ? currentUo - 70 : 50,
+            referenceLines: [
+              { value: 70, label: 'Overbought', color: '#EF4444' },
+              { value: 30, label: 'Oversold', color: '#22C55E' },
+            ],
+            metadata: {}
+          };
+        }
+
+        // Chande Momentum Oscillator
+        if (upperName === 'CMO') {
+          const period = 14;
+          if (data.length < period + 1) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+          const gains: number[] = [], losses: number[] = [];
+          for (let i = 1; i < closes.length; i++) {
+            const change = closes[i] - closes[i - 1];
+            gains.push(change > 0 ? change : 0);
+            losses.push(change < 0 ? -change : 0);
+          }
+
+          const cmoValues: number[] = [];
+          for (let i = period - 1; i < gains.length; i++) {
+            const sumGain = gains.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+            const sumLoss = losses.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+            const denom = sumGain + sumLoss;
+            cmoValues.push(denom > 0 ? ((sumGain - sumLoss) / denom) * 100 : 0);
+          }
+          if (cmoValues.length === 0) return null;
+          const currentCmo = cmoValues[cmoValues.length - 1] ?? 0;
+
+          return {
+            values: cmoValues,
+            currentValue: currentCmo,
+            signal: currentCmo < -50 ? 'bullish' : currentCmo > 50 ? 'bearish' : 'neutral',
+            signalStrength: Math.abs(currentCmo),
+            referenceLines: [
+              { value: 50, label: 'Overbought', color: '#EF4444' },
+              { value: -50, label: 'Oversold', color: '#22C55E' },
+              { value: 0, label: 'Zero', color: '#6B7280' },
+            ],
+            metadata: {}
+          };
+        }
+
+        // Detrended Price Oscillator
+        if (upperName === 'DPO') {
+          const period = 20;
+          const shift = Math.floor(period / 2) + 1;
+          if (data.length < period + shift) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+
+          const dpoValues: number[] = [];
+          for (let i = period - 1 + shift; i < closes.length; i++) {
+            const sma = closes.slice(i - period - shift + 1, i - shift + 1).reduce((a: number, b: number) => a + b, 0) / period;
+            dpoValues.push(closes[i - shift] - sma);
+          }
+          if (dpoValues.length === 0) return null;
+          const currentDpo = dpoValues[dpoValues.length - 1] ?? 0;
+
+          return {
+            values: dpoValues,
+            currentValue: currentDpo,
+            signal: currentDpo > 0 ? 'bullish' : 'bearish',
+            signalStrength: Math.min(100, Math.abs(currentDpo) * 10),
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: {}
+          };
+        }
+
+        // Aroon Oscillator
+        if (upperName === 'AROON') {
+          const period = 25;
+          if (data.length < period + 1) return null;
+          const aroonValues: number[] = [];
+
+          for (let i = period; i < data.length; i++) {
+            const slice = data.slice(i - period, i + 1);
+            let highIdx = 0, lowIdx = 0;
+            let highVal = slice[0]?.high ?? 0, lowVal = slice[0]?.low ?? Infinity;
+            for (let j = 0; j < slice.length; j++) {
+              const d = slice[j];
+              if (d) {
+                if (d.high >= highVal) { highVal = d.high; highIdx = j; }
+                if (d.low <= lowVal) { lowVal = d.low; lowIdx = j; }
+              }
+            }
+            const aroonUp = (highIdx / period) * 100;
+            const aroonDown = (lowIdx / period) * 100;
+            aroonValues.push(aroonUp - aroonDown);
+          }
+          if (aroonValues.length === 0) return null;
+          const currentAroon = aroonValues[aroonValues.length - 1] ?? 0;
+
+          return {
+            values: aroonValues,
+            currentValue: currentAroon,
+            signal: currentAroon > 50 ? 'bullish' : currentAroon < -50 ? 'bearish' : 'neutral',
+            signalStrength: Math.abs(currentAroon),
+            referenceLines: [
+              { value: 50, label: 'Bullish', color: '#22C55E' },
+              { value: -50, label: 'Bearish', color: '#EF4444' },
+              { value: 0, label: 'Zero', color: '#6B7280' },
+            ],
+            metadata: {}
+          };
+        }
+
+        // Parabolic SAR
+        if (upperName === 'PSAR') {
+          if (data.length < 5) return null;
+          const af0 = 0.02, afMax = 0.2, afStep = 0.02;
+          let af = af0, ep = data[0]?.high ?? 0, sar = data[0]?.low ?? 0, isLong = true;
+          const sarValues: number[] = [sar];
+
+          for (let i = 1; i < data.length; i++) {
+            const curr = data[i];
+            if (!curr) continue;
+
+            const prevSar = sar;
+            sar = prevSar + af * (ep - prevSar);
+
+            if (isLong) {
+              sar = Math.min(sar, data[i - 1]?.low ?? sar);
+              if (i >= 2) sar = Math.min(sar, data[i - 2]?.low ?? sar);
+              if (curr.low < sar) {
+                isLong = false;
+                sar = ep;
+                ep = curr.low;
+                af = af0;
+              } else {
+                if (curr.high > ep) { ep = curr.high; af = Math.min(af + afStep, afMax); }
+              }
+            } else {
+              sar = Math.max(sar, data[i - 1]?.high ?? sar);
+              if (i >= 2) sar = Math.max(sar, data[i - 2]?.high ?? sar);
+              if (curr.high > sar) {
+                isLong = true;
+                sar = ep;
+                ep = curr.high;
+                af = af0;
+              } else {
+                if (curr.low < ep) { ep = curr.low; af = Math.min(af + afStep, afMax); }
+              }
+            }
+            sarValues.push(sar);
+          }
+
+          const currentSar = sarValues[sarValues.length - 1] ?? 0;
+          const currentPrice = data[data.length - 1]?.close ?? 0;
+          const finalIsLong = currentPrice > currentSar;
+
+          return {
+            values: sarValues,
+            currentValue: currentSar,
+            signal: finalIsLong ? 'bullish' : 'bearish',
+            signalStrength: Math.min(100, Math.abs((currentPrice - currentSar) / currentSar * 100) * 20),
+            metadata: { isLong: finalIsLong, sar: currentSar }
+          };
+        }
+
+        // Hull Moving Average
+        if (upperName === 'HMA') {
+          const period = 20;
+          if (data.length < period * 2) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+
+          const calcWma = (arr: number[], len: number): number[] => {
+            const result: number[] = [];
+            for (let i = len - 1; i < arr.length; i++) {
+              let sum = 0, weightSum = 0;
+              for (let j = 0; j < len; j++) {
+                const w = len - j;
+                sum += (arr[i - j] ?? 0) * w;
+                weightSum += w;
+              }
+              result.push(sum / weightSum);
+            }
+            return result;
+          };
+
+          const halfPeriod = Math.floor(period / 2);
+          const sqrtPeriod = Math.floor(Math.sqrt(period));
+          const wma1 = calcWma(closes, halfPeriod);
+          const wma2 = calcWma(closes, period);
+
+          const offset = wma1.length - wma2.length;
+          const rawHma: number[] = [];
+          for (let i = 0; i < wma2.length; i++) {
+            rawHma.push(2 * (wma1[i + offset] ?? 0) - (wma2[i] ?? 0));
+          }
+          const hmaValues = calcWma(rawHma, sqrtPeriod);
+          if (hmaValues.length === 0) return null;
+
+          const currentHma = hmaValues[hmaValues.length - 1] ?? 0;
+          const currentPrice = closes[closes.length - 1] ?? 0;
+
+          return {
+            values: hmaValues,
+            currentValue: currentHma,
+            signal: currentPrice > currentHma ? 'bullish' : 'bearish',
+            signalStrength: currentHma !== 0 ? Math.min(100, Math.abs((currentPrice - currentHma) / currentHma * 100) * 20) : 50,
+            metadata: {}
+          };
+        }
+
+        // DEMA - Double Exponential Moving Average
+        if (upperName === 'DEMA') {
+          const period = 20;
+          if (data.length < period * 2) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+
+          const calcEma = (arr: number[], len: number): number[] => {
+            const multiplier = 2 / (len + 1);
+            let ema = arr.slice(0, len).reduce((a, b) => a + b, 0) / len;
+            const result = [ema];
+            for (let i = len; i < arr.length; i++) {
+              ema = (arr[i] - ema) * multiplier + ema;
+              result.push(ema);
+            }
+            return result;
+          };
+
+          const ema1 = calcEma(closes, period);
+          const ema2 = calcEma(ema1, period);
+
+          const offset = ema1.length - ema2.length;
+          const demaValues: number[] = [];
+          for (let i = 0; i < ema2.length; i++) {
+            demaValues.push(2 * (ema1[i + offset] ?? 0) - (ema2[i] ?? 0));
+          }
+          if (demaValues.length === 0) return null;
+
+          const currentDema = demaValues[demaValues.length - 1] ?? 0;
+          const currentPrice = closes[closes.length - 1] ?? 0;
+
+          return {
+            values: demaValues,
+            currentValue: currentDema,
+            signal: currentPrice > currentDema ? 'bullish' : 'bearish',
+            signalStrength: currentDema !== 0 ? Math.min(100, Math.abs((currentPrice - currentDema) / currentDema * 100) * 20) : 50,
+            metadata: {}
+          };
+        }
+
+        // TEMA - Triple Exponential Moving Average
+        if (upperName === 'TEMA') {
+          const period = 20;
+          if (data.length < period * 3) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+
+          const calcEma = (arr: number[], len: number): number[] => {
+            const multiplier = 2 / (len + 1);
+            let ema = arr.slice(0, len).reduce((a, b) => a + b, 0) / len;
+            const result = [ema];
+            for (let i = len; i < arr.length; i++) {
+              ema = (arr[i] - ema) * multiplier + ema;
+              result.push(ema);
+            }
+            return result;
+          };
+
+          const ema1 = calcEma(closes, period);
+          const ema2 = calcEma(ema1, period);
+          const ema3 = calcEma(ema2, period);
+
+          const offset1 = ema1.length - ema2.length;
+          const offset2 = ema2.length - ema3.length;
+          const temaValues: number[] = [];
+          for (let i = 0; i < ema3.length; i++) {
+            const e1 = ema1[i + offset1 + offset2] ?? 0;
+            const e2 = ema2[i + offset2] ?? 0;
+            const e3 = ema3[i] ?? 0;
+            temaValues.push(3 * e1 - 3 * e2 + e3);
+          }
+          if (temaValues.length === 0) return null;
+
+          const currentTema = temaValues[temaValues.length - 1] ?? 0;
+          const currentPrice = closes[closes.length - 1] ?? 0;
+
+          return {
+            values: temaValues,
+            currentValue: currentTema,
+            signal: currentPrice > currentTema ? 'bullish' : 'bearish',
+            signalStrength: currentTema !== 0 ? Math.min(100, Math.abs((currentPrice - currentTema) / currentTema * 100) * 20) : 50,
+            metadata: {}
+          };
+        }
+
+        // TRIX
+        if (upperName === 'TRIX') {
+          const period = 15;
+          if (data.length < period * 3 + 1) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+
+          const calcEma = (arr: number[], len: number): number[] => {
+            const multiplier = 2 / (len + 1);
+            let ema = arr.slice(0, len).reduce((a, b) => a + b, 0) / len;
+            const result = [ema];
+            for (let i = len; i < arr.length; i++) {
+              ema = (arr[i] - ema) * multiplier + ema;
+              result.push(ema);
+            }
+            return result;
+          };
+
+          const ema1 = calcEma(closes, period);
+          const ema2 = calcEma(ema1, period);
+          const ema3 = calcEma(ema2, period);
+
+          const trixValues: number[] = [];
+          for (let i = 1; i < ema3.length; i++) {
+            const curr = ema3[i] ?? 0, prev = ema3[i - 1] ?? 1;
+            trixValues.push(prev !== 0 ? ((curr - prev) / prev) * 10000 : 0);
+          }
+          if (trixValues.length === 0) return null;
+          const currentTrix = trixValues[trixValues.length - 1] ?? 0;
+
+          return {
+            values: trixValues,
+            currentValue: currentTrix,
+            signal: currentTrix > 0 ? 'bullish' : 'bearish',
+            signalStrength: Math.min(100, Math.abs(currentTrix) * 10),
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: {}
+          };
+        }
+
+        // PPO - Percentage Price Oscillator
+        if (upperName === 'PPO') {
+          if (data.length < 26 + 9) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+
+          const calcEma = (arr: number[], len: number): number[] => {
+            const multiplier = 2 / (len + 1);
+            let ema = arr.slice(0, len).reduce((a, b) => a + b, 0) / len;
+            const result = [ema];
+            for (let i = len; i < arr.length; i++) {
+              ema = (arr[i] - ema) * multiplier + ema;
+              result.push(ema);
+            }
+            return result;
+          };
+
+          const ema12 = calcEma(closes, 12);
+          const ema26 = calcEma(closes, 26);
+
+          const offset = ema12.length - ema26.length;
+          const ppoLine: number[] = [];
+          for (let i = 0; i < ema26.length; i++) {
+            const fast = ema12[i + offset] ?? 0;
+            const slow = ema26[i] ?? 1;
+            ppoLine.push(slow !== 0 ? ((fast - slow) / slow) * 100 : 0);
+          }
+
+          const signalLine = calcEma(ppoLine, 9);
+          const histOffset = ppoLine.length - signalLine.length;
+          const histogram: number[] = [];
+          for (let i = 0; i < signalLine.length; i++) {
+            histogram.push((ppoLine[i + histOffset] ?? 0) - (signalLine[i] ?? 0));
+          }
+          if (histogram.length === 0) return null;
+          const currentPpo = histogram[histogram.length - 1] ?? 0;
+
+          return {
+            values: histogram,
+            currentValue: currentPpo,
+            signal: currentPpo > 0 ? 'bullish' : 'bearish',
+            signalStrength: Math.min(100, Math.abs(currentPpo) * 20),
+            secondaryValues: signalLine,
+            secondaryLabel: 'Signal',
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: {}
+          };
+        }
+
+        // Coppock Curve
+        if (upperName === 'COPPOCK') {
+          const roc14 = 14, roc11 = 11, wmaPeriod = 10;
+          if (data.length < Math.max(roc14, roc11) + wmaPeriod) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+
+          const rocSum: number[] = [];
+          for (let i = roc14; i < closes.length; i++) {
+            const r14 = closes[i - roc14] !== 0 ? ((closes[i] - closes[i - roc14]) / closes[i - roc14]) * 100 : 0;
+            const r11 = closes[i - roc11] !== 0 ? ((closes[i] - closes[i - roc11]) / closes[i - roc11]) * 100 : 0;
+            rocSum.push(r14 + r11);
+          }
+
+          // WMA
+          const coppockValues: number[] = [];
+          for (let i = wmaPeriod - 1; i < rocSum.length; i++) {
+            let sum = 0, weightSum = 0;
+            for (let j = 0; j < wmaPeriod; j++) {
+              const w = wmaPeriod - j;
+              sum += (rocSum[i - j] ?? 0) * w;
+              weightSum += w;
+            }
+            coppockValues.push(sum / weightSum);
+          }
+          if (coppockValues.length === 0) return null;
+          const currentCoppock = coppockValues[coppockValues.length - 1] ?? 0;
+          const prevCoppock = coppockValues[coppockValues.length - 2] ?? currentCoppock;
+
+          return {
+            values: coppockValues,
+            currentValue: currentCoppock,
+            signal: currentCoppock > 0 && currentCoppock > prevCoppock ? 'bullish' :
+                   currentCoppock < 0 && currentCoppock < prevCoppock ? 'bearish' : 'neutral',
+            signalStrength: Math.min(100, Math.abs(currentCoppock) * 5),
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: {}
+          };
+        }
+
         return null;
       };
 
@@ -2432,6 +3197,26 @@ Explain the key risks and what conditions would need to change before trading th
         if (name.includes('ATR')) return `Volatility is ${currentValue > 0 ? 'elevated' : 'normal'}. Adjust position sizing accordingly.`;
         if (name.includes('OBV')) return `Volume trend shows ${signal === 'bullish' ? 'accumulation' : 'distribution'}. ${signal === 'bullish' ? 'Smart money buying' : 'Smart money selling'}.`;
         if (name.includes('ADX')) return `Trend strength at ${currentValue.toFixed(1)}. ${currentValue > 50 ? 'Very strong trend' : currentValue > 25 ? 'Trending market' : 'Weak/No trend'}.`;
+        // New indicator interpretations
+        if (name.includes('VWAP')) return `Price ${signal === 'bullish' ? 'above VWAP - institutional buying' : 'below VWAP - institutional selling'}. Key intraday level.`;
+        if (name.includes('KELTNER')) return `Keltner Channel ${signal === 'bullish' ? 'breakout below - oversold' : signal === 'bearish' ? 'breakout above - overbought' : 'within channel - normal range'}.`;
+        if (name.includes('DONCHIAN')) return `Donchian Channel ${signal === 'bullish' ? 'upper breakout - new highs' : signal === 'bearish' ? 'lower breakout - new lows' : 'within range'}.`;
+        if (name.includes('ICHIMOKU')) return `Ichimoku Cloud shows ${signal === 'bullish' ? 'price above cloud with bullish TK cross' : signal === 'bearish' ? 'price below cloud with bearish TK cross' : 'price in cloud - consolidation'}.`;
+        if (name.includes('PIVOT')) return `Price ${signal === 'bullish' ? 'broke above R1 resistance' : signal === 'bearish' ? 'broke below S1 support' : 'between S1 and R1 - consolidation'}.`;
+        if (name.includes('FORCE')) return `Force Index shows ${signal === 'bullish' ? 'buying pressure with volume' : 'selling pressure with volume'}. ${Math.abs(currentValue) > 1000000 ? 'Strong move' : 'Moderate activity'}.`;
+        if (name.includes('EMV')) return `Ease of Movement ${signal === 'bullish' ? 'positive - price rising on low volume' : 'negative - price falling on volume'}. Measures price/volume efficiency.`;
+        if (name.includes('ELDER')) return `Elder Ray ${signal === 'bullish' ? 'bull power rising - bulls gaining strength' : signal === 'bearish' ? 'bear power falling - bears dominant' : 'balanced forces'}.`;
+        if (name.includes('UO')) return `Ultimate Oscillator at ${currentValue.toFixed(1)}. ${currentValue < 30 ? 'Oversold - potential reversal' : currentValue > 70 ? 'Overbought - caution' : 'Neutral momentum'}.`;
+        if (name.includes('CMO')) return `Chande Momentum at ${currentValue.toFixed(1)}. ${Math.abs(currentValue) > 50 ? 'Strong momentum' : 'Weak momentum'} in ${signal} direction.`;
+        if (name.includes('DPO')) return `Detrended Price Oscillator shows ${signal === 'bullish' ? 'price above trend' : 'price below trend'}. Identifies cycles.`;
+        if (name.includes('AROON')) return `Aroon Oscillator at ${currentValue.toFixed(1)}. ${signal === 'bullish' ? 'Uptrend strengthening' : signal === 'bearish' ? 'Downtrend strengthening' : 'No clear trend'}.`;
+        if (name.includes('PSAR')) return `Parabolic SAR ${signal === 'bullish' ? 'below price - uptrend intact' : 'above price - downtrend or reversal'}. Trailing stop level.`;
+        if (name.includes('HMA')) return `Hull MA shows ${signal === 'bullish' ? 'upward momentum' : 'downward momentum'}. Fast-responding trend indicator.`;
+        if (name.includes('DEMA')) return `Double EMA shows ${signal === 'bullish' ? 'bullish trend' : 'bearish trend'}. Reduced lag vs standard EMA.`;
+        if (name.includes('TEMA')) return `Triple EMA shows ${signal === 'bullish' ? 'strong bullish momentum' : 'strong bearish momentum'}. Minimal lag indicator.`;
+        if (name.includes('TRIX')) return `TRIX at ${currentValue.toFixed(2)}. ${signal === 'bullish' ? 'Positive momentum building' : 'Negative momentum building'}. Triple-smoothed momentum.`;
+        if (name.includes('PPO')) return `PPO histogram ${signal === 'bullish' ? 'positive - bullish momentum' : 'negative - bearish momentum'}. Similar to MACD in percentage terms.`;
+        if (name.includes('COPPOCK')) return `Coppock Curve ${signal === 'bullish' ? 'turning up from bottom - buy signal' : signal === 'bearish' ? 'turning down from top - caution' : 'flat - no clear signal'}. Long-term momentum.`;
 
         return `${name} indicates ${signalText} at current levels.`;
       };
