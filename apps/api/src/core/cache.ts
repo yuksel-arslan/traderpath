@@ -1,15 +1,17 @@
 // ===========================================
-// Cache Client (Memory-based fallback)
+// Cache Client - Redis with Memory Fallback
 // ===========================================
 
+import Redis from 'ioredis';
 import { config } from './config';
 
-// In-memory cache for development
+// ===========================================
+// In-Memory Fallback Cache
+// ===========================================
 const memoryCache = new Map<string, { value: string; expiresAt?: number }>();
 
-// Mock Redis interface
-export const redis = {
-  async ping() {
+const memoryCacheClient = {
+  async ping(): Promise<string> {
     return 'PONG';
   },
 
@@ -42,12 +44,18 @@ export const redis = {
   },
 
   async keys(pattern: string): Promise<string[]> {
-    const regex = new RegExp(pattern.replace(/\*/g, '.*'));
+    const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
     return Array.from(memoryCache.keys()).filter(k => regex.test(k));
   },
 
   async exists(key: string): Promise<number> {
-    return memoryCache.has(key) ? 1 : 0;
+    const item = memoryCache.get(key);
+    if (!item) return 0;
+    if (item.expiresAt && Date.now() > item.expiresAt) {
+      memoryCache.delete(key);
+      return 0;
+    }
+    return 1;
   },
 
   async incr(key: string): Promise<number> {
@@ -64,55 +72,187 @@ export const redis = {
     return 1;
   },
 
+  async ttl(key: string): Promise<number> {
+    const item = memoryCache.get(key);
+    if (!item) return -2;
+    if (!item.expiresAt) return -1;
+    const remaining = Math.ceil((item.expiresAt - Date.now()) / 1000);
+    return remaining > 0 ? remaining : -2;
+  },
+
   async quit(): Promise<'OK'> {
     memoryCache.clear();
     return 'OK';
   },
 
-  on(_event: string, _callback: (...args: any[]) => void) {
+  on(_event: string, _callback: (...args: unknown[]) => void): void {
     // No-op for memory cache
+  },
+
+  get status(): string {
+    return 'ready';
   },
 };
 
-console.log('Using in-memory cache (Redis not configured)');
+// ===========================================
+// Redis Client Initialization
+// ===========================================
+
+type CacheClient = typeof memoryCacheClient | Redis;
+
+let redis: CacheClient;
+let isRedisConnected = false;
+let connectionAttempts = 0;
+const MAX_CONNECTION_ATTEMPTS = 3;
+
+function createRedisClient(): CacheClient {
+  const redisUrl = config.redisUrl;
+
+  if (!redisUrl) {
+    console.log('[Cache] No REDIS_URL configured, using in-memory cache');
+    return memoryCacheClient;
+  }
+
+  try {
+    const client = new Redis(redisUrl, {
+      maxRetriesPerRequest: 3,
+      retryStrategy: (times) => {
+        if (times > MAX_CONNECTION_ATTEMPTS) {
+          console.warn(`[Cache] Redis connection failed after ${times} attempts, falling back to memory cache`);
+          return null; // Stop retrying
+        }
+        return Math.min(times * 200, 2000); // Exponential backoff
+      },
+      lazyConnect: true,
+      enableReadyCheck: true,
+      connectTimeout: 5000,
+    });
+
+    client.on('connect', () => {
+      console.log('[Cache] Redis connecting...');
+    });
+
+    client.on('ready', () => {
+      isRedisConnected = true;
+      connectionAttempts = 0;
+      console.log('[Cache] Redis connected and ready');
+    });
+
+    client.on('error', (err) => {
+      connectionAttempts++;
+      console.error('[Cache] Redis error:', err.message);
+      if (connectionAttempts >= MAX_CONNECTION_ATTEMPTS) {
+        console.warn('[Cache] Switching to in-memory cache due to Redis errors');
+        isRedisConnected = false;
+      }
+    });
+
+    client.on('close', () => {
+      isRedisConnected = false;
+      console.log('[Cache] Redis connection closed');
+    });
+
+    // Connect immediately
+    client.connect().catch((err) => {
+      console.warn('[Cache] Redis initial connection failed:', err.message);
+      console.log('[Cache] Using in-memory cache as fallback');
+    });
+
+    return client;
+  } catch (error) {
+    console.error('[Cache] Failed to create Redis client:', error);
+    return memoryCacheClient;
+  }
+}
+
+// Initialize Redis client
+redis = createRedisClient();
 
 // ===========================================
-// Cache Utilities
+// Cache Status
 // ===========================================
+
+export function getCacheStatus(): { type: 'redis' | 'memory'; connected: boolean } {
+  if (redis instanceof Redis) {
+    return { type: 'redis', connected: isRedisConnected && redis.status === 'ready' };
+  }
+  return { type: 'memory', connected: true };
+}
+
+// ===========================================
+// Cache Utilities with Fallback
+// ===========================================
+
+async function safeRedisOp<T>(
+  operation: () => Promise<T>,
+  fallback: () => Promise<T>
+): Promise<T> {
+  if (!isRedisConnected && redis instanceof Redis) {
+    return fallback();
+  }
+  try {
+    return await operation();
+  } catch (error) {
+    console.warn('[Cache] Redis operation failed, using fallback:', error);
+    return fallback();
+  }
+}
 
 export const cache = {
   async get<T>(key: string): Promise<T | null> {
-    const value = await redis.get(key);
+    const value = await safeRedisOp(
+      () => redis.get(key),
+      () => memoryCacheClient.get(key)
+    );
     if (!value) return null;
     try {
       return JSON.parse(value) as T;
     } catch {
-      return value as T;
+      return value as unknown as T;
     }
   },
 
   async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
     const serialized = typeof value === 'string' ? value : JSON.stringify(value);
     if (ttlSeconds) {
-      await redis.setex(key, ttlSeconds, serialized);
+      await safeRedisOp(
+        () => redis.setex(key, ttlSeconds, serialized),
+        () => memoryCacheClient.setex(key, ttlSeconds, serialized)
+      );
     } else {
-      await redis.set(key, serialized);
+      await safeRedisOp(
+        () => redis.set(key, serialized),
+        () => memoryCacheClient.set(key, serialized)
+      );
     }
   },
 
   async del(key: string): Promise<void> {
-    await redis.del(key);
+    await safeRedisOp(
+      () => redis.del(key),
+      () => memoryCacheClient.del(key)
+    );
   },
 
   async delPattern(pattern: string): Promise<void> {
-    const keys = await redis.keys(pattern);
+    const keys = await safeRedisOp(
+      () => redis.keys(pattern),
+      () => memoryCacheClient.keys(pattern)
+    );
     if (keys.length > 0) {
-      await redis.del(...keys);
+      await safeRedisOp(
+        () => redis.del(...keys),
+        () => memoryCacheClient.del(...keys)
+      );
     }
   },
 
   async exists(key: string): Promise<boolean> {
-    return (await redis.exists(key)) === 1;
+    const result = await safeRedisOp(
+      () => redis.exists(key),
+      () => memoryCacheClient.exists(key)
+    );
+    return result === 1;
   },
 
   async getOrSet<T>(
@@ -129,13 +269,36 @@ export const cache = {
   },
 
   async incr(key: string): Promise<number> {
-    return redis.incr(key);
+    return safeRedisOp(
+      () => redis.incr(key),
+      () => memoryCacheClient.incr(key)
+    );
   },
 
   async expire(key: string, seconds: number): Promise<void> {
-    await redis.expire(key, seconds);
+    await safeRedisOp(
+      () => redis.expire(key, seconds),
+      () => memoryCacheClient.expire(key, seconds)
+    );
+  },
+
+  async ttl(key: string): Promise<number> {
+    return safeRedisOp(
+      () => redis.ttl(key),
+      () => memoryCacheClient.ttl(key)
+    );
+  },
+
+  async ping(): Promise<string> {
+    return safeRedisOp(
+      () => redis.ping(),
+      () => memoryCacheClient.ping()
+    );
   },
 };
+
+// Export redis for direct access if needed
+export { redis };
 
 // ===========================================
 // Cache Keys
@@ -150,6 +313,8 @@ export const cacheKeys = {
   userDailyRewards: (userId: string, date: string) => `daily:${userId}:${date}`,
   analysis: (id: string) => `analysis:${id}`,
   rateLimit: (ip: string, endpoint: string) => `ratelimit:${ip}:${endpoint}`,
+  binancePrice: (symbol: string) => `binance:price:${symbol}`,
+  platformStats: () => 'platform:stats',
 };
 
 // ===========================================
@@ -157,10 +322,12 @@ export const cacheKeys = {
 // ===========================================
 
 export const cacheTTL = {
-  marketPulse: 5 * 60,
-  assetData: 60,
-  orderBook: 10,
-  userSession: 24 * 60 * 60,
-  userCredits: 5 * 60,
-  analysis: 24 * 60 * 60,
+  marketPulse: 5 * 60,      // 5 minutes
+  assetData: 60,            // 1 minute
+  orderBook: 10,            // 10 seconds
+  userSession: 24 * 60 * 60, // 24 hours
+  userCredits: 5 * 60,      // 5 minutes
+  analysis: 24 * 60 * 60,   // 24 hours
+  binancePrice: 5,          // 5 seconds (live prices)
+  platformStats: 60,        // 1 minute
 };
