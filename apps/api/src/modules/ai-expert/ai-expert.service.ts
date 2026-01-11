@@ -1412,45 +1412,55 @@ export class AIExpertService {
     let focusData: Record<string, unknown> = {};
     let focusPrompt = '';
 
+    // ALWAYS include symbol in data to prevent AI confusion
+    const baseData = { symbol, analysisFor: symbol };
+
     switch (expertId) {
       case 'aria':
         focusData = {
-          price: analysisData.currentPrice,
+          ...baseData,
+          currentPrice: analysisData.currentPrice,
           rsi: (analysisData.indicators as Record<string, unknown>)?.rsi,
           macd: (analysisData.indicators as Record<string, unknown>)?.macd,
           timeframes: analysisData.timeframes,
           levels: analysisData.levels,
           pvtTrend: (analysisData.advancedMetrics as Record<string, unknown>)?.pvtTrend,
           volumeSpike: (analysisData.advancedMetrics as Record<string, unknown>)?.volumeSpike,
+          indicatorDetails: analysisData.indicatorDetails,
         };
-        focusPrompt = `Analyze the TECHNICAL picture for ${symbol}. Focus on RSI, MACD, trend alignment, and key price levels.`;
+        focusPrompt = `You are analyzing ${symbol} (NOT Bitcoin, NOT BTC - specifically ${symbol}). Focus on RSI, MACD, trend alignment, and key price levels for ${symbol}.`;
         break;
 
       case 'oracle':
         focusData = {
+          ...baseData,
           whaleActivity: analysisData.whaleActivity,
           exchangeFlows: analysisData.exchangeFlows,
           smartMoney: analysisData.smartMoney,
           orderFlowImbalance: (analysisData.advancedMetrics as Record<string, unknown>)?.orderFlowImbalance,
           liquidityScore: (analysisData.advancedMetrics as Record<string, unknown>)?.liquidityScore,
+          indicatorDetails: analysisData.indicatorDetails,
         };
-        focusPrompt = `Analyze the ON-CHAIN activity for ${symbol}. Focus on whale movements, exchange flows, and smart money positioning.`;
+        focusPrompt = `You are analyzing ${symbol} (NOT Bitcoin, NOT BTC - specifically ${symbol}). Focus on whale movements, exchange flows, and smart money positioning for ${symbol}.`;
         break;
 
       case 'sentinel':
         focusData = {
+          ...baseData,
           riskLevel: analysisData.riskLevel,
           manipulation: analysisData.manipulation,
           traps: analysisData.traps,
           warnings: analysisData.warnings,
           liquidityScore: (analysisData.advancedMetrics as Record<string, unknown>)?.liquidityScore,
           historicalVolatility: (analysisData.advancedMetrics as Record<string, unknown>)?.historicalVolatility,
+          indicatorDetails: analysisData.indicatorDetails,
         };
-        focusPrompt = `Analyze the SECURITY & TRAP risks for ${symbol}. Focus on manipulation signs, trap risks, and red flags.`;
+        focusPrompt = `You are analyzing ${symbol} (NOT Bitcoin, NOT BTC - specifically ${symbol}). Focus on manipulation signs, trap risks, and red flags for ${symbol}.`;
         break;
 
       case 'nexus':
         focusData = {
+          ...baseData,
           direction: analysisData.direction,
           entries: analysisData.entries,
           stopLoss: analysisData.stopLoss,
@@ -1459,25 +1469,28 @@ export class AIExpertService {
           positionSizePercent: analysisData.positionSizePercent,
           riskAmount: analysisData.riskAmount,
         };
-        focusPrompt = `Analyze the RISK MANAGEMENT for ${symbol}. Focus on R/R ratio, position sizing, and stop/take profit placement.`;
+        focusPrompt = `You are analyzing ${symbol} (NOT Bitcoin, NOT BTC - specifically ${symbol}). Focus on R/R ratio, position sizing, and stop/take profit placement for ${symbol}.`;
         break;
     }
 
     const prompt = `You are ${expert.name}, ${expert.title} at TradePath.
 
+⚠️ CRITICAL: This analysis is ONLY for ${symbol}. Do NOT mention Bitcoin or BTC unless ${symbol} IS BTC.
+
 ${focusPrompt}
 
-DATA:
+${symbol} DATA:
 ${JSON.stringify(focusData, null, 2)}
 
 RULES:
 - Give your expert opinion in 2-3 sentences MAX
 - Be specific with numbers and percentages
 - Highlight the most important finding from your perspective
+- ONLY discuss ${symbol}, never mention other coins
 - ${langInstruction}
 - NO questions, NO offers, NO CTAs at the end
 
-FORMAT: Just your professional insight. Start directly with your analysis.`;
+FORMAT: Just your professional insight about ${symbol}. Start directly with your analysis.`;
 
     try {
       const response = await fetch(
@@ -1534,25 +1547,28 @@ FORMAT: Just your professional insight. Start directly with your analysis.`;
 
     const prompt = `You are the VOLTRAN - the unified voice of TradePath's Expert Panel.
 
-4 world-class experts have analyzed ${symbol}. Synthesize their insights into ONE powerful recommendation.
+⚠️ CRITICAL: This analysis is ONLY for ${symbol}. Do NOT mention Bitcoin or BTC unless ${symbol} IS BTC.
 
-EXPERT OPINIONS:
+4 world-class experts have analyzed ${symbol}. Synthesize their insights into ONE powerful recommendation for ${symbol}.
+
+${symbol} EXPERT OPINIONS:
 ${expertComments.map(e => `${e.expertName}: ${e.comment}`).join('\n\n')}
 
-FINAL VERDICT DATA:
+${symbol} FINAL VERDICT DATA:
 - Decision: ${verdict.verdict}
 - Score: ${verdict.overallScore}/10
 - Recommendation: ${verdict.recommendation}
 
 YOUR TASK:
-Create a unified 3-4 sentence synthesis that:
-1. Highlights the consensus view
-2. Notes any expert disagreements
-3. Gives the final actionable recommendation
+Create a unified 3-4 sentence synthesis for ${symbol} that:
+1. Highlights the consensus view about ${symbol}
+2. Notes any expert disagreements about ${symbol}
+3. Gives the final actionable recommendation for ${symbol}
 
 ${langInstruction}
+ONLY discuss ${symbol}, never mention other coins.
 
-FORMAT: Just your professional synthesis. Start directly with your unified recommendation.`;
+FORMAT: Just your professional synthesis about ${symbol}. Start directly with your unified recommendation.`;
 
     try {
       const response = await fetch(
