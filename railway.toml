@@ -1,9 +1,9 @@
 [build]
-builder = "nixpacks"
-buildCommand = "pnpm install && pnpm run build --filter=@tradepath/api..."
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "cd apps/api && pnpm run db:migrate && pnpm run start"
+startCommand = "cd apps/api && pnpm run db:migrate && node dist/index.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
