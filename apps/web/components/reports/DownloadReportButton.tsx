@@ -373,6 +373,19 @@ export function DownloadReportButton({
     setMounted(true);
   }, []);
 
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.report-type-dropdown') && !target.closest('.language-dropdown')) {
+        setShowReportTypeMenu(false);
+        setShowLanguageMenu(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
   // Check if translation is needed (not English)
   const needsTranslation = selectedLanguage !== 'en';
 
@@ -860,9 +873,12 @@ export function DownloadReportButton({
     <>
       <div className={cn('flex items-center gap-2', className)}>
         {/* Report Type Selector */}
-        <div className="relative">
+        <div className="relative report-type-dropdown">
           <button
-            onClick={() => setShowReportTypeMenu(!showReportTypeMenu)}
+            onClick={() => {
+              setShowReportTypeMenu(!showReportTypeMenu);
+              setShowLanguageMenu(false);
+            }}
             disabled={isGenerating}
             className={cn(
               'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all',
@@ -881,7 +897,7 @@ export function DownloadReportButton({
           </button>
 
           {showReportTypeMenu && (
-            <div className="absolute top-full left-0 mt-1 w-56 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+            <div className="absolute top-full left-0 mt-1 w-56 bg-card border border-border rounded-lg shadow-xl overflow-hidden" style={{ zIndex: 9999 }}>
               <button
                 onClick={() => {
                   setSelectedReportType('standard');
@@ -922,9 +938,12 @@ export function DownloadReportButton({
         </div>
 
         {/* Language Selector */}
-        <div className="relative">
+        <div className="relative language-dropdown">
           <button
-            onClick={() => setShowLanguageMenu(!showLanguageMenu)}
+            onClick={() => {
+              setShowLanguageMenu(!showLanguageMenu);
+              setShowReportTypeMenu(false);
+            }}
             disabled={isGenerating}
             className={cn(
               'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all',
@@ -944,7 +963,7 @@ export function DownloadReportButton({
           </button>
 
           {showLanguageMenu && (
-            <div className="absolute top-full left-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-xl max-h-64 overflow-y-auto" style={{ zIndex: 9999 }}>
               {Object.entries(REPORT_LANGUAGES).map(([code, name]) => (
                 <button
                   key={code}
