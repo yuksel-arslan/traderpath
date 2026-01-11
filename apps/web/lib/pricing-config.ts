@@ -101,5 +101,14 @@ export const ANALYSIS_BUNDLES = [
   { name: 'Full Analysis', steps: 'All 7 Steps', original: 30, discounted: 25, savings: '17%' },
 ];
 
+// Feature credit costs
+export const FEATURE_COSTS = [
+  { name: 'AI Expert Chat', credits: 5, description: 'Per message' },
+  { name: 'PDF Report', credits: 10, description: 'Full analysis report' },
+  { name: 'Translation', credits: 5, description: 'Translate analysis' },
+  { name: 'Email Send', credits: 1, description: 'Send report via email' },
+  { name: 'Price Alert', credits: 1, description: 'Per alert created' },
+];
+
 // Free signup credits
 export const FREE_SIGNUP_CREDITS = 25;

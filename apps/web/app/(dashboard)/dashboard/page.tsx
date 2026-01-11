@@ -2276,7 +2276,7 @@ export default function DashboardPage() {
           <span className="font-medium text-gray-900 dark:text-white">AI Experts</span>
         </Link>
         <Link
-          href="/credits"
+          href="/pricing"
           className="flex flex-col items-center gap-2 p-4 bg-yellow-50 dark:bg-yellow-500/10 hover:bg-yellow-100 dark:hover:bg-yellow-500/20 rounded-xl border border-yellow-200 dark:border-yellow-500/30 transition group"
         >
           <Sparkles className="w-6 h-6 text-yellow-600 dark:text-yellow-400 group-hover:scale-110 transition" />

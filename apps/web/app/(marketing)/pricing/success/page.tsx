@@ -50,10 +50,10 @@ export default function PaymentSuccessPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-emerald-500 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-slate-400">Verifying your payment...</p>
+          <p className="text-muted-foreground">Verifying your payment...</p>
         </div>
       </div>
     );
@@ -61,21 +61,19 @@ export default function PaymentSuccessPage() {
 
   if (error || session?.paymentStatus !== 'paid') {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-8">
           <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-6">
             <XCircle className="w-10 h-10 text-red-500" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            Payment Verification Failed
-          </h1>
-          <p className="text-gray-500 dark:text-slate-400 mb-6">
+          <h1 className="text-2xl font-bold mb-2">Payment Verification Failed</h1>
+          <p className="text-muted-foreground mb-6">
             {error || 'Your payment could not be verified. If you were charged, please contact support.'}
           </p>
           <div className="flex gap-4 justify-center">
             <Link
-              href="/credits"
-              className="px-6 py-3 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600 transition"
+              href="/pricing"
+              className="px-6 py-3 bg-secondary text-secondary-foreground rounded-xl font-medium hover:bg-secondary/80 transition"
             >
               Try Again
             </Link>
@@ -92,27 +90,25 @@ export default function PaymentSuccessPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center max-w-md mx-auto p-8">
         <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-6 animate-bounce">
           <CheckCircle className="w-10 h-10 text-emerald-500" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          Payment Successful!
-        </h1>
-        <p className="text-gray-500 dark:text-slate-400 mb-2">
+        <h1 className="text-2xl font-bold mb-2">Payment Successful!</h1>
+        <p className="text-muted-foreground mb-2">
           Thank you for your purchase. Your credits have been added to your account.
         </p>
-        <p className="text-sm text-gray-400 dark:text-slate-500 mb-6">
+        <p className="text-sm text-muted-foreground/70 mb-6">
           Confirmation sent to {session?.customerEmail}
         </p>
 
         {/* Amount Paid */}
-        <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-4 mb-6 inline-flex items-center gap-3">
+        <div className="bg-accent rounded-xl p-4 mb-6 inline-flex items-center gap-3">
           <Gem className="w-6 h-6 text-amber-500" />
           <div className="text-left">
-            <p className="text-sm text-gray-500 dark:text-slate-400">Amount Paid</p>
-            <p className="text-xl font-bold text-gray-900 dark:text-white">
+            <p className="text-sm text-muted-foreground">Amount Paid</p>
+            <p className="text-xl font-bold">
               ${((session?.amountTotal || 0) / 100).toFixed(2)}
             </p>
           </div>

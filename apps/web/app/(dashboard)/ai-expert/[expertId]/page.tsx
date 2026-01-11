@@ -863,7 +863,7 @@ export default function AIExpertChatPage() {
             <div className="flex items-center gap-2 mb-3 p-4 bg-destructive/10 text-destructive rounded-xl text-sm border border-destructive/20">
               <AlertCircle className="w-5 h-5" />
               <span>You need at least 5 credits to chat with this expert.</span>
-              <Link href="/credits" className="underline font-semibold ml-auto">
+              <Link href="/pricing" className="underline font-semibold ml-auto">
                 Buy Credits
               </Link>
             </div>
