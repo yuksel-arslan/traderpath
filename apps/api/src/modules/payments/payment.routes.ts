@@ -91,8 +91,8 @@ export default async function paymentRoutes(app: FastifyInstance) {
             bonusCredits: pkg.bonusCredits,
             priceUsd: Number(pkg.priceUsd),
           },
-          successUrl: `${appUrl}/credits/success?session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${appUrl}/credits?canceled=true`,
+          successUrl: `${appUrl}/pricing/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancelUrl: `${appUrl}/pricing?canceled=true`,
         });
 
         return reply.send({

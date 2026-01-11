@@ -96,19 +96,19 @@ export function CreditBalance() {
 
             <div className="space-y-2">
               <Link
-                href="/credits"
+                href="/pricing"
                 onClick={() => setShowDropdown(false)}
                 className="block w-full py-2 px-4 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg font-medium hover:opacity-90 transition text-center"
               >
                 Buy Credits
               </Link>
               <Link
-                href="/credits?tab=history"
+                href="/rewards"
                 onClick={() => setShowDropdown(false)}
                 className="w-full py-2 px-4 bg-secondary text-secondary-foreground rounded-lg font-medium hover:bg-secondary/80 transition flex items-center justify-center gap-2"
               >
                 <History className="w-4 h-4" />
-                View History
+                Earn Free Credits
               </Link>
             </div>
           </div>
