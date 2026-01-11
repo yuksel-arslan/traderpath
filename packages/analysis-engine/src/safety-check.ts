@@ -159,15 +159,15 @@ export async function checkSafety(config: AnalysisConfig): Promise<AnalysisResul
 
     // 3. Advanced Metrics
     const advancedMetrics = calculateAdvancedMetrics(orderBook, recentTrades, klines24h, klines7d);
-    if (advancedMetrics.volumeSpike) {
-      warnings.push(`📊 Unusual volume spike: ${advancedMetrics.volumeSpikeFactor.toFixed(1)}x normal`);
+    if (advancedMetrics?.volumeSpike) {
+      warnings.push(`📊 Unusual volume spike: ${advancedMetrics.volumeSpikeFactor?.toFixed(1) ?? '?'}x normal`);
       riskScore += 10;
     }
-    if (advancedMetrics.bidAskSpread > 0.5) {
+    if (advancedMetrics && advancedMetrics.bidAskSpread > 0.5) {
       warnings.push(`📉 Wide bid-ask spread: ${advancedMetrics.bidAskSpread.toFixed(2)}%`);
       riskScore += 10;
     }
-    if (advancedMetrics.liquidityScore < 30) {
+    if (advancedMetrics && advancedMetrics.liquidityScore < 30) {
       warnings.push(`⚠️ Low liquidity score: ${advancedMetrics.liquidityScore}`);
       riskScore += 15;
     }
@@ -376,10 +376,11 @@ function analyzeManipulation(
   const recentLargeFills = trades.filter(t => t.quantity > avgTradeSize * 5);
   const topOfBook = orderBook.bids[0];
 
-  if (recentLargeFills.length > 3 && topOfBook && topOfBook.quantity < avgTradeSize * 2) {
+  const firstLargeFill = recentLargeFills[0];
+  if (recentLargeFills.length > 3 && topOfBook && topOfBook.quantity < avgTradeSize * 2 && firstLargeFill) {
     result.icebergDetected = true;
-    result.icebergPrice = recentLargeFills[0].price;
-    result.icebergSide = recentLargeFills[0].isBuyerMaker ? 'sell' : 'buy';
+    result.icebergPrice = firstLargeFill.price;
+    result.icebergSide = firstLargeFill.isBuyerMaker ? 'sell' : 'buy';
   }
 
   // 4. Wash Trading Detection - Self-trading patterns
@@ -398,7 +399,9 @@ function analyzeManipulation(
         // Check for alternating buy/sell pattern
         let alternations = 0;
         for (let i = 1; i < group.length; i++) {
-          if (group[i].isBuyerMaker !== group[i-1].isBuyerMaker) {
+          const current = group[i];
+          const previous = group[i-1];
+          if (current && previous && current.isBuyerMaker !== previous.isBuyerMaker) {
             alternations++;
           }
         }
@@ -419,8 +422,10 @@ function analyzeManipulation(
     const previousVolume = klines.slice(0, -4).reduce((sum, k) => sum + k.quoteVolume, 0) / (klines.length - 4);
     const volumeRatio = previousVolume > 0 ? recentVolume / previousVolume : 1;
 
-    const priceChange = klines.length > 0
-      ? (klines[klines.length - 1].close - klines[0].open) / klines[0].open
+    const firstKline = klines[0];
+    const lastKline = klines[klines.length - 1];
+    const priceChange = klines.length > 0 && firstKline && lastKline
+      ? (lastKline.close - firstKline.open) / firstKline.open
       : 0;
 
     if (volumeRatio > PUMP_DUMP_VOLUME_SPIKE && Math.abs(priceChange) > PUMP_DUMP_PRICE_SPIKE) {
@@ -444,7 +449,9 @@ function analyzeWhaleActivity(trades: Trade[]): SafetyCheckResult['whaleActivity
 
   if (!trades.length) return result;
 
-  const currentPrice = trades[trades.length - 1].price;
+  const lastTrade = trades[trades.length - 1];
+  if (!lastTrade) return result;
+  const currentPrice = lastTrade.price;
 
   // Filter whale trades
   trades.forEach(trade => {
@@ -534,8 +541,11 @@ function calculateAdvancedMetrics(
   let pvt = 0;
   klines24h.forEach((k, i) => {
     if (i > 0) {
-      const priceChange = (k.close - klines24h[i-1].close) / klines24h[i-1].close;
-      pvt += priceChange * k.volume;
+      const prevKline = klines24h[i-1];
+      if (prevKline && prevKline.close !== 0) {
+        const priceChange = (k.close - prevKline.close) / prevKline.close;
+        pvt += priceChange * k.volume;
+      }
     }
   });
 
@@ -543,9 +553,10 @@ function calculateAdvancedMetrics(
   const pvtTrend: 'bullish' | 'bearish' | 'neutral' = pvt > 100 ? 'bullish' : pvt < -100 ? 'bearish' : 'neutral';
 
   // Historical Volatility
-  const returns = klines24h.slice(1).map((k, i) =>
-    Math.log(k.close / klines24h[i].close)
-  );
+  const returns = klines24h.slice(1).map((k, i) => {
+    const prevKline = klines24h[i];
+    return prevKline && prevKline.close !== 0 ? Math.log(k.close / prevKline.close) : 0;
+  });
   const avgReturn = returns.length > 0 ? returns.reduce((a, b) => a + b, 0) / returns.length : 0;
   const variance = returns.length > 0
     ? returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length
