@@ -279,24 +279,28 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
 
         // Refund credits on error (only if charged)
         if (!isAdmin && cost > 0) {
-          await creditService.add(
-            userId,
-            cost,
-            'BONUS',
-            'ai_expert_chat_error_refund',
-            {
-              expertId: body.expertId,
-              error: errorMessage,
-              isRefund: true,
-            }
-          );
+          try {
+            await creditService.add(
+              userId,
+              cost,
+              'BONUS',
+              'ai_expert_chat_error_refund',
+              {
+                expertId: body.expertId,
+                error: errorMessage,
+                isRefund: true,
+              }
+            );
+          } catch (refundError) {
+            fastify.log.error({ err: refundError, userId, cost }, 'Failed to refund credits');
+          }
         }
 
         return reply.code(500).send({
           success: false,
           error: {
             code: 'AI_CHAT_ERROR',
-            message: `AI Expert failed to respond: ${errorMessage}. Your credits have been refunded.`,
+            message: `AI Expert failed to respond: ${errorMessage}. Credits refund attempted.`,
           },
         });
       }
@@ -379,11 +383,15 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
         });
       } catch (error) {
         // Refund on error
-        await creditService.add(userId, cost, 'BONUS', 'add_to_report_error_refund', { isRefund: true });
+        try {
+          await creditService.add(userId, cost, 'BONUS', 'add_to_report_error_refund', { isRefund: true });
+        } catch (refundError) {
+          fastify.log.error({ err: refundError, userId, cost }, 'Failed to refund credits');
+        }
 
         return reply.code(500).send({
           success: false,
-          error: { code: 'REPORT_ERROR', message: 'Failed to add to report. Your credits have been refunded.' },
+          error: { code: 'REPORT_ERROR', message: 'Failed to add to report. Credits refund attempted.' },
         });
       }
     }
@@ -467,10 +475,14 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
         });
 
         if (!report) {
-          await creditService.add(userId, cost, 'BONUS', 'email_refund_not_found', { isRefund: true });
+          try {
+            await creditService.add(userId, cost, 'BONUS', 'email_refund_not_found', { isRefund: true });
+          } catch (refundError) {
+            fastify.log.error({ err: refundError, userId, cost }, 'Failed to refund credits');
+          }
           return reply.code(404).send({
             success: false,
-            error: { code: 'REPORT_NOT_FOUND', message: 'Report not found. Your credits have been refunded.' },
+            error: { code: 'REPORT_NOT_FOUND', message: 'Report not found. Credits refund attempted.' },
           });
         }
 
@@ -497,10 +509,14 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
         });
 
         if (!result.success) {
-          await creditService.add(userId, cost, 'BONUS', 'email_send_error_refund', { isRefund: true });
+          try {
+            await creditService.add(userId, cost, 'BONUS', 'email_send_error_refund', { isRefund: true });
+          } catch (refundError) {
+            fastify.log.error({ err: refundError, userId, cost }, 'Failed to refund credits');
+          }
           return reply.code(500).send({
             success: false,
-            error: { code: 'EMAIL_ERROR', message: 'Failed to send email. Your credits have been refunded.' },
+            error: { code: 'EMAIL_ERROR', message: 'Failed to send email. Credits refund attempted.' },
           });
         }
 
@@ -516,10 +532,14 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
           },
         });
       } catch (error) {
-        await creditService.add(userId, cost, 'BONUS', 'email_error_refund', { isRefund: true });
+        try {
+          await creditService.add(userId, cost, 'BONUS', 'email_error_refund', { isRefund: true });
+        } catch (refundError) {
+          fastify.log.error({ err: refundError, userId, cost }, 'Failed to refund credits');
+        }
         return reply.code(500).send({
           success: false,
-          error: { code: 'EMAIL_ERROR', message: 'Failed to send email. Your credits have been refunded.' },
+          error: { code: 'EMAIL_ERROR', message: 'Failed to send email. Credits refund attempted.' },
         });
       }
     }
