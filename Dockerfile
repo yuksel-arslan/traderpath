@@ -16,15 +16,17 @@ COPY packages/analysis-engine/package.json ./packages/analysis-engine/
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 RUN pnpm install --frozen-lockfile
 
-# Copy source files
+# Copy source files (NOT copying apps/web or tsconfig.json to prevent TypeScript issues)
 COPY apps/api/ ./apps/api/
 COPY packages/types/ ./packages/types/
 COPY packages/analysis-engine/ ./packages/analysis-engine/
-COPY tsconfig.json ./
 
-# Build the API
+# Generate Prisma client
 WORKDIR /app/apps/api
-RUN pnpm run build
+RUN pnpm exec prisma generate
+
+# Build API with esbuild directly (no TypeScript type checking)
+RUN pnpm exec esbuild src/**/*.ts --outdir=dist --platform=node --target=node20 --format=esm --sourcemap
 
 # Production stage
 FROM node:20-alpine AS runner

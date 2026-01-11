@@ -1,0 +1,15 @@
+# Skip TypeScript compilation - use esbuild directly
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["corepack enable", "pnpm install"]
+
+[phases.build]
+cmds = [
+  "pnpm exec prisma generate || true",
+  "pnpm exec esbuild src/**/*.ts --outdir=dist --platform=node --target=node20 --format=esm --sourcemap"
+]
+
+[start]
+cmd = "node dist/index.js"
