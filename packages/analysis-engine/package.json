@@ -6,7 +6,7 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "echo 'Analysis engine exports TypeScript directly - no build needed'",
     "lint": "eslint src --ext .ts",
     "test": "vitest",
     "clean": "rm -rf dist node_modules"
