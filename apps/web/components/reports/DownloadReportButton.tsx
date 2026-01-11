@@ -525,35 +525,40 @@ export function DownloadReportButton({
                 // Transform API data to DetailedIndicatorChartData format
                 indicatorChartData = {};
                 for (const [step, charts] of Object.entries(chartResult.data.chartData)) {
-                  indicatorChartData[Number(step)] = (charts as Array<{
-                    name: string;
-                    category: string;
-                    values: number[];
-                    timestamps: number[];
-                    currentValue: number;
-                    signal: string;
-                    signalStrength: number;
-                    interpretation: string;
-                    chartColor: string;
-                    secondaryValues?: number[];
-                    secondaryLabel?: string;
-                    referenceLines?: Array<{ value: number; label: string; color: string }>;
-                    metadata?: Record<string, unknown>;
-                  }>).map(chart => ({
-                    name: chart.name,
-                    category: chart.category as 'trend' | 'momentum' | 'volatility' | 'volume' | 'advanced',
-                    values: chart.values,
-                    timestamps: chart.timestamps,
-                    currentValue: chart.currentValue,
-                    signal: chart.signal as 'bullish' | 'bearish' | 'neutral',
-                    signalStrength: chart.signalStrength,
-                    interpretation: chart.interpretation,
-                    chartColor: chart.chartColor,
-                    secondaryValues: chart.secondaryValues,
-                    secondaryLabel: chart.secondaryLabel,
-                    referenceLines: chart.referenceLines,
-                    metadata: chart.metadata,
-                  }));
+                  // Ensure charts is an array before mapping
+                  if (Array.isArray(charts)) {
+                    indicatorChartData[Number(step)] = charts.map((chart: {
+                      name: string;
+                      category: string;
+                      values: number[];
+                      timestamps: number[];
+                      currentValue: number;
+                      signal: string;
+                      signalStrength: number;
+                      interpretation: string;
+                      chartColor: string;
+                      secondaryValues?: number[];
+                      secondaryLabel?: string;
+                      referenceLines?: Array<{ value: number; label: string; color: string }>;
+                      metadata?: Record<string, unknown>;
+                    }) => ({
+                      name: chart.name,
+                      category: chart.category as 'trend' | 'momentum' | 'volatility' | 'volume' | 'advanced',
+                      values: chart.values || [],
+                      timestamps: chart.timestamps || [],
+                      currentValue: chart.currentValue ?? 0,
+                      signal: (chart.signal as 'bullish' | 'bearish' | 'neutral') || 'neutral',
+                      signalStrength: chart.signalStrength ?? 0,
+                      interpretation: chart.interpretation || '',
+                      chartColor: chart.chartColor || '#3B82F6',
+                      secondaryValues: chart.secondaryValues,
+                      secondaryLabel: chart.secondaryLabel,
+                      referenceLines: chart.referenceLines,
+                      metadata: chart.metadata,
+                    }));
+                  } else {
+                    indicatorChartData[Number(step)] = [];
+                  }
                 }
               }
             }
@@ -639,9 +644,9 @@ export function DownloadReportButton({
                   'MACD': { value: reportData.assetScan.indicators.macd.histogram, signal: reportData.assetScan.indicators.macd.histogram > 0 ? 'bullish' : 'bearish' as const, strength: 60 },
                 },
                 signals: {
-                  bullish: reportData.assetScan.timeframes.filter(t => t.trend === 'bullish').map(t => `${t.tf} bullish`),
-                  bearish: reportData.assetScan.timeframes.filter(t => t.trend === 'bearish').map(t => `${t.tf} bearish`),
-                  neutral: reportData.assetScan.timeframes.filter(t => t.trend === 'neutral').map(t => `${t.tf} neutral`),
+                  bullish: (reportData.assetScan.timeframes || []).filter(t => t.trend === 'bullish').map(t => `${t.tf} bullish`),
+                  bearish: (reportData.assetScan.timeframes || []).filter(t => t.trend === 'bearish').map(t => `${t.tf} bearish`),
+                  neutral: (reportData.assetScan.timeframes || []).filter(t => t.trend === 'neutral').map(t => `${t.tf} neutral`),
                 },
                 stepScore: 6,
                 stepConfidence: 70,
@@ -652,7 +657,7 @@ export function DownloadReportButton({
               },
               commentary: {
                 summary: reportData.assetScan.aiInsight || 'Asset technical analysis completed.',
-                signalInterpretation: `Multi-timeframe analysis shows ${reportData.assetScan.timeframes.filter(t => t.trend === 'bullish').length > reportData.assetScan.timeframes.filter(t => t.trend === 'bearish').length ? 'bullish' : 'bearish'} bias.`,
+                signalInterpretation: `Multi-timeframe analysis shows ${(reportData.assetScan.timeframes || []).filter(t => t.trend === 'bullish').length > (reportData.assetScan.timeframes || []).filter(t => t.trend === 'bearish').length ? 'bullish' : 'bearish'} bias.`,
                 riskFactors: reportData.assetScan.indicators.rsi > 70 ? ['RSI overbought'] : reportData.assetScan.indicators.rsi < 30 ? ['RSI oversold'] : [],
                 opportunities: [],
                 recommendation: 'Review support and resistance levels',
@@ -813,7 +818,7 @@ export function DownloadReportButton({
                   neutral: reportData.verdict.action === 'WAIT' ? ['Wait for confirmation'] : [],
                 },
                 stepScore: reportData.verdict.overallScore / 10,
-                stepConfidence: reportData.verdict.confidenceFactors.filter(c => c.positive).length / reportData.verdict.confidenceFactors.length * 100 || 50,
+                stepConfidence: (reportData.verdict.confidenceFactors || []).length > 0 ? (reportData.verdict.confidenceFactors || []).filter(c => c.positive).length / (reportData.verdict.confidenceFactors || []).length * 100 : 50,
                 keyFindings: [
                   `Final Decision: ${reportData.verdict.action}`,
                   `Overall Score: ${reportData.verdict.overallScore}/100`,
@@ -822,8 +827,8 @@ export function DownloadReportButton({
               commentary: {
                 summary: reportData.verdict.aiSummary || 'Final verdict delivered.',
                 signalInterpretation: `${reportData.verdict.action} recommendation based on comprehensive analysis.`,
-                riskFactors: reportData.verdict.confidenceFactors.filter(c => !c.positive).map(c => c.factor),
-                opportunities: reportData.verdict.confidenceFactors.filter(c => c.positive).map(c => c.factor),
+                riskFactors: (reportData.verdict.confidenceFactors || []).filter(c => !c.positive).map(c => c.factor),
+                opportunities: (reportData.verdict.confidenceFactors || []).filter(c => c.positive).map(c => c.factor),
                 recommendation: reportData.verdict.action === 'GO' ? 'Execute trade plan' : reportData.verdict.action === 'WAIT' ? 'Wait for better conditions' : 'Avoid this trade',
               },
               indicatorCharts: indicatorChartData[7] || [],
@@ -831,19 +836,19 @@ export function DownloadReportButton({
           ],
           tradePlanSummary: {
             direction: reportData.tradePlan.direction as 'long' | 'short',
-            entries: reportData.tradePlan.entries.map(e => ({ price: e.price, percentage: e.percentage })),
+            entries: (reportData.tradePlan.entries || []).map(e => ({ price: e.price, percentage: e.percentage })),
             averageEntry: reportData.tradePlan.averageEntry,
             stopLoss: reportData.tradePlan.stopLoss,
-            takeProfits: reportData.tradePlan.takeProfits,
+            takeProfits: reportData.tradePlan.takeProfits || [],
             riskReward: reportData.tradePlan.riskReward,
             winRateEstimate: reportData.tradePlan.winRateEstimate,
           },
           verdict: {
             action: (reportData.verdict.action.toLowerCase().replace(' ', '_') as 'go' | 'conditional_go' | 'wait' | 'avoid'),
             overallScore: reportData.verdict.overallScore / 10,
-            overallConfidence: reportData.verdict.confidenceFactors.filter(c => c.positive).length / reportData.verdict.confidenceFactors.length * 100 || 50,
+            overallConfidence: (reportData.verdict.confidenceFactors || []).length > 0 ? (reportData.verdict.confidenceFactors || []).filter(c => c.positive).length / (reportData.verdict.confidenceFactors || []).length * 100 : 50,
             direction: reportData.tradePlan.direction as 'long' | 'short',
-            reasons: reportData.verdict.confidenceFactors.map(c => `${c.positive ? '+' : '-'} ${c.factor}`),
+            reasons: (reportData.verdict.confidenceFactors || []).map(c => `${c.positive ? '+' : '-'} ${c.factor}`),
           },
         };
 
