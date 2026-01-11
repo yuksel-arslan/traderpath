@@ -871,7 +871,9 @@ export function DownloadReportButton({
 
   return (
     <>
-      <div className={cn('flex items-center gap-2', className)}>
+      <div className={cn('flex flex-col items-center gap-3', className)}>
+        {/* Dropdowns Row */}
+        <div className="flex items-center gap-2">
         {/* Report Type Selector */}
         <div className="relative report-type-dropdown">
           <button
@@ -984,6 +986,7 @@ export function DownloadReportButton({
               ))}
             </div>
           )}
+        </div>
         </div>
 
         {/* Download Button */}
