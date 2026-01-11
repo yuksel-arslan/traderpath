@@ -899,7 +899,7 @@ export function DownloadReportButton({
           </button>
 
           {showReportTypeMenu && (
-            <div className="absolute top-full left-0 mt-1 w-56 bg-card border border-border rounded-lg shadow-xl overflow-hidden" style={{ zIndex: 9999 }}>
+            <div className="absolute bottom-full left-0 mb-1 w-56 bg-card border border-border rounded-lg shadow-xl overflow-hidden" style={{ zIndex: 9999 }}>
               <button
                 onClick={() => {
                   setSelectedReportType('standard');
@@ -965,7 +965,7 @@ export function DownloadReportButton({
           </button>
 
           {showLanguageMenu && (
-            <div className="absolute top-full left-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-xl max-h-64 overflow-y-auto" style={{ zIndex: 9999 }}>
+            <div className="absolute bottom-full left-0 mb-1 w-48 bg-card border border-border rounded-lg shadow-xl max-h-64 overflow-y-auto" style={{ zIndex: 9999 }}>
               {Object.entries(REPORT_LANGUAGES).map(([code, name]) => (
                 <button
                   key={code}
