@@ -212,6 +212,108 @@ export interface TechnicalIndicators {
   };
 }
 
+// ===========================================
+// Detailed Indicator Analysis Types
+// ===========================================
+
+/**
+ * Single indicator detail with value, signal, and interpretation
+ */
+export interface IndicatorDetail {
+  name: string;
+  value: number | string | null;
+  signal: 'bullish' | 'bearish' | 'neutral';
+  signalStrength: 'strong' | 'moderate' | 'weak';
+  interpretation: string;
+  category: 'trend' | 'momentum' | 'volatility' | 'volume' | 'advanced';
+  isLeadingIndicator: boolean;
+  weight: number; // 0-1, importance in decision
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Divergence detection result
+ */
+export interface DivergenceInfo {
+  type: 'bullish' | 'bearish' | 'none';
+  indicator: string;
+  description: string;
+  reliability: 'high' | 'medium' | 'low';
+  isEarlySignal: boolean;
+}
+
+/**
+ * Complete indicator analysis with all details
+ */
+export interface IndicatorAnalysis {
+  // Trend Indicators
+  trend: {
+    ema9?: IndicatorDetail;
+    ema21?: IndicatorDetail;
+    ema50?: IndicatorDetail;
+    ema200?: IndicatorDetail;
+    sma50?: IndicatorDetail;
+    sma200?: IndicatorDetail;
+    macd?: IndicatorDetail;
+    adx?: IndicatorDetail;
+    supertrend?: IndicatorDetail;
+    ichimoku?: IndicatorDetail;
+  };
+
+  // Momentum Indicators
+  momentum: {
+    rsi?: IndicatorDetail;
+    stochastic?: IndicatorDetail;
+    stochRsi?: IndicatorDetail;
+    cci?: IndicatorDetail;
+    williamsR?: IndicatorDetail;
+    mfi?: IndicatorDetail;
+    roc?: IndicatorDetail;
+  };
+
+  // Volatility Indicators
+  volatility: {
+    bollingerBands?: IndicatorDetail;
+    atr?: IndicatorDetail;
+    keltnerChannel?: IndicatorDetail;
+    historicalVolatility?: IndicatorDetail;
+    squeeze?: IndicatorDetail;
+  };
+
+  // Volume Indicators
+  volume: {
+    obv?: IndicatorDetail;
+    vwap?: IndicatorDetail;
+    cmf?: IndicatorDetail;
+    pvt?: IndicatorDetail;
+    relativeVolume?: IndicatorDetail;
+    volumeSpike?: IndicatorDetail;
+  };
+
+  // Advanced/Leading Indicators
+  advanced: {
+    orderFlowImbalance?: IndicatorDetail;
+    liquidityScore?: IndicatorDetail;
+    bidAskSpread?: IndicatorDetail;
+    whaleActivity?: IndicatorDetail;
+    spoofingRisk?: IndicatorDetail;
+  };
+
+  // Divergences (Early Signals)
+  divergences: DivergenceInfo[];
+
+  // Summary
+  summary: {
+    bullishIndicators: number;
+    bearishIndicators: number;
+    neutralIndicators: number;
+    totalIndicatorsUsed: number;
+    overallSignal: 'bullish' | 'bearish' | 'neutral';
+    signalConfidence: number; // 0-100
+    leadingIndicatorsSignal: 'bullish' | 'bearish' | 'neutral' | 'mixed';
+  };
+}
+
 // Step 3: Safety Check
 export interface SafetyCheck {
   manipulation: ManipulationCheck;

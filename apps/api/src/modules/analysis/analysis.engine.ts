@@ -7,6 +7,8 @@ import { randomUUID } from 'crypto';
 import { config } from '../../core/config';
 import { contractSecurityService } from '../security/contract-security.service';
 import { TradeType, getTradeConfig, getStepConfig, Timeframe } from './config/trade-config';
+import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/indicator-interpreter.service';
+import { IndicatorAnalysis } from '@tradepath/types';
 
 // ===========================================
 // Price Formatting Utility
@@ -164,6 +166,8 @@ interface AssetScanResult {
     bollingerBands: { upper: number; middle: number; lower: number };
     atr: number;
   };
+  // Detailed indicator analysis with interpretations
+  indicatorDetails?: IndicatorAnalysis;
   score: number;
 }
 
@@ -236,6 +240,8 @@ interface SafetyCheckResult {
   };
   riskLevel: 'low' | 'medium' | 'high';
   warnings: string[];
+  // Detailed indicator analysis with interpretations (for advanced metrics)
+  indicatorDetails?: IndicatorAnalysis;
   score: number;
 }
 
@@ -1569,6 +1575,16 @@ export const analysisEngine = {
         },
         atr: parseFloat(atr.toFixed(2)),
       },
+      // Build detailed indicator analysis with interpretations
+      indicatorDetails: buildIndicatorAnalysis({
+        currentPrice: ticker.price,
+        priceChange24h: ticker.priceChangePercent24h,
+        prices: prices4h,
+        rsi,
+        macd: { value: macd.macd, signal: macd.signal, histogram: macd.histogram },
+        bollingerBands: { upper: bb.upper, middle: bb.middle, lower: bb.lower },
+        movingAverages: { ma50, ma200 },
+      }),
       score,
     };
   },
@@ -1882,6 +1898,18 @@ export const analysisEngine = {
       contractSecurity,
       riskLevel,
       warnings,
+      // Build detailed indicator analysis with interpretations for advanced metrics
+      indicatorDetails: buildIndicatorAnalysis({
+        currentPrice,
+        priceChange24h: ticker.priceChangePercent24h,
+        prices: candlesPrimary.map(c => c.close),
+        pvt: { pvt: pvt.pvt, trend: pvt.trend, momentum: pvt.momentum },
+        relativeVolume,
+        volumeSpike: { isSpike: volumeSpike.isSpike, factor: volumeSpike.factor },
+        orderFlowImbalance: { imbalance: orderFlowImbalance.imbalance, bias: orderFlowImbalance.bias },
+        liquidityScore,
+        historicalVolatility: historicalVol,
+      }),
       score,
     };
   },

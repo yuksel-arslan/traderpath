@@ -1048,11 +1048,15 @@ export class AIExpertService {
       // Always use English for expert panel analysis
       const language = 'en';
 
-      // Run Expert Panel analysis
+      // Detect trade type from message
+      const tradeType = this.detectTradeType(request.message);
+
+      // Run Expert Panel analysis with detected trade type
       const panelResult = await this.analyzeWithExpertPanel({
         symbol: detectedSymbol,
         userId: request.userId,
         language,
+        tradeType,
       });
 
       // Format the panel response
@@ -1394,13 +1398,50 @@ export class AIExpertService {
   }
 
   /**
+   * Detect trade type from user message
+   */
+  detectTradeType(message: string): 'scalping' | 'dayTrade' | 'swing' {
+    const lowerMessage = message.toLowerCase();
+
+    // Scalping keywords
+    const scalpingKeywords = [
+      'scalp', 'scalping', 'skalp', 'skalpingl', 'quick', 'hızlı',
+      '1m', '5m', '15m', '1 minute', '5 minute', '15 minute',
+      '1 dakika', '5 dakika', '15 dakika', 'kısa vadeli', 'short term',
+      'fast trade', 'hızlı işlem'
+    ];
+
+    // Swing keywords
+    const swingKeywords = [
+      'swing', 'uzun vade', 'long term', 'günlük', 'haftalık',
+      'daily', 'weekly', '1d', '1w', '4h', '1 day', '1 week',
+      'hold', 'tutmak', 'beklemek', 'patience', 'sabır',
+      'medium term', 'orta vade'
+    ];
+
+    // Check for scalping
+    if (scalpingKeywords.some(kw => lowerMessage.includes(kw))) {
+      return 'scalping';
+    }
+
+    // Check for swing
+    if (swingKeywords.some(kw => lowerMessage.includes(kw))) {
+      return 'swing';
+    }
+
+    // Default to day trade
+    return 'dayTrade';
+  }
+
+  /**
    * Generate expert commentary on analysis data
    */
   private async generateExpertCommentary(
     expertId: ExpertId,
     symbol: string,
     analysisData: Record<string, unknown>,
-    language: 'en' | 'tr' = 'en'
+    language: 'en' | 'tr' = 'en',
+    tradeType: 'scalping' | 'dayTrade' | 'swing' = 'dayTrade'
   ): Promise<{ expertId: string; expertName: string; comment: string }> {
     const expert = AI_EXPERTS[expertId];
 
@@ -1408,49 +1449,88 @@ export class AIExpertService {
       ? 'Respond in Turkish. Be professional and concise.'
       : 'Respond in English. Be professional and concise.';
 
+    // Trade type context for the AI
+    const tradeTypeContext = {
+      scalping: {
+        label: 'SCALPING',
+        timeframes: '1-15 minute',
+        holdTime: 'seconds to minutes',
+        focus: 'quick momentum moves, tight stops, fast entries/exits',
+      },
+      dayTrade: {
+        label: 'DAY TRADE',
+        timeframes: '15min-4h',
+        holdTime: 'hours (same day)',
+        focus: 'intraday trends, key levels, volume confirmation',
+      },
+      swing: {
+        label: 'SWING TRADE',
+        timeframes: '4h-1d',
+        holdTime: 'days to weeks',
+        focus: 'major trends, support/resistance zones, patience',
+      },
+    };
+    const tradeCtx = tradeTypeContext[tradeType];
+
     // Expert-specific data extraction
     let focusData: Record<string, unknown> = {};
     let focusPrompt = '';
 
+    // ALWAYS include symbol AND tradeType in data to prevent AI confusion
+    const baseData = {
+      symbol,
+      analysisFor: symbol,
+      tradeType: tradeCtx.label,
+      timeframes: tradeCtx.timeframes,
+      expectedHoldTime: tradeCtx.holdTime,
+    };
+
     switch (expertId) {
       case 'aria':
         focusData = {
-          price: analysisData.currentPrice,
+          ...baseData,
+          currentPrice: analysisData.currentPrice,
           rsi: (analysisData.indicators as Record<string, unknown>)?.rsi,
           macd: (analysisData.indicators as Record<string, unknown>)?.macd,
           timeframes: analysisData.timeframes,
           levels: analysisData.levels,
           pvtTrend: (analysisData.advancedMetrics as Record<string, unknown>)?.pvtTrend,
           volumeSpike: (analysisData.advancedMetrics as Record<string, unknown>)?.volumeSpike,
+          indicatorDetails: analysisData.indicatorDetails,
         };
-        focusPrompt = `Analyze the TECHNICAL picture for ${symbol}. Focus on RSI, MACD, trend alignment, and key price levels.`;
+        focusPrompt = `You are analyzing ${symbol} for ${tradeCtx.label} (${tradeCtx.timeframes} timeframes, ${tradeCtx.holdTime} holds). Focus on ${tradeCtx.focus}. NOT Bitcoin analysis - specifically ${symbol}.`;
         break;
 
       case 'oracle':
         focusData = {
+          ...baseData,
           whaleActivity: analysisData.whaleActivity,
           exchangeFlows: analysisData.exchangeFlows,
           smartMoney: analysisData.smartMoney,
           orderFlowImbalance: (analysisData.advancedMetrics as Record<string, unknown>)?.orderFlowImbalance,
           liquidityScore: (analysisData.advancedMetrics as Record<string, unknown>)?.liquidityScore,
+          indicatorDetails: analysisData.indicatorDetails,
         };
-        focusPrompt = `Analyze the ON-CHAIN activity for ${symbol}. Focus on whale movements, exchange flows, and smart money positioning.`;
+        focusPrompt = `You are analyzing ${symbol} whale activity for ${tradeCtx.label}. For ${tradeCtx.holdTime} holds, focus on short-term flow patterns. NOT Bitcoin analysis - specifically ${symbol}.`;
         break;
 
       case 'sentinel':
         focusData = {
+          ...baseData,
           riskLevel: analysisData.riskLevel,
           manipulation: analysisData.manipulation,
           traps: analysisData.traps,
           warnings: analysisData.warnings,
           liquidityScore: (analysisData.advancedMetrics as Record<string, unknown>)?.liquidityScore,
           historicalVolatility: (analysisData.advancedMetrics as Record<string, unknown>)?.historicalVolatility,
+          indicatorDetails: analysisData.indicatorDetails,
         };
-        focusPrompt = `Analyze the SECURITY & TRAP risks for ${symbol}. Focus on manipulation signs, trap risks, and red flags.`;
+        focusPrompt = `You are analyzing ${symbol} risks for ${tradeCtx.label}. For ${tradeCtx.holdTime} trades, assess manipulation and trap risks. NOT Bitcoin analysis - specifically ${symbol}.`;
         break;
 
       case 'nexus':
         focusData = {
+          ...baseData,
           direction: analysisData.direction,
           entries: analysisData.entries,
           stopLoss: analysisData.stopLoss,
@@ -1459,25 +1539,33 @@ export class AIExpertService {
           positionSizePercent: analysisData.positionSizePercent,
           riskAmount: analysisData.riskAmount,
         };
-        focusPrompt = `Analyze the RISK MANAGEMENT for ${symbol}. Focus on R/R ratio, position sizing, and stop/take profit placement.`;
+        focusPrompt = `You are analyzing ${symbol} trade plan for ${tradeCtx.label}. For ${tradeCtx.holdTime} holds with ${tradeCtx.timeframes} timeframes, assess R/R and position sizing. NOT Bitcoin analysis - specifically ${symbol}.`;
         break;
     }
 
     const prompt = `You are ${expert.name}, ${expert.title} at TradePath.
 
+⚠️ CRITICAL CONTEXT:
+- Asset: ${symbol} (NOT Bitcoin, NOT BTC - specifically ${symbol})
+- Trade Type: ${tradeCtx.label}
+- Timeframes: ${tradeCtx.timeframes}
+- Hold Time: ${tradeCtx.holdTime}
+- Focus: ${tradeCtx.focus}
+
 ${focusPrompt}
 
-DATA:
+${symbol} ${tradeCtx.label} DATA:
 ${JSON.stringify(focusData, null, 2)}
 
 RULES:
 - Give your expert opinion in 2-3 sentences MAX
 - Be specific with numbers and percentages
-- Highlight the most important finding from your perspective
+- Tailor advice to ${tradeCtx.label} style (${tradeCtx.holdTime} holds)
+- ONLY discuss ${symbol}, never mention other coins
 - ${langInstruction}
 - NO questions, NO offers, NO CTAs at the end
 
-FORMAT: Just your professional insight. Start directly with your analysis.`;
+FORMAT: Just your professional ${tradeCtx.label} insight about ${symbol}. Start directly with your analysis.`;
 
     try {
       const response = await fetch(
@@ -1526,33 +1614,48 @@ FORMAT: Just your professional insight. Start directly with your analysis.`;
     symbol: string,
     expertComments: Array<{ expertId: string; expertName: string; comment: string }>,
     verdict: Record<string, unknown>,
-    language: 'en' | 'tr' = 'en'
+    language: 'en' | 'tr' = 'en',
+    tradeType: 'scalping' | 'dayTrade' | 'swing' = 'dayTrade'
   ): Promise<string> {
     const langInstruction = language === 'tr'
       ? 'Respond in Turkish.'
       : 'Respond in English.';
 
+    // Trade type context
+    const tradeTypeContext = {
+      scalping: { label: 'SCALPING', holdTime: 'seconds to minutes' },
+      dayTrade: { label: 'DAY TRADE', holdTime: 'hours (same day)' },
+      swing: { label: 'SWING TRADE', holdTime: 'days to weeks' },
+    };
+    const tradeCtx = tradeTypeContext[tradeType];
+
     const prompt = `You are the VOLTRAN - the unified voice of TradePath's Expert Panel.
 
-4 world-class experts have analyzed ${symbol}. Synthesize their insights into ONE powerful recommendation.
+⚠️ CRITICAL CONTEXT:
+- Asset: ${symbol} (NOT Bitcoin, NOT BTC - specifically ${symbol})
+- Trade Type: ${tradeCtx.label}
+- Hold Time: ${tradeCtx.holdTime}
 
-EXPERT OPINIONS:
+4 world-class experts have analyzed ${symbol} for ${tradeCtx.label}. Synthesize their insights into ONE powerful recommendation.
+
+${symbol} ${tradeCtx.label} EXPERT OPINIONS:
 ${expertComments.map(e => `${e.expertName}: ${e.comment}`).join('\n\n')}
 
-FINAL VERDICT DATA:
+${symbol} ${tradeCtx.label} FINAL VERDICT DATA:
 - Decision: ${verdict.verdict}
 - Score: ${verdict.overallScore}/10
 - Recommendation: ${verdict.recommendation}
 
 YOUR TASK:
-Create a unified 3-4 sentence synthesis that:
-1. Highlights the consensus view
-2. Notes any expert disagreements
-3. Gives the final actionable recommendation
+Create a unified 3-4 sentence synthesis for ${symbol} ${tradeCtx.label} that:
+1. Highlights the consensus view about ${symbol} for ${tradeCtx.holdTime} trades
+2. Notes any expert disagreements about ${symbol}
+3. Gives the final actionable ${tradeCtx.label} recommendation for ${symbol}
 
 ${langInstruction}
+ONLY discuss ${symbol}, never mention other coins.
 
-FORMAT: Just your professional synthesis. Start directly with your unified recommendation.`;
+FORMAT: Just your professional ${tradeCtx.label} synthesis about ${symbol}. Start directly with your unified recommendation.`;
 
     try {
       const response = await fetch(
@@ -1592,8 +1695,9 @@ FORMAT: Just your professional synthesis. Start directly with your unified recom
     symbol: string;
     userId: string;
     language?: 'en' | 'tr';
+    tradeType?: 'scalping' | 'dayTrade' | 'swing';
   }): Promise<ExpertPanelResult> {
-    const { symbol, userId, language = 'en' } = params;
+    const { symbol, userId, language = 'en', tradeType = 'dayTrade' } = params;
     const upperSymbol = symbol.toUpperCase();
 
     // Check if symbol is supported
@@ -1609,6 +1713,7 @@ FORMAT: Just your professional synthesis. Start directly with your unified recom
     const cost = await creditCostsService.getCreditCost('BUNDLE_FULL_ANALYSIS');
     const chargeResult = await creditService.charge(userId, cost, 'expert_panel_analysis', {
       symbol: upperSymbol,
+      tradeType,
     });
 
     if (!chargeResult.success) {
@@ -1619,15 +1724,23 @@ FORMAT: Just your professional synthesis. Start directly with your unified recom
       };
     }
 
+    // Trade type labels for prompts
+    const tradeTypeLabels = {
+      scalping: 'SCALPING (1-15 minute timeframes, quick trades)',
+      dayTrade: 'DAY TRADE (15min-4h timeframes, intraday)',
+      swing: 'SWING TRADE (4h-1d timeframes, multi-day holds)',
+    };
+    const tradeTypeLabel = tradeTypeLabels[tradeType];
+
     try {
-      // Run full 7-step analysis
+      // Run full 7-step analysis with trade type
       const [marketPulse, assetScan, safetyCheck, timing, tradePlan, trapCheck] = await Promise.all([
         analysisEngine.getMarketPulse(),
-        analysisEngine.scanAsset(upperSymbol),
-        analysisEngine.safetyCheck(upperSymbol),
-        analysisEngine.timingAnalysis(upperSymbol),
-        analysisEngine.tradePlan(upperSymbol, 10000),
-        analysisEngine.trapCheck(upperSymbol),
+        analysisEngine.scanAsset(upperSymbol, tradeType),
+        analysisEngine.safetyCheck(upperSymbol, tradeType),
+        analysisEngine.timingAnalysis(upperSymbol, tradeType),
+        analysisEngine.tradePlan(upperSymbol, 10000, tradeType),
+        analysisEngine.trapCheck(upperSymbol, tradeType),
       ]);
 
       // Generate final verdict
@@ -1640,28 +1753,29 @@ FORMAT: Just your professional synthesis. Start directly with your unified recom
         trapCheck,
       });
 
-      // Prepare combined data for each expert
-      const ariaData = { ...assetScan, advancedMetrics: safetyCheck.advancedMetrics };
-      const oracleData = { ...safetyCheck, advancedMetrics: safetyCheck.advancedMetrics };
-      const sentinelData = { ...safetyCheck, ...trapCheck, advancedMetrics: safetyCheck.advancedMetrics };
-      const nexusData = { ...tradePlan };
+      // Prepare combined data for each expert - include tradeType context
+      const ariaData = { ...assetScan, advancedMetrics: safetyCheck.advancedMetrics, tradeType, tradeTypeLabel };
+      const oracleData = { ...safetyCheck, advancedMetrics: safetyCheck.advancedMetrics, tradeType, tradeTypeLabel };
+      const sentinelData = { ...safetyCheck, ...trapCheck, advancedMetrics: safetyCheck.advancedMetrics, tradeType, tradeTypeLabel };
+      const nexusData = { ...tradePlan, tradeType, tradeTypeLabel };
 
       // Get all 4 expert comments in parallel
       const [ariaComment, oracleComment, sentinelComment, nexusComment] = await Promise.all([
-        this.generateExpertCommentary('aria', upperSymbol, ariaData, language),
-        this.generateExpertCommentary('oracle', upperSymbol, oracleData, language),
-        this.generateExpertCommentary('sentinel', upperSymbol, sentinelData, language),
-        this.generateExpertCommentary('nexus', upperSymbol, nexusData, language),
+        this.generateExpertCommentary('aria', upperSymbol, ariaData, language, tradeType),
+        this.generateExpertCommentary('oracle', upperSymbol, oracleData, language, tradeType),
+        this.generateExpertCommentary('sentinel', upperSymbol, sentinelData, language, tradeType),
+        this.generateExpertCommentary('nexus', upperSymbol, nexusData, language, tradeType),
       ]);
 
       const expertComments = [ariaComment, oracleComment, sentinelComment, nexusComment];
 
-      // Generate Voltran synthesis
+      // Generate Voltran synthesis with trade type context
       const voltranSynthesis = await this.generateVoltranSynthesis(
         upperSymbol,
         expertComments,
         verdict as unknown as Record<string, unknown>,
-        language
+        language,
+        tradeType
       );
 
       // Log costs for AI calls (5 Gemini calls: 4 experts + 1 synthesis)
@@ -1673,7 +1787,7 @@ FORMAT: Just your professional synthesis. Start directly with your unified recom
         costUsd: 0.001,
         userId,
         symbol: upperSymbol,
-        metadata: { experts: 4, synthesis: true },
+        metadata: { experts: 4, synthesis: true, tradeType },
       });
 
       return {

@@ -7,6 +7,10 @@
 
 import { Shield, AlertTriangle, CheckCircle, Brain, Activity, Users, Waves } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { IndicatorDetails } from './IndicatorDetails';
+
+// Import type from the shared types package
+import type { IndicatorAnalysis } from '@tradepath/types';
 
 interface SafetyCheckData {
   riskLevel: 'low' | 'medium' | 'high' | 'extreme';
@@ -27,6 +31,8 @@ interface SafetyCheckData {
   };
   warnings: string[];
   aiInsight?: string;
+  // New: detailed indicator analysis for advanced metrics
+  indicatorDetails?: IndicatorAnalysis;
 }
 
 interface SafetyCheckProps {
@@ -221,6 +227,17 @@ export function SafetyCheck({ data, symbol }: SafetyCheckProps) {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* Detailed Indicator Analysis - Advanced Metrics */}
+      {data.indicatorDetails && (
+        <div className="mt-6 pt-6 border-t">
+          <IndicatorDetails
+            data={data.indicatorDetails}
+            title="Advanced Metric Analysis"
+            compact={false}
+          />
         </div>
       )}
 
