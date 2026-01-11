@@ -44,34 +44,44 @@ async function main() {
     console.log(`✅ Updated admin password for: ${adminEmail}`);
   }
 
-  // Seed Credit Packages
+  // Seed Credit Packages - Must match pricing-config.ts in web app
   const packages = [
     {
-      name: 'Starter',
+      name: 'Starter Pack',
       credits: 50,
       bonusCredits: 0,
-      priceUsd: 14.99,
-      pricePerCredit: 14.99 / 50,
+      priceUsd: 7.99,
+      pricePerCredit: 7.99 / 50,
       discountPercent: 0,
       isPopular: false,
       isActive: true,
     },
     {
-      name: 'Popular',
-      credits: 120,
-      bonusCredits: 10,
-      priceUsd: 29.99,
-      pricePerCredit: 29.99 / 130,
+      name: 'Trader Pack',
+      credits: 150,
+      bonusCredits: 15,
+      priceUsd: 19.99,
+      pricePerCredit: 19.99 / 165,
       discountPercent: 0,
       isPopular: true,
       isActive: true,
     },
     {
-      name: 'Pro',
-      credits: 300,
-      bonusCredits: 30,
-      priceUsd: 59.99,
-      pricePerCredit: 59.99 / 330,
+      name: 'Pro Pack',
+      credits: 400,
+      bonusCredits: 60,
+      priceUsd: 44.99,
+      pricePerCredit: 44.99 / 460,
+      discountPercent: 0,
+      isPopular: false,
+      isActive: true,
+    },
+    {
+      name: 'Whale Pack',
+      credits: 1000,
+      bonusCredits: 200,
+      priceUsd: 89.99,
+      pricePerCredit: 89.99 / 1200,
       discountPercent: 0,
       isPopular: false,
       isActive: true,
@@ -79,16 +89,20 @@ async function main() {
   ];
 
   for (const pkg of packages) {
-    const existing = await prisma.creditPackage.findFirst({
+    await prisma.creditPackage.upsert({
       where: { name: pkg.name },
+      update: {
+        credits: pkg.credits,
+        bonusCredits: pkg.bonusCredits,
+        priceUsd: pkg.priceUsd,
+        pricePerCredit: pkg.pricePerCredit,
+        discountPercent: pkg.discountPercent,
+        isPopular: pkg.isPopular,
+        isActive: pkg.isActive,
+      },
+      create: pkg,
     });
-
-    if (!existing) {
-      await prisma.creditPackage.create({ data: pkg });
-      console.log(`✅ Created package: ${pkg.name}`);
-    } else {
-      console.log(`⏭️ Package already exists: ${pkg.name}`);
-    }
+    console.log(`✅ Upserted package: ${pkg.name}`);
   }
 
   console.log('🎉 Database seed completed!');

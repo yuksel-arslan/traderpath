@@ -5,7 +5,7 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from './database';
-import { redis } from './cache';
+import { cache, getCacheStatus } from './cache';
 import { logger } from './logger';
 
 // ===========================================
@@ -28,6 +28,7 @@ interface ComponentHealth {
   status: 'up' | 'down';
   latency?: number;
   error?: string;
+  type?: 'redis' | 'memory';
 }
 
 interface ExternalServicesHealth {
@@ -97,17 +98,20 @@ async function checkDatabase(): Promise<ComponentHealth> {
 
 async function checkCache(): Promise<ComponentHealth> {
   const start = Date.now();
+  const cacheStatus = getCacheStatus();
   try {
-    await redis.ping();
+    await cache.ping();
     return {
       status: 'up',
       latency: Date.now() - start,
+      type: cacheStatus.type,
     };
   } catch (error) {
     logger.error({ error }, 'Cache health check failed');
     return {
       status: 'down',
       error: error instanceof Error ? error.message : 'Unknown error',
+      type: cacheStatus.type,
     };
   }
 }

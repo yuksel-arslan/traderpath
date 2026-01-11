@@ -385,6 +385,163 @@ export interface ConfidenceFactor {
 }
 
 // ===========================================
+// Detailed Report Types (3D Matrix Based)
+// ===========================================
+
+/**
+ * Indicator Chart Data for rendering line charts in Detailed Report
+ */
+export interface IndicatorChartData {
+  name: string;
+  category: 'trend' | 'momentum' | 'volatility' | 'volume' | 'advanced';
+  values: number[];
+  timestamps: number[];
+  currentValue: number;
+  signal: 'bullish' | 'bearish' | 'neutral';
+  signalStrength: number;
+  interpretation: string;
+  chartColor: string;
+  // For indicators with multiple lines (e.g., MACD, Bollinger)
+  secondaryValues?: number[];
+  secondaryLabel?: string;
+  thirdValues?: number[];
+  thirdLabel?: string;
+  // Reference lines (e.g., RSI 30/70, MACD zero line)
+  referenceLines?: { value: number; label: string; color: string }[];
+  // Metadata for advanced display
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Step Input Data - what data was used for this step
+ */
+export interface StepInputData {
+  timeframes: {
+    timeframe: string;
+    candleCount: number;
+    priority: 'primary' | 'secondary' | 'confirmation';
+    dataRange: {
+      startTime: number;
+      endTime: number;
+    };
+  }[];
+  indicators: {
+    name: string;
+    category: string;
+    params: Record<string, number>;
+    weight: number;
+  }[];
+  tradeType: 'scalping' | 'dayTrade' | 'swing';
+  aiPromptFocus: string;
+}
+
+/**
+ * Step Output Data - what was calculated/determined
+ */
+export interface StepOutputData {
+  indicators: Record<string, {
+    value: number | null;
+    signal: 'bullish' | 'bearish' | 'neutral';
+    strength: number;
+    metadata?: Record<string, unknown>;
+  }>;
+  signals: {
+    bullish: string[];
+    bearish: string[];
+    neutral: string[];
+  };
+  stepScore: number;
+  stepConfidence: number;
+  keyFindings: string[];
+}
+
+/**
+ * Step Commentary - AI analysis and interpretation
+ */
+export interface StepCommentary {
+  summary: string;
+  signalInterpretation: string;
+  riskFactors: string[];
+  opportunities: string[];
+  recommendation: string;
+  aiExpertInsight?: string;
+}
+
+/**
+ * Complete Step Detail for Detailed Report
+ */
+export interface DetailedStepData {
+  stepNumber: number;
+  stepName: string;
+  stepDescription: string;
+  input: StepInputData;
+  output: StepOutputData;
+  commentary: StepCommentary;
+  indicatorCharts: IndicatorChartData[];
+}
+
+/**
+ * Full Detailed Report Data Structure
+ */
+export interface DetailedReportData {
+  // Header info
+  symbol: string;
+  tradeType: 'scalping' | 'dayTrade' | 'swing';
+  generatedAt: string;
+  analysisId: string;
+
+  // Market context
+  marketContext: {
+    btcPrice: number;
+    btcDominance: number;
+    fearGreedIndex: number;
+    marketTrend: 'bullish' | 'bearish' | 'neutral';
+  };
+
+  // Current asset info
+  assetInfo: {
+    currentPrice: number;
+    priceChange24h: number;
+    volume24h: number;
+    marketCap?: number;
+  };
+
+  // All 7 steps with detailed data
+  steps: DetailedStepData[];
+
+  // Trade Plan Summary
+  tradePlanSummary: {
+    direction: 'long' | 'short';
+    entries: { price: number; percentage: number }[];
+    averageEntry: number;
+    stopLoss: { price: number; percentage: number; reason: string };
+    takeProfits: { price: number; percentage: number; reason: string }[];
+    riskReward: number;
+    winRateEstimate: number;
+  };
+
+  // Final Verdict
+  verdict: {
+    action: 'go' | 'conditional_go' | 'wait' | 'avoid';
+    overallScore: number;
+    overallConfidence: number;
+    direction: 'long' | 'short' | null;
+    reasons: string[];
+    aiSummary?: string;
+  };
+
+  // AI Expert Comments
+  aiExpertComments?: {
+    expertName: string;
+    role: string;
+    comment: string;
+  }[];
+
+  // Chart image for trade plan visualization
+  chartImage?: string;
+}
+
+// ===========================================
 // Rewards & Achievements
 // ===========================================
 

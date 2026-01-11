@@ -5,25 +5,31 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { stripeService, CREDIT_PACKAGES } from './stripe.service';
+import { stripeService } from './stripe.service';
 import { authenticate } from '../../core/auth/middleware';
 import { prisma } from '../../core/database';
 
 export default async function paymentRoutes(app: FastifyInstance) {
   /**
    * GET /api/payments/packages
-   * Get available credit packages
+   * Get available credit packages from database
    */
   app.get('/packages', async (_request: FastifyRequest, reply: FastifyReply) => {
-    // Return packages without sensitive data
-    const packages = CREDIT_PACKAGES.map((pkg) => ({
+    // Get active packages from database
+    const dbPackages = await prisma.creditPackage.findMany({
+      where: { isActive: true },
+      orderBy: { priceUsd: 'asc' },
+    });
+
+    // Format packages for frontend
+    const packages = dbPackages.map((pkg) => ({
       id: pkg.id,
       name: pkg.name,
       credits: pkg.credits,
-      bonus: pkg.bonus,
-      price: pkg.priceDisplay,
-      perCredit: pkg.perCredit,
-      popular: pkg.popular || false,
+      bonus: pkg.bonusCredits,
+      price: `$${Number(pkg.priceUsd).toFixed(2)}`,
+      perCredit: `$${Number(pkg.pricePerCredit).toFixed(2)}`,
+      popular: pkg.isPopular,
     }));
 
     return reply.send({
@@ -37,7 +43,7 @@ export default async function paymentRoutes(app: FastifyInstance) {
    * Create Stripe checkout session
    */
   const checkoutSchema = z.object({
-    packageId: z.enum(['starter', 'trader', 'pro', 'whale']),
+    packageId: z.string().uuid(),
   });
 
   app.post(
@@ -47,16 +53,28 @@ export default async function paymentRoutes(app: FastifyInstance) {
       const userId = request.user!.id;
       const body = checkoutSchema.parse(request.body);
 
-      // Get user email
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { email: true },
-      });
+      // Get user email and package in parallel
+      const [user, pkg] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true },
+        }),
+        prisma.creditPackage.findUnique({
+          where: { id: body.packageId, isActive: true },
+        }),
+      ]);
 
       if (!user) {
         return reply.code(404).send({
           success: false,
           error: { code: 'USER_NOT_FOUND', message: 'User not found' },
+        });
+      }
+
+      if (!pkg) {
+        return reply.code(404).send({
+          success: false,
+          error: { code: 'PACKAGE_NOT_FOUND', message: 'Package not found or inactive' },
         });
       }
 
@@ -66,7 +84,13 @@ export default async function paymentRoutes(app: FastifyInstance) {
         const session = await stripeService.createCheckoutSession({
           userId,
           userEmail: user.email,
-          packageId: body.packageId,
+          package: {
+            id: pkg.id,
+            name: pkg.name,
+            credits: pkg.credits,
+            bonusCredits: pkg.bonusCredits,
+            priceUsd: Number(pkg.priceUsd),
+          },
           successUrl: `${appUrl}/credits/success?session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${appUrl}/credits?canceled=true`,
         });
