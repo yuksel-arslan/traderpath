@@ -536,8 +536,22 @@ export default function AIExpertChatPage() {
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error?.message || 'Failed to get response');
+        // Read body as text first, then try to parse as JSON
+        const text = await res.text().catch(() => '');
+        let errorMessage = 'Failed to get response';
+
+        try {
+          const error = JSON.parse(text);
+          errorMessage = error.error?.message || errorMessage;
+        } catch {
+          // Response wasn't JSON (e.g., "Internal Server Error")
+          if (text) {
+            errorMessage = text.includes('Internal')
+              ? 'Server error occurred. Please try again.'
+              : text;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       return res.json();

@@ -3653,21 +3653,29 @@ Explain the key risks and what conditions would need to change before trading th
           if (data.length < 50) return null;
 
           // Find price range
-          const highs = data.map((d: { high: number }) => d.high);
-          const lows = data.map((d: { low: number }) => d.low);
+          const highs = data.map((d: { high: number }) => d.high ?? 0).filter(v => isFinite(v));
+          const lows = data.map((d: { low: number }) => d.low ?? 0).filter(v => isFinite(v));
+          if (highs.length === 0 || lows.length === 0) return null;
           const maxPrice = Math.max(...highs);
           const minPrice = Math.min(...lows);
           const priceRange = maxPrice - minPrice;
+
+          // Guard against zero price range
+          if (priceRange === 0 || !isFinite(priceRange)) return null;
+
           const numBins = 20;
           const binSize = priceRange / numBins;
+
+          // Guard against zero bin size
+          if (binSize === 0 || !isFinite(binSize)) return null;
 
           // Create volume profile bins
           const volumeProfile: number[] = new Array(numBins).fill(0);
           for (const candle of data) {
             const d = candle as { high: number; low: number; close: number; volume: number };
             const avgPrice = (d.high + d.low + d.close) / 3;
-            const binIndex = Math.min(numBins - 1, Math.floor((avgPrice - minPrice) / binSize));
-            volumeProfile[binIndex] += d.volume;
+            const binIndex = Math.min(numBins - 1, Math.max(0, Math.floor((avgPrice - minPrice) / binSize)));
+            volumeProfile[binIndex] += d.volume || 0;
           }
 
           // Find POC (Point of Control) - price level with highest volume
@@ -3715,22 +3723,28 @@ Explain the key risks and what conditions would need to change before trading th
         if (upperName === 'KVO' || upperName === 'KLINGER') {
           if (data.length < 55) return null;
 
-          const hlc3 = data.map((d: { high: number; low: number; close: number }) => (d.high + d.low + d.close) / 3);
+          const hlc3 = data.map((d: { high: number; low: number; close: number }) =>
+            ((d.high ?? 0) + (d.low ?? 0) + (d.close ?? 0)) / 3
+          );
           const dm: number[] = [];
           const trend: number[] = [];
           const vf: number[] = [];
 
           for (let i = 1; i < data.length; i++) {
-            const curr = data[i] as { high: number; low: number; close: number; volume: number };
-            const prev = data[i - 1] as { high: number; low: number; close: number };
-            dm.push(curr.high - curr.low);
-            trend.push(hlc3[i] > hlc3[i - 1] ? 1 : -1);
+            const curr = data[i] as { high?: number; low?: number; close?: number; volume?: number };
+            const prev = data[i - 1] as { high?: number; low?: number; close?: number };
+            if (!curr || !prev) continue;
+
+            dm.push((curr.high ?? 0) - (curr.low ?? 0));
+            const currHlc3 = hlc3[i] ?? 0;
+            const prevHlc3 = hlc3[i - 1] ?? 0;
+            trend.push(currHlc3 > prevHlc3 ? 1 : -1);
 
             const cm = dm[dm.length - 1] ?? 0;
             const prevCm = dm[dm.length - 2] ?? cm;
             const cmRatio = prevCm !== 0 ? Math.abs((cm - prevCm) / prevCm) : 0;
             const trendVal = trend[trend.length - 1] ?? 1;
-            vf.push(curr.volume * Math.abs(2 * cmRatio - 1) * trendVal * 100);
+            vf.push((curr.volume || 0) * Math.abs(2 * cmRatio - 1) * trendVal * 100);
           }
 
           // EMA of VF
@@ -3743,6 +3757,9 @@ Explain the key risks and what conditions would need to change before trading th
             return ema;
           };
 
+          // Guard against empty vf array
+          if (vf.length < 55) return null;
+
           const ema34 = calcEma(vf, 34);
           const ema55 = calcEma(vf, 55);
 
@@ -3752,9 +3769,10 @@ Explain the key risks and what conditions would need to change before trading th
           }
 
           // Signal line (13-period EMA)
+          if (kvoValues.length === 0) return null;
           const signalLine = calcEma(kvoValues, 13);
 
-          if (kvoValues.length === 0) return null;
+          if (signalLine.length === 0) return null;
           const currentKvo = kvoValues[kvoValues.length - 1] ?? 0;
           const currentSignal = signalLine[signalLine.length - 1] ?? 0;
 
@@ -3776,7 +3794,7 @@ Explain the key risks and what conditions would need to change before trading th
           const emaPeriod = 9, sumPeriod = 25;
           if (data.length < emaPeriod * 2 + sumPeriod) return null;
 
-          const hlRange = data.map((d: { high: number; low: number }) => d.high - d.low);
+          const hlRange = data.map((d: { high: number; low: number }) => (d.high ?? 0) - (d.low ?? 0));
 
           // Calculate single EMA
           const calcEma = (values: number[], period: number) => {
@@ -3828,11 +3846,15 @@ Explain the key risks and what conditions would need to change before trading th
           const longPeriod = 25, shortPeriod = 13, signalPeriod = 7;
           if (data.length < longPeriod + shortPeriod + signalPeriod) return null;
 
-          const closes = data.map((d: { close: number }) => d.close);
+          const closes = data.map((d: { close: number }) => d.close ?? 0);
           const changes: number[] = [];
           for (let i = 1; i < closes.length; i++) {
-            changes.push(closes[i] - closes[i - 1]);
+            const curr = closes[i] ?? 0;
+            const prev = closes[i - 1] ?? 0;
+            changes.push(curr - prev);
           }
+
+          if (changes.length < longPeriod) return null;
 
           // Double-smooth the price change
           const calcEma = (values: number[], period: number) => {
@@ -3892,14 +3914,15 @@ Explain the key risks and what conditions would need to change before trading th
           const signalPeriod = 9;
           if (data.length < roc4 + sma4 + signalPeriod) return null;
 
-          const closes = data.map((d: { close: number }) => d.close);
+          const closes = data.map((d: { close: number }) => d.close ?? 0);
 
           // Calculate ROC for each period
           const calcRoc = (period: number): number[] => {
             const roc: number[] = [];
             for (let i = period; i < closes.length; i++) {
-              const prev = closes[i - period];
-              roc.push(prev !== 0 ? ((closes[i] - prev) / prev) * 100 : 0);
+              const curr = closes[i] ?? 0;
+              const prev = closes[i - period] ?? 0;
+              roc.push(prev !== 0 ? ((curr - prev) / prev) * 100 : 0);
             }
             return roc;
           };
@@ -3970,22 +3993,30 @@ Explain the key risks and what conditions would need to change before trading th
           let anchorIdx = 0;
           let lowestLow = Infinity;
           for (let i = 0; i < recentData.length; i++) {
-            const d = recentData[i] as { low: number };
-            if (d.low < lowestLow) {
-              lowestLow = d.low;
+            const d = recentData[i] as { low?: number };
+            const low = d?.low ?? Infinity;
+            if (low < lowestLow) {
+              lowestLow = low;
               anchorIdx = i;
             }
           }
+
+          // Guard against no valid anchor found
+          if (!isFinite(lowestLow)) return null;
 
           // Calculate VWAP from anchor
           const avwapValues: number[] = [];
           let cumVolume = 0, cumVwap = 0;
 
           for (let i = anchorIdx; i < recentData.length; i++) {
-            const d = recentData[i] as { high: number; low: number; close: number; volume: number };
-            const typicalPrice = (d.high + d.low + d.close) / 3;
-            cumVolume += d.volume;
-            cumVwap += typicalPrice * d.volume;
+            const d = recentData[i] as { high?: number; low?: number; close?: number; volume?: number };
+            const high = d?.high ?? 0;
+            const low = d?.low ?? 0;
+            const close = d?.close ?? 0;
+            const volume = d?.volume ?? 0;
+            const typicalPrice = (high + low + close) / 3;
+            cumVolume += volume;
+            cumVwap += typicalPrice * volume;
             avwapValues.push(cumVolume > 0 ? cumVwap / cumVolume : typicalPrice);
           }
 
@@ -4009,7 +4040,7 @@ Explain the key risks and what conditions would need to change before trading th
           const fast = 12, slow = 26;
           if (data.length < slow) return null;
 
-          const closes = data.map((d: { close: number }) => d.close);
+          const closes = data.map((d: { close: number }) => d.close ?? 0);
 
           const calcEma = (values: number[], period: number) => {
             const mult = 2 / (period + 1);
