@@ -177,6 +177,12 @@ interface RecentOutcome {
   takeProfit1?: number;
   takeProfit2?: number;
   takeProfit3?: number;
+  // NEW: Target progress and outcome
+  tpProgress?: number;
+  distanceToTP1?: number;
+  distanceToSL?: number;
+  outcomePrice?: number;
+  outcomeAt?: string;
 }
 
 // ===========================================
@@ -658,12 +664,20 @@ export default function DashboardPage() {
           else if (a.interval === '1h' || a.interval === '4h') tradeType = 'dayTrade';
           else if (a.interval === '1d' || a.interval === '1D') tradeType = 'swing';
 
+          // Map outcome from API to our enum
+          let outcomeStatus: 'correct' | 'incorrect' | 'pending' = 'pending';
+          if (a.outcome === 'tp1_hit' || a.outcome === 'tp2_hit' || a.outcome === 'tp3_hit') {
+            outcomeStatus = 'correct';
+          } else if (a.outcome === 'sl_hit') {
+            outcomeStatus = 'incorrect';
+          }
+
           return {
             id: a.id,
             symbol: a.symbol,
             verdict,
             score: a.totalScore || 0,
-            outcome: 'pending' as const, // analyses don't track outcome yet
+            outcome: outcomeStatus,
             priceChange: a.unrealizedPnL,
             createdAt: a.createdAt, // Raw ISO date
             createdAtDisplay: new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -677,6 +691,12 @@ export default function DashboardPage() {
             takeProfit1: a.takeProfit1,
             takeProfit2: a.takeProfit2,
             takeProfit3: a.takeProfit3,
+            // NEW: Target progress from API
+            tpProgress: a.tpProgress,
+            distanceToTP1: a.distanceToTP1,
+            distanceToSL: a.distanceToSL,
+            outcomePrice: a.outcomePrice,
+            outcomeAt: a.outcomeAt,
           };
         });
         setRecentOutcomes(newRecentOutcomes);
@@ -1869,37 +1889,46 @@ export default function DashboardPage() {
 
                         <div className="text-gray-300 dark:text-muted-foreground/30">|</div>
 
-                        {/* TP Progress */}
+                        {/* TP Progress - Use API value or calculate */}
                         {(() => {
-                          // Calculate TP progress
-                          let tpProgress = 0;
-                          if (outcome.outcome === 'correct') {
-                            tpProgress = 100;
-                          } else if (outcome.entryPrice && outcome.currentPrice && outcome.takeProfit1) {
-                            const isLong = outcome.direction === 'long' || outcome.direction === 'LONG';
-                            const totalDistance = isLong
-                              ? (outcome.takeProfit1 - outcome.entryPrice)
-                              : (outcome.entryPrice - outcome.takeProfit1);
-                            const coveredDistance = isLong
-                              ? (outcome.currentPrice - outcome.entryPrice)
-                              : (outcome.entryPrice - outcome.currentPrice);
-                            tpProgress = totalDistance !== 0
-                              ? Math.min(100, Math.max(0, (coveredDistance / totalDistance) * 100))
-                              : 0;
-                          }
+                          // Use tpProgress from API if available
+                          const tpProgress = outcome.tpProgress ?? (() => {
+                            if (outcome.outcome === 'correct') return 100;
+                            if (outcome.entryPrice && outcome.currentPrice && outcome.takeProfit1) {
+                              const isLong = outcome.direction === 'long' || outcome.direction === 'LONG';
+                              const totalDistance = isLong
+                                ? (outcome.takeProfit1 - outcome.entryPrice)
+                                : (outcome.entryPrice - outcome.takeProfit1);
+                              const coveredDistance = isLong
+                                ? (outcome.currentPrice - outcome.entryPrice)
+                                : (outcome.entryPrice - outcome.currentPrice);
+                              return totalDistance !== 0
+                                ? Math.min(100, Math.max(0, (coveredDistance / totalDistance) * 100))
+                                : 0;
+                            }
+                            return 0;
+                          })();
+
+                          // Check if TP was hit
+                          const isTPHit = outcome.outcome === 'correct';
+                          const isSLHit = outcome.outcome === 'incorrect';
 
                           return (
                             <div className={cn(
                               "text-center px-2 py-1 rounded-lg flex-1",
+                              isTPHit ? "bg-green-200 dark:bg-green-500/30 ring-2 ring-green-500" :
+                              isSLHit ? "bg-red-200 dark:bg-red-500/30 ring-2 ring-red-500" :
                               tpProgress >= 80 ? "bg-green-100 dark:bg-green-500/20" :
                               tpProgress >= 50 ? "bg-yellow-100 dark:bg-yellow-500/20" : "bg-blue-100 dark:bg-blue-500/20"
                             )}>
                               <div className="text-[9px] text-gray-500 dark:text-muted-foreground flex items-center justify-center gap-0.5">
                                 <Target className="w-2.5 h-2.5" />
-                                TP
+                                {isTPHit ? 'TP HIT!' : isSLHit ? 'SL HIT' : 'TP'}
                               </div>
                               <div className={cn(
                                 "font-bold text-xs",
+                                isTPHit ? "text-green-600 dark:text-green-300" :
+                                isSLHit ? "text-red-600 dark:text-red-300" :
                                 tpProgress >= 80 ? "text-green-600 dark:text-green-400" :
                                 tpProgress >= 50 ? "text-yellow-600 dark:text-yellow-400" : "text-blue-600 dark:text-blue-400"
                               )}>
@@ -1908,6 +1937,19 @@ export default function DashboardPage() {
                             </div>
                           );
                         })()}
+
+                        {/* Distance to Target */}
+                        {outcome.distanceToTP1 !== undefined && outcome.distanceToTP1 !== null && (
+                          <>
+                            <div className="text-gray-300 dark:text-muted-foreground/30">|</div>
+                            <div className="text-center px-2 py-1 rounded-lg bg-purple-100 dark:bg-purple-500/20 flex-1">
+                              <div className="text-[9px] text-gray-500 dark:text-muted-foreground">Hedefe</div>
+                              <div className="font-bold text-xs text-purple-600 dark:text-purple-400">
+                                {outcome.distanceToTP1 > 0 ? '+' : ''}{outcome.distanceToTP1.toFixed(1)}%
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -1938,22 +1980,26 @@ export default function DashboardPage() {
                     {/* Table Body - Max 5 rows visible, vertical scroll */}
                     <div className="divide-y divide-gray-200 dark:divide-white/5 max-h-[220px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
                       {filteredOutcomes.map((outcome) => {
-                        // Calculate TP Progress
-                        let tpProgress = 0;
-                        if (outcome.outcome === 'correct') {
-                          tpProgress = 100;
-                        } else if (outcome.entryPrice && outcome.currentPrice && outcome.takeProfit1) {
-                          const isLong = outcome.direction === 'long' || outcome.direction === 'LONG';
-                          const totalDistance = isLong
-                            ? (outcome.takeProfit1 - outcome.entryPrice)
-                            : (outcome.entryPrice - outcome.takeProfit1);
-                          const coveredDistance = isLong
-                            ? (outcome.currentPrice - outcome.entryPrice)
-                            : (outcome.entryPrice - outcome.currentPrice);
-                          tpProgress = totalDistance !== 0
-                            ? Math.min(100, Math.max(0, (coveredDistance / totalDistance) * 100))
-                            : 0;
-                        }
+                        // Use tpProgress from API if available, otherwise calculate
+                        const tpProgress = outcome.tpProgress ?? (() => {
+                          if (outcome.outcome === 'correct') return 100;
+                          if (outcome.entryPrice && outcome.currentPrice && outcome.takeProfit1) {
+                            const isLong = outcome.direction === 'long' || outcome.direction === 'LONG';
+                            const totalDistance = isLong
+                              ? (outcome.takeProfit1 - outcome.entryPrice)
+                              : (outcome.entryPrice - outcome.takeProfit1);
+                            const coveredDistance = isLong
+                              ? (outcome.currentPrice - outcome.entryPrice)
+                              : (outcome.entryPrice - outcome.currentPrice);
+                            return totalDistance !== 0
+                              ? Math.min(100, Math.max(0, (coveredDistance / totalDistance) * 100))
+                              : 0;
+                          }
+                          return 0;
+                        })();
+
+                        const isTPHit = outcome.outcome === 'correct';
+                        const isSLHit = outcome.outcome === 'incorrect';
 
                         return (
                           <div
@@ -2045,6 +2091,8 @@ export default function DashboardPage() {
                             <div className="flex items-center justify-center">
                               <span className={cn(
                                 "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                                isTPHit ? "bg-green-300/80 dark:bg-green-500/30 text-green-700 dark:text-green-300 ring-1 ring-green-500" :
+                                isSLHit ? "bg-red-300/80 dark:bg-red-500/30 text-red-700 dark:text-red-300 ring-1 ring-red-500" :
                                 tpProgress >= 80 ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400" :
                                 tpProgress >= 50 ? "bg-yellow-200/80 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400" :
                                 "bg-blue-200/80 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"

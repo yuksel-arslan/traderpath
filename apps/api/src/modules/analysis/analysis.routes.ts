@@ -738,6 +738,9 @@ Explain the key risks and what conditions would need to change before trading th
           totalScore: true,
           step5Result: true, // tradePlan
           step7Result: true, // verdict
+          outcome: true, // TP/SL hit status
+          outcomePrice: true,
+          outcomeAt: true,
           createdAt: true,
           expiresAt: true,
         },
@@ -796,7 +799,9 @@ Explain the key risks and what conditions would need to change before trading th
       const allNextCloses = Object.values(nextCandleCloses);
       const nextRefresh = allNextCloses.length > 0 ? Math.min(...allNextCloses) : null;
 
-      // Enrich analyses with current price and P/L
+      // Enrich analyses with current price, P/L, and TP/SL hit detection
+      const analysesToUpdate: Array<{ id: string; outcome: string; outcomePrice: number }> = [];
+
       const enrichedAnalyses = analyses.map(a => {
         const tradePlan = a.step5Result as Record<string, unknown> | null;
         const verdictData = a.step7Result as Record<string, unknown> | null;
@@ -814,6 +819,55 @@ Explain the key risks and what conditions would need to change before trading th
         const stopLossData = tradePlan?.stopLoss as Record<string, unknown> | null;
         const takeProfits = tradePlan?.takeProfits as Array<{ price: number }> | null;
 
+        const stopLoss = stopLossData?.price as number || null;
+        const tp1 = takeProfits?.[0]?.price || null;
+        const tp2 = takeProfits?.[1]?.price || null;
+        const tp3 = takeProfits?.[2]?.price || null;
+
+        // Calculate target progress (% towards TP1)
+        let tpProgress: number | null = null;
+        let distanceToTP1: number | null = null;
+        let distanceToSL: number | null = null;
+
+        if (entryPrice && currentPrice && tp1) {
+          const isLong = direction === 'long';
+          const totalDistance = isLong ? (tp1 - entryPrice) : (entryPrice - tp1);
+          const coveredDistance = isLong ? (currentPrice - entryPrice) : (entryPrice - currentPrice);
+          tpProgress = totalDistance !== 0 ? Math.min(100, Math.max(-100, (coveredDistance / totalDistance) * 100)) : 0;
+          distanceToTP1 = ((tp1 - currentPrice) / currentPrice) * 100;
+        }
+
+        if (currentPrice && stopLoss) {
+          distanceToSL = ((stopLoss - currentPrice) / currentPrice) * 100;
+        }
+
+        // Check if TP/SL was hit (only if not already recorded)
+        let outcome = a.outcome;
+        let outcomePrice = a.outcomePrice ? Number(a.outcomePrice) : null;
+
+        if (!outcome && entryPrice && currentPrice) {
+          const isLong = direction === 'long';
+
+          // Check TPs (highest first for better outcome)
+          if (tp3 && (isLong ? currentPrice >= tp3 : currentPrice <= tp3)) {
+            outcome = 'tp3_hit';
+            outcomePrice = currentPrice;
+            analysesToUpdate.push({ id: a.id, outcome, outcomePrice });
+          } else if (tp2 && (isLong ? currentPrice >= tp2 : currentPrice <= tp2)) {
+            outcome = 'tp2_hit';
+            outcomePrice = currentPrice;
+            analysesToUpdate.push({ id: a.id, outcome, outcomePrice });
+          } else if (tp1 && (isLong ? currentPrice >= tp1 : currentPrice <= tp1)) {
+            outcome = 'tp1_hit';
+            outcomePrice = currentPrice;
+            analysesToUpdate.push({ id: a.id, outcome, outcomePrice });
+          } else if (stopLoss && (isLong ? currentPrice <= stopLoss : currentPrice >= stopLoss)) {
+            outcome = 'sl_hit';
+            outcomePrice = currentPrice;
+            analysesToUpdate.push({ id: a.id, outcome, outcomePrice });
+          }
+        }
+
         return {
           id: a.id,
           symbol: a.symbol,
@@ -823,10 +877,17 @@ Explain the key risks and what conditions would need to change before trading th
           entryPrice,
           currentPrice,
           unrealizedPnL,
-          stopLoss: stopLossData?.price || null,
-          takeProfit1: takeProfits?.[0]?.price || null,
-          takeProfit2: takeProfits?.[1]?.price || null,
-          takeProfit3: takeProfits?.[2]?.price || null,
+          stopLoss,
+          takeProfit1: tp1,
+          takeProfit2: tp2,
+          takeProfit3: tp3,
+          // NEW: Target progress and distance fields
+          tpProgress,
+          distanceToTP1,
+          distanceToSL,
+          outcome,
+          outcomePrice,
+          outcomeAt: a.outcomeAt,
           verdict: verdictData?.verdict || 'N/A',
           hasTradePlan: !!tradePlan && !!entryPrice,
           nextCandleClose: a.interval ? nextCandleCloses[a.interval] : null,
@@ -834,6 +895,22 @@ Explain the key risks and what conditions would need to change before trading th
           expiresAt: a.expiresAt,
         };
       });
+
+      // Update analyses with new outcomes (fire and forget)
+      if (analysesToUpdate.length > 0) {
+        Promise.all(
+          analysesToUpdate.map(update =>
+            app.prisma.analysis.update({
+              where: { id: update.id },
+              data: {
+                outcome: update.outcome,
+                outcomePrice: update.outcomePrice,
+                outcomeAt: new Date(),
+              },
+            })
+          )
+        ).catch(err => console.error('Failed to update analysis outcomes:', err));
+      }
 
       return reply.send({
         success: true,

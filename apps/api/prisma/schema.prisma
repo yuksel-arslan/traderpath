@@ -423,11 +423,17 @@ model Analysis {
   totalScore     Decimal? @map("total_score") @db.Decimal(3, 1)
   creditsSpent   Int      @default(0) @map("credits_spent")
 
+  // Outcome tracking for TP/SL hit detection
+  outcome            String?   @db.VarChar(20) // 'tp1_hit', 'tp2_hit', 'tp3_hit', 'sl_hit', 'pending'
+  outcomePrice       Decimal?  @map("outcome_price") @db.Decimal(20, 8) // Price when TP/SL was hit
+  outcomeAt          DateTime? @map("outcome_at") // When outcome was determined
+
   createdAt      DateTime @default(now()) @map("created_at")
   expiresAt      DateTime @default(dbgenerated("NOW() + INTERVAL '24 hours'")) @map("expires_at")
 
   @@index([userId])
   @@index([symbol])
+  @@index([outcome])
   @@map("analyses")
 }
 
