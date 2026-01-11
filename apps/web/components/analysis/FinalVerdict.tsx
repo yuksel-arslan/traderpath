@@ -39,21 +39,67 @@ interface MarketPulseData {
   aiSummary?: string;
 }
 
+// Indicator detail type for AI context
+interface IndicatorDetailForContext {
+  name: string;
+  value: number | string | null;
+  signal: string;
+  signalStrength: string;
+  interpretation: string;
+  isLeadingIndicator: boolean;
+}
+
+interface IndicatorAnalysisForContext {
+  trend?: Record<string, IndicatorDetailForContext | undefined>;
+  momentum?: Record<string, IndicatorDetailForContext | undefined>;
+  volatility?: Record<string, IndicatorDetailForContext | undefined>;
+  volume?: Record<string, IndicatorDetailForContext | undefined>;
+  advanced?: Record<string, IndicatorDetailForContext | undefined>;
+  divergences?: Array<{
+    type: string;
+    indicator: string;
+    description: string;
+    reliability: string;
+    isEarlySignal: boolean;
+  }>;
+  summary?: {
+    bullishIndicators: number;
+    bearishIndicators: number;
+    neutralIndicators: number;
+    totalIndicatorsUsed: number;
+    overallSignal: string;
+    signalConfidence: number;
+    leadingIndicatorsSignal: string;
+  };
+}
+
 interface AssetScannerData {
   currentPrice?: number;
   priceChange24h?: number;
   indicators?: { rsi?: number; macd?: { histogram?: number } };
   levels?: { support?: number[]; resistance?: number[] };
   aiInsight?: string;
+  indicatorDetails?: IndicatorAnalysisForContext;
 }
 
 interface SafetyCheckData {
   riskLevel?: string;
   manipulation?: { pumpDumpRisk?: string };
-  whaleActivity?: { bias?: string };
+  whaleActivity?: { bias?: string; orderFlowImbalance?: number; orderFlowBias?: string };
   smartMoney?: { positioning?: string };
   warnings?: string[];
   aiInsight?: string;
+  advancedMetrics?: {
+    volumeSpike?: boolean;
+    volumeSpikeFactor?: number;
+    relativeVolume?: number;
+    pvt?: number;
+    pvtTrend?: string;
+    pvtMomentum?: number;
+    historicalVolatility?: number;
+    liquidityScore?: number;
+  };
+  indicatorDetails?: IndicatorAnalysisForContext;
 }
 
 interface TimingData {
@@ -156,6 +202,52 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
       }
       if (assetScanner.levels?.support?.length) sections.push(`- Support: $${assetScanner.levels.support[0]?.toLocaleString()}`);
       if (assetScanner.levels?.resistance?.length) sections.push(`- Resistance: $${assetScanner.levels.resistance[0]?.toLocaleString()}`);
+
+      // Add detailed indicator analysis
+      if (assetScanner.indicatorDetails) {
+        sections.push('');
+        sections.push('[DETAILED INDICATOR ANALYSIS]');
+        const details = assetScanner.indicatorDetails;
+
+        // Summary
+        if (details.summary) {
+          sections.push(`- Overall Signal: ${details.summary.overallSignal?.toUpperCase()} (${details.summary.signalConfidence}% confidence)`);
+          sections.push(`- Leading Indicators Signal: ${details.summary.leadingIndicatorsSignal?.toUpperCase()}`);
+          sections.push(`- Indicators: ${details.summary.bullishIndicators} bullish, ${details.summary.bearishIndicators} bearish, ${details.summary.neutralIndicators} neutral (${details.summary.totalIndicatorsUsed} total)`);
+        }
+
+        // Divergences (Early Signals)
+        if (details.divergences && details.divergences.length > 0) {
+          sections.push('');
+          sections.push('[DIVERGENCES - EARLY WARNING SIGNALS]');
+          details.divergences.forEach(div => {
+            sections.push(`- ${div.type?.toUpperCase()} ${div.indicator} DIVERGENCE: ${div.description} (${div.reliability} reliability)`);
+          });
+        }
+
+        // All indicators with interpretations
+        const addIndicatorDetails = (category: string, indicators: Record<string, IndicatorDetailForContext | undefined> | undefined) => {
+          if (!indicators) return;
+          const activeIndicators = Object.values(indicators).filter((i): i is IndicatorDetailForContext => i !== undefined);
+          if (activeIndicators.length > 0) {
+            sections.push('');
+            sections.push(`[${category.toUpperCase()} INDICATORS]`);
+            activeIndicators.forEach(ind => {
+              const leadingTag = ind.isLeadingIndicator ? ' [LEADING]' : '';
+              sections.push(`- ${ind.name}${leadingTag}: ${ind.signal?.toUpperCase()} (${ind.signalStrength})`);
+              sections.push(`  Value: ${typeof ind.value === 'number' ? ind.value.toFixed(2) : ind.value}`);
+              sections.push(`  Interpretation: ${ind.interpretation}`);
+            });
+          }
+        };
+
+        addIndicatorDetails('TREND', details.trend);
+        addIndicatorDetails('MOMENTUM', details.momentum);
+        addIndicatorDetails('VOLATILITY', details.volatility);
+        addIndicatorDetails('VOLUME', details.volume);
+        addIndicatorDetails('ADVANCED', details.advanced);
+      }
+
       if (assetScanner.aiInsight) sections.push(`- AI Insight: ${assetScanner.aiInsight}`);
     } else {
       sections.push('- Data not available');
@@ -168,7 +260,57 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
       if (safetyCheck.riskLevel) sections.push(`- Risk Level: ${safetyCheck.riskLevel.toUpperCase()}`);
       if (safetyCheck.manipulation?.pumpDumpRisk) sections.push(`- Pump and Dump Risk: ${safetyCheck.manipulation.pumpDumpRisk.toUpperCase()}`);
       if (safetyCheck.whaleActivity?.bias) sections.push(`- Whale Activity: ${safetyCheck.whaleActivity.bias.toUpperCase()}`);
+      if (safetyCheck.whaleActivity?.orderFlowImbalance !== undefined) {
+        sections.push(`- Order Flow Imbalance: ${(safetyCheck.whaleActivity.orderFlowImbalance * 100).toFixed(1)}% (${safetyCheck.whaleActivity.orderFlowBias?.toUpperCase() || 'NEUTRAL'})`);
+      }
       if (safetyCheck.smartMoney?.positioning) sections.push(`- Smart Money: ${safetyCheck.smartMoney.positioning.toUpperCase()}`);
+
+      // Advanced Metrics
+      if (safetyCheck.advancedMetrics) {
+        const am = safetyCheck.advancedMetrics;
+        sections.push('');
+        sections.push('[ADVANCED RISK METRICS]');
+        if (am.volumeSpike) sections.push(`- VOLUME SPIKE DETECTED: ${am.volumeSpikeFactor?.toFixed(1)}x normal - caution!`);
+        if (am.relativeVolume !== undefined) sections.push(`- Relative Volume: ${am.relativeVolume.toFixed(2)}x average`);
+        if (am.pvtTrend) sections.push(`- PVT Trend: ${am.pvtTrend.toUpperCase()} (momentum: ${((am.pvtMomentum || 0) * 100).toFixed(2)}%)`);
+        if (am.historicalVolatility !== undefined) sections.push(`- Historical Volatility: ${am.historicalVolatility.toFixed(0)}% annualized`);
+        if (am.liquidityScore !== undefined) sections.push(`- Liquidity Score: ${am.liquidityScore.toFixed(0)}/100`);
+      }
+
+      // Safety Check Indicator Details
+      if (safetyCheck.indicatorDetails) {
+        const details = safetyCheck.indicatorDetails;
+        if (details.summary) {
+          sections.push('');
+          sections.push('[SAFETY INDICATOR SUMMARY]');
+          sections.push(`- Overall Signal: ${details.summary.overallSignal?.toUpperCase()} (${details.summary.signalConfidence}% confidence)`);
+          sections.push(`- Leading Indicators: ${details.summary.leadingIndicatorsSignal?.toUpperCase()}`);
+        }
+
+        // Volume and Advanced indicators from safety check
+        if (details.volume) {
+          const volumeInds = Object.values(details.volume).filter((i): i is IndicatorDetailForContext => i !== undefined);
+          if (volumeInds.length > 0) {
+            sections.push('');
+            sections.push('[VOLUME ANALYSIS]');
+            volumeInds.forEach(ind => {
+              sections.push(`- ${ind.name}: ${ind.signal?.toUpperCase()} - ${ind.interpretation}`);
+            });
+          }
+        }
+
+        if (details.advanced) {
+          const advInds = Object.values(details.advanced).filter((i): i is IndicatorDetailForContext => i !== undefined);
+          if (advInds.length > 0) {
+            sections.push('');
+            sections.push('[ADVANCED ANALYSIS]');
+            advInds.forEach(ind => {
+              sections.push(`- ${ind.name}: ${ind.signal?.toUpperCase()} - ${ind.interpretation}`);
+            });
+          }
+        }
+      }
+
       if (safetyCheck.warnings?.length) sections.push(`- Warnings: ${safetyCheck.warnings.join(', ')}`);
       if (safetyCheck.aiInsight) sections.push(`- AI Insight: ${safetyCheck.aiInsight}`);
     } else {

@@ -5,8 +5,12 @@
 // Matches API response structure
 // ===========================================
 
-import { Target, TrendingUp, TrendingDown, Minus, Brain } from 'lucide-react';
+import { Target, TrendingUp, TrendingDown, Minus, Brain, BarChart3 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { IndicatorDetails } from './IndicatorDetails';
+
+// Import type from the shared types package
+import type { IndicatorAnalysis } from '@tradepath/types';
 
 interface AssetScannerData {
   symbol?: string;
@@ -38,6 +42,8 @@ interface AssetScannerData {
     resistance: number[];
   };
   aiInsight?: string;
+  // New: detailed indicator analysis
+  indicatorDetails?: IndicatorAnalysis;
 }
 
 interface AssetScannerProps {
@@ -165,6 +171,17 @@ export function AssetScanner({ data, symbol }: AssetScannerProps) {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Detailed Indicator Analysis */}
+      {data.indicatorDetails && (
+        <div className="mt-6 pt-6 border-t">
+          <IndicatorDetails
+            data={data.indicatorDetails}
+            title="Technical Indicator Analysis"
+            compact={false}
+          />
         </div>
       )}
 
