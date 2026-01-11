@@ -745,4 +745,4 @@ export async function generateDetailedReport(data: DetailedReportData): Promise<
   };
 }
 
-export type { DetailedReportData, DetailedStepData, IndicatorChartData };
+// Types are already exported via interface declarations above

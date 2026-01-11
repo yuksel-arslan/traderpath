@@ -35,11 +35,111 @@ const REPORT_LANGUAGES = {
 
 const TRANSLATION_CREDIT_COST = 10;
 
+// Detailed Report Data Types (matching DetailedAnalysisReport.tsx)
+interface DetailedIndicatorChartData {
+  name: string;
+  category: 'trend' | 'momentum' | 'volatility' | 'volume' | 'advanced';
+  values: number[];
+  timestamps: number[];
+  currentValue: number;
+  signal: 'bullish' | 'bearish' | 'neutral';
+  signalStrength: number;
+  interpretation: string;
+  chartColor: string;
+  secondaryValues?: number[];
+  secondaryLabel?: string;
+  referenceLines?: { value: number; label: string; color: string }[];
+  metadata?: Record<string, unknown>;
+}
+
+interface DetailedStepData {
+  stepNumber: number;
+  stepName: string;
+  stepDescription: string;
+  input: {
+    timeframes: {
+      timeframe: string;
+      candleCount: number;
+      priority: 'primary' | 'secondary' | 'confirmation';
+      dataRange: { startTime: number; endTime: number };
+    }[];
+    indicators: {
+      name: string;
+      category: string;
+      params: Record<string, number>;
+      weight: number;
+    }[];
+    tradeType: 'scalping' | 'dayTrade' | 'swing';
+    aiPromptFocus: string;
+  };
+  output: {
+    indicators: Record<string, {
+      value: number | null;
+      signal: 'bullish' | 'bearish' | 'neutral';
+      strength: number;
+      metadata?: Record<string, unknown>;
+    }>;
+    signals: {
+      bullish: string[];
+      bearish: string[];
+      neutral: string[];
+    };
+    stepScore: number;
+    stepConfidence: number;
+    keyFindings: string[];
+  };
+  commentary: {
+    summary: string;
+    signalInterpretation: string;
+    riskFactors: string[];
+    opportunities: string[];
+    recommendation: string;
+  };
+  indicatorCharts: DetailedIndicatorChartData[];
+}
+
+interface DetailedReportData {
+  symbol: string;
+  tradeType: 'scalping' | 'dayTrade' | 'swing';
+  generatedAt: string;
+  analysisId: string;
+  marketContext: {
+    btcPrice: number;
+    btcDominance: number;
+    fearGreedIndex: number;
+    marketTrend: 'bullish' | 'bearish' | 'neutral';
+  };
+  assetInfo: {
+    currentPrice: number;
+    priceChange24h: number;
+    volume24h: number;
+  };
+  steps: DetailedStepData[];
+  tradePlanSummary: {
+    direction: 'long' | 'short';
+    entries: { price: number; percentage: number }[];
+    averageEntry: number;
+    stopLoss: { price: number; percentage: number; reason: string };
+    takeProfits: { price: number; percentage: number; reason: string }[];
+    riskReward: number;
+    winRateEstimate: number;
+  };
+  verdict: {
+    action: 'go' | 'conditional_go' | 'wait' | 'avoid';
+    overallScore: number;
+    overallConfidence: number;
+    direction: 'long' | 'short' | null;
+    reasons: string[];
+  };
+  chartImage?: string;
+}
+
 // Define the report data type inline to avoid import issues
 interface AnalysisReportData {
   symbol: string;
   generatedAt: string;
   analysisId: string;
+  tradeType?: 'scalping' | 'dayTrade' | 'swing';
   marketPulse: {
     btcDominance: number;
     fearGreedIndex: number;
@@ -111,6 +211,7 @@ interface DownloadReportButtonProps {
   className?: string;
   defaultLanguage?: string;
   analysisId?: string; // To fetch existing AI Expert comment
+  tradeType?: 'scalping' | 'dayTrade' | 'swing'; // Trade type for detailed report
 }
 
 // Fetch existing AI Expert comment from report
@@ -140,7 +241,7 @@ async function saveReportToDatabase(reportData: AnalysisReportData, interval: st
     if (!token) return false;
 
     // Extract tradeType from reportData if available
-    const tradeType = (reportData as Record<string, unknown>).tradeType as string | undefined;
+    const tradeType = reportData.tradeType;
 
     const response = await fetch('/api/reports', {
       method: 'POST',
@@ -248,6 +349,7 @@ export function DownloadReportButton({
   className,
   defaultLanguage = 'en',
   analysisId,
+  tradeType = 'dayTrade',
 }: DownloadReportButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -294,6 +396,7 @@ export function DownloadReportButton({
         symbol,
         generatedAt: new Date().toLocaleString('tr-TR'),
         analysisId: reportAnalysisId,
+        tradeType,
         marketPulse: (analysisData[1] as AnalysisReportData['marketPulse']) || {
           btcDominance: 0,
           fearGreedIndex: 0,
@@ -396,9 +499,9 @@ export function DownloadReportButton({
         const { generateDetailedReport } = await import('./DetailedAnalysisReport');
 
         // Transform to detailed report format
-        const detailedReportData = {
+        const detailedReportData: DetailedReportData = {
           symbol: reportData.symbol,
-          tradeType: ((analysisData as Record<string, unknown>).tradeType as string || 'dayTrade') as 'scalping' | 'dayTrade' | 'swing',
+          tradeType: tradeType,
           generatedAt: reportData.generatedAt,
           analysisId: reportData.analysisId,
           marketContext: {
@@ -423,7 +526,7 @@ export function DownloadReportButton({
                   { name: 'Fear & Greed', category: 'sentiment', params: {}, weight: 1 },
                   { name: 'BTC Dominance', category: 'market', params: {}, weight: 1 },
                 ],
-                tradeType: ((analysisData as Record<string, unknown>).tradeType as string || 'dayTrade') as 'scalping' | 'dayTrade' | 'swing',
+                tradeType: tradeType,
                 aiPromptFocus: 'Analyze market conditions and sentiment',
               },
               output: {
@@ -462,7 +565,7 @@ export function DownloadReportButton({
                   { name: 'RSI', category: 'momentum', params: { period: 14 }, weight: 1 },
                   { name: 'MACD', category: 'trend', params: {}, weight: 1 },
                 ],
-                tradeType: ((analysisData as Record<string, unknown>).tradeType as string || 'dayTrade') as 'scalping' | 'dayTrade' | 'swing',
+                tradeType: tradeType,
                 aiPromptFocus: 'Analyze asset technical structure',
               },
               output: {
@@ -498,7 +601,7 @@ export function DownloadReportButton({
               input: {
                 timeframes: [{ timeframe: '1h', candleCount: 50, priority: 'primary' as const, dataRange: { startTime: 0, endTime: 0 } }],
                 indicators: [{ name: 'Whale Activity', category: 'advanced', params: {}, weight: 1 }],
-                tradeType: ((analysisData as Record<string, unknown>).tradeType as string || 'dayTrade') as 'scalping' | 'dayTrade' | 'swing',
+                tradeType: tradeType,
                 aiPromptFocus: 'Detect manipulation and assess risk',
               },
               output: {
@@ -533,7 +636,7 @@ export function DownloadReportButton({
               input: {
                 timeframes: [{ timeframe: '1h', candleCount: 50, priority: 'primary' as const, dataRange: { startTime: 0, endTime: 0 } }],
                 indicators: [{ name: 'Momentum', category: 'momentum', params: {}, weight: 1 }],
-                tradeType: ((analysisData as Record<string, unknown>).tradeType as string || 'dayTrade') as 'scalping' | 'dayTrade' | 'swing',
+                tradeType: tradeType,
                 aiPromptFocus: 'Determine optimal entry timing',
               },
               output: {
@@ -566,7 +669,7 @@ export function DownloadReportButton({
               input: {
                 timeframes: [{ timeframe: '4h', candleCount: 50, priority: 'primary' as const, dataRange: { startTime: 0, endTime: 0 } }],
                 indicators: [{ name: 'ATR', category: 'volatility', params: { period: 14 }, weight: 1 }],
-                tradeType: ((analysisData as Record<string, unknown>).tradeType as string || 'dayTrade') as 'scalping' | 'dayTrade' | 'swing',
+                tradeType: tradeType,
                 aiPromptFocus: 'Calculate optimal trade parameters',
               },
               output: {
@@ -600,7 +703,7 @@ export function DownloadReportButton({
               input: {
                 timeframes: [{ timeframe: '1h', candleCount: 50, priority: 'primary' as const, dataRange: { startTime: 0, endTime: 0 } }],
                 indicators: [{ name: 'Divergence', category: 'advanced', params: {}, weight: 1 }],
-                tradeType: ((analysisData as Record<string, unknown>).tradeType as string || 'dayTrade') as 'scalping' | 'dayTrade' | 'swing',
+                tradeType: tradeType,
                 aiPromptFocus: 'Detect potential traps and false signals',
               },
               output: {
@@ -634,7 +737,7 @@ export function DownloadReportButton({
               input: {
                 timeframes: [],
                 indicators: [],
-                tradeType: ((analysisData as Record<string, unknown>).tradeType as string || 'dayTrade') as 'scalping' | 'dayTrade' | 'swing',
+                tradeType: tradeType,
                 aiPromptFocus: 'Provide final trading decision',
               },
               output: {

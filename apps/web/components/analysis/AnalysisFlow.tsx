@@ -704,7 +704,7 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
                       <span>Report saved - View in Reports page</span>
                     </div>
                   )}
-                  <DownloadReportButton analysisData={results} symbol={symbol} analysisId={savedAnalysisId || undefined} />
+                  <DownloadReportButton analysisData={results} symbol={symbol} analysisId={savedAnalysisId || undefined} tradeType={tradeType} />
 
                   {/* Hidden TradePlanChart for PDF capture - positioned off-screen but in DOM */}
                   {results[6] && (
