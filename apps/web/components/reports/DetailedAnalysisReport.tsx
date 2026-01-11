@@ -165,6 +165,25 @@ function getCategoryIcon(category: string): string {
   return icons[category] || icons.trend;
 }
 
+// Safe array access helper - returns empty array if undefined/null
+function safeArray<T>(arr: T[] | undefined | null): T[] {
+  return Array.isArray(arr) ? arr : [];
+}
+
+// Safe object access helper
+function safeStopLoss(sl: { price: number; percentage: number; reason: string } | undefined | null): { price: number; percentage: number; reason: string } {
+  return sl || { price: 0, percentage: 0, reason: '' };
+}
+
+// Safe signals access helper
+function safeSignals(signals: { bullish: string[]; bearish: string[]; neutral: string[] } | undefined | null): { bullish: string[]; bearish: string[]; neutral: string[] } {
+  return {
+    bullish: safeArray(signals?.bullish),
+    bearish: safeArray(signals?.bearish),
+    neutral: safeArray(signals?.neutral),
+  };
+}
+
 // ===========================================
 // SVG LINE CHART GENERATOR
 // ===========================================
@@ -419,10 +438,10 @@ function generateCoverPage(data: DetailedReportData): string {
         </div>
         <div class="trade-item">
           <div class="trade-label">Stop Loss</div>
-          <div class="trade-value stop">${formatPrice(data.tradePlanSummary.stopLoss.price)}</div>
-          <div style="font-size: 7px; color: #dc2626;">-${data.tradePlanSummary.stopLoss.percentage}%</div>
+          <div class="trade-value stop">${formatPrice(safeStopLoss(data.tradePlanSummary?.stopLoss).price)}</div>
+          <div style="font-size: 7px; color: #dc2626;">-${safeStopLoss(data.tradePlanSummary?.stopLoss).percentage}%</div>
         </div>
-        ${data.tradePlanSummary.takeProfits.slice(0, 2).map((tp, i) => `
+        ${safeArray(data.tradePlanSummary?.takeProfits).slice(0, 2).map((tp, i) => `
         <div class="trade-item">
           <div class="trade-label">TP${i + 1}</div>
           <div class="trade-value target">${formatPrice(tp.price)}</div>
@@ -440,11 +459,11 @@ function generateCoverPage(data: DetailedReportData): string {
     <div class="section">
       <div class="section-title">7-Step Analysis Overview</div>
       <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;">
-        ${data.steps.map(step => `
-          <div style="text-align: center; padding: 8px; background: ${step.output.stepScore >= 6 ? '#dcfce7' : step.output.stepScore >= 4 ? '#fef3c7' : '#fee2e2'}; border-radius: 6px;">
-            <div style="font-size: 14px; font-weight: bold; color: ${step.output.stepScore >= 6 ? '#16a34a' : step.output.stepScore >= 4 ? '#d97706' : '#dc2626'};">${safeToFixed(step.output.stepScore, 1)}</div>
+        ${safeArray(data.steps).map(step => `
+          <div style="text-align: center; padding: 8px; background: ${(step.output?.stepScore ?? 0) >= 6 ? '#dcfce7' : (step.output?.stepScore ?? 0) >= 4 ? '#fef3c7' : '#fee2e2'}; border-radius: 6px;">
+            <div style="font-size: 14px; font-weight: bold; color: ${(step.output?.stepScore ?? 0) >= 6 ? '#16a34a' : (step.output?.stepScore ?? 0) >= 4 ? '#d97706' : '#dc2626'};">${safeToFixed(step.output?.stepScore, 1)}</div>
             <div style="font-size: 7px; color: #64748b; margin-top: 2px;">Step ${step.stepNumber}</div>
-            <div style="font-size: 6px; color: #94a3b8;">${step.stepName.split(' ')[0]}</div>
+            <div style="font-size: 6px; color: #94a3b8;">${(step.stepName || '').split(' ')[0]}</div>
           </div>
         `).join('')}
       </div>
@@ -454,7 +473,7 @@ function generateCoverPage(data: DetailedReportData): string {
     <div class="section">
       <div class="section-title">Analysis Summary</div>
       <div class="signal-list">
-        ${data.verdict.reasons.map(r => `
+        ${safeArray(data.verdict?.reasons).map(r => `
           <div class="signal-item ${r.includes('Bullish') ? 'signal-bullish' : r.includes('Bearish') ? 'signal-bearish' : ''}">${r}</div>
         `).join('')}
       </div>
@@ -510,19 +529,19 @@ function generateStepDetailPage(data: DetailedReportData, step: DetailedStepData
         <div class="card">
           <div class="card-title">Timeframes Used</div>
           <div class="input-grid">
-            ${step.input.timeframes.map(tf => `
+            ${safeArray(step.input?.timeframes).map(tf => `
               <div class="input-item">
                 <span class="input-label">${tf.priority}: </span>
                 <span class="input-value">${tf.timeframe} (${tf.candleCount} candles)</span>
               </div>
             `).join('')}
           </div>
-          <div class="card-title" style="margin-top: 10px;">Indicators (${step.input.indicators.length})</div>
+          <div class="card-title" style="margin-top: 10px;">Indicators (${safeArray(step.input?.indicators).length})</div>
           <div style="font-size: 8px; color: #475569;">
-            ${step.input.indicators.map(ind => `<span style="display: inline-block; background: #f1f5f9; padding: 2px 6px; border-radius: 3px; margin: 2px;">${ind.name}</span>`).join('')}
+            ${safeArray(step.input?.indicators).map(ind => `<span style="display: inline-block; background: #f1f5f9; padding: 2px 6px; border-radius: 3px; margin: 2px;">${ind.name}</span>`).join('')}
           </div>
           <div class="card-title" style="margin-top: 10px;">Analysis Focus</div>
-          <div style="font-size: 8px; color: #475569; font-style: italic;">"${step.input.aiPromptFocus}"</div>
+          <div style="font-size: 8px; color: #475569; font-style: italic;">"${step.input?.aiPromptFocus || ''}"</div>
         </div>
       </div>
 
@@ -536,17 +555,17 @@ function generateStepDetailPage(data: DetailedReportData, step: DetailedStepData
           <div class="card-title">Signal Summary</div>
           <div style="display: flex; gap: 8px; margin-bottom: 8px;">
             <span style="background: #dcfce7; color: #16a34a; padding: 3px 8px; border-radius: 4px; font-size: 8px; font-weight: 600;">
-              ${step.output.signals.bullish.length} Bullish
+              ${safeSignals(step.output?.signals).bullish.length} Bullish
             </span>
             <span style="background: #fee2e2; color: #dc2626; padding: 3px 8px; border-radius: 4px; font-size: 8px; font-weight: 600;">
-              ${step.output.signals.bearish.length} Bearish
+              ${safeSignals(step.output?.signals).bearish.length} Bearish
             </span>
             <span style="background: #fef3c7; color: #d97706; padding: 3px 8px; border-radius: 4px; font-size: 8px; font-weight: 600;">
-              ${step.output.signals.neutral.length} Neutral
+              ${safeSignals(step.output?.signals).neutral.length} Neutral
             </span>
           </div>
           <div class="card-title">Key Indicators</div>
-          ${Object.entries(step.output.indicators).slice(0, 5).map(([name, ind]) => `
+          ${Object.entries(step.output?.indicators || {}).slice(0, 5).map(([name, ind]) => `
             <div class="indicator-row">
               <span class="indicator-name">${name}</span>
               <span class="indicator-value">${ind.value?.toFixed(2) || 'N/A'} ${getSignalBadge(ind.signal)}</span>
@@ -563,7 +582,7 @@ function generateStepDetailPage(data: DetailedReportData, step: DetailedStepData
         Key Findings
       </div>
       <div class="signal-list" style="background: #fefce8; border: 1px solid #fef08a; border-radius: 6px; padding: 10px;">
-        ${step.output.keyFindings.map(f => `<div class="signal-item">${f}</div>`).join('')}
+        ${safeArray(step.output?.keyFindings).map(f => `<div class="signal-item">${f}</div>`).join('')}
       </div>
     </div>
 
@@ -574,21 +593,21 @@ function generateStepDetailPage(data: DetailedReportData, step: DetailedStepData
         AI Commentary
       </div>
       <div class="commentary-box">
-        <div class="commentary-summary">${step.commentary.summary}</div>
-        <div class="commentary-detail"><strong>Signals:</strong> ${step.commentary.signalInterpretation}</div>
-        ${step.commentary.riskFactors.length > 0 ? `
+        <div class="commentary-summary">${step.commentary?.summary || ''}</div>
+        <div class="commentary-detail"><strong>Signals:</strong> ${step.commentary?.signalInterpretation || ''}</div>
+        ${safeArray(step.commentary?.riskFactors).length > 0 ? `
           <div class="commentary-detail"><strong>Risk Factors:</strong></div>
           <ul class="commentary-list">
-            ${step.commentary.riskFactors.map(r => `<li>${r}</li>`).join('')}
+            ${safeArray(step.commentary?.riskFactors).map(r => `<li>${r}</li>`).join('')}
           </ul>
         ` : ''}
-        ${step.commentary.opportunities.length > 0 ? `
+        ${safeArray(step.commentary?.opportunities).length > 0 ? `
           <div class="commentary-detail"><strong>Opportunities:</strong></div>
           <ul class="commentary-list">
-            ${step.commentary.opportunities.map(o => `<li>${o}</li>`).join('')}
+            ${safeArray(step.commentary?.opportunities).map(o => `<li>${o}</li>`).join('')}
           </ul>
         ` : ''}
-        <div class="commentary-recommendation">💡 ${step.commentary.recommendation}</div>
+        <div class="commentary-recommendation">💡 ${step.commentary?.recommendation || ''}</div>
       </div>
     </div>
 
@@ -601,7 +620,7 @@ function generateStepDetailPage(data: DetailedReportData, step: DetailedStepData
 }
 
 function generateIndicatorChartsPage(data: DetailedReportData, step: DetailedStepData, pageNumber: number): string {
-  const charts = step.indicatorCharts.slice(0, 4); // Max 4 charts per page
+  const charts = safeArray(step.indicatorCharts).slice(0, 4); // Max 4 charts per page
 
   if (charts.length === 0) {
     return ''; // Skip if no charts
@@ -714,12 +733,12 @@ export async function generateDetailedReport(data: DetailedReportData): Promise<
   pages.push(generateCoverPage(data));
 
   // Pages 2-8: Step Details (one page per step)
-  for (const step of data.steps) {
+  for (const step of safeArray(data.steps)) {
     pageNumber++;
     pages.push(generateStepDetailPage(data, step, pageNumber));
 
     // Add indicator charts page if step has charts
-    if (step.indicatorCharts.length > 0) {
+    if (safeArray(step.indicatorCharts).length > 0) {
       pageNumber++;
       const chartPage = generateIndicatorChartsPage(data, step, pageNumber);
       if (chartPage) pages.push(chartPage);

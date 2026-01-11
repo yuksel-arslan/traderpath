@@ -897,7 +897,7 @@ export function DownloadReportButton({
             direction: (reportData.tradePlan?.direction ?? 'long') as 'long' | 'short',
             entries: (reportData.tradePlan?.entries || []).map(e => ({ price: e.price, percentage: e.percentage })),
             averageEntry: reportData.tradePlan?.averageEntry ?? 0,
-            stopLoss: reportData.tradePlan?.stopLoss ?? 0,
+            stopLoss: reportData.tradePlan?.stopLoss ?? { price: 0, percentage: 0, reason: '' },
             takeProfits: reportData.tradePlan?.takeProfits || [],
             riskReward: reportData.tradePlan?.riskReward ?? 0,
             winRateEstimate: reportData.tradePlan?.winRateEstimate ?? 50,
