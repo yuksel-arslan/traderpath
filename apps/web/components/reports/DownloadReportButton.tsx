@@ -511,6 +511,58 @@ export function DownloadReportButton({
         // Generate Detailed Report with all step data and indicator charts
         const { generateDetailedReport } = await import('./DetailedAnalysisReport');
 
+        // Fetch real indicator chart data from API
+        let indicatorChartData: Record<number, DetailedIndicatorChartData[]> = {};
+        try {
+          const token = await getAuthToken();
+          if (token) {
+            const chartResponse = await fetch(`/api/analysis/indicator-charts/${symbol}?tradeType=${tradeType}&timeframe=4h`, {
+              headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (chartResponse.ok) {
+              const chartResult = await chartResponse.json();
+              if (chartResult.success && chartResult.data?.chartData) {
+                // Transform API data to DetailedIndicatorChartData format
+                indicatorChartData = {};
+                for (const [step, charts] of Object.entries(chartResult.data.chartData)) {
+                  indicatorChartData[Number(step)] = (charts as Array<{
+                    name: string;
+                    category: string;
+                    values: number[];
+                    timestamps: number[];
+                    currentValue: number;
+                    signal: string;
+                    signalStrength: number;
+                    interpretation: string;
+                    chartColor: string;
+                    secondaryValues?: number[];
+                    secondaryLabel?: string;
+                    referenceLines?: Array<{ value: number; label: string; color: string }>;
+                    metadata?: Record<string, unknown>;
+                  }>).map(chart => ({
+                    name: chart.name,
+                    category: chart.category as 'trend' | 'momentum' | 'volatility' | 'volume' | 'advanced',
+                    values: chart.values,
+                    timestamps: chart.timestamps,
+                    currentValue: chart.currentValue,
+                    signal: chart.signal as 'bullish' | 'bearish' | 'neutral',
+                    signalStrength: chart.signalStrength,
+                    interpretation: chart.interpretation,
+                    chartColor: chart.chartColor,
+                    secondaryValues: chart.secondaryValues,
+                    secondaryLabel: chart.secondaryLabel,
+                    referenceLines: chart.referenceLines,
+                    metadata: chart.metadata,
+                  }));
+                }
+              }
+            }
+          }
+        } catch (chartError) {
+          console.error('Failed to fetch indicator charts:', chartError);
+          // Continue without chart data
+        }
+
         // Transform to detailed report format
         const detailedReportData: DetailedReportData = {
           symbol: reportData.symbol,
@@ -566,7 +618,7 @@ export function DownloadReportButton({
                 opportunities: reportData.marketPulse.marketRegime === 'risk_on' ? ['Risk-on environment favorable'] : [],
                 recommendation: reportData.marketPulse.trend.direction === 'bullish' ? 'Market conditions favorable' : 'Use caution',
               },
-              indicatorCharts: [],
+              indicatorCharts: indicatorChartData[1] || [],
             },
             {
               stepNumber: 2,
@@ -594,8 +646,8 @@ export function DownloadReportButton({
                 stepScore: 6,
                 stepConfidence: 70,
                 keyFindings: [
-                  `RSI at ${reportData.assetScan.indicators.rsi.toFixed(0)}`,
-                  `Price change 24h: ${reportData.assetScan.priceChange24h.toFixed(2)}%`,
+                  `RSI at ${reportData.assetScan.indicators?.rsi?.toFixed(0) ?? '-'}`,
+                  `Price change 24h: ${reportData.assetScan.priceChange24h?.toFixed(2) ?? '0'}%`,
                 ],
               },
               commentary: {
@@ -605,7 +657,7 @@ export function DownloadReportButton({
                 opportunities: [],
                 recommendation: 'Review support and resistance levels',
               },
-              indicatorCharts: [],
+              indicatorCharts: indicatorChartData[2] || [],
             },
             {
               stepNumber: 3,
@@ -640,7 +692,7 @@ export function DownloadReportButton({
                 opportunities: reportData.safetyCheck.smartMoney.positioning === 'long' ? ['Smart money long'] : [],
                 recommendation: reportData.safetyCheck.riskLevel === 'high' ? 'Exercise extreme caution' : 'Proceed with normal risk management',
               },
-              indicatorCharts: [],
+              indicatorCharts: indicatorChartData[3] || [],
             },
             {
               stepNumber: 4,
@@ -670,10 +722,10 @@ export function DownloadReportButton({
                 summary: reportData.timing.aiInsight || 'Timing analysis completed.',
                 signalInterpretation: reportData.timing.reason,
                 riskFactors: !reportData.timing.tradeNow ? ['Entry conditions not fully met'] : [],
-                opportunities: reportData.timing.entryZones.map(ez => `Entry zone: ${ez.priceLow.toFixed(2)} - ${ez.priceHigh.toFixed(2)}`),
+                opportunities: reportData.timing.entryZones?.map(ez => `Entry zone: ${ez.priceLow?.toFixed(2) ?? '-'} - ${ez.priceHigh?.toFixed(2) ?? '-'}`) || [],
                 recommendation: reportData.timing.tradeNow ? 'Good entry timing' : 'Wait for better conditions',
               },
-              indicatorCharts: [],
+              indicatorCharts: indicatorChartData[4] || [],
             },
             {
               stepNumber: 5,
@@ -692,22 +744,22 @@ export function DownloadReportButton({
                   bearish: reportData.tradePlan.direction === 'short' ? ['Short setup'] : [],
                   neutral: [],
                 },
-                stepScore: reportData.tradePlan.riskReward >= 2 ? 8 : reportData.tradePlan.riskReward >= 1.5 ? 6 : 4,
+                stepScore: (reportData.tradePlan.riskReward ?? 0) >= 2 ? 8 : (reportData.tradePlan.riskReward ?? 0) >= 1.5 ? 6 : 4,
                 stepConfidence: 80,
                 keyFindings: [
                   `Direction: ${reportData.tradePlan.direction}`,
-                  `R:R Ratio: ${reportData.tradePlan.riskReward.toFixed(2)}:1`,
+                  `R:R Ratio: ${reportData.tradePlan.riskReward?.toFixed(2) ?? '0'}:1`,
                   `Win Rate Est: ${reportData.tradePlan.winRateEstimate}%`,
                 ],
               },
               commentary: {
                 summary: reportData.tradePlan.aiInsight || 'Trade plan calculated.',
-                signalInterpretation: `${reportData.tradePlan.direction.toUpperCase()} trade with ${reportData.tradePlan.riskReward.toFixed(1)}:1 risk-reward.`,
-                riskFactors: reportData.tradePlan.riskReward < 1.5 ? ['Low risk-reward ratio'] : [],
-                opportunities: [`${reportData.tradePlan.takeProfits.length} take-profit levels defined`],
+                signalInterpretation: `${(reportData.tradePlan.direction || 'LONG').toUpperCase()} trade with ${reportData.tradePlan.riskReward?.toFixed(1) ?? '0'}:1 risk-reward.`,
+                riskFactors: (reportData.tradePlan.riskReward ?? 0) < 1.5 ? ['Low risk-reward ratio'] : [],
+                opportunities: [`${reportData.tradePlan.takeProfits?.length ?? 0} take-profit levels defined`],
                 recommendation: 'Follow position sizing rules strictly',
               },
-              indicatorCharts: [],
+              indicatorCharts: indicatorChartData[5] || [],
             },
             {
               stepNumber: 6,
@@ -741,7 +793,7 @@ export function DownloadReportButton({
                 opportunities: reportData.trapCheck.counterStrategy,
                 recommendation: reportData.trapCheck.traps.fakeoutRisk === 'high' ? 'Be cautious of false breakouts' : 'Low trap probability',
               },
-              indicatorCharts: [],
+              indicatorCharts: indicatorChartData[6] || [],
             },
             {
               stepNumber: 7,
@@ -774,7 +826,7 @@ export function DownloadReportButton({
                 opportunities: reportData.verdict.confidenceFactors.filter(c => c.positive).map(c => c.factor),
                 recommendation: reportData.verdict.action === 'GO' ? 'Execute trade plan' : reportData.verdict.action === 'WAIT' ? 'Wait for better conditions' : 'Avoid this trade',
               },
-              indicatorCharts: [],
+              indicatorCharts: indicatorChartData[7] || [],
             },
           ],
           tradePlanSummary: {

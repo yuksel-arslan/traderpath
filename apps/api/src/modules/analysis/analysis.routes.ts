@@ -1686,6 +1686,811 @@ Explain the key risks and what conditions would need to change before trading th
   });
 
   /**
+   * GET /api/analysis/indicator-charts/:symbol
+   * Get indicator chart data for detailed PDF reports
+   * Returns historical indicator values for charting
+   */
+  app.get('/indicator-charts/:symbol', {
+    preHandler: authenticate,
+  }, async (request: FastifyRequest<{
+    Params: { symbol: string };
+    Querystring: { tradeType?: string; timeframe?: string };
+  }>, reply: FastifyReply) => {
+    try {
+      const { symbol } = request.params;
+      const tradeType = (request.query.tradeType || 'dayTrade') as TradeType;
+      const timeframe = request.query.timeframe || '4h';
+
+      // Map timeframe to Binance interval
+      const intervalMap: Record<string, string> = {
+        '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
+        '1h': '1h', '4h': '4h', '1d': '1d', '1w': '1w'
+      };
+      const interval = intervalMap[timeframe] || '4h';
+
+      // Fetch kline data from Binance (500 candles for good chart data)
+      const response = await fetch(
+        `https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}USDT&interval=${interval}&limit=500`
+      );
+
+      if (!response.ok) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: 'FETCH_ERROR', message: 'Failed to fetch market data' }
+        });
+      }
+
+      const klines = await response.json();
+
+      // Convert Binance klines to OHLCV format
+      const ohlcv = klines.map((k: (string | number)[]) => ({
+        timestamp: Number(k[0]),
+        open: parseFloat(k[1] as string),
+        high: parseFloat(k[2] as string),
+        low: parseFloat(k[3] as string),
+        close: parseFloat(k[4] as string),
+        volume: parseFloat(k[5] as string),
+      }));
+
+      // Define indicators per step based on trade type
+      const stepIndicators: Record<number, { name: string; category: string; color: string }[]> = {
+        1: [ // Market Pulse - sentiment indicators
+          { name: 'EMA_20', category: 'trend', color: '#3B82F6' },
+          { name: 'EMA_50', category: 'trend', color: '#8B5CF6' },
+        ],
+        2: [ // Asset Scanner - core technical indicators
+          { name: 'RSI', category: 'momentum', color: '#F59E0B' },
+          { name: 'MACD', category: 'trend', color: '#10B981' },
+          { name: 'BOLLINGER', category: 'volatility', color: '#6366F1' },
+          { name: 'EMA_20', category: 'trend', color: '#3B82F6' },
+          { name: 'SMA_50', category: 'trend', color: '#EC4899' },
+        ],
+        3: [ // Safety Check - volume & activity
+          { name: 'OBV', category: 'volume', color: '#14B8A6' },
+          { name: 'MFI', category: 'volume', color: '#F97316' },
+          { name: 'CMF', category: 'volume', color: '#8B5CF6' },
+        ],
+        4: [ // Timing - momentum & timing
+          { name: 'STOCHASTIC', category: 'momentum', color: '#EF4444' },
+          { name: 'CCI', category: 'momentum', color: '#06B6D4' },
+          { name: 'WILLIAMS_R', category: 'momentum', color: '#84CC16' },
+        ],
+        5: [ // Trade Plan - volatility & risk
+          { name: 'ATR', category: 'volatility', color: '#F59E0B' },
+          { name: 'SUPERTREND', category: 'trend', color: '#22C55E' },
+          { name: 'ADX', category: 'trend', color: '#A855F7' },
+        ],
+        6: [ // Trap Check - divergence detection
+          { name: 'RSI', category: 'momentum', color: '#F59E0B' },
+          { name: 'STOCH_RSI', category: 'momentum', color: '#EC4899' },
+          { name: 'ROC', category: 'momentum', color: '#06B6D4' },
+        ],
+        7: [], // Final Verdict - aggregation only
+      };
+
+      // Calculate indicators for each step
+      const chartData: Record<number, Array<{
+        name: string;
+        category: string;
+        values: number[];
+        timestamps: number[];
+        currentValue: number;
+        signal: string;
+        signalStrength: number;
+        interpretation: string;
+        chartColor: string;
+        secondaryValues?: number[];
+        secondaryLabel?: string;
+        referenceLines?: Array<{ value: number; label: string; color: string }>;
+        metadata?: Record<string, unknown>;
+      }>> = {};
+
+      // Helper to calculate indicator
+      const calculateIndicator = (name: string, data: typeof ohlcv): {
+        values: number[];
+        currentValue: number;
+        signal: string;
+        signalStrength: number;
+        referenceLines?: Array<{ value: number; label: string; color: string }>;
+        secondaryValues?: number[];
+        secondaryLabel?: string;
+        metadata?: Record<string, unknown>;
+      } | null => {
+        const upperName = name.toUpperCase();
+        if (data.length < 20) return null; // Need minimum data
+
+        // Simple indicator calculations inline (lightweight version)
+        if (upperName.startsWith('EMA_')) {
+          const periodStr = upperName.split('_')[1];
+          const period = periodStr ? parseInt(periodStr, 10) : 20;
+          if (data.length < period) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+          const multiplier = 2 / (period + 1);
+          let ema = closes.slice(0, period).reduce((a: number, b: number) => a + b, 0) / period;
+          const emaValues: number[] = [ema];
+          for (let i = period; i < closes.length; i++) {
+            ema = (closes[i] - ema) * multiplier + ema;
+            emaValues.push(ema);
+          }
+          const currentValue = emaValues[emaValues.length - 1] ?? 0;
+          const currentPrice = closes[closes.length - 1] ?? 0;
+          return {
+            values: emaValues,
+            currentValue,
+            signal: currentPrice > currentValue ? 'bullish' : 'bearish',
+            signalStrength: currentValue !== 0 ? Math.min(100, Math.abs((currentPrice - currentValue) / currentValue * 100) * 10) : 0,
+            metadata: {}
+          };
+        }
+
+        if (upperName.startsWith('SMA_')) {
+          const periodStr = upperName.split('_')[1];
+          const period = periodStr ? parseInt(periodStr, 10) : 20;
+          if (data.length < period) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+          const smaValues: number[] = [];
+          for (let i = period - 1; i < closes.length; i++) {
+            smaValues.push(closes.slice(i - period + 1, i + 1).reduce((a: number, b: number) => a + b, 0) / period);
+          }
+          const currentValue = smaValues[smaValues.length - 1] ?? 0;
+          const currentPrice = closes[closes.length - 1] ?? 0;
+          return {
+            values: smaValues,
+            currentValue,
+            signal: currentPrice > currentValue ? 'bullish' : 'bearish',
+            signalStrength: currentValue !== 0 ? Math.min(100, Math.abs((currentPrice - currentValue) / currentValue * 100) * 10) : 0,
+            metadata: {}
+          };
+        }
+
+        if (upperName === 'RSI') {
+          const period = 14;
+          if (data.length < period + 1) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+          const changes: number[] = [];
+          for (let i = 1; i < closes.length; i++) {
+            changes.push(closes[i] - closes[i - 1]);
+          }
+          const gains = changes.map(c => c > 0 ? c : 0);
+          const losses = changes.map(c => c < 0 ? -c : 0);
+          let avgGain = gains.slice(0, period).reduce((a, b) => a + b, 0) / period;
+          let avgLoss = losses.slice(0, period).reduce((a, b) => a + b, 0) / period;
+          const rsiValues: number[] = [];
+          for (let i = period; i < changes.length; i++) {
+            const gain = gains[i];
+            const loss = losses[i];
+            if (gain !== undefined && loss !== undefined) {
+              avgGain = (avgGain * (period - 1) + gain) / period;
+              avgLoss = (avgLoss * (period - 1) + loss) / period;
+              const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+              rsiValues.push(100 - (100 / (1 + rs)));
+            }
+          }
+          if (rsiValues.length === 0) return null;
+          const currentRsi = rsiValues[rsiValues.length - 1] ?? 50;
+          return {
+            values: rsiValues,
+            currentValue: currentRsi,
+            signal: currentRsi < 30 ? 'bullish' : currentRsi > 70 ? 'bearish' : 'neutral',
+            signalStrength: currentRsi < 30 ? 30 - currentRsi : currentRsi > 70 ? currentRsi - 70 : 50,
+            referenceLines: [
+              { value: 70, label: 'Overbought', color: '#EF4444' },
+              { value: 30, label: 'Oversold', color: '#22C55E' },
+              { value: 50, label: 'Neutral', color: '#6B7280' },
+            ],
+            metadata: { overbought: currentRsi > 70, oversold: currentRsi < 30 }
+          };
+        }
+
+        if (upperName === 'MACD') {
+          if (data.length < 35) return null; // Need 26 + 9 periods
+          const closes = data.map((d: { close: number }) => d.close);
+          const fast = 12, slow = 26, signalPeriod = 9;
+
+          // Calculate EMAs
+          const calcEma = (arr: number[], period: number): number[] => {
+            if (arr.length < period) return [];
+            const multiplier = 2 / (period + 1);
+            let ema = arr.slice(0, period).reduce((a, b) => a + b, 0) / period;
+            const result = [ema];
+            for (let i = period; i < arr.length; i++) {
+              const val = arr[i];
+              if (val !== undefined) {
+                ema = (val - ema) * multiplier + ema;
+                result.push(ema);
+              }
+            }
+            return result;
+          };
+
+          const fastEma = calcEma(closes, fast);
+          const slowEma = calcEma(closes, slow);
+          if (fastEma.length === 0 || slowEma.length === 0) return null;
+
+          const offset = slow - fast;
+          const macdLine: number[] = [];
+          for (let i = 0; i < slowEma.length; i++) {
+            const fastVal = fastEma[i + offset];
+            const slowVal = slowEma[i];
+            if (fastVal !== undefined && slowVal !== undefined) {
+              macdLine.push(fastVal - slowVal);
+            }
+          }
+          if (macdLine.length === 0) return null;
+
+          const signalLine = calcEma(macdLine, signalPeriod);
+          if (signalLine.length === 0) return null;
+          const histogram: number[] = [];
+          for (let i = 0; i < signalLine.length; i++) {
+            const macdVal = macdLine[i + (macdLine.length - signalLine.length)];
+            const sigVal = signalLine[i];
+            if (macdVal !== undefined && sigVal !== undefined) {
+              histogram.push(macdVal - sigVal);
+            }
+          }
+          if (histogram.length === 0) return null;
+
+          const currentHistogram = histogram[histogram.length - 1] ?? 0;
+          return {
+            values: histogram,
+            currentValue: currentHistogram,
+            signal: currentHistogram > 0 ? 'bullish' : 'bearish',
+            signalStrength: Math.min(100, Math.abs(currentHistogram) * 1000),
+            secondaryValues: signalLine,
+            secondaryLabel: 'Signal Line',
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: { macd: macdLine[macdLine.length - 1] ?? 0, signal: signalLine[signalLine.length - 1] ?? 0, histogram: currentHistogram }
+          };
+        }
+
+        if (upperName === 'BOLLINGER') {
+          const period = 20, stdDev = 2;
+          if (data.length < period) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+          const upperBand: number[] = [];
+          const lowerBand: number[] = [];
+          const middleBand: number[] = [];
+
+          for (let i = period - 1; i < closes.length; i++) {
+            const slice = closes.slice(i - period + 1, i + 1);
+            const sma = slice.reduce((a: number, b: number) => a + b, 0) / period;
+            const variance = slice.reduce((sum: number, val: number) => sum + Math.pow(val - sma, 2), 0) / period;
+            const std = Math.sqrt(variance);
+            middleBand.push(sma);
+            upperBand.push(sma + stdDev * std);
+            lowerBand.push(sma - stdDev * std);
+          }
+          if (middleBand.length === 0) return null;
+
+          const currentPrice = closes[closes.length - 1] ?? 0;
+          const currentUpper = upperBand[upperBand.length - 1] ?? 0;
+          const currentLower = lowerBand[lowerBand.length - 1] ?? 0;
+          const currentMiddle = middleBand[middleBand.length - 1] ?? 0;
+          const bandDiff = currentUpper - currentMiddle;
+
+          return {
+            values: middleBand,
+            currentValue: currentMiddle,
+            signal: currentPrice > currentUpper ? 'bearish' : currentPrice < currentLower ? 'bullish' : 'neutral',
+            signalStrength: bandDiff !== 0 ? Math.abs((currentPrice - currentMiddle) / bandDiff * 100) : 0,
+            secondaryValues: upperBand,
+            secondaryLabel: 'Upper Band',
+            metadata: { upper: currentUpper, lower: currentLower, middle: currentMiddle, width: currentMiddle !== 0 ? (currentUpper - currentLower) / currentMiddle * 100 : 0 }
+          };
+        }
+
+        if (upperName === 'ATR') {
+          const period = 14;
+          if (data.length < period + 1) return null;
+          const trValues: number[] = [];
+          for (let i = 1; i < data.length; i++) {
+            const curr = data[i];
+            const prev = data[i - 1];
+            if (curr && prev) {
+              trValues.push(Math.max(
+                curr.high - curr.low,
+                Math.abs(curr.high - prev.close),
+                Math.abs(curr.low - prev.close)
+              ));
+            }
+          }
+          if (trValues.length < period) return null;
+          let atr = trValues.slice(0, period).reduce((a, b) => a + b, 0) / period;
+          const atrValues: number[] = [atr];
+          for (let i = period; i < trValues.length; i++) {
+            const trVal = trValues[i];
+            if (trVal !== undefined) {
+              atr = (atr * (period - 1) + trVal) / period;
+              atrValues.push(atr);
+            }
+          }
+          const currentAtr = atrValues[atrValues.length - 1] ?? 0;
+          const avgAtr = atrValues.length > 0 ? atrValues.reduce((a, b) => a + b, 0) / atrValues.length : 1;
+          return {
+            values: atrValues,
+            currentValue: currentAtr,
+            signal: currentAtr > avgAtr * 1.5 ? 'bearish' : currentAtr < avgAtr * 0.5 ? 'bullish' : 'neutral',
+            signalStrength: avgAtr !== 0 ? Math.min(100, (currentAtr / avgAtr) * 50) : 0,
+            metadata: { volatility: currentAtr > avgAtr ? 'high' : 'low' }
+          };
+        }
+
+        if (upperName === 'STOCHASTIC') {
+          const k = 14, d = 3, smooth = 3;
+          if (data.length < k + smooth + d) return null;
+          const kValues: number[] = [];
+          for (let i = k - 1; i < data.length; i++) {
+            const periodData = data.slice(i - k + 1, i + 1);
+            const high = Math.max(...periodData.map((d: { high: number }) => d.high));
+            const low = Math.min(...periodData.map((d: { low: number }) => d.low));
+            const curr = data[i];
+            if (curr) {
+              kValues.push(high === low ? 50 : ((curr.close - low) / (high - low)) * 100);
+            }
+          }
+          if (kValues.length < smooth) return null;
+          const smoothK: number[] = [];
+          for (let i = smooth - 1; i < kValues.length; i++) {
+            smoothK.push(kValues.slice(i - smooth + 1, i + 1).reduce((a, b) => a + b, 0) / smooth);
+          }
+          if (smoothK.length < d) return null;
+          const dValues: number[] = [];
+          for (let i = d - 1; i < smoothK.length; i++) {
+            dValues.push(smoothK.slice(i - d + 1, i + 1).reduce((a, b) => a + b, 0) / d);
+          }
+          if (smoothK.length === 0 || dValues.length === 0) return null;
+          const currentK = smoothK[smoothK.length - 1] ?? 50;
+          const currentD = dValues[dValues.length - 1] ?? 50;
+          return {
+            values: smoothK,
+            currentValue: currentK,
+            signal: currentK < 20 && currentK > currentD ? 'bullish' : currentK > 80 && currentK < currentD ? 'bearish' : 'neutral',
+            signalStrength: currentK < 20 ? 20 - currentK : currentK > 80 ? currentK - 80 : 50,
+            secondaryValues: dValues,
+            secondaryLabel: '%D',
+            referenceLines: [
+              { value: 80, label: 'Overbought', color: '#EF4444' },
+              { value: 20, label: 'Oversold', color: '#22C55E' },
+            ],
+            metadata: { k: currentK, d: currentD }
+          };
+        }
+
+        if (upperName === 'OBV') {
+          if (data.length < 2) return null;
+          let obv = 0;
+          const obvValues: number[] = [obv];
+          for (let i = 1; i < data.length; i++) {
+            const curr = data[i];
+            const prev = data[i - 1];
+            if (curr && prev) {
+              if (curr.close > prev.close) {
+                obv += curr.volume;
+              } else if (curr.close < prev.close) {
+                obv -= curr.volume;
+              }
+            }
+            obvValues.push(obv);
+          }
+          const currentObv = obvValues[obvValues.length - 1] ?? 0;
+          const prevObv = obvValues[obvValues.length - 20] ?? obvValues[0] ?? 1;
+          const safePrevObv = prevObv === 0 ? 1 : prevObv;
+          return {
+            values: obvValues,
+            currentValue: currentObv,
+            signal: currentObv > prevObv ? 'bullish' : 'bearish',
+            signalStrength: Math.min(100, Math.abs((currentObv - prevObv) / Math.abs(safePrevObv)) * 100),
+            metadata: { trend: currentObv > prevObv ? 'accumulation' : 'distribution' }
+          };
+        }
+
+        if (upperName === 'MFI') {
+          const period = 14;
+          if (data.length < period + 1) return null;
+          const typicalPrices = data.map((d: { high: number; low: number; close: number }) => (d.high + d.low + d.close) / 3);
+          const moneyFlows = data.map((d: { volume: number }, i: number) => (typicalPrices[i] ?? 0) * d.volume);
+          const mfiValues: number[] = [];
+          for (let i = period; i < data.length; i++) {
+            let positiveFlow = 0, negativeFlow = 0;
+            for (let j = i - period + 1; j <= i; j++) {
+              const tpj = typicalPrices[j] ?? 0;
+              const tpjPrev = typicalPrices[j - 1] ?? 0;
+              const mfj = moneyFlows[j] ?? 0;
+              if (tpj > tpjPrev) positiveFlow += mfj;
+              else negativeFlow += mfj;
+            }
+            mfiValues.push(negativeFlow === 0 ? 100 : 100 - (100 / (1 + positiveFlow / negativeFlow)));
+          }
+          if (mfiValues.length === 0) return null;
+          const currentMfi = mfiValues[mfiValues.length - 1] ?? 50;
+          return {
+            values: mfiValues,
+            currentValue: currentMfi,
+            signal: currentMfi < 20 ? 'bullish' : currentMfi > 80 ? 'bearish' : 'neutral',
+            signalStrength: currentMfi < 20 ? 20 - currentMfi : currentMfi > 80 ? currentMfi - 80 : 50,
+            referenceLines: [
+              { value: 80, label: 'Overbought', color: '#EF4444' },
+              { value: 20, label: 'Oversold', color: '#22C55E' },
+            ],
+            metadata: {}
+          };
+        }
+
+        if (upperName === 'CMF') {
+          const period = 20;
+          if (data.length < period) return null;
+          const cmfValues: number[] = [];
+          for (let i = period - 1; i < data.length; i++) {
+            let mfvSum = 0, volSum = 0;
+            for (let j = i - period + 1; j <= i; j++) {
+              const dj = data[j];
+              if (dj) {
+                const mfm = dj.high === dj.low ? 0 : ((dj.close - dj.low) - (dj.high - dj.close)) / (dj.high - dj.low);
+                mfvSum += mfm * dj.volume;
+                volSum += dj.volume;
+              }
+            }
+            cmfValues.push(volSum === 0 ? 0 : mfvSum / volSum);
+          }
+          if (cmfValues.length === 0) return null;
+          const currentCmf = cmfValues[cmfValues.length - 1] ?? 0;
+          return {
+            values: cmfValues,
+            currentValue: currentCmf,
+            signal: currentCmf > 0.1 ? 'bullish' : currentCmf < -0.1 ? 'bearish' : 'neutral',
+            signalStrength: Math.min(100, Math.abs(currentCmf) * 200),
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: {}
+          };
+        }
+
+        if (upperName === 'CCI') {
+          const period = 20;
+          if (data.length < period) return null;
+          const typicalPrices = data.map((d: { high: number; low: number; close: number }) => (d.high + d.low + d.close) / 3);
+          const cciValues: number[] = [];
+          for (let i = period - 1; i < typicalPrices.length; i++) {
+            const slice = typicalPrices.slice(i - period + 1, i + 1);
+            const sma = slice.reduce((a: number, b: number) => a + b, 0) / period;
+            const meanDev = slice.reduce((sum: number, val: number) => sum + Math.abs(val - sma), 0) / period;
+            const tpi = typicalPrices[i] ?? sma;
+            cciValues.push(meanDev === 0 ? 0 : (tpi - sma) / (0.015 * meanDev));
+          }
+          if (cciValues.length === 0) return null;
+          const currentCci = cciValues[cciValues.length - 1] ?? 0;
+          return {
+            values: cciValues,
+            currentValue: currentCci,
+            signal: currentCci < -100 ? 'bullish' : currentCci > 100 ? 'bearish' : 'neutral',
+            signalStrength: Math.abs(currentCci) > 100 ? Math.min(100, Math.abs(currentCci) - 100) : 50,
+            referenceLines: [
+              { value: 100, label: 'Overbought', color: '#EF4444' },
+              { value: -100, label: 'Oversold', color: '#22C55E' },
+              { value: 0, label: 'Zero', color: '#6B7280' },
+            ],
+            metadata: {}
+          };
+        }
+
+        if (upperName === 'WILLIAMS_R') {
+          const period = 14;
+          if (data.length < period) return null;
+          const wrValues: number[] = [];
+          for (let i = period - 1; i < data.length; i++) {
+            const periodData = data.slice(i - period + 1, i + 1);
+            const high = Math.max(...periodData.map((d: { high: number }) => d.high));
+            const low = Math.min(...periodData.map((d: { low: number }) => d.low));
+            const curr = data[i];
+            if (curr) {
+              wrValues.push(high === low ? -50 : ((high - curr.close) / (high - low)) * -100);
+            }
+          }
+          if (wrValues.length === 0) return null;
+          const currentWr = wrValues[wrValues.length - 1] ?? -50;
+          return {
+            values: wrValues,
+            currentValue: currentWr,
+            signal: currentWr < -80 ? 'bullish' : currentWr > -20 ? 'bearish' : 'neutral',
+            signalStrength: currentWr < -80 ? Math.abs(currentWr + 80) : currentWr > -20 ? Math.abs(currentWr + 20) : 50,
+            referenceLines: [
+              { value: -20, label: 'Overbought', color: '#EF4444' },
+              { value: -80, label: 'Oversold', color: '#22C55E' },
+            ],
+            metadata: {}
+          };
+        }
+
+        if (upperName === 'ADX') {
+          const period = 14;
+          if (data.length < period * 2) return null;
+          const plusDM: number[] = [], minusDM: number[] = [], tr: number[] = [];
+          for (let i = 1; i < data.length; i++) {
+            const curr = data[i];
+            const prev = data[i - 1];
+            if (curr && prev) {
+              const upMove = curr.high - prev.high;
+              const downMove = prev.low - curr.low;
+              plusDM.push(upMove > downMove && upMove > 0 ? upMove : 0);
+              minusDM.push(downMove > upMove && downMove > 0 ? downMove : 0);
+              tr.push(Math.max(
+                curr.high - curr.low,
+                Math.abs(curr.high - prev.close),
+                Math.abs(curr.low - prev.close)
+              ));
+            }
+          }
+          if (tr.length < period) return null;
+
+          let sumTR = tr.slice(0, period).reduce((a, b) => a + b, 0);
+          let sumPlusDM = plusDM.slice(0, period).reduce((a, b) => a + b, 0);
+          let sumMinusDM = minusDM.slice(0, period).reduce((a, b) => a + b, 0);
+
+          const adxValues: number[] = [];
+          let adx = 0;
+
+          for (let i = period; i < tr.length; i++) {
+            const trVal = tr[i] ?? 0;
+            const plusVal = plusDM[i] ?? 0;
+            const minusVal = minusDM[i] ?? 0;
+            sumTR = sumTR - sumTR / period + trVal;
+            sumPlusDM = sumPlusDM - sumPlusDM / period + plusVal;
+            sumMinusDM = sumMinusDM - sumMinusDM / period + minusVal;
+
+            const plusDI = sumTR !== 0 ? (sumPlusDM / sumTR) * 100 : 0;
+            const minusDI = sumTR !== 0 ? (sumMinusDM / sumTR) * 100 : 0;
+            const diSum = plusDI + minusDI;
+            const dx = diSum === 0 ? 0 : (Math.abs(plusDI - minusDI) / diSum) * 100;
+
+            if (adxValues.length < period) {
+              adxValues.push(dx);
+              if (adxValues.length === period) {
+                adx = adxValues.reduce((a, b) => a + b, 0) / period;
+              }
+            } else {
+              adx = (adx * (period - 1) + dx) / period;
+              adxValues.push(adx);
+            }
+          }
+          if (adxValues.length <= period) return null;
+
+          const currentAdx = adxValues[adxValues.length - 1] ?? 25;
+          const slicedValues = adxValues.slice(period);
+          return {
+            values: slicedValues,
+            currentValue: currentAdx,
+            signal: currentAdx > 25 ? 'bullish' : 'neutral',
+            signalStrength: Math.min(100, currentAdx),
+            referenceLines: [
+              { value: 25, label: 'Trend', color: '#F59E0B' },
+              { value: 50, label: 'Strong', color: '#22C55E' },
+            ],
+            metadata: { trendStrength: currentAdx > 50 ? 'strong' : currentAdx > 25 ? 'moderate' : 'weak' }
+          };
+        }
+
+        if (upperName === 'SUPERTREND') {
+          const period = 10, multiplier = 3;
+          if (data.length < period + 1) return null;
+          // Calculate ATR first
+          const trValues: number[] = [];
+          for (let i = 1; i < data.length; i++) {
+            const curr = data[i];
+            const prev = data[i - 1];
+            if (curr && prev) {
+              trValues.push(Math.max(
+                curr.high - curr.low,
+                Math.abs(curr.high - prev.close),
+                Math.abs(curr.low - prev.close)
+              ));
+            }
+          }
+          if (trValues.length < period) return null;
+          let atr = trValues.slice(0, period).reduce((a, b) => a + b, 0) / period;
+          const atrValues: number[] = [atr];
+          for (let i = period; i < trValues.length; i++) {
+            const trVal = trValues[i];
+            if (trVal !== undefined) {
+              atr = (atr * (period - 1) + trVal) / period;
+              atrValues.push(atr);
+            }
+          }
+
+          let trend = 1;
+          let finalUpperBand = 0, finalLowerBand = 0;
+          const supertrendValues: number[] = [];
+          const trends: number[] = [];
+
+          for (let i = period - 1; i < data.length; i++) {
+            const atrIdx = i - (period - 1);
+            const atrVal = atrValues[atrIdx] ?? 0;
+            const curr = data[i];
+            const prev = data[i - 1];
+            if (!curr) continue;
+
+            const hl2 = (curr.high + curr.low) / 2;
+            const upperBand = hl2 + multiplier * atrVal;
+            const lowerBand = hl2 - multiplier * atrVal;
+
+            if (i === period - 1) {
+              finalUpperBand = upperBand;
+              finalLowerBand = lowerBand;
+            } else if (prev) {
+              finalUpperBand = upperBand < finalUpperBand || prev.close > finalUpperBand ? upperBand : finalUpperBand;
+              finalLowerBand = lowerBand > finalLowerBand || prev.close < finalLowerBand ? lowerBand : finalLowerBand;
+            }
+
+            if (trend === 1 && curr.close < finalLowerBand) trend = -1;
+            else if (trend === -1 && curr.close > finalUpperBand) trend = 1;
+
+            trends.push(trend);
+            supertrendValues.push(trend === 1 ? finalLowerBand : finalUpperBand);
+          }
+          if (supertrendValues.length === 0) return null;
+
+          const currentTrend = trends[trends.length - 1] ?? 1;
+          const currentST = supertrendValues[supertrendValues.length - 1] ?? 0;
+          const lastClose = data[data.length - 1]?.close ?? currentST;
+          return {
+            values: supertrendValues,
+            currentValue: currentST,
+            signal: currentTrend === 1 ? 'bullish' : 'bearish',
+            signalStrength: currentST !== 0 ? Math.min(100, Math.abs((lastClose - currentST) / currentST * 100) * 10) : 0,
+            metadata: { trend: currentTrend === 1 ? 'up' : 'down' }
+          };
+        }
+
+        if (upperName === 'STOCH_RSI') {
+          const period = 14;
+          if (data.length < period * 2) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+          const changes: number[] = [];
+          for (let i = 1; i < closes.length; i++) {
+            const curr = closes[i];
+            const prev = closes[i - 1];
+            if (curr !== undefined && prev !== undefined) {
+              changes.push(curr - prev);
+            }
+          }
+          const gains = changes.map(c => c > 0 ? c : 0);
+          const losses = changes.map(c => c < 0 ? -c : 0);
+          let avgGain = gains.slice(0, period).reduce((a, b) => a + b, 0) / period;
+          let avgLoss = losses.slice(0, period).reduce((a, b) => a + b, 0) / period;
+          const rsiValues: number[] = [];
+          for (let i = period; i < changes.length; i++) {
+            const g = gains[i] ?? 0;
+            const l = losses[i] ?? 0;
+            avgGain = (avgGain * (period - 1) + g) / period;
+            avgLoss = (avgLoss * (period - 1) + l) / period;
+            rsiValues.push(avgLoss === 0 ? 100 : 100 - (100 / (1 + avgGain / avgLoss)));
+          }
+          if (rsiValues.length < period) return null;
+
+          // Calculate StochRSI
+          const stochRsiValues: number[] = [];
+          for (let i = period - 1; i < rsiValues.length; i++) {
+            const periodRsi = rsiValues.slice(i - period + 1, i + 1);
+            const highRsi = Math.max(...periodRsi);
+            const lowRsi = Math.min(...periodRsi);
+            const rsiVal = rsiValues[i] ?? 50;
+            stochRsiValues.push(highRsi === lowRsi ? 50 : ((rsiVal - lowRsi) / (highRsi - lowRsi)) * 100);
+          }
+          if (stochRsiValues.length === 0) return null;
+
+          const currentStochRsi = stochRsiValues[stochRsiValues.length - 1] ?? 50;
+          return {
+            values: stochRsiValues,
+            currentValue: currentStochRsi,
+            signal: currentStochRsi < 20 ? 'bullish' : currentStochRsi > 80 ? 'bearish' : 'neutral',
+            signalStrength: currentStochRsi < 20 ? 20 - currentStochRsi : currentStochRsi > 80 ? currentStochRsi - 80 : 50,
+            referenceLines: [
+              { value: 80, label: 'Overbought', color: '#EF4444' },
+              { value: 20, label: 'Oversold', color: '#22C55E' },
+            ],
+            metadata: {}
+          };
+        }
+
+        if (upperName === 'ROC') {
+          const period = 12;
+          if (data.length < period + 1) return null;
+          const closes = data.map((d: { close: number }) => d.close);
+          const rocValues: number[] = [];
+          for (let i = period; i < closes.length; i++) {
+            const curr = closes[i];
+            const prev = closes[i - period];
+            if (curr !== undefined && prev !== undefined && prev !== 0) {
+              rocValues.push(((curr - prev) / prev) * 100);
+            }
+          }
+          if (rocValues.length === 0) return null;
+          const currentRoc = rocValues[rocValues.length - 1] ?? 0;
+          return {
+            values: rocValues,
+            currentValue: currentRoc,
+            signal: currentRoc > 0 ? 'bullish' : 'bearish',
+            signalStrength: Math.min(100, Math.abs(currentRoc) * 5),
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: {}
+          };
+        }
+
+        return null;
+      };
+
+      // Generate interpretation text
+      const getInterpretation = (name: string, signal: string, currentValue: number) => {
+        const signalText = signal === 'bullish' ? 'bullish momentum' : signal === 'bearish' ? 'bearish pressure' : 'neutral conditions';
+
+        if (name.includes('RSI')) {
+          if (currentValue > 70) return `RSI at ${currentValue.toFixed(1)} indicates overbought conditions. Consider taking profits or waiting for pullback.`;
+          if (currentValue < 30) return `RSI at ${currentValue.toFixed(1)} shows oversold conditions. Potential buying opportunity on confirmation.`;
+          return `RSI at ${currentValue.toFixed(1)} in neutral zone. Monitor for breakout from range.`;
+        }
+        if (name.includes('MACD')) return `MACD histogram shows ${signalText}. ${signal === 'bullish' ? 'Momentum building higher' : signal === 'bearish' ? 'Momentum weakening' : 'Momentum flat'}.`;
+        if (name.includes('BOLLINGER')) return `Price ${signal === 'bullish' ? 'near lower band - potential support' : signal === 'bearish' ? 'near upper band - potential resistance' : 'within bands - range-bound'}.`;
+        if (name.includes('STOCHASTIC')) return `Stochastic ${signal === 'bullish' ? 'showing oversold crossover' : signal === 'bearish' ? 'showing overbought crossover' : 'in middle range'}.`;
+        if (name.includes('ATR')) return `Volatility is ${currentValue > 0 ? 'elevated' : 'normal'}. Adjust position sizing accordingly.`;
+        if (name.includes('OBV')) return `Volume trend shows ${signal === 'bullish' ? 'accumulation' : 'distribution'}. ${signal === 'bullish' ? 'Smart money buying' : 'Smart money selling'}.`;
+        if (name.includes('ADX')) return `Trend strength at ${currentValue.toFixed(1)}. ${currentValue > 50 ? 'Very strong trend' : currentValue > 25 ? 'Trending market' : 'Weak/No trend'}.`;
+
+        return `${name} indicates ${signalText} at current levels.`;
+      };
+
+      // Calculate all indicators for each step
+      const timestamps = ohlcv.map((d: { timestamp: number }) => d.timestamp);
+
+      for (const [step, indicators] of Object.entries(stepIndicators)) {
+        chartData[Number(step)] = [];
+
+        for (const ind of indicators) {
+          const result = calculateIndicator(ind.name, ohlcv);
+          if (result && result.values && result.values.length > 0) {
+            // Align timestamps with values (values may start later due to lookback period)
+            const offset = timestamps.length - result.values.length;
+            const alignedTimestamps = timestamps.slice(offset);
+
+            const stepData = chartData[Number(step)];
+            if (stepData) {
+              stepData.push({
+              name: ind.name.replace('_', ' '),
+              category: ind.category as 'trend' | 'momentum' | 'volatility' | 'volume' | 'advanced',
+              values: result.values,
+              timestamps: alignedTimestamps,
+              currentValue: result.currentValue,
+              signal: result.signal as 'bullish' | 'bearish' | 'neutral',
+              signalStrength: result.signalStrength,
+              interpretation: getInterpretation(ind.name, result.signal, result.currentValue),
+              chartColor: ind.color,
+              secondaryValues: result.secondaryValues,
+              secondaryLabel: result.secondaryLabel,
+              referenceLines: result.referenceLines,
+              metadata: result.metadata,
+              });
+            }
+          }
+        }
+      }
+
+      return reply.send({
+        success: true,
+        data: {
+          symbol,
+          timeframe,
+          tradeType,
+          candleCount: ohlcv.length,
+          chartData,
+        }
+      });
+    } catch (error) {
+      console.error('Indicator charts error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'CHART_ERROR', message: 'Failed to generate indicator charts' }
+      });
+    }
+  });
+
+  /**
    * GET /api/analysis/supported-symbols
    */
   app.get('/supported-symbols', async (_request: FastifyRequest, reply: FastifyReply) => {
