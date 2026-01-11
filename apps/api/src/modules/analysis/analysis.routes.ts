@@ -1733,61 +1733,194 @@ Explain the key risks and what conditions would need to change before trading th
       }));
 
       // Define indicators per step based on trade type (40+ indicators total)
-      const stepIndicators: Record<number, { name: string; category: string; color: string }[]> = {
-        1: [ // Market Pulse - trend & sentiment indicators
-          { name: 'EMA_20', category: 'trend', color: '#3B82F6' },
-          { name: 'EMA_50', category: 'trend', color: '#8B5CF6' },
-          { name: 'EMA_100', category: 'trend', color: '#06B6D4' },
-          { name: 'EMA_200', category: 'trend', color: '#EC4899' },
-          { name: 'SMA_50', category: 'trend', color: '#F97316' },
-          { name: 'SMA_200', category: 'trend', color: '#14B8A6' },
-          { name: 'ICHIMOKU', category: 'trend', color: '#8B5CF6' },
-        ],
-        2: [ // Asset Scanner - core technical indicators
-          { name: 'RSI', category: 'momentum', color: '#F59E0B' },
-          { name: 'MACD', category: 'trend', color: '#10B981' },
-          { name: 'BOLLINGER', category: 'volatility', color: '#6366F1' },
-          { name: 'KELTNER', category: 'volatility', color: '#EC4899' },
-          { name: 'DONCHIAN', category: 'volatility', color: '#06B6D4' },
-          { name: 'VWAP', category: 'volume', color: '#F97316' },
-          { name: 'PIVOT', category: 'advanced', color: '#8B5CF6' },
-        ],
-        3: [ // Safety Check - volume & activity indicators
-          { name: 'OBV', category: 'volume', color: '#14B8A6' },
-          { name: 'MFI', category: 'volume', color: '#F97316' },
-          { name: 'CMF', category: 'volume', color: '#8B5CF6' },
-          { name: 'FORCE_INDEX', category: 'volume', color: '#3B82F6' },
-          { name: 'EMV', category: 'volume', color: '#22C55E' },
-          { name: 'ELDER_RAY', category: 'advanced', color: '#EF4444' },
-        ],
-        4: [ // Timing - momentum & timing indicators
-          { name: 'STOCHASTIC', category: 'momentum', color: '#EF4444' },
-          { name: 'CCI', category: 'momentum', color: '#06B6D4' },
-          { name: 'WILLIAMS_R', category: 'momentum', color: '#84CC16' },
-          { name: 'UO', category: 'momentum', color: '#A855F7' },
-          { name: 'CMO', category: 'momentum', color: '#F97316' },
-          { name: 'DPO', category: 'momentum', color: '#3B82F6' },
-          { name: 'AROON', category: 'trend', color: '#14B8A6' },
-        ],
-        5: [ // Trade Plan - volatility & risk management
-          { name: 'ATR', category: 'volatility', color: '#F59E0B' },
-          { name: 'SUPERTREND', category: 'trend', color: '#22C55E' },
-          { name: 'ADX', category: 'trend', color: '#A855F7' },
-          { name: 'PSAR', category: 'trend', color: '#EF4444' },
-          { name: 'HMA', category: 'trend', color: '#3B82F6' },
-          { name: 'DEMA', category: 'trend', color: '#EC4899' },
-          { name: 'TEMA', category: 'trend', color: '#06B6D4' },
-        ],
-        6: [ // Trap Check - divergence & reversal detection
-          { name: 'RSI', category: 'momentum', color: '#F59E0B' },
-          { name: 'STOCH_RSI', category: 'momentum', color: '#EC4899' },
-          { name: 'ROC', category: 'momentum', color: '#06B6D4' },
-          { name: 'TRIX', category: 'momentum', color: '#8B5CF6' },
-          { name: 'PPO', category: 'momentum', color: '#14B8A6' },
-          { name: 'COPPOCK', category: 'momentum', color: '#F97316' },
-        ],
-        7: [], // Final Verdict - aggregation only
+      // Trade type specific configurations with different periods and indicator focus
+      const getStepIndicators = (type: TradeType): Record<number, { name: string; category: string; color: string }[]> => {
+        if (type === 'scalping') {
+          // Scalping: Fast indicators, short periods, focus on momentum & quick reversals
+          // Professional scalpers use: VWAP, fast oscillators, order flow indicators
+          return {
+            1: [ // Market Pulse - fast trend detection (institutional level)
+              { name: 'EMA_9', category: 'trend', color: '#3B82F6' },
+              { name: 'EMA_21', category: 'trend', color: '#8B5CF6' },
+              { name: 'EMA_50', category: 'trend', color: '#06B6D4' },
+              { name: 'SMA_20', category: 'trend', color: '#F97316' },
+              { name: 'VWAP', category: 'volume', color: '#14B8A6' }, // Critical for institutional traders
+              { name: 'HMA', category: 'trend', color: '#EC4899' },
+              { name: 'CHOP', category: 'volatility', color: '#A855F7' }, // Market structure
+            ],
+            2: [ // Asset Scanner - quick signals (pro trader setup)
+              { name: 'RSI_7', category: 'momentum', color: '#F59E0B' },
+              { name: 'MACD_FAST', category: 'trend', color: '#10B981' },
+              { name: 'BOLLINGER', category: 'volatility', color: '#6366F1' },
+              { name: 'KELTNER', category: 'volatility', color: '#EC4899' },
+              { name: 'STOCHASTIC_FAST', category: 'momentum', color: '#EF4444' },
+              { name: 'PIVOT', category: 'advanced', color: '#8B5CF6' },
+              { name: 'LRS', category: 'trend', color: '#22C55E' }, // Trend direction
+            ],
+            3: [ // Safety Check - volume/order flow (smart money detection)
+              { name: 'OBV', category: 'volume', color: '#14B8A6' },
+              { name: 'MFI_7', category: 'volume', color: '#F97316' },
+              { name: 'CMF', category: 'volume', color: '#8B5CF6' },
+              { name: 'FORCE_INDEX', category: 'volume', color: '#3B82F6' },
+              { name: 'EMV', category: 'volume', color: '#22C55E' },
+              { name: 'CHAIKIN', category: 'volume', color: '#A855F7' }, // Pro volume momentum
+              { name: 'ADL', category: 'volume', color: '#EC4899' }, // Accumulation/Distribution
+            ],
+            4: [ // Timing - fast momentum (execution timing)
+              { name: 'STOCHASTIC_FAST', category: 'momentum', color: '#EF4444' },
+              { name: 'CCI_7', category: 'momentum', color: '#06B6D4' },
+              { name: 'WILLIAMS_R', category: 'momentum', color: '#84CC16' },
+              { name: 'RSI_7', category: 'momentum', color: '#F59E0B' },
+              { name: 'CMO', category: 'momentum', color: '#F97316' },
+              { name: 'ROC_5', category: 'momentum', color: '#3B82F6' },
+              { name: 'RVI', category: 'momentum', color: '#A855F7' }, // Vigor Index
+            ],
+            5: [ // Trade Plan - tight stops (risk management)
+              { name: 'ATR_7', category: 'volatility', color: '#F59E0B' },
+              { name: 'SUPERTREND_FAST', category: 'trend', color: '#22C55E' },
+              { name: 'PSAR', category: 'trend', color: '#EF4444' },
+              { name: 'DEMA', category: 'trend', color: '#EC4899' },
+              { name: 'TEMA', category: 'trend', color: '#06B6D4' },
+              { name: 'STDDEV', category: 'volatility', color: '#8B5CF6' }, // Volatility measure
+            ],
+            6: [ // Trap Check - quick reversals (trap detection)
+              { name: 'RSI_7', category: 'momentum', color: '#F59E0B' },
+              { name: 'STOCH_RSI_FAST', category: 'momentum', color: '#EC4899' },
+              { name: 'ROC_5', category: 'momentum', color: '#06B6D4' },
+              { name: 'TRIX', category: 'momentum', color: '#8B5CF6' },
+              { name: 'PPO', category: 'momentum', color: '#14B8A6' },
+              { name: 'CV', category: 'volatility', color: '#A855F7' }, // Chaikin Volatility
+            ],
+            7: [],
+          };
+        }
+
+        if (type === 'swing') {
+          // Swing: Slow indicators, long periods, focus on trend & accumulation
+          // Institutional swing traders use: Ichimoku, ADX, Accumulation indicators
+          return {
+            1: [ // Market Pulse - long-term trend (fund manager approach)
+              { name: 'EMA_50', category: 'trend', color: '#3B82F6' },
+              { name: 'EMA_100', category: 'trend', color: '#8B5CF6' },
+              { name: 'EMA_200', category: 'trend', color: '#06B6D4' },
+              { name: 'SMA_50', category: 'trend', color: '#F97316' },
+              { name: 'SMA_200', category: 'trend', color: '#14B8A6' },
+              { name: 'ICHIMOKU', category: 'trend', color: '#EC4899' },
+              { name: 'LRS', category: 'trend', color: '#A855F7' }, // Linear regression for trend
+            ],
+            2: [ // Asset Scanner - trend confirmation (institutional signals)
+              { name: 'RSI_21', category: 'momentum', color: '#F59E0B' },
+              { name: 'MACD', category: 'trend', color: '#10B981' },
+              { name: 'BOLLINGER', category: 'volatility', color: '#6366F1' },
+              { name: 'DONCHIAN', category: 'volatility', color: '#06B6D4' },
+              { name: 'ICHIMOKU', category: 'trend', color: '#EC4899' },
+              { name: 'ADX', category: 'trend', color: '#A855F7' },
+              { name: 'CHOP', category: 'volatility', color: '#22C55E' }, // Market structure
+            ],
+            3: [ // Safety Check - accumulation/distribution (smart money flow)
+              { name: 'OBV', category: 'volume', color: '#14B8A6' },
+              { name: 'MFI', category: 'volume', color: '#F97316' },
+              { name: 'CMF', category: 'volume', color: '#8B5CF6' },
+              { name: 'FORCE_INDEX', category: 'volume', color: '#3B82F6' },
+              { name: 'ELDER_RAY', category: 'advanced', color: '#EF4444' },
+              { name: 'EMV', category: 'volume', color: '#22C55E' },
+              { name: 'ADL', category: 'volume', color: '#A855F7' }, // Key for institutions
+              { name: 'CHAIKIN', category: 'volume', color: '#EC4899' }, // Pro volume analysis
+            ],
+            4: [ // Timing - trend momentum (position timing)
+              { name: 'STOCHASTIC', category: 'momentum', color: '#EF4444' },
+              { name: 'CCI', category: 'momentum', color: '#06B6D4' },
+              { name: 'AROON', category: 'trend', color: '#14B8A6' },
+              { name: 'DPO', category: 'momentum', color: '#3B82F6' },
+              { name: 'COPPOCK', category: 'momentum', color: '#F97316' },
+              { name: 'UO', category: 'momentum', color: '#A855F7' },
+              { name: 'RVI', category: 'momentum', color: '#EC4899' }, // Market vigor
+            ],
+            5: [ // Trade Plan - wide stops (position sizing)
+              { name: 'ATR_21', category: 'volatility', color: '#F59E0B' },
+              { name: 'SUPERTREND', category: 'trend', color: '#22C55E' },
+              { name: 'ADX', category: 'trend', color: '#A855F7' },
+              { name: 'PSAR', category: 'trend', color: '#EF4444' },
+              { name: 'EMA_50', category: 'trend', color: '#3B82F6' },
+              { name: 'EMA_200', category: 'trend', color: '#EC4899' },
+              { name: 'STDDEV', category: 'volatility', color: '#06B6D4' }, // Risk measurement
+            ],
+            6: [ // Trap Check - trend reversals (reversal detection)
+              { name: 'RSI_21', category: 'momentum', color: '#F59E0B' },
+              { name: 'STOCH_RSI', category: 'momentum', color: '#EC4899' },
+              { name: 'ROC', category: 'momentum', color: '#06B6D4' },
+              { name: 'COPPOCK', category: 'momentum', color: '#8B5CF6' },
+              { name: 'TRIX', category: 'momentum', color: '#14B8A6' },
+              { name: 'PPO', category: 'momentum', color: '#F97316' },
+              { name: 'CV', category: 'volatility', color: '#A855F7' }, // Volatility change
+            ],
+            7: [],
+          };
+        }
+
+        // Day Trade: Standard indicators, balanced approach
+        // Professional day traders use: VWAP, Bollinger, Order Flow indicators
+        return {
+          1: [ // Market Pulse - balanced trend (professional day trader)
+            { name: 'EMA_20', category: 'trend', color: '#3B82F6' },
+            { name: 'EMA_50', category: 'trend', color: '#8B5CF6' },
+            { name: 'EMA_100', category: 'trend', color: '#06B6D4' },
+            { name: 'SMA_50', category: 'trend', color: '#F97316' },
+            { name: 'VWAP', category: 'volume', color: '#14B8A6' }, // Critical for day traders
+            { name: 'ICHIMOKU', category: 'trend', color: '#EC4899' },
+            { name: 'LRS', category: 'trend', color: '#A855F7' }, // Trend direction
+          ],
+          2: [ // Asset Scanner - core technicals (multi-timeframe analysis)
+            { name: 'RSI', category: 'momentum', color: '#F59E0B' },
+            { name: 'MACD', category: 'trend', color: '#10B981' },
+            { name: 'BOLLINGER', category: 'volatility', color: '#6366F1' },
+            { name: 'KELTNER', category: 'volatility', color: '#EC4899' },
+            { name: 'DONCHIAN', category: 'volatility', color: '#06B6D4' },
+            { name: 'PIVOT', category: 'advanced', color: '#8B5CF6' },
+            { name: 'CHOP', category: 'volatility', color: '#22C55E' }, // Market structure
+          ],
+          3: [ // Safety Check - volume analysis (smart money detection)
+            { name: 'OBV', category: 'volume', color: '#14B8A6' },
+            { name: 'MFI', category: 'volume', color: '#F97316' },
+            { name: 'CMF', category: 'volume', color: '#8B5CF6' },
+            { name: 'FORCE_INDEX', category: 'volume', color: '#3B82F6' },
+            { name: 'EMV', category: 'volume', color: '#22C55E' },
+            { name: 'ELDER_RAY', category: 'advanced', color: '#EF4444' },
+            { name: 'ADL', category: 'volume', color: '#A855F7' }, // Accumulation/Distribution
+            { name: 'CHAIKIN', category: 'volume', color: '#EC4899' }, // Volume momentum
+          ],
+          4: [ // Timing - momentum signals (entry/exit timing)
+            { name: 'STOCHASTIC', category: 'momentum', color: '#EF4444' },
+            { name: 'CCI', category: 'momentum', color: '#06B6D4' },
+            { name: 'WILLIAMS_R', category: 'momentum', color: '#84CC16' },
+            { name: 'UO', category: 'momentum', color: '#A855F7' },
+            { name: 'CMO', category: 'momentum', color: '#F97316' },
+            { name: 'AROON', category: 'trend', color: '#14B8A6' },
+            { name: 'RVI', category: 'momentum', color: '#EC4899' }, // Vigor Index
+          ],
+          5: [ // Trade Plan - risk management (position management)
+            { name: 'ATR', category: 'volatility', color: '#F59E0B' },
+            { name: 'SUPERTREND', category: 'trend', color: '#22C55E' },
+            { name: 'ADX', category: 'trend', color: '#A855F7' },
+            { name: 'PSAR', category: 'trend', color: '#EF4444' },
+            { name: 'HMA', category: 'trend', color: '#3B82F6' },
+            { name: 'DEMA', category: 'trend', color: '#EC4899' },
+            { name: 'STDDEV', category: 'volatility', color: '#06B6D4' }, // Volatility measure
+          ],
+          6: [ // Trap Check - reversal detection (trap avoidance)
+            { name: 'RSI', category: 'momentum', color: '#F59E0B' },
+            { name: 'STOCH_RSI', category: 'momentum', color: '#EC4899' },
+            { name: 'ROC', category: 'momentum', color: '#06B6D4' },
+            { name: 'TRIX', category: 'momentum', color: '#8B5CF6' },
+            { name: 'PPO', category: 'momentum', color: '#14B8A6' },
+            { name: 'DPO', category: 'momentum', color: '#F97316' },
+            { name: 'CV', category: 'volatility', color: '#A855F7' }, // Chaikin Volatility
+          ],
+          7: [],
+        };
       };
+
+      const stepIndicators = getStepIndicators(tradeType);
 
       // Calculate indicators for each step
       const chartData: Record<number, Array<{
@@ -1864,8 +1997,10 @@ Explain the key risks and what conditions would need to change before trading th
           };
         }
 
-        if (upperName === 'RSI') {
-          const period = 14;
+        // RSI with configurable period (RSI, RSI_7, RSI_14, RSI_21)
+        if (upperName === 'RSI' || upperName.startsWith('RSI_')) {
+          const periodStr = upperName.split('_')[1];
+          const period = periodStr ? parseInt(periodStr, 10) : 14;
           if (data.length < period + 1) return null;
           const closes = data.map((d: { close: number }) => d.close);
           const changes: number[] = [];
@@ -1889,24 +2024,31 @@ Explain the key risks and what conditions would need to change before trading th
           }
           if (rsiValues.length === 0) return null;
           const currentRsi = rsiValues[rsiValues.length - 1] ?? 50;
+          // Adjust thresholds for shorter periods (more sensitive)
+          const overbought = period <= 7 ? 80 : 70;
+          const oversold = period <= 7 ? 20 : 30;
           return {
             values: rsiValues,
             currentValue: currentRsi,
-            signal: currentRsi < 30 ? 'bullish' : currentRsi > 70 ? 'bearish' : 'neutral',
-            signalStrength: currentRsi < 30 ? 30 - currentRsi : currentRsi > 70 ? currentRsi - 70 : 50,
+            signal: currentRsi < oversold ? 'bullish' : currentRsi > overbought ? 'bearish' : 'neutral',
+            signalStrength: currentRsi < oversold ? oversold - currentRsi : currentRsi > overbought ? currentRsi - overbought : 50,
             referenceLines: [
-              { value: 70, label: 'Overbought', color: '#EF4444' },
-              { value: 30, label: 'Oversold', color: '#22C55E' },
+              { value: overbought, label: 'Overbought', color: '#EF4444' },
+              { value: oversold, label: 'Oversold', color: '#22C55E' },
               { value: 50, label: 'Neutral', color: '#6B7280' },
             ],
-            metadata: { overbought: currentRsi > 70, oversold: currentRsi < 30 }
+            metadata: { overbought: currentRsi > overbought, oversold: currentRsi < oversold, period }
           };
         }
 
-        if (upperName === 'MACD') {
-          if (data.length < 35) return null; // Need 26 + 9 periods
+        // MACD with fast variant for scalping (MACD, MACD_FAST)
+        if (upperName === 'MACD' || upperName === 'MACD_FAST') {
+          const isFast = upperName === 'MACD_FAST';
+          const fast = isFast ? 5 : 12;
+          const slow = isFast ? 13 : 26;
+          const signalPeriod = isFast ? 5 : 9;
+          if (data.length < slow + signalPeriod) return null;
           const closes = data.map((d: { close: number }) => d.close);
-          const fast = 12, slow = 26, signalPeriod = 9;
 
           // Calculate EMAs
           const calcEma = (arr: number[], period: number): number[] => {
@@ -2000,8 +2142,10 @@ Explain the key risks and what conditions would need to change before trading th
           };
         }
 
-        if (upperName === 'ATR') {
-          const period = 14;
+        // ATR with configurable period (ATR, ATR_7, ATR_14, ATR_21)
+        if (upperName === 'ATR' || upperName.startsWith('ATR_')) {
+          const periodStr = upperName.split('_')[1];
+          const period = periodStr ? parseInt(periodStr, 10) : 14;
           if (data.length < period + 1) return null;
           const trValues: number[] = [];
           for (let i = 1; i < data.length; i++) {
@@ -2036,8 +2180,10 @@ Explain the key risks and what conditions would need to change before trading th
           };
         }
 
-        if (upperName === 'STOCHASTIC') {
-          const k = 14, d = 3, smooth = 3;
+        // STOCHASTIC with fast variant (STOCHASTIC, STOCHASTIC_FAST)
+        if (upperName === 'STOCHASTIC' || upperName === 'STOCHASTIC_FAST') {
+          const isFast = upperName === 'STOCHASTIC_FAST';
+          const k = isFast ? 5 : 14, d = isFast ? 2 : 3, smooth = isFast ? 2 : 3;
           if (data.length < k + smooth + d) return null;
           const kValues: number[] = [];
           for (let i = k - 1; i < data.length; i++) {
@@ -2105,8 +2251,13 @@ Explain the key risks and what conditions would need to change before trading th
           };
         }
 
-        if (upperName === 'MFI') {
-          const period = 14;
+        // MFI with configurable period (MFI, MFI_7, MFI_14)
+        if (upperName === 'MFI' || upperName.startsWith('MFI_')) {
+          const periodStr = upperName.split('_')[1];
+          const period = periodStr ? parseInt(periodStr, 10) : 14;
+          // Shorter periods have tighter thresholds
+          const overbought = period <= 7 ? 85 : 80;
+          const oversold = period <= 7 ? 15 : 20;
           if (data.length < period + 1) return null;
           const typicalPrices = data.map((d: { high: number; low: number; close: number }) => (d.high + d.low + d.close) / 3);
           const moneyFlows = data.map((d: { volume: number }, i: number) => (typicalPrices[i] ?? 0) * d.volume);
@@ -2127,13 +2278,13 @@ Explain the key risks and what conditions would need to change before trading th
           return {
             values: mfiValues,
             currentValue: currentMfi,
-            signal: currentMfi < 20 ? 'bullish' : currentMfi > 80 ? 'bearish' : 'neutral',
-            signalStrength: currentMfi < 20 ? 20 - currentMfi : currentMfi > 80 ? currentMfi - 80 : 50,
+            signal: currentMfi < oversold ? 'bullish' : currentMfi > overbought ? 'bearish' : 'neutral',
+            signalStrength: currentMfi < oversold ? oversold - currentMfi : currentMfi > overbought ? currentMfi - overbought : 50,
             referenceLines: [
-              { value: 80, label: 'Overbought', color: '#EF4444' },
-              { value: 20, label: 'Oversold', color: '#22C55E' },
+              { value: overbought, label: 'Overbought', color: '#EF4444' },
+              { value: oversold, label: 'Oversold', color: '#22C55E' },
             ],
-            metadata: {}
+            metadata: { period }
           };
         }
 
@@ -2165,8 +2316,13 @@ Explain the key risks and what conditions would need to change before trading th
           };
         }
 
-        if (upperName === 'CCI') {
-          const period = 20;
+        // CCI with configurable period (CCI, CCI_7, CCI_14, CCI_20)
+        if (upperName === 'CCI' || upperName.startsWith('CCI_')) {
+          const periodStr = upperName.split('_')[1];
+          const period = periodStr ? parseInt(periodStr, 10) : 20;
+          // Shorter periods use tighter thresholds
+          const overbought = period <= 7 ? 150 : 100;
+          const oversold = period <= 7 ? -150 : -100;
           if (data.length < period) return null;
           const typicalPrices = data.map((d: { high: number; low: number; close: number }) => (d.high + d.low + d.close) / 3);
           const cciValues: number[] = [];
@@ -2182,19 +2338,21 @@ Explain the key risks and what conditions would need to change before trading th
           return {
             values: cciValues,
             currentValue: currentCci,
-            signal: currentCci < -100 ? 'bullish' : currentCci > 100 ? 'bearish' : 'neutral',
-            signalStrength: Math.abs(currentCci) > 100 ? Math.min(100, Math.abs(currentCci) - 100) : 50,
+            signal: currentCci < oversold ? 'bullish' : currentCci > overbought ? 'bearish' : 'neutral',
+            signalStrength: Math.abs(currentCci) > Math.abs(oversold) ? Math.min(100, Math.abs(currentCci) - Math.abs(oversold)) : 50,
             referenceLines: [
-              { value: 100, label: 'Overbought', color: '#EF4444' },
-              { value: -100, label: 'Oversold', color: '#22C55E' },
+              { value: overbought, label: 'Overbought', color: '#EF4444' },
+              { value: oversold, label: 'Oversold', color: '#22C55E' },
               { value: 0, label: 'Zero', color: '#6B7280' },
             ],
-            metadata: {}
+            metadata: { period }
           };
         }
 
-        if (upperName === 'WILLIAMS_R') {
-          const period = 14;
+        // WILLIAMS_R with configurable period (WILLIAMS_R, WILLIAMS_R_7, WILLIAMS_R_21)
+        if (upperName === 'WILLIAMS_R' || upperName.startsWith('WILLIAMS_R_')) {
+          const periodStr = upperName.split('_').pop();
+          const period = periodStr && !isNaN(parseInt(periodStr, 10)) ? parseInt(periodStr, 10) : 14;
           if (data.length < period) return null;
           const wrValues: number[] = [];
           for (let i = period - 1; i < data.length; i++) {
@@ -2221,8 +2379,10 @@ Explain the key risks and what conditions would need to change before trading th
           };
         }
 
-        if (upperName === 'ADX') {
-          const period = 14;
+        // ADX with configurable period (ADX, ADX_7, ADX_14, ADX_21)
+        if (upperName === 'ADX' || upperName.startsWith('ADX_')) {
+          const periodStr = upperName.split('_')[1];
+          const period = periodStr ? parseInt(periodStr, 10) : 14;
           if (data.length < period * 2) return null;
           const plusDM: number[] = [], minusDM: number[] = [], tr: number[] = [];
           for (let i = 1; i < data.length; i++) {
@@ -2289,8 +2449,10 @@ Explain the key risks and what conditions would need to change before trading th
           };
         }
 
-        if (upperName === 'SUPERTREND') {
-          const period = 10, multiplier = 3;
+        // SUPERTREND with fast variant (SUPERTREND, SUPERTREND_FAST)
+        if (upperName === 'SUPERTREND' || upperName === 'SUPERTREND_FAST') {
+          const isFast = upperName === 'SUPERTREND_FAST';
+          const period = isFast ? 5 : 10, multiplier = isFast ? 2 : 3;
           if (data.length < period + 1) return null;
           // Calculate ATR first
           const trValues: number[] = [];
@@ -2360,8 +2522,10 @@ Explain the key risks and what conditions would need to change before trading th
           };
         }
 
-        if (upperName === 'STOCH_RSI') {
-          const period = 14;
+        // STOCH_RSI with fast variant (STOCH_RSI, STOCH_RSI_FAST)
+        if (upperName === 'STOCH_RSI' || upperName === 'STOCH_RSI_FAST') {
+          const isFast = upperName === 'STOCH_RSI_FAST';
+          const period = isFast ? 7 : 14;
           if (data.length < period * 2) return null;
           const closes = data.map((d: { close: number }) => d.close);
           const changes: number[] = [];
@@ -2411,8 +2575,10 @@ Explain the key risks and what conditions would need to change before trading th
           };
         }
 
-        if (upperName === 'ROC') {
-          const period = 12;
+        // ROC with configurable period (ROC, ROC_5, ROC_10, ROC_12, ROC_21)
+        if (upperName === 'ROC' || upperName.startsWith('ROC_')) {
+          const periodStr = upperName.split('_')[1];
+          const period = periodStr ? parseInt(periodStr, 10) : 12;
           if (data.length < period + 1) return null;
           const closes = data.map((d: { close: number }) => d.close);
           const rocValues: number[] = [];
@@ -2431,7 +2597,7 @@ Explain the key risks and what conditions would need to change before trading th
             signal: currentRoc > 0 ? 'bullish' : 'bearish',
             signalStrength: Math.min(100, Math.abs(currentRoc) * 5),
             referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
-            metadata: {}
+            metadata: { period }
           };
         }
 
@@ -3140,6 +3306,290 @@ Explain the key risks and what conditions would need to change before trading th
           };
         }
 
+        // =====================================================
+        // ADDITIONAL RECOMMENDED INDICATORS
+        // =====================================================
+
+        // Choppiness Index - Measures if market is trending or ranging (0-100)
+        if (upperName === 'CHOP' || upperName === 'CHOPPINESS') {
+          const period = 14;
+          if (data.length < period + 1) return null;
+
+          const chopValues: number[] = [];
+          for (let i = period; i < data.length; i++) {
+            const periodData = data.slice(i - period + 1, i + 1);
+            const highestHigh = Math.max(...periodData.map((d: { high: number }) => d.high));
+            const lowestLow = Math.min(...periodData.map((d: { low: number }) => d.low));
+
+            // Sum of True Range
+            let atrSum = 0;
+            for (let j = i - period + 1; j <= i; j++) {
+              const curr = data[j];
+              const prev = data[j - 1];
+              if (curr && prev) {
+                const tr = Math.max(
+                  curr.high - curr.low,
+                  Math.abs(curr.high - prev.close),
+                  Math.abs(curr.low - prev.close)
+                );
+                atrSum += tr;
+              }
+            }
+
+            const hlRange = highestHigh - lowestLow;
+            if (hlRange > 0) {
+              const chop = 100 * Math.log10(atrSum / hlRange) / Math.log10(period);
+              chopValues.push(Math.max(0, Math.min(100, chop)));
+            }
+          }
+
+          if (chopValues.length === 0) return null;
+          const currentChop = chopValues[chopValues.length - 1] ?? 50;
+
+          return {
+            values: chopValues,
+            currentValue: currentChop,
+            // High chop = ranging/consolidation, Low chop = trending
+            signal: currentChop < 38.2 ? 'bullish' : currentChop > 61.8 ? 'neutral' : 'neutral',
+            signalStrength: currentChop < 38.2 ? 100 - currentChop * 2 : 50,
+            referenceLines: [
+              { value: 61.8, label: 'Choppy', color: '#F59E0B' },
+              { value: 38.2, label: 'Trending', color: '#22C55E' },
+            ],
+            metadata: { marketState: currentChop > 61.8 ? 'ranging' : currentChop < 38.2 ? 'trending' : 'transitional' }
+          };
+        }
+
+        // Linear Regression Slope - Trend direction and strength
+        if (upperName === 'LRS' || upperName === 'LINEAR_REGRESSION_SLOPE') {
+          const period = 20;
+          if (data.length < period) return null;
+
+          const closes = data.map((d: { close: number }) => d.close);
+          const lrsValues: number[] = [];
+
+          for (let i = period - 1; i < closes.length; i++) {
+            const slice = closes.slice(i - period + 1, i + 1);
+            // Calculate linear regression slope
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            for (let j = 0; j < period; j++) {
+              const x = j;
+              const y = slice[j] ?? 0;
+              sumX += x;
+              sumY += y;
+              sumXY += x * y;
+              sumX2 += x * x;
+            }
+            const n = period;
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            lrsValues.push(slope);
+          }
+
+          if (lrsValues.length === 0) return null;
+          const currentSlope = lrsValues[lrsValues.length - 1] ?? 0;
+          const avgPrice = closes.slice(-period).reduce((a, b) => a + b, 0) / period;
+          const normalizedSlope = avgPrice !== 0 ? (currentSlope / avgPrice) * 100 : 0;
+
+          return {
+            values: lrsValues,
+            currentValue: normalizedSlope,
+            signal: normalizedSlope > 0.1 ? 'bullish' : normalizedSlope < -0.1 ? 'bearish' : 'neutral',
+            signalStrength: Math.min(100, Math.abs(normalizedSlope) * 50),
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: { rawSlope: currentSlope, trendAngle: Math.atan(currentSlope) * (180 / Math.PI) }
+          };
+        }
+
+        // RVI (Relative Vigor Index) - Momentum based on close vs open
+        if (upperName === 'RVI') {
+          const period = 10;
+          if (data.length < period + 4) return null;
+
+          // Calculate numerator (close - open) and denominator (high - low) with smoothing
+          const rviValues: number[] = [];
+          const signalValues: number[] = [];
+
+          for (let i = 3; i < data.length; i++) {
+            const d0 = data[i], d1 = data[i-1], d2 = data[i-2], d3 = data[i-3];
+            if (d0 && d1 && d2 && d3) {
+              const num = ((d0.close - d0.open) + 2*(d1.close - d1.open) + 2*(d2.close - d2.open) + (d3.close - d3.open)) / 6;
+              const den = ((d0.high - d0.low) + 2*(d1.high - d1.low) + 2*(d2.high - d2.low) + (d3.high - d3.low)) / 6;
+              rviValues.push(den !== 0 ? num / den : 0);
+            }
+          }
+
+          if (rviValues.length < period) return null;
+
+          // Calculate signal line (4-period SMA of RVI)
+          for (let i = 3; i < rviValues.length; i++) {
+            const slice = rviValues.slice(i - 3, i + 1);
+            signalValues.push(slice.reduce((a, b) => a + b, 0) / 4);
+          }
+
+          if (signalValues.length === 0) return null;
+          const currentRvi = rviValues[rviValues.length - 1] ?? 0;
+          const currentSignal = signalValues[signalValues.length - 1] ?? 0;
+
+          return {
+            values: rviValues.slice(-signalValues.length),
+            currentValue: currentRvi,
+            signal: currentRvi > currentSignal && currentRvi > 0 ? 'bullish' :
+                   currentRvi < currentSignal && currentRvi < 0 ? 'bearish' : 'neutral',
+            signalStrength: Math.min(100, Math.abs(currentRvi - currentSignal) * 200),
+            secondaryValues: signalValues,
+            secondaryLabel: 'Signal',
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: { rvi: currentRvi, signal: currentSignal }
+          };
+        }
+
+        // Chaikin Oscillator - Momentum of A/D Line
+        if (upperName === 'CHAIKIN' || upperName === 'CHO') {
+          if (data.length < 13) return null;
+
+          // First calculate A/D Line
+          let adl = 0;
+          const adlValues: number[] = [];
+          for (let i = 0; i < data.length; i++) {
+            const d = data[i];
+            if (d) {
+              const mfm = d.high === d.low ? 0 : ((d.close - d.low) - (d.high - d.close)) / (d.high - d.low);
+              adl += mfm * d.volume;
+              adlValues.push(adl);
+            }
+          }
+
+          if (adlValues.length < 13) return null;
+
+          // Calculate 3-day EMA and 10-day EMA of A/D Line
+          const calcEma = (values: number[], period: number) => {
+            const mult = 2 / (period + 1);
+            const ema: number[] = [values[0] ?? 0];
+            for (let i = 1; i < values.length; i++) {
+              const val = values[i] ?? 0;
+              const prevEma = ema[i - 1] ?? 0;
+              ema.push((val - prevEma) * mult + prevEma);
+            }
+            return ema;
+          };
+
+          const ema3 = calcEma(adlValues, 3);
+          const ema10 = calcEma(adlValues, 10);
+
+          const choValues: number[] = [];
+          for (let i = 9; i < adlValues.length; i++) {
+            const e3 = ema3[i] ?? 0;
+            const e10 = ema10[i] ?? 0;
+            choValues.push(e3 - e10);
+          }
+
+          if (choValues.length === 0) return null;
+          const currentCho = choValues[choValues.length - 1] ?? 0;
+          const prevCho = choValues[choValues.length - 2] ?? currentCho;
+
+          return {
+            values: choValues,
+            currentValue: currentCho,
+            signal: currentCho > 0 && currentCho > prevCho ? 'bullish' :
+                   currentCho < 0 && currentCho < prevCho ? 'bearish' : 'neutral',
+            signalStrength: Math.min(100, Math.abs(currentCho) / 10000),
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: { momentum: currentCho > prevCho ? 'rising' : 'falling' }
+          };
+        }
+
+        // A/D Line (Accumulation/Distribution Line)
+        if (upperName === 'AD' || upperName === 'ADL') {
+          if (data.length < 20) return null;
+
+          let adl = 0;
+          const adlValues: number[] = [];
+          for (let i = 0; i < data.length; i++) {
+            const d = data[i];
+            if (d) {
+              const mfm = d.high === d.low ? 0 : ((d.close - d.low) - (d.high - d.close)) / (d.high - d.low);
+              adl += mfm * d.volume;
+              adlValues.push(adl);
+            }
+          }
+
+          if (adlValues.length === 0) return null;
+          const currentAd = adlValues[adlValues.length - 1] ?? 0;
+          const prevAd = adlValues[adlValues.length - 20] ?? adlValues[0] ?? 0;
+
+          return {
+            values: adlValues,
+            currentValue: currentAd,
+            signal: currentAd > prevAd ? 'bullish' : 'bearish',
+            signalStrength: Math.min(100, Math.abs(currentAd - prevAd) / Math.max(1, Math.abs(prevAd)) * 100),
+            metadata: { trend: currentAd > prevAd ? 'accumulation' : 'distribution' }
+          };
+        }
+
+        // Standard Deviation - Volatility measure
+        if (upperName === 'STDDEV' || upperName === 'STD') {
+          const period = 20;
+          if (data.length < period) return null;
+
+          const closes = data.map((d: { close: number }) => d.close);
+          const stdValues: number[] = [];
+
+          for (let i = period - 1; i < closes.length; i++) {
+            const slice = closes.slice(i - period + 1, i + 1);
+            const mean = slice.reduce((a, b) => a + b, 0) / period;
+            const variance = slice.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / period;
+            stdValues.push(Math.sqrt(variance));
+          }
+
+          if (stdValues.length === 0) return null;
+          const currentStd = stdValues[stdValues.length - 1] ?? 0;
+          const avgStd = stdValues.reduce((a, b) => a + b, 0) / stdValues.length;
+
+          return {
+            values: stdValues,
+            currentValue: currentStd,
+            signal: currentStd > avgStd * 1.5 ? 'bearish' : currentStd < avgStd * 0.5 ? 'bullish' : 'neutral',
+            signalStrength: avgStd !== 0 ? Math.min(100, (currentStd / avgStd) * 50) : 0,
+            metadata: { volatility: currentStd > avgStd ? 'high' : 'low', percentOfAvg: avgStd !== 0 ? (currentStd / avgStd * 100).toFixed(1) : 0 }
+          };
+        }
+
+        // Chaikin Volatility - Based on high-low range
+        if (upperName === 'CV' || upperName === 'CHAIKIN_VOLATILITY') {
+          const period = 10, rocPeriod = 10;
+          if (data.length < period + rocPeriod) return null;
+
+          // Calculate EMA of high-low range
+          const hlRange = data.map((d: { high: number; low: number }) => d.high - d.low);
+          const mult = 2 / (period + 1);
+          const ema: number[] = [hlRange[0] ?? 0];
+          for (let i = 1; i < hlRange.length; i++) {
+            const val = hlRange[i] ?? 0;
+            const prevEma = ema[i - 1] ?? 0;
+            ema.push((val - prevEma) * mult + prevEma);
+          }
+
+          // Calculate ROC of EMA
+          const cvValues: number[] = [];
+          for (let i = rocPeriod; i < ema.length; i++) {
+            const curr = ema[i] ?? 0;
+            const prev = ema[i - rocPeriod] ?? 1;
+            cvValues.push(prev !== 0 ? ((curr - prev) / prev) * 100 : 0);
+          }
+
+          if (cvValues.length === 0) return null;
+          const currentCv = cvValues[cvValues.length - 1] ?? 0;
+
+          return {
+            values: cvValues,
+            currentValue: currentCv,
+            signal: currentCv > 25 ? 'bearish' : currentCv < -25 ? 'bullish' : 'neutral',
+            signalStrength: Math.min(100, Math.abs(currentCv)),
+            referenceLines: [{ value: 0, label: 'Zero', color: '#6B7280' }],
+            metadata: { volatilityChange: currentCv > 0 ? 'expanding' : 'contracting' }
+          };
+        }
+
         // Coppock Curve
         if (upperName === 'COPPOCK') {
           const roc14 = 14, roc11 = 11, wmaPeriod = 10;
@@ -3217,6 +3667,14 @@ Explain the key risks and what conditions would need to change before trading th
         if (name.includes('TRIX')) return `TRIX at ${currentValue.toFixed(2)}. ${signal === 'bullish' ? 'Positive momentum building' : 'Negative momentum building'}. Triple-smoothed momentum.`;
         if (name.includes('PPO')) return `PPO histogram ${signal === 'bullish' ? 'positive - bullish momentum' : 'negative - bearish momentum'}. Similar to MACD in percentage terms.`;
         if (name.includes('COPPOCK')) return `Coppock Curve ${signal === 'bullish' ? 'turning up from bottom - buy signal' : signal === 'bearish' ? 'turning down from top - caution' : 'flat - no clear signal'}. Long-term momentum.`;
+        // Additional recommended indicator interpretations
+        if (name.includes('CHOP')) return `Choppiness Index at ${currentValue.toFixed(1)}. ${currentValue > 61.8 ? 'Market is ranging/consolidating' : currentValue < 38.2 ? 'Market is trending - follow trend' : 'Market transitional - wait for clarity'}.`;
+        if (name.includes('LRS') || name.includes('LINEAR_REGRESSION')) return `Linear Regression Slope ${signal === 'bullish' ? 'positive - uptrend' : signal === 'bearish' ? 'negative - downtrend' : 'flat - no clear direction'}. Trend angle indicator.`;
+        if (name === 'RVI') return `Relative Vigor Index ${signal === 'bullish' ? 'positive with bullish crossover' : signal === 'bearish' ? 'negative with bearish crossover' : 'neutral - no clear signal'}. Measures conviction of moves.`;
+        if (name.includes('CHAIKIN') && !name.includes('VOLATILITY')) return `Chaikin Oscillator ${signal === 'bullish' ? 'rising and positive - accumulation' : signal === 'bearish' ? 'falling and negative - distribution' : 'flat - wait for direction'}. Volume momentum.`;
+        if (name === 'AD' || name === 'ADL') return `A/D Line ${signal === 'bullish' ? 'rising - accumulation phase' : 'falling - distribution phase'}. Confirms volume participation.`;
+        if (name.includes('STDDEV') || name === 'STD') return `Standard Deviation ${currentValue > 0 ? 'indicates' : 'shows'} ${signal === 'bearish' ? 'high volatility - increase caution' : signal === 'bullish' ? 'low volatility - potential breakout setup' : 'normal volatility'}.`;
+        if (name === 'CV' || name.includes('CHAIKIN_VOLATILITY')) return `Chaikin Volatility ${currentValue > 0 ? 'expanding - high volatility' : 'contracting - low volatility'}. ${Math.abs(currentValue) > 25 ? 'Significant change detected' : 'Normal range'}.`;
 
         return `${name} indicates ${signalText} at current levels.`;
       };
