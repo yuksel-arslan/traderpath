@@ -576,13 +576,13 @@ export function DownloadReportButton({
           analysisId: reportData.analysisId,
           marketContext: {
             btcPrice: 0,
-            btcDominance: reportData.marketPulse.btcDominance,
-            fearGreedIndex: reportData.marketPulse.fearGreedIndex,
-            marketTrend: reportData.marketPulse.trend.direction as 'bullish' | 'bearish' | 'neutral',
+            btcDominance: reportData.marketPulse?.btcDominance ?? 50,
+            fearGreedIndex: reportData.marketPulse?.fearGreedIndex ?? 50,
+            marketTrend: (reportData.marketPulse?.trend?.direction ?? 'neutral') as 'bullish' | 'bearish' | 'neutral',
           },
           assetInfo: {
-            currentPrice: reportData.assetScan.currentPrice,
-            priceChange24h: reportData.assetScan.priceChange24h,
+            currentPrice: reportData.assetScan?.currentPrice ?? 0,
+            priceChange24h: reportData.assetScan?.priceChange24h ?? 0,
             volume24h: 0,
           },
           steps: [
@@ -599,30 +599,36 @@ export function DownloadReportButton({
                 tradeType: tradeType,
                 aiPromptFocus: 'Analyze market conditions and sentiment',
               },
-              output: {
-                indicators: {
-                  'Fear & Greed': { value: reportData.marketPulse.fearGreedIndex, signal: reportData.marketPulse.fearGreedIndex > 50 ? 'bullish' : reportData.marketPulse.fearGreedIndex < 50 ? 'bearish' : 'neutral' as const, strength: 70 },
-                  'BTC Dominance': { value: reportData.marketPulse.btcDominance, signal: 'neutral' as const, strength: 50 },
-                },
-                signals: {
-                  bullish: reportData.marketPulse.trend.direction === 'bullish' ? ['Market trend bullish'] : [],
-                  bearish: reportData.marketPulse.trend.direction === 'bearish' ? ['Market trend bearish'] : [],
-                  neutral: reportData.marketPulse.trend.direction === 'neutral' ? ['Market sideways'] : [],
-                },
-                stepScore: reportData.marketPulse.trend.strength / 10,
-                stepConfidence: reportData.marketPulse.trend.strength,
-                keyFindings: [
-                  `Fear & Greed Index: ${reportData.marketPulse.fearGreedIndex} (${reportData.marketPulse.fearGreedLabel})`,
-                  `Market Regime: ${reportData.marketPulse.marketRegime}`,
-                ],
-              },
-              commentary: {
-                summary: reportData.marketPulse.aiSummary || 'Market conditions analyzed.',
-                signalInterpretation: `Market showing ${reportData.marketPulse.trend.direction} bias.`,
-                riskFactors: reportData.marketPulse.marketRegime === 'risk_off' ? ['Risk-off environment'] : [],
-                opportunities: reportData.marketPulse.marketRegime === 'risk_on' ? ['Risk-on environment favorable'] : [],
-                recommendation: reportData.marketPulse.trend.direction === 'bullish' ? 'Market conditions favorable' : 'Use caution',
-              },
+              output: (() => {
+                const trend = reportData.marketPulse?.trend || { direction: 'neutral', strength: 50 };
+                return {
+                  indicators: {
+                    'Fear & Greed': { value: reportData.marketPulse?.fearGreedIndex ?? 50, signal: (reportData.marketPulse?.fearGreedIndex ?? 50) > 50 ? 'bullish' : (reportData.marketPulse?.fearGreedIndex ?? 50) < 50 ? 'bearish' : 'neutral' as const, strength: 70 },
+                    'BTC Dominance': { value: reportData.marketPulse?.btcDominance ?? 50, signal: 'neutral' as const, strength: 50 },
+                  },
+                  signals: {
+                    bullish: trend.direction === 'bullish' ? ['Market trend bullish'] : [],
+                    bearish: trend.direction === 'bearish' ? ['Market trend bearish'] : [],
+                    neutral: trend.direction === 'neutral' ? ['Market sideways'] : [],
+                  },
+                  stepScore: (trend.strength ?? 50) / 10,
+                  stepConfidence: trend.strength ?? 50,
+                  keyFindings: [
+                    `Fear & Greed Index: ${reportData.marketPulse?.fearGreedIndex ?? '-'} (${reportData.marketPulse?.fearGreedLabel ?? 'Unknown'})`,
+                    `Market Regime: ${reportData.marketPulse?.marketRegime ?? 'Unknown'}`,
+                  ],
+                };
+              })(),
+              commentary: (() => {
+                const trend = reportData.marketPulse?.trend || { direction: 'neutral', strength: 50 };
+                return {
+                  summary: reportData.marketPulse?.aiSummary || 'Market conditions analyzed.',
+                  signalInterpretation: `Market showing ${trend.direction} bias.`,
+                  riskFactors: reportData.marketPulse?.marketRegime === 'risk_off' ? ['Risk-off environment'] : [],
+                  opportunities: reportData.marketPulse?.marketRegime === 'risk_on' ? ['Risk-on environment favorable'] : [],
+                  recommendation: trend.direction === 'bullish' ? 'Market conditions favorable' : 'Use caution',
+                };
+              })(),
               indicatorCharts: indicatorChartData[1] || [],
             },
             {
@@ -638,30 +644,39 @@ export function DownloadReportButton({
                 tradeType: tradeType,
                 aiPromptFocus: 'Analyze asset technical structure',
               },
-              output: {
-                indicators: {
-                  'RSI': { value: reportData.assetScan.indicators.rsi, signal: reportData.assetScan.indicators.rsi > 70 ? 'bearish' : reportData.assetScan.indicators.rsi < 30 ? 'bullish' : 'neutral' as const, strength: 70 },
-                  'MACD': { value: reportData.assetScan.indicators.macd.histogram, signal: reportData.assetScan.indicators.macd.histogram > 0 ? 'bullish' : 'bearish' as const, strength: 60 },
-                },
-                signals: {
-                  bullish: (reportData.assetScan.timeframes || []).filter(t => t.trend === 'bullish').map(t => `${t.tf} bullish`),
-                  bearish: (reportData.assetScan.timeframes || []).filter(t => t.trend === 'bearish').map(t => `${t.tf} bearish`),
-                  neutral: (reportData.assetScan.timeframes || []).filter(t => t.trend === 'neutral').map(t => `${t.tf} neutral`),
-                },
-                stepScore: 6,
-                stepConfidence: 70,
-                keyFindings: [
-                  `RSI at ${reportData.assetScan.indicators?.rsi?.toFixed(0) ?? '-'}`,
-                  `Price change 24h: ${reportData.assetScan.priceChange24h?.toFixed(2) ?? '0'}%`,
-                ],
-              },
-              commentary: {
-                summary: reportData.assetScan.aiInsight || 'Asset technical analysis completed.',
-                signalInterpretation: `Multi-timeframe analysis shows ${(reportData.assetScan.timeframes || []).filter(t => t.trend === 'bullish').length > (reportData.assetScan.timeframes || []).filter(t => t.trend === 'bearish').length ? 'bullish' : 'bearish'} bias.`,
-                riskFactors: reportData.assetScan.indicators.rsi > 70 ? ['RSI overbought'] : reportData.assetScan.indicators.rsi < 30 ? ['RSI oversold'] : [],
-                opportunities: [],
-                recommendation: 'Review support and resistance levels',
-              },
+              output: (() => {
+                const indicators = reportData.assetScan?.indicators || { rsi: 50, macd: { histogram: 0 } };
+                const rsi = indicators.rsi ?? 50;
+                const macdHistogram = indicators.macd?.histogram ?? 0;
+                return {
+                  indicators: {
+                    'RSI': { value: rsi, signal: rsi > 70 ? 'bearish' : rsi < 30 ? 'bullish' : 'neutral' as const, strength: 70 },
+                    'MACD': { value: macdHistogram, signal: macdHistogram > 0 ? 'bullish' : 'bearish' as const, strength: 60 },
+                  },
+                  signals: {
+                    bullish: (reportData.assetScan?.timeframes || []).filter(t => t.trend === 'bullish').map(t => `${t.tf} bullish`),
+                    bearish: (reportData.assetScan?.timeframes || []).filter(t => t.trend === 'bearish').map(t => `${t.tf} bearish`),
+                    neutral: (reportData.assetScan?.timeframes || []).filter(t => t.trend === 'neutral').map(t => `${t.tf} neutral`),
+                  },
+                  stepScore: 6,
+                  stepConfidence: 70,
+                  keyFindings: [
+                    `RSI at ${rsi.toFixed(0)}`,
+                    `Price change 24h: ${reportData.assetScan?.priceChange24h?.toFixed(2) ?? '0'}%`,
+                  ],
+                };
+              })(),
+              commentary: (() => {
+                const rsi = reportData.assetScan?.indicators?.rsi ?? 50;
+                const timeframes = reportData.assetScan?.timeframes || [];
+                return {
+                  summary: reportData.assetScan?.aiInsight || 'Asset technical analysis completed.',
+                  signalInterpretation: `Multi-timeframe analysis shows ${timeframes.filter(t => t.trend === 'bullish').length > timeframes.filter(t => t.trend === 'bearish').length ? 'bullish' : 'bearish'} bias.`,
+                  riskFactors: rsi > 70 ? ['RSI overbought'] : rsi < 30 ? ['RSI oversold'] : [],
+                  opportunities: [],
+                  recommendation: 'Review support and resistance levels',
+                };
+              })(),
               indicatorCharts: indicatorChartData[2] || [],
             },
             {
@@ -674,29 +689,39 @@ export function DownloadReportButton({
                 tradeType: tradeType,
                 aiPromptFocus: 'Detect manipulation and assess risk',
               },
-              output: {
-                indicators: {
-                  'Whale Activity': { value: null, signal: reportData.safetyCheck.whaleActivity.bias === 'accumulation' ? 'bullish' : reportData.safetyCheck.whaleActivity.bias === 'distribution' ? 'bearish' : 'neutral' as const, strength: 50 },
-                },
-                signals: {
-                  bullish: reportData.safetyCheck.whaleActivity.bias === 'accumulation' ? ['Whale accumulation detected'] : [],
-                  bearish: reportData.safetyCheck.whaleActivity.bias === 'distribution' ? ['Whale distribution detected'] : [],
-                  neutral: [],
-                },
-                stepScore: reportData.safetyCheck.riskLevel === 'low' ? 8 : reportData.safetyCheck.riskLevel === 'medium' ? 5 : 3,
-                stepConfidence: 60,
-                keyFindings: [
-                  `Risk Level: ${reportData.safetyCheck.riskLevel}`,
-                  ...reportData.safetyCheck.warnings.slice(0, 2),
-                ],
-              },
-              commentary: {
-                summary: reportData.safetyCheck.aiInsight || 'Safety analysis completed.',
-                signalInterpretation: `${reportData.safetyCheck.riskLevel} risk environment.`,
-                riskFactors: reportData.safetyCheck.warnings,
-                opportunities: reportData.safetyCheck.smartMoney.positioning === 'long' ? ['Smart money long'] : [],
-                recommendation: reportData.safetyCheck.riskLevel === 'high' ? 'Exercise extreme caution' : 'Proceed with normal risk management',
-              },
+              output: (() => {
+                const whaleActivity = reportData.safetyCheck?.whaleActivity || { bias: 'neutral' };
+                const warnings = reportData.safetyCheck?.warnings || [];
+                const riskLevel = reportData.safetyCheck?.riskLevel || 'medium';
+                return {
+                  indicators: {
+                    'Whale Activity': { value: null, signal: whaleActivity.bias === 'accumulation' ? 'bullish' : whaleActivity.bias === 'distribution' ? 'bearish' : 'neutral' as const, strength: 50 },
+                  },
+                  signals: {
+                    bullish: whaleActivity.bias === 'accumulation' ? ['Whale accumulation detected'] : [],
+                    bearish: whaleActivity.bias === 'distribution' ? ['Whale distribution detected'] : [],
+                    neutral: [],
+                  },
+                  stepScore: riskLevel === 'low' ? 8 : riskLevel === 'medium' ? 5 : 3,
+                  stepConfidence: 60,
+                  keyFindings: [
+                    `Risk Level: ${riskLevel}`,
+                    ...(Array.isArray(warnings) ? warnings.slice(0, 2) : []),
+                  ],
+                };
+              })(),
+              commentary: (() => {
+                const riskLevel = reportData.safetyCheck?.riskLevel || 'medium';
+                const warnings = reportData.safetyCheck?.warnings || [];
+                const smartMoney = reportData.safetyCheck?.smartMoney || { positioning: 'neutral' };
+                return {
+                  summary: reportData.safetyCheck?.aiInsight || 'Safety analysis completed.',
+                  signalInterpretation: `${riskLevel} risk environment.`,
+                  riskFactors: Array.isArray(warnings) ? warnings : [],
+                  opportunities: smartMoney.positioning === 'long' ? ['Smart money long'] : [],
+                  recommendation: riskLevel === 'high' ? 'Exercise extreme caution' : 'Proceed with normal risk management',
+                };
+              })(),
               indicatorCharts: indicatorChartData[3] || [],
             },
             {
@@ -709,27 +734,36 @@ export function DownloadReportButton({
                 tradeType: tradeType,
                 aiPromptFocus: 'Determine optimal entry timing',
               },
-              output: {
-                indicators: {},
-                signals: {
-                  bullish: reportData.timing.tradeNow ? ['Entry conditions met'] : [],
-                  bearish: [],
-                  neutral: !reportData.timing.tradeNow ? ['Waiting for conditions'] : [],
-                },
-                stepScore: reportData.timing.tradeNow ? 8 : 4,
-                stepConfidence: 70,
-                keyFindings: [
-                  reportData.timing.tradeNow ? 'Trade now recommended' : 'Wait for better entry',
-                  reportData.timing.reason,
-                ],
-              },
-              commentary: {
-                summary: reportData.timing.aiInsight || 'Timing analysis completed.',
-                signalInterpretation: reportData.timing.reason,
-                riskFactors: !reportData.timing.tradeNow ? ['Entry conditions not fully met'] : [],
-                opportunities: reportData.timing.entryZones?.map(ez => `Entry zone: ${ez.priceLow?.toFixed(2) ?? '-'} - ${ez.priceHigh?.toFixed(2) ?? '-'}`) || [],
-                recommendation: reportData.timing.tradeNow ? 'Good entry timing' : 'Wait for better conditions',
-              },
+              output: (() => {
+                const tradeNow = reportData.timing?.tradeNow ?? false;
+                const reason = reportData.timing?.reason || 'Timing analysis pending';
+                return {
+                  indicators: {},
+                  signals: {
+                    bullish: tradeNow ? ['Entry conditions met'] : [],
+                    bearish: [],
+                    neutral: !tradeNow ? ['Waiting for conditions'] : [],
+                  },
+                  stepScore: tradeNow ? 8 : 4,
+                  stepConfidence: 70,
+                  keyFindings: [
+                    tradeNow ? 'Trade now recommended' : 'Wait for better entry',
+                    reason,
+                  ],
+                };
+              })(),
+              commentary: (() => {
+                const tradeNow = reportData.timing?.tradeNow ?? false;
+                const reason = reportData.timing?.reason || 'Timing analysis pending';
+                const entryZones = reportData.timing?.entryZones || [];
+                return {
+                  summary: reportData.timing?.aiInsight || 'Timing analysis completed.',
+                  signalInterpretation: reason,
+                  riskFactors: !tradeNow ? ['Entry conditions not fully met'] : [],
+                  opportunities: entryZones.map(ez => `Entry zone: ${ez.priceLow?.toFixed(2) ?? '-'} - ${ez.priceHigh?.toFixed(2) ?? '-'}`),
+                  recommendation: tradeNow ? 'Good entry timing' : 'Wait for better conditions',
+                };
+              })(),
               indicatorCharts: indicatorChartData[4] || [],
             },
             {
@@ -742,28 +776,38 @@ export function DownloadReportButton({
                 tradeType: tradeType,
                 aiPromptFocus: 'Calculate optimal trade parameters',
               },
-              output: {
-                indicators: {},
-                signals: {
-                  bullish: reportData.tradePlan.direction === 'long' ? ['Long setup'] : [],
-                  bearish: reportData.tradePlan.direction === 'short' ? ['Short setup'] : [],
-                  neutral: [],
-                },
-                stepScore: (reportData.tradePlan.riskReward ?? 0) >= 2 ? 8 : (reportData.tradePlan.riskReward ?? 0) >= 1.5 ? 6 : 4,
-                stepConfidence: 80,
-                keyFindings: [
-                  `Direction: ${reportData.tradePlan.direction}`,
-                  `R:R Ratio: ${reportData.tradePlan.riskReward?.toFixed(2) ?? '0'}:1`,
-                  `Win Rate Est: ${reportData.tradePlan.winRateEstimate}%`,
-                ],
-              },
-              commentary: {
-                summary: reportData.tradePlan.aiInsight || 'Trade plan calculated.',
-                signalInterpretation: `${(reportData.tradePlan.direction || 'LONG').toUpperCase()} trade with ${reportData.tradePlan.riskReward?.toFixed(1) ?? '0'}:1 risk-reward.`,
-                riskFactors: (reportData.tradePlan.riskReward ?? 0) < 1.5 ? ['Low risk-reward ratio'] : [],
-                opportunities: [`${reportData.tradePlan.takeProfits?.length ?? 0} take-profit levels defined`],
-                recommendation: 'Follow position sizing rules strictly',
-              },
+              output: (() => {
+                const direction = reportData.tradePlan?.direction || 'long';
+                const riskReward = reportData.tradePlan?.riskReward ?? 0;
+                const winRateEstimate = reportData.tradePlan?.winRateEstimate ?? 50;
+                return {
+                  indicators: {},
+                  signals: {
+                    bullish: direction === 'long' ? ['Long setup'] : [],
+                    bearish: direction === 'short' ? ['Short setup'] : [],
+                    neutral: [],
+                  },
+                  stepScore: riskReward >= 2 ? 8 : riskReward >= 1.5 ? 6 : 4,
+                  stepConfidence: 80,
+                  keyFindings: [
+                    `Direction: ${direction}`,
+                    `R:R Ratio: ${riskReward.toFixed(2)}:1`,
+                    `Win Rate Est: ${winRateEstimate}%`,
+                  ],
+                };
+              })(),
+              commentary: (() => {
+                const direction = reportData.tradePlan?.direction || 'long';
+                const riskReward = reportData.tradePlan?.riskReward ?? 0;
+                const takeProfits = reportData.tradePlan?.takeProfits || [];
+                return {
+                  summary: reportData.tradePlan?.aiInsight || 'Trade plan calculated.',
+                  signalInterpretation: `${direction.toUpperCase()} trade with ${riskReward.toFixed(1)}:1 risk-reward.`,
+                  riskFactors: riskReward < 1.5 ? ['Low risk-reward ratio'] : [],
+                  opportunities: [`${takeProfits.length} take-profit levels defined`],
+                  recommendation: 'Follow position sizing rules strictly',
+                };
+              })(),
               indicatorCharts: indicatorChartData[5] || [],
             },
             {
@@ -776,28 +820,34 @@ export function DownloadReportButton({
                 tradeType: tradeType,
                 aiPromptFocus: 'Detect potential traps and false signals',
               },
-              output: {
-                indicators: {},
-                signals: {
-                  bullish: !reportData.trapCheck.traps.bullTrap && !reportData.trapCheck.traps.bearTrap ? ['No traps detected'] : [],
-                  bearish: reportData.trapCheck.traps.bullTrap || reportData.trapCheck.traps.bearTrap ? ['Trap risk detected'] : [],
-                  neutral: [],
-                },
-                stepScore: !reportData.trapCheck.traps.bullTrap && !reportData.trapCheck.traps.bearTrap ? 8 : 4,
-                stepConfidence: 65,
-                keyFindings: [
-                  `Bull Trap: ${reportData.trapCheck.traps.bullTrap ? 'Detected' : 'Clear'}`,
-                  `Bear Trap: ${reportData.trapCheck.traps.bearTrap ? 'Detected' : 'Clear'}`,
-                  `Fakeout Risk: ${reportData.trapCheck.traps.fakeoutRisk}`,
-                ],
-              },
-              commentary: {
-                summary: reportData.trapCheck.aiInsight || 'Trap analysis completed.',
-                signalInterpretation: reportData.trapCheck.traps.fakeoutRisk === 'high' ? 'High fakeout risk detected' : 'Low trap probability',
-                riskFactors: reportData.trapCheck.traps.bullTrap ? ['Bull trap risk'] : reportData.trapCheck.traps.bearTrap ? ['Bear trap risk'] : [],
-                opportunities: reportData.trapCheck.counterStrategy,
-                recommendation: reportData.trapCheck.traps.fakeoutRisk === 'high' ? 'Be cautious of false breakouts' : 'Low trap probability',
-              },
+              output: (() => {
+                const traps = reportData.trapCheck?.traps || { bullTrap: false, bearTrap: false, fakeoutRisk: 'low' };
+                return {
+                  indicators: {},
+                  signals: {
+                    bullish: !traps.bullTrap && !traps.bearTrap ? ['No traps detected'] : [],
+                    bearish: traps.bullTrap || traps.bearTrap ? ['Trap risk detected'] : [],
+                    neutral: [],
+                  },
+                  stepScore: !traps.bullTrap && !traps.bearTrap ? 8 : 4,
+                  stepConfidence: 65,
+                  keyFindings: [
+                    `Bull Trap: ${traps.bullTrap ? 'Detected' : 'Clear'}`,
+                    `Bear Trap: ${traps.bearTrap ? 'Detected' : 'Clear'}`,
+                    `Fakeout Risk: ${traps.fakeoutRisk || 'low'}`,
+                  ],
+                };
+              })(),
+              commentary: (() => {
+                const traps = reportData.trapCheck?.traps || { bullTrap: false, bearTrap: false, fakeoutRisk: 'low' };
+                return {
+                  summary: reportData.trapCheck?.aiInsight || 'Trap analysis completed.',
+                  signalInterpretation: traps.fakeoutRisk === 'high' ? 'High fakeout risk detected' : 'Low trap probability',
+                  riskFactors: traps.bullTrap ? ['Bull trap risk'] : traps.bearTrap ? ['Bear trap risk'] : [],
+                  opportunities: reportData.trapCheck?.counterStrategy,
+                  recommendation: traps.fakeoutRisk === 'high' ? 'Be cautious of false breakouts' : 'Low trap probability',
+                };
+              })(),
               indicatorCharts: indicatorChartData[6] || [],
             },
             {
@@ -810,46 +860,59 @@ export function DownloadReportButton({
                 tradeType: tradeType,
                 aiPromptFocus: 'Provide final trading decision',
               },
-              output: {
-                indicators: {},
-                signals: {
-                  bullish: reportData.verdict.action === 'GO' ? ['Strong buy signal'] : [],
-                  bearish: reportData.verdict.action === 'AVOID' ? ['Avoid trade'] : [],
-                  neutral: reportData.verdict.action === 'WAIT' ? ['Wait for confirmation'] : [],
-                },
-                stepScore: reportData.verdict.overallScore / 10,
-                stepConfidence: (reportData.verdict.confidenceFactors || []).length > 0 ? (reportData.verdict.confidenceFactors || []).filter(c => c.positive).length / (reportData.verdict.confidenceFactors || []).length * 100 : 50,
-                keyFindings: [
-                  `Final Decision: ${reportData.verdict.action}`,
-                  `Overall Score: ${reportData.verdict.overallScore}/100`,
-                ],
-              },
-              commentary: {
-                summary: reportData.verdict.aiSummary || 'Final verdict delivered.',
-                signalInterpretation: `${reportData.verdict.action} recommendation based on comprehensive analysis.`,
-                riskFactors: (reportData.verdict.confidenceFactors || []).filter(c => !c.positive).map(c => c.factor),
-                opportunities: (reportData.verdict.confidenceFactors || []).filter(c => c.positive).map(c => c.factor),
-                recommendation: reportData.verdict.action === 'GO' ? 'Execute trade plan' : reportData.verdict.action === 'WAIT' ? 'Wait for better conditions' : 'Avoid this trade',
-              },
+              output: (() => {
+                const action = reportData.verdict?.action || 'WAIT';
+                const overallScore = reportData.verdict?.overallScore ?? 50;
+                const confidenceFactors = reportData.verdict?.confidenceFactors || [];
+                return {
+                  indicators: {},
+                  signals: {
+                    bullish: action === 'GO' ? ['Strong buy signal'] : [],
+                    bearish: action === 'AVOID' ? ['Avoid trade'] : [],
+                    neutral: action === 'WAIT' ? ['Wait for confirmation'] : [],
+                  },
+                  stepScore: overallScore / 10,
+                  stepConfidence: confidenceFactors.length > 0 ? confidenceFactors.filter(c => c.positive).length / confidenceFactors.length * 100 : 50,
+                  keyFindings: [
+                    `Final Decision: ${action}`,
+                    `Overall Score: ${overallScore}/100`,
+                  ],
+                };
+              })(),
+              commentary: (() => {
+                const action = reportData.verdict?.action || 'WAIT';
+                const confidenceFactors = reportData.verdict?.confidenceFactors || [];
+                return {
+                  summary: reportData.verdict?.aiSummary || 'Final verdict delivered.',
+                  signalInterpretation: `${action} recommendation based on comprehensive analysis.`,
+                  riskFactors: confidenceFactors.filter(c => !c.positive).map(c => c.factor),
+                  opportunities: confidenceFactors.filter(c => c.positive).map(c => c.factor),
+                  recommendation: action === 'GO' ? 'Execute trade plan' : action === 'WAIT' ? 'Wait for better conditions' : 'Avoid this trade',
+                };
+              })(),
               indicatorCharts: indicatorChartData[7] || [],
             },
           ],
           tradePlanSummary: {
-            direction: reportData.tradePlan.direction as 'long' | 'short',
-            entries: (reportData.tradePlan.entries || []).map(e => ({ price: e.price, percentage: e.percentage })),
-            averageEntry: reportData.tradePlan.averageEntry,
-            stopLoss: reportData.tradePlan.stopLoss,
-            takeProfits: reportData.tradePlan.takeProfits || [],
-            riskReward: reportData.tradePlan.riskReward,
-            winRateEstimate: reportData.tradePlan.winRateEstimate,
+            direction: (reportData.tradePlan?.direction ?? 'long') as 'long' | 'short',
+            entries: (reportData.tradePlan?.entries || []).map(e => ({ price: e.price, percentage: e.percentage })),
+            averageEntry: reportData.tradePlan?.averageEntry ?? 0,
+            stopLoss: reportData.tradePlan?.stopLoss ?? 0,
+            takeProfits: reportData.tradePlan?.takeProfits || [],
+            riskReward: reportData.tradePlan?.riskReward ?? 0,
+            winRateEstimate: reportData.tradePlan?.winRateEstimate ?? 50,
           },
-          verdict: {
-            action: (reportData.verdict.action.toLowerCase().replace(' ', '_') as 'go' | 'conditional_go' | 'wait' | 'avoid'),
-            overallScore: reportData.verdict.overallScore / 10,
-            overallConfidence: (reportData.verdict.confidenceFactors || []).length > 0 ? (reportData.verdict.confidenceFactors || []).filter(c => c.positive).length / (reportData.verdict.confidenceFactors || []).length * 100 : 50,
-            direction: reportData.tradePlan.direction as 'long' | 'short',
-            reasons: (reportData.verdict.confidenceFactors || []).map(c => `${c.positive ? '+' : '-'} ${c.factor}`),
-          },
+          verdict: (() => {
+            const action = reportData.verdict?.action || 'wait';
+            const confidenceFactors = reportData.verdict?.confidenceFactors || [];
+            return {
+              action: (action.toLowerCase().replace(' ', '_') as 'go' | 'conditional_go' | 'wait' | 'avoid'),
+              overallScore: (reportData.verdict?.overallScore ?? 50) / 10,
+              overallConfidence: confidenceFactors.length > 0 ? confidenceFactors.filter(c => c.positive).length / confidenceFactors.length * 100 : 50,
+              direction: (reportData.tradePlan?.direction ?? 'long') as 'long' | 'short',
+              reasons: confidenceFactors.map(c => `${c.positive ? '+' : '-'} ${c.factor}`),
+            };
+          })(),
         };
 
         pdfResult = await generateDetailedReport(detailedReportData);
