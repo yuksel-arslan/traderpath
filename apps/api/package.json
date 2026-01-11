@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "cross-env PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 prisma generate && prisma db push --skip-generate --accept-data-loss && tsx watch src/index.ts",
     "dev:quick": "tsx watch src/index.ts",
-    "build": "cross-env PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 prisma generate && tsc",
+    "build": "cross-env PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 prisma generate && node build.mjs",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",
     "test": "vitest",
@@ -49,6 +49,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "esbuild": "^0.20.0",
     "@types/node": "^20.10.0",
     "@types/pg": "^8.16.0",
     "@types/web-push": "^3.6.4",
