@@ -515,18 +515,22 @@ export function DownloadReportButton({
         let indicatorChartData: Record<number, DetailedIndicatorChartData[]> = {};
         try {
           const token = await getAuthToken();
+          console.log('[Detailed Report] Fetching indicator charts for', symbol, 'with token:', !!token);
           if (token) {
             const chartResponse = await fetch(`/api/analysis/indicator-charts/${symbol}?tradeType=${tradeType}&timeframe=4h`, {
               headers: { 'Authorization': `Bearer ${token}` },
             });
+            console.log('[Detailed Report] Chart API response status:', chartResponse.status);
             if (chartResponse.ok) {
               const chartResult = await chartResponse.json();
+              console.log('[Detailed Report] Chart API result:', chartResult.success, 'chartData keys:', chartResult.data?.chartData ? Object.keys(chartResult.data.chartData) : 'none');
               if (chartResult.success && chartResult.data?.chartData) {
                 // Transform API data to DetailedIndicatorChartData format
                 indicatorChartData = {};
                 for (const [step, charts] of Object.entries(chartResult.data.chartData)) {
                   // Ensure charts is an array before mapping
                   if (Array.isArray(charts)) {
+                    console.log(`[Detailed Report] Step ${step} has ${charts.length} charts:`, charts.map((c: { name: string }) => c.name));
                     indicatorChartData[Number(step)] = charts.map((chart: {
                       name: string;
                       category: string;
