@@ -99,17 +99,22 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
-  // Fetch user profile and settings on mount
+  // Fetch user profile and settings on mount - parallel fetching for speed
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Fetch user profile
-        const userResponse = await authFetch('/api/auth/me');
+        // Fetch all data in parallel for faster loading
+        const [userResponse, settingsResponse, alertSettingsResponse, twoFactorResponse] = await Promise.all([
+          authFetch('/api/auth/me'),
+          authFetch('/api/user/settings'),
+          authFetch('/api/alerts/settings'),
+          authFetch('/api/auth/2fa/status').catch(() => null),
+        ]);
 
+        // Process user profile
         if (userResponse.ok) {
           const userData = await userResponse.json();
           if (userData.success && userData.data) {
-            // Combine user and credits data
             const profileData: UserProfile = {
               ...userData.data.user,
               credits: userData.data.credits?.balance ?? 0,
@@ -117,14 +122,11 @@ export default function SettingsPage() {
             setUser(profileData);
           }
         } else if (userResponse.status === 401) {
-          // Token expired or invalid - middleware will handle redirect
           setIsLoadingUser(false);
           return;
         }
 
-        // Fetch settings
-        const settingsResponse = await authFetch('/api/user/settings');
-
+        // Process settings
         if (settingsResponse.ok) {
           const settingsData = await settingsResponse.json();
           if (settingsData.success && settingsData.data.reportValidityPeriods) {
@@ -132,9 +134,7 @@ export default function SettingsPage() {
           }
         }
 
-        // Fetch notification/webhook settings
-        const alertSettingsResponse = await authFetch('/api/alerts/settings');
-
+        // Process notification/webhook settings
         if (alertSettingsResponse.ok) {
           const alertData = await alertSettingsResponse.json();
           if (alertData.success && alertData.data?.settings) {
@@ -157,20 +157,14 @@ export default function SettingsPage() {
           }
         }
 
-        // Fetch 2FA status
-        try {
-          const twoFactorResponse = await authFetch('/api/auth/2fa/status');
-          if (twoFactorResponse.ok) {
-            const twoFactorData = await twoFactorResponse.json();
-            if (twoFactorData.success) {
-              setTwoFactorEnabled(twoFactorData.data?.enabled || false);
-            }
+        // Process 2FA status
+        if (twoFactorResponse?.ok) {
+          const twoFactorData = await twoFactorResponse.json();
+          if (twoFactorData.success) {
+            setTwoFactorEnabled(twoFactorData.data?.enabled || false);
           }
-        } catch {
-          console.log('2FA status not available');
-        } finally {
-          setTwoFactorLoading(false);
         }
+        setTwoFactorLoading(false);
       } catch (error) {
         console.error('Failed to fetch user data:', error);
       } finally {

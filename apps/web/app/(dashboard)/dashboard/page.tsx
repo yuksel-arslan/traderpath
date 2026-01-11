@@ -8,6 +8,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BarChart3,
   TrendingUp,
@@ -548,15 +549,34 @@ function OutcomeIndicator({ outcome }: { outcome: 'correct' | 'incorrect' | 'pen
 // ===========================================
 // Cache key and duration for dashboard data
 const CACHE_KEY = 'dashboard_cache';
-const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for better UX
+
+// Initialize from cache for instant load
+function getInitialCacheData() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const cached = sessionStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        return data;
+      }
+    }
+  } catch {
+    // Ignore cache errors
+  }
+  return null;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
-  const [recentOutcomes, setRecentOutcomes] = useState<RecentOutcome[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [credits, setCredits] = useState(0);
+  // Initialize from cache if available for instant navigation
+  const initialCache = useRef(getInitialCacheData());
+  const [platformStats, setPlatformStats] = useState<PlatformStats | null>(initialCache.current?.platformStats || null);
+  const [userStats, setUserStats] = useState<UserStats | null>(initialCache.current?.userStats || null);
+  const [recentOutcomes, setRecentOutcomes] = useState<RecentOutcome[]>(initialCache.current?.recentOutcomes || []);
+  const [loading, setLoading] = useState(!initialCache.current);
+  const [credits, setCredits] = useState(initialCache.current?.credits || 0);
   const [outcomeViewMode, setOutcomeViewMode] = useState<'card' | 'list'>('card');
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly'>('daily');
   const [stepPeriod, setStepPeriod] = useState<'D' | 'W' | 'M' | 'all'>('all');
@@ -725,7 +745,13 @@ export default function DashboardPage() {
     prevPeriodRef.current = stepPeriod;
     prevTradeTypeRef.current = tradeTypeFilter;
 
-    fetchDashboardData(periodChanged || tradeTypeChanged); // Force refresh when filters change
+    // Skip initial fetch if we already loaded from cache
+    if (!periodChanged && !tradeTypeChanged && initialCache.current) {
+      // Background refresh for fresh data
+      fetchDashboardData(false);
+    } else {
+      fetchDashboardData(periodChanged || tradeTypeChanged);
+    }
 
     // Fallback: Auto-refresh every 5 minutes if candle close timer fails
     const refreshInterval = setInterval(() => {

@@ -196,8 +196,15 @@ export default function DashboardLayout({
 
                 {notificationMenuOpen && (
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setNotificationMenuOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div
+                      className="fixed inset-0"
+                      style={{ zIndex: 9998 }}
+                      onClick={() => setNotificationMenuOpen(false)}
+                    />
+                    <div
+                      className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
+                      style={{ zIndex: 9999 }}
+                    >
                       <div className="p-3 border-b border-border flex items-center justify-between">
                         <h3 className="font-semibold">Notifications</h3>
                         <Link
@@ -326,8 +333,15 @@ export default function DashboardLayout({
 
                 {userMenuOpen && (
                 <>
-                  <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div
+                    className="fixed inset-0"
+                    style={{ zIndex: 9998 }}
+                    onClick={() => setUserMenuOpen(false)}
+                  />
+                  <div
+                    className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
+                    style={{ zIndex: 9999 }}
+                  >
                     {/* User info */}
                     {user && (
                       <div className="p-3 border-b border-border">
