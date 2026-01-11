@@ -123,10 +123,16 @@ function formatPrice(price: number): string {
 }
 
 function formatVolume(vol: number): string {
+  if (!vol || isNaN(vol)) return '-';
   if (vol >= 1e9) return `$${(vol / 1e9).toFixed(2)}B`;
   if (vol >= 1e6) return `$${(vol / 1e6).toFixed(2)}M`;
   if (vol >= 1e3) return `$${(vol / 1e3).toFixed(2)}K`;
   return `$${vol.toFixed(2)}`;
+}
+
+function safeToFixed(value: number | undefined | null, decimals: number = 2): string {
+  if (value === undefined || value === null || isNaN(value)) return '-';
+  return value.toFixed(decimals);
 }
 
 function formatTimestamp(ts: number): string {
@@ -207,7 +213,7 @@ function generateLineChart(
   // Y-axis labels
   const yLabels = [maxVal, (maxVal + minVal) / 2, minVal].map((v, i) => {
     const y = padding.top + (i * chartHeight) / 2;
-    return `<text x="${width - padding.right + 3}" y="${y + 3}" fill="#64748b" font-size="7">${v.toFixed(1)}</text>`;
+    return `<text x="${width - padding.right + 3}" y="${y + 3}" fill="#64748b" font-size="7">${safeToFixed(v, 1)}</text>`;
   }).join('');
 
   // Current value indicator
@@ -360,7 +366,7 @@ function generateCoverPage(data: DetailedReportData): string {
     <!-- Verdict Banner -->
     <div class="verdict-box" style="background: linear-gradient(135deg, ${actionColor} 0%, ${actionColor}dd 100%);">
       <div class="verdict-action">${data.verdict.action.replace('_', ' ').toUpperCase()}</div>
-      <div class="verdict-score">Overall Score: ${data.verdict.overallScore.toFixed(1)}/10 | Confidence: ${data.verdict.overallConfidence}%</div>
+      <div class="verdict-score">Overall Score: ${safeToFixed(data.verdict.overallScore, 1)}/10 | Confidence: ${data.verdict.overallConfidence ?? 0}%</div>
       ${data.verdict.direction ? `<div class="verdict-direction">${isLong ? '▲ LONG' : '▼ SHORT'}</div>` : ''}
     </div>
 
@@ -376,8 +382,8 @@ function generateCoverPage(data: DetailedReportData): string {
           </div>
           <div class="indicator-row">
             <span class="indicator-name">24h Change</span>
-            <span class="indicator-value" style="color: ${data.assetInfo.priceChange24h >= 0 ? '#16a34a' : '#dc2626'}">
-              ${data.assetInfo.priceChange24h >= 0 ? '+' : ''}${data.assetInfo.priceChange24h.toFixed(2)}%
+            <span class="indicator-value" style="color: ${(data.assetInfo.priceChange24h ?? 0) >= 0 ? '#16a34a' : '#dc2626'}">
+              ${(data.assetInfo.priceChange24h ?? 0) >= 0 ? '+' : ''}${safeToFixed(data.assetInfo.priceChange24h, 2)}%
             </span>
           </div>
           <div class="indicator-row">
@@ -393,7 +399,7 @@ function generateCoverPage(data: DetailedReportData): string {
           </div>
           <div class="indicator-row">
             <span class="indicator-name">BTC Dominance</span>
-            <span class="indicator-value">${data.marketContext.btcDominance.toFixed(1)}%</span>
+            <span class="indicator-value">${safeToFixed(data.marketContext.btcDominance, 1)}%</span>
           </div>
           <div class="indicator-row">
             <span class="indicator-name">Market Trend</span>
@@ -425,7 +431,7 @@ function generateCoverPage(data: DetailedReportData): string {
         `).join('')}
       </div>
       <div style="margin-top: 8px; display: flex; justify-content: center; gap: 20px; font-size: 9px; color: #64748b;">
-        <span>R:R <strong style="color: #1e293b;">${data.tradePlanSummary.riskReward.toFixed(1)}:1</strong></span>
+        <span>R:R <strong style="color: #1e293b;">${safeToFixed(data.tradePlanSummary.riskReward, 1)}:1</strong></span>
         <span>Win Rate <strong style="color: #1e293b;">${data.tradePlanSummary.winRateEstimate}%</strong></span>
       </div>
     </div>
@@ -436,7 +442,7 @@ function generateCoverPage(data: DetailedReportData): string {
       <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;">
         ${data.steps.map(step => `
           <div style="text-align: center; padding: 8px; background: ${step.output.stepScore >= 6 ? '#dcfce7' : step.output.stepScore >= 4 ? '#fef3c7' : '#fee2e2'}; border-radius: 6px;">
-            <div style="font-size: 14px; font-weight: bold; color: ${step.output.stepScore >= 6 ? '#16a34a' : step.output.stepScore >= 4 ? '#d97706' : '#dc2626'};">${step.output.stepScore.toFixed(1)}</div>
+            <div style="font-size: 14px; font-weight: bold; color: ${step.output.stepScore >= 6 ? '#16a34a' : step.output.stepScore >= 4 ? '#d97706' : '#dc2626'};">${safeToFixed(step.output.stepScore, 1)}</div>
             <div style="font-size: 7px; color: #64748b; margin-top: 2px;">Step ${step.stepNumber}</div>
             <div style="font-size: 6px; color: #94a3b8;">${step.stepName.split(' ')[0]}</div>
           </div>
@@ -488,7 +494,7 @@ function generateStepDetailPage(data: DetailedReportData, step: DetailedStepData
           <div class="step-desc">${step.stepDescription}</div>
         </div>
         <div style="text-align: right;">
-          <div class="step-score" style="color: ${scoreColor};">${step.output.stepScore.toFixed(1)}</div>
+          <div class="step-score" style="color: ${scoreColor};">${safeToFixed(step.output.stepScore, 1)}</div>
           <div class="step-score-label">Score / 10</div>
         </div>
       </div>
@@ -630,7 +636,7 @@ function generateIndicatorChartsPage(data: DetailedReportData, step: DetailedSte
             ${getSignalBadge(chart.signal)}
           </div>
           <div style="font-size: 10px; font-weight: bold; color: ${chart.chartColor};">
-            ${chart.currentValue.toFixed(2)}
+            ${safeToFixed(chart.currentValue, 2)}
           </div>
         </div>
         ${generateLineChart(chart, 520, 100)}
