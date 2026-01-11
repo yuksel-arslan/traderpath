@@ -551,38 +551,20 @@ function OutcomeIndicator({ outcome }: { outcome: 'correct' | 'incorrect' | 'pen
 const CACHE_KEY = 'dashboard_cache';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for better UX
 
-// Initialize from cache for instant load
-function getInitialCacheData() {
-  if (typeof window === 'undefined') return null;
-  try {
-    const cached = sessionStorage.getItem(CACHE_KEY);
-    if (cached) {
-      const { data, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp < CACHE_DURATION) {
-        return data;
-      }
-    }
-  } catch {
-    // Ignore cache errors
-  }
-  return null;
-}
-
 export default function DashboardPage() {
   const router = useRouter();
-  // Initialize from cache if available for instant navigation
-  const initialCache = useRef(getInitialCacheData());
-  const [platformStats, setPlatformStats] = useState<PlatformStats | null>(initialCache.current?.platformStats || null);
-  const [userStats, setUserStats] = useState<UserStats | null>(initialCache.current?.userStats || null);
-  const [recentOutcomes, setRecentOutcomes] = useState<RecentOutcome[]>(initialCache.current?.recentOutcomes || []);
-  const [loading, setLoading] = useState(!initialCache.current);
-  const [credits, setCredits] = useState(initialCache.current?.credits || 0);
+  const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [recentOutcomes, setRecentOutcomes] = useState<RecentOutcome[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [credits, setCredits] = useState(0);
   const [outcomeViewMode, setOutcomeViewMode] = useState<'card' | 'list'>('card');
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly'>('daily');
   const [stepPeriod, setStepPeriod] = useState<'D' | 'W' | 'M' | 'all'>('all');
   const [tradeTypeFilter, setTradeTypeFilter] = useState<TradeType | 'all'>('all');
   const [nextCandleRefresh, setNextCandleRefresh] = useState<number | null>(null);
   const candleRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const initialLoadDone = useRef(false);
 
   const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     try {
@@ -738,19 +720,43 @@ export default function DashboardPage() {
   const prevPeriodRef = useRef(stepPeriod);
   const prevTradeTypeRef = useRef(tradeTypeFilter);
 
+  // Initial load - check cache first for instant display
   useEffect(() => {
-    // Force refresh if period or trade type changed (not initial load)
+    if (initialLoadDone.current) return;
+    initialLoadDone.current = true;
+
+    // Try to load from cache immediately (client-side only)
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < CACHE_DURATION) {
+          setPlatformStats(data.platformStats);
+          setUserStats(data.userStats);
+          setRecentOutcomes(data.recentOutcomes);
+          setCredits(data.credits);
+          setLoading(false);
+          // Still fetch fresh data in background
+          fetchDashboardData(false);
+          return;
+        }
+      }
+    } catch {
+      // Cache read failed, continue with fetch
+    }
+    fetchDashboardData(false);
+  }, [fetchDashboardData]);
+
+  useEffect(() => {
+    // Force refresh if period or trade type changed (skip initial load)
     const periodChanged = prevPeriodRef.current !== stepPeriod;
     const tradeTypeChanged = prevTradeTypeRef.current !== tradeTypeFilter;
     prevPeriodRef.current = stepPeriod;
     prevTradeTypeRef.current = tradeTypeFilter;
 
-    // Skip initial fetch if we already loaded from cache
-    if (!periodChanged && !tradeTypeChanged && initialCache.current) {
-      // Background refresh for fresh data
-      fetchDashboardData(false);
-    } else {
-      fetchDashboardData(periodChanged || tradeTypeChanged);
+    // Only fetch if filters actually changed (not initial mount)
+    if (periodChanged || tradeTypeChanged) {
+      fetchDashboardData(true);
     }
 
     // Fallback: Auto-refresh every 5 minutes if candle close timer fails
