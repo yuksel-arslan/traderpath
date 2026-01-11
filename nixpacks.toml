@@ -5,7 +5,7 @@ nixPkgs = ["nodejs_20", "pnpm"]
 cmds = ["pnpm install"]
 
 [phases.build]
-cmds = ["pnpm run build"]
+cmds = ["pnpm run build --filter=@tradepath/api..."]
 
 [start]
-cmd = "pnpm run start"
+cmd = "cd apps/api && pnpm run start"

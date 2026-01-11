@@ -1,9 +1,9 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pnpm install && pnpm run build"
+buildCommand = "pnpm install && pnpm run build --filter=@tradepath/api..."
 
 [deploy]
-startCommand = "pnpm run db:migrate && pnpm run start"
+startCommand = "cd apps/api && pnpm run db:migrate && pnpm run start"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
