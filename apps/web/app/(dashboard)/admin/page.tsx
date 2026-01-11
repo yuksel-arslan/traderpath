@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Server,
-  Database,
   Activity,
   Users,
   TrendingUp,
@@ -131,18 +130,12 @@ export default function AdminPage() {
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'activity' | 'costs'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'activity'>('overview');
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [cleanupResult, setCleanupResult] = useState<string | null>(null);
-
-  // Credit costs state
-  const [creditCosts, setCreditCosts] = useState<Record<string, number> | null>(null);
-  const [editingCosts, setEditingCosts] = useState<Record<string, number>>({});
-  const [savingCosts, setSavingCosts] = useState(false);
-  const [costsSaved, setCostsSaved] = useState(false);
 
   const fetchData = useCallback(async (showRefresh = false) => {
     if (showRefresh) setIsRefreshing(true);
@@ -216,74 +209,7 @@ export default function AdminPage() {
     if (activeTab === 'users') {
       fetchUsers();
     }
-    if (activeTab === 'costs') {
-      fetchCreditCosts();
-    }
   }, [activeTab, fetchUsers]);
-
-  // Fetch credit costs
-  const fetchCreditCosts = async () => {
-    try {
-      const response = await authFetch('/api/admin/credit-costs');
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.data?.raw) {
-          setCreditCosts(data.data.raw);
-          setEditingCosts(data.data.raw);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch credit costs:', err);
-    }
-  };
-
-  // Save credit costs
-  const handleSaveCosts = async () => {
-    setSavingCosts(true);
-    setCostsSaved(false);
-
-    try {
-      const response = await authFetch('/api/admin/credit-costs', {
-        method: 'PATCH',
-        body: JSON.stringify(editingCosts),
-      });
-
-      if (response.ok) {
-        setCreditCosts(editingCosts);
-        setCostsSaved(true);
-        setTimeout(() => setCostsSaved(false), 3000);
-      }
-    } catch (err) {
-      console.error('Failed to save credit costs:', err);
-    } finally {
-      setSavingCosts(false);
-    }
-  };
-
-  // Reset credit costs to defaults
-  const handleResetCosts = async () => {
-    if (!confirm('Are you sure you want to reset all credit costs to default values?')) {
-      return;
-    }
-
-    setSavingCosts(true);
-    try {
-      const response = await authFetch('/api/admin/credit-costs/reset', {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        fetchCreditCosts();
-        setCostsSaved(true);
-        setTimeout(() => setCostsSaved(false), 3000);
-      }
-    } catch (err) {
-      console.error('Failed to reset credit costs:', err);
-    } finally {
-      setSavingCosts(false);
-    }
-  };
 
   const handleCleanup = async () => {
     if (!confirm('Are you sure you want to run cleanup? This will delete expired reports and old transactions.')) {
@@ -406,7 +332,6 @@ export default function AdminPage() {
           { id: 'overview', label: 'Overview', icon: BarChart3 },
           { id: 'users', label: 'Users', icon: Users },
           { id: 'activity', label: 'Activity', icon: Activity },
-          { id: 'costs', label: 'Credit Costs', icon: DollarSign },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -422,18 +347,11 @@ export default function AdminPage() {
           </button>
         ))}
         <Link
-          href="/admin/costs"
+          href="/admin/finance"
           className="flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-muted-foreground hover:text-foreground transition"
         >
           <DollarSign className="w-4 h-4" />
-          Costs
-        </Link>
-        <Link
-          href="/admin/pricing"
-          className="flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-muted-foreground hover:text-foreground transition"
-        >
-          <CreditCard className="w-4 h-4" />
-          Packages
+          Finance
         </Link>
       </div>
 
@@ -782,149 +700,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Credit Costs Tab */}
-      {activeTab === 'costs' && (
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">Credit Cost Settings</h3>
-              <p className="text-sm text-muted-foreground">Configure how many credits each operation costs</p>
-            </div>
-            <div className="flex gap-2">
-              {costsSaved && (
-                <span className="flex items-center gap-2 text-green-500 text-sm">
-                  <CheckCircle className="w-4 h-4" />
-                  Saved
-                </span>
-              )}
-              <button
-                onClick={handleResetCosts}
-                disabled={savingCosts}
-                className="px-3 py-2 text-sm border rounded-lg hover:bg-accent disabled:opacity-50"
-              >
-                Reset to Defaults
-              </button>
-              <button
-                onClick={handleSaveCosts}
-                disabled={savingCosts}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
-              >
-                {savingCosts ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
-              </button>
-            </div>
-          </div>
-
-          {creditCosts ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Analysis Bundles */}
-              <div className="bg-card border rounded-lg p-4">
-                <h4 className="font-semibold mb-4 flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Analysis Bundles
-                </h4>
-                <div className="space-y-4">
-                  {[
-                    { key: 'creditCostFullAnalysis', label: 'Full Analysis (7-Step)', description: 'Complete trading analysis' },
-                    { key: 'creditCostQuickCheck', label: 'Quick Check', description: 'Asset Scanner + Final Verdict' },
-                    { key: 'creditCostSmartEntry', label: 'Smart Entry', description: 'Steps 2-4 + Final Verdict' },
-                  ].map(({ key, label, description }) => (
-                    <div key={key} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{label}</p>
-                        <p className="text-sm text-muted-foreground">{description}</p>
-                      </div>
-                      <input
-                        type="number"
-                        min="0"
-                        value={editingCosts[key] ?? ''}
-                        onChange={(e) => setEditingCosts({ ...editingCosts, [key]: parseInt(e.target.value) || 0 })}
-                        className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Features */}
-              <div className="bg-card border rounded-lg p-4">
-                <h4 className="font-semibold mb-4 flex items-center gap-2">
-                  <Zap className="w-4 h-4" />
-                  Features
-                </h4>
-                <div className="space-y-4">
-                  {[
-                    { key: 'creditCostAiExpert', label: 'AI Expert Chat', description: 'Per message cost' },
-                    { key: 'creditCostPdfReport', label: 'PDF Report', description: 'Generate and download PDF' },
-                    { key: 'creditCostTranslation', label: 'Translation', description: 'Translate report to another language' },
-                    { key: 'creditCostEmailSend', label: 'Email Send', description: 'Send report via email' },
-                    { key: 'creditCostAddToReport', label: 'Add to Report', description: 'Add AI insight to report' },
-                    { key: 'creditCostPriceAlert', label: 'Price Alert', description: 'Set a price alert' },
-                  ].map(({ key, label, description }) => (
-                    <div key={key} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{label}</p>
-                        <p className="text-sm text-muted-foreground">{description}</p>
-                      </div>
-                      <input
-                        type="number"
-                        min="0"
-                        value={editingCosts[key] ?? ''}
-                        onChange={(e) => setEditingCosts({ ...editingCosts, [key]: parseInt(e.target.value) || 0 })}
-                        className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Analysis Steps */}
-              <div className="bg-card border rounded-lg p-4 lg:col-span-2">
-                <h4 className="font-semibold mb-4 flex items-center gap-2">
-                  <Activity className="w-4 h-4" />
-                  Individual Analysis Steps
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {[
-                    { key: 'creditCostMarketPulse', label: 'Market Pulse', step: 1 },
-                    { key: 'creditCostAssetScanner', label: 'Asset Scanner', step: 2 },
-                    { key: 'creditCostSafetyCheck', label: 'Safety Check', step: 3 },
-                    { key: 'creditCostTiming', label: 'Timing', step: 4 },
-                    { key: 'creditCostTrapCheck', label: 'Trap Check', step: 5 },
-                    { key: 'creditCostTradePlan', label: 'Trade Plan', step: 6 },
-                    { key: 'creditCostFinalVerdict', label: 'Final Verdict', step: 7 },
-                  ].map(({ key, label, step }) => (
-                    <div key={key} className="flex items-center justify-between p-3 bg-accent/30 rounded-lg">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Step {step}</p>
-                        <p className="font-medium text-sm">{label}</p>
-                      </div>
-                      <input
-                        type="number"
-                        min="0"
-                        value={editingCosts[key] ?? ''}
-                        onChange={(e) => setEditingCosts({ ...editingCosts, [key]: parseInt(e.target.value) || 0 })}
-                        className="w-16 px-2 py-1 border rounded text-center font-mono text-sm bg-background"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center p-8">
-              <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
