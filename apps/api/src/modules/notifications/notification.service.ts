@@ -133,7 +133,7 @@ class NotificationService {
 
     try {
       await webpush.sendNotification(
-        settings.subscription as webpush.PushSubscription,
+        settings.subscription as unknown as webpush.PushSubscription,
         notificationPayload
       );
       console.log(`[Browser Push] Sent alert for ${payload.symbol}`);
@@ -301,7 +301,7 @@ class NotificationService {
 
     // Fetch current prices from Binance
     try {
-      const pairs = symbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
+      const pairs = symbols.map((s: string) => `"${s.toUpperCase()}USDT"`).join(',');
       const response = await fetch(
         `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
       );

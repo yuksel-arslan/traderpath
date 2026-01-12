@@ -447,7 +447,7 @@ export default async function securityRoutes(app: FastifyInstance) {
 
       // Generate JWT
       const token = app.jwt.sign(
-        { id: user.id },
+        { id: user.id, email: user.email, name: user.name || '', level: user.level || 1 },
         { expiresIn: config.jwtExpiresIn }
       );
 
