@@ -12,6 +12,21 @@ import { analysisEngine } from './analysis.engine';
 import { config } from '../../core/config';
 import { TradeType, getTradeConfig, getStepConfig } from './config/trade-config';
 import { getCautionRate, calculateCautionOutcomes, calculateExpiredOutcomes } from '../reports/outcome.service';
+import { prisma } from '../../core/database';
+
+// User type from JWT
+interface JwtUser {
+  id: string;
+  email: string;
+  name: string;
+  level: number;
+  isAdmin?: boolean;
+}
+
+// Helper to get typed user from request
+function getUser(request: FastifyRequest): JwtUser {
+  return request.user as JwtUser;
+}
 
 // Gemini response with usage data
 interface GeminiResult {
@@ -139,7 +154,7 @@ Be concise and actionable.`;
   app.post('/asset-scan', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    const userId = getUser(request).id;
     const body = assetScanSchema.parse(request.body);
 
     const cost = await creditCostsService.getCreditCost('STEP_ASSET_SCANNER');
@@ -191,7 +206,7 @@ Be concise and give a trading perspective.`;
   app.post('/safety-check', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    const userId = getUser(request).id;
     const body = assetScanSchema.parse(request.body);
 
     const cost = await creditCostsService.getCreditCost('STEP_SAFETY_CHECK');
@@ -245,7 +260,7 @@ Focus on risk assessment and trading implications.`;
   app.post('/timing', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    const userId = getUser(request).id;
     const body = assetScanSchema.parse(request.body);
 
     const cost = await creditCostsService.getCreditCost('STEP_TIMING');
@@ -305,7 +320,7 @@ Be specific about when to enter.`;
   app.post('/trade-plan', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    const userId = getUser(request).id;
     const body = tradePlanSchema.parse(request.body);
 
     const cost = await creditCostsService.getCreditCost('STEP_TRADE_PLAN');
@@ -363,7 +378,7 @@ Give practical trading advice.`;
   app.post('/trap-check', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    const userId = getUser(request).id;
     const body = assetScanSchema.parse(request.body);
 
     const cost = await creditCostsService.getCreditCost('STEP_TRAP_CHECK');
@@ -423,7 +438,7 @@ Warn about potential traps and give protective advice.`;
   app.post('/full', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    const userId = getUser(request).id;
     const body = fullAnalysisSchema.parse(request.body);
 
     const cost = await creditCostsService.getCreditCost('BUNDLE_FULL_ANALYSIS');
@@ -477,11 +492,12 @@ Warn about potential traps and give protective advice.`;
 
       // Save analysis to database (regardless of verdict)
       const tradeConfig = getTradeConfig(body.tradeType);
-      const savedAnalysis = await app.prisma.analysis.create({
+      const primaryTimeframe = tradeConfig.steps[0]?.timeframes.find(tf => tf.priority === 'primary')?.timeframe || '4h';
+      const savedAnalysis = await prisma.analysis.create({
         data: {
           userId,
           symbol: body.symbol,
-          interval: tradeConfig.primaryTimeframe,
+          interval: primaryTimeframe,
           stepsCompleted: [1, 2, 3, 4, 5, 6, 7],
           step1Result: marketPulse as object,
           step2Result: assetScan as object,
@@ -611,11 +627,11 @@ Explain the key risks and what conditions would need to change before trading th
     preHandler: authenticate,
   }, async (request: FastifyRequest<{ Querystring: { limit?: string; offset?: string } }>, reply: FastifyReply) => {
     try {
-      const userId = request.user!.id;
+      const userId = getUser(request).id;
       const limit = Math.min(parseInt(request.query.limit || '20'), 50);
       const offset = parseInt(request.query.offset || '0');
 
-      const analyses = await app.prisma.analysis.findMany({
+      const analyses = await prisma.analysis.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
         take: limit,
@@ -633,7 +649,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
 
-      const total = await app.prisma.analysis.count({ where: { userId } });
+      const total = await prisma.analysis.count({ where: { userId } });
 
       // Extract verdict and tradePlan from step results for each analysis
       const enrichedAnalyses = analyses.map((a) => {
@@ -685,10 +701,10 @@ Explain the key risks and what conditions would need to change before trading th
     preHandler: authenticate,
   }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
     try {
-      const userId = request.user!.id;
+      const userId = getUser(request).id;
       const { id } = request.params;
 
-      const analysis = await app.prisma.analysis.findFirst({
+      const analysis = await prisma.analysis.findFirst({
         where: { id, userId },
       });
 
@@ -721,10 +737,10 @@ Explain the key risks and what conditions would need to change before trading th
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const userId = request.user!.id;
+      const userId = getUser(request).id;
 
       // Get user's analyses with trade plans (have entry price)
-      const analyses = await app.prisma.analysis.findMany({
+      const analyses = await prisma.analysis.findMany({
         where: {
           userId,
           expiresAt: { gt: new Date() }, // Only active analyses
@@ -754,7 +770,7 @@ Explain the key risks and what conditions would need to change before trading th
       }
 
       // Extract unique symbols
-      const symbols = [...new Set(analyses.map(a => a.symbol))];
+      const symbols = [...new Set(analyses.map(a => a.symbol as string))];
 
       // Fetch current prices from Binance
       const prices: Record<string, number> = {};
@@ -775,7 +791,7 @@ Explain the key risks and what conditions would need to change before trading th
       }
 
       // Calculate next candle close time based on intervals present
-      const intervals = [...new Set(analyses.map(a => a.interval))];
+      const intervals = [...new Set(analyses.map(a => a.interval as string))];
       const nextCandleCloses: Record<string, number> = {};
       const now = Date.now();
 
@@ -900,7 +916,7 @@ Explain the key risks and what conditions would need to change before trading th
       if (analysesToUpdate.length > 0) {
         Promise.all(
           analysesToUpdate.map(update =>
-            app.prisma.analysis.update({
+            prisma.analysis.update({
               where: { id: update.id },
               data: {
                 outcome: update.outcome,
@@ -941,7 +957,7 @@ Explain the key risks and what conditions would need to change before trading th
    */
   app.get('/platform-stats', async (request: FastifyRequest<{ Querystring: { period?: string; tradeType?: string } }>, reply: FastifyReply) => {
     try {
-      const db = app.prisma;
+      const db = prisma;
 
       // Parse period filter
       const period = (request.query.period || 'all').toUpperCase();
@@ -1316,10 +1332,10 @@ Explain the key risks and what conditions would need to change before trading th
   app.get('/statistics', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    const userId = getUser(request).id;
 
     try {
-      const db = app.prisma;
+      const db = prisma;
 
       // Get user's reports for real verdict distribution and scores
       const userReports = await db.report.findMany({
@@ -1388,7 +1404,7 @@ Explain the key risks and what conditions would need to change before trading th
       // Fetch current prices for active trades to calculate active performance
       let activeProfitable = 0;
       if (activeCount > 0) {
-        const activeSymbols = [...new Set(activeTrades.map(r => r.symbol))];
+        const activeSymbols = [...new Set(activeTrades.map(r => r.symbol as string))];
         const prices: Record<string, number> = {};
 
         try {
@@ -1486,10 +1502,10 @@ Explain the key risks and what conditions would need to change before trading th
   app.get('/performance', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    const userId = getUser(request).id;
 
     try {
-      const db = app.prisma;
+      const db = prisma;
 
       // Calculate weekly/monthly analyses from credit transactions
       const now = new Date();
@@ -1582,7 +1598,7 @@ Explain the key risks and what conditions would need to change before trading th
       });
 
       // Fetch current prices for all symbols
-      const symbols = [...new Set(reportsWithExpiration.map(r => r.symbol))];
+      const symbols = [...new Set(reportsWithExpiration.map(r => r.symbol as string))];
       const prices: Record<string, number> = {};
 
       if (symbols.length > 0) {
@@ -1697,10 +1713,10 @@ Explain the key risks and what conditions would need to change before trading th
   app.get('/recent', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    const userId = getUser(request).id;
 
     try {
-      const db = app.prisma;
+      const db = prisma;
 
       // Get recent reports with real data
       const recentReports = await db.report.findMany({
