@@ -64,5 +64,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Run as non-root user
 USER tradepath
 
-# Start the application
-CMD ["node", "dist/index.js"]
+# Start the application with schema sync
+CMD ["sh", "-c", "npx prisma db push --skip-generate --accept-data-loss && node dist/index.js"]
