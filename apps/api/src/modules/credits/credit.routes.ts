@@ -7,6 +7,20 @@ import { z } from 'zod';
 import { creditService } from './credit.service';
 import { authenticate } from '../../core/auth/middleware';
 
+// User type from JWT
+interface JwtUser {
+  id: string;
+  email: string;
+  name: string;
+  level: number;
+  isAdmin?: boolean;
+}
+
+// Helper to get typed user from request
+function getUser(request: FastifyRequest): JwtUser {
+  return request.user as JwtUser;
+}
+
 export default async function creditRoutes(app: FastifyInstance) {
   // All routes require authentication
   app.addHook('preHandler', authenticate);
@@ -16,7 +30,7 @@ export default async function creditRoutes(app: FastifyInstance) {
    * Get current credit balance
    */
   app.get('/balance', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    const userId = getUser(request).id;
     const balance = await creditService.getBalance(userId);
 
     return reply.send({
@@ -48,7 +62,7 @@ export default async function creditRoutes(app: FastifyInstance) {
   });
 
   app.post('/purchase', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    const userId = getUser(request).id;
     const body = purchaseSchema.parse(request.body);
 
     // TODO: Process payment with Stripe/Crypto
@@ -78,7 +92,7 @@ export default async function creditRoutes(app: FastifyInstance) {
   });
 
   app.get('/history', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    const userId = getUser(request).id;
     const query = historyQuerySchema.parse(request.query);
 
     const history = await creditService.getHistory(
@@ -118,7 +132,7 @@ export default async function creditRoutes(app: FastifyInstance) {
   });
 
   app.post('/deduct', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    const userId = getUser(request).id;
     const body = deductSchema.parse(request.body);
 
     const result = await creditService.charge(

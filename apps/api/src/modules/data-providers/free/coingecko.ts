@@ -182,7 +182,7 @@ export async function getGlobalMarketData(): Promise<
     };
   }
 
-  return response as DataProviderResponse<CoinGeckoGlobalData>;
+  return response as unknown as DataProviderResponse<CoinGeckoGlobalData>;
 }
 
 /**

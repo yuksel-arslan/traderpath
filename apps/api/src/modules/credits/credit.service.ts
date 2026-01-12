@@ -107,7 +107,7 @@ export class CreditService {
           balanceAfter: balance.balance - amount,
           type: 'SPEND',
           source,
-          metadata: metadata || {},
+          metadata: (metadata || {}) as object,
         },
       }),
     ]);
@@ -151,7 +151,7 @@ export class CreditService {
           balanceAfter: balance.balance + amount,
           type,
           source,
-          metadata: metadata || {},
+          metadata: (metadata || {}) as object,
         },
       }),
     ]);

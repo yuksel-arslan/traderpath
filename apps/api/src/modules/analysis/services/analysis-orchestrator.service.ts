@@ -11,7 +11,13 @@
  * - Swing: 2-14 days holding, conservative indicators, 1 credit
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+// Simple logger replacement for NestJS Logger
+const Logger = {
+  log: (message: string, context?: string) => console.log(`[${context || 'Analysis'}] ${message}`),
+  error: (message: string, trace?: string, context?: string) => console.error(`[${context || 'Analysis'}] ${message}`, trace),
+  warn: (message: string, context?: string) => console.warn(`[${context || 'Analysis'}] ${message}`),
+  debug: (message: string, context?: string) => console.debug(`[${context || 'Analysis'}] ${message}`),
+};
 import {
   TradeType,
   AnalysisStep,
@@ -992,7 +998,7 @@ Include specific price levels and actionable insights.
       values: alignedValues.filter((v): v is number => v !== null),
       timestamps: timestamps.slice(-alignedValues.length),
       currentValue: result.value || 0,
-      signal: result.signal || 'neutral',
+      signal: (result.signal || 'neutral') as 'bullish' | 'bearish' | 'neutral',
       signalStrength: result.strength || 0,
       interpretation: this.getIndicatorInterpretation(name, result),
       chartColor: this.getIndicatorColor(name, category),
@@ -1086,7 +1092,7 @@ Include specific price levels and actionable insights.
       for (const [name, result] of Object.entries(stepResult.aggregatedIndicators)) {
         outputIndicators[name] = {
           value: result.value,
-          signal: result.signal || 'neutral',
+          signal: (result.signal || 'neutral') as 'bullish' | 'bearish' | 'neutral',
           strength: result.strength || 0,
           metadata: result.metadata,
         };
