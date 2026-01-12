@@ -1230,7 +1230,7 @@ export class AIExpertService {
 
       await prisma.report.update({
         where: { id: params.reportId },
-        data: { reportData },
+        data: { reportData: reportData as object },
       });
 
       return {

@@ -3,6 +3,9 @@
 // Production-grade with comprehensive monitoring
 // ===========================================
 
+// Import type declarations first
+import './types/fastify';
+
 import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -494,22 +497,4 @@ process.on('unhandledRejection', (reason, promise) => {
 // Start the server
 start();
 
-// ===========================================
-// Type Declarations
-// ===========================================
-
-declare module 'fastify' {
-  interface FastifyInstance {
-    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
-  }
-  interface FastifyRequest {
-    startTime?: number;
-    user?: {
-      id: string;
-      email: string;
-      name: string;
-      level: number;
-      isAdmin?: boolean;
-    };
-  }
-}
+// Type declarations are in src/types/fastify.d.ts

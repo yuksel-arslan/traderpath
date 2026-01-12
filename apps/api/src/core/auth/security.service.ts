@@ -798,7 +798,7 @@ export async function logSecurityEvent(data: SecurityEventData): Promise<void> {
         ipAddress: data.ipAddress,
         userAgent: data.userAgent,
         failureReason: data.failureReason,
-        metadata: data.metadata || {},
+        metadata: (data.metadata || {}) as object,
       },
     });
   } catch (error) {

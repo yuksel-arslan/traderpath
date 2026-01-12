@@ -325,7 +325,16 @@ export default async function adminRoutes(app: FastifyInstance) {
 
     try {
       if (pattern === '*') {
-        await redis.flushdb();
+        // flushdb only available on real Redis, not memory cache
+        if ('flushdb' in redis) {
+          await (redis as any).flushdb();
+        } else {
+          // For memory cache, delete all keys
+          const keys = await redis.keys('*');
+          if (keys.length > 0) {
+            await redis.del(...keys);
+          }
+        }
       } else {
         const keys = await redis.keys(pattern);
         if (keys.length > 0) {
