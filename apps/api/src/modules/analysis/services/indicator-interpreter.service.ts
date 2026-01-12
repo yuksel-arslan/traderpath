@@ -1,5 +1,5 @@
 /**
- * TradePath Indicator Interpreter Service
+ * TraderPath Indicator Interpreter Service
  * ========================================
  *
  * Generates detailed interpretations for all technical indicators.
@@ -11,7 +11,7 @@
  * - Multi-indicator signal aggregation
  */
 
-import { IndicatorDetail, IndicatorAnalysis, DivergenceInfo } from '@tradepath/types';
+import { IndicatorDetail, IndicatorAnalysis, DivergenceInfo } from '@traderpath/types';
 
 interface IndicatorValue {
   value: number | null;

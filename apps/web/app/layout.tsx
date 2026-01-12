@@ -11,7 +11,7 @@ import { Providers } from './providers';
 const fontClass = 'font-sans';
 
 export const metadata: Metadata = {
-  title: 'TradePath - 7-Step Trading Analysis',
+  title: 'TraderPath - 7-Step Trading Analysis',
   description: 'From confusion to conviction in 7 steps. AI-powered trading analysis with manipulation detection.',
   keywords: ['crypto', 'trading', 'analysis', 'bitcoin', 'ethereum', 'whale', 'manipulation'],
 };

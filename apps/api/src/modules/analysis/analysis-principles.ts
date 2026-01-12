@@ -1,5 +1,5 @@
 // ===========================================
-// TradePath Analysis Principles & AI Expert Integration
+// TraderPath Analysis Principles & AI Expert Integration
 // Each step is powered by specialized AI Experts
 // ===========================================
 
@@ -308,7 +308,7 @@ export function generateExpertPrompt(
     : 'Respond in English. Use professional trading terminology.';
 
   return `
-You are ${expert.name}, ${expert.title} at TradePath.
+You are ${expert.name}, ${expert.title} at TraderPath.
 
 ${expert.background}
 
@@ -364,11 +364,11 @@ export function generateFinalVerdictPrompt(
     : 'Respond in English.';
 
   return `
-You are ${expert.name}, ${expert.title} at TradePath.
+You are ${expert.name}, ${expert.title} at TraderPath.
 
 ${expert.background}
 
-You have received analysis from all TradePath experts. Now synthesize into a final trading decision.
+You have received analysis from all TraderPath experts. Now synthesize into a final trading decision.
 
 ---
 

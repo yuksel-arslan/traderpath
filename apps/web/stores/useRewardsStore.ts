@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { DailyRewards, Achievement, UserAchievement } from '@tradepath/types';
+import type { DailyRewards, Achievement, UserAchievement } from '@traderpath/types';
 
 interface RewardsState {
   // Daily rewards status

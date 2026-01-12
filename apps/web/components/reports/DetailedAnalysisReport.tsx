@@ -1,7 +1,7 @@
 'use client';
 
 // ===========================================
-// TradePath Detailed Analysis Report - Comprehensive PDF
+// TraderPath Detailed Analysis Report - Comprehensive PDF
 // Multi-Page Layout with Step Details, Indicator Charts, and Commentary
 // ===========================================
 
@@ -759,7 +759,7 @@ export async function generateDetailedReport(data: DetailedReportData): Promise<
     }
   }
 
-  const fileName = `TradePath_${data.symbol}_Detailed_${new Date().toISOString().split('T')[0]}.pdf`;
+  const fileName = `TraderPath_${data.symbol}_Detailed_${new Date().toISOString().split('T')[0]}.pdf`;
   const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
   pdf.save(fileName);

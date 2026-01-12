@@ -52,7 +52,7 @@ interface PdfReportEmailData {
 }
 
 class EmailService {
-  private readonly FROM_EMAIL = 'TradePath <noreply@tradepath.app>';
+  private readonly FROM_EMAIL = 'TraderPath <noreply@traderpath.io>';
   private readonly RESEND_API_KEY = process.env.RESEND_API_KEY;
 
   /**
@@ -111,7 +111,7 @@ class EmailService {
 
     const result = await this.sendEmail({
       to: email,
-      subject: `TradePath ${data.symbol} Expert Analysis Report - ${data.expertName}`,
+      subject: `TraderPath ${data.symbol} Expert Analysis Report - ${data.expertName}`,
       html,
       text,
     });
@@ -129,7 +129,7 @@ class EmailService {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TradePath Expert Report</title>
+  <title>TraderPath Expert Report</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 40px 20px;">
@@ -140,7 +140,7 @@ class EmailService {
           <tr>
             <td style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); padding: 30px; text-align: center;">
               <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
-                TradePath
+                TraderPath
               </h1>
               <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
                 Expert AI Analysis Report
@@ -193,7 +193,7 @@ ${data.expertInsights}
           <tr>
             <td style="background-color: #0f172a; padding: 20px; text-align: center; border-top: 1px solid #334155;">
               <p style="color: #64748b; font-size: 12px; margin: 0;">
-                TradePath - Professional Trading Analysis
+                TraderPath - Professional Trading Analysis
               </p>
               <p style="color: #475569; font-size: 11px; margin: 10px 0 0;">
                 This email was sent for your requested analysis report.
@@ -214,7 +214,7 @@ ${data.expertInsights}
    */
   private generateReportEmailText(data: ReportEmailData): string {
     return `
-TradePath Expert Analysis Report
+TraderPath Expert Analysis Report
 =============================
 
 Hello ${data.userName},
@@ -229,7 +229,7 @@ View full report: ${data.reportUrl}
 This report was generated on ${data.generatedAt}.
 
 ---
-TradePath - Professional Trading Analysis
+TraderPath - Professional Trading Analysis
     `.trim();
   }
 
@@ -242,7 +242,7 @@ TradePath - Professional Trading Analysis
 
     const result = await this.sendEmail({
       to: email,
-      subject: `📊 TradePath ${data.symbol} Daily Analysis - ${data.verdict}`,
+      subject: `📊 TraderPath ${data.symbol} Daily Analysis - ${data.verdict}`,
       html,
       text,
     });
@@ -265,7 +265,7 @@ TradePath - Professional Trading Analysis
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TradePath Scheduled Report</title>
+  <title>TraderPath Scheduled Report</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 40px 20px;">
@@ -276,7 +276,7 @@ TradePath - Professional Trading Analysis
           <tr>
             <td style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); padding: 30px; text-align: center;">
               <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
-                TradePath
+                TraderPath
               </h1>
               <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
                 Scheduled Analysis Report
@@ -383,7 +383,7 @@ TradePath - Professional Trading Analysis
           <tr>
             <td style="background-color: #0f172a; padding: 20px; text-align: center; border-top: 1px solid #334155;">
               <p style="color: #64748b; font-size: 12px; margin: 0;">
-                TradePath - Professional Trading Analysis
+                TraderPath - Professional Trading Analysis
               </p>
               <p style="color: #475569; font-size: 11px; margin: 10px 0 0;">
                 This is your scheduled report. Manage settings in your dashboard.
@@ -404,7 +404,7 @@ TradePath - Professional Trading Analysis
    */
   private generateScheduledReportText(data: ScheduledReportEmailData): string {
     return `
-TradePath Scheduled Analysis Report
+TraderPath Scheduled Analysis Report
 ====================================
 
 Hi ${data.userName},
@@ -426,7 +426,7 @@ View full report: ${data.reportUrl}
 Generated on ${data.generatedAt}
 
 ---
-TradePath - Professional Trading Analysis
+TraderPath - Professional Trading Analysis
     `.trim();
   }
 
@@ -439,7 +439,7 @@ TradePath - Professional Trading Analysis
 
     const result = await this.sendEmail({
       to: email,
-      subject: `📊 TradePath ${data.symbol}/USDT Analysis Report - ${data.verdict}`,
+      subject: `📊 TraderPath ${data.symbol}/USDT Analysis Report - ${data.verdict}`,
       html,
       text,
       attachments: [
@@ -470,7 +470,7 @@ TradePath - Professional Trading Analysis
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TradePath Analysis Report</title>
+  <title>TraderPath Analysis Report</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
@@ -603,7 +603,7 @@ TradePath - Professional Trading Analysis
           <tr>
             <td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
               <p style="color: #64748b; font-size: 13px; margin: 0 0 10px; font-weight: 600;">
-                TradePath - Professional Trading Analysis
+                TraderPath - Professional Trading Analysis
               </p>
               <p style="color: #94a3b8; font-size: 11px; margin: 0;">
                 This email was automatically sent for your requested analysis report.
@@ -629,7 +629,7 @@ TradePath - Professional Trading Analysis
     const directionText = data.direction?.toLowerCase() === 'long' ? 'BULLISH' : 'BEARISH';
 
     return `
-TradePath Analysis Report
+TraderPath Analysis Report
 =======================
 
 Hello ${data.userName},
@@ -653,7 +653,7 @@ PDF File: ${data.fileName}
 This report was generated on ${data.generatedAt}.
 
 ---
-TradePath - Professional Trading Analysis
+TraderPath - Professional Trading Analysis
 
 ⚠️ This report does not constitute investment advice.
 Do your own research before trading.
@@ -678,7 +678,7 @@ Do your own research before trading.
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Email Verification - TradePath</title>
+  <title>Email Verification - TraderPath</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
@@ -689,7 +689,7 @@ Do your own research before trading.
           <tr>
             <td style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); padding: 30px; text-align: center;">
               <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
-                TradePath
+                TraderPath
               </h1>
               <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
                 Email Verification
@@ -705,7 +705,7 @@ Do your own research before trading.
               </p>
 
               <p style="color: #64748b; font-size: 15px; margin: 0 0 30px; line-height: 1.6;">
-                Thank you for creating your TradePath account! Click the button below to verify your email address.
+                Thank you for creating your TraderPath account! Click the button below to verify your email address.
               </p>
 
               <!-- CTA Button -->
@@ -734,7 +734,7 @@ Do your own research before trading.
           <tr>
             <td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
               <p style="color: #64748b; font-size: 13px; margin: 0;">
-                TradePath - Professional Trading Analysis
+                TraderPath - Professional Trading Analysis
               </p>
               <p style="color: #94a3b8; font-size: 11px; margin: 10px 0 0;">
                 This email was sent automatically. Please do not reply.
@@ -752,7 +752,7 @@ Do your own research before trading.
     const text = `
 Hello ${userName},
 
-Thank you for creating your TradePath account!
+Thank you for creating your TraderPath account!
 
 To verify your email address, open this link in your browser:
 ${verificationUrl}
@@ -762,12 +762,12 @@ This link will expire in 24 hours.
 If you did not request this, you can ignore this email.
 
 ---
-TradePath - Professional Trading Analysis
+TraderPath - Professional Trading Analysis
     `.trim();
 
     const result = await this.sendEmail({
       to: email,
-      subject: '✓ Verify Your Email - TradePath',
+      subject: '✓ Verify Your Email - TraderPath',
       html,
       text,
     });
@@ -789,7 +789,7 @@ TradePath - Professional Trading Analysis
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Password Reset - TradePath</title>
+  <title>Password Reset - TraderPath</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
@@ -800,7 +800,7 @@ TradePath - Professional Trading Analysis
           <tr>
             <td style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; text-align: center;">
               <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
-                TradePath
+                TraderPath
               </h1>
               <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
                 🔐 Password Reset
@@ -845,7 +845,7 @@ TradePath - Professional Trading Analysis
           <tr>
             <td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
               <p style="color: #64748b; font-size: 13px; margin: 0;">
-                TradePath - Professional Trading Analysis
+                TraderPath - Professional Trading Analysis
               </p>
               <p style="color: #94a3b8; font-size: 11px; margin: 10px 0 0;">
                 This email was sent in response to your password reset request.
@@ -873,12 +873,12 @@ This link will expire in 1 hour.
 If you did not request a password reset, please ignore this email.
 
 ---
-TradePath - Professional Trading Analysis
+TraderPath - Professional Trading Analysis
     `.trim();
 
     const result = await this.sendEmail({
       to: email,
-      subject: '🔐 Password Reset Request - TradePath',
+      subject: '🔐 Password Reset Request - TraderPath',
       html,
       text,
     });
@@ -899,7 +899,7 @@ TradePath - Professional Trading Analysis
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>2FA Enabled - TradePath</title>
+  <title>2FA Enabled - TraderPath</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
@@ -910,7 +910,7 @@ TradePath - Professional Trading Analysis
           <tr>
             <td style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 30px; text-align: center;">
               <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
-                TradePath
+                TraderPath
               </h1>
               <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
                 🛡️ Güvenlik Bildirimi
@@ -959,7 +959,7 @@ TradePath - Professional Trading Analysis
           <tr>
             <td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
               <p style="color: #64748b; font-size: 13px; margin: 0;">
-                TradePath - Professional Trading Analysis
+                TraderPath - Professional Trading Analysis
               </p>
             </td>
           </tr>
@@ -986,12 +986,12 @@ Important Reminders:
 If you did not perform this action, please check your account immediately.
 
 ---
-TradePath - Professional Trading Analysis
+TraderPath - Professional Trading Analysis
     `.trim();
 
     const result = await this.sendEmail({
       to: email,
-      subject: '🛡️ Two-Factor Authentication Enabled - TradePath',
+      subject: '🛡️ Two-Factor Authentication Enabled - TraderPath',
       html,
       text,
     });
@@ -1013,7 +1013,7 @@ TradePath - Professional Trading Analysis
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Security Alert - TradePath</title>
+  <title>Security Alert - TraderPath</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
@@ -1024,7 +1024,7 @@ TradePath - Professional Trading Analysis
           <tr>
             <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center;">
               <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
-                TradePath
+                TraderPath
               </h1>
               <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
                 ⚠️ Security Alert
@@ -1095,7 +1095,7 @@ TradePath - Professional Trading Analysis
           <tr>
             <td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
               <p style="color: #64748b; font-size: 13px; margin: 0;">
-                TradePath - Professional Trading Analysis
+                TraderPath - Professional Trading Analysis
               </p>
             </td>
           </tr>
@@ -1126,12 +1126,12 @@ Otherwise:
 - Enable two-factor authentication
 
 ---
-TradePath - Professional Trading Analysis
+TraderPath - Professional Trading Analysis
     `.trim();
 
     const result = await this.sendEmail({
       to: email,
-      subject: '⚠️ New Device Login Detected - TradePath',
+      subject: '⚠️ New Device Login Detected - TraderPath',
       html,
       text,
     });

@@ -1,5 +1,5 @@
 {
-  "name": "@tradepath/web",
+  "name": "@traderpath/web",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -31,7 +31,7 @@
     "@radix-ui/react-tooltip": "^1.0.7",
     "@react-pdf/renderer": "^4.3.2",
     "@tanstack/react-query": "^5.13.4",
-    "@tradepath/types": "workspace:*",
+    "@traderpath/types": "workspace:*",
     "@types/bcryptjs": "^2.4.6",
     "@types/uuid": "^11.0.0",
     "axios": "^1.6.2",

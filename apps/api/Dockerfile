@@ -1,5 +1,5 @@
 # ===========================================
-# TradePath API - Production Dockerfile
+# TraderPath API - Production Dockerfile
 # Multi-stage build for minimal image size
 # ===========================================
 
@@ -41,7 +41,7 @@ RUN corepack enable && corepack prepare pnpm@8.12.0 --activate
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 tradepath
+RUN adduser --system --uid 1001 traderpath
 
 # Copy built files
 COPY --from=builder /app/apps/api/dist ./dist
@@ -62,7 +62,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:4000/health || exit 1
 
 # Run as non-root user
-USER tradepath
+USER traderpath
 
 # Start the application
 CMD ["node", "dist/index.js"]

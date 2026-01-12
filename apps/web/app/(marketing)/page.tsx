@@ -45,7 +45,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
-import { TradePathLogo } from '../../components/common/TradePathLogo';
+import { TraderPathLogo } from '../../components/common/TraderPathLogo';
 import { CREDIT_PACKAGES } from '../../lib/pricing-config';
 import { LiveAnalysisPreview } from '../../components/marketing/LiveAnalysisPreview';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../lib/coin-icons';
@@ -102,7 +102,7 @@ const TESTIMONIALS = [
   {
     name: 'Alex M.',
     role: 'Day Trader',
-    content: 'TradePath helped me avoid 3 manipulation traps in just one week. The Safety Check feature is incredible.',
+    content: 'TraderPath helped me avoid 3 manipulation traps in just one week. The Safety Check feature is incredible.',
     rating: 5,
   },
   {
@@ -122,12 +122,12 @@ const TESTIMONIALS = [
 
 const FAQS = [
   {
-    question: 'What is TradePath and how does it work?',
-    answer: 'TradePath is an AI-powered trading analysis platform that runs your chosen cryptocurrency through 7 specialized analysis steps. In about 60 seconds, you get a complete trade plan with entry points, targets, stop-losses, and a final verdict on whether to trade or wait.',
+    question: 'What is TraderPath and how does it work?',
+    answer: 'TraderPath is an AI-powered trading analysis platform that runs your chosen cryptocurrency through 7 specialized analysis steps. In about 60 seconds, you get a complete trade plan with entry points, targets, stop-losses, and a final verdict on whether to trade or wait.',
   },
   {
     question: 'Do I need to connect my exchange or wallet?',
-    answer: 'No! TradePath is purely an analysis tool. We never ask for your trading keys, wallet addresses, or exchange credentials. Your funds stay safe in your own accounts.',
+    answer: 'No! TraderPath is purely an analysis tool. We never ask for your trading keys, wallet addresses, or exchange credentials. Your funds stay safe in your own accounts.',
   },
   {
     question: 'How accurate is the analysis?',
@@ -143,7 +143,7 @@ const FAQS = [
   },
   {
     question: 'Can I get a refund if I\'m not satisfied?',
-    answer: 'Yes! We offer a 7-day money-back guarantee on your first credit purchase. If TradePath doesn\'t meet your expectations, contact support for a full refund.',
+    answer: 'Yes! We offer a 7-day money-back guarantee on your first credit purchase. If TraderPath doesn\'t meet your expectations, contact support for a full refund.',
   },
 ];
 
@@ -940,7 +940,7 @@ function FeaturesSection() {
                   {/* Availability */}
                   <div className="bg-accent/50 rounded-lg p-4 border border-border">
                     <p className="text-sm text-muted-foreground">
-                      <span className="font-semibold text-foreground">Availability:</span> This feature is included with all TradePath accounts. No additional cost or subscription required.
+                      <span className="font-semibold text-foreground">Availability:</span> This feature is included with all TraderPath accounts. No additional cost or subscription required.
                     </p>
                   </div>
                 </>
@@ -1084,7 +1084,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <TradePathLogo size="md" showText showTagline href="/" />
+          <TraderPathLogo size="md" showText showTagline href="/" />
           <nav className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-muted-foreground hover:text-foreground transition">
               Features
@@ -1127,7 +1127,7 @@ export default function LandingPage() {
           </div>
           <div className="flex justify-center mb-8">
             <div className="float">
-              <TradePathLogo size="xl" showText={false} />
+              <TraderPathLogo size="xl" showText={false} />
             </div>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
@@ -1186,15 +1186,15 @@ export default function LandingPage() {
       {/* Features Section with 7-Step Analysis + AI Experts */}
       <FeaturesSection />
 
-      {/* Why TradePath Section */}
+      {/* Why TraderPath Section */}
       <section className="py-20 bg-accent/50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Why Choose TradePath?
+              Why Choose TraderPath?
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              See how TradePath compares to traditional analysis tools
+              See how TraderPath compares to traditional analysis tools
             </p>
           </div>
           <div className="max-w-4xl mx-auto">
@@ -1204,7 +1204,7 @@ export default function LandingPage() {
                   <tr className="border-b">
                     <th className="text-left p-4 font-semibold">Feature</th>
                     <th className="text-center p-4 font-semibold text-muted-foreground">Traditional Tools</th>
-                    <th className="text-center p-4 font-semibold gradient-text">TradePath</th>
+                    <th className="text-center p-4 font-semibold gradient-text">TraderPath</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1247,7 +1247,7 @@ export default function LandingPage() {
       <section id="how-it-works" className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">How TradePath Works</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">How TraderPath Works</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               We don&apos;t trade for you. We provide scientific analysis and education so you can make informed decisions.
             </p>
@@ -1382,7 +1382,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              See TradePath in Action
+              See TraderPath in Action
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Here's a real example of our 7-step analysis for Bitcoin
@@ -1414,7 +1414,7 @@ export default function LandingPage() {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-lg"></div>
-                    <span className="font-bold gradient-text">TradePath</span>
+                    <span className="font-bold gradient-text">TraderPath</span>
                   </div>
                   <nav className="hidden md:flex items-center gap-4 ml-8">
                     <span className="text-sm font-medium text-primary">Dashboard</span>
@@ -1554,7 +1554,7 @@ export default function LandingPage() {
               Trusted by Traders Worldwide
             </h2>
             <p className="text-muted-foreground">
-              See what our users have to say about TradePath
+              See what our users have to say about TraderPath
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1652,7 +1652,7 @@ export default function LandingPage() {
               Frequently Asked Questions
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to know about TradePath
+              Everything you need to know about TraderPath
             </p>
           </div>
           <div className="max-w-3xl mx-auto space-y-4">
@@ -1676,7 +1676,7 @@ export default function LandingPage() {
             <div className="text-2xl font-bold text-muted-foreground">Bybit</div>
           </div>
           <p className="text-center text-xs text-muted-foreground mt-6">
-            *Users from these platforms trust TradePath for their trading analysis
+            *Users from these platforms trust TraderPath for their trading analysis
           </p>
         </div>
       </section>
@@ -1697,7 +1697,7 @@ export default function LandingPage() {
               <span className="gradient-text-animate">Smarter?</span>
             </h2>
             <p className="text-xl text-muted-foreground mb-8">
-              Join 12,000+ traders who already use TradePath to make informed decisions.
+              Join 12,000+ traders who already use TraderPath to make informed decisions.
               Start with 25 free credits today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -1754,7 +1754,7 @@ export default function LandingPage() {
           </div>
           <div className="pt-8 border-t flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-muted-foreground text-sm">
-              © 2025 TradePath. All rights reserved.
+              © 2025 TraderPath. All rights reserved.
             </p>
             <p className="text-muted-foreground text-sm">
               Trading involves risk. Not financial advice.

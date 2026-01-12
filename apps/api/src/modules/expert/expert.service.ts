@@ -1,6 +1,6 @@
 // ===========================================
 // Expert AI Service
-// Provides AI-powered answers with real examples from TradePath
+// Provides AI-powered answers with real examples from TraderPath
 // ===========================================
 
 import { prisma } from '../../core/database';
@@ -96,7 +96,7 @@ export class ExpertService {
   }
 
   /**
-   * Find relevant examples from TradePath based on question topic
+   * Find relevant examples from TraderPath based on question topic
    */
   async findExamples(question: string, userId?: string): Promise<ExampleData[]> {
     const topic = this.classifyTopic(question);
@@ -325,19 +325,19 @@ export class ExpertService {
       return `Example ${i + 1} (${ex.type}): ${ex.title}\n${ex.description}\n${detailsStr}`;
     }).join('\n\n');
 
-    const prompt = `You are TradePath's expert trading educator. You help users learn about crypto trading.
+    const prompt = `You are TraderPath's expert trading educator. You help users learn about crypto trading.
 
 USER QUESTION:
 ${question}
 
 DETECTED TOPIC: ${topic}
 
-REAL EXAMPLES FROM TradePath:
+REAL EXAMPLES FROM TraderPath:
 ${examplesText || 'No relevant examples yet'}
 
 IMPORTANT INSTRUCTIONS:
 1. Answer in ENGLISH (professional but understandable language)
-2. If examples are available, include them in your answer and reference them like "As we see in TradePath..."
+2. If examples are available, include them in your answer and reference them like "As we see in TraderPath..."
 3. Give practical and actionable advice
 4. Warn about risks but don't create excessive fear
 5. Keep your answer 3-5 paragraphs

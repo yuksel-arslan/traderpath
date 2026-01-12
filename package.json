@@ -1,9 +1,9 @@
 {
-  "name": "tradepath",
+  "name": "traderpath",
   "version": "1.0.0",
   "private": true,
-  "description": "TradePath - 7-Step Trading Analysis Platform",
-  "author": "TradePath Team",
+  "description": "TraderPath - 7-Step Trading Analysis Platform",
+  "author": "TraderPath Team",
   "license": "UNLICENSED",
   "workspaces": [
     "apps/*",

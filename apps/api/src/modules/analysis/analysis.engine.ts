@@ -1,5 +1,5 @@
 // ===========================================
-// TradePath Analysis Engine - Production Grade
+// TraderPath Analysis Engine - Production Grade
 // Full Technical Specification Compliance
 // ===========================================
 
@@ -8,7 +8,7 @@ import { config } from '../../core/config';
 import { contractSecurityService } from '../security/contract-security.service';
 import { TradeType, getTradeConfig, getStepConfig, Timeframe } from './config/trade-config';
 import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/indicator-interpreter.service';
-import { IndicatorAnalysis } from '@tradepath/types';
+import { IndicatorAnalysis } from '@traderpath/types';
 
 // ===========================================
 // Price Formatting Utility

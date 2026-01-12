@@ -4,7 +4,7 @@
 
 import { prisma } from '../../core/database';
 import { cache, cacheKeys, cacheTTL } from '../../core/cache';
-import { CREDIT_COSTS, type CreditBalance, type CreditTransaction } from '@tradepath/types';
+import { CREDIT_COSTS, type CreditBalance, type CreditTransaction } from '@traderpath/types';
 
 // Admin emails with free unlimited access
 const ADMIN_EMAILS = ['contact@yukselarslan.com'];

@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getAuthToken } from '../../lib/api';
-import { CREDIT_COSTS } from '@tradepath/types';
+import { CREDIT_COSTS } from '@traderpath/types';
 import { MarketPulse } from './MarketPulse';
 import { AssetScanner } from './AssetScanner';
 import { SafetyCheck } from './SafetyCheck';
