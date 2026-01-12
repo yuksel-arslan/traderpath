@@ -150,7 +150,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
             userId,
             symbol: symbol.toUpperCase(),
             analysisId,
-            reportData,
+            reportData: reportData as any, // Cast to bypass strict Json type
             verdict,
             score,
             direction,
@@ -919,9 +919,9 @@ export async function reportRoutes(fastify: FastifyInstance) {
           const result = await calculateReportOutcome(id);
           if (result) {
             outcome = result.outcome;
-            outcomePrice = result.outcomePrice;
-            outcomePriceChange = result.priceChange;
-            stepOutcomes = result.stepOutcomes;
+            outcomePrice = result.outcomePrice as any;
+            outcomePriceChange = result.priceChange as any;
+            stepOutcomes = result.stepOutcomes as any;
           }
         }
 

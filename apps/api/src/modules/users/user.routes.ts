@@ -48,7 +48,7 @@ export default async function userRoutes(app: FastifyInstance) {
           id: user.id,
           email: user.email,
           name: user.name,
-          avatarUrl: user.avatarUrl,
+          avatarUrl: user.image, // Prisma field is 'image', mapped to 'avatar_url' in DB
           level: user.level,
           xp: user.xp,
           streakDays: user.streakDays,

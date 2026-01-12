@@ -102,11 +102,15 @@ export class ExpertService {
     const topic = this.classifyTopic(question);
     const examples: ExampleData[] = [];
 
+    // Valid QuizCategory values in Prisma schema
+    const validQuizCategories = ['TECHNICAL_ANALYSIS', 'WHALE_BEHAVIOR', 'RISK_MANAGEMENT', 'MARKET_STRUCTURE', 'MANIPULATION', 'PSYCHOLOGY'];
+    const quizCategory = validQuizCategories.includes(topic) ? topic : undefined;
+
     try {
       // 1. Get relevant quiz questions as educational examples
       const quizzes = await prisma.quiz.findMany({
         where: {
-          category: topic !== 'GENERAL' ? topic : undefined,
+          category: quizCategory as any,
           isActive: true,
         },
         take: 2,
