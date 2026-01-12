@@ -286,7 +286,7 @@ export async function getUserActiveTrades(userId: string): Promise<LiveTrackingS
   if (reports.length === 0) return [];
 
   // Fetch all prices at once
-  const symbols = [...new Set(reports.map(r => r.symbol))];
+  const symbols = [...new Set(reports.map(r => r.symbol))] as string[];
   const prices = await fetchBulkPrices(symbols);
 
   const results: LiveTrackingStatus[] = [];
@@ -395,7 +395,7 @@ export async function checkAndUpdateOutcomes(): Promise<{
   }
 
   // Fetch all prices at once to check if any TP/SL might have been hit
-  const symbols = [...new Set(reports.map(r => r.symbol))];
+  const symbols = [...new Set(reports.map(r => r.symbol))] as string[];
   const prices = await fetchBulkPrices(symbols);
 
   let tpHits = 0;

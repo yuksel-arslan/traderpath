@@ -37,7 +37,8 @@ export default async function userRoutes(app: FastifyInstance) {
 
     // Calculate level info
     const { LEVEL_THRESHOLDS } = await import('@tradepath/types');
-    const currentLevel = LEVEL_THRESHOLDS.findLast((l) => user.xp >= l.xp) || LEVEL_THRESHOLDS[0];
+    const matchingLevels = LEVEL_THRESHOLDS.filter((l) => user.xp >= l.xp);
+    const currentLevel = matchingLevels[matchingLevels.length - 1] || LEVEL_THRESHOLDS[0];
     const nextLevel = LEVEL_THRESHOLDS.find((l) => l.xp > user.xp);
 
     return reply.send({

@@ -775,7 +775,7 @@ Explain the key risks and what conditions would need to change before trading th
       // Fetch current prices from Binance
       const prices: Record<string, number> = {};
       try {
-        const pairs = symbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
+        const pairs = symbols.map((s: string) => `"${s.toUpperCase()}USDT"`).join(',');
         const response = await fetch(
           `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
         );
@@ -807,7 +807,7 @@ Explain the key risks and what conditions would need to change before trading th
         if (intervalMs > 0) {
           // Calculate next candle close (aligned to interval)
           const nextClose = Math.ceil(now / intervalMs) * intervalMs;
-          nextCandleCloses[interval] = nextClose;
+          nextCandleCloses[interval as string] = nextClose;
         }
       }
 
@@ -1408,7 +1408,7 @@ Explain the key risks and what conditions would need to change before trading th
         const prices: Record<string, number> = {};
 
         try {
-          const pairs = activeSymbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
+          const pairs = activeSymbols.map((s: string) => `"${s.toUpperCase()}USDT"`).join(',');
           const priceResponse = await fetch(
             `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
           );
@@ -1603,7 +1603,7 @@ Explain the key risks and what conditions would need to change before trading th
 
       if (symbols.length > 0) {
         try {
-          const pairs = symbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
+          const pairs = symbols.map((s: string) => `"${s.toUpperCase()}USDT"`).join(',');
           const priceResponse = await fetch(
             `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
           );

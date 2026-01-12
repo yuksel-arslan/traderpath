@@ -25,6 +25,33 @@ interface SaveReportBody {
   tradeType?: string; // 'scalping', 'dayTrade', 'swing'
 }
 
+interface SendEmailBody {
+  symbol: string;
+  verdict: string;
+  score: number;
+  direction: string;
+  generatedAt: string;
+  pdfBase64: string;
+  fileName: string;
+}
+
+interface SendHtmlEmailBody {
+  reportId: string;
+  reportData: {
+    symbol: string;
+    generatedAt: string;
+    analysisId?: string;
+    marketPulse?: Record<string, unknown>;
+    assetScan?: Record<string, unknown>;
+    safetyCheck?: Record<string, unknown>;
+    timing?: Record<string, unknown>;
+    tradePlan?: Record<string, unknown>;
+    trapCheck?: Record<string, unknown>;
+    verdict?: Record<string, unknown>;
+    aiExpertComment?: string;
+  };
+}
+
 // Extract entry price from report data - comprehensive search
 function extractEntryPrice(reportData: Record<string, unknown>): number | null {
   // Try tradePlan first (most accurate)
@@ -53,8 +80,18 @@ function extractEntryPrice(reportData: Record<string, unknown>): number | null {
   return null;
 }
 
-interface AuthenticatedRequest extends FastifyRequest {
-  user?: { id: string };
+// User payload type for JWT
+interface JwtUser {
+  id: string;
+  email: string;
+  name: string;
+  level: number;
+  isAdmin?: boolean;
+}
+
+// Helper to get user from request
+function getUser(request: FastifyRequest): JwtUser | null {
+  return request.user as JwtUser | null;
 }
 
 // Reports stay active until TP/SL hit - no time-based expiration
@@ -73,16 +110,16 @@ export async function reportRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: SaveReportBody }>(
     '/api/reports',
     { preHandler: authenticate },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = request.user?.id;
+        const userId = getUser(request)?.id;
         if (!userId) {
           return reply.code(401).send({
             error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
           });
         }
 
-        const { symbol, analysisId, reportData, verdict, score, direction, interval = '4h', entryPrice, tradeType } = request.body;
+        const { symbol, analysisId, reportData, verdict, score, direction, interval = '4h', entryPrice, tradeType } = request.body as SaveReportBody;
 
         if (!symbol || !reportData || !verdict || score === undefined) {
           return reply.code(400).send({
@@ -201,9 +238,9 @@ export async function reportRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/reports',
     { preHandler: authenticate },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = request.user?.id;
+        const userId = getUser(request)?.id;
         if (!userId) {
           return reply.code(401).send({
             error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
@@ -214,7 +251,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
 
         // Calculate outcomes for expired reports in the background (instead of deleting)
         calculateExpiredOutcomes().catch((err) =>
-          fastify.log.error('Failed to calculate expired report outcomes:', err)
+          fastify.log.error({ error: err }, 'Failed to calculate expired report outcomes')
         );
 
         // Base expiry filter
@@ -306,7 +343,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
               }
             }
           } catch (err) {
-            fastify.log.error('Failed to fetch prices:', err);
+            fastify.log.error({ error: err }, 'Failed to fetch prices');
           }
         }
 
@@ -418,16 +455,16 @@ export async function reportRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { analysisId: string } }>(
     '/api/reports/by-analysis/:analysisId',
     { preHandler: authenticate },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = request.user?.id;
+        const userId = getUser(request)?.id;
         if (!userId) {
           return reply.code(401).send({
             error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
           });
         }
 
-        const { analysisId } = request.params;
+        const { analysisId } = request.params as { analysisId: string };
 
         const report = await prisma.report.findFirst({
           where: { analysisId, userId },
@@ -463,16 +500,16 @@ export async function reportRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { id: string } }>(
     '/api/reports/:id',
     { preHandler: authenticate },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = request.user?.id;
+        const userId = getUser(request)?.id;
         if (!userId) {
           return reply.code(401).send({
             error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
           });
         }
 
-        const { id } = request.params;
+        const { id } = request.params as { id: string };
 
         const report = await prisma.report.findFirst({
           where: { id, userId },
@@ -518,17 +555,17 @@ export async function reportRoutes(fastify: FastifyInstance) {
   fastify.patch<{ Params: { analysisId: string }; Body: { comment: string } }>(
     '/api/reports/by-analysis/:analysisId/ai-expert-comment',
     { preHandler: authenticate },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = request.user?.id;
+        const userId = getUser(request)?.id;
         if (!userId) {
           return reply.code(401).send({
             error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
           });
         }
 
-        const { analysisId } = request.params;
-        const { comment } = request.body;
+        const { analysisId } = request.params as { analysisId: string };
+        const { comment } = request.body as { comment: string };
 
         if (!comment || typeof comment !== 'string') {
           return reply.code(400).send({
@@ -573,17 +610,17 @@ export async function reportRoutes(fastify: FastifyInstance) {
   fastify.patch<{ Params: { id: string }; Body: { comment: string } }>(
     '/api/reports/:id/ai-expert-comment',
     { preHandler: authenticate },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = request.user?.id;
+        const userId = getUser(request)?.id;
         if (!userId) {
           return reply.code(401).send({
             error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
           });
         }
 
-        const { id } = request.params;
-        const { comment } = request.body;
+        const { id } = request.params as { id: string };
+        const { comment } = request.body as { comment: string };
 
         if (!comment || typeof comment !== 'string') {
           return reply.code(400).send({
@@ -628,16 +665,16 @@ export async function reportRoutes(fastify: FastifyInstance) {
   fastify.delete<{ Params: { id: string } }>(
     '/api/reports/:id',
     { preHandler: authenticate },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = request.user?.id;
+        const userId = getUser(request)?.id;
         if (!userId) {
           return reply.code(401).send({
             error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
           });
         }
 
-        const { id } = request.params;
+        const { id } = request.params as { id: string };
 
         const report = await prisma.report.findFirst({
           where: { id, userId },
@@ -670,9 +707,9 @@ export async function reportRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/reports/cleanup',
     { preHandler: authenticate },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = request.user?.id;
+        const userId = getUser(request)?.id;
         if (!userId) {
           return reply.code(401).send({
             error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
@@ -756,16 +793,16 @@ export async function reportRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { id: string } }>(
     '/api/reports/:id/outcome',
     { preHandler: authenticate },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = request.user?.id;
+        const userId = getUser(request)?.id;
         if (!userId) {
           return reply.code(401).send({
             error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
           });
         }
 
-        const { id } = request.params;
+        const { id } = request.params as { id: string };
 
         const report = await prisma.report.findFirst({
           where: { id, userId },
@@ -829,16 +866,16 @@ export async function reportRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { id: string } }>(
     '/api/reports/:id/accuracy-report',
     { preHandler: authenticate },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = request.user?.id;
+        const userId = getUser(request)?.id;
         if (!userId) {
           return reply.code(401).send({
             error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
           });
         }
 
-        const { id } = request.params;
+        const { id } = request.params as { id: string };
 
         const report = await prisma.report.findFirst({
           where: { id, userId },
@@ -951,9 +988,9 @@ export async function reportRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/reports/live-tracking',
     { preHandler: authenticate },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = request.user?.id;
+        const userId = getUser(request)?.id;
         if (!userId) {
           return reply.code(401).send({
             error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
@@ -986,16 +1023,16 @@ export async function reportRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { id: string } }>(
     '/api/reports/:id/live-status',
     { preHandler: authenticate },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = request.user?.id;
+        const userId = getUser(request)?.id;
         if (!userId) {
           return reply.code(401).send({
             error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
           });
         }
 
-        const { id } = request.params;
+        const { id } = request.params as { id: string };
 
         // Verify ownership
         const report = await prisma.report.findFirst({
@@ -1059,29 +1096,19 @@ export async function reportRoutes(fastify: FastifyInstance) {
   // ===========================================
   // POST /api/reports/send-email - Send PDF report via email
   // ===========================================
-  interface SendEmailBody {
-    symbol: string;
-    verdict: string;
-    score: number;
-    direction: string;
-    generatedAt: string;
-    pdfBase64: string;
-    fileName: string;
-  }
-
   fastify.post<{ Body: SendEmailBody }>(
     '/api/reports/send-email',
     { preHandler: authenticate },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = request.user?.id;
+        const userId = getUser(request)?.id;
         if (!userId) {
           return reply.code(401).send({
             error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
           });
         }
 
-        const { symbol, verdict, score, direction, generatedAt, pdfBase64, fileName } = request.body;
+        const { symbol, verdict, score, direction, generatedAt, pdfBase64, fileName } = request.body as SendEmailBody;
 
         // Validate required fields
         if (!symbol || !pdfBase64 || !fileName) {
@@ -1138,38 +1165,21 @@ export async function reportRoutes(fastify: FastifyInstance) {
   // ===========================================
   // POST /api/reports/send-html-email - Send HTML report via email (5 credits)
   // ===========================================
-  interface SendHtmlEmailBody {
-    reportId: string;
-    reportData: {
-      symbol: string;
-      generatedAt: string;
-      analysisId?: string;
-      marketPulse?: Record<string, unknown>;
-      assetScan?: Record<string, unknown>;
-      safetyCheck?: Record<string, unknown>;
-      timing?: Record<string, unknown>;
-      tradePlan?: Record<string, unknown>;
-      trapCheck?: Record<string, unknown>;
-      verdict?: Record<string, unknown>;
-      aiExpertComment?: string;
-    };
-  }
-
   const HTML_EMAIL_CREDIT_COST = 5;
 
   fastify.post<{ Body: SendHtmlEmailBody }>(
     '/api/reports/send-html-email',
     { preHandler: authenticate },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = request.user?.id;
+        const userId = getUser(request)?.id;
         if (!userId) {
           return reply.code(401).send({
             error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
           });
         }
 
-        const { reportId, reportData } = request.body;
+        const { reportId, reportData } = request.body as SendHtmlEmailBody;
 
         if (!reportId || !reportData) {
           return reply.code(400).send({

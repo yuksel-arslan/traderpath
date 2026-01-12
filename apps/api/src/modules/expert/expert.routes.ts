@@ -9,6 +9,7 @@ import { authenticate } from '../../core/auth/middleware';
 import { creditService } from '../credits/credit.service';
 import { expertService } from './expert.service';
 import { creditCostsService } from '../costs/credit-costs.service';
+import { prisma } from '../../core/database';
 
 export default async function expertRoutes(app: FastifyInstance) {
   /**
@@ -61,7 +62,7 @@ export default async function expertRoutes(app: FastifyInstance) {
       console.error('Expert AI error:', error);
 
       // Refund credits on error
-      await creditService.add(userId, cost, 'REFUND', 'expert_ai_error', {
+      await creditService.add(userId, cost, 'BONUS' as any, 'expert_ai_error', {
         reason: 'API error',
       });
 
@@ -150,7 +151,7 @@ export default async function expertRoutes(app: FastifyInstance) {
 
     try {
       // Get recent expert questions from credit transactions
-      const recentQuestions = await app.prisma.creditTransaction.findMany({
+      const recentQuestions = await prisma.creditTransaction.findMany({
         where: {
           userId,
           source: 'expert_ai_question',

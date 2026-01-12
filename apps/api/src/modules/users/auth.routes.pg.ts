@@ -129,7 +129,7 @@ export default async function authRoutesPg(app: FastifyInstance) {
 
       // Generate JWT token
       const token = app.jwt.sign(
-        { id: user.id },
+        { id: user.id, email: user.email, name: user.name || '', level: user.level || 1 },
         { expiresIn: config.jwtExpiresIn }
       );
 
@@ -224,7 +224,7 @@ export default async function authRoutesPg(app: FastifyInstance) {
 
       // Generate JWT token
       const token = app.jwt.sign(
-        { id: user.id },
+        { id: user.id, email: user.email, name: user.name || '', level: user.level || 1 },
         { expiresIn: config.jwtExpiresIn }
       );
 
@@ -376,7 +376,7 @@ export default async function authRoutesPg(app: FastifyInstance) {
 
       // Generate JWT token
       const token = app.jwt.sign(
-        { id: user.id },
+        { id: user.id, email: user.email, name: user.name || '', level: user.level || 1 },
         { expiresIn: config.jwtExpiresIn }
       );
 
@@ -538,7 +538,7 @@ export default async function authRoutesPg(app: FastifyInstance) {
 
       // Generate JWT token
       const token = app.jwt.sign(
-        { id: user.id },
+        { id: user.id, email: user.email, name: user.name || '', level: user.level || 1 },
         { expiresIn: config.jwtExpiresIn }
       );
 

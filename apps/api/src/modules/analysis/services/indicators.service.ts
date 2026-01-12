@@ -90,9 +90,8 @@ function trueRange(current: OHLCV, previous: OHLCV): number {
 // INDICATORS SERVICE
 // ============================================================================
 
-@Injectable()
 export class IndicatorsService {
-  private readonly logger = new Logger(IndicatorsService.name);
+  private readonly logger = Logger;
 
   // ==========================================================================
   // TREND INDICATORS

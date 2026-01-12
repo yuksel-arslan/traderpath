@@ -87,7 +87,7 @@ export async function translationRoutes(fastify: FastifyInstance) {
       fastify.log.error(error);
 
       // Refund credits on error
-      await creditService.add(userId, cost, 'refund', 'translation_error_refund', {});
+      await creditService.add(userId, cost, 'BONUS' as any, 'translation_error_refund', {});
 
       return reply.code(500).send({
         error: { code: 'TRANSLATION_ERROR', message: 'Failed to translate content' },

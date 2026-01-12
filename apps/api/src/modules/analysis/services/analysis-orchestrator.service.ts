@@ -234,9 +234,8 @@ function timeframeToInterval(tf: Timeframe): string {
 // ANALYSIS ORCHESTRATOR SERVICE
 // ============================================================================
 
-@Injectable()
 export class AnalysisOrchestratorService {
-  private readonly logger = new Logger(AnalysisOrchestratorService.name);
+  private readonly logger = Logger;
   private indicatorsService: IndicatorsService;
 
   constructor() {

@@ -16,12 +16,16 @@ export type LoginEventType =
   | 'LOGOUT'
   | 'PASSWORD_CHANGE'
   | 'PASSWORD_RESET_SUCCESS'
+  | 'PASSWORD_RESET_REQUEST'
   | 'TWO_FACTOR_ENABLED'
   | 'TWO_FACTOR_DISABLED'
+  | 'TWO_FACTOR_FAILED'
+  | 'TWO_FACTOR_SUCCESS'
   | 'ACCOUNT_LOCKED'
   | 'ACCOUNT_UNLOCKED'
   | 'SUSPICIOUS_ACTIVITY'
-  | 'EMAIL_VERIFIED';
+  | 'EMAIL_VERIFIED'
+  | 'EMAIL_VERIFICATION_SENT';
 
 // ===========================================
 // Database Compatibility Helper

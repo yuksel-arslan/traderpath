@@ -100,7 +100,7 @@ export default async function paymentRoutes(app: FastifyInstance) {
           data: session,
         });
       } catch (error) {
-        app.log.error('Checkout session creation failed:', error);
+        app.log.error({ error }, 'Checkout session creation failed');
         return reply.code(500).send({
           success: false,
           error: { code: 'CHECKOUT_ERROR', message: 'Failed to create checkout session' },
@@ -138,7 +138,7 @@ export default async function paymentRoutes(app: FastifyInstance) {
 
         event = stripeService.constructWebhookEvent(rawBody, signature);
       } catch (err: any) {
-        app.log.error('Webhook signature verification failed:', err.message);
+        app.log.error({ error: err.message }, 'Webhook signature verification failed');
         return reply.code(400).send({ error: `Webhook Error: ${err.message}` });
       }
 
@@ -155,7 +155,7 @@ export default async function paymentRoutes(app: FastifyInstance) {
           const bonus = parseInt(session.metadata?.bonus || '0');
 
           if (!userId || !packageId || totalCredits === 0) {
-            app.log.error('Invalid session metadata:', session.metadata);
+            app.log.error({ metadata: session.metadata }, 'Invalid session metadata');
             break;
           }
 
@@ -212,14 +212,14 @@ export default async function paymentRoutes(app: FastifyInstance) {
 
             app.log.info(`Credits added successfully for user ${userId}`);
           } catch (dbError) {
-            app.log.error('Failed to add credits:', dbError);
+            app.log.error({ error: dbError }, 'Failed to add credits');
           }
           break;
         }
 
         case 'payment_intent.payment_failed': {
           const paymentIntent = event.data.object;
-          app.log.warn('Payment failed:', paymentIntent.id);
+          app.log.warn({ paymentIntentId: paymentIntent.id }, 'Payment failed');
           break;
         }
 
@@ -254,7 +254,7 @@ export default async function paymentRoutes(app: FastifyInstance) {
           },
         });
       } catch (error) {
-        app.log.error('Failed to get session:', error);
+        app.log.error({ error }, 'Failed to get session');
         return reply.code(404).send({
           success: false,
           error: { code: 'SESSION_NOT_FOUND', message: 'Session not found' },
