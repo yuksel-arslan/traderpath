@@ -98,9 +98,16 @@ export default async function userRoutes(app: FastifyInstance) {
     const userId = request.user!.id;
     const body = updateSchema.parse(request.body);
 
+    // Map avatarUrl to image field for Prisma
+    const { avatarUrl, ...rest } = body;
+    const updateData = {
+      ...rest,
+      ...(avatarUrl !== undefined && { image: avatarUrl }),
+    };
+
     const user = await prisma.user.update({
       where: { id: userId },
-      data: body,
+      data: updateData,
     });
 
     return reply.send({
@@ -110,7 +117,7 @@ export default async function userRoutes(app: FastifyInstance) {
           id: user.id,
           email: user.email,
           name: user.name,
-          avatarUrl: user.avatarUrl,
+          avatarUrl: user.image,
           preferredCoins: user.preferredCoins,
         },
       },
