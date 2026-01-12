@@ -3,8 +3,7 @@
 // Production-grade with comprehensive monitoring
 // ===========================================
 
-// Import type declarations first
-import './types/fastify';
+/// <reference path="./types/fastify.ts" />
 
 import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import cors from '@fastify/cors';
