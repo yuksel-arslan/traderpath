@@ -387,9 +387,9 @@ export default function RewardsPage() {
                             : isToday
                             ? 'bg-amber-500/10 border-amber-500'
                             : 'bg-card border-border'
-                        } ${reward.bonus ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-background' : ''}`}
+                        } ${'bonus' in reward && reward.bonus ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-background' : ''}`}
                       >
-                        {reward.bonus && (
+                        {'bonus' in reward && reward.bonus && (
                           <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">
                             BONUS
                           </span>

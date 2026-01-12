@@ -3,11 +3,12 @@
 // ===========================================
 
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 
-const inter = Inter({ subsets: ['latin'] });
+// System font stack - fast loading, no external requests needed
+// Inter-like appearance using system fonts for optimal performance
+const fontClass = 'font-sans';
 
 export const metadata: Metadata = {
   title: 'TradePath - 7-Step Trading Analysis',
@@ -22,7 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={fontClass}>
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -385,7 +385,7 @@ export default function ReportViewPage() {
                 symbol={report.symbol}
                 direction={report.tradePlan.direction as 'long' | 'short'}
                 entries={report.tradePlan.averageEntry ? [{ price: report.tradePlan.averageEntry, percentage: 100 }] : []}
-                stopLoss={report.tradePlan.stopLoss || { price: 0, percentage: 0 }}
+                stopLoss={{ price: report.tradePlan.stopLoss?.price || 0, percentage: 0 }}
                 takeProfits={report.tradePlan.takeProfits?.map((tp, i) => ({
                   price: tp.price,
                   percentage: 0,

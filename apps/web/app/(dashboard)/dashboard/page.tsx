@@ -62,6 +62,9 @@ import { getApiUrl, authFetch } from '../../../lib/api';
 // ===========================================
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
 
+// Step rates type for accuracy
+type StepRatesKey = 'marketPulse' | 'assetScanner' | 'safetyCheck' | 'timing' | 'tradePlan' | 'trapCheck' | 'finalVerdict';
+
 const TRADE_TYPE_CONFIG: Record<TradeType, { label: string; icon: typeof Zap; color: string }> = {
   scalping: { label: 'Scalping', icon: Zap, color: 'purple' },
   dayTrade: { label: 'Day Trade', icon: Activity, color: 'blue' },
@@ -1228,7 +1231,7 @@ export default function DashboardPage() {
                   5: 'tradePlan',
                   6: 'trapCheck',
                   7: 'finalVerdict',
-                }[step.step] as keyof typeof platformStats.accuracy.stepRates;
+                }[step.step] as StepRatesKey;
 
                 const accuracy = platformStats?.accuracy.stepRates[accuracyKey] ?? 0;
                 const stepHasData = hasRealData && accuracy > 0;

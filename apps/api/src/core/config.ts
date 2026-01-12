@@ -7,6 +7,9 @@ import { z } from 'zod';
 
 dotenv.config();
 
+// Production environment check
+const isProduction = process.env.NODE_ENV === 'production';
+
 const envSchema = z.object({
   // App
   NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
@@ -17,16 +20,24 @@ const envSchema = z.object({
   // CORS - comma-separated list of allowed origins (optional)
   CORS_ORIGINS: z.string().optional(),
 
-  // Database (optional - using JSON file storage)
-  DATABASE_URL: z.string().optional(),
+  // Database - required in production
+  DATABASE_URL: isProduction
+    ? z.string().min(1, 'DATABASE_URL is required in production')
+    : z.string().optional(),
 
-  // Redis (optional)
-  REDIS_URL: z.string().optional(),
+  // Redis - required in production
+  REDIS_URL: isProduction
+    ? z.string().min(1, 'REDIS_URL is required in production')
+    : z.string().optional(),
 
-  // JWT (with defaults for development)
-  JWT_SECRET: z.string().min(32).default('dev-jwt-secret-key-minimum-32-characters-long'),
+  // JWT - required in production, defaults only for development
+  JWT_SECRET: isProduction
+    ? z.string().min(32, 'JWT_SECRET must be at least 32 characters in production')
+    : z.string().min(32).default('dev-jwt-secret-key-minimum-32-characters-long'),
   JWT_EXPIRES_IN: z.string().default('7d'),
-  REFRESH_TOKEN_SECRET: z.string().min(32).default('dev-refresh-token-secret-minimum-32-chars'),
+  REFRESH_TOKEN_SECRET: isProduction
+    ? z.string().min(32, 'REFRESH_TOKEN_SECRET must be at least 32 characters in production')
+    : z.string().min(32).default('dev-refresh-token-secret-minimum-32-chars'),
   REFRESH_TOKEN_EXPIRES_IN: z.string().default('30d'),
 
   // Google OAuth

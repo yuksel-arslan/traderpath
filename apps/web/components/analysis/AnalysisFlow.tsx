@@ -175,7 +175,8 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
   const [viewMode, setViewMode] = useState<'intro' | 'result'>('intro');
   const [loading, setLoading] = useState(false);
   const [isRunningFull, setIsRunningFull] = useState(false);
-  const [results, setResults] = useState<Record<number, unknown>>({});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [results, setResults] = useState<Record<number, any>>({});
   const [error, setError] = useState<string | null>(null);
   const [reportSaved, setReportSaved] = useState(false);
   const [savedAnalysisId, setSavedAnalysisId] = useState<string | null>(null);
@@ -711,11 +712,11 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
                     <div style={{ position: 'fixed', left: '-9999px', top: '0', width: '800px', background: '#fff' }}>
                       <TradePlanChart
                         symbol={symbol}
-                        entries={(results[6] as { entries?: Array<{ price: number }> })?.entries}
-                        stopLoss={(results[6] as { stopLoss?: { price: number; percentage: number } })?.stopLoss}
-                        takeProfits={(results[6] as { takeProfits?: Array<{ price: number; percentage: number }> })?.takeProfits}
-                        direction={(results[6] as { direction?: string })?.direction || 'long'}
-                        currentPrice={(results[2] as { currentPrice?: number })?.currentPrice}
+                        entries={(results[6] as { entries?: Array<{ price: number; percentage: number }> })?.entries ?? []}
+                        stopLoss={(results[6] as { stopLoss?: { price: number; percentage: number } })?.stopLoss ?? { price: 0, percentage: 0 }}
+                        takeProfits={(results[6] as { takeProfits?: Array<{ price: number; percentage: number; riskReward?: number }> })?.takeProfits?.map((tp, i) => ({ ...tp, riskReward: tp.riskReward ?? (i + 1) })) ?? []}
+                        direction={((results[6] as { direction?: 'long' | 'short' })?.direction) || 'long'}
+                        currentPrice={(results[2] as { currentPrice?: number })?.currentPrice ?? 0}
                       />
                     </div>
                   )}
