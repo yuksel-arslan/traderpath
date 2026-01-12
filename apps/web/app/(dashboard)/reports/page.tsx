@@ -60,7 +60,7 @@ interface Report {
   expiresAt: string;
   downloadCount: number;
   // Live tracking fields
-  outcome?: 'correct' | 'incorrect' | null;
+  outcome?: 'correct' | 'incorrect' | 'pending' | null;
   entryPrice?: number;
   currentPrice?: number;
   unrealizedPnL?: number;

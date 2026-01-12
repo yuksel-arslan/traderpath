@@ -228,8 +228,9 @@ export const PDF_TRANSLATIONS = {
 } as const;
 
 export type PDFLanguage = keyof typeof PDF_TRANSLATIONS;
-export type PDFTranslations = typeof PDF_TRANSLATIONS['en'];
+export type PDFTranslations = (typeof PDF_TRANSLATIONS)[PDFLanguage];
 
 export function getPDFTranslations(lang: string): PDFTranslations {
-  return PDF_TRANSLATIONS[lang as PDFLanguage] || PDF_TRANSLATIONS.en;
+  const translations = PDF_TRANSLATIONS[lang as PDFLanguage];
+  return translations ?? PDF_TRANSLATIONS.en;
 }

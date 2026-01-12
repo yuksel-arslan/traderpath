@@ -1,0 +1,29 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build output (we'll build inside Docker)
+dist
+
+# Development files
+*.log
+*.md
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Testing
+coverage
+*.test.ts
+*.spec.ts
+__tests__
+
+# Git
+.git
+.gitignore

@@ -103,14 +103,29 @@ const nextConfig = {
     ];
   },
 
-  // Allow images from external sources
+  // Allow images from external sources (using remotePatterns instead of deprecated domains)
   images: {
-    domains: [
-      'lh3.googleusercontent.com',
-      'avatars.githubusercontent.com',
-      'raw.githubusercontent.com', // For cryptocurrency icons
-      'assets.coingecko.com',
-      'www.cryptocompare.com',
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'raw.githubusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'assets.coingecko.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.cryptocompare.com',
+      },
     ],
   },
 
