@@ -162,14 +162,26 @@ export default async function paymentRoutes(app: FastifyInstance) {
           app.log.info(`Payment successful for user ${userId}, package ${packageId}, credits ${totalCredits}`);
 
           try {
-            // Add credits to user
+            // Add credits to user via creditBalance
             await prisma.$transaction(async (tx) => {
-              // Update user credits
-              await tx.user.update({
-                where: { id: userId },
-                data: {
-                  credits: { increment: totalCredits },
+              // Update or create credit balance
+              await tx.creditBalance.upsert({
+                where: { userId },
+                update: {
+                  balance: { increment: totalCredits },
+                  lifetimePurchased: { increment: totalCredits },
                 },
+                create: {
+                  userId,
+                  balance: totalCredits,
+                  lifetimePurchased: totalCredits,
+                },
+              });
+
+              // Get updated balance
+              const creditBalance = await tx.creditBalance.findUnique({
+                where: { userId },
+                select: { balance: true },
               });
 
               // Record transaction
@@ -177,9 +189,9 @@ export default async function paymentRoutes(app: FastifyInstance) {
                 data: {
                   userId,
                   amount: totalCredits,
-                  type: 'purchase',
-                  reason: `Purchased ${packageId} package (${credits} + ${bonus} bonus)`,
-                  balanceAfter: 0, // Will be updated
+                  type: 'PURCHASE',
+                  source: `package_${packageId}`,
+                  balanceAfter: creditBalance?.balance || totalCredits,
                   metadata: {
                     packageId,
                     credits,
@@ -187,25 +199,6 @@ export default async function paymentRoutes(app: FastifyInstance) {
                     stripeSessionId: session.id,
                     stripePaymentIntent: session.payment_intent,
                   },
-                },
-              });
-
-              // Update balance after
-              const user = await tx.user.findUnique({
-                where: { id: userId },
-                select: { credits: true },
-              });
-
-              await tx.creditTransaction.updateMany({
-                where: {
-                  userId,
-                  metadata: {
-                    path: ['stripeSessionId'],
-                    equals: session.id,
-                  },
-                },
-                data: {
-                  balanceAfter: user?.credits || 0,
                 },
               });
             });

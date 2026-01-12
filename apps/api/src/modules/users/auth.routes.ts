@@ -827,7 +827,7 @@ export default async function authRoutes(app: FastifyInstance) {
       // Verify user still exists and is valid
       const user = await prisma.user.findUnique({
         where: { id: request.user!.id },
-        select: { id: true, email: true },
+        select: { id: true, email: true, name: true, level: true },
       });
 
       if (!user) {
