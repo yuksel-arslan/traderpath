@@ -88,7 +88,8 @@ await app.register(cors, {
 });
 
 // Rate Limiting - Global
-await app.register(rateLimit, {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+await app.register(rateLimit as any, {
   max: config.rateLimitMax,
   timeWindow: config.rateLimitWindow,
   errorResponseBuilder: (request, context) => {
