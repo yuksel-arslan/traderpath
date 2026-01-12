@@ -53,7 +53,7 @@ const FAQS = [
   {
     question: 'What are credits?',
     answer:
-      'Credits are the currency used to run analyses on TradePath. Each analysis step costs a certain number of credits. You can earn free credits daily or purchase packages.',
+      'Credits are the currency used to run analyses on TraderPath. Each analysis step costs a certain number of credits. You can earn free credits daily or purchase packages.',
   },
   {
     question: 'Do credits expire?',
@@ -147,7 +147,7 @@ export default function PricingPage() {
             href="/"
             className="text-2xl font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent"
           >
-            TradePath
+            TraderPath
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             <Link href="/#features" className="text-muted-foreground hover:text-foreground transition">
@@ -475,7 +475,7 @@ export default function PricingPage() {
       {/* Footer */}
       <footer className="py-8 border-t">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>&copy; 2024 TradePath. All rights reserved. Trading involves risk.</p>
+          <p>&copy; 2024 TraderPath. All rights reserved. Trading involves risk.</p>
         </div>
       </footer>
     </div>

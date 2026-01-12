@@ -1,7 +1,7 @@
 'use client';
 
 // ===========================================
-// TradePath Brand Logo Component
+// TraderPath Brand Logo Component
 // Logo + Brand Text + Motto
 // ===========================================
 
@@ -100,7 +100,7 @@ export function TradepathLogo({
     </svg>
   );
 
-  // Brand text "TradePath"
+  // Brand text "TraderPath"
   const BrandText = () => (
     <div className="flex flex-col">
       <span
@@ -115,7 +115,7 @@ export function TradepathLogo({
           backgroundClip: 'text',
         }}
       >
-        TradePath
+        TraderPath
       </span>
       {showMotto && (
         <span

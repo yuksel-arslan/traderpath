@@ -73,7 +73,7 @@ export default function VerifyEmailPage() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">
-              TradePath
+              TraderPath
             </h1>
           </div>
 
@@ -123,7 +123,7 @@ export default function VerifyEmailPage() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">
-              TradePath
+              TraderPath
             </h1>
           </div>
 
@@ -144,7 +144,7 @@ export default function VerifyEmailPage() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">
-              TradePath
+              TraderPath
             </h1>
           </div>
 
@@ -174,7 +174,7 @@ export default function VerifyEmailPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">
-            TradePath
+            TraderPath
           </h1>
         </div>
 

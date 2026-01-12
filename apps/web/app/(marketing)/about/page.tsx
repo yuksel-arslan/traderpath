@@ -65,7 +65,7 @@ const VALUES = [
 ];
 
 const MILESTONES = [
-  { year: '2023 Q1', event: 'TradePath founded' },
+  { year: '2023 Q1', event: 'TraderPath founded' },
   { year: '2023 Q3', event: 'Beta launch with 1,000 users' },
   { year: '2023 Q4', event: 'Manipulation detection engine released' },
   { year: '2024 Q1', event: '10,000+ active traders' },
@@ -80,7 +80,7 @@ export default function AboutPage() {
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">
-            TradePath
+            TraderPath
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             <Link href="/#features" className="text-muted-foreground hover:text-foreground transition">
@@ -115,7 +115,7 @@ export default function AboutPage() {
             </span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            TradePath was born from a simple idea: trading decisions should be based on
+            TraderPath was born from a simple idea: trading decisions should be based on
             comprehensive analysis, not gut feelings or FOMO.
           </p>
         </div>
@@ -245,7 +245,7 @@ export default function AboutPage() {
       {/* Footer */}
       <footer className="py-8 border-t">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2024 TradePath. All rights reserved. Trading involves risk.</p>
+          <p>© 2024 TraderPath. All rights reserved. Trading involves risk.</p>
         </div>
       </footer>
     </div>

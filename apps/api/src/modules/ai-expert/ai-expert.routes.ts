@@ -504,7 +504,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
           symbol: report.symbol,
           expertName: expertInsights.length > 0 ? expertInsights[0].expertName : 'AI Expert',
           expertInsights: insightsText || 'No expert insights added yet.',
-          reportUrl: `${process.env.APP_URL || 'https://tradepath.app'}/reports/${report.id}`,
+          reportUrl: `${process.env.APP_URL || 'https://traderpath.io'}/reports/${report.id}`,
           generatedAt: report.generatedAt.toLocaleDateString('en-US'),
         });
 

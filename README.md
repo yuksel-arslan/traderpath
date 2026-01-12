@@ -1,4 +1,4 @@
-# TradePath
+# TraderPath
 
 > From Confusion to Conviction in 7 Steps
 
@@ -34,7 +34,7 @@ A gamified cryptocurrency trading analysis platform that guides users through a 
 ## Project Structure
 
 ```
-tradepath/
+traderpath/
 ├── apps/
 │   ├── web/          # Next.js frontend
 │   └── api/          # Fastify backend
@@ -57,8 +57,8 @@ tradepath/
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-org/tradepath.git
-cd tradepath
+git clone https://github.com/your-org/traderpath.git
+cd traderpath
 ```
 
 2. Install dependencies:
@@ -175,4 +175,4 @@ Proprietary - All Rights Reserved
 
 ---
 
-Built with love by the TradePath Team
+Built with love by the TraderPath Team

@@ -1,4 +1,4 @@
-// TradePath Analysis Engine
+// TraderPath Analysis Engine
 // Core analysis logic for 7-step trading analysis
 
 export * from './types';

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 
-interface TradePathLogoProps {
+interface TraderPathLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showText?: boolean;
   showTagline?: boolean;
@@ -17,13 +17,13 @@ const sizes = {
   xl: { wrapper: 'h-14 px-2.5', letter: 'text-2xl', text: 'text-2xl', tagline: 'text-xs' },
 };
 
-export function TradePathLogo({
+export function TraderPathLogo({
   size = 'md',
   showText = true,
   showTagline = false,
   href,
   className = '',
-}: TradePathLogoProps) {
+}: TraderPathLogoProps) {
   const s = sizes[size];
 
   const LogoContent = (
@@ -40,7 +40,7 @@ export function TradePathLogo({
       {showText && (
         <div className="flex flex-col">
           <span className={`${s.text} font-bold gradient-text-rg-animate`}>
-            TradePath
+            TraderPath
           </span>
           {showTagline && (
             <span className={`${s.tagline} text-muted-foreground -mt-0.5`}>
@@ -63,4 +63,4 @@ export function TradePathLogo({
   return LogoContent;
 }
 
-export default TradePathLogo;
+export default TraderPathLogo;

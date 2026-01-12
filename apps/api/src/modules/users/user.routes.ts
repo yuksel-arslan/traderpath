@@ -36,7 +36,7 @@ export default async function userRoutes(app: FastifyInstance) {
     }
 
     // Calculate level info
-    const { LEVEL_THRESHOLDS } = await import('@tradepath/types');
+    const { LEVEL_THRESHOLDS } = await import('@traderpath/types');
     const matchingLevels = LEVEL_THRESHOLDS.filter((l) => user.xp >= l.xp);
     const currentLevel = matchingLevels[matchingLevels.length - 1] || LEVEL_THRESHOLDS[0];
     const nextLevel = LEVEL_THRESHOLDS.find((l) => l.xp > user.xp);
@@ -215,7 +215,7 @@ export default async function userRoutes(app: FastifyInstance) {
       success: true,
       data: {
         code: user.referralCode,
-        url: `https://tradepath.io/ref/${user.referralCode}`,
+        url: `https://traderpath.io/ref/${user.referralCode}`,
         stats: {
           totalReferrals,
           pending,

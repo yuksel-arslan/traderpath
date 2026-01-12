@@ -720,12 +720,12 @@ export default function AIExpertChatPage() {
                   ))}
                 </div>
 
-                {/* TradePath Feature Link */}
+                {/* TraderPath Feature Link */}
                 <div className="mt-6 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl border border-blue-500/20">
                   <div className="flex items-center gap-2 text-sm">
                     <ExternalLink className="w-4 h-4 text-blue-500" />
                     <span className="text-muted-foreground">
-                      Test this in TradePath{' '}
+                      Test this in TraderPath{' '}
                       <Link href="/analyze" className="text-primary font-medium hover:underline">
                         Analyze → Step {expert.relatedStep}
                       </Link>

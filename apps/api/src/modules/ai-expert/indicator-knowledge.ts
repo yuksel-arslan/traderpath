@@ -1,15 +1,15 @@
 /**
- * TradePath Indicator Knowledge Base
+ * TraderPath Indicator Knowledge Base
  * ===================================
  *
- * Comprehensive documentation of all 40+ indicators used in TradePath.
+ * Comprehensive documentation of all 40+ indicators used in TraderPath.
  * This knowledge is shared with AI Experts to enable detailed explanations.
  *
  * Structure:
  * - What: Brief description
  * - How: Simplified calculation
  * - Interpretation: What values mean
- * - Usage: Which TradePath step uses it
+ * - Usage: Which TraderPath step uses it
  * - Example: Real-world scenario
  */
 
@@ -62,7 +62,7 @@ export const INDICATOR_KNOWLEDGE = {
       strength: 'Histogram height shows momentum strength; Growing histogram = strengthening trend',
     },
     usage: 'Timing (Step 4) + Trap Check (Step 6) - Crossovers signal entry, divergences warn of reversals',
-    example: 'SOL price makes new high at $180 but MACD makes lower high = bearish divergence. This warned of the pullback to $150. TradePath detected this in Trap Check.',
+    example: 'SOL price makes new high at $180 but MACD makes lower high = bearish divergence. This warned of the pullback to $150. TraderPath detected this in Trap Check.',
   },
 
   ADX: {
@@ -77,7 +77,7 @@ export const INDICATOR_KNOWLEDGE = {
       '60+': 'Extremely strong trend - rare, often precedes exhaustion',
     },
     usage: 'Market Pulse (Step 1) + Verdict (Step 7) - Filters out weak setups, confirms strong trends',
-    example: 'BTC with ADX=45, +DI=35, -DI=15 indicates strong uptrend. TradePath gives higher confidence scores when ADX>25 confirms the direction.',
+    example: 'BTC with ADX=45, +DI=35, -DI=15 indicates strong uptrend. TraderPath gives higher confidence scores when ADX>25 confirms the direction.',
   },
 
   ICHIMOKU: {
@@ -183,7 +183,7 @@ export const INDICATOR_KNOWLEDGE = {
       'swing': 'RSI(14) on higher timeframes',
     },
     usage: 'Timing (Step 4) + Trap Check (Step 6) - Entry timing and divergence detection',
-    example: 'ETH RSI(14) at 28 on 4H chart after -15% drop. Oversold condition + bullish divergence on lower timeframe = high probability bounce setup. TradePath Timing score increases.',
+    example: 'ETH RSI(14) at 28 on 4H chart after -15% drop. Oversold condition + bullish divergence on lower timeframe = high probability bounce setup. TraderPath Timing score increases.',
   },
 
   STOCHASTIC: {
@@ -270,7 +270,7 @@ export const INDICATOR_KNOWLEDGE = {
       divergence: 'Price up but MFI down = distribution (smart money selling)',
     },
     usage: 'Safety Check (Step 3) + Trap Check (Step 6) - Confirms volume supports price move',
-    example: 'BTC makes new high at $70,000 but MFI drops from 75 to 65 = bearish divergence. Money is flowing out despite higher prices. TradePath warns "distribution detected".',
+    example: 'BTC makes new high at $70,000 but MFI drops from 75 to 65 = bearish divergence. Money is flowing out despite higher prices. TraderPath warns "distribution detected".',
   },
 
   ULTIMATE: {
@@ -318,7 +318,7 @@ export const INDICATOR_KNOWLEDGE = {
       percentB: '%B shows where price is within bands (0=lower, 1=upper, 0.5=middle)',
     },
     usage: 'Market Pulse (Step 1) + Trade Plan (Step 5) - Volatility state and price targets',
-    example: 'BTC Bollinger squeeze (bandwidth at 3-month low) followed by upper band breakout = start of new trend. TradePath detected this in Market Pulse.',
+    example: 'BTC Bollinger squeeze (bandwidth at 3-month low) followed by upper band breakout = start of new trend. TraderPath detected this in Market Pulse.',
   },
 
   ATR: {
@@ -337,7 +337,7 @@ export const INDICATOR_KNOWLEDGE = {
       'swing': 'ATR(14) on daily for position sizing',
     },
     usage: 'Trade Plan (Step 5) + Verdict (Step 7) - Stop-loss calculation and volatility assessment',
-    example: 'ETH ATR(14) = $120 on 4H. For 2× ATR stop: Entry at $3,400 → Stop at $3,400 - $240 = $3,160. TradePath automatically calculates this.',
+    example: 'ETH ATR(14) = $120 on 4H. For 2× ATR stop: Entry at $3,400 → Stop at $3,400 - $240 = $3,160. TraderPath automatically calculates this.',
   },
 
   KELTNER: {
@@ -365,7 +365,7 @@ export const INDICATOR_KNOWLEDGE = {
       support: 'Middle line often acts as support in uptrend',
     },
     usage: 'Trade Plan (Step 5) - Take-profit levels and breakout confirmation',
-    example: 'BTC breaks Donchian(20) upper channel at $65,000 = 20-day breakout. Classic trend-following entry. TradePath uses this for TP targets.',
+    example: 'BTC breaks Donchian(20) upper channel at $65,000 = 20-day breakout. Classic trend-following entry. TraderPath uses this for TP targets.',
   },
 
   HISTORICAL_VOLATILITY: {
@@ -380,7 +380,7 @@ export const INDICATOR_KNOWLEDGE = {
       'extreme': '> 100% = extreme volatility, extra caution required',
     },
     usage: 'Safety Check (Step 3) - Risk assessment and position sizing',
-    example: 'SHIB Historical Volatility at 180% = extremely risky. TradePath recommends 50% smaller position size compared to BTC (40% HV).',
+    example: 'SHIB Historical Volatility at 180% = extremely risky. TraderPath recommends 50% smaller position size compared to BTC (40% HV).',
   },
 
   SQUEEZE: {
@@ -394,7 +394,7 @@ export const INDICATOR_KNOWLEDGE = {
       histogram: 'Green/rising = bullish momentum; Red/falling = bearish momentum',
     },
     usage: 'Safety Check (Step 3) - Warns of imminent volatility expansion',
-    example: 'ETH in squeeze for 5 days (black dots), histogram turning green = bullish breakout imminent. TradePath shows "Squeeze detected - potential breakout coming".',
+    example: 'ETH in squeeze for 5 days (black dots), histogram turning green = bullish breakout imminent. TraderPath shows "Squeeze detected - potential breakout coming".',
   },
 
   // ============================================================================
@@ -441,7 +441,7 @@ export const INDICATOR_KNOWLEDGE = {
       divergence: 'Price up but A/D down = hidden distribution, bearish warning',
     },
     usage: 'Trap Check (Step 6) - Confirms volume supports price action',
-    example: 'DOGE price rallies 20% but A/D line is flat = rally on low conviction, likely to reverse. TradePath Trap Check warns "volume not confirming".',
+    example: 'DOGE price rallies 20% but A/D line is flat = rally on low conviction, likely to reverse. TraderPath Trap Check warns "volume not confirming".',
   },
 
   CMF: {
@@ -498,7 +498,7 @@ export const INDICATOR_KNOWLEDGE = {
       divergence: 'Price up but PVT flat/down = stealth distribution by smart money',
     },
     usage: 'Asset Scan (Step 2) + Safety Check (Step 3) - Smart money detection',
-    example: 'LINK price flat but PVT steadily rising = quiet accumulation happening. Bullish breakout likely. TradePath shows "pvtTrend: bullish".',
+    example: 'LINK price flat but PVT steadily rising = quiet accumulation happening. Bullish breakout likely. TraderPath shows "pvtTrend: bullish".',
   },
 
   RELATIVE_VOLUME: {
@@ -513,7 +513,7 @@ export const INDICATOR_KNOWLEDGE = {
       'spike': '> 2.0 = unusual activity, investigate (news, manipulation, or breakout)',
     },
     usage: 'Market Pulse (Step 1) + Safety Check (Step 3) - Activity level assessment',
-    example: 'PEPE RVOL at 0.3 = very low volume. TradePath warns "Low liquidity risk - may have trouble exiting position".',
+    example: 'PEPE RVOL at 0.3 = very low volume. TraderPath warns "Low liquidity risk - may have trouble exiting position".',
   },
 
   VOLUME_SPIKE: {
@@ -527,7 +527,7 @@ export const INDICATOR_KNOWLEDGE = {
       exhaustion: 'Volume spike at end of trend = possible exhaustion/reversal',
     },
     usage: 'Safety Check (Step 3) + Asset Scan (Step 2) - Unusual activity alert',
-    example: 'WIF shows 4.2x volume spike with 30% price increase = likely manipulation or pump. TradePath Safety Check warns "Volume spike detected - wait for calm".',
+    example: 'WIF shows 4.2x volume spike with 30% price increase = likely manipulation or pump. TraderPath Safety Check warns "Volume spike detected - wait for calm".',
   },
 
   // ============================================================================
@@ -562,7 +562,7 @@ export const INDICATOR_KNOWLEDGE = {
       dangerous: '> 1% = poor liquidity, high execution risk',
     },
     usage: 'Asset Scan (Step 2) for Scalping - Execution cost assessment',
-    example: 'Shitcoin XYZ has 2.5% spread = your entry is already -2.5% before price moves. TradePath warns "Wide spread - execution risk high".',
+    example: 'Shitcoin XYZ has 2.5% spread = your entry is already -2.5% before price moves. TraderPath warns "Wide spread - execution risk high".',
   },
 
   LIQUIDITY_SCORE: {
@@ -578,7 +578,7 @@ export const INDICATOR_KNOWLEDGE = {
       'dangerous': '< 20 = avoid - cannot exit safely',
     },
     usage: 'Asset Scan (Step 2) + Safety Check (Step 3) - Position size guidance',
-    example: 'New memecoin has Liquidity Score 18. TradePath warns "Critical: Cannot exit large positions. Maximum recommended: $500".',
+    example: 'New memecoin has Liquidity Score 18. TraderPath warns "Critical: Cannot exit large positions. Maximum recommended: $500".',
   },
 
   SLIPPAGE_ESTIMATE: {
@@ -620,7 +620,7 @@ export const INDICATOR_KNOWLEDGE = {
       detected: 'Score > 50 = significant whale activity detected',
     },
     usage: 'Safety Check (Step 3) - Smart money tracking',
-    example: 'BTC Whale Activity Score 75: Multiple $10M+ buy orders detected, exchange outflows spiking. TradePath shows "Whale accumulation detected - bullish signal".',
+    example: 'BTC Whale Activity Score 75: Multiple $10M+ buy orders detected, exchange outflows spiking. TraderPath shows "Whale accumulation detected - bullish signal".',
   },
 
   SPOOFING_DETECTION: {
@@ -832,7 +832,7 @@ export function getIndicatorKnowledgeForAI(): string {
 
   sections.push(`
 [TRADEPATH INDICATOR KNOWLEDGE BASE]
-TradePath uses 40+ technical indicators across 7 analysis steps.
+TraderPath uses 40+ technical indicators across 7 analysis steps.
 Each indicator has specific purposes and interpretations.
 `);
 

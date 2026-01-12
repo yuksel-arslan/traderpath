@@ -1,6 +1,6 @@
 // ===========================================
 // Expert AI Routes
-// AI-powered expert answers with real TradePath examples
+// AI-powered expert answers with real TraderPath examples
 // ===========================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';

@@ -51,7 +51,7 @@ export const stripeService = {
             product_data: {
               name: pkg.name,
               description: `${totalCredits} credits for TradePath analysis`,
-              images: ['https://tradepath.app/logo.png'],
+              images: ['https://traderpath.io/logo.png'],
             },
             unit_amount: priceInCents,
           },

@@ -2,7 +2,7 @@
 
 // ===========================================
 // Expert AI Component
-// Interactive AI chat with real TradePath examples
+// Interactive AI chat with real TraderPath examples
 // ===========================================
 
 import { useState, useRef, useEffect } from 'react';
@@ -186,7 +186,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                     Expert AI
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    Answers enriched with TradePath examples
+                    Answers enriched with TraderPath examples
                   </p>
                 </div>
               </div>
@@ -250,7 +250,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                   <div>
                     <h4 className="font-semibold mb-4 flex items-center gap-2">
                       <BookOpen className="w-5 h-5 text-amber-500" />
-                      TradePath Examples
+                      TraderPath Examples
                     </h4>
                     <div className="grid gap-4">
                       {response.examples.map((example, i) => (
@@ -395,7 +395,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                 </div>
                 <p className="text-lg font-medium">Expert is preparing response...</p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Searching TradePath examples
+                  Searching TraderPath examples
                 </p>
               </div>
             )}

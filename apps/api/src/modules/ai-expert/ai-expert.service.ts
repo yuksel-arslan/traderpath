@@ -1,7 +1,7 @@
 // ===========================================
 // AI Expert Service
 // Chat with specialized AI trading experts
-// Enhanced with TradePath examples (3 credits)
+// Enhanced with TraderPath examples (3 credits)
 // ===========================================
 
 import { config } from '../../core/config';
@@ -94,7 +94,7 @@ function sanitizeAIResponse(text: string): string {
   return cleaned;
 }
 
-// TradePath system knowledge (shared across all experts)
+// TraderPath system knowledge (shared across all experts)
 const TRADEPATH_CONTEXT = `
 ⛔ CRITICAL RULES - READ BEFORE EVERY RESPONSE ⛔
 NEVER write any of the following (even a single word is forbidden):
@@ -118,7 +118,7 @@ NEVER write any of the following (even a single word is forbidden):
 When users ask about trading concepts:
 - Explain like an expert speaking to another professional
 - Reference specific metrics, percentages, and price levels when possible
-- Guide to TradePath features ONLY when directly relevant
+- Guide to TraderPath features ONLY when directly relevant
 - NEVER offer to analyze - direct them to Analyze page
 
 ⚠️ REMINDER: Frontend adds action buttons automatically. No CTAs needed.
@@ -138,7 +138,7 @@ const AI_EXPERTS = {
     title: 'Chief Technical Analyst',
     category: 'TECHNICAL_ANALYSIS',
     yearsExperience: 15,
-    systemPrompt: `You are ARIA - Chief Technical Analyst at TradePath.
+    systemPrompt: `You are ARIA - Chief Technical Analyst at TraderPath.
 
 [YOUR PROFESSIONAL BACKGROUND]
 Former Head of Technical Analysis at Goldman Sachs Digital Assets. Published author of "Algorithmic Pattern Recognition in Crypto Markets". Certified Market Technician (CMT) with 15+ years analyzing financial markets. You've correctly predicted 73% of major BTC trend reversals.
@@ -153,8 +153,8 @@ Former Head of Technical Analysis at Goldman Sachs Digital Assets. Published aut
 • Multi-Timeframe Confluence - The professional edge
 
 [ADVANCED INDICATORS - TRADEPATH EXCLUSIVE]
-• PVT (Price-Volume Trend) - Measures buying/selling pressure by combining price change with volume. Bullish PVT = accumulation, Bearish PVT = distribution. TradePath uses this in Timing Analysis.
-• Volume Spike Detection - Identifies when volume is 2x+ above normal (15-period average). Spikes often indicate manipulation or major news. TradePath warns "wait for calm" during spikes.
+• PVT (Price-Volume Trend) - Measures buying/selling pressure by combining price change with volume. Bullish PVT = accumulation, Bearish PVT = distribution. TraderPath uses this in Timing Analysis.
+• Volume Spike Detection - Identifies when volume is 2x+ above normal (15-period average). Spikes often indicate manipulation or major news. TraderPath warns "wait for calm" during spikes.
 • Relative Volume - Current volume vs 20-period average. 0.8-2.0x is healthy, >2x is suspicious, <0.5x is low liquidity risk.
 • Historical Volatility - Annualized volatility calculation. High volatility = wider stops needed, low volatility = potential breakout incoming.
 
@@ -173,8 +173,8 @@ ${TRADEPATH_CONTEXT}
 [GUIDANCE]
 - Explain technical concepts with professional depth
 - Always include specific numbers when possible
-- Reference TradePath → Analyze → Asset Scanner for real-time data
-- For live analysis: "Run a 7-step analysis in TradePath → Analyze"
+- Reference TraderPath → Analyze → Asset Scanner for real-time data
+- For live analysis: "Run a 7-step analysis in TraderPath → Analyze"
 - Explain PVT, Volume Spike, Relative Volume when relevant
 
 FINAL CHECK: No "want me to", "credits", "---", or "🚀". Be the expert.`,
@@ -187,7 +187,7 @@ FINAL CHECK: No "want me to", "credits", "---", or "🚀". Be the expert.`,
     title: 'Chief Risk Officer',
     category: 'RISK_MANAGEMENT',
     yearsExperience: 20,
-    systemPrompt: `You are NEXUS - Chief Risk Officer at TradePath.
+    systemPrompt: `You are NEXUS - Chief Risk Officer at TraderPath.
 
 [YOUR PROFESSIONAL BACKGROUND]
 Former Risk Manager at Bridgewater Associates, the world's largest hedge fund. Developed quantitative risk models managing $50B+ in assets. PhD in Financial Mathematics from MIT. You've saved portfolios from catastrophic losses in 2018, 2020, and 2022 crashes.
@@ -218,7 +218,7 @@ ${TRADEPATH_CONTEXT}
 [GUIDANCE]
 - Always calculate exact position sizes with formulas
 - Emphasize risk/reward ratio in every trade discussion
-- Reference TradePath → Analyze → Trade Plan for calculations
+- Reference TraderPath → Analyze → Trade Plan for calculations
 - For specific setups: "Run a full analysis to get your exact TP/SL levels"
 
 FINAL CHECK: No "want me to", "credits", "---", or "🚀". Protect capital.`,
@@ -231,7 +231,7 @@ FINAL CHECK: No "want me to", "credits", "---", or "🚀". Protect capital.`,
     title: 'On-Chain Intelligence Director',
     category: 'WHALE_BEHAVIOR',
     yearsExperience: 8,
-    systemPrompt: `You are ORACLE - On-Chain Intelligence Director at TradePath.
+    systemPrompt: `You are ORACLE - On-Chain Intelligence Director at TraderPath.
 
 [YOUR PROFESSIONAL BACKGROUND]
 Founder of a top blockchain analytics firm (acquired by Chainalysis for $200M). Pioneer in whale wallet tracking and exchange flow analysis. Advisor to Grayscale, Fidelity, and major institutional crypto funds. You see what retail never sees.
@@ -246,9 +246,9 @@ Founder of a top blockchain analytics firm (acquired by Chainalysis for $200M). 
 • Institutional Movement Detection - They're always early
 
 [ADVANCED ON-CHAIN METRICS - TRADEPATH EXCLUSIVE]
-• Order Flow Imbalance - Calculates (TakerBuyVolume - TakerSellVolume) / TotalVolume. Positive = buying pressure, Negative = selling pressure. TradePath shows this in Safety Check as "orderFlowBias".
+• Order Flow Imbalance - Calculates (TakerBuyVolume - TakerSellVolume) / TotalVolume. Positive = buying pressure, Negative = selling pressure. TraderPath shows this in Safety Check as "orderFlowBias".
 • PVT (Price-Volume Trend) - Cumulative indicator showing smart money accumulation/distribution. Rising PVT with flat price = stealth accumulation. Falling PVT with rising price = distribution (sell signal).
-• Net Flow Analysis - TradePath tracks exchange inflows/outflows with specific USD values. Net negative = bullish (coins leaving exchanges), Net positive = bearish (coins entering for sale).
+• Net Flow Analysis - TraderPath tracks exchange inflows/outflows with specific USD values. Net negative = bullish (coins leaving exchanges), Net positive = bearish (coins entering for sale).
 • Liquidity Score - 0-100 score based on volume depth and bid-ask spread. <30 = dangerous low liquidity, >70 = safe for larger positions.
 
 [YOUR KEY INSIGHTS]
@@ -274,7 +274,7 @@ ${TRADEPATH_CONTEXT}
 - Reference specific whale movements and exchange flows
 - Connect on-chain data to price implications
 - Explain Order Flow Imbalance, PVT, Liquidity Score when relevant
-- Reference TradePath → Analyze → Safety Check for whale data
+- Reference TraderPath → Analyze → Safety Check for whale data
 - For specific coins: "Run a full analysis to see real-time whale activity"
 
 FINAL CHECK: No "want me to", "credits", "---", or "🚀". Reveal the hidden.`,
@@ -287,7 +287,7 @@ FINAL CHECK: No "want me to", "credits", "---", or "🚀". Reveal the hidden.`,
     title: 'Security & Fraud Prevention Lead',
     category: 'MANIPULATION',
     yearsExperience: 12,
-    systemPrompt: `You are SENTINEL - Security & Fraud Prevention Lead at TradePath.
+    systemPrompt: `You are SENTINEL - Security & Fraud Prevention Lead at TraderPath.
 
 [YOUR PROFESSIONAL BACKGROUND]
 Former Cybersecurity Director at Binance where you prevented $500M+ in potential rug pulls and scams. White-hat hacker with expertise in smart contract auditing. You've identified over 2,000 honeypot tokens before they could harm users. Your warnings have saved millions.
@@ -302,10 +302,10 @@ Former Cybersecurity Director at Binance where you prevented $500M+ in potential
 • Wash Trading Detection - Fake volume = fake hype
 
 [ADVANCED SECURITY METRICS - TRADEPATH EXCLUSIVE]
-• Volume Spike Detection - TradePath detects when volume is 2x+ above 15-period average. Spikes often indicate pump & dump schemes. "volumeSpikeFactor" shows the multiplier.
+• Volume Spike Detection - TraderPath detects when volume is 2x+ above 15-period average. Spikes often indicate pump & dump schemes. "volumeSpikeFactor" shows the multiplier.
 • Liquidity Score - 0-100 score based on order book depth and spread. <30 = extremely dangerous (can't exit large positions), 30-50 = risky, >70 = acceptable liquidity.
-• Historical Volatility - Annualized volatility %. >100% = extremely volatile (risky), 50-100% = high volatility, <50% = moderate. TradePath uses this for risk assessment.
-• Bid-Ask Spread - Wide spread (>1%) indicates low liquidity or manipulation. TradePath monitors this in advancedMetrics.
+• Historical Volatility - Annualized volatility %. >100% = extremely volatile (risky), 50-100% = high volatility, <50% = moderate. TraderPath uses this for risk assessment.
+• Bid-Ask Spread - Wide spread (>1%) indicates low liquidity or manipulation. TraderPath monitors this in advancedMetrics.
 • Relative Volume - <0.5x average = suspiciously low activity, might be abandoned or illiquid token.
 
 [YOUR RED FLAGS]
@@ -331,7 +331,7 @@ ${TRADEPATH_CONTEXT}
 - Be direct and specific about security concerns
 - List exact red flags with evidence
 - Explain Volume Spike, Liquidity Score, Historical Volatility when relevant
-- Reference TradePath → Analyze → Safety Check + Trap Check
+- Reference TraderPath → Analyze → Safety Check + Trap Check
 - For token safety: "Run a full analysis for comprehensive security audit"
 
 FINAL CHECK: No "want me to", "credits", "---", or "🚀". Protect users.`,
@@ -410,7 +410,7 @@ export class AIExpertService {
   }
 
   /**
-   * Find relevant TradePath examples based on expert category
+   * Find relevant TraderPath examples based on expert category
    */
   async findExamples(expertId: ExpertId, userId: string): Promise<ExampleData[]> {
     const expert = AI_EXPERTS[expertId];
@@ -436,7 +436,7 @@ export class AIExpertService {
         const options = quiz.options as string[];
         examples.push({
           type: 'quiz',
-          title: 'TradePath Education',
+          title: 'TraderPath Education',
           description: quiz.question,
           details: {
             correctAnswer: options[quiz.correctIndex],
@@ -471,7 +471,7 @@ export class AIExpertService {
         if (verdict) {
           examples.push({
             type: 'analysis',
-            title: `${analysis.symbol} TradePath Analysis`,
+            title: `${analysis.symbol} TraderPath Analysis`,
             description: `Real analysis: ${(verdict.verdict as string || 'N/A').toUpperCase()} signal`,
             details: {
               symbol: analysis.symbol,
@@ -523,7 +523,7 @@ export class AIExpertService {
           details: {
             threshold: '2x 15-period average',
             action: 'Wait for volume to normalize before entry',
-            tradepath: 'TradePath Timing warns during spikes',
+            tradepath: 'TraderPath Timing warns during spikes',
           },
         },
         {
@@ -654,7 +654,7 @@ export class AIExpertService {
           title: 'Honeypot Detection',
           description: 'Can buy but can\'t sell = HONEYPOT',
           details: {
-            check: 'TradePath Safety Check → contractSecurity.isHoneypot',
+            check: 'TraderPath Safety Check → contractSecurity.isHoneypot',
             rule: 'If isHoneypot = true, NEVER BUY',
           },
         },
@@ -684,7 +684,7 @@ export class AIExpertService {
           question: 'What is RSI and how do I interpret it?',
           category: 'education',
           stage1Preview: 'RSI (Relative Strength Index) is a momentum indicator ranging from 0-100...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -692,7 +692,7 @@ export class AIExpertService {
           question: 'How do I read MACD signals?',
           category: 'education',
           stage1Preview: 'MACD is a powerful indicator for detecting trend changes...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -700,7 +700,7 @@ export class AIExpertService {
           question: 'What does a Bollinger Band squeeze mean?',
           category: 'education',
           stage1Preview: 'When bands contract, a big move is approaching...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -708,7 +708,7 @@ export class AIExpertService {
           question: 'How to identify support and resistance levels?',
           category: 'education',
           stage1Preview: 'Support/resistance are price levels frequently tested by price...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -716,7 +716,7 @@ export class AIExpertService {
           question: 'Why is multi-timeframe analysis important?',
           category: 'education',
           stage1Preview: 'Trend alignment across timeframes increases reliability...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -724,7 +724,7 @@ export class AIExpertService {
           question: 'How to identify trend reversals?',
           category: 'strategy',
           stage1Preview: 'MA crossovers, divergences and volume changes signal reversals...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -732,7 +732,7 @@ export class AIExpertService {
           question: 'How to tell a breakout from a fake-out?',
           category: 'strategy',
           stage1Preview: 'Real breakouts are confirmed by volume increase and candle close...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -740,7 +740,7 @@ export class AIExpertService {
           question: 'What are the best entry signals?',
           category: 'strategy',
           stage1Preview: 'Optimal entries combine RSI, support levels, and trend alignment...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -748,7 +748,7 @@ export class AIExpertService {
           question: 'How does BTC dominance affect altcoins?',
           category: 'practical',
           stage1Preview: 'BTC dominance impacts altcoin performance inversely...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -756,7 +756,7 @@ export class AIExpertService {
           question: 'What does divergence indicate?',
           category: 'practical',
           stage1Preview: 'Divergence shows momentum weakening before price reverses...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
       ],
@@ -766,7 +766,7 @@ export class AIExpertService {
           question: 'How to calculate position size?',
           category: 'education',
           stage1Preview: 'Position size = Risk amount / (Entry - Stop Loss)...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -774,7 +774,7 @@ export class AIExpertService {
           question: 'Why is risk/reward ratio important?',
           category: 'education',
           stage1Preview: 'Every trade should have potential profit at least 2x the risk...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -782,7 +782,7 @@ export class AIExpertService {
           question: 'Where should I place my stop loss?',
           category: 'education',
           stage1Preview: 'Stop loss should be below support levels or based on volatility...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -790,7 +790,7 @@ export class AIExpertService {
           question: 'What is DCA strategy?',
           category: 'education',
           stage1Preview: 'Dollar Cost Averaging spreads risk across multiple entries...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -798,7 +798,7 @@ export class AIExpertService {
           question: 'How to diversify a crypto portfolio?',
           category: 'education',
           stage1Preview: 'Select assets with low correlation to reduce overall risk...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -806,7 +806,7 @@ export class AIExpertService {
           question: 'How much should I risk per trade?',
           category: 'strategy',
           stage1Preview: 'Maximum 1-2% portfolio risk per single trade is recommended...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -814,7 +814,7 @@ export class AIExpertService {
           question: 'How to set take profit targets?',
           category: 'strategy',
           stage1Preview: 'Use resistance levels and Fibonacci extensions for targets...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -822,7 +822,7 @@ export class AIExpertService {
           question: 'When should I scale into a position?',
           category: 'strategy',
           stage1Preview: 'Pyramiding strategy adds to winning positions only...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -830,7 +830,7 @@ export class AIExpertService {
           question: 'Best strategy for $1000 capital?',
           category: 'practical',
           stage1Preview: 'Small capital suits swing trading with strict risk management...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -838,7 +838,7 @@ export class AIExpertService {
           question: 'How many positions should I have open?',
           category: 'practical',
           stage1Preview: 'Based on portfolio size, 3-10 positions recommended...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
       ],
@@ -848,7 +848,7 @@ export class AIExpertService {
           question: 'How to detect whale accumulation?',
           category: 'education',
           stage1Preview: 'Large wallet withdrawals from exchanges = accumulation signal...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -856,7 +856,7 @@ export class AIExpertService {
           question: 'Why is exchange flow important?',
           category: 'education',
           stage1Preview: 'Inflow = selling pressure, Outflow = buying signal...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -864,7 +864,7 @@ export class AIExpertService {
           question: 'What is smart money?',
           category: 'education',
           stage1Preview: 'Institutional investors and experienced traders\' positions...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -872,7 +872,7 @@ export class AIExpertService {
           question: 'How to read order flow imbalance?',
           category: 'education',
           stage1Preview: 'More buy orders than sell orders = bullish signal...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -880,7 +880,7 @@ export class AIExpertService {
           question: 'What does negative net flow mean?',
           category: 'education',
           stage1Preview: 'Net outflow from exchanges = supply decreasing = potential rise...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -888,7 +888,7 @@ export class AIExpertService {
           question: 'What are big players doing?',
           category: 'strategy',
           stage1Preview: 'Whale activity can predict market direction early...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -896,7 +896,7 @@ export class AIExpertService {
           question: 'How to spot accumulation patterns?',
           category: 'strategy',
           stage1Preview: 'Rising OBV with low volatility indicates accumulation...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -904,7 +904,7 @@ export class AIExpertService {
           question: 'Is there whale dump risk?',
           category: 'strategy',
           stage1Preview: 'Large wallet transfers to exchanges = dump risk...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -912,7 +912,7 @@ export class AIExpertService {
           question: 'Which coins are whales accumulating?',
           category: 'practical',
           stage1Preview: 'Track via exchange outflow metrics...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -920,7 +920,7 @@ export class AIExpertService {
           question: 'How to track institutional buying?',
           category: 'practical',
           stage1Preview: 'Monitor OTC deals and large wallet transfers...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
       ],
@@ -930,7 +930,7 @@ export class AIExpertService {
           question: 'What is a honeypot token?',
           category: 'education',
           stage1Preview: 'Scam tokens where you can buy but cannot sell...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -938,7 +938,7 @@ export class AIExpertService {
           question: 'How to identify a rug pull?',
           category: 'education',
           stage1Preview: 'Unlocked liquidity, anonymous team, unrealistic promises...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -946,7 +946,7 @@ export class AIExpertService {
           question: 'Why is liquidity lock important?',
           category: 'education',
           stage1Preview: 'Locked liquidity prevents developers from running away...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -954,7 +954,7 @@ export class AIExpertService {
           question: 'What is mint function risk?',
           category: 'education',
           stage1Preview: 'If owner can mint unlimited tokens = infinite inflation...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -962,7 +962,7 @@ export class AIExpertService {
           question: 'What does verified contract mean?',
           category: 'education',
           stage1Preview: 'Source code is visible = transparency, hidden = danger...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -970,7 +970,7 @@ export class AIExpertService {
           question: 'How to check if a token is safe?',
           category: 'strategy',
           stage1Preview: 'Comprehensive check: honeypot, lock, mint, tax...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -978,7 +978,7 @@ export class AIExpertService {
           question: 'How to spot pump & dump schemes?',
           category: 'strategy',
           stage1Preview: 'Sudden price and volume spikes indicate manipulation...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -986,7 +986,7 @@ export class AIExpertService {
           question: 'What are common red flags in crypto projects?',
           category: 'strategy',
           stage1Preview: 'Team, tokenomics, and contract analysis reveals red flags...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -994,7 +994,7 @@ export class AIExpertService {
           question: 'What is buy/sell tax?',
           category: 'practical',
           stage1Preview: 'High tax rates eat into your profits...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
         {
@@ -1002,7 +1002,7 @@ export class AIExpertService {
           question: 'How to detect wash trading?',
           category: 'practical',
           stage1Preview: 'Fake volume misleads real demand perception...',
-          stage2Action: 'Run full analysis in TradePath → Analyze',
+          stage2Action: 'Run full analysis in TraderPath → Analyze',
           creditCost: 3,
         },
       ],
@@ -1078,12 +1078,12 @@ export class AIExpertService {
     // REGULAR CHAT (no analysis request)
     // ===========================================
 
-    // Find relevant TradePath examples
+    // Find relevant TraderPath examples
     const examples = await this.findExamples(request.expertId, request.userId);
 
     // Format examples for the prompt
     const examplesText = examples.length > 0
-      ? `\n\n[Real Examples from TradePath - Reference these in your response]\n${examples.map((ex, i) =>
+      ? `\n\n[Real Examples from TraderPath - Reference these in your response]\n${examples.map((ex, i) =>
           `${i + 1}. ${ex.title}: ${ex.description}\n   Details: ${JSON.stringify(ex.details)}`
         ).join('\n')}`
       : '';
@@ -1098,7 +1098,7 @@ export class AIExpertService {
       },
       {
         role: 'model' as const,
-        parts: [{ text: `I'm ${expert.name}, TradePath's expert AI. I'll provide answers backed by real examples from TradePath. How can I help you?` }],
+        parts: [{ text: `I'm ${expert.name}, TraderPath's expert AI. I'll provide answers backed by real examples from TraderPath. How can I help you?` }],
       },
     ];
 
@@ -1543,7 +1543,7 @@ export class AIExpertService {
         break;
     }
 
-    const prompt = `You are ${expert.name}, ${expert.title} at TradePath.
+    const prompt = `You are ${expert.name}, ${expert.title} at TraderPath.
 
 ⚠️ CRITICAL CONTEXT:
 - Asset: ${symbol} (NOT Bitcoin, NOT BTC - specifically ${symbol})
@@ -1629,7 +1629,7 @@ FORMAT: Just your professional ${tradeCtx.label} insight about ${symbol}. Start 
     };
     const tradeCtx = tradeTypeContext[tradeType];
 
-    const prompt = `You are the VOLTRAN - the unified voice of TradePath's Expert Panel.
+    const prompt = `You are the VOLTRAN - the unified voice of TraderPath's Expert Panel.
 
 ⚠️ CRITICAL CONTEXT:
 - Asset: ${symbol} (NOT Bitcoin, NOT BTC - specifically ${symbol})

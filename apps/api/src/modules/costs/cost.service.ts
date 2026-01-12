@@ -14,7 +14,7 @@ const GEMINI_PRICING = {
   avgOutputTokensPerResponse: 300,
 };
 
-// Credit costs per operation (from @tradepath/types)
+// Credit costs per operation (from @traderpath/types)
 const CREDIT_COSTS = {
   STEP_MARKET_PULSE: 0,
   STEP_ASSET_SCANNER: 2,

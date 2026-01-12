@@ -6,7 +6,7 @@
 export const PDF_TRANSLATIONS = {
   en: {
     // Cover page
-    title: 'TradePath',
+    title: 'TraderPath',
     subtitle: 'AI-Powered Trading Analysis',
     reportTitle: '7-Step Analysis Report',
     generatedAt: 'Generated:',
@@ -15,7 +15,7 @@ export const PDF_TRANSLATIONS = {
     poweredBy: 'AI Powered by',
 
     // Footer
-    footerTitle: 'TradePath Analysis Report',
+    footerTitle: 'TraderPath Analysis Report',
     footerPowered: 'Powered by Gemini 2.5 Flash',
     page: 'Page',
     disclaimer: 'This report is not investment advice. Cryptocurrencies carry high risk. Base your investment decisions on your own research.',
@@ -103,7 +103,7 @@ export const PDF_TRANSLATIONS = {
 
     // Legal
     legalDisclaimer: 'LEGAL DISCLAIMER',
-    legalText: 'This analysis is for informational purposes only and should not be considered financial advice. Cryptocurrency trading carries significant risk of loss and is not suitable for all investors. Past performance is not indicative of future results. Do your own research before making any investment decisions. TradePath cannot be held responsible for losses resulting from trades based on this report.',
+    legalText: 'This analysis is for informational purposes only and should not be considered financial advice. Cryptocurrency trading carries significant risk of loss and is not suitable for all investors. Past performance is not indicative of future results. Do your own research before making any investment decisions. TraderPath cannot be held responsible for losses resulting from trades based on this report.',
 
     // AI Commentary titles
     aiMarketPulse: 'Market Condition Assessment',
@@ -117,7 +117,7 @@ export const PDF_TRANSLATIONS = {
 
   tr: {
     // Cover page
-    title: 'TradePath',
+    title: 'TraderPath',
     subtitle: 'AI Destekli Trading Analizi',
     reportTitle: '7 Adimli Analiz Raporu',
     generatedAt: 'Olusturulma:',
@@ -126,7 +126,7 @@ export const PDF_TRANSLATIONS = {
     poweredBy: 'Yapay Zeka Destegi',
 
     // Footer
-    footerTitle: 'TradePath Analiz Raporu',
+    footerTitle: 'TraderPath Analiz Raporu',
     footerPowered: 'Powered by Gemini 2.5 Flash',
     page: 'Sayfa',
     disclaimer: 'Bu rapor yatirim tavsiyesi degildir. Kripto paralar yuksek risk icerir. Yatirim kararlarinizi kendi arastirmaniza dayandiriniz.',
@@ -214,7 +214,7 @@ export const PDF_TRANSLATIONS = {
 
     // Legal
     legalDisclaimer: 'YASAL UYARI',
-    legalText: 'Bu analiz yalnizca bilgilendirme amacidir ve finansal tavsiye olarak degerlendirilmemelidir. Kripto para ticareti onemli kayip riski tasir ve tum yatirimcilar icin uygun degildir. Gecmis performans gelecekteki sonuclarin gostergesi degildir. Herhangi bir yatirim karari vermeden once kendi arastirmanizi yapin. TradePath, bu rapora dayanilarak yapilan islemlerden kaynaklanan zararlardan sorumlu tutulamaz.',
+    legalText: 'Bu analiz yalnizca bilgilendirme amacidir ve finansal tavsiye olarak degerlendirilmemelidir. Kripto para ticareti onemli kayip riski tasir ve tum yatirimcilar icin uygun degildir. Gecmis performans gelecekteki sonuclarin gostergesi degildir. Herhangi bir yatirim karari vermeden once kendi arastirmanizi yapin. TraderPath, bu rapora dayanilarak yapilan islemlerden kaynaklanan zararlardan sorumlu tutulamaz.',
 
     // AI Commentary titles
     aiMarketPulse: 'Piyasa Durumu Degerlendirmesi',

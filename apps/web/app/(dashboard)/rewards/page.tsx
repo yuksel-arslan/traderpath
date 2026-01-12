@@ -27,7 +27,7 @@ import {
   DAILY_REWARD_SCHEDULE,
   DEFAULT_ACHIEVEMENTS,
   QUIZ_POOL
-} from '@tradepath/types';
+} from '@traderpath/types';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   star: Star,

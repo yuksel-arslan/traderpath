@@ -379,12 +379,12 @@ export default function AIExpertsPage() {
             </span>
           ) : (
             <span className="text-gray-700 dark:text-slate-300">
-              Each message costs <span className="text-amber-600 dark:text-amber-400 font-bold">5 credits</span> - powered by TradePath examples
+              Each message costs <span className="text-amber-600 dark:text-amber-400 font-bold">5 credits</span> - powered by TraderPath examples
             </span>
           )}
         </div>
         <p className="text-xs text-gray-500 dark:text-slate-400 mt-1.5">
-          AI Experts use real examples from your TradePath analyses and quiz questions to give you personalized answers.
+          AI Experts use real examples from your TraderPath analyses and quiz questions to give you personalized answers.
         </p>
       </div>
     </div>

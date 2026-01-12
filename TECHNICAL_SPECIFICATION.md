@@ -1,4 +1,4 @@
-# TradePath - Technical Specification Document
+# TraderPath - Technical Specification Document
 
 ## Version 1.0.0 | December 2024
 
@@ -23,7 +23,7 @@
 ## 1. Project Overview
 
 ### 1.1 Vision
-TradePath is a gamified cryptocurrency trading analysis platform that guides users through a 7-step decision funnel, from macro market analysis to actionable trade plans.
+TraderPath is a gamified cryptocurrency trading analysis platform that guides users through a 7-step decision funnel, from macro market analysis to actionable trade plans.
 
 ### 1.2 Core Value Proposition
 - **7-Step Decision Funnel**: Structured analysis from "What's happening in the market?" to "Should I trade?"
@@ -1254,7 +1254,7 @@ User Request (symbol)
 
 ### 7.4 Trade Type Configuration Matrix
 
-TradePath supports three distinct trade types, each with optimized timeframes, indicators, and analysis parameters.
+TraderPath supports three distinct trade types, each with optimized timeframes, indicators, and analysis parameters.
 
 #### Summary Matrix
 
@@ -1491,8 +1491,8 @@ interface RewardsState {
 | Environment | Purpose | URL |
 |-------------|---------|-----|
 | Development | Local development | localhost |
-| Staging | Pre-production testing | staging.tradepath.io |
-| Production | Live application | app.tradepath.io |
+| Staging | Pre-production testing | staging.traderpath.io |
+| Production | Live application | app.traderpath.io |
 
 ### 10.2 CI/CD Pipeline
 
@@ -1637,4 +1637,4 @@ jobs:
 
 *Document Version: 1.0.0*
 *Last Updated: December 2024*
-*Author: TradePath Team*
+*Author: TraderPath Team*
