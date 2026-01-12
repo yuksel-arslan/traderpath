@@ -13,7 +13,13 @@
  * - Advanced Indicators (Order Flow, Bid-Ask Spread, Liquidity Score, Whale Activity, Spoofing)
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+// Simple logger replacement for NestJS Logger
+const Logger = {
+  log: (message: string, context?: string) => console.log(`[${context || 'Indicators'}] ${message}`),
+  error: (message: string, trace?: string, context?: string) => console.error(`[${context || 'Indicators'}] ${message}`, trace),
+  warn: (message: string, context?: string) => console.warn(`[${context || 'Indicators'}] ${message}`),
+  debug: (message: string, context?: string) => console.debug(`[${context || 'Indicators'}] ${message}`),
+};
 
 // ============================================================================
 // TYPE DEFINITIONS

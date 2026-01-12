@@ -8,6 +8,20 @@ import { z } from 'zod';
 import { authenticate } from '../../core/auth/middleware';
 import { costService } from './cost.service';
 
+// User type from JWT
+interface JwtUser {
+  id: string;
+  email: string;
+  name: string;
+  level: number;
+  isAdmin?: boolean;
+}
+
+// Helper to get typed user from request
+function getUser(request: FastifyRequest): JwtUser {
+  return request.user as JwtUser;
+}
+
 // Admin emails with access
 const ADMIN_EMAILS = ['contact@yukselarslan.com'];
 
@@ -15,7 +29,8 @@ const ADMIN_EMAILS = ['contact@yukselarslan.com'];
 async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
   await authenticate(request, reply);
 
-  if (!request.user || !ADMIN_EMAILS.includes(request.user.email)) {
+  const user = getUser(request);
+  if (!user || !ADMIN_EMAILS.includes(user.email)) {
     return reply.status(403).send({
       success: false,
       error: { code: 'FORBIDDEN', message: 'Admin access required' },

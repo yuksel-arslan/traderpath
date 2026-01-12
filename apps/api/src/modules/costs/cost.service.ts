@@ -100,7 +100,7 @@ class CostService {
         userId: input.userId,
         symbol: input.symbol,
         durationMs: input.durationMs || 0,
-        metadata: input.metadata || {},
+        metadata: (input.metadata || {}) as object,
       },
     });
   }

@@ -1516,14 +1516,14 @@ Explain the key risks and what conditions would need to change before trading th
         db.creditTransaction.count({
           where: {
             userId,
-            reason: 'analysis_full',
+            source: 'analysis_full',
             createdAt: { gte: oneWeekAgo }
           }
         }),
         db.creditTransaction.count({
           where: {
             userId,
-            reason: 'analysis_full',
+            source: 'analysis_full',
             createdAt: { gte: oneMonthAgo }
           }
         })
