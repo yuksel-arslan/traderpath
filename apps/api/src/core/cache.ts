@@ -260,7 +260,7 @@ export const cache = {
     fetcher: () => Promise<T>,
     ttlSeconds: number
   ): Promise<T> {
-    const cached = await this.get<T>(key);
+    const cached = await this.get(key) as T | null;
     if (cached !== null) return cached;
 
     const value = await fetcher();

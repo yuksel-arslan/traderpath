@@ -255,7 +255,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
         const response = await aiExpertService.chat({
           expertId: body.expertId,
           message: body.message,
-          conversationHistory: body.conversationHistory,
+          conversationHistory: body.conversationHistory as { role: 'user' | 'assistant'; content: string }[] | undefined,
           userId,
         });
 
