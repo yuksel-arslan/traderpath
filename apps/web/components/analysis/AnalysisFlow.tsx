@@ -750,6 +750,7 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
                         takeProfits={(results[6] as { takeProfits?: Array<{ price: number; percentage: number; riskReward?: number }> })?.takeProfits?.map((tp, i) => ({ ...tp, riskReward: tp.riskReward ?? (i + 1) })) ?? []}
                         direction={((results[6] as { direction?: 'long' | 'short' })?.direction) || 'long'}
                         currentPrice={(results[2] as { currentPrice?: number })?.currentPrice ?? 0}
+                        chartId="pdf-capture-chart"
                         onChartReady={() => {
                           setChartReady(true);
                           // Expose globally for captureChartAsImage

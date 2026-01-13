@@ -29,6 +29,7 @@ interface TradePlanChartProps {
   support?: number[];
   resistance?: number[];
   onChartReady?: () => void; // Callback when chart is fully rendered with data
+  chartId?: string; // Optional custom ID for the chart container (default: 'trade-plan-chart')
 }
 
 interface KlineData {
@@ -50,6 +51,7 @@ export function TradePlanChart({
   support = [],
   resistance = [],
   onChartReady,
+  chartId = 'trade-plan-chart',
 }: TradePlanChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -344,7 +346,7 @@ export function TradePlanChart({
     : 0;
 
   return (
-    <div id="trade-plan-chart" className="bg-card rounded-lg border overflow-hidden">
+    <div id={chartId} className="bg-card rounded-lg border overflow-hidden">
       {/* Chart Header */}
       <div className="p-4 border-b bg-gradient-to-r from-card to-muted/20">
         <div className="flex items-center justify-between">
