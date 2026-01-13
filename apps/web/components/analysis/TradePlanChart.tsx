@@ -32,14 +32,6 @@ interface TradePlanChartProps {
   chartId?: string; // Optional custom ID for the chart container (default: 'trade-plan-chart')
 }
 
-// Global chart reference for PDF capture
-// This allows the capture function to use chart.takeScreenshot() method
-declare global {
-  interface Window {
-    __tradePlanChart?: IChartApi | null;
-  }
-}
-
 interface KlineData {
   time: number;
   open: number;
@@ -75,11 +67,10 @@ export function TradePlanChart({
     // Reset disposed state
     isDisposedRef.current = false;
 
-    // Create chart - using semi-transparent background that works in both dark mode and PDF
-    // For PDF capture: WebGL canvas needs a solid background to be visible
+    // Create chart with dark theme
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: '#131722' }, // Dark background for WebGL canvas
+        background: { type: ColorType.Solid, color: 'transparent' },
         textColor: '#9ca3af',
         fontFamily: "'Inter', sans-serif",
       },
@@ -124,11 +115,6 @@ export function TradePlanChart({
 
     chartRef.current = chart;
 
-    // Store global reference for PDF capture (allows using chart.takeScreenshot())
-    if (typeof window !== 'undefined') {
-      window.__tradePlanChart = chart;
-    }
-
     // Create candlestick series
     const candleSeries = chart.addCandlestickSeries({
       upColor: '#22c55e',
@@ -162,10 +148,6 @@ export function TradePlanChart({
     return () => {
       isDisposedRef.current = true;
       window.removeEventListener('resize', handleResize);
-      // Clear global reference
-      if (typeof window !== 'undefined' && window.__tradePlanChart === chart) {
-        window.__tradePlanChart = null;
-      }
       chartRef.current = null;
       candleSeriesRef.current = null;
       priceLinesRef.current = [];
