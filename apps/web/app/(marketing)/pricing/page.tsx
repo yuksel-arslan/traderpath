@@ -242,7 +242,7 @@ export default function PricingPage() {
         <div className="container mx-auto px-4">
           <h2 className="text-2xl font-bold text-center mb-2">Credit Packages</h2>
           <p className="text-muted-foreground text-center mb-8">Choose the package that fits your trading style</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {CREDIT_PACKAGES.map((pkg) => {
               const Icon = PACKAGE_ICONS[pkg.id] || Zap;
               const isSelected = selectedPackage === pkg.id;
