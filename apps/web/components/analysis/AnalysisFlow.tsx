@@ -28,7 +28,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { getAuthToken } from '../../lib/api';
+import { getAuthToken, getApiUrl } from '../../lib/api';
 import { CREDIT_COSTS } from '@traderpath/types';
 import { MarketPulse } from './MarketPulse';
 import { AssetScanner } from './AssetScanner';
@@ -242,7 +242,7 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
       options.body = JSON.stringify({ symbol, accountSize, interval, tradeType });
     }
 
-    const response = await fetch(endpoint.url, options);
+    const response = await fetch(getApiUrl(endpoint.url), options);
 
     // Safely parse JSON response
     const responseText = await response.text();
@@ -304,7 +304,7 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
         verdict: results[7],
       };
 
-      const response = await fetch('/api/reports', {
+      const response = await fetch(getApiUrl('/api/reports'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -380,7 +380,7 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
 
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch('/api/analysis/full', {
+      const response = await fetch(getApiUrl('/api/analysis/full'), {
         method: 'POST',
         headers,
         body: JSON.stringify({ symbol, accountSize, tradeType }),

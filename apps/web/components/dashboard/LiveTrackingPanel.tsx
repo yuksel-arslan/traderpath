@@ -15,7 +15,7 @@ import {
   ArrowDown,
 } from 'lucide-react';
 import Link from 'next/link';
-import { getAuthToken } from '../../lib/api';
+import { getAuthToken, getApiUrl } from '../../lib/api';
 
 interface TakeProfit {
   level: 'TP1' | 'TP2' | 'TP3';
@@ -68,7 +68,7 @@ export function LiveTrackingPanel({ className = '' }: LiveTrackingPanelProps) {
         return;
       }
 
-      const response = await fetch('/api/reports/live-tracking', {
+      const response = await fetch(getApiUrl('/api/reports/live-tracking'), {
         headers: { Authorization: `Bearer ${token}` },
       });
 

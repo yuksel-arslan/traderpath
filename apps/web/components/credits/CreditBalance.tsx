@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { Gem, Plus, History } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '../../lib/utils';
-import { getAuthToken } from '../../lib/api';
+import { getAuthToken, getApiUrl } from '../../lib/api';
 import Link from 'next/link';
 
 interface CreditBalanceData {
@@ -23,7 +23,7 @@ async function fetchBalance(): Promise<CreditBalanceData> {
   }
 
   try {
-    const response = await fetch('/api/credits/balance', {
+    const response = await fetch(getApiUrl('/api/credits/balance'), {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
