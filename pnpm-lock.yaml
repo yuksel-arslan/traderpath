@@ -47,10 +47,10 @@ importers:
       '@prisma/client':
         specifier: ^6.2.1
         version: 6.19.1(prisma@6.19.1)(typescript@5.9.3)
-      '@tradepath/analysis-engine':
+      '@traderpath/analysis-engine':
         specifier: workspace:*
         version: link:../../packages/analysis-engine
-      '@tradepath/types':
+      '@traderpath/types':
         specifier: workspace:*
         version: link:../../packages/types
       axios:
@@ -225,7 +225,7 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.13.4
         version: 5.90.16(react@18.3.1)
-      '@tradepath/types':
+      '@traderpath/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@types/bcryptjs':
@@ -346,7 +346,7 @@ importers:
 
   packages/analysis-engine:
     dependencies:
-      '@tradepath/types':
+      '@traderpath/types':
         specifier: workspace:*
         version: link:../types
       axios:
