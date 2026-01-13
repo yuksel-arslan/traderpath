@@ -117,7 +117,18 @@ export function TradePlanChart({ symbol, interval, tradePlan }: TradePlanChartPr
           throw new Error('Failed to fetch data');
         }
 
-        const data = await response.json();
+        // Safely parse JSON response
+        const responseText = await response.text();
+        if (!responseText || responseText.trim() === '') {
+          throw new Error('Empty response from Binance API');
+        }
+
+        let data: number[][];
+        try {
+          data = JSON.parse(responseText);
+        } catch {
+          throw new Error('Invalid JSON response from Binance API');
+        }
 
         // Convert Binance data to Lightweight Charts format
         const candleData: CandlestickData[] = data.map((d: number[]) => ({
