@@ -80,7 +80,7 @@ export default function DashboardLayout({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
 
-  // Fetch user info with React Query (cached, no refetch on navigation)
+  // Fetch user info with React Query
   const { data: user } = useQuery<UserInfo | null>({
     queryKey: ['user-info'],
     queryFn: async () => {
@@ -97,10 +97,8 @@ export default function DashboardLayout({
         return null;
       }
     },
-    staleTime: 10 * 60 * 1000, // 10 minutes - user info rarely changes
+    staleTime: 5 * 60 * 1000, // 5 minutes - user info rarely changes
     gcTime: 30 * 60 * 1000, // 30 minutes garbage collection
-    refetchOnMount: false, // Don't refetch on navigation
-    refetchOnWindowFocus: false,
     retry: false,
   });
 
