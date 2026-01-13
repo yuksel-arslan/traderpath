@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   User,
   Bell,
@@ -57,6 +58,7 @@ interface TwoFactorSetup {
 
 export default function SettingsPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [activeSection, setActiveSection] = useState('profile');
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
@@ -136,6 +138,10 @@ export default function SettingsPage() {
 
       // Update local state
       setUser(prev => prev ? { ...prev, name: fullName } : null);
+
+      // Invalidate user-info cache so the header name updates across all pages
+      queryClient.invalidateQueries({ queryKey: ['user-info'] });
+
       setProfileSaveSuccess(true);
       setTimeout(() => setProfileSaveSuccess(false), 3000);
     } catch (err) {
@@ -390,6 +396,9 @@ export default function SettingsPage() {
 
       // Update local state
       setUser(prev => prev ? { ...prev, avatarUrl: uploadResult.url! } : null);
+
+      // Invalidate user-info cache so the header avatar updates across all pages
+      queryClient.invalidateQueries({ queryKey: ['user-info'] });
     } catch (err) {
       setAvatarError(err instanceof Error ? err.message : 'Avatar upload failed');
     } finally {
