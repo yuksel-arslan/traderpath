@@ -1071,47 +1071,47 @@ Could you share your risk assessment and recommendations based on this analysis?
                 </div>
               </div>
 
-              {/* Trade Plan Summary */}
-              <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 flex-wrap">
+              {/* Trade Plan Summary - Hidden on mobile, shown on larger screens */}
+              <div className="hidden md:flex items-center gap-2 lg:gap-4 flex-wrap">
                 {/* Entry Price */}
                 {chartModal.report.entryPrice && (
-                  <div className="text-center px-4 py-2 bg-gray-200 dark:bg-slate-800/50 rounded-lg">
-                    <div className="text-xs text-gray-500 dark:text-muted-foreground">Entry</div>
-                    <div className="font-mono font-bold text-gray-900 dark:text-white">${chartModal.report.entryPrice.toFixed(4)}</div>
+                  <div className="text-center px-3 py-1.5 bg-gray-200 dark:bg-slate-800/50 rounded-lg">
+                    <div className="text-[10px] text-gray-500 dark:text-muted-foreground">Entry</div>
+                    <div className="font-mono font-bold text-sm text-gray-900 dark:text-white">${chartModal.report.entryPrice.toFixed(4)}</div>
                   </div>
                 )}
 
                 {/* Stop Loss */}
                 {chartModal.report.stopLoss && (
-                  <div className="text-center px-4 py-2 bg-red-100 dark:bg-red-500/10 rounded-lg border border-red-300 dark:border-red-500/30">
-                    <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+                  <div className="text-center px-3 py-1.5 bg-red-100 dark:bg-red-500/10 rounded-lg border border-red-300 dark:border-red-500/30">
+                    <div className="flex items-center gap-1 text-[10px] text-red-600 dark:text-red-400">
                       <Shield className="w-3 h-3" />
-                      Stop Loss
+                      SL
                     </div>
-                    <div className="font-mono font-bold text-red-600 dark:text-red-400">${chartModal.report.stopLoss.toFixed(4)}</div>
+                    <div className="font-mono font-bold text-sm text-red-600 dark:text-red-400">${chartModal.report.stopLoss.toFixed(4)}</div>
                   </div>
                 )}
 
                 {/* Take Profits */}
                 {chartModal.report.takeProfit1 && (
-                  <div className="flex gap-2">
-                    <div className="text-center px-3 py-2 bg-green-100 dark:bg-green-500/10 rounded-lg border border-green-300 dark:border-green-500/30">
-                      <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                  <div className="flex gap-1.5">
+                    <div className="text-center px-2 py-1.5 bg-green-100 dark:bg-green-500/10 rounded-lg border border-green-300 dark:border-green-500/30">
+                      <div className="flex items-center gap-1 text-[10px] text-green-600 dark:text-green-400">
                         <Target className="w-3 h-3" />
                         TP1
                       </div>
-                      <div className="font-mono font-bold text-green-600 dark:text-green-400">${chartModal.report.takeProfit1.toFixed(4)}</div>
+                      <div className="font-mono font-bold text-sm text-green-600 dark:text-green-400">${chartModal.report.takeProfit1.toFixed(4)}</div>
                     </div>
                     {chartModal.report.takeProfit2 && (
-                      <div className="text-center px-3 py-2 bg-green-100 dark:bg-green-500/10 rounded-lg border border-green-300 dark:border-green-500/30">
-                        <div className="text-xs text-green-600 dark:text-green-400">TP2</div>
-                        <div className="font-mono font-bold text-green-600 dark:text-green-400">${chartModal.report.takeProfit2.toFixed(4)}</div>
+                      <div className="text-center px-2 py-1.5 bg-green-100 dark:bg-green-500/10 rounded-lg border border-green-300 dark:border-green-500/30">
+                        <div className="text-[10px] text-green-600 dark:text-green-400">TP2</div>
+                        <div className="font-mono font-bold text-sm text-green-600 dark:text-green-400">${chartModal.report.takeProfit2.toFixed(4)}</div>
                       </div>
                     )}
                     {chartModal.report.takeProfit3 && (
-                      <div className="text-center px-3 py-2 bg-green-100 dark:bg-green-500/10 rounded-lg border border-green-300 dark:border-green-500/30">
-                        <div className="text-xs text-green-600 dark:text-green-400">TP3</div>
-                        <div className="font-mono font-bold text-green-600 dark:text-green-400">${chartModal.report.takeProfit3.toFixed(4)}</div>
+                      <div className="text-center px-2 py-1.5 bg-green-100 dark:bg-green-500/10 rounded-lg border border-green-300 dark:border-green-500/30">
+                        <div className="text-[10px] text-green-600 dark:text-green-400">TP3</div>
+                        <div className="font-mono font-bold text-sm text-green-600 dark:text-green-400">${chartModal.report.takeProfit3.toFixed(4)}</div>
                       </div>
                     )}
                   </div>
@@ -1120,26 +1120,26 @@ Could you share your risk assessment and recommendations based on this analysis?
                 {/* P/L */}
                 {chartModal.report.unrealizedPnL !== undefined && (
                   <div className={cn(
-                    "text-center px-4 py-2 rounded-lg font-bold",
+                    "text-center px-3 py-1.5 rounded-lg font-bold",
                     chartModal.report.unrealizedPnL >= 0
                       ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400"
                       : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
                   )}>
-                    <div className="text-xs">P/L</div>
-                    <div className="flex items-center gap-1 text-lg">
+                    <div className="text-[10px]">P/L</div>
+                    <div className="flex items-center gap-1 text-sm">
                       {chartModal.report.unrealizedPnL >= 0 ? '+' : ''}{chartModal.report.unrealizedPnL.toFixed(2)}%
                     </div>
                   </div>
                 )}
-
-                {/* Close Button */}
-                <button
-                  onClick={() => setChartModal({ isOpen: false, report: null })}
-                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 transition"
-                >
-                  <X className="w-6 h-6" />
-                </button>
               </div>
+
+              {/* Close Button */}
+              <button
+                onClick={() => setChartModal({ isOpen: false, report: null })}
+                className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 transition ml-auto sm:ml-0"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
 
             {/* 2-Panel Chart Grid */}
