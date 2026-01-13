@@ -83,7 +83,7 @@ export default function AnalyzePage() {
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
       {/* ===== SECTION 1: Analysis Statistics Header ===== */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         <div className="bg-white dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50 text-center">
           <FileText className="w-5 h-5 text-gray-500 dark:text-slate-400 mx-auto mb-2" />
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.totalAnalyses || 0}</div>

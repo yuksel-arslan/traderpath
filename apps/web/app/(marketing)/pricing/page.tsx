@@ -412,7 +412,7 @@ export default function PricingPage() {
             <p className="text-muted-foreground mb-8">
               You don&apos;t always have to pay. Earn up to 25 free credits every day!
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               {[
                 { name: 'Daily Login', credits: 3, icon: '🎁' },
                 { name: 'Lucky Spin', credits: '1-10', icon: '🎰' },
