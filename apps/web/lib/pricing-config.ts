@@ -65,22 +65,6 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
     ],
     color: 'amber',
   },
-  {
-    id: 'whale',
-    name: 'Whale Pack',
-    credits: 1000,
-    bonus: 200,
-    price: 89.99,
-    priceDisplay: '$89.99',
-    perCredit: '$0.08',
-    features: [
-      '1000 + 200 bonus credits',
-      'All 7 analysis steps',
-      'VIP support',
-      'Early access to new features',
-    ],
-    color: 'green',
-  },
 ];
 
 // Analysis step credit costs

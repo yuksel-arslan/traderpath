@@ -5,9 +5,12 @@
 
 // API base URL - uses environment variable in production
 // In development, leave empty to use Next.js proxy rewrites
-const API_BASE_URL = process.env.NODE_ENV === 'production'
+export const apiBaseUrl = process.env.NODE_ENV === 'production'
   ? (process.env.NEXT_PUBLIC_API_URL || '')
   : '';
+
+// Backwards compatibility
+const API_BASE_URL = apiBaseUrl;
 
 // Token cache for API calls
 let authTokenCache: string | null = null;
