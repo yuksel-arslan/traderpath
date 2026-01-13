@@ -306,10 +306,18 @@ class NotificationService {
         `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
       );
       if (response.ok) {
-        const data = await response.json();
-        for (const item of data) {
-          const symbol = item.symbol.replace('USDT', '');
-          prices[symbol] = parseFloat(item.price);
+        // Safely parse JSON response
+        const responseText = await response.text();
+        if (responseText && responseText.trim() !== '') {
+          try {
+            const data = JSON.parse(responseText) as Array<{ symbol: string; price: string }>;
+            for (const item of data) {
+              const symbol = item.symbol.replace('USDT', '');
+              prices[symbol] = parseFloat(item.price);
+            }
+          } catch {
+            console.error('[Alert Check] Invalid JSON from Binance');
+          }
         }
       }
     } catch (error) {

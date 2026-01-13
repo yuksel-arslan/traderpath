@@ -92,7 +92,18 @@ export async function getFearGreedIndex(): Promise<
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const result = (await response.json()) as FearGreedResponse;
+    // Safely parse JSON response
+    const responseText = await response.text();
+    if (!responseText || responseText.trim() === '') {
+      throw new Error('Empty response from Fear & Greed API');
+    }
+
+    let result: FearGreedResponse;
+    try {
+      result = JSON.parse(responseText) as FearGreedResponse;
+    } catch {
+      throw new Error('Invalid JSON response from Fear & Greed API');
+    }
 
     if (result.metadata.error) {
       throw new Error(result.metadata.error);
@@ -169,7 +180,18 @@ export async function getFearGreedHistory(
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const result = (await response.json()) as FearGreedResponse;
+    // Safely parse JSON response
+    const historyResponseText = await response.text();
+    if (!historyResponseText || historyResponseText.trim() === '') {
+      throw new Error('Empty response from Fear & Greed API');
+    }
+
+    let result: FearGreedResponse;
+    try {
+      result = JSON.parse(historyResponseText) as FearGreedResponse;
+    } catch {
+      throw new Error('Invalid JSON response from Fear & Greed API');
+    }
 
     if (result.metadata.error) {
       throw new Error(result.metadata.error);
