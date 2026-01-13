@@ -200,7 +200,7 @@ export function TradePlanChart({
     });
 
     // Entry levels (cyan/blue)
-    entries?.forEach((entry, index) => {
+    entries?.filter(e => e != null).forEach((entry, index) => {
       if (entry?.price) {
         addPriceLine({
           price: entry.price,
@@ -227,7 +227,7 @@ export function TradePlanChart({
 
     // Take Profits (green gradient)
     const tpColors = ['#22c55e', '#16a34a', '#15803d'];
-    takeProfits?.forEach((tp, index) => {
+    takeProfits?.filter(tp => tp != null).forEach((tp, index) => {
       if (tp?.price) {
         addPriceLine({
           price: tp.price,
@@ -437,7 +437,7 @@ export function TradePlanChart({
         {/* Entries */}
         <div className="space-y-1">
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Entry Levels</div>
-          {entries?.map((entry, i) => (
+          {entries?.filter(e => e != null).map((entry, i) => (
             <div key={i} className="flex justify-between text-sm">
               <span className="text-cyan-500">E{i + 1}</span>
               <span className="font-mono">${(entry.price ?? 0).toLocaleString()}</span>
@@ -459,7 +459,7 @@ export function TradePlanChart({
         <div className="space-y-1 md:col-span-2">
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Take Profit Targets</div>
           <div className="grid grid-cols-3 gap-2">
-            {takeProfits?.map((tp, i) => (
+            {takeProfits?.filter(tp => tp != null).map((tp, i) => (
               <div key={i} className="text-sm">
                 <div className="flex justify-between">
                   <span className="text-green-500">TP{i + 1}</span>
