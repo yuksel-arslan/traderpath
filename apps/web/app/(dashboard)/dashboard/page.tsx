@@ -1252,7 +1252,11 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={step.step}
-                    className="group relative"
+                    className={cn(
+                      "group relative",
+                      // Final Verdict (step 7) spans full width on mobile when alone
+                      step.step === 7 && "col-span-2 sm:col-span-1"
+                    )}
                   >
                     <div className={cn(
                       "relative p-4 rounded-xl border transition-all duration-300 h-full",
