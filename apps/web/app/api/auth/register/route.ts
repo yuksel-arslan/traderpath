@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io';
 
 export async function POST(request: NextRequest) {
   try {
