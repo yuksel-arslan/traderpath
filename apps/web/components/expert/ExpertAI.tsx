@@ -172,20 +172,20 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-background border border-border rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
+          className="bg-background border border-border rounded-2xl w-full max-w-3xl max-h-[95vh] sm:max-h-[85vh] overflow-hidden flex flex-col shadow-2xl mx-2 sm:mx-0"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-cyan-500/10 p-6 border-b border-border">
+          <div className="bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-cyan-500/10 p-4 sm:p-6 border-b border-border">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center">
-                  <Brain className="w-7 h-7 text-white" />
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center">
+                  <Brain className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 text-transparent bg-clip-text">
+                  <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 text-transparent bg-clip-text">
                     Expert AI
                   </h2>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
                     Answers enriched with TraderPath examples
                   </p>
                 </div>
@@ -206,7 +206,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             {/* Error Display */}
             {error && (
               <motion.div
@@ -295,7 +295,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                               <p className="text-sm text-muted-foreground mb-2">
                                 {example.description}
                               </p>
-                              <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 text-xs">
                                 {Object.entries(example.details).slice(0, 4).map(([key, value]) => (
                                   <div key={key} className="flex items-center gap-1">
                                     <span className="text-muted-foreground">{key}:</span>
@@ -359,7 +359,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                   </p>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
                   {suggestedQuestions.map((category, catIndex) => {
                     const Icon = CATEGORY_ICONS[category.category] || Brain;
                     return (

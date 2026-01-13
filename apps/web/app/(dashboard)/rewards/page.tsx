@@ -154,7 +154,7 @@ export default function RewardsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {/* Level Card */}
         <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-lg p-6">
           <div className="flex items-center gap-3 mb-4">
@@ -217,7 +217,7 @@ export default function RewardsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b">
+      <div className="flex gap-1 sm:gap-2 mb-4 sm:mb-6 border-b overflow-x-auto pb-0">
         {[
           { id: 'daily', label: 'Daily Rewards', icon: Gift },
           { id: 'achievements', label: 'Achievements', icon: Trophy },
@@ -228,7 +228,7 @@ export default function RewardsPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex items-center gap-2 px-4 py-2 border-b-2 transition ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border-b-2 transition whitespace-nowrap text-sm sm:text-base ${
                 activeTab === tab.id
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -250,7 +250,7 @@ export default function RewardsPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               {/* Daily Login */}
               <div className="bg-card border rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -322,7 +322,7 @@ export default function RewardsPage() {
               </div>
 
               {/* Daily Quiz */}
-              <div className="bg-card border rounded-lg p-6 md:col-span-2">
+              <div className="bg-card border rounded-lg p-4 sm:p-6 sm:col-span-2">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-3 bg-blue-500/20 rounded-full">
                     <HelpCircle className="w-6 h-6 text-blue-500" />
@@ -370,9 +370,9 @@ export default function RewardsPage() {
               </div>
 
               {/* Weekly Progress */}
-              <div className="bg-card border rounded-lg p-6 md:col-span-2">
+              <div className="bg-card border rounded-lg p-4 sm:p-6 sm:col-span-2">
                 <h3 className="font-semibold mb-4">Weekly Login Rewards</h3>
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-7 gap-1 sm:gap-2">
                   {DAILY_REWARD_SCHEDULE.map((reward, index) => {
                     const streakDay = dailyState.streak.days % 7;
                     const isClaimed = index < streakDay;
@@ -417,7 +417,7 @@ export default function RewardsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
           >
             {DEFAULT_ACHIEVEMENTS.map((achievement, index) => {
               const isUnlocked = unlockedCodes.includes(achievement.code);
@@ -569,7 +569,7 @@ export default function RewardsPage() {
           <Flame className="w-5 h-5 text-orange-500" />
           Streak Milestones
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
           {STREAK_MILESTONES.map((milestone) => {
             const isReached = dailyState.streak.days >= milestone.days;
             return (
@@ -595,8 +595,8 @@ export default function RewardsPage() {
       </div>
 
       {/* Referral Section */}
-      <div className="mt-8 p-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold mb-1">Invite Friends, Earn Rewards</h3>
             <p className="text-sm text-muted-foreground">

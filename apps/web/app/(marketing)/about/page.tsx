@@ -162,7 +162,7 @@ export default function AboutPage() {
       <section className="py-16">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Our Values</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-5xl mx-auto">
             {VALUES.map((value, index) => {
               const Icon = value.icon;
               return (
@@ -187,7 +187,7 @@ export default function AboutPage() {
             A diverse group of traders, engineers, and researchers united by a passion
             for making trading more accessible and informed.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-5xl mx-auto">
             {TEAM.map((member, index) => (
               <div key={index} className="bg-card rounded-lg border p-6 text-center">
                 <div className="w-20 h-20 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-full flex items-center justify-center mx-auto mb-4">

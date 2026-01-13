@@ -469,7 +469,7 @@ Could you share your risk assessment and recommendations based on this analysis?
       </div>
 
       {/* ===== Statistics Header ===== */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3">
         {/* Total Reports */}
         <div className="bg-white dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50 text-center">
           <FileText className="w-5 h-5 text-gray-500 dark:text-slate-400 mx-auto mb-2" />
@@ -535,8 +535,8 @@ Could you share your risk assessment and recommendations based on this analysis?
       </div>
 
       {/* Search, Filters, and Sorting */}
-      <div className="flex flex-col gap-4 mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
+      <div className="flex flex-col gap-3 sm:gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input
@@ -548,7 +548,7 @@ Could you share your risk assessment and recommendations based on this analysis?
             />
           </div>
           {/* Direction Filter */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {[
               { value: 'all', label: 'All' },
               { value: 'long', label: 'Long' },
@@ -570,7 +570,7 @@ Could you share your risk assessment and recommendations based on this analysis?
           </div>
 
           {/* Trade Type Filter */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setTradeTypeFilter('all')}
               className={cn(
@@ -829,7 +829,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                 </div>
 
                 {/* Score + Price + P/L + Distance Display */}
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-slate-900/50 rounded-lg border border-gray-200 dark:border-transparent">
+                <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-gray-100 dark:bg-slate-900/50 rounded-lg border border-gray-200 dark:border-transparent flex-wrap justify-center sm:justify-start">
                   {/* Score as percentage */}
                   <div className={cn(
                     "text-center px-2 py-1 rounded-lg min-w-[50px]",
@@ -923,7 +923,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-center sm:justify-end">
                   {/* Chart Button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); setChartModal({ isOpen: true, report }); }}
@@ -1016,10 +1016,10 @@ Could you share your risk assessment and recommendations based on this analysis?
 
       {/* TradingView Chart Modal - 4 Panel Multi-Timeframe */}
       {chartModal.isOpen && chartModal.report && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="bg-card border rounded-xl w-[95vw] h-[90vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4">
+          <div className="bg-card border rounded-xl w-full sm:w-[95vw] h-[95vh] sm:h-[90vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-gray-100 dark:bg-slate-900/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b bg-gray-100 dark:bg-slate-900/50 gap-3 sm:gap-0">
               <div className="flex items-center gap-4">
                 <img
                   src={getCoinIcon(chartModal.report.symbol)}
@@ -1072,7 +1072,7 @@ Could you share your risk assessment and recommendations based on this analysis?
               </div>
 
               {/* Trade Plan Summary */}
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 flex-wrap">
                 {/* Entry Price */}
                 {chartModal.report.entryPrice && (
                   <div className="text-center px-4 py-2 bg-gray-200 dark:bg-slate-800/50 rounded-lg">
@@ -1143,7 +1143,7 @@ Could you share your risk assessment and recommendations based on this analysis?
             </div>
 
             {/* 2-Panel Chart Grid */}
-            <div className="flex-1 grid grid-cols-2 gap-2 p-2 bg-slate-900">
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-2 p-2 bg-slate-900 overflow-y-auto">
               {/* 15m Chart - Left (with Trade Plan lines) */}
               <div className="relative bg-slate-800 rounded-lg overflow-hidden">
                 <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-slate-900/90 rounded text-sm font-medium text-purple-400">

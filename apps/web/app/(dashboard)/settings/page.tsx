@@ -444,40 +444,48 @@ export default function SettingsPage() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Settings</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-8">
         {/* Sidebar */}
-        <div className="lg:col-span-1">
-          <nav className="space-y-1">
+        <div className="md:col-span-1">
+          <nav className="flex md:flex-col gap-1 overflow-x-auto pb-2 md:pb-0">
             {sections.map((section) => {
               const Icon = section.icon;
               return (
                 <button
                   key={section.id}
                   onClick={() => setActiveSection(section.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                  className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 rounded-lg transition whitespace-nowrap text-sm md:text-base ${
                     activeSection === section.id
                       ? 'bg-primary text-primary-foreground'
                       : 'hover:bg-accent'
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
-                  {section.label}
+                  <Icon className="w-4 h-4 md:w-5 md:h-5" />
+                  <span className="hidden sm:inline">{section.label}</span>
                 </button>
               );
             })}
-            <hr className="my-4" />
+            <div className="hidden md:block">
+              <hr className="my-4" />
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-500 hover:bg-red-500/10 transition"
+              >
+                <LogOut className="w-5 h-5" />
+                Sign Out
+              </button>
+            </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-500 hover:bg-red-500/10 transition"
+              className="md:hidden flex items-center gap-2 px-3 py-2 rounded-lg text-red-500 hover:bg-red-500/10 transition whitespace-nowrap text-sm"
             >
-              <LogOut className="w-5 h-5" />
-              Sign Out
+              <LogOut className="w-4 h-4" />
             </button>
           </nav>
         </div>
 
         {/* Content */}
-        <div className="lg:col-span-3">
+        <div className="md:col-span-3">
           <div className="bg-card border rounded-lg p-6">
             {/* Profile Section */}
             {activeSection === 'profile' && (
@@ -606,7 +614,7 @@ export default function SettingsPage() {
                       </div>
 
                       {/* User Stats */}
-                      <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                      <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-4 border-t">
                         <div className="text-center p-3 bg-background rounded-lg">
                           <p className="text-2xl font-bold text-primary">{user.level}</p>
                           <p className="text-sm text-muted-foreground">Level</p>

@@ -740,11 +740,11 @@ function FeaturesSection() {
       {/* Analysis Step Modal */}
       {activeStep !== null && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4"
           onClick={() => setActiveStep(null)}
         >
           <div
-            className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-xl w-full max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
+            className="bg-card border-2 rounded-2xl shadow-2xl p-4 sm:p-6 max-w-xl w-full max-h-[95vh] sm:max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {(() => {
@@ -811,11 +811,11 @@ function FeaturesSection() {
       {/* AI Expert Modal */}
       {activeExpert !== null && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4"
           onClick={() => setActiveExpert(null)}
         >
           <div
-            className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-md w-full animate-in fade-in zoom-in-95 duration-200"
+            className="bg-card border-2 rounded-2xl shadow-2xl p-4 sm:p-6 max-w-md w-full max-h-[95vh] sm:max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {(() => {
@@ -890,11 +890,11 @@ function FeaturesSection() {
       {/* Report Feature Modal */}
       {activeReport !== null && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4"
           onClick={() => setActiveReport(null)}
         >
           <div
-            className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-md w-full animate-in fade-in zoom-in-95 duration-200"
+            className="bg-card border-2 rounded-2xl shadow-2xl p-4 sm:p-6 max-w-md w-full max-h-[95vh] sm:max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {(() => {
@@ -953,11 +953,11 @@ function FeaturesSection() {
       {/* Alert Feature Modal */}
       {activeAlert !== null && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4"
           onClick={() => setActiveAlert(null)}
         >
           <div
-            className="bg-card border-2 rounded-2xl shadow-2xl p-6 max-w-md w-full animate-in fade-in zoom-in-95 duration-200"
+            className="bg-card border-2 rounded-2xl shadow-2xl p-4 sm:p-6 max-w-md w-full max-h-[95vh] sm:max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {(() => {

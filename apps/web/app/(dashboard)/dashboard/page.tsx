@@ -846,9 +846,9 @@ export default function DashboardPage() {
     <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-8">
 
       {/* ===== GLOBAL TRADE TYPE FILTER ===== */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-gray-600 dark:text-slate-400">Filter by Trade Type:</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2 sm:pb-0">
+          <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-slate-400 whitespace-nowrap">Filter:</span>
           <div className="flex items-center bg-gray-100/80 dark:bg-white/5 rounded-xl p-1 border border-gray-200 dark:border-white/10">
             <button
               onClick={() => setTradeTypeFilter('all')}
@@ -915,8 +915,8 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Platform Performance</h2>
-                <p className="text-gray-500 dark:text-slate-400 text-sm">Real-time verification from {platformStats?.accuracy.sampleSize ?? 0} trades</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Platform Performance</h2>
+                <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm">Real-time verification from {platformStats?.accuracy.sampleSize ?? 0} trades</p>
               </div>
             </div>
             {platformStats?.accuracy.methodology === 'outcome-verified' && (
@@ -1178,8 +1178,8 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">7-Step Analysis</h2>
-                <p className="text-gray-500 dark:text-slate-400 text-sm">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">7-Step Analysis</h2>
+                <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm">
                   {stepPeriod === 'all' ? 'All time' : stepPeriod === 'D' ? 'Last 24h' : stepPeriod === 'W' ? 'Last 7 days' : 'Last 30 days'} average from {platformStats?.accuracy.sampleSize ?? 0} analyses
                 </p>
               </div>
@@ -1515,26 +1515,26 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Stats Grid - Compact */}
-                <div className="grid grid-cols-5 gap-2 mb-4">
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
                   <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-lg p-2 text-center border border-gray-200 dark:border-white/10">
-                    <div className="text-lg font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
-                    <div className="text-[9px] text-gray-500 dark:text-slate-400">Total</div>
+                    <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
+                    <div className="text-[8px] sm:text-[9px] text-gray-500 dark:text-slate-400">Total</div>
                   </div>
                   <div className="bg-blue-100/80 dark:bg-blue-500/10 rounded-lg p-2 text-center border border-blue-200/50 dark:border-blue-500/20">
-                    <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
-                    <div className="text-[9px] text-gray-500 dark:text-slate-400">Active</div>
+                    <div className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
+                    <div className="text-[8px] sm:text-[9px] text-gray-500 dark:text-slate-400">Active</div>
                   </div>
                   <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-lg p-2 text-center border border-gray-200 dark:border-white/10">
-                    <div className="text-lg font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
-                    <div className="text-[9px] text-gray-500 dark:text-slate-400">Closed</div>
+                    <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
+                    <div className="text-[8px] sm:text-[9px] text-gray-500 dark:text-slate-400">Closed</div>
                   </div>
                   <div className="bg-green-100/80 dark:bg-green-500/10 rounded-lg p-2 text-center border border-green-200/50 dark:border-green-500/20">
-                    <div className="text-lg font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
-                    <div className="text-[9px] text-gray-500 dark:text-slate-400">TP Hit</div>
+                    <div className="text-base sm:text-lg font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
+                    <div className="text-[8px] sm:text-[9px] text-gray-500 dark:text-slate-400">TP Hit</div>
                   </div>
-                  <div className="bg-red-100/80 dark:bg-red-500/10 rounded-lg p-2 text-center border border-red-200/50 dark:border-red-500/20">
-                    <div className="text-lg font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
-                    <div className="text-[9px] text-gray-500 dark:text-slate-400">SL Hit</div>
+                  <div className="bg-red-100/80 dark:bg-red-500/10 rounded-lg p-2 text-center border border-red-200/50 dark:border-red-500/20 col-span-3 sm:col-span-1">
+                    <div className="text-base sm:text-lg font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
+                    <div className="text-[8px] sm:text-[9px] text-gray-500 dark:text-slate-400">SL Hit</div>
                   </div>
                 </div>
 
@@ -1584,7 +1584,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ===== SECTION 3.5: Signal Accuracy Details ===== */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {/* GO Signal Accuracy */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-500/10 dark:to-green-500/10 border border-emerald-200/50 dark:border-emerald-500/20 p-5">
           <div className="flex items-center gap-3 mb-4">
@@ -1736,8 +1736,8 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Live Accuracy Tracking</h2>
-                <p className="text-gray-500 dark:text-slate-400 text-sm">Real-time TP/SL monitoring - trades close when targets hit</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Live Accuracy Tracking</h2>
+                <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm hidden sm:block">Real-time TP/SL monitoring - trades close when targets hit</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -2166,14 +2166,14 @@ export default function DashboardPage() {
               </div>
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Data Sources & Methodology</h2>
-              <p className="text-gray-500 dark:text-slate-400 text-sm">The reliable infrastructure behind our analyses</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Data Sources & Methodology</h2>
+              <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm hidden sm:block">The reliable infrastructure behind our analyses</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Data Sources */}
-            <div className="group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-gray-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/30 transition-all hover:shadow-lg">
+            <div className="group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 sm:p-5 border border-gray-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/30 transition-all hover:shadow-lg">
               <div className="relative mb-3">
                 <div className="absolute inset-0 bg-blue-500/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                 <Database className="relative w-7 h-7 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
@@ -2200,7 +2200,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Technical Indicators */}
-            <div className="group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-gray-200 dark:border-white/10 hover:border-purple-300 dark:hover:border-purple-500/30 transition-all hover:shadow-lg">
+            <div className="group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 sm:p-5 border border-gray-200 dark:border-white/10 hover:border-purple-300 dark:hover:border-purple-500/30 transition-all hover:shadow-lg">
               <div className="relative mb-3">
                 <div className="absolute inset-0 bg-purple-500/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                 <LineChart className="relative w-7 h-7 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform" />
@@ -2227,7 +2227,7 @@ export default function DashboardPage() {
             </div>
 
             {/* AI Analysis */}
-            <div className="group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-gray-200 dark:border-white/10 hover:border-emerald-300 dark:hover:border-emerald-500/30 transition-all hover:shadow-lg">
+            <div className="group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 sm:p-5 border border-gray-200 dark:border-white/10 hover:border-emerald-300 dark:hover:border-emerald-500/30 transition-all hover:shadow-lg">
               <div className="relative mb-3">
                 <div className="absolute inset-0 bg-emerald-500/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                 <Brain className="relative w-7 h-7 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
@@ -2254,7 +2254,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Security */}
-            <div className="group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-gray-200 dark:border-white/10 hover:border-amber-300 dark:hover:border-amber-500/30 transition-all hover:shadow-lg">
+            <div className="group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 sm:p-5 border border-gray-200 dark:border-white/10 hover:border-amber-300 dark:hover:border-amber-500/30 transition-all hover:shadow-lg">
               <div className="relative mb-3">
                 <div className="absolute inset-0 bg-amber-500/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                 <Shield className="relative w-7 h-7 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform" />

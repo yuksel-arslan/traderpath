@@ -124,7 +124,7 @@ export default function AlertsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
         <div>
           <h1 className="text-3xl font-bold mb-2">Price Alerts</h1>
           <p className="text-muted-foreground">
@@ -141,44 +141,44 @@ export default function AlertsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-card border rounded-lg p-4">
-          <div className="flex items-center gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8">
+        <div className="bg-card border rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 text-center sm:text-left">
             <div className="p-2 bg-blue-500/10 rounded-full">
-              <Bell className="w-5 h-5 text-blue-500" />
+              <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Total Alerts</p>
-              <p className="text-2xl font-bold">{alerts.length}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
+              <p className="text-xl sm:text-2xl font-bold">{alerts.length}</p>
             </div>
           </div>
         </div>
-        <div className="bg-card border rounded-lg p-4">
-          <div className="flex items-center gap-3">
+        <div className="bg-card border rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 text-center sm:text-left">
             <div className="p-2 bg-green-500/10 rounded-full">
-              <Check className="w-5 h-5 text-green-500" />
+              <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Active</p>
-              <p className="text-2xl font-bold">{activeCount}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Active</p>
+              <p className="text-xl sm:text-2xl font-bold">{activeCount}</p>
             </div>
           </div>
         </div>
-        <div className="bg-card border rounded-lg p-4">
-          <div className="flex items-center gap-3">
+        <div className="bg-card border rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 text-center sm:text-left">
             <div className="p-2 bg-amber-500/10 rounded-full">
-              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Triggered</p>
-              <p className="text-2xl font-bold">{triggeredCount}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Triggered</p>
+              <p className="text-xl sm:text-2xl font-bold">{triggeredCount}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-4 sm:mb-6 overflow-x-auto pb-2">
         {[
           { id: 'all', label: 'All' },
           { id: 'active', label: 'Active' },
@@ -222,16 +222,16 @@ export default function AlertsPage() {
           {filteredAlerts.map((alert) => (
             <div
               key={alert.id}
-              className={`flex items-center justify-between p-4 bg-card border rounded-lg ${
+              className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-card border rounded-lg gap-3 sm:gap-0 ${
                 alert.triggered ? 'border-amber-500/50 bg-amber-500/5' : ''
               } ${!alert.active && !alert.triggered ? 'opacity-60' : ''}`}
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 {/* Coin Icon */}
                 <img
                   src={getCoinIcon(alert.symbol)}
                   alt={alert.symbol}
-                  className="w-10 h-10 rounded-full object-contain"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-contain"
                   onError={(e) => {
                     e.currentTarget.src = FALLBACK_COIN_ICON;
                   }}
@@ -272,7 +272,7 @@ export default function AlertsPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 justify-end">
                 {/* Toggle */}
                 <button
                   onClick={() => handleToggleAlert(alert.id)}
