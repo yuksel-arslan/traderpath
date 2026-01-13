@@ -181,6 +181,7 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
   const [reportSaved, setReportSaved] = useState(false);
   const [savedAnalysisId, setSavedAnalysisId] = useState<string | null>(null);
   const saveAttemptedRef = useRef(false);
+  const [chartReady, setChartReady] = useState(false);
 
   // Smart Analysis Mode state
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('educational');
@@ -377,6 +378,11 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
     setError(null);
     setActiveStep(1);
     setViewMode('intro');
+    setChartReady(false);
+    // Reset global chart ready flag
+    if (typeof window !== 'undefined') {
+      (window as unknown as { __tradePlanChartReady?: boolean }).__tradePlanChartReady = false;
+    }
 
     try {
       const headers = await getAuthHeaders();
@@ -722,9 +728,21 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
                   )}
                   <DownloadReportButton analysisData={results} symbol={symbol} analysisId={savedAnalysisId || undefined} tradeType={tradeType} />
 
-                  {/* Hidden TradePlanChart for PDF capture - must be in viewport for canvas to render */}
+                  {/* Hidden TradePlanChart for PDF capture - rendered offscreen but visible for canvas to work */}
                   {results[6] && (
-                    <div style={{ position: 'fixed', left: '0', top: '0', width: '800px', height: '600px', background: '#fff', opacity: 0, pointerEvents: 'none', zIndex: -1000 }}>
+                    <div
+                      id="hidden-chart-container"
+                      style={{
+                        position: 'fixed',
+                        left: '-2000px',
+                        top: '0',
+                        width: '800px',
+                        height: '600px',
+                        background: '#ffffff',
+                        pointerEvents: 'none',
+                        overflow: 'hidden',
+                      }}
+                    >
                       <TradePlanChart
                         symbol={symbol}
                         entries={(results[6] as { entries?: Array<{ price: number; percentage: number }> })?.entries ?? []}
@@ -732,6 +750,13 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
                         takeProfits={(results[6] as { takeProfits?: Array<{ price: number; percentage: number; riskReward?: number }> })?.takeProfits?.map((tp, i) => ({ ...tp, riskReward: tp.riskReward ?? (i + 1) })) ?? []}
                         direction={((results[6] as { direction?: 'long' | 'short' })?.direction) || 'long'}
                         currentPrice={(results[2] as { currentPrice?: number })?.currentPrice ?? 0}
+                        onChartReady={() => {
+                          setChartReady(true);
+                          // Expose globally for captureChartAsImage
+                          if (typeof window !== 'undefined') {
+                            (window as unknown as { __tradePlanChartReady: boolean }).__tradePlanChartReady = true;
+                          }
+                        }}
                       />
                     </div>
                   )}

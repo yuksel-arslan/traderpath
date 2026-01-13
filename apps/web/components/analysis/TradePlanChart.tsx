@@ -28,6 +28,7 @@ interface TradePlanChartProps {
   currentPrice: number;
   support?: number[];
   resistance?: number[];
+  onChartReady?: () => void; // Callback when chart is fully rendered with data
 }
 
 interface KlineData {
@@ -48,6 +49,7 @@ export function TradePlanChart({
   currentPrice,
   support = [],
   resistance = [],
+  onChartReady,
 }: TradePlanChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -322,6 +324,12 @@ export function TradePlanChart({
     } finally {
       if (!isDisposedRef.current) {
         setLoading(false);
+        // Notify parent that chart is ready after a small delay to ensure rendering is complete
+        setTimeout(() => {
+          if (!isDisposedRef.current && onChartReady) {
+            onChartReady();
+          }
+        }, 100);
       }
     }
   };
