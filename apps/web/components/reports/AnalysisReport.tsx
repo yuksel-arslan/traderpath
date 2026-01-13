@@ -500,28 +500,165 @@ function generatePage3HTML(data: AnalysisReportData): string {
 
 // ===========================================
 // PROFESSIONAL CHART CAPTURE SOLUTION
-// Captures the VISIBLE chart that user sees
+// Uses lightweight-charts built-in takeScreenshot() for reliable WebGL capture
 // ===========================================
+
+// Chart interface type (matches IChartApi from lightweight-charts)
+interface ChartApiForCapture {
+  takeScreenshot?: () => HTMLCanvasElement;
+}
+
+// Helper: Wait for next animation frame (ensures WebGL has rendered)
+function waitForNextFrame(): Promise<void> {
+  return new Promise(resolve => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        resolve();
+      });
+    });
+  });
+}
+
+// Helper: Scroll element into view and wait
+async function scrollIntoViewAndWait(element: HTMLElement): Promise<void> {
+  element.scrollIntoView({ behavior: 'auto', block: 'center' });
+  // Wait for scroll and rendering
+  await new Promise(resolve => setTimeout(resolve, 300));
+  await waitForNextFrame();
+}
 
 export async function captureChartAsImage(): Promise<string | null> {
   try {
     console.log('[ChartCapture] Starting chart capture...');
 
-    // Find the visible TradePlanChart (the one user sees on screen)
+    // Find the visible TradePlanChart container
     const visibleChart = document.getElementById('trade-plan-chart');
 
     if (!visibleChart) {
-      console.log('[ChartCapture] No visible chart found');
+      console.log('[ChartCapture] No chart element found with id="trade-plan-chart"');
       return null;
     }
 
-    console.log('[ChartCapture] Found visible chart, checking canvas...');
+    console.log('[ChartCapture] Found chart element, scrolling into view...');
 
-    // Find the WebGL canvas inside the chart
-    const chartCanvas = visibleChart.querySelector('canvas');
+    // Step 1: Scroll the chart into view to ensure WebGL renders it
+    await scrollIntoViewAndWait(visibleChart);
+
+    // Step 2: Try to use the chart's built-in takeScreenshot() method (most reliable)
+    // Access global chart reference set by TradePlanChart component
+    const chartInstance = typeof window !== 'undefined'
+      ? (window as unknown as { __tradePlanChart?: ChartApiForCapture | null }).__tradePlanChart
+      : null;
+
+    if (chartInstance && typeof chartInstance.takeScreenshot === 'function') {
+      console.log('[ChartCapture] Using lightweight-charts takeScreenshot() method...');
+
+      // Wait for chart to be fully rendered
+      await waitForNextFrame();
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      try {
+        // Get screenshot from the chart
+        const screenshotCanvas = chartInstance.takeScreenshot();
+
+        if (screenshotCanvas && screenshotCanvas.width > 0 && screenshotCanvas.height > 0) {
+          console.log('[ChartCapture] Screenshot obtained:', screenshotCanvas.width, 'x', screenshotCanvas.height);
+
+          // Get container dimensions for full capture with header/footer
+          const containerRect = visibleChart.getBoundingClientRect();
+          const chartArea = visibleChart.querySelector('.w-full.h-\\[500px\\]');
+          const chartAreaRect = chartArea?.getBoundingClientRect();
+
+          // Create output canvas combining HTML elements + chart screenshot
+          const scale = 2;
+          const outputCanvas = document.createElement('canvas');
+          outputCanvas.width = containerRect.width * scale;
+          outputCanvas.height = containerRect.height * scale;
+
+          const ctx = outputCanvas.getContext('2d');
+          if (!ctx) {
+            console.log('[ChartCapture] Failed to get 2D context');
+            return null;
+          }
+
+          // Fill with white background
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+          ctx.scale(scale, scale);
+
+          // Capture HTML elements (header, legend, footer)
+          console.log('[ChartCapture] Capturing HTML elements...');
+          const html2canvasResult = await html2canvas(visibleChart, {
+            backgroundColor: '#ffffff',
+            scale: 1,
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+            ignoreElements: (el) => el.tagName === 'CANVAS',
+            onclone: (clonedDoc) => {
+              const clonedEl = clonedDoc.getElementById('trade-plan-chart');
+              if (clonedEl) {
+                // Force light theme colors for PDF
+                clonedEl.style.backgroundColor = '#ffffff';
+                clonedEl.style.color = '#1e293b';
+
+                // Fix text colors
+                clonedEl.querySelectorAll('.text-muted-foreground').forEach((el) => {
+                  (el as HTMLElement).style.color = '#64748b';
+                });
+
+                // Fix backgrounds
+                clonedEl.querySelectorAll('.bg-card, .bg-muted').forEach((el) => {
+                  (el as HTMLElement).style.backgroundColor = '#f8fafc';
+                });
+
+                // Fix borders
+                clonedEl.querySelectorAll('[class*="border"]').forEach((el) => {
+                  (el as HTMLElement).style.borderColor = '#e2e8f0';
+                });
+              }
+            },
+          });
+
+          // Draw the HTML content
+          ctx.drawImage(html2canvasResult, 0, 0);
+
+          // Draw the chart screenshot in the correct position
+          if (chartAreaRect) {
+            const offsetX = chartAreaRect.left - containerRect.left;
+            const offsetY = chartAreaRect.top - containerRect.top;
+
+            // Draw light background for chart area
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(offsetX, offsetY, chartAreaRect.width, chartAreaRect.height);
+
+            // Draw the chart screenshot
+            ctx.drawImage(screenshotCanvas, offsetX, offsetY, chartAreaRect.width, chartAreaRect.height);
+            console.log('[ChartCapture] Chart screenshot drawn at:', offsetX, offsetY);
+          } else {
+            // Fallback - draw centered
+            const offsetX = (containerRect.width - screenshotCanvas.width) / 2;
+            const offsetY = 60; // After header
+            ctx.drawImage(screenshotCanvas, offsetX, offsetY);
+          }
+
+          console.log('[ChartCapture] Chart captured successfully using takeScreenshot!');
+          return outputCanvas.toDataURL('image/png');
+        }
+      } catch (screenshotError) {
+        console.log('[ChartCapture] takeScreenshot() failed:', screenshotError);
+        // Fall through to fallback method
+      }
+    }
+
+    // Fallback: Direct canvas capture (when takeScreenshot is not available)
+    console.log('[ChartCapture] Using fallback canvas capture method...');
+
+    const chartCanvas = visibleChart.querySelector('canvas') as HTMLCanvasElement | null;
 
     if (!chartCanvas) {
-      console.log('[ChartCapture] No canvas found, using html2canvas fallback');
+      console.log('[ChartCapture] No canvas found in chart container');
+      // Last resort: capture the whole container with html2canvas
       try {
         const fallbackCanvas = await html2canvas(visibleChart, {
           backgroundColor: '#ffffff',
@@ -537,18 +674,18 @@ export async function captureChartAsImage(): Promise<string | null> {
       }
     }
 
-    console.log('[ChartCapture] Canvas found:', chartCanvas.width, 'x', chartCanvas.height);
+    // Wait for WebGL to render
+    await waitForNextFrame();
+    await new Promise(resolve => setTimeout(resolve, 200));
+    await waitForNextFrame();
 
     // Get dimensions
     const containerRect = visibleChart.getBoundingClientRect();
     const canvasRect = chartCanvas.getBoundingClientRect();
 
-    if (containerRect.width === 0 || containerRect.height === 0) {
-      console.log('[ChartCapture] Container has zero dimensions');
-      return null;
-    }
+    console.log('[ChartCapture] Container:', containerRect.width, 'x', containerRect.height);
 
-    // Create output canvas with high resolution
+    // Create output canvas
     const scale = 2;
     const outputCanvas = document.createElement('canvas');
     outputCanvas.width = containerRect.width * scale;
@@ -565,8 +702,7 @@ export async function captureChartAsImage(): Promise<string | null> {
     ctx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
     ctx.scale(scale, scale);
 
-    // Step 1: Capture all non-canvas elements using html2canvas
-    console.log('[ChartCapture] Capturing non-canvas elements...');
+    // Capture HTML elements
     const html2canvasResult = await html2canvas(visibleChart, {
       backgroundColor: '#ffffff',
       scale: 1,
@@ -577,44 +713,21 @@ export async function captureChartAsImage(): Promise<string | null> {
       onclone: (clonedDoc) => {
         const clonedEl = clonedDoc.getElementById('trade-plan-chart');
         if (clonedEl) {
-          // Force light theme colors for PDF
           clonedEl.style.backgroundColor = '#ffffff';
           clonedEl.style.color = '#1e293b';
-
-          // Fix all text colors
-          clonedEl.querySelectorAll('.text-muted-foreground').forEach((el) => {
-            (el as HTMLElement).style.color = '#64748b';
-          });
-
-          // Fix backgrounds
-          clonedEl.querySelectorAll('.bg-card, .bg-muted, .bg-card\\/80').forEach((el) => {
-            (el as HTMLElement).style.backgroundColor = '#f8fafc';
-          });
-
-          // Fix borders
-          clonedEl.querySelectorAll('[class*="border"]').forEach((el) => {
-            (el as HTMLElement).style.borderColor = '#e2e8f0';
-          });
         }
       },
     });
 
-    // Draw the HTML content
     ctx.drawImage(html2canvasResult, 0, 0);
 
-    // Step 2: Draw the WebGL canvas on top in correct position
-    console.log('[ChartCapture] Drawing WebGL canvas...');
+    // Draw the WebGL canvas
     const offsetX = canvasRect.left - containerRect.left;
     const offsetY = canvasRect.top - containerRect.top;
 
-    // Draw white background where chart goes
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(offsetX, offsetY, canvasRect.width, canvasRect.height);
-
-    // Draw the actual chart canvas
     ctx.drawImage(chartCanvas, offsetX, offsetY, canvasRect.width, canvasRect.height);
 
-    console.log('[ChartCapture] Chart captured successfully!');
+    console.log('[ChartCapture] Chart captured using fallback method!');
     return outputCanvas.toDataURL('image/png');
   } catch (error) {
     console.error('[ChartCapture] Error:', error);
