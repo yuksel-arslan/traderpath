@@ -33,11 +33,27 @@ export function PriceTicker() {
         const response = await fetch(
           'https://api.binance.com/api/v3/ticker/24hr'
         );
-        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(`Binance API error: ${response.status}`);
+        }
+
+        // Safely parse JSON response
+        const text = await response.text();
+        if (!text || text.trim() === '') {
+          throw new Error('Empty response from Binance API');
+        }
+
+        let data: Array<{ symbol: string; lastPrice: string; priceChangePercent: string }>;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error('Invalid JSON response from Binance API');
+        }
 
         // Filter and map to our format
         const tickerCoins: TickerCoin[] = TOP_COINS.map(symbol => {
-          const ticker = data.find((t: any) => t.symbol === symbol);
+          const ticker = data.find((t) => t.symbol === symbol);
           if (ticker) {
             return {
               symbol: symbol.replace('USDT', ''),

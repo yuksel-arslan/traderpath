@@ -201,7 +201,19 @@ async function fetchKlines(
       throw new Error(`Binance API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    // Safely parse JSON response
+    const responseText = await response.text();
+    if (!responseText || responseText.trim() === '') {
+      throw new Error('Empty response from Binance API');
+    }
+
+    let data: any[];
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      throw new Error('Invalid JSON response from Binance API');
+    }
+
     return data.map((k: any[]) => ({
       timestamp: k[0],
       open: parseFloat(k[1]),
