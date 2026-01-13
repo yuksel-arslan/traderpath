@@ -243,7 +243,15 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
     }
 
     const response = await fetch(endpoint.url, options);
-    const data = await response.json();
+
+    // Safely parse JSON response
+    const responseText = await response.text();
+    let data: any;
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch {
+      throw new Error('Invalid response from server');
+    }
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -378,7 +386,14 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
         body: JSON.stringify({ symbol, accountSize, tradeType }),
       });
 
-      const data = await response.json();
+      // Safely parse JSON response
+      const responseText = await response.text();
+      let data: any;
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        throw new Error('Invalid response from server');
+      }
 
       if (!response.ok) {
         if (response.status === 402) {
