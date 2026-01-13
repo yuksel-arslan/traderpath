@@ -524,7 +524,8 @@ export async function captureChartAsImage(): Promise<string | null> {
 
     // Find the hidden chart container and temporarily move it into view
     const hiddenContainer = document.getElementById('hidden-chart-container');
-    const element = document.getElementById('trade-plan-chart');
+    // Use the unique ID for PDF capture chart (not the visible one)
+    const element = document.getElementById('pdf-capture-chart');
 
     if (!element) {
       console.log('Chart element not found');
@@ -585,7 +586,7 @@ export async function captureChartAsImage(): Promise<string | null> {
         allowTaint: true,
         ignoreElements: (el) => el.tagName === 'CANVAS',
         onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.getElementById('trade-plan-chart');
+          const clonedElement = clonedDoc.getElementById('pdf-capture-chart');
           if (clonedElement) {
             clonedElement.style.backgroundColor = '#ffffff';
             clonedElement.style.color = '#1e293b';
