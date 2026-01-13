@@ -722,9 +722,9 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
                   )}
                   <DownloadReportButton analysisData={results} symbol={symbol} analysisId={savedAnalysisId || undefined} tradeType={tradeType} />
 
-                  {/* Hidden TradePlanChart for PDF capture - positioned off-screen but in DOM */}
+                  {/* Hidden TradePlanChart for PDF capture - must be in viewport for canvas to render */}
                   {results[6] && (
-                    <div style={{ position: 'fixed', left: '-9999px', top: '0', width: '800px', background: '#fff' }}>
+                    <div style={{ position: 'fixed', left: '0', top: '0', width: '800px', height: '600px', background: '#fff', opacity: 0, pointerEvents: 'none', zIndex: -1000 }}>
                       <TradePlanChart
                         symbol={symbol}
                         entries={(results[6] as { entries?: Array<{ price: number; percentage: number }> })?.entries ?? []}
