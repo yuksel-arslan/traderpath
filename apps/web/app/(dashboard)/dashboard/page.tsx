@@ -906,16 +906,16 @@ export default function DashboardPage() {
         {/* Content */}
         <div className="relative z-10 p-6 md:p-8">
           {/* Header - Same style as other sections */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="relative">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="relative shrink-0">
                 <div className="absolute inset-0 bg-emerald-500/30 blur-lg rounded-full" />
-                <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                  <Shield className="w-6 h-6 text-white" />
+                <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                  <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
               </div>
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Platform Performance</h2>
+                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Platform Performance</h2>
                 <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm">Real-time verification from {platformStats?.accuracy.sampleSize ?? 0} trades</p>
               </div>
             </div>
@@ -945,10 +945,10 @@ export default function DashboardPage() {
             </div>
 
             {/* RIGHT: Stats Grid - New Layout */}
-            <div className="flex-1 w-full">
-              <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 w-full flex flex-col items-center lg:items-stretch">
+              <div className="flex flex-col sm:flex-row gap-3 items-center sm:items-stretch">
                 {/* LEFT COLUMN: Total/Week + Caution/Verified */}
-                <div className="flex gap-3">
+                <div className="flex gap-3 justify-center sm:justify-start">
                   {/* Total & This Week */}
                   <div className="flex flex-col gap-3">
                     <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10 min-w-[100px]">
@@ -995,7 +995,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* RIGHT COLUMN: Profit Trend (full height) */}
-                <div className="flex-1 flex gap-3 min-h-[140px]">
+                <div className="flex-1 w-full sm:w-auto flex gap-3 min-h-[140px]">
                   {/* Premium Profit Sparkline - Daily/Weekly P&L Toggle */}
                   {(() => {
                     // DAILY VIEW: Hours of today (00:00 - 23:00)
@@ -1169,22 +1169,22 @@ export default function DashboardPage() {
         }} />
 
         <div className="relative z-10 p-6 md:p-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="relative">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="relative shrink-0">
                 <div className="absolute inset-0 bg-cyan-500/30 blur-lg rounded-full" />
-                <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
-                  <Brain className="w-6 h-6 text-white" />
+                <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                  <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
               </div>
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">7-Step Analysis</h2>
+                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">7-Step Analysis</h2>
                 <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm">
                   {stepPeriod === 'all' ? 'All time' : stepPeriod === 'D' ? 'Last 24h' : stepPeriod === 'W' ? 'Last 7 days' : 'Last 30 days'} average from {platformStats?.accuracy.sampleSize ?? 0} analyses
                 </p>
               </div>
             </div>
-            <div className="hidden sm:flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* Period Filter Buttons */}
               <div className="flex items-center bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
                 {(['D', 'W', 'M', 'all'] as const).map((period) => (
@@ -1192,7 +1192,7 @@ export default function DashboardPage() {
                     key={period}
                     onClick={() => setStepPeriod(period)}
                     className={cn(
-                      "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                      "px-2 sm:px-3 py-1 sm:py-1.5 text-xs font-medium rounded-md transition-all",
                       stepPeriod === period
                         ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
                         : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
@@ -1204,14 +1204,14 @@ export default function DashboardPage() {
               </div>
               <button
                 onClick={() => fetchDashboardData(true)}
-                className="p-2.5 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition"
+                className="p-2 sm:p-2.5 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition"
                 title="Refresh data"
               >
-                <RefreshCw className="w-5 h-5" />
+                <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <Link
                 href="/analyze"
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white rounded-xl font-semibold transition shadow-lg shadow-cyan-500/25"
+                className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white rounded-xl font-semibold transition shadow-lg shadow-cyan-500/25"
               >
                 Start Analysis
                 <ArrowRight className="w-4 h-4" />
@@ -1727,20 +1727,20 @@ export default function DashboardPage() {
         }} />
 
         <div className="relative z-10 p-6 md:p-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="relative">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="relative shrink-0">
                 <div className="absolute inset-0 bg-blue-500/30 blur-lg rounded-full" />
-                <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                  <Eye className="w-6 h-6 text-white" />
+                <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                  <Eye className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
               </div>
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Live Accuracy Tracking</h2>
+                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Live Accuracy Tracking</h2>
                 <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm hidden sm:block">Real-time TP/SL monitoring - trades close when targets hit</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* View Toggle */}
               <div className="flex items-center bg-gray-100/80 dark:bg-white/5 rounded-lg p-1 border border-gray-200 dark:border-white/10">
                 <button
@@ -2158,15 +2158,15 @@ export default function DashboardPage() {
         }} />
 
         <div className="relative z-10 p-6 md:p-8">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="relative">
+          <div className="flex items-center gap-3 sm:gap-4 mb-6">
+            <div className="relative shrink-0">
               <div className="absolute inset-0 bg-indigo-500/30 blur-lg rounded-full" />
-              <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                <Lock className="w-6 h-6 text-white" />
+              <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Data Sources & Methodology</h2>
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Data Sources & Methodology</h2>
               <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm hidden sm:block">The reliable infrastructure behind our analyses</p>
             </div>
           </div>
