@@ -105,9 +105,45 @@ export default function SettingsPage() {
   const [avatarError, setAvatarError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Profile edit state
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
+  const [profileSaveError, setProfileSaveError] = useState('');
+
   const handleAvatarButtonClick = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
+
+  const handleSaveProfile = async () => {
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+
+    setIsSavingProfile(true);
+    setProfileSaveError('');
+    setProfileSaveSuccess(false);
+
+    try {
+      const response = await authFetch('/api/user/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({ name: fullName }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error?.message || 'Failed to update profile');
+      }
+
+      // Update local state
+      setUser(prev => prev ? { ...prev, name: fullName } : null);
+      setProfileSaveSuccess(true);
+      setTimeout(() => setProfileSaveSuccess(false), 3000);
+    } catch (err) {
+      setProfileSaveError(err instanceof Error ? err.message : 'Failed to save profile');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   // Fetch user profile and settings on mount - parallel fetching for speed
   useEffect(() => {
@@ -130,6 +166,11 @@ export default function SettingsPage() {
               credits: userData.data.credits?.balance ?? 0,
             };
             setUser(profileData);
+            // Initialize name fields
+            const name = profileData.name || '';
+            const nameParts = name.split(' ');
+            setFirstName(nameParts[0] || '');
+            setLastName(nameParts.slice(1).join(' ') || '');
           }
         } else if (userResponse.status === 401) {
           setIsLoadingUser(false);
@@ -565,7 +606,8 @@ export default function SettingsPage() {
                           <label className="block text-sm font-medium mb-2">First Name</label>
                           <input
                             type="text"
-                            defaultValue={getFirstName(user.name)}
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
                             placeholder="Enter first name"
                             className="w-full px-4 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                           />
@@ -574,7 +616,8 @@ export default function SettingsPage() {
                           <label className="block text-sm font-medium mb-2">Last Name</label>
                           <input
                             type="text"
-                            defaultValue={getLastName(user.name)}
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
                             placeholder="Enter last name"
                             className="w-full px-4 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                           />
@@ -636,8 +679,25 @@ export default function SettingsPage() {
                         </div>
                       </div>
 
-                      <button className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition">
-                        Save Changes
+                      {profileSaveError && (
+                        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+                          {profileSaveError}
+                        </div>
+                      )}
+                      {profileSaveSuccess && (
+                        <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-500 text-sm flex items-center gap-2">
+                          <Check className="w-4 h-4" />
+                          Profile saved successfully!
+                        </div>
+                      )}
+
+                      <button
+                        onClick={handleSaveProfile}
+                        disabled={isSavingProfile}
+                        className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {isSavingProfile && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {isSavingProfile ? 'Saving...' : 'Save Changes'}
                       </button>
                     </div>
                   </>
