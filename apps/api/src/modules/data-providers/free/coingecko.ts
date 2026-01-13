@@ -121,7 +121,19 @@ async function fetchCoinGecko<T>(
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const data = (await response.json()) as T;
+    // Safely parse JSON response
+    const responseText = await response.text();
+    if (!responseText || responseText.trim() === '') {
+      throw new Error('Empty response from CoinGecko API');
+    }
+
+    let data: T;
+    try {
+      data = JSON.parse(responseText) as T;
+    } catch {
+      throw new Error('Invalid JSON response from CoinGecko API');
+    }
+
     setCache(cacheKey, data, cacheTtl);
 
     return {
