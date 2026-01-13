@@ -13,6 +13,7 @@ export interface AnalysisReportData {
   symbol: string;
   generatedAt: string;
   analysisId: string;
+  tradeType?: 'scalping' | 'dayTrade' | 'swing';
   chartImage?: string;
   marketPulse: {
     btcDominance: number;
@@ -703,8 +704,14 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
   const imgData3 = canvas3.toDataURL('image/png');
   pdf.addImage(imgData3, 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-  // Generate filename
-  const fileName = `TraderPath_${data.symbol}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+  // Generate filename with trade type
+  const tradeTypeLabels: Record<string, string> = {
+    scalping: 'Scalping',
+    dayTrade: 'DayTrade',
+    swing: 'Swing',
+  };
+  const tradeTypeLabel = data.tradeType ? tradeTypeLabels[data.tradeType] || '' : '';
+  const fileName = `TraderPath_${data.symbol}${tradeTypeLabel ? `_${tradeTypeLabel}` : ''}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
 
   // Get PDF as base64 for email (remove data:application/pdf;base64, prefix)
   const pdfBase64 = pdf.output('datauristring').split(',')[1];
