@@ -344,7 +344,7 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
       sections.push(`- Entry: $${tradePlan.entries?.[0]?.price?.toLocaleString()} (${tradePlan.entries?.length} levels)`);
       if (tradePlan.averageEntry) sections.push(`- Average Entry: $${tradePlan.averageEntry.toLocaleString()}`);
       sections.push(`- Stop Loss: $${tradePlan.stopLoss?.price?.toLocaleString()} (${tradePlan.stopLoss?.percentage?.toFixed(1)}%)`);
-      tradePlan.takeProfits?.forEach((tp, i) => {
+      tradePlan.takeProfits?.filter(tp => tp != null).forEach((tp, i) => {
         sections.push(`- TP${i + 1}: $${tp.price?.toLocaleString()} (${tp.riskReward?.toFixed(1)}R)`);
       });
     } else {

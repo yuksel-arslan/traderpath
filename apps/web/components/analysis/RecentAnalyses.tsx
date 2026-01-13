@@ -324,7 +324,7 @@ export function RecentAnalyses() {
                     analysis.score >= 7 ? "text-green-600 dark:text-green-400" :
                     analysis.score >= 5 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"
                   )}>
-                    {(analysis.score * 10).toFixed(0)}%
+                    {((analysis.score ?? 0) * 10).toFixed(0)}%
                   </div>
                 </div>
 
@@ -343,7 +343,7 @@ export function RecentAnalyses() {
                         "font-bold text-sm",
                         analysis.unrealizedPnL >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                       )}>
-                        {analysis.unrealizedPnL >= 0 ? '+' : ''}{analysis.unrealizedPnL.toFixed(2)}%
+                        {analysis.unrealizedPnL >= 0 ? '+' : ''}{(analysis.unrealizedPnL ?? 0).toFixed(2)}%
                       </div>
                     </div>
                   </>
@@ -371,7 +371,7 @@ export function RecentAnalyses() {
                         tpProgress >= 80 ? "text-green-600 dark:text-green-400" :
                         tpProgress >= 50 ? "text-yellow-600 dark:text-yellow-400" : "text-blue-600 dark:text-blue-400"
                       )}>
-                        {tpProgress.toFixed(0)}%
+                        {(tpProgress ?? 0).toFixed(0)}%
                       </div>
                     </div>
                   </>
