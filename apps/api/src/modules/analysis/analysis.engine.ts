@@ -430,6 +430,22 @@ async function fetchWithRetry(
   throw new Error('Fetch failed after retries');
 }
 
+/**
+ * Safely parse JSON from a Response object
+ * Handles empty responses and malformed JSON gracefully
+ */
+async function safeJsonParse<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  if (!text || text.trim() === '') {
+    throw new Error('Empty response body');
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`Invalid JSON response: ${text.substring(0, 100)}...`);
+  }
+}
+
 // ===========================================
 // Simple In-Memory Cache
 // ===========================================
@@ -478,7 +494,7 @@ async function fetchKlines(
 
   const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=${interval}&limit=${limit}`;
   const response = await fetchWithRetry(url);
-  const data = await response.json();
+  const data = await safeJsonParse<(string | number)[][]>(response);
 
   const candles: Candle[] = data.map((k: (string | number)[]) => ({
     openTime: k[0] as number,
@@ -501,7 +517,15 @@ async function fetch24hTicker(symbol: string): Promise<MarketData> {
 
   const url = `https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}USDT`;
   const response = await fetchWithRetry(url);
-  const data = await response.json();
+  const data = await safeJsonParse<{
+    lastPrice: string;
+    priceChange: string;
+    priceChangePercent: string;
+    highPrice: string;
+    lowPrice: string;
+    volume: string;
+    quoteVolume: string;
+  }>(response);
 
   const result: MarketData = {
     symbol,
@@ -524,7 +548,7 @@ async function fetchOrderBook(
 ): Promise<{ bids: [string, string][]; asks: [string, string][] }> {
   const url = `https://api.binance.com/api/v3/depth?symbol=${symbol}USDT&limit=${limit}`;
   const response = await fetchWithRetry(url);
-  return response.json();
+  return safeJsonParse<{ bids: [string, string][]; asks: [string, string][] }>(response);
 }
 
 async function fetchRecentTrades(
@@ -535,7 +559,7 @@ async function fetchRecentTrades(
 > {
   const url = `https://api.binance.com/api/v3/trades?symbol=${symbol}USDT&limit=${limit}`;
   const response = await fetchWithRetry(url);
-  return response.json();
+  return safeJsonParse<Array<{ price: string; qty: string; time: number; isBuyerMaker: boolean }>>(response);
 }
 
 interface GlobalMetrics {
@@ -554,7 +578,14 @@ async function fetchGlobalMetrics(): Promise<GlobalMetrics> {
     const response = await fetchWithRetry(
       'https://api.coingecko.com/api/v3/global'
     );
-    const data = await response.json();
+    const data = await safeJsonParse<{
+      data: {
+        total_market_cap: { usd: number };
+        market_cap_percentage: { btc: number };
+        total_volume: { usd: number };
+        market_cap_change_percentage_24h_usd: number;
+      };
+    }>(response);
 
     const result = {
       totalMarketCap: data.data.total_market_cap.usd,
@@ -588,7 +619,9 @@ async function fetchFearGreedIndex(): Promise<FearGreedData> {
 
   try {
     const response = await fetchWithRetry('https://api.alternative.me/fng/');
-    const data = await response.json();
+    const data = await safeJsonParse<{
+      data: Array<{ value: string; value_classification: string }>;
+    }>(response);
 
     const result = {
       value: parseInt(data.data[0].value),
@@ -709,7 +742,15 @@ async function fetchNewsSentiment(symbol: string): Promise<NewsSentimentResult> 
     const url = `${NEWS_API_URL}/posts/?auth_token=${NEWS_API_KEY}&currencies=${symbol}&kind=news&filter=important`;
 
     const response = await fetchWithRetry(url, { timeout: 8000 });
-    const data = await response.json();
+    const data = await safeJsonParse<{
+      results?: Array<{
+        title: string;
+        source?: { title?: string };
+        published_at: string;
+        votes?: { positive?: number; negative?: number; important?: number };
+        url: string;
+      }>;
+    }>(response);
 
     if (!data.results || !Array.isArray(data.results)) {
       return defaultResult;
@@ -812,7 +853,13 @@ Focus on: What's driving sentiment? Any notable events? Is news aligned with pri
       }
     );
 
-    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await safeJsonParse<{
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    }>(response);
     return data.candidates?.[0]?.content?.parts?.[0]?.text ||
            `${newsItems.length} news items analyzed. Sentiment: ${newsItems.filter(n => n.sentiment === 'positive').length > newsItems.filter(n => n.sentiment === 'negative').length ? 'positive' : 'mixed'}.`;
   } catch {

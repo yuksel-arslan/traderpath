@@ -246,7 +246,19 @@ async function fetchOrderBook(symbol: string): Promise<{ bids: OrderBookLevel[];
     const response = await fetch(`https://api.binance.com/api/v3/depth?symbol=${symbol}&limit=100`);
     if (!response.ok) throw new Error('Failed to fetch order book');
 
-    const data = await response.json();
+    // Safely parse JSON response
+    const responseText = await response.text();
+    if (!responseText || responseText.trim() === '') {
+      throw new Error('Empty response from Binance API');
+    }
+
+    let data: { bids: [string, string][]; asks: [string, string][] };
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      throw new Error('Invalid JSON response from Binance API');
+    }
+
     return {
       bids: data.bids.map(([price, qty]: [string, string]) => ({
         price: parseFloat(price),
@@ -268,7 +280,19 @@ async function fetchRecentTrades(symbol: string, limit: number): Promise<Trade[]
     const response = await fetch(`https://api.binance.com/api/v3/trades?symbol=${symbol}&limit=${limit}`);
     if (!response.ok) throw new Error('Failed to fetch trades');
 
-    const data = await response.json();
+    // Safely parse JSON response
+    const responseText = await response.text();
+    if (!responseText || responseText.trim() === '') {
+      throw new Error('Empty response from Binance API');
+    }
+
+    let data: any[];
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      throw new Error('Invalid JSON response from Binance API');
+    }
+
     return data.map((t: any) => ({
       price: parseFloat(t.price),
       quantity: parseFloat(t.qty),
@@ -288,7 +312,19 @@ async function fetchKlines(symbol: string, interval: string, limit: number): Pro
     );
     if (!response.ok) throw new Error('Failed to fetch klines');
 
-    const data = await response.json();
+    // Safely parse JSON response
+    const responseText = await response.text();
+    if (!responseText || responseText.trim() === '') {
+      throw new Error('Empty response from Binance API');
+    }
+
+    let data: any[];
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      throw new Error('Invalid JSON response from Binance API');
+    }
+
     return data.map((k: any[]) => ({
       openTime: k[0],
       open: parseFloat(k[1]),

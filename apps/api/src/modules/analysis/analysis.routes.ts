@@ -71,7 +71,24 @@ async function getGeminiInsight(
       return { text: 'AI analysis temporarily unavailable', inputTokens: 0, outputTokens: 0, costUsd: 0 };
     }
 
-    const data = await response.json();
+    // Safely parse JSON response
+    const responseText = await response.text();
+    if (!responseText || responseText.trim() === '') {
+      console.error('Empty response from Gemini API');
+      return { text: 'AI analysis temporarily unavailable', inputTokens: 0, outputTokens: 0, costUsd: 0 };
+    }
+
+    let data: {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+    };
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      console.error('Invalid JSON response from Gemini API');
+      return { text: 'AI analysis temporarily unavailable', inputTokens: 0, outputTokens: 0, costUsd: 0 };
+    }
+
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No insight generated';
 
     // Extract token usage from response
@@ -780,10 +797,13 @@ Explain the key risks and what conditions would need to change before trading th
           `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
         );
         if (response.ok) {
-          const data = await response.json();
-          for (const item of data) {
-            const symbol = item.symbol.replace('USDT', '');
-            prices[symbol] = parseFloat(item.price);
+          const responseText = await response.text();
+          if (responseText && responseText.trim() !== '') {
+            const data = JSON.parse(responseText) as Array<{ symbol: string; price: string }>;
+            for (const item of data) {
+              const symbol = item.symbol.replace('USDT', '');
+              prices[symbol] = parseFloat(item.price);
+            }
           }
         }
       } catch (err) {
@@ -1813,7 +1833,24 @@ Explain the key risks and what conditions would need to change before trading th
         });
       }
 
-      const klines = await response.json();
+      // Safely parse JSON response
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        return reply.status(400).send({
+          success: false,
+          error: { code: 'EMPTY_RESPONSE', message: 'Empty response from Binance API' }
+        });
+      }
+
+      let klines: (string | number)[][];
+      try {
+        klines = JSON.parse(responseText);
+      } catch {
+        return reply.status(400).send({
+          success: false,
+          error: { code: 'PARSE_ERROR', message: 'Invalid JSON response from Binance API' }
+        });
+      }
 
       // Convert Binance klines to OHLCV format
       const ohlcv = klines.map((k: (string | number)[]) => ({
