@@ -65,7 +65,8 @@ interface UserInfo {
   id: string;
   email: string;
   name?: string;
-  image?: string;
+  avatarUrl?: string;
+  level?: number;
   isAdmin?: boolean;
 }
 
@@ -316,9 +317,9 @@ export default function DashboardLayout({
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center">
-                    {user?.image ? (
-                      <img src={user.image} alt="" className="w-8 h-8 rounded-full" />
+                  <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center overflow-hidden">
+                    {user?.avatarUrl ? (
+                      <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
                     ) : (
                       <User className="w-4 h-4 text-primary-foreground" />
                     )}
@@ -337,14 +338,28 @@ export default function DashboardLayout({
                     onClick={() => setUserMenuOpen(false)}
                   />
                   <div
-                    className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
+                    className="absolute right-0 mt-2 w-64 bg-card border border-border rounded-xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
                     style={{ zIndex: 9999 }}
                   >
                     {/* User info */}
                     {user && (
                       <div className="p-3 border-b border-border">
-                        <p className="text-sm font-medium truncate">{user.name || 'User'}</p>
-                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center overflow-hidden shrink-0">
+                            {user.avatarUrl ? (
+                              <img src={user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
+                            ) : (
+                              <User className="w-5 h-5 text-primary-foreground" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{user.name || 'User'}</p>
+                            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                            <p className="text-xs text-primary font-medium mt-0.5">
+                              {user.level && user.level >= 10 ? 'Pro Trader' : user.level && user.level >= 5 ? 'Trader' : 'Beginner'}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     )}
                     {/* Settings & Admin (Admin only visible for admins) */}
