@@ -1271,30 +1271,37 @@ export function buildIndicatorAnalysis(inputs: AnalysisInputs): IndicatorAnalysi
     indicators.divergences = detectDivergences(inputs.prices, inputs.rsiValues, inputs.macdHistogramValues);
   }
 
-  // Calculate Summary
-  let bullish = 0, bearish = 0, neutral = 0;
+  // ========================================
+  // Calculate Summary - ONLY LEADING INDICATORS AFFECT DECISIONS
+  // Lagging indicators (ADX, MA, VWAP, etc.) are shown for info only
+  // ========================================
+
+  // Count all indicators for display purposes
+  let totalBullish = 0, totalBearish = 0, totalNeutral = 0;
+  for (const ind of allIndicators) {
+    if (ind.signal === 'bullish') totalBullish++;
+    else if (ind.signal === 'bearish') totalBearish++;
+    else totalNeutral++;
+  }
+
+  // ONLY use leading indicators for signal calculation (excludes lagging indicators)
+  let leadingBullish = 0, leadingBearish = 0, leadingNeutral = 0;
   let weightedBullish = 0, weightedBearish = 0, totalWeight = 0;
 
-  for (const ind of allIndicators) {
+  for (const ind of leadingIndicators) {
     if (ind.signal === 'bullish') {
-      bullish++;
+      leadingBullish++;
       weightedBullish += ind.weight;
     } else if (ind.signal === 'bearish') {
-      bearish++;
+      leadingBearish++;
       weightedBearish += ind.weight;
     } else {
-      neutral++;
+      leadingNeutral++;
     }
     totalWeight += ind.weight;
   }
 
-  // Leading indicators signal
-  let leadingBullish = 0, leadingBearish = 0;
-  for (const ind of leadingIndicators) {
-    if (ind.signal === 'bullish') leadingBullish++;
-    else if (ind.signal === 'bearish') leadingBearish++;
-  }
-
+  // Leading signal determination
   let leadingSignal: 'bullish' | 'bearish' | 'neutral' | 'mixed' = 'neutral';
   if (leadingBullish > leadingBearish && leadingBullish > leadingIndicators.length * 0.5) {
     leadingSignal = 'bullish';
@@ -1304,25 +1311,30 @@ export function buildIndicatorAnalysis(inputs: AnalysisInputs): IndicatorAnalysi
     leadingSignal = 'mixed';
   }
 
-  // Overall signal based on weighted sum
+  // Overall signal ONLY based on leading indicators (lagging excluded from decision)
   const netSignal = (weightedBullish - weightedBearish) / (totalWeight || 1);
   let overallSignal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
   if (netSignal > 0.1) overallSignal = 'bullish';
   else if (netSignal < -0.1) overallSignal = 'bearish';
 
-  // Confidence based on agreement
-  const maxCount = Math.max(bullish, bearish, neutral);
-  const confidence = Math.round((maxCount / allIndicators.length) * 100);
+  // Confidence based on leading indicator agreement only
+  const maxLeadingCount = Math.max(leadingBullish, leadingBearish, leadingNeutral);
+  const confidence = leadingIndicators.length > 0
+    ? Math.round((maxLeadingCount / leadingIndicators.length) * 100)
+    : 0;
 
   indicators.summary = {
-    bullishIndicators: bullish,
-    bearishIndicators: bearish,
-    neutralIndicators: neutral,
+    bullishIndicators: totalBullish,  // Display total for UI
+    bearishIndicators: totalBearish,
+    neutralIndicators: totalNeutral,
     totalIndicatorsUsed: allIndicators.length,
-    overallSignal,
-    signalConfidence: confidence,
-    leadingIndicatorsSignal: leadingSignal
-  };
+    overallSignal,  // Based on LEADING indicators only
+    signalConfidence: confidence,  // Based on LEADING indicators only
+    leadingIndicatorsSignal: leadingSignal,
+    // Additional info for transparency
+    leadingIndicatorsCount: leadingIndicators.length,
+    laggingIndicatorsCount: allIndicators.length - leadingIndicators.length,
+  } as typeof indicators.summary;
 
   // Add divergences to boost/reduce confidence
   for (const div of indicators.divergences) {
