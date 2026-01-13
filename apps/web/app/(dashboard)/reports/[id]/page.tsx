@@ -226,24 +226,24 @@ export default function ReportViewPage() {
         </Link>
 
         {/* Main Card */}
-        <div className="bg-white dark:bg-slate-800/80 rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-transparent">
+        <div className="bg-white dark:bg-slate-800/80 rounded-2xl p-4 sm:p-6 shadow-xl border border-gray-200 dark:border-transparent">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <img
                 src={getCoinIcon(report.symbol)}
                 alt={report.symbol}
-                className="w-12 h-12 rounded-full object-contain"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-contain"
                 onError={(e) => {
                   e.currentTarget.src = FALLBACK_COIN_ICON;
                 }}
               />
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">{report.symbol}/USDT Analysis</h1>
-                <p className="text-sm text-gray-500 dark:text-slate-400">{report.generatedAt}</p>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{report.symbol}/USDT Analysis</h1>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">{report.generatedAt}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 justify-between sm:justify-end">
               <div className={cn(
                 "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold",
                 isBullish ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400" : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
@@ -251,12 +251,12 @@ export default function ReportViewPage() {
                 {isBullish ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                 {isBullish ? 'BULLISH' : 'BEARISH'}
               </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{score}/100</div>
+              <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{score}/100</div>
             </div>
           </div>
 
-          {/* 6 Info Cards - 2x3 Grid (All analysis steps) */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          {/* 6 Info Cards - 1 col mobile, 2 col desktop */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
             {/* 1. Market Pulse */}
             <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
               <div className="flex items-center justify-between mb-2">
@@ -339,9 +339,13 @@ export default function ReportViewPage() {
                   planStatus === 'Ready' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{planStatus}</span>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
-                Entry: {formatPrice(report.tradePlan?.averageEntry)} • TP: {formatPrice(report.tradePlan?.takeProfits?.[0]?.price)} • SL: {formatPrice(report.tradePlan?.stopLoss?.price)}
-              </p>
+              <div className="text-sm text-gray-500 dark:text-slate-400 space-y-0.5 sm:space-y-0">
+                <span className="block sm:inline">Entry: {formatPrice(report.tradePlan?.averageEntry)}</span>
+                <span className="hidden sm:inline"> • </span>
+                <span className="block sm:inline">TP: {formatPrice(report.tradePlan?.takeProfits?.[0]?.price)}</span>
+                <span className="hidden sm:inline"> • </span>
+                <span className="block sm:inline">SL: {formatPrice(report.tradePlan?.stopLoss?.price)}</span>
+              </div>
             </div>
 
             {/* 6. Trap Check */}
@@ -356,9 +360,13 @@ export default function ReportViewPage() {
                   trapStatus === 'Clear' ? 'text-green-600 dark:text-green-400' : trapStatus === 'Warning' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{trapStatus}</span>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
-                Bull trap: {report.trapCheck?.traps?.bullTrap ? 'Yes' : 'No'} • Bear trap: {report.trapCheck?.traps?.bearTrap ? 'Yes' : 'No'} • Fakeout: {report.trapCheck?.traps?.fakeoutRisk || 'low'}
-              </p>
+              <div className="text-sm text-gray-500 dark:text-slate-400 space-y-0.5 sm:space-y-0">
+                <span className="block sm:inline">Bull trap: {report.trapCheck?.traps?.bullTrap ? 'Yes' : 'No'}</span>
+                <span className="hidden sm:inline"> • </span>
+                <span className="block sm:inline">Bear trap: {report.trapCheck?.traps?.bearTrap ? 'Yes' : 'No'}</span>
+                <span className="hidden sm:inline"> • </span>
+                <span className="block sm:inline">Fakeout: {report.trapCheck?.traps?.fakeoutRisk || 'low'}</span>
+              </div>
             </div>
           </div>
 
