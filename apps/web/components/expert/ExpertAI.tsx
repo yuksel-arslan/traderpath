@@ -24,7 +24,7 @@ import {
   Target,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { getAuthToken } from '../../lib/api';
+import { getAuthToken, getApiUrl } from '../../lib/api';
 
 interface Example {
   type: 'analysis' | 'quiz' | 'pattern';
@@ -94,7 +94,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
   const fetchSuggestedQuestions = async () => {
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch('/api/expert/suggested-questions', {
+      const res = await fetch(getApiUrl('/api/expert/suggested-questions'), {
         headers,
       });
       const data = await res.json();
@@ -115,7 +115,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
 
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch('/api/expert/ask', {
+      const res = await fetch(getApiUrl('/api/expert/ask'), {
         method: 'POST',
         headers,
         body: JSON.stringify({ question: question.trim() }),

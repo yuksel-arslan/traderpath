@@ -22,7 +22,7 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { getAuthToken } from '../../lib/api';
+import { getAuthToken, getApiUrl } from '../../lib/api';
 
 interface TradePlanData {
   symbol: string;
@@ -89,7 +89,7 @@ export function SetAlertModal({ isOpen, onClose, tradePlan }: SetAlertModalProps
       if (selectedAlerts.tp2 && tradePlan.takeProfits[1]) takeProfits.push(tradePlan.takeProfits[1]);
       if (selectedAlerts.tp3 && tradePlan.takeProfits[2]) takeProfits.push(tradePlan.takeProfits[2]);
 
-      const response = await fetch('/api/alerts/trade-plan', {
+      const response = await fetch(getApiUrl('/api/alerts/trade-plan'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

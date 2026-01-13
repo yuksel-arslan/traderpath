@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { CoinIcon } from '../common/CoinIcon';
 import { cn } from '../../lib/utils';
-import { getAuthToken } from '../../lib/api';
+import { getAuthToken, getApiUrl } from '../../lib/api';
 import Link from 'next/link';
 
 // Trade type definitions
@@ -82,7 +82,7 @@ export function RecentAnalyses() {
       }
 
       // Fetch from live-prices API for real-time data
-      const response = await fetch('/api/analysis/live-prices', {
+      const response = await fetch(getApiUrl('/api/analysis/live-prices'), {
         headers: {
           'Authorization': `Bearer ${token}`,
         },

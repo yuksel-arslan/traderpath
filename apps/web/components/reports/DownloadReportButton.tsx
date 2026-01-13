@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FileDown, Loader2, Check, Globe, ChevronDown, Mail, X, Send, FileText, BarChart3 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { getAuthToken } from '../../lib/api';
+import { getAuthToken, getApiUrl } from '../../lib/api';
 
 // Report type selector
 type ReportType = 'standard' | 'detailed';
@@ -220,7 +220,7 @@ async function fetchAiExpertComment(analysisId: string): Promise<string | null> 
     const token = await getAuthToken();
     if (!token) return null;
 
-    const response = await fetch(`/api/reports/by-analysis/${analysisId}`, {
+    const response = await fetch(getApiUrl(`/api/reports/by-analysis/${analysisId}`), {
       headers: { 'Authorization': `Bearer ${token}` },
     });
 
@@ -243,7 +243,7 @@ async function saveReportToDatabase(reportData: AnalysisReportData, interval: st
     // Extract tradeType from reportData if available
     const tradeType = reportData.tradeType;
 
-    const response = await fetch('/api/reports', {
+    const response = await fetch(getApiUrl('/api/reports'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -277,7 +277,7 @@ async function translateReportContent(
     const token = await getAuthToken();
     if (!token) return null;
 
-    const response = await fetch('/api/translation/translate', {
+    const response = await fetch(getApiUrl('/api/translation/translate'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -312,7 +312,7 @@ async function sendReportEmail(
     const token = await getAuthToken();
     if (!token) return { success: false, error: 'Not authenticated' };
 
-    const response = await fetch('/api/reports/send-email', {
+    const response = await fetch(getApiUrl('/api/reports/send-email'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
