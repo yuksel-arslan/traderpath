@@ -129,12 +129,12 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
       ? Math.abs((averageEntry - stopLossPrice) / averageEntry * 100)
       : 0);
 
-  const chartEntries = data.entries?.map(e => ({
+  const chartEntries = data.entries?.filter(e => e != null).map(e => ({
     price: e.price || 0,
     percentage: e.percentage || 0,
   })) || [{ price: averageEntry, percentage: 100 }];
 
-  const chartTakeProfits = data.takeProfits?.map(tp => ({
+  const chartTakeProfits = data.takeProfits?.filter(tp => tp != null).map(tp => ({
     price: tp.price || 0,
     percentage: tp.percentage || 0,
     riskReward: tp.riskReward || 0,
@@ -276,7 +276,7 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
             <div className="bg-cyan-500/5 rounded-xl p-4 border border-cyan-500/20">
               <p className="text-sm font-semibold mb-3 text-cyan-500">Entry Levels (DCA)</p>
               <div className="space-y-2">
-                {data.entries.map((entry, i) => (
+                {data.entries.filter(e => e != null).map((entry, i) => (
                   <div key={i} className="flex items-center justify-between p-3 bg-cyan-500/10 rounded-lg">
                     <div className="flex items-center gap-3">
                       <span className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center text-sm font-bold text-cyan-500">
@@ -299,7 +299,7 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
             <div className="bg-green-500/5 rounded-xl p-4 border border-green-500/20">
               <p className="text-sm font-semibold mb-3 text-green-500">Take Profit Targets</p>
               <div className="space-y-2">
-                {data.takeProfits.map((tp, i) => {
+                {data.takeProfits.filter(tp => tp != null).map((tp, i) => {
                   const tpPrice = tp.price ?? 0;
                   const profitPercent = tp.percentage || (averageEntry > 0 ? ((tpPrice - averageEntry) / averageEntry * 100) : 0);
                   return (

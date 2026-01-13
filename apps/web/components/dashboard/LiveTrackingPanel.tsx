@@ -246,7 +246,7 @@ export function LiveTrackingPanel({ className = '' }: LiveTrackingPanelProps) {
                   <p>{formatPercent(trade.stopLoss.distance)}</p>
                 </div>
                 {/* TP Statuses */}
-                {trade.takeProfits.map((tp) => (
+                {trade.takeProfits?.filter(tp => tp != null).map((tp) => (
                   <div
                     key={tp.level}
                     className={`p-2 rounded border ${
