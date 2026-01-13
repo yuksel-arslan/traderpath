@@ -63,7 +63,20 @@ async function fetchBulkPrices(symbols: string[]): Promise<BulkPriceData> {
 
     if (!response.ok) return prices;
 
-    const data = await response.json();
+    // Safely parse JSON response
+    const responseText = await response.text();
+    if (!responseText || responseText.trim() === '') {
+      return prices;
+    }
+
+    let data: Array<{ symbol: string; price: string }>;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      console.error('Invalid JSON response from Binance API');
+      return prices;
+    }
+
     for (const item of data) {
       const symbol = item.symbol.replace('USDT', '');
       prices[symbol] = parseFloat(item.price);
@@ -81,7 +94,20 @@ async function fetchCurrentPrice(symbol: string): Promise<number | null> {
     const pair = `${symbol.toUpperCase()}USDT`;
     const response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${pair}`);
     if (!response.ok) return null;
-    const data = await response.json();
+
+    // Safely parse JSON response
+    const responseText = await response.text();
+    if (!responseText || responseText.trim() === '') {
+      return null;
+    }
+
+    let data: { price: string };
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      return null;
+    }
+
     return parseFloat(data.price);
   } catch {
     return null;
