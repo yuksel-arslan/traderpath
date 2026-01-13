@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   User,
@@ -103,6 +103,11 @@ export default function SettingsPage() {
   // Avatar upload state
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarButtonClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
 
   // Fetch user profile and settings on mount - parallel fetching for speed
   useEffect(() => {
@@ -512,21 +517,23 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <input
+                          ref={fileInputRef}
                           type="file"
-                          id="avatar-upload"
                           accept="image/jpeg,image/png,image/gif,image/webp"
                           onChange={handleAvatarUpload}
-                          className="hidden"
+                          className="sr-only"
                           disabled={isUploadingAvatar}
                         />
-                        <label
-                          htmlFor="avatar-upload"
-                          className={`inline-block px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition cursor-pointer ${
+                        <button
+                          type="button"
+                          onClick={handleAvatarButtonClick}
+                          disabled={isUploadingAvatar}
+                          className={`px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition ${
                             isUploadingAvatar ? 'opacity-50 cursor-not-allowed' : ''
                           }`}
                         >
                           {isUploadingAvatar ? 'Uploading...' : 'Change Avatar'}
-                        </label>
+                        </button>
                         <p className="text-sm text-muted-foreground mt-1">
                           JPG, PNG, GIF or WebP. Max 2MB.
                         </p>
