@@ -89,7 +89,21 @@ export function RecentAnalyses() {
       });
 
       if (response.ok) {
-        const result = await response.json();
+        // Safely parse JSON response
+        const responseText = await response.text();
+        let result: any = { data: { analyses: [] } };
+
+        if (responseText && responseText.trim() !== '') {
+          try {
+            result = JSON.parse(responseText);
+          } catch {
+            console.error('Invalid JSON response from live-prices API');
+            setError('Failed to load analyses');
+            setLoading(false);
+            return;
+          }
+        }
+
         const liveAnalyses = result.data?.analyses || [];
 
         // Map to RecentAnalysis format
