@@ -4,12 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  CheckCircle,
   Zap,
-  Crown,
   Star,
   TrendingUp,
-  Rocket,
   ArrowRight,
   HelpCircle,
   Gem,
@@ -24,20 +21,28 @@ import {
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { cn } from '../../../lib/utils';
 import {
-  CREDIT_PACKAGES,
   ANALYSIS_COSTS,
-  ANALYSIS_BUNDLES,
   FEATURE_COSTS,
   FREE_SIGNUP_CREDITS,
 } from '../../../lib/pricing-config';
-import { authFetch, getAuthToken } from '../../../lib/api';
+import { authFetch, getAuthToken, apiBaseUrl } from '../../../lib/api';
+
+// Package type from API
+interface ApiPackage {
+  id: string;
+  name: string;
+  credits: number;
+  bonus: number;
+  price: string;
+  perCredit: string;
+  popular: boolean;
+}
 
 // Icon mapping for packages by ID
 const PACKAGE_ICONS: Record<string, typeof Zap> = {
   starter: Zap,
   trader: Star,
   pro: TrendingUp,
-  whale: Rocket,
 };
 
 // Icon mapping for features
@@ -79,10 +84,29 @@ export default function PricingPage() {
   const [purchasing, setPurchasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [packages, setPackages] = useState<ApiPackage[]>([]);
+  const [packagesLoading, setPackagesLoading] = useState(true);
 
   useEffect(() => {
     checkAuthStatus();
+    fetchPackages();
   }, []);
+
+  const fetchPackages = async () => {
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/payments/packages`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data?.packages) {
+          setPackages(data.data.packages);
+        }
+      }
+    } catch {
+      // Will show empty state or could add fallback
+    } finally {
+      setPackagesLoading(false);
+    }
+  };
 
   const checkAuthStatus = async () => {
     try {
@@ -242,68 +266,80 @@ export default function PricingPage() {
         <div className="container mx-auto px-4">
           <h2 className="text-2xl font-bold text-center mb-2">Credit Packages</h2>
           <p className="text-muted-foreground text-center mb-8">Choose the package that fits your trading style</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            {CREDIT_PACKAGES.map((pkg) => {
-              const Icon = PACKAGE_ICONS[pkg.id] || Zap;
-              const isSelected = selectedPackage === pkg.id;
-              const isPurchasing = purchasing && isSelected;
+          {packagesLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : packages.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              No packages available at the moment.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+              {packages.map((pkg) => {
+                // Map package name to icon
+                const nameKey = pkg.name.toLowerCase().split(' ')[0]; // "Starter Pack" -> "starter"
+                const Icon = PACKAGE_ICONS[nameKey] || PACKAGE_ICONS[pkg.id] || Zap;
+                const isSelected = selectedPackage === pkg.id;
+                const isPurchasing = purchasing && isSelected;
 
-              return (
-                <div
-                  key={pkg.id}
-                  className={cn(
-                    'bg-card rounded-xl border-2 p-6 relative text-center transition',
-                    pkg.popular
-                      ? 'border-amber-500 ring-2 ring-amber-500 ring-offset-2 ring-offset-background'
-                      : 'border-border hover:border-primary/50',
-                    isSelected && 'border-primary'
-                  )}
-                >
-                  {pkg.popular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">
-                      MOST POPULAR
-                    </div>
-                  )}
-                  <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-accent flex items-center justify-center">
-                    <Icon className="w-7 h-7 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-2">{pkg.name}</h3>
-                  <div className="text-3xl font-bold text-primary mb-1">
-                    {pkg.credits}
-                    {pkg.bonus > 0 && <span className="text-lg text-amber-500 ml-1">+{pkg.bonus}</span>}
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">credits</p>
-                  <div className="text-2xl font-bold mb-1">{pkg.priceDisplay}</div>
-                  <p className="text-sm text-muted-foreground mb-6">{pkg.perCredit}/credit</p>
-                  <button
-                    onClick={() => handlePurchase(pkg.id)}
-                    disabled={purchasing}
+                return (
+                  <div
+                    key={pkg.id}
                     className={cn(
-                      'w-full py-3 rounded-lg font-semibold text-center transition flex items-center justify-center gap-2',
+                      'bg-card rounded-xl border-2 p-6 relative text-center transition',
                       pkg.popular
-                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                        : 'border hover:bg-accent',
-                      purchasing && 'opacity-50 cursor-not-allowed'
+                        ? 'border-amber-500 ring-2 ring-amber-500 ring-offset-2 ring-offset-background'
+                        : 'border-border hover:border-primary/50',
+                      isSelected && 'border-primary'
                     )}
                   >
-                    {isPurchasing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : isLoggedIn ? (
-                      <>
-                        <CreditCard className="w-4 h-4" />
-                        Buy Now
-                      </>
-                    ) : (
-                      'Get Started'
+                    {pkg.popular && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">
+                        MOST POPULAR
+                      </div>
                     )}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                    <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-accent flex items-center justify-center">
+                      <Icon className="w-7 h-7 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">{pkg.name}</h3>
+                    <div className="text-3xl font-bold text-primary mb-1">
+                      {pkg.credits}
+                      {pkg.bonus > 0 && <span className="text-lg text-amber-500 ml-1">+{pkg.bonus}</span>}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">credits</p>
+                    <div className="text-2xl font-bold mb-1">{pkg.price}</div>
+                    <p className="text-sm text-muted-foreground mb-6">{pkg.perCredit}/credit</p>
+                    <button
+                      onClick={() => handlePurchase(pkg.id)}
+                      disabled={purchasing}
+                      className={cn(
+                        'w-full py-3 rounded-lg font-semibold text-center transition flex items-center justify-center gap-2',
+                        pkg.popular
+                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                          : 'border hover:bg-accent',
+                        purchasing && 'opacity-50 cursor-not-allowed'
+                      )}
+                    >
+                      {isPurchasing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : isLoggedIn ? (
+                        <>
+                          <CreditCard className="w-4 h-4" />
+                          Buy Now
+                        </>
+                      ) : (
+                        'Get Started'
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {isLoggedIn && (
             <p className="text-center text-xs text-muted-foreground mt-4">
               Secure payment powered by Stripe
@@ -341,29 +377,6 @@ export default function PricingPage() {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Analysis Bundles */}
-      <section className="py-12 bg-accent/50">
-        <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold text-center mb-8">Analysis Bundles</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            {ANALYSIS_BUNDLES.map((bundle, index) => (
-              <div key={index} className="bg-card rounded-lg border p-6 text-center">
-                <h3 className="font-semibold text-lg mb-2">{bundle.name}</h3>
-                <p className="text-sm text-muted-foreground mb-4">{bundle.steps}</p>
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <span className="text-muted-foreground line-through">{bundle.original}</span>
-                  <span className="text-2xl font-bold text-primary">{bundle.discounted}</span>
-                  <span className="text-sm">credits</span>
-                </div>
-                <span className="inline-block px-2 py-1 bg-green-500/20 text-green-500 text-xs rounded-full">
-                  Save {bundle.savings}
-                </span>
-              </div>
-            ))}
           </div>
         </div>
       </section>
