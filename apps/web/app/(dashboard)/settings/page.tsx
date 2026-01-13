@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   User,
@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { authFetch } from '../../../lib/api';
+import { uploadToCloudinary, isCloudinaryConfigured } from '../../../lib/cloudinary';
 
 interface UserProfile {
   id: string;
@@ -98,6 +99,10 @@ export default function SettingsPage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  // Avatar upload state
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
 
   // Fetch user profile and settings on mount - parallel fetching for speed
   useEffect(() => {
@@ -305,6 +310,49 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check if Cloudinary is configured
+    if (!isCloudinaryConfigured()) {
+      setAvatarError('Avatar upload is not configured. Please contact support.');
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    setAvatarError('');
+
+    try {
+      // Upload to Cloudinary
+      const uploadResult = await uploadToCloudinary(file, 'traderpath-avatars');
+
+      if (!uploadResult.success || !uploadResult.url) {
+        throw new Error(uploadResult.error || 'Upload failed');
+      }
+
+      // Update user profile with new avatar URL
+      const response = await authFetch('/api/user/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({ avatarUrl: uploadResult.url }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error?.message || 'Failed to update profile');
+      }
+
+      // Update local state
+      setUser(prev => prev ? { ...prev, avatarUrl: uploadResult.url! } : null);
+    } catch (err) {
+      setAvatarError(err instanceof Error ? err.message : 'Avatar upload failed');
+    } finally {
+      setIsUploadingAvatar(false);
+      // Reset the input
+      event.target.value = '';
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
@@ -444,24 +492,47 @@ export default function SettingsPage() {
                   <>
                     {/* Avatar */}
                     <div className="flex items-center gap-4 mb-6">
-                      {user.avatarUrl ? (
-                        <img
-                          src={user.avatarUrl}
-                          alt={user.name || user.email}
-                          className="w-20 h-20 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-20 h-20 bg-gradient-to-br from-primary via-primary/80 to-primary/60 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                          {getInitials(user.name, user.email)}
-                        </div>
-                      )}
+                      <div className="relative">
+                        {user.avatarUrl ? (
+                          <img
+                            src={user.avatarUrl}
+                            alt={user.name || user.email}
+                            className="w-20 h-20 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-20 h-20 bg-gradient-to-br from-primary via-primary/80 to-primary/60 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                            {getInitials(user.name, user.email)}
+                          </div>
+                        )}
+                        {isUploadingAvatar && (
+                          <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                            <Loader2 className="w-6 h-6 animate-spin text-white" />
+                          </div>
+                        )}
+                      </div>
                       <div>
-                        <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition">
-                          Change Avatar
-                        </button>
+                        <input
+                          type="file"
+                          id="avatar-upload"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          onChange={handleAvatarUpload}
+                          className="hidden"
+                          disabled={isUploadingAvatar}
+                        />
+                        <label
+                          htmlFor="avatar-upload"
+                          className={`inline-block px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition cursor-pointer ${
+                            isUploadingAvatar ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                        >
+                          {isUploadingAvatar ? 'Uploading...' : 'Change Avatar'}
+                        </label>
                         <p className="text-sm text-muted-foreground mt-1">
-                          JPG, PNG or GIF. Max 2MB.
+                          JPG, PNG, GIF or WebP. Max 2MB.
                         </p>
+                        {avatarError && (
+                          <p className="text-sm text-destructive mt-1">{avatarError}</p>
+                        )}
                       </div>
                     </div>
 
