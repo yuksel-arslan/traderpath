@@ -23,7 +23,7 @@ import {
   TrendingDown,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
-import { TradePathLogo } from '../../components/common/TradePathLogo';
+import { TraderPathLogo } from '../../components/common/TraderPathLogo';
 import { cn } from '../../lib/utils';
 import { authFetch, clearAuthToken } from '../../lib/api';
 
@@ -151,8 +151,8 @@ export default function DashboardLayout({
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <TradePathLogo size="md" showText showTagline href="/dashboard" className="hidden sm:flex" />
-            <TradePathLogo size="md" showText={false} href="/dashboard" className="sm:hidden" />
+            <TraderPathLogo size="md" showText showTagline href="/dashboard" className="hidden sm:flex" />
+            <TraderPathLogo size="md" showText={false} href="/dashboard" className="sm:hidden" />
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-1">
