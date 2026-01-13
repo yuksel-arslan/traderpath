@@ -37,7 +37,7 @@ import { TimingAnalysis } from './TimingAnalysis';
 import { TradePlan } from './TradePlan';
 import { TrapCheck } from './TrapCheck';
 import { FinalVerdict } from './FinalVerdict';
-// TradePlanChart is rendered in FinalVerdict component - PDF capture uses the visible chart
+import { TradePlanChart } from './TradePlanChart';
 import { DownloadReportButton } from '../reports/DownloadReportButton';
 import { AnalysisProgressBar } from './AnalysisProgressBar';
 
@@ -721,6 +721,31 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
                     </div>
                   )}
                   <DownloadReportButton analysisData={results} symbol={symbol} analysisId={savedAnalysisId || undefined} tradeType={tradeType} />
+
+                  {/* Hidden TradePlanChart for PDF capture - must have id="trade-plan-chart" for capture to work */}
+                  {results[6] && (
+                    <div
+                      style={{
+                        position: 'fixed',
+                        left: '-2000px',
+                        top: '0',
+                        width: '800px',
+                        height: '600px',
+                        background: '#ffffff',
+                        pointerEvents: 'none',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <TradePlanChart
+                        symbol={symbol}
+                        entries={(results[6] as { entries?: Array<{ price: number; percentage: number }> })?.entries ?? []}
+                        stopLoss={(results[6] as { stopLoss?: { price: number; percentage: number } })?.stopLoss ?? { price: 0, percentage: 0 }}
+                        takeProfits={(results[6] as { takeProfits?: Array<{ price: number; percentage: number; riskReward?: number }> })?.takeProfits?.map((tp, i) => ({ ...tp, riskReward: tp.riskReward ?? (i + 1) })) ?? []}
+                        direction={((results[6] as { direction?: 'long' | 'short' })?.direction) || 'long'}
+                        currentPrice={(results[2] as { currentPrice?: number })?.currentPrice ?? 0}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 

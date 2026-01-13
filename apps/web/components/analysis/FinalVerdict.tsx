@@ -518,6 +518,7 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
           currentPrice={tradePlan.currentPrice || tradePlan.averageEntry || tradePlan.entries![0].price}
           support={tradePlan.support}
           resistance={tradePlan.resistance}
+          chartId="trade-plan-chart-visible"
         />
       )}
 

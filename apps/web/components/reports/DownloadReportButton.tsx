@@ -502,10 +502,8 @@ export function DownloadReportButton({
         }
       }
 
-      // Wait for chart to load data and render before capture
-      // Chart needs time to: 1) fetch data from Binance, 2) render candlesticks, 3) add price lines
-      console.log('[Report] Waiting for chart to load and render...');
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Wait for chart to be rendered before capture
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       let pdfResult: { base64: string; fileName: string } | void;
 
