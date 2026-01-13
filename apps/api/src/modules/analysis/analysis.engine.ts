@@ -6,9 +6,10 @@
 import { randomUUID } from 'crypto';
 import { config } from '../../core/config';
 import { contractSecurityService } from '../security/contract-security.service';
-import { TradeType, getTradeConfig, getStepConfig, Timeframe } from './config/trade-config';
+import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig } from './config/trade-config';
 import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/indicator-interpreter.service';
 import { IndicatorAnalysis } from '@traderpath/types';
+import { IndicatorsService, OHLCV, IndicatorResult } from './services/indicators.service';
 
 // ===========================================
 // Price Formatting Utility
@@ -85,6 +86,408 @@ interface Candle {
   close: number;
   volume: number;
   closeTime: number;
+}
+
+// ===========================================
+// Indicator Calculation Helpers
+// Uses trade-config.ts and indicators.service.ts
+// ===========================================
+
+// Singleton instance of IndicatorsService
+const indicatorsService = new IndicatorsService();
+
+/**
+ * Convert Candle[] to OHLCV[] format for IndicatorsService
+ */
+function candlesToOHLCV(candles: Candle[]): OHLCV[] {
+  return candles.map(c => ({
+    timestamp: c.openTime,
+    open: c.open,
+    high: c.high,
+    low: c.low,
+    close: c.close,
+    volume: c.volume,
+  }));
+}
+
+/**
+ * Calculate all configured indicators for a step using trade-config
+ * Returns a Map of indicator name to result
+ */
+function calculateStepIndicators(
+  candles: Candle[],
+  tradeType: TradeType,
+  step: AnalysisStep
+): Map<string, IndicatorResult> {
+  const stepConfig = getStepConfig(tradeType, step);
+  if (!stepConfig) {
+    return new Map();
+  }
+
+  const ohlcv = candlesToOHLCV(candles);
+  const indicatorNames = stepConfig.indicators.map(ind => ind.name);
+
+  // Also extract params from config
+  const results = new Map<string, IndicatorResult>();
+  for (const indConfig of stepConfig.indicators) {
+    try {
+      const result = indicatorsService.calculateIndicator(
+        indConfig.name,
+        ohlcv,
+        indConfig.params
+      );
+      if (result && result.value !== null) {
+        results.set(indConfig.name, result);
+      }
+    } catch (error) {
+      console.warn(`Failed to calculate ${indConfig.name}:`, error);
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Convert indicator results to a format suitable for buildIndicatorAnalysis
+ */
+function indicatorResultsToAnalysisInputs(
+  results: Map<string, IndicatorResult>,
+  currentPrice: number,
+  priceChange24h: number,
+  prices: number[]
+): Record<string, any> {
+  const inputs: Record<string, any> = {
+    currentPrice,
+    priceChange24h,
+    prices,
+  };
+
+  // Map results to the expected format
+  for (const [name, result] of results) {
+    const upperName = name.toUpperCase();
+
+    // RSI
+    if (upperName === 'RSI') {
+      inputs.rsi = result.value;
+      if (result.values) inputs.rsiValues = result.values;
+    }
+
+    // MACD
+    if (upperName === 'MACD' && result.metadata) {
+      inputs.macd = {
+        value: result.metadata.macd ?? result.value,
+        signal: result.metadata.signal ?? 0,
+        histogram: result.metadata.histogram ?? 0,
+      };
+      if (result.values) inputs.macdHistogramValues = result.values;
+    }
+
+    // Bollinger Bands
+    if (upperName === 'BOLLINGER' && result.metadata) {
+      inputs.bollingerBands = {
+        upper: result.metadata.upper,
+        middle: result.metadata.middle,
+        lower: result.metadata.lower,
+      };
+    }
+
+    // ATR
+    if (upperName === 'ATR') {
+      inputs.atr = result.value;
+    }
+
+    // Moving Averages
+    if (upperName.startsWith('SMA_') || upperName.startsWith('EMA_')) {
+      const period = parseInt(upperName.split('_')[1]);
+      inputs.movingAverages = inputs.movingAverages || {};
+      if (period === 50) inputs.movingAverages.ma50 = result.value;
+      if (period === 200) inputs.movingAverages.ma200 = result.value;
+      if (period === 20) inputs.movingAverages.ma20 = result.value;
+    }
+
+    // PVT
+    if (upperName === 'PVT' && result.values) {
+      const pvtValues = result.values;
+      const momentum = pvtValues.length > 1
+        ? (pvtValues[pvtValues.length - 1] - pvtValues[pvtValues.length - 2]) / Math.abs(pvtValues[pvtValues.length - 2] || 1)
+        : 0;
+      inputs.pvt = {
+        pvt: result.value,
+        trend: result.signal || 'neutral',
+        momentum,
+      };
+    }
+
+    // Relative Volume
+    if (upperName === 'RELATIVE_VOLUME') {
+      inputs.relativeVolume = result.value;
+    }
+
+    // Volume Spike
+    if (upperName === 'VOLUME_SPIKE' && result.metadata) {
+      inputs.volumeSpike = {
+        isSpike: result.metadata.isSpike ?? false,
+        factor: result.value ?? 1,
+      };
+    }
+
+    // Order Flow Imbalance
+    if (upperName === 'ORDER_FLOW_IMBALANCE') {
+      inputs.orderFlowImbalance = {
+        imbalance: result.value ?? 0,
+        bias: result.signal || 'neutral',
+      };
+    }
+
+    // Liquidity Score
+    if (upperName === 'LIQUIDITY_SCORE') {
+      inputs.liquidityScore = result.value;
+    }
+
+    // Historical Volatility
+    if (upperName === 'HISTORICAL_VOLATILITY') {
+      inputs.historicalVolatility = result.value;
+    }
+
+    // ADX
+    if (upperName === 'ADX') {
+      inputs.adx = {
+        value: result.value,
+        plusDI: result.metadata?.plusDI,
+        minusDI: result.metadata?.minusDI,
+        signal: result.signal,
+        trendStrength: result.metadata?.trendStrength,
+      };
+    }
+
+    // Ichimoku
+    if (upperName === 'ICHIMOKU' && result.metadata) {
+      inputs.ichimoku = {
+        tenkanSen: result.metadata.tenkanSen,
+        kijunSen: result.metadata.kijunSen,
+        senkouA: result.metadata.senkouA,
+        senkouB: result.metadata.senkouB,
+        chikou: result.metadata.chikou,
+        cloudTop: result.metadata.cloudTop,
+        cloudBottom: result.metadata.cloudBottom,
+        signal: result.signal,
+      };
+    }
+
+    // Supertrend
+    if (upperName === 'SUPERTREND' && result.metadata) {
+      inputs.supertrend = {
+        value: result.value,
+        trend: result.metadata.trend,
+        signal: result.signal,
+      };
+    }
+
+    // Stochastic
+    if (upperName === 'STOCHASTIC' && result.metadata) {
+      inputs.stochastic = {
+        k: result.metadata.k ?? result.value,
+        d: result.metadata.d,
+        signal: result.signal,
+      };
+    }
+
+    // Stochastic RSI
+    if (upperName === 'STOCH_RSI' && result.metadata) {
+      inputs.stochRsi = {
+        k: result.metadata.k ?? result.value,
+        d: result.metadata.d,
+        signal: result.signal,
+      };
+    }
+
+    // CCI
+    if (upperName === 'CCI') {
+      inputs.cci = {
+        value: result.value,
+        signal: result.signal,
+      };
+    }
+
+    // Williams %R
+    if (upperName === 'WILLIAMS_R') {
+      inputs.williamsR = {
+        value: result.value,
+        signal: result.signal,
+      };
+    }
+
+    // MFI
+    if (upperName === 'MFI') {
+      inputs.mfi = {
+        value: result.value,
+        signal: result.signal,
+      };
+    }
+
+    // OBV
+    if (upperName === 'OBV') {
+      inputs.obv = {
+        value: result.value,
+        signal: result.signal,
+      };
+    }
+
+    // VWAP
+    if (upperName === 'VWAP') {
+      inputs.vwap = result.value;
+    }
+
+    // CMF
+    if (upperName === 'CMF') {
+      inputs.cmf = {
+        value: result.value,
+        signal: result.signal,
+      };
+    }
+
+    // Squeeze
+    if (upperName === 'SQUEEZE' && result.metadata) {
+      inputs.squeeze = {
+        on: result.metadata.squeezeOn,
+        signal: result.signal,
+      };
+    }
+
+    // Aroon
+    if (upperName === 'AROON' && result.metadata) {
+      inputs.aroon = {
+        up: result.metadata.aroonUp,
+        down: result.metadata.aroonDown,
+        oscillator: result.value,
+        signal: result.signal,
+      };
+    }
+
+    // PSAR
+    if (upperName === 'PSAR') {
+      inputs.psar = {
+        value: result.value,
+        trend: result.metadata?.trend,
+        signal: result.signal,
+      };
+    }
+
+    // Keltner Channel
+    if (upperName === 'KELTNER' && result.metadata) {
+      inputs.keltner = {
+        upper: result.metadata.upper,
+        middle: result.metadata.middle,
+        lower: result.metadata.lower,
+        value: result.value,
+        signal: result.signal,
+      };
+    }
+
+    // Donchian Channel
+    if (upperName === 'DONCHIAN' && result.metadata) {
+      inputs.donchian = {
+        upper: result.metadata.upper,
+        middle: result.metadata.middle,
+        lower: result.metadata.lower,
+        width: result.metadata.width,
+      };
+    }
+
+    // Whale Activity
+    if (upperName === 'WHALE_ACTIVITY' && result.metadata) {
+      inputs.whaleActivity = {
+        score: result.value,
+        detected: result.metadata.detected,
+        signal: result.signal,
+      };
+    }
+
+    // Spoofing Detection
+    if (upperName === 'SPOOFING_DETECTION' && result.metadata) {
+      inputs.spoofingDetection = {
+        score: result.value,
+        warning: result.metadata.warning,
+        riskLevel: result.metadata.riskLevel,
+      };
+    }
+
+    // Bid-Ask Spread
+    if (upperName === 'BID_ASK_SPREAD') {
+      inputs.bidAskSpread = result.value;
+    }
+
+    // Slippage Estimate
+    if (upperName === 'SLIPPAGE_ESTIMATE' && result.metadata) {
+      inputs.slippageEstimate = {
+        bps: result.value,
+        estimatedUSD: result.metadata.estimatedSlippageUSD,
+      };
+    }
+
+    // Market Impact
+    if (upperName === 'MARKET_IMPACT') {
+      inputs.marketImpact = {
+        score: result.value,
+        signal: result.signal,
+      };
+    }
+
+    // Force Index
+    if (upperName === 'FORCE_INDEX') {
+      inputs.forceIndex = {
+        value: result.value,
+        signal: result.signal,
+      };
+    }
+
+    // ROC
+    if (upperName === 'ROC') {
+      inputs.roc = {
+        value: result.value,
+        signal: result.signal,
+      };
+    }
+
+    // TSI
+    if (upperName === 'TSI') {
+      inputs.tsi = {
+        value: result.value,
+        signal: result.signal,
+      };
+    }
+
+    // Ultimate Oscillator
+    if (upperName === 'ULTIMATE') {
+      inputs.ultimate = {
+        value: result.value,
+        signal: result.signal,
+      };
+    }
+
+    // VWMA
+    if (upperName === 'VWMA') {
+      inputs.vwma = result.value;
+    }
+
+    // AD (Accumulation/Distribution)
+    if (upperName === 'AD') {
+      inputs.ad = {
+        value: result.value,
+        signal: result.signal,
+      };
+    }
+
+    // EOM (Ease of Movement)
+    if (upperName === 'EOM') {
+      inputs.eom = {
+        value: result.value,
+        signal: result.signal,
+      };
+    }
+  }
+
+  return inputs;
 }
 
 interface MarketData {
@@ -1504,7 +1907,13 @@ export const analysisEngine = {
     const prices4h = candles4h.map((c) => c.close);
     const prices1d = candles1d.map((c) => c.close);
 
-    // Technical indicators
+    // ========================================
+    // Calculate ALL configured indicators for this step using trade-config
+    // This uses the 40+ indicators defined in TECHNICAL_SPECIFICATION.md
+    // ========================================
+    const stepIndicators = calculateStepIndicators(candlesPrimary, tradeType, 'assetScan');
+
+    // Traditional indicators (kept for backwards compatibility in indicators object)
     const rsi = calculateRSI(prices4h);
     const macd = calculateMACD(prices4h);
     const bb = calculateBollingerBands(prices4h);
@@ -1622,14 +2031,18 @@ export const analysisEngine = {
         },
         atr: parseFloat(atr.toFixed(2)),
       },
-      // Build detailed indicator analysis with interpretations
+      // Build detailed indicator analysis with ALL configured indicators
+      // Uses full 40+ indicators from trade-config.ts for rich analysis
       indicatorDetails: buildIndicatorAnalysis({
-        currentPrice: ticker.price,
-        priceChange24h: ticker.priceChangePercent24h,
-        prices: prices4h,
-        rsi,
-        macd: { value: macd.macd, signal: macd.signal, histogram: macd.histogram },
-        bollingerBands: { upper: bb.upper, middle: bb.middle, lower: bb.lower },
+        ...indicatorResultsToAnalysisInputs(stepIndicators, ticker.price, ticker.priceChangePercent24h, prices4h),
+        // Include traditional indicators as fallback
+        rsi: stepIndicators.get('RSI')?.value ?? rsi,
+        macd: stepIndicators.get('MACD')?.metadata
+          ? { value: stepIndicators.get('MACD')!.metadata!.macd, signal: stepIndicators.get('MACD')!.metadata!.signal, histogram: stepIndicators.get('MACD')!.metadata!.histogram }
+          : { value: macd.macd, signal: macd.signal, histogram: macd.histogram },
+        bollingerBands: stepIndicators.get('BOLLINGER')?.metadata
+          ? { upper: stepIndicators.get('BOLLINGER')!.metadata!.upper, middle: stepIndicators.get('BOLLINGER')!.metadata!.middle, lower: stepIndicators.get('BOLLINGER')!.metadata!.lower }
+          : { upper: bb.upper, middle: bb.middle, lower: bb.lower },
         movingAverages: { ma50, ma200 },
       }),
       score,
@@ -1658,7 +2071,13 @@ export const analysisEngine = {
     const currentVolume = volumes[volumes.length - 1] ?? avgVolume;
     const volumeRatio = avgVolume > 0 ? currentVolume / avgVolume : 1;
 
-    // Advanced indicators from Python metrics
+    // ========================================
+    // Calculate ALL configured indicators for this step using trade-config
+    // This uses the 40+ indicators defined in TECHNICAL_SPECIFICATION.md
+    // ========================================
+    const stepIndicators = calculateStepIndicators(candlesPrimary, tradeType, 'safetyCheck');
+
+    // Advanced indicators from Python metrics (kept for backwards compatibility)
     const volumeSpike = detectVolumeSpike(candles1h, 15, 2.0);
     const relativeVolume = calculateRelativeVolume(candles1h, 20);
     const pvt = calculatePVT(candles1h);
@@ -1945,17 +2364,23 @@ export const analysisEngine = {
       contractSecurity,
       riskLevel,
       warnings,
-      // Build detailed indicator analysis with interpretations for advanced metrics
+      // Build detailed indicator analysis with ALL configured indicators
+      // Uses full 40+ indicators from trade-config.ts for rich analysis
       indicatorDetails: buildIndicatorAnalysis({
-        currentPrice,
-        priceChange24h: ticker.priceChangePercent24h,
-        prices: candlesPrimary.map(c => c.close),
-        pvt: { pvt: pvt.pvt, trend: pvt.trend, momentum: pvt.momentum },
-        relativeVolume,
-        volumeSpike: { isSpike: volumeSpike.isSpike, factor: volumeSpike.factor },
-        orderFlowImbalance: { imbalance: orderFlowImbalance.imbalance, bias: orderFlowImbalance.bias },
-        liquidityScore,
-        historicalVolatility: historicalVol,
+        ...indicatorResultsToAnalysisInputs(stepIndicators, currentPrice, ticker.priceChangePercent24h, candlesPrimary.map(c => c.close)),
+        // Include traditional indicators as fallback
+        pvt: stepIndicators.get('PVT')?.values
+          ? { pvt: stepIndicators.get('PVT')!.value, trend: stepIndicators.get('PVT')!.signal || pvt.trend, momentum: pvt.momentum }
+          : { pvt: pvt.pvt, trend: pvt.trend, momentum: pvt.momentum },
+        relativeVolume: stepIndicators.get('RELATIVE_VOLUME')?.value ?? relativeVolume,
+        volumeSpike: stepIndicators.get('VOLUME_SPIKE')?.metadata
+          ? { isSpike: stepIndicators.get('VOLUME_SPIKE')!.metadata!.isSpike, factor: stepIndicators.get('VOLUME_SPIKE')!.value ?? volumeSpike.factor }
+          : { isSpike: volumeSpike.isSpike, factor: volumeSpike.factor },
+        orderFlowImbalance: stepIndicators.get('ORDER_FLOW_IMBALANCE')
+          ? { imbalance: stepIndicators.get('ORDER_FLOW_IMBALANCE')!.value ?? orderFlowImbalance.imbalance, bias: stepIndicators.get('ORDER_FLOW_IMBALANCE')!.signal || orderFlowImbalance.bias }
+          : { imbalance: orderFlowImbalance.imbalance, bias: orderFlowImbalance.bias },
+        liquidityScore: stepIndicators.get('LIQUIDITY_SCORE')?.value ?? liquidityScore,
+        historicalVolatility: stepIndicators.get('HISTORICAL_VOLATILITY')?.value ?? historicalVol,
       }),
       score,
     };

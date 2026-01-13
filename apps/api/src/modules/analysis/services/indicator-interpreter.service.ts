@@ -557,6 +557,410 @@ export function detectDivergences(
 }
 
 // ===========================================
+// Additional Indicator Interpreters (40+ indicators)
+// ===========================================
+
+export function interpretADX(value: number, plusDI?: number, minusDI?: number, trendStrength?: string): IndicatorDetail {
+  let signal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  let signalStrength: 'strong' | 'moderate' | 'weak' = 'weak';
+  let interpretation = '';
+
+  if (value > 50) {
+    signalStrength = 'strong';
+    interpretation = `ADX at ${value.toFixed(1)} - Very strong trend. `;
+  } else if (value > 25) {
+    signalStrength = 'moderate';
+    interpretation = `ADX at ${value.toFixed(1)} - Moderate trend strength. `;
+  } else {
+    interpretation = `ADX at ${value.toFixed(1)} - Weak/no trend (ranging market). `;
+  }
+
+  if (plusDI !== undefined && minusDI !== undefined) {
+    if (plusDI > minusDI) {
+      signal = value > 25 ? 'bullish' : 'neutral';
+      interpretation += `+DI (${plusDI.toFixed(1)}) > -DI (${minusDI.toFixed(1)}) - Bullish direction.`;
+    } else {
+      signal = value > 25 ? 'bearish' : 'neutral';
+      interpretation += `-DI (${minusDI.toFixed(1)}) > +DI (${plusDI.toFixed(1)}) - Bearish direction.`;
+    }
+  }
+
+  return {
+    name: 'ADX(14)',
+    value,
+    signal,
+    signalStrength,
+    interpretation,
+    category: 'trend',
+    isLeadingIndicator: false,
+    weight: 0.12,
+    metadata: { plusDI, minusDI, trendStrength }
+  };
+}
+
+export function interpretIchimoku(
+  price: number,
+  tenkanSen: number,
+  kijunSen: number,
+  cloudTop: number,
+  cloudBottom: number
+): IndicatorDetail {
+  let signal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  let signalStrength: 'strong' | 'moderate' | 'weak' = 'weak';
+  let interpretation = '';
+
+  if (price > cloudTop && tenkanSen > kijunSen) {
+    signal = 'bullish';
+    signalStrength = 'strong';
+    interpretation = `Price above cloud with TK cross bullish. Strong uptrend confirmed.`;
+  } else if (price > cloudTop) {
+    signal = 'bullish';
+    signalStrength = 'moderate';
+    interpretation = `Price above Kumo cloud. Bullish bias.`;
+  } else if (price < cloudBottom && tenkanSen < kijunSen) {
+    signal = 'bearish';
+    signalStrength = 'strong';
+    interpretation = `Price below cloud with TK cross bearish. Strong downtrend.`;
+  } else if (price < cloudBottom) {
+    signal = 'bearish';
+    signalStrength = 'moderate';
+    interpretation = `Price below Kumo cloud. Bearish bias.`;
+  } else {
+    interpretation = `Price inside Kumo cloud. Consolidation/indecision zone.`;
+  }
+
+  return {
+    name: 'Ichimoku Cloud',
+    value: price > cloudTop ? 1 : price < cloudBottom ? -1 : 0,
+    signal,
+    signalStrength,
+    interpretation,
+    category: 'trend',
+    isLeadingIndicator: true,
+    weight: 0.15,
+    metadata: { tenkanSen, kijunSen, cloudTop, cloudBottom }
+  };
+}
+
+export function interpretSupertrend(value: number, trend: number, currentPrice: number): IndicatorDetail {
+  const signal: 'bullish' | 'bearish' | 'neutral' = trend === 1 ? 'bullish' : 'bearish';
+  const distance = Math.abs((currentPrice - value) / value * 100);
+
+  return {
+    name: 'Supertrend(10,3)',
+    value,
+    signal,
+    signalStrength: distance > 5 ? 'strong' : 'moderate',
+    interpretation: trend === 1
+      ? `Supertrend bullish at $${value.toFixed(2)}. Price ${distance.toFixed(1)}% above support line.`
+      : `Supertrend bearish at $${value.toFixed(2)}. Price ${distance.toFixed(1)}% below resistance line.`,
+    category: 'trend',
+    isLeadingIndicator: true,
+    weight: 0.12,
+    metadata: { trend, distance }
+  };
+}
+
+export function interpretStochastic(k: number, d?: number): IndicatorDetail {
+  let signal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  let signalStrength: 'strong' | 'moderate' | 'weak' = 'weak';
+  let interpretation = '';
+
+  if (k < 20) {
+    signal = 'bullish';
+    signalStrength = d !== undefined && k > d ? 'strong' : 'moderate';
+    interpretation = `Stochastic at ${k.toFixed(1)} - Oversold zone. ${d !== undefined && k > d ? 'Bullish crossover!' : 'Watch for bullish cross.'}`;
+  } else if (k > 80) {
+    signal = 'bearish';
+    signalStrength = d !== undefined && k < d ? 'strong' : 'moderate';
+    interpretation = `Stochastic at ${k.toFixed(1)} - Overbought zone. ${d !== undefined && k < d ? 'Bearish crossover!' : 'Watch for bearish cross.'}`;
+  } else {
+    interpretation = `Stochastic at ${k.toFixed(1)} - Neutral zone.`;
+  }
+
+  return {
+    name: 'Stochastic(14,3,3)',
+    value: k,
+    signal,
+    signalStrength,
+    interpretation,
+    category: 'momentum',
+    isLeadingIndicator: true,
+    weight: 0.10,
+    metadata: { k, d }
+  };
+}
+
+export function interpretCCI(value: number): IndicatorDetail {
+  let signal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  let signalStrength: 'strong' | 'moderate' | 'weak' = 'weak';
+  let interpretation = '';
+
+  if (value < -200) {
+    signal = 'bullish';
+    signalStrength = 'strong';
+    interpretation = `CCI at ${value.toFixed(0)} - Extremely oversold. Strong bounce potential.`;
+  } else if (value < -100) {
+    signal = 'bullish';
+    signalStrength = 'moderate';
+    interpretation = `CCI at ${value.toFixed(0)} - Oversold territory. Watch for reversal.`;
+  } else if (value > 200) {
+    signal = 'bearish';
+    signalStrength = 'strong';
+    interpretation = `CCI at ${value.toFixed(0)} - Extremely overbought. High pullback risk.`;
+  } else if (value > 100) {
+    signal = 'bearish';
+    signalStrength = 'moderate';
+    interpretation = `CCI at ${value.toFixed(0)} - Overbought territory. Watch for reversal.`;
+  } else {
+    interpretation = `CCI at ${value.toFixed(0)} - Neutral range.`;
+  }
+
+  return {
+    name: 'CCI(20)',
+    value,
+    signal,
+    signalStrength,
+    interpretation,
+    category: 'momentum',
+    isLeadingIndicator: true,
+    weight: 0.08,
+    metadata: { overbought: 100, oversold: -100 }
+  };
+}
+
+export function interpretWilliamsR(value: number): IndicatorDetail {
+  let signal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  let signalStrength: 'strong' | 'moderate' | 'weak' = 'weak';
+
+  if (value < -80) {
+    signal = 'bullish';
+    signalStrength = 'moderate';
+  } else if (value > -20) {
+    signal = 'bearish';
+    signalStrength = 'moderate';
+  }
+
+  return {
+    name: 'Williams %R(14)',
+    value,
+    signal,
+    signalStrength,
+    interpretation: value < -80
+      ? `Williams %R at ${value.toFixed(1)} - Oversold, potential bullish reversal.`
+      : value > -20
+        ? `Williams %R at ${value.toFixed(1)} - Overbought, potential bearish reversal.`
+        : `Williams %R at ${value.toFixed(1)} - Neutral zone.`,
+    category: 'momentum',
+    isLeadingIndicator: true,
+    weight: 0.06,
+    metadata: {}
+  };
+}
+
+export function interpretMFI(value: number): IndicatorDetail {
+  let signal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  let signalStrength: 'strong' | 'moderate' | 'weak' = 'weak';
+
+  if (value < 20) {
+    signal = 'bullish';
+    signalStrength = 'moderate';
+  } else if (value > 80) {
+    signal = 'bearish';
+    signalStrength = 'moderate';
+  }
+
+  return {
+    name: 'MFI(14)',
+    value,
+    signal,
+    signalStrength,
+    interpretation: value < 20
+      ? `MFI at ${value.toFixed(1)} - Oversold with weak money flow. Potential accumulation.`
+      : value > 80
+        ? `MFI at ${value.toFixed(1)} - Overbought with strong money flow. Potential distribution.`
+        : `MFI at ${value.toFixed(1)} - Normal money flow.`,
+    category: 'momentum',
+    isLeadingIndicator: true,
+    weight: 0.08,
+    metadata: {}
+  };
+}
+
+export function interpretOBV(value: number, signal?: string): IndicatorDetail {
+  return {
+    name: 'OBV',
+    value,
+    signal: signal === 'bullish' ? 'bullish' : signal === 'bearish' ? 'bearish' : 'neutral',
+    signalStrength: 'moderate',
+    interpretation: signal === 'bullish'
+      ? 'OBV trending up - Volume confirms price increase. Accumulation likely.'
+      : signal === 'bearish'
+        ? 'OBV trending down - Volume confirms price decrease. Distribution likely.'
+        : 'OBV flat - No clear volume trend.',
+    category: 'volume',
+    isLeadingIndicator: true,
+    weight: 0.10,
+    metadata: {}
+  };
+}
+
+export function interpretVWAP(vwap: number, currentPrice: number): IndicatorDetail {
+  const percentFromVwap = ((currentPrice - vwap) / vwap) * 100;
+  const signal: 'bullish' | 'bearish' | 'neutral' = currentPrice > vwap ? 'bullish' : 'bearish';
+
+  return {
+    name: 'VWAP',
+    value: vwap,
+    signal,
+    signalStrength: Math.abs(percentFromVwap) > 2 ? 'strong' : 'moderate',
+    interpretation: currentPrice > vwap
+      ? `Price ${percentFromVwap.toFixed(1)}% above VWAP ($${vwap.toFixed(2)}). Institutional buyers in control.`
+      : `Price ${Math.abs(percentFromVwap).toFixed(1)}% below VWAP ($${vwap.toFixed(2)}). Institutional sellers in control.`,
+    category: 'volume',
+    isLeadingIndicator: false,
+    weight: 0.10,
+    metadata: { percentFromVwap }
+  };
+}
+
+export function interpretCMF(value: number): IndicatorDetail {
+  let signal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  let signalStrength: 'strong' | 'moderate' | 'weak' = 'weak';
+
+  if (value > 0.25) {
+    signal = 'bullish';
+    signalStrength = 'strong';
+  } else if (value > 0.05) {
+    signal = 'bullish';
+    signalStrength = 'moderate';
+  } else if (value < -0.25) {
+    signal = 'bearish';
+    signalStrength = 'strong';
+  } else if (value < -0.05) {
+    signal = 'bearish';
+    signalStrength = 'moderate';
+  }
+
+  return {
+    name: 'CMF(20)',
+    value,
+    signal,
+    signalStrength,
+    interpretation: value > 0.05
+      ? `CMF at ${value.toFixed(2)} - Buying pressure. Money flowing into asset.`
+      : value < -0.05
+        ? `CMF at ${value.toFixed(2)} - Selling pressure. Money flowing out of asset.`
+        : `CMF at ${value.toFixed(2)} - Neutral money flow.`,
+    category: 'volume',
+    isLeadingIndicator: true,
+    weight: 0.08,
+    metadata: {}
+  };
+}
+
+export function interpretSqueeze(on: boolean): IndicatorDetail {
+  return {
+    name: 'Squeeze Momentum',
+    value: on ? 1 : 0,
+    signal: 'neutral',
+    signalStrength: on ? 'strong' : 'weak',
+    interpretation: on
+      ? 'SQUEEZE ON: Bollinger Bands inside Keltner Channels. Low volatility - expect big move soon!'
+      : 'Squeeze off - Normal volatility conditions.',
+    category: 'volatility',
+    isLeadingIndicator: true,
+    weight: 0.12,
+    metadata: { squeezeOn: on }
+  };
+}
+
+export function interpretAroon(up: number, down: number): IndicatorDetail {
+  let signal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  let signalStrength: 'strong' | 'moderate' | 'weak' = 'weak';
+
+  if (up > 70 && down < 30) {
+    signal = 'bullish';
+    signalStrength = 'strong';
+  } else if (down > 70 && up < 30) {
+    signal = 'bearish';
+    signalStrength = 'strong';
+  } else if (up > down) {
+    signal = 'bullish';
+    signalStrength = 'moderate';
+  } else if (down > up) {
+    signal = 'bearish';
+    signalStrength = 'moderate';
+  }
+
+  return {
+    name: 'Aroon(25)',
+    value: up - down,
+    signal,
+    signalStrength,
+    interpretation: `Aroon Up: ${up.toFixed(0)}, Down: ${down.toFixed(0)}. ${
+      up > 70 && down < 30 ? 'Strong uptrend.' :
+      down > 70 && up < 30 ? 'Strong downtrend.' :
+      'Trend developing.'
+    }`,
+    category: 'trend',
+    isLeadingIndicator: true,
+    weight: 0.08,
+    metadata: { up, down }
+  };
+}
+
+export function interpretWhaleActivity(score: number, detected?: boolean): IndicatorDetail {
+  return {
+    name: 'Whale Activity',
+    value: score,
+    signal: detected ? 'bullish' : 'neutral',
+    signalStrength: score > 50 ? 'strong' : 'moderate',
+    interpretation: detected
+      ? `Whale activity detected (score: ${score.toFixed(0)}). Large players accumulating/distributing.`
+      : `No significant whale activity (score: ${score.toFixed(0)}).`,
+    category: 'advanced',
+    isLeadingIndicator: true,
+    weight: 0.12,
+    metadata: { detected }
+  };
+}
+
+export function interpretSpoofingDetection(score: number, warning?: boolean): IndicatorDetail {
+  return {
+    name: 'Spoofing Detection',
+    value: score,
+    signal: warning ? 'bearish' : 'neutral',
+    signalStrength: warning ? 'strong' : 'weak',
+    interpretation: warning
+      ? `WARNING: Spoofing patterns detected (score: ${score.toFixed(0)}). Order book may be manipulated.`
+      : `No spoofing detected (score: ${score.toFixed(0)}). Order book appears genuine.`,
+    category: 'advanced',
+    isLeadingIndicator: true,
+    weight: 0.10,
+    metadata: { warning }
+  };
+}
+
+export function interpretMarketImpact(score: number): IndicatorDetail {
+  return {
+    name: 'Market Impact',
+    value: score,
+    signal: score < 1 ? 'bullish' : score > 3 ? 'bearish' : 'neutral',
+    signalStrength: score > 3 ? 'strong' : 'moderate',
+    interpretation: score < 1
+      ? `Low market impact (${score.toFixed(2)}). Orders unlikely to move price significantly.`
+      : score > 3
+        ? `High market impact (${score.toFixed(2)}). Large orders may cause significant slippage.`
+        : `Moderate market impact (${score.toFixed(2)}). Standard execution expected.`,
+    category: 'advanced',
+    isLeadingIndicator: false,
+    weight: 0.08,
+    metadata: {}
+  };
+}
+
+// ===========================================
 // Complete Indicator Analysis Builder
 // ===========================================
 
@@ -564,19 +968,52 @@ interface AnalysisInputs {
   currentPrice: number;
   priceChange24h: number;
   prices: number[];
+  // Momentum Indicators
   rsi?: number;
+  rsiValues?: number[];
+  stochastic?: { k: number; d?: number; signal?: string };
+  stochRsi?: { k: number; d?: number; signal?: string };
+  cci?: { value: number; signal?: string };
+  williamsR?: { value: number; signal?: string };
+  mfi?: { value: number; signal?: string };
+  roc?: { value: number; signal?: string };
+  tsi?: { value: number; signal?: string };
+  ultimate?: { value: number; signal?: string };
+  // Trend Indicators
   macd?: { value: number; signal: number; histogram: number };
-  bollingerBands?: { upper: number; middle: number; lower: number };
+  macdHistogramValues?: number[];
+  adx?: { value: number; plusDI?: number; minusDI?: number; signal?: string; trendStrength?: string };
+  ichimoku?: { tenkanSen: number; kijunSen: number; senkouA: number; senkouB: number; chikou?: number; cloudTop: number; cloudBottom: number; signal?: string };
+  supertrend?: { value: number; trend?: number; signal?: string };
+  psar?: { value: number; trend?: number; signal?: string };
+  aroon?: { up: number; down: number; oscillator?: number; signal?: string };
+  vwma?: number;
   movingAverages?: { ma20?: number; ma50?: number; ma200?: number };
+  // Volatility Indicators
+  bollingerBands?: { upper: number; middle: number; lower: number };
   atr?: number;
+  keltner?: { upper: number; middle: number; lower: number; value?: number; signal?: string };
+  donchian?: { upper: number; middle: number; lower: number; width?: number };
+  historicalVolatility?: number;
+  squeeze?: { on: boolean; signal?: string };
+  // Volume Indicators
   pvt?: { pvt: number; trend: string; momentum: number };
   relativeVolume?: number;
   volumeSpike?: { isSpike: boolean; factor: number };
+  obv?: { value: number; signal?: string };
+  vwap?: number;
+  cmf?: { value: number; signal?: string };
+  ad?: { value: number; signal?: string };
+  forceIndex?: { value: number; signal?: string };
+  eom?: { value: number; signal?: string };
+  // Advanced Indicators
   orderFlowImbalance?: { imbalance: number; bias: string };
   liquidityScore?: number;
-  historicalVolatility?: number;
-  rsiValues?: number[];
-  macdHistogramValues?: number[];
+  bidAskSpread?: number;
+  slippageEstimate?: { bps: number; estimatedUSD?: number };
+  marketImpact?: { score: number; signal?: string };
+  whaleActivity?: { score: number; detected?: boolean; signal?: string };
+  spoofingDetection?: { score: number; warning?: boolean; riskLevel?: string };
 }
 
 export function buildIndicatorAnalysis(inputs: AnalysisInputs): IndicatorAnalysis {
@@ -690,6 +1127,145 @@ export function buildIndicatorAnalysis(inputs: AnalysisInputs): IndicatorAnalysi
     if (hvDetail.isLeadingIndicator) leadingIndicators.push(hvDetail);
   }
 
+  // ========================================
+  // Additional Indicators (40+ from trade-config)
+  // ========================================
+
+  // ADX
+  if (inputs.adx) {
+    const adxDetail = interpretADX(inputs.adx.value, inputs.adx.plusDI, inputs.adx.minusDI, inputs.adx.trendStrength);
+    indicators.trend.adx = adxDetail;
+    allIndicators.push(adxDetail);
+    if (adxDetail.isLeadingIndicator) leadingIndicators.push(adxDetail);
+  }
+
+  // Ichimoku
+  if (inputs.ichimoku) {
+    const ichDetail = interpretIchimoku(
+      inputs.currentPrice,
+      inputs.ichimoku.tenkanSen,
+      inputs.ichimoku.kijunSen,
+      inputs.ichimoku.cloudTop,
+      inputs.ichimoku.cloudBottom
+    );
+    indicators.trend.ichimoku = ichDetail;
+    allIndicators.push(ichDetail);
+    if (ichDetail.isLeadingIndicator) leadingIndicators.push(ichDetail);
+  }
+
+  // Supertrend
+  if (inputs.supertrend) {
+    const stDetail = interpretSupertrend(inputs.supertrend.value, inputs.supertrend.trend ?? 1, inputs.currentPrice);
+    indicators.trend.supertrend = stDetail;
+    allIndicators.push(stDetail);
+    if (stDetail.isLeadingIndicator) leadingIndicators.push(stDetail);
+  }
+
+  // Stochastic
+  if (inputs.stochastic) {
+    const stochDetail = interpretStochastic(inputs.stochastic.k, inputs.stochastic.d);
+    indicators.momentum.stochastic = stochDetail;
+    allIndicators.push(stochDetail);
+    if (stochDetail.isLeadingIndicator) leadingIndicators.push(stochDetail);
+  }
+
+  // Stochastic RSI
+  if (inputs.stochRsi) {
+    const stochRsiDetail = interpretStochastic(inputs.stochRsi.k, inputs.stochRsi.d);
+    stochRsiDetail.name = 'Stochastic RSI(14,3,3)';
+    indicators.momentum.stochRsi = stochRsiDetail;
+    allIndicators.push(stochRsiDetail);
+    if (stochRsiDetail.isLeadingIndicator) leadingIndicators.push(stochRsiDetail);
+  }
+
+  // CCI
+  if (inputs.cci) {
+    const cciDetail = interpretCCI(inputs.cci.value);
+    indicators.momentum.cci = cciDetail;
+    allIndicators.push(cciDetail);
+    if (cciDetail.isLeadingIndicator) leadingIndicators.push(cciDetail);
+  }
+
+  // Williams %R
+  if (inputs.williamsR) {
+    const wrDetail = interpretWilliamsR(inputs.williamsR.value);
+    indicators.momentum.williamsR = wrDetail;
+    allIndicators.push(wrDetail);
+    if (wrDetail.isLeadingIndicator) leadingIndicators.push(wrDetail);
+  }
+
+  // MFI
+  if (inputs.mfi) {
+    const mfiDetail = interpretMFI(inputs.mfi.value);
+    indicators.momentum.mfi = mfiDetail;
+    allIndicators.push(mfiDetail);
+    if (mfiDetail.isLeadingIndicator) leadingIndicators.push(mfiDetail);
+  }
+
+  // OBV
+  if (inputs.obv) {
+    const obvDetail = interpretOBV(inputs.obv.value, inputs.obv.signal);
+    indicators.volume.obv = obvDetail;
+    allIndicators.push(obvDetail);
+    if (obvDetail.isLeadingIndicator) leadingIndicators.push(obvDetail);
+  }
+
+  // VWAP
+  if (inputs.vwap !== undefined) {
+    const vwapDetail = interpretVWAP(inputs.vwap, inputs.currentPrice);
+    indicators.volume.vwap = vwapDetail;
+    allIndicators.push(vwapDetail);
+    if (vwapDetail.isLeadingIndicator) leadingIndicators.push(vwapDetail);
+  }
+
+  // CMF
+  if (inputs.cmf) {
+    const cmfDetail = interpretCMF(inputs.cmf.value);
+    indicators.volume.cmf = cmfDetail;
+    allIndicators.push(cmfDetail);
+    if (cmfDetail.isLeadingIndicator) leadingIndicators.push(cmfDetail);
+  }
+
+  // Squeeze
+  if (inputs.squeeze) {
+    const squeezeDetail = interpretSqueeze(inputs.squeeze.on);
+    indicators.volatility.squeeze = squeezeDetail;
+    allIndicators.push(squeezeDetail);
+    if (squeezeDetail.isLeadingIndicator) leadingIndicators.push(squeezeDetail);
+  }
+
+  // Aroon
+  if (inputs.aroon) {
+    const aroonDetail = interpretAroon(inputs.aroon.up, inputs.aroon.down);
+    indicators.trend.aroon = aroonDetail;
+    allIndicators.push(aroonDetail);
+    if (aroonDetail.isLeadingIndicator) leadingIndicators.push(aroonDetail);
+  }
+
+  // Whale Activity
+  if (inputs.whaleActivity) {
+    const whaleDetail = interpretWhaleActivity(inputs.whaleActivity.score, inputs.whaleActivity.detected);
+    indicators.advanced.whaleActivity = whaleDetail;
+    allIndicators.push(whaleDetail);
+    if (whaleDetail.isLeadingIndicator) leadingIndicators.push(whaleDetail);
+  }
+
+  // Spoofing Detection
+  if (inputs.spoofingDetection) {
+    const spoofDetail = interpretSpoofingDetection(inputs.spoofingDetection.score, inputs.spoofingDetection.warning);
+    indicators.advanced.spoofingDetection = spoofDetail;
+    allIndicators.push(spoofDetail);
+    if (spoofDetail.isLeadingIndicator) leadingIndicators.push(spoofDetail);
+  }
+
+  // Market Impact
+  if (inputs.marketImpact) {
+    const impactDetail = interpretMarketImpact(inputs.marketImpact.score);
+    indicators.advanced.marketImpact = impactDetail;
+    allIndicators.push(impactDetail);
+    if (impactDetail.isLeadingIndicator) leadingIndicators.push(impactDetail);
+  }
+
   // Detect Divergences
   if (inputs.prices && inputs.rsiValues && inputs.macdHistogramValues) {
     indicators.divergences = detectDivergences(inputs.prices, inputs.rsiValues, inputs.macdHistogramValues);
@@ -763,6 +1339,7 @@ export function buildIndicatorAnalysis(inputs: AnalysisInputs): IndicatorAnalysi
 }
 
 export const indicatorInterpreterService = {
+  // Original interpreters
   interpretRSI,
   interpretMACD,
   interpretBollingerBands,
@@ -774,5 +1351,21 @@ export const indicatorInterpreterService = {
   interpretHistoricalVolatility,
   interpretMovingAverage,
   detectDivergences,
-  buildIndicatorAnalysis
+  buildIndicatorAnalysis,
+  // New interpreters for 40+ indicators
+  interpretADX,
+  interpretIchimoku,
+  interpretSupertrend,
+  interpretStochastic,
+  interpretCCI,
+  interpretWilliamsR,
+  interpretMFI,
+  interpretOBV,
+  interpretVWAP,
+  interpretCMF,
+  interpretSqueeze,
+  interpretAroon,
+  interpretWhaleActivity,
+  interpretSpoofingDetection,
+  interpretMarketImpact,
 };
