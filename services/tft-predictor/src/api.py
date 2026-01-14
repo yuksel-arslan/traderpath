@@ -70,6 +70,52 @@ class HealthResponse(BaseModel):
     model_type: str
 
 
+class TrainRequest(BaseModel):
+    """Request model for training."""
+    symbols: List[str] = Field(..., description="Symbols to train on")
+    epochs: int = Field(50, description="Number of training epochs")
+    batch_size: int = Field(64, description="Training batch size")
+
+
+class TrainStatusResponse(BaseModel):
+    """Training status response."""
+    status: str  # not_trained, training, trained, error
+    last_trained_at: Optional[str] = None
+    model_version: Optional[str] = None
+    metrics: Optional[dict] = None
+    symbols: List[str] = []
+
+
+class TrainProgressResponse(BaseModel):
+    """Training progress response."""
+    epoch: int
+    total_epochs: int
+    loss: float
+    val_loss: float
+    eta: str
+    status: str
+    logs: List[str]
+
+
+# Training state (in-memory)
+training_state = {
+    "status": "not_trained",
+    "last_trained_at": None,
+    "model_version": None,
+    "metrics": None,
+    "symbols": [],
+    "progress": {
+        "epoch": 0,
+        "total_epochs": 0,
+        "loss": 0,
+        "val_loss": 0,
+        "eta": "-",
+        "status": "idle",
+        "logs": []
+    }
+}
+
+
 # ============ API Endpoints ============
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])
@@ -154,6 +200,113 @@ async def get_supported_symbols():
         ],
         "note": "Any symbol available on Binance USDT pair is supported"
     }
+
+
+# ============ Training Endpoints ============
+
+@app.get("/train/status", response_model=TrainStatusResponse, tags=["Training"])
+async def get_training_status():
+    """Get current training status and model info."""
+    return TrainStatusResponse(
+        status=training_state["status"],
+        last_trained_at=training_state["last_trained_at"],
+        model_version=training_state["model_version"],
+        metrics=training_state["metrics"],
+        symbols=training_state["symbols"]
+    )
+
+
+@app.get("/train/progress", response_model=TrainProgressResponse, tags=["Training"])
+async def get_training_progress():
+    """Get current training progress."""
+    return TrainProgressResponse(**training_state["progress"])
+
+
+@app.post("/train/start", tags=["Training"])
+async def start_training(request: TrainRequest, background_tasks: BackgroundTasks):
+    """Start model training in background."""
+    if training_state["status"] == "training":
+        raise HTTPException(status_code=400, detail="Training already in progress")
+
+    # Initialize training state
+    training_state["status"] = "training"
+    training_state["symbols"] = [s.upper() for s in request.symbols]
+    training_state["progress"] = {
+        "epoch": 0,
+        "total_epochs": request.epochs,
+        "loss": 1.0,
+        "val_loss": 1.0,
+        "eta": "Calculating...",
+        "status": "running",
+        "logs": [f"Training started with symbols: {', '.join(training_state['symbols'])}"]
+    }
+
+    # Run training in background
+    background_tasks.add_task(
+        run_training,
+        training_state["symbols"],
+        request.epochs,
+        request.batch_size
+    )
+
+    return {"message": "Training started", "symbols": training_state["symbols"]}
+
+
+@app.post("/train/stop", tags=["Training"])
+async def stop_training():
+    """Stop current training."""
+    if training_state["status"] != "training":
+        raise HTTPException(status_code=400, detail="No training in progress")
+
+    training_state["status"] = "not_trained"
+    training_state["progress"]["status"] = "stopped"
+    training_state["progress"]["logs"].append("Training stopped by user")
+
+    return {"message": "Training stopped"}
+
+
+async def run_training(symbols: List[str], epochs: int, batch_size: int):
+    """Background training task."""
+    import asyncio
+    from datetime import datetime
+
+    try:
+        for epoch in range(1, epochs + 1):
+            if training_state["status"] != "training":
+                break
+
+            # Simulate training progress (replace with actual training)
+            await asyncio.sleep(2)
+
+            training_state["progress"]["epoch"] = epoch
+            training_state["progress"]["loss"] = max(0.01, 1.0 - (epoch / epochs) * 0.8 + (hash(str(epoch)) % 100) / 1000)
+            training_state["progress"]["val_loss"] = max(0.02, 1.0 - (epoch / epochs) * 0.75 + (hash(str(epoch + 1)) % 100) / 1000)
+
+            remaining = epochs - epoch
+            training_state["progress"]["eta"] = f"{remaining * 2}s"
+            training_state["progress"]["logs"].append(
+                f"Epoch {epoch}/{epochs} - Loss: {training_state['progress']['loss']:.4f}, Val Loss: {training_state['progress']['val_loss']:.4f}"
+            )
+
+        # Training complete
+        if training_state["status"] == "training":
+            training_state["status"] = "trained"
+            training_state["last_trained_at"] = datetime.now().isoformat()
+            training_state["model_version"] = f"v{int(datetime.now().timestamp())}"
+            training_state["metrics"] = {
+                "validationLoss": training_state["progress"]["val_loss"],
+                "mape": 2.5 + (hash(str(epochs)) % 200) / 100,
+                "trainingSamples": len(symbols) * 1000,
+                "epochs": epochs
+            }
+            training_state["progress"]["status"] = "completed"
+            training_state["progress"]["logs"].append("Training completed successfully!")
+
+    except Exception as e:
+        logger.error(f"Training failed: {e}")
+        training_state["status"] = "error"
+        training_state["progress"]["status"] = "failed"
+        training_state["progress"]["logs"].append(f"Training failed: {str(e)}")
 
 
 # ============ Main Entry Point ============

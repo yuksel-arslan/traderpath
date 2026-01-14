@@ -675,54 +675,92 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   // ===========================================
   // TFT Model Training Endpoints (Admin Only)
+  // Proxies to TFT Python service
   // ===========================================
 
-  // TFT training state (in-memory for simplicity)
-  const tftState = {
-    status: 'not_trained' as 'not_trained' | 'training' | 'trained' | 'error',
-    lastTrainedAt: null as string | null,
-    modelVersion: null as string | null,
-    metrics: null as { validationLoss: number; mape: number; trainingSamples: number; epochs: number } | null,
-    symbols: [] as string[],
-    progress: null as { epoch: number; totalEpochs: number; loss: number; valLoss: number; eta: string; logs: string[] } | null,
-    trainingProcess: null as ReturnType<typeof setTimeout> | null,
-  };
+  const TFT_SERVICE_URL = process.env.TFT_SERVICE_URL || 'http://localhost:8001';
 
   // GET /api/admin/tft/status - Get TFT model status
   app.get('/tft/status', {
     preHandler: requireAdmin,
   }, async (_request: FastifyRequest, reply: FastifyReply) => {
-    // Check if model file exists (simulate)
-    const modelExists = tftState.status === 'trained' || tftState.metrics !== null;
+    try {
+      const response = await fetch(`${TFT_SERVICE_URL}/train/status`, {
+        signal: AbortSignal.timeout(5000),
+      });
 
-    return reply.send({
-      success: true,
-      data: {
-        status: tftState.status,
-        lastTrainedAt: tftState.lastTrainedAt,
-        modelVersion: tftState.modelVersion,
-        metrics: tftState.metrics,
-        symbols: tftState.symbols,
-      },
-    });
+      if (!response.ok) {
+        throw new Error(`TFT service error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return reply.send({
+        success: true,
+        data: {
+          status: data.status,
+          lastTrainedAt: data.last_trained_at,
+          modelVersion: data.model_version,
+          metrics: data.metrics,
+          symbols: data.symbols,
+        },
+      });
+    } catch (error) {
+      // Return default state if TFT service is unavailable
+      return reply.send({
+        success: true,
+        data: {
+          status: 'not_trained',
+          lastTrainedAt: null,
+          modelVersion: null,
+          metrics: null,
+          symbols: [],
+          serviceError: String(error),
+        },
+      });
+    }
   });
 
   // GET /api/admin/tft/progress - Get training progress
   app.get('/tft/progress', {
     preHandler: requireAdmin,
   }, async (_request: FastifyRequest, reply: FastifyReply) => {
-    return reply.send({
-      success: true,
-      data: tftState.progress || {
-        epoch: 0,
-        totalEpochs: 0,
-        loss: 0,
-        valLoss: 0,
-        eta: '-',
-        status: 'idle',
-        logs: [],
-      },
-    });
+    try {
+      const response = await fetch(`${TFT_SERVICE_URL}/train/progress`, {
+        signal: AbortSignal.timeout(5000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`TFT service error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return reply.send({
+        success: true,
+        data: {
+          epoch: data.epoch,
+          totalEpochs: data.total_epochs,
+          loss: data.loss,
+          valLoss: data.val_loss,
+          eta: data.eta,
+          status: data.status,
+          logs: data.logs,
+        },
+      });
+    } catch (error) {
+      return reply.send({
+        success: true,
+        data: {
+          epoch: 0,
+          totalEpochs: 0,
+          loss: 0,
+          valLoss: 0,
+          eta: '-',
+          status: 'idle',
+          logs: [],
+          serviceError: String(error),
+        },
+      });
+    }
   });
 
   // POST /api/admin/tft/train - Start TFT training
@@ -733,13 +771,6 @@ export default async function adminRoutes(app: FastifyInstance) {
   }>, reply: FastifyReply) => {
     const { symbols, epochs = 50, batchSize = 64 } = request.body;
 
-    if (tftState.status === 'training') {
-      return reply.status(400).send({
-        success: false,
-        error: { code: 'TRAINING_IN_PROGRESS', message: 'Training is already in progress' },
-      });
-    }
-
     if (!symbols || symbols.length === 0) {
       return reply.status(400).send({
         success: false,
@@ -747,89 +778,64 @@ export default async function adminRoutes(app: FastifyInstance) {
       });
     }
 
-    // Start training (simulated for now - will be replaced with actual TFT service call)
-    tftState.status = 'training';
-    tftState.symbols = symbols;
-    tftState.progress = {
-      epoch: 0,
-      totalEpochs: epochs,
-      loss: 1.0,
-      valLoss: 1.0,
-      eta: 'Calculating...',
-      logs: [`Training started with symbols: ${symbols.join(', ')}`],
-    };
+    try {
+      const response = await fetch(`${TFT_SERVICE_URL}/train/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbols, epochs, batch_size: batchSize }),
+        signal: AbortSignal.timeout(10000),
+      });
 
-    // Simulate training progress (in production, this would call the TFT Python service)
-    const simulateTraining = () => {
-      if (tftState.status !== 'training' || !tftState.progress) return;
-
-      tftState.progress.epoch += 1;
-      tftState.progress.loss = Math.max(0.01, 1.0 - (tftState.progress.epoch / epochs) * 0.8 + Math.random() * 0.1);
-      tftState.progress.valLoss = Math.max(0.02, 1.0 - (tftState.progress.epoch / epochs) * 0.75 + Math.random() * 0.15);
-
-      const remainingEpochs = epochs - tftState.progress.epoch;
-      const etaSeconds = remainingEpochs * 30; // ~30 seconds per epoch
-      tftState.progress.eta = formatUptime(etaSeconds);
-
-      tftState.progress.logs.push(
-        `Epoch ${tftState.progress.epoch}/${epochs} - Loss: ${tftState.progress.loss.toFixed(4)}, Val Loss: ${tftState.progress.valLoss.toFixed(4)}`
-      );
-
-      if (tftState.progress.epoch >= epochs) {
-        // Training complete
-        tftState.status = 'trained';
-        tftState.lastTrainedAt = new Date().toISOString();
-        tftState.modelVersion = `v${Date.now()}`;
-        tftState.metrics = {
-          validationLoss: tftState.progress.valLoss,
-          mape: 2.5 + Math.random() * 2,
-          trainingSamples: symbols.length * 1000,
-          epochs: epochs,
-        };
-        tftState.progress.logs.push('Training completed successfully!');
-        tftState.trainingProcess = null;
-      } else {
-        // Continue training
-        tftState.trainingProcess = setTimeout(simulateTraining, 2000); // 2 seconds per epoch for demo
+      if (!response.ok) {
+        const error = await response.json();
+        return reply.status(response.status).send({
+          success: false,
+          error: { code: 'TFT_ERROR', message: error.detail || 'Training failed to start' },
+        });
       }
-    };
 
-    // Start simulation
-    tftState.trainingProcess = setTimeout(simulateTraining, 1000);
-
-    return reply.send({
-      success: true,
-      data: { message: 'Training started', symbols, epochs },
-    });
+      const data = await response.json();
+      return reply.send({
+        success: true,
+        data: { message: data.message, symbols: data.symbols, epochs },
+      });
+    } catch (error) {
+      return reply.status(503).send({
+        success: false,
+        error: { code: 'TFT_SERVICE_UNAVAILABLE', message: `TFT service unavailable: ${error}` },
+      });
+    }
   });
 
   // POST /api/admin/tft/stop - Stop TFT training
   app.post('/tft/stop', {
     preHandler: requireAdmin,
   }, async (_request: FastifyRequest, reply: FastifyReply) => {
-    if (tftState.status !== 'training') {
-      return reply.status(400).send({
+    try {
+      const response = await fetch(`${TFT_SERVICE_URL}/train/stop`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(5000),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        return reply.status(response.status).send({
+          success: false,
+          error: { code: 'TFT_ERROR', message: error.detail || 'Failed to stop training' },
+        });
+      }
+
+      const data = await response.json();
+      return reply.send({
+        success: true,
+        data: { message: data.message },
+      });
+    } catch (error) {
+      return reply.status(503).send({
         success: false,
-        error: { code: 'NOT_TRAINING', message: 'No training in progress' },
+        error: { code: 'TFT_SERVICE_UNAVAILABLE', message: `TFT service unavailable: ${error}` },
       });
     }
-
-    // Stop training
-    if (tftState.trainingProcess) {
-      clearTimeout(tftState.trainingProcess);
-      tftState.trainingProcess = null;
-    }
-
-    tftState.status = 'not_trained';
-    if (tftState.progress) {
-      tftState.progress.logs.push('Training stopped by user');
-    }
-    tftState.progress = null;
-
-    return reply.send({
-      success: true,
-      data: { message: 'Training stopped' },
-    });
   });
 }
 

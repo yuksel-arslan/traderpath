@@ -34,6 +34,27 @@ services:
       retries: 5
     command: redis-server --appendonly yes
 
+  tft-predictor:
+    build:
+      context: ./services/tft-predictor
+      dockerfile: Dockerfile
+    container_name: traderpath-tft
+    restart: unless-stopped
+    ports:
+      - "${TFT_PORT:-8001}:8000"
+    volumes:
+      - tft_models:/app/models
+    environment:
+      - TFT_MODEL_PATH=/app/models/tft_crypto.pt
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
 volumes:
   postgres_data:
   redis_data:
+  tft_models:
