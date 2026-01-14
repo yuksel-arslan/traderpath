@@ -82,6 +82,7 @@ class TrainRequest(BaseModel):
     symbols: List[str] = Field(..., description="Symbols to train on")
     epochs: int = Field(50, description="Number of training epochs")
     batch_size: int = Field(64, description="Training batch size")
+    trade_type: str = Field("swing", description="Trade type: scalp, swing, or position")
 
 
 class TrainStatusResponse(BaseModel):
@@ -111,6 +112,7 @@ training_state = {
     "model_version": None,
     "metrics": None,
     "symbols": [],
+    "trade_type": "swing",
     "progress": {
         "epoch": 0,
         "total_epochs": 0,
@@ -237,12 +239,21 @@ async def start_training(request: TrainRequest):
     if training_state["status"] == "training":
         raise HTTPException(status_code=400, detail="Training already in progress")
 
+    # Validate trade type
+    valid_trade_types = ['scalp', 'swing', 'position']
+    if request.trade_type not in valid_trade_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid trade type. Must be one of: {', '.join(valid_trade_types)}"
+        )
+
     # Reset stop flag
     _stop_training_flag.clear()
 
     # Initialize training state
     training_state["status"] = "training"
     training_state["symbols"] = [s.upper() for s in request.symbols]
+    training_state["trade_type"] = request.trade_type
     training_state["progress"] = {
         "epoch": 0,
         "total_epochs": request.epochs,
@@ -250,20 +261,27 @@ async def start_training(request: TrainRequest):
         "val_loss": 1.0,
         "eta": "Calculating...",
         "status": "running",
-        "logs": [f"Training started with symbols: {', '.join(training_state['symbols'])}"]
+        "logs": [
+            f"Trade Type: {request.trade_type.upper()}",
+            f"Training started with symbols: {', '.join(training_state['symbols'])}"
+        ]
     }
 
     # Run training in separate thread (more reliable than BackgroundTasks)
     _training_thread = threading.Thread(
         target=run_training_sync,
-        args=(training_state["symbols"], request.epochs, request.batch_size),
+        args=(training_state["symbols"], request.epochs, request.batch_size, request.trade_type),
         daemon=True
     )
     _training_thread.start()
 
-    logger.info(f"Training thread started for symbols: {training_state['symbols']}")
+    logger.info(f"Training thread started for symbols: {training_state['symbols']} with trade_type: {request.trade_type}")
 
-    return {"message": "Training started", "symbols": training_state["symbols"]}
+    return {
+        "message": "Training started",
+        "symbols": training_state["symbols"],
+        "trade_type": request.trade_type
+    }
 
 
 @app.post("/train/stop", tags=["Training"])
@@ -284,7 +302,7 @@ async def stop_training():
     return {"message": "Training stopped"}
 
 
-def run_training_sync(symbols: List[str], epochs: int, batch_size: int):
+def run_training_sync(symbols: List[str], epochs: int, batch_size: int, trade_type: str = "swing"):
     """
     Synchronous training task running in a separate thread.
     More reliable than FastAPI BackgroundTasks for long-running operations.
@@ -292,10 +310,23 @@ def run_training_sync(symbols: List[str], epochs: int, batch_size: int):
     import time
     import random
 
-    logger.info(f"Training thread started: symbols={symbols}, epochs={epochs}, batch_size={batch_size}")
+    logger.info(f"Training thread started: symbols={symbols}, epochs={epochs}, batch_size={batch_size}, trade_type={trade_type}")
+
+    # Trade type configurations
+    trade_type_info = {
+        "scalp": {"interval": "15m", "horizon": "1-4 hours", "data_days": 180},
+        "swing": {"interval": "1h", "horizon": "1-7 days", "data_days": 730},
+        "position": {"interval": "4h", "horizon": "1-4 weeks", "data_days": 1095},
+    }
+    info = trade_type_info.get(trade_type, trade_type_info["swing"])
 
     try:
         start_time = time.time()
+
+        # Log trade type configuration
+        training_state["progress"]["logs"].append(
+            f"Config: interval={info['interval']}, horizon={info['horizon']}, data={info['data_days']} days"
+        )
 
         for epoch in range(1, epochs + 1):
             # Check stop flag
@@ -341,16 +372,17 @@ def run_training_sync(symbols: List[str], epochs: int, batch_size: int):
         if training_state["status"] == "training" and not _stop_training_flag.is_set():
             training_state["status"] = "trained"
             training_state["last_trained_at"] = datetime.now().isoformat()
-            training_state["model_version"] = f"v{int(datetime.now().timestamp())}"
+            training_state["model_version"] = f"{trade_type}_v{int(datetime.now().timestamp())}"
             training_state["metrics"] = {
                 "validationLoss": training_state["progress"]["val_loss"],
                 "mape": round(2.0 + random.uniform(0, 1.5), 2),
                 "trainingSamples": len(symbols) * 1000,
-                "epochs": epochs
+                "epochs": epochs,
+                "tradeType": trade_type
             }
             training_state["progress"]["status"] = "completed"
-            training_state["progress"]["logs"].append("Training completed successfully!")
-            logger.info("Training completed successfully!")
+            training_state["progress"]["logs"].append(f"Training completed! Model: {training_state['model_version']}")
+            logger.info(f"Training completed successfully! Model version: {training_state['model_version']}")
 
     except Exception as e:
         error_msg = f"Training failed: {str(e)}"

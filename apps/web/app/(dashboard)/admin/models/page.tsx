@@ -49,9 +49,16 @@ export default function AdminModelsPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>(['BTC', 'ETH', 'SOL', 'BNB', 'XRP']);
   const [epochs, setEpochs] = useState(50);
+  const [tradeType, setTradeType] = useState<'scalp' | 'swing' | 'position'>('swing');
   const [trainingLogs, setTrainingLogs] = useState<string[]>([]);
 
   const availableSymbols = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC'];
+
+  const tradeTypeOptions = [
+    { value: 'scalp', label: 'Scalp', description: '1-4 saat, yüksek frekanslı' },
+    { value: 'swing', label: 'Swing', description: '1-7 gün, orta vadeli' },
+    { value: 'position', label: 'Position', description: '1-4 hafta, uzun vadeli' },
+  ];
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -123,6 +130,7 @@ export default function AdminModelsPage() {
           symbols: selectedSymbols,
           epochs,
           batchSize: 64,
+          tradeType,
         }),
       });
 
@@ -285,6 +293,28 @@ export default function AdminModelsPage() {
             <p className="text-sm text-muted-foreground mt-2">
               Selected: {selectedSymbols.length} symbols
             </p>
+          </div>
+
+          {/* Trade Type Selection */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2">Trade Type</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {tradeTypeOptions.map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => setTradeType(option.value as 'scalp' | 'swing' | 'position')}
+                  disabled={modelStatus?.status === 'training'}
+                  className={`p-3 rounded-lg border text-left transition ${
+                    tradeType === option.value
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border hover:border-primary/50'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  <div className="font-medium">{option.label}</div>
+                  <div className="text-xs text-muted-foreground">{option.description}</div>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Epochs */}
