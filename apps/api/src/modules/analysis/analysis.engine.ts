@@ -413,6 +413,635 @@ function evaluateAssetGateRuleBased(input: AssetGateEvaluationInput): AssetGateE
 }
 
 // ===========================================
+// STEP 3: Safety Check Gate Evaluation
+// ===========================================
+
+interface SafetyGateEvaluationInput {
+  symbol: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  spoofingDetected: boolean;
+  layeringDetected: boolean;
+  washTrading: boolean;
+  pumpDumpRisk: 'low' | 'medium' | 'high';
+  whaleBias: 'accumulation' | 'distribution' | 'neutral';
+  netFlowUsd: number;
+  orderFlowImbalance: number;
+  smartMoneyPositioning: 'long' | 'short' | 'neutral';
+  volumeSpike: boolean;
+  volumeSpikeFactor: number;
+  liquidityScore: number;
+  warnings: string[];
+}
+
+interface SafetyGateEvaluationResult {
+  canProceed: boolean;
+  reason: string;
+  confidence: number;
+  riskAdjustment: number; // -100 to +100, affects position sizing
+}
+
+async function evaluateSafetyGateWithRAG(input: SafetyGateEvaluationInput): Promise<SafetyGateEvaluationResult> {
+  const GEMINI_API_KEY = config.gemini?.apiKey;
+
+  if (!GEMINI_API_KEY) {
+    return evaluateSafetyGateRuleBased(input);
+  }
+
+  try {
+    const tradingKnowledge = getTradingKnowledgeForAI();
+
+    const prompt = `You are a professional crypto trader evaluating trade safety. Analyze the following safety metrics.
+
+IMPORTANT: You MUST respond in English only.
+
+## Safety Data for ${input.symbol}:
+- Overall Risk Level: ${input.riskLevel}
+- Spoofing Detected: ${input.spoofingDetected}
+- Layering Detected: ${input.layeringDetected}
+- Wash Trading: ${input.washTrading}
+- Pump & Dump Risk: ${input.pumpDumpRisk}
+- Whale Activity Bias: ${input.whaleBias}
+- Net Whale Flow: $${input.netFlowUsd.toLocaleString()}
+- Order Flow Imbalance: ${(input.orderFlowImbalance * 100).toFixed(1)}%
+- Smart Money Positioning: ${input.smartMoneyPositioning}
+- Volume Spike: ${input.volumeSpike ? `Yes (${input.volumeSpikeFactor.toFixed(1)}x)` : 'No'}
+- Liquidity Score: ${input.liquidityScore.toFixed(0)}/100
+- Warnings: ${input.warnings.length > 0 ? input.warnings.join(', ') : 'None'}
+
+## Trading Knowledge:
+${tradingKnowledge}
+
+## Task:
+Evaluate if it's safe to proceed with the trade. Consider manipulation risks, whale activity, and liquidity.
+
+Respond ONLY in the following JSON format:
+{
+  "canProceed": true or false,
+  "reason": "Brief explanation (max 2 sentences)",
+  "confidence": 0-100,
+  "riskAdjustment": -100 to +100 (negative means reduce position size, positive means can increase)
+}`;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
+      }),
+    });
+
+    if (!response.ok) {
+      return evaluateSafetyGateRuleBased(input);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        canProceed: Boolean(parsed.canProceed),
+        reason: String(parsed.reason || 'Safety evaluation completed'),
+        confidence: Math.max(0, Math.min(100, Number(parsed.confidence) || 50)),
+        riskAdjustment: Math.max(-100, Math.min(100, Number(parsed.riskAdjustment) || 0)),
+      };
+    }
+
+    return evaluateSafetyGateRuleBased(input);
+  } catch (error) {
+    console.warn('Safety RAG evaluation failed:', error);
+    return evaluateSafetyGateRuleBased(input);
+  }
+}
+
+function evaluateSafetyGateRuleBased(input: SafetyGateEvaluationInput): SafetyGateEvaluationResult {
+  let score = 70;
+  let riskAdjustment = 0;
+  const reasons: string[] = [];
+
+  // Critical risks - block trade
+  if (input.pumpDumpRisk === 'high') {
+    score -= 40;
+    riskAdjustment -= 50;
+    reasons.push('High pump & dump risk');
+  }
+  if (input.spoofingDetected && input.layeringDetected) {
+    score -= 30;
+    riskAdjustment -= 30;
+    reasons.push('Market manipulation detected');
+  }
+
+  // Medium risks
+  if (input.riskLevel === 'high') {
+    score -= 25;
+    riskAdjustment -= 25;
+  } else if (input.riskLevel === 'medium') {
+    score -= 10;
+    riskAdjustment -= 10;
+  }
+
+  if (input.washTrading) {
+    score -= 15;
+    reasons.push('Wash trading activity');
+  }
+
+  if (input.liquidityScore < 30) {
+    score -= 20;
+    riskAdjustment -= 20;
+    reasons.push('Low liquidity');
+  }
+
+  // Positive factors
+  if (input.whaleBias === 'accumulation') {
+    score += 10;
+    riskAdjustment += 10;
+  }
+  if (input.smartMoneyPositioning !== 'neutral') {
+    score += 5;
+  }
+  if (input.liquidityScore > 70) {
+    score += 10;
+    riskAdjustment += 10;
+  }
+
+  score = Math.max(0, Math.min(100, score));
+  riskAdjustment = Math.max(-100, Math.min(100, riskAdjustment));
+
+  const canProceed = score >= 40;
+  const reason = canProceed
+    ? `Safety check passed with ${input.riskLevel} risk level`
+    : reasons.length > 0
+      ? reasons.slice(0, 2).join(', ')
+      : 'Safety conditions not met';
+
+  return { canProceed, reason, confidence: score, riskAdjustment };
+}
+
+// ===========================================
+// STEP 4: Timing Gate Evaluation
+// ===========================================
+
+interface TimingGateEvaluationInput {
+  symbol: string;
+  currentPrice: number;
+  rsiValue: number;
+  macdSignal: 'bullish' | 'bearish' | 'neutral';
+  volumeConfirmation: boolean;
+  nearSupport: boolean;
+  nearResistance: boolean;
+  trendStrength: number;
+  entryQuality: number;
+  momentum: 'accelerating' | 'decelerating' | 'stable';
+}
+
+interface TimingGateEvaluationResult {
+  canProceed: boolean;
+  reason: string;
+  confidence: number;
+  urgency: 'immediate' | 'soon' | 'wait' | 'avoid';
+}
+
+async function evaluateTimingGateWithRAG(input: TimingGateEvaluationInput): Promise<TimingGateEvaluationResult> {
+  const GEMINI_API_KEY = config.gemini?.apiKey;
+
+  if (!GEMINI_API_KEY) {
+    return evaluateTimingGateRuleBased(input);
+  }
+
+  try {
+    const tradingKnowledge = getTradingKnowledgeForAI();
+
+    const prompt = `You are a professional crypto trader evaluating entry timing. Analyze when to enter this trade.
+
+IMPORTANT: You MUST respond in English only.
+
+## Timing Data for ${input.symbol}:
+- Current Price: $${input.currentPrice.toLocaleString()}
+- RSI: ${input.rsiValue.toFixed(1)}
+- MACD Signal: ${input.macdSignal}
+- Volume Confirmation: ${input.volumeConfirmation ? 'Yes' : 'No'}
+- Near Support: ${input.nearSupport ? 'Yes' : 'No'}
+- Near Resistance: ${input.nearResistance ? 'Yes' : 'No'}
+- Trend Strength: ${input.trendStrength}%
+- Entry Quality Score: ${input.entryQuality}/10
+- Momentum: ${input.momentum}
+
+## Trading Knowledge:
+${tradingKnowledge}
+
+## Task:
+Evaluate if the timing is right for entry. Consider RSI extremes, support/resistance levels, and momentum.
+
+Respond ONLY in the following JSON format:
+{
+  "canProceed": true or false,
+  "reason": "Brief explanation (max 2 sentences)",
+  "confidence": 0-100,
+  "urgency": "immediate" or "soon" or "wait" or "avoid"
+}`;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
+      }),
+    });
+
+    if (!response.ok) {
+      return evaluateTimingGateRuleBased(input);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      const validUrgency = ['immediate', 'soon', 'wait', 'avoid'].includes(parsed.urgency) ? parsed.urgency : 'wait';
+      return {
+        canProceed: Boolean(parsed.canProceed),
+        reason: String(parsed.reason || 'Timing evaluation completed'),
+        confidence: Math.max(0, Math.min(100, Number(parsed.confidence) || 50)),
+        urgency: validUrgency,
+      };
+    }
+
+    return evaluateTimingGateRuleBased(input);
+  } catch (error) {
+    console.warn('Timing RAG evaluation failed:', error);
+    return evaluateTimingGateRuleBased(input);
+  }
+}
+
+function evaluateTimingGateRuleBased(input: TimingGateEvaluationInput): TimingGateEvaluationResult {
+  let score = 50;
+  let urgency: 'immediate' | 'soon' | 'wait' | 'avoid' = 'wait';
+  const reasons: string[] = [];
+
+  // RSI signals
+  if (input.rsiValue < 30) {
+    score += 20;
+    reasons.push('RSI oversold');
+    urgency = 'soon';
+  } else if (input.rsiValue > 70) {
+    score += 15; // Good for shorts
+    reasons.push('RSI overbought');
+    urgency = 'soon';
+  } else if (input.rsiValue >= 40 && input.rsiValue <= 60) {
+    score += 5; // Neutral zone
+  }
+
+  // Support/Resistance
+  if (input.nearSupport && input.macdSignal === 'bullish') {
+    score += 25;
+    urgency = 'immediate';
+    reasons.push('At support with bullish signal');
+  }
+  if (input.nearResistance && input.macdSignal === 'bearish') {
+    score += 20;
+    urgency = 'immediate';
+    reasons.push('At resistance with bearish signal');
+  }
+
+  // Volume and momentum
+  if (input.volumeConfirmation) {
+    score += 15;
+  }
+  if (input.momentum === 'accelerating') {
+    score += 10;
+  } else if (input.momentum === 'decelerating') {
+    score -= 10;
+  }
+
+  // Entry quality
+  score += (input.entryQuality - 5) * 3;
+
+  score = Math.max(0, Math.min(100, score));
+
+  if (score >= 75) urgency = 'immediate';
+  else if (score >= 55) urgency = 'soon';
+  else if (score >= 35) urgency = 'wait';
+  else urgency = 'avoid';
+
+  const canProceed = score >= 45;
+  const reason = canProceed
+    ? reasons.length > 0 ? reasons[0] : 'Timing conditions favorable'
+    : 'Wait for better entry timing';
+
+  return { canProceed, reason, confidence: score, urgency };
+}
+
+// ===========================================
+// STEP 5: Trade Plan Gate Evaluation
+// ===========================================
+
+interface TradePlanGateEvaluationInput {
+  symbol: string;
+  direction: 'long' | 'short';
+  riskRewardRatio: number;
+  winRateEstimate: number;
+  positionSizePercent: number;
+  stopLossPercent: number;
+  targetCount: number;
+  averageTargetPercent: number;
+}
+
+interface TradePlanGateEvaluationResult {
+  canProceed: boolean;
+  reason: string;
+  confidence: number;
+  planQuality: 'excellent' | 'good' | 'acceptable' | 'poor';
+}
+
+async function evaluateTradePlanGateWithRAG(input: TradePlanGateEvaluationInput): Promise<TradePlanGateEvaluationResult> {
+  const GEMINI_API_KEY = config.gemini?.apiKey;
+
+  if (!GEMINI_API_KEY) {
+    return evaluateTradePlanGateRuleBased(input);
+  }
+
+  try {
+    const tradingKnowledge = getTradingKnowledgeForAI();
+
+    const prompt = `You are a professional crypto trader evaluating a trade plan. Analyze if this plan is worth executing.
+
+IMPORTANT: You MUST respond in English only.
+
+## Trade Plan for ${input.symbol}:
+- Direction: ${input.direction.toUpperCase()}
+- Risk/Reward Ratio: ${input.riskRewardRatio.toFixed(2)}
+- Estimated Win Rate: ${input.winRateEstimate}%
+- Position Size: ${input.positionSizePercent.toFixed(1)}% of portfolio
+- Stop Loss: ${input.stopLossPercent.toFixed(2)}% from entry
+- Take Profit Targets: ${input.targetCount}
+- Average Target: +${input.averageTargetPercent.toFixed(2)}%
+
+## Trading Knowledge:
+${tradingKnowledge}
+
+## Task:
+Evaluate if this trade plan has positive expected value. Consider R:R, win rate, and position sizing.
+
+Respond ONLY in the following JSON format:
+{
+  "canProceed": true or false,
+  "reason": "Brief explanation (max 2 sentences)",
+  "confidence": 0-100,
+  "planQuality": "excellent" or "good" or "acceptable" or "poor"
+}`;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
+      }),
+    });
+
+    if (!response.ok) {
+      return evaluateTradePlanGateRuleBased(input);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      const validQuality = ['excellent', 'good', 'acceptable', 'poor'].includes(parsed.planQuality) ? parsed.planQuality : 'acceptable';
+      return {
+        canProceed: Boolean(parsed.canProceed),
+        reason: String(parsed.reason || 'Trade plan evaluation completed'),
+        confidence: Math.max(0, Math.min(100, Number(parsed.confidence) || 50)),
+        planQuality: validQuality,
+      };
+    }
+
+    return evaluateTradePlanGateRuleBased(input);
+  } catch (error) {
+    console.warn('Trade Plan RAG evaluation failed:', error);
+    return evaluateTradePlanGateRuleBased(input);
+  }
+}
+
+function evaluateTradePlanGateRuleBased(input: TradePlanGateEvaluationInput): TradePlanGateEvaluationResult {
+  let score = 50;
+  let planQuality: 'excellent' | 'good' | 'acceptable' | 'poor' = 'acceptable';
+
+  // Risk/Reward evaluation
+  if (input.riskRewardRatio >= 3) {
+    score += 30;
+  } else if (input.riskRewardRatio >= 2) {
+    score += 20;
+  } else if (input.riskRewardRatio >= 1.5) {
+    score += 10;
+  } else if (input.riskRewardRatio < 1) {
+    score -= 30;
+  }
+
+  // Win rate impact
+  if (input.winRateEstimate >= 60) {
+    score += 15;
+  } else if (input.winRateEstimate >= 50) {
+    score += 5;
+  } else if (input.winRateEstimate < 40) {
+    score -= 15;
+  }
+
+  // Expected value calculation
+  const expectedValue = (input.winRateEstimate / 100) * input.riskRewardRatio - (1 - input.winRateEstimate / 100);
+  if (expectedValue > 0.5) {
+    score += 20;
+  } else if (expectedValue > 0.2) {
+    score += 10;
+  } else if (expectedValue < 0) {
+    score -= 25;
+  }
+
+  // Position sizing check
+  if (input.positionSizePercent > 10) {
+    score -= 15; // Over-leveraged
+  } else if (input.positionSizePercent <= 2) {
+    score += 5; // Conservative
+  }
+
+  score = Math.max(0, Math.min(100, score));
+
+  if (score >= 80) planQuality = 'excellent';
+  else if (score >= 60) planQuality = 'good';
+  else if (score >= 40) planQuality = 'acceptable';
+  else planQuality = 'poor';
+
+  const canProceed = score >= 45;
+  const reason = canProceed
+    ? `R:R of ${input.riskRewardRatio.toFixed(1)} with ${input.winRateEstimate}% win rate`
+    : 'Trade plan does not meet minimum criteria';
+
+  return { canProceed, reason, confidence: score, planQuality };
+}
+
+// ===========================================
+// STEP 6: Trap Check Gate Evaluation
+// ===========================================
+
+interface TrapGateEvaluationInput {
+  symbol: string;
+  bullTrap: boolean;
+  bearTrap: boolean;
+  liquidityGrabDetected: boolean;
+  stopHuntZonesCount: number;
+  fakeoutRisk: 'low' | 'medium' | 'high';
+  liquidationLevelsNearby: number;
+  riskLevel: 'low' | 'medium' | 'high';
+}
+
+interface TrapGateEvaluationResult {
+  canProceed: boolean;
+  reason: string;
+  confidence: number;
+  trapRisk: 'minimal' | 'moderate' | 'elevated' | 'severe';
+}
+
+async function evaluateTrapGateWithRAG(input: TrapGateEvaluationInput): Promise<TrapGateEvaluationResult> {
+  const GEMINI_API_KEY = config.gemini?.apiKey;
+
+  if (!GEMINI_API_KEY) {
+    return evaluateTrapGateRuleBased(input);
+  }
+
+  try {
+    const tradingKnowledge = getTradingKnowledgeForAI();
+
+    const prompt = `You are a professional crypto trader evaluating trap risks. Analyze potential market traps.
+
+IMPORTANT: You MUST respond in English only.
+
+## Trap Analysis for ${input.symbol}:
+- Bull Trap Detected: ${input.bullTrap ? 'Yes' : 'No'}
+- Bear Trap Detected: ${input.bearTrap ? 'Yes' : 'No'}
+- Liquidity Grab Detected: ${input.liquidityGrabDetected ? 'Yes' : 'No'}
+- Stop Hunt Zones: ${input.stopHuntZonesCount}
+- Fakeout Risk: ${input.fakeoutRisk}
+- Nearby Liquidation Levels: ${input.liquidationLevelsNearby}
+- Overall Risk Level: ${input.riskLevel}
+
+## Trading Knowledge:
+${tradingKnowledge}
+
+## Task:
+Evaluate if the trade can proceed safely or if trap risks are too high. Consider all trap indicators.
+
+Respond ONLY in the following JSON format:
+{
+  "canProceed": true or false,
+  "reason": "Brief explanation (max 2 sentences)",
+  "confidence": 0-100,
+  "trapRisk": "minimal" or "moderate" or "elevated" or "severe"
+}`;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
+      }),
+    });
+
+    if (!response.ok) {
+      return evaluateTrapGateRuleBased(input);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      const validRisk = ['minimal', 'moderate', 'elevated', 'severe'].includes(parsed.trapRisk) ? parsed.trapRisk : 'moderate';
+      return {
+        canProceed: Boolean(parsed.canProceed),
+        reason: String(parsed.reason || 'Trap evaluation completed'),
+        confidence: Math.max(0, Math.min(100, Number(parsed.confidence) || 50)),
+        trapRisk: validRisk,
+      };
+    }
+
+    return evaluateTrapGateRuleBased(input);
+  } catch (error) {
+    console.warn('Trap RAG evaluation failed:', error);
+    return evaluateTrapGateRuleBased(input);
+  }
+}
+
+function evaluateTrapGateRuleBased(input: TrapGateEvaluationInput): TrapGateEvaluationResult {
+  let score = 70;
+  let trapRisk: 'minimal' | 'moderate' | 'elevated' | 'severe' = 'moderate';
+  const reasons: string[] = [];
+
+  // Critical traps
+  if (input.bullTrap && input.bearTrap) {
+    score -= 40;
+    trapRisk = 'severe';
+    reasons.push('Multiple trap patterns detected');
+  } else if (input.bullTrap) {
+    score -= 25;
+    reasons.push('Bull trap detected');
+  } else if (input.bearTrap) {
+    score -= 25;
+    reasons.push('Bear trap detected');
+  }
+
+  // Liquidity risks
+  if (input.liquidityGrabDetected) {
+    score -= 20;
+    reasons.push('Liquidity grab in progress');
+  }
+
+  if (input.stopHuntZonesCount > 3) {
+    score -= 15;
+  } else if (input.stopHuntZonesCount > 1) {
+    score -= 8;
+  }
+
+  // Fakeout risk
+  if (input.fakeoutRisk === 'high') {
+    score -= 20;
+  } else if (input.fakeoutRisk === 'medium') {
+    score -= 10;
+  }
+
+  // Nearby liquidations
+  if (input.liquidationLevelsNearby > 5) {
+    score -= 15;
+  }
+
+  // Overall risk
+  if (input.riskLevel === 'high') {
+    score -= 15;
+  }
+
+  score = Math.max(0, Math.min(100, score));
+
+  if (score >= 75) trapRisk = 'minimal';
+  else if (score >= 55) trapRisk = 'moderate';
+  else if (score >= 35) trapRisk = 'elevated';
+  else trapRisk = 'severe';
+
+  const canProceed = score >= 40;
+  const reason = canProceed
+    ? `Trap risk is ${trapRisk}, proceed with caution`
+    : reasons.length > 0 ? reasons[0] : 'High trap risk detected';
+
+  return { canProceed, reason, confidence: score, trapRisk };
+}
+
+// ===========================================
 // Price Formatting Utility
 // Handles decimal precision based on price level
 // ===========================================
@@ -1075,6 +1704,13 @@ interface SafetyCheckResult {
   // Detailed indicator analysis with interpretations (for advanced metrics)
   indicatorDetails?: IndicatorAnalysis;
   score: number;
+  // Gate evaluation result
+  gate: {
+    canProceed: boolean;
+    reason: string;
+    confidence: number;
+    riskAdjustment: number;
+  };
 }
 
 // Step 4 Types
@@ -1101,6 +1737,13 @@ interface TimingResult {
     estimatedTime: string;
   };
   score: number;
+  // Gate evaluation result
+  gate: {
+    canProceed: boolean;
+    reason: string;
+    confidence: number;
+    urgency: 'immediate' | 'soon' | 'wait' | 'avoid';
+  };
 }
 
 // Step 5 Types (Enhanced - uses all previous step data)
@@ -1145,6 +1788,13 @@ interface TradePlanResult {
   };
   // New: Confidence from integrated analysis
   confidence: number;
+  // Gate evaluation result
+  gate: {
+    canProceed: boolean;
+    reason: string;
+    confidence: number;
+    planQuality: 'excellent' | 'good' | 'acceptable' | 'poor';
+  };
 }
 
 // Step 6 Types
@@ -1171,6 +1821,13 @@ interface TrapCheckResult {
   proTip: string;
   riskLevel: 'low' | 'medium' | 'high';
   score: number;
+  // Gate evaluation result
+  gate: {
+    canProceed: boolean;
+    reason: string;
+    confidence: number;
+    trapRisk: 'minimal' | 'moderate' | 'elevated' | 'severe';
+  };
 }
 
 // Step 6 Types - Preliminary Verdict (decides BEFORE trade plan)
@@ -3076,6 +3733,25 @@ export const analysisEngine = {
     // Calculate score (inverse of risk)
     const score = Math.max(1, Math.min(10, riskScore / 10));
 
+    // Gate evaluation
+    const gateInput: SafetyGateEvaluationInput = {
+      symbol,
+      riskLevel,
+      spoofingDetected,
+      layeringDetected,
+      washTrading,
+      pumpDumpRisk,
+      whaleBias,
+      netFlowUsd,
+      orderFlowImbalance: orderFlowImbalance.imbalance,
+      smartMoneyPositioning,
+      volumeSpike: volumeSpike.isSpike,
+      volumeSpikeFactor: volumeSpike.factor,
+      liquidityScore,
+      warnings,
+    };
+    const gateResult = await evaluateSafetyGateWithRAG(gateInput);
+
     return {
       symbol,
       manipulation: {
@@ -3159,6 +3835,12 @@ export const analysisEngine = {
         historicalVolatility: stepIndicators.get('HISTORICAL_VOLATILITY')?.value ?? historicalVol,
       }),
       score,
+      gate: {
+        canProceed: gateResult.canProceed,
+        reason: gateResult.reason,
+        confidence: gateResult.confidence,
+        riskAdjustment: gateResult.riskAdjustment,
+      },
     };
   },
 
@@ -3323,6 +4005,23 @@ export const analysisEngine = {
     if (rsi4h >= 30 && rsi4h <= 50) score += 0.5;
     score = Math.max(1, Math.min(10, parseFloat(score.toFixed(1))));
 
+    // Gate evaluation
+    const nearSupport = levels.support.length > 0 && currentPrice <= (levels.support[0] ?? currentPrice) * 1.03;
+    const nearResistance = levels.resistance.length > 0 && currentPrice >= (levels.resistance[0] ?? currentPrice) * 0.97;
+    const timingGateInput: TimingGateEvaluationInput = {
+      symbol,
+      currentPrice,
+      rsiValue: rsi4h,
+      macdSignal: macd.histogram > 0 ? 'bullish' : macd.histogram < 0 ? 'bearish' : 'neutral',
+      volumeConfirmation: relativeVolume >= 0.8 && relativeVolume <= 2.0,
+      nearSupport,
+      nearResistance,
+      trendStrength: trend.strength,
+      entryQuality: entryZones.length > 0 ? entryZones[0]?.quality ?? 5 : 5,
+      momentum: pvt.momentum > 0.01 ? 'accelerating' : pvt.momentum < -0.01 ? 'decelerating' : 'stable',
+    };
+    const timingGateResult = await evaluateTimingGateWithRAG(timingGateInput);
+
     return {
       symbol,
       currentPrice,
@@ -3333,6 +4032,12 @@ export const analysisEngine = {
       optimalEntry,
       waitFor,
       score,
+      gate: {
+        canProceed: timingGateResult.canProceed,
+        reason: timingGateResult.reason,
+        confidence: timingGateResult.confidence,
+        urgency: timingGateResult.urgency,
+      },
     };
   },
 
@@ -3453,6 +4158,20 @@ export const analysisEngine = {
     if (stopPercentage <= 5) score += 0.5;
     score = Math.max(1, Math.min(10, parseFloat(score.toFixed(1))));
 
+    // Gate evaluation
+    const avgTargetPercent = takeProfits.reduce((sum, tp) => sum + Math.abs((tp.price - averageEntry) / averageEntry * 100) * (tp.percentage / 100), 0);
+    const tradePlanGateInput: TradePlanGateEvaluationInput = {
+      symbol,
+      direction,
+      riskRewardRatio: avgRR,
+      winRateEstimate,
+      positionSizePercent,
+      stopLossPercent: stopPercentage,
+      targetCount: takeProfits.length,
+      averageTargetPercent: avgTargetPercent,
+    };
+    const tradePlanGateResult = await evaluateTradePlanGateWithRAG(tradePlanGateInput);
+
     return {
       symbol,
       direction,
@@ -3475,6 +4194,12 @@ export const analysisEngine = {
         targets: ['R:R calculation'],
       },
       confidence: trend.strength,
+      gate: {
+        canProceed: tradePlanGateResult.canProceed,
+        reason: tradePlanGateResult.reason,
+        confidence: tradePlanGateResult.confidence,
+        planQuality: tradePlanGateResult.planQuality,
+      },
     };
   },
 
@@ -3602,6 +4327,19 @@ export const analysisEngine = {
     if (lowVolumeBreakout) score -= 1;
     score = Math.max(1, Math.min(10, score));
 
+    // Gate evaluation
+    const trapGateInput: TrapGateEvaluationInput = {
+      symbol,
+      bullTrap,
+      bearTrap,
+      liquidityGrabDetected: liquidityGrabZones.length > 0,
+      stopHuntZonesCount: stopHuntZones.length,
+      fakeoutRisk,
+      liquidationLevelsNearby: longLiquidations.length + shortLiquidations.length,
+      riskLevel,
+    };
+    const trapGateResult = await evaluateTrapGateWithRAG(trapGateInput);
+
     return {
       symbol,
       traps: {
@@ -3621,6 +4359,12 @@ export const analysisEngine = {
       proTip,
       riskLevel,
       score,
+      gate: {
+        canProceed: trapGateResult.canProceed,
+        reason: trapGateResult.reason,
+        confidence: trapGateResult.confidence,
+        trapRisk: trapGateResult.trapRisk,
+      },
     };
   },
 
@@ -3859,14 +4603,71 @@ export const analysisEngine = {
       reasons.push({ factor: 'High trap risk', positive: false, impact: 'high', source: 'Trap Check' });
     }
 
+    // ===== GATE-BASED EVALUATION =====
+    // Sequential gate approach: each step must pass before proceeding
+    const gateResults = {
+      marketPulse: marketPulse.gate,
+      assetScan: assetScan.gate,
+      safetyCheck: safetyCheck.gate,
+      timing: timing.gate,
+      trapCheck: trapCheck.gate,
+    };
+
+    // Count gates that passed
+    const gatesPassed = [
+      gateResults.marketPulse.canProceed,
+      gateResults.assetScan.canProceed,
+      gateResults.safetyCheck.canProceed,
+      gateResults.timing.canProceed,
+      gateResults.trapCheck.canProceed,
+    ].filter(Boolean).length;
+
+    // Calculate average gate confidence
+    const avgGateConfidence = (
+      gateResults.marketPulse.confidence +
+      gateResults.assetScan.confidence +
+      gateResults.safetyCheck.confidence +
+      gateResults.timing.confidence +
+      gateResults.trapCheck.confidence
+    ) / 5;
+
+    // Add gate reasons to the reasons list
+    if (!gateResults.marketPulse.canProceed) {
+      reasons.push({ factor: `Market Pulse gate: ${gateResults.marketPulse.reason}`, positive: false, impact: 'high', source: 'Market Pulse Gate' });
+    }
+    if (!gateResults.assetScan.canProceed) {
+      reasons.push({ factor: `Asset Scanner gate: ${gateResults.assetScan.reason}`, positive: false, impact: 'high', source: 'Asset Scanner Gate' });
+    }
+    if (!gateResults.safetyCheck.canProceed) {
+      reasons.push({ factor: `Safety gate: ${gateResults.safetyCheck.reason}`, positive: false, impact: 'high', source: 'Safety Check Gate' });
+    }
+    if (!gateResults.timing.canProceed) {
+      reasons.push({ factor: `Timing gate: ${gateResults.timing.reason}`, positive: false, impact: 'medium', source: 'Timing Gate' });
+    }
+    if (!gateResults.trapCheck.canProceed) {
+      reasons.push({ factor: `Trap gate: ${gateResults.trapCheck.reason}`, positive: false, impact: 'high', source: 'Trap Check Gate' });
+    }
+
+    // Use Asset Scanner direction recommendation if available
+    if (assetScan.direction && assetScan.directionConfidence > 50) {
+      directionSources.push({
+        source: 'Asset Scanner Gate',
+        direction: assetScan.direction,
+        weight: 0.15,
+        reason: `RAG-based direction with ${assetScan.directionConfidence}% confidence`
+      });
+    }
+
     // ===== VERDICT DETERMINATION =====
     let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
     let shouldGenerateTradePlan = false;
 
-    // AVOID conditions (highest priority)
+    // AVOID conditions (highest priority) - includes gate failures
+    const criticalGatesFailed = !gateResults.safetyCheck.canProceed || !gateResults.trapCheck.canProceed;
     if (safetyCheck.riskLevel === 'high' ||
         safetyCheck.manipulation.pumpDumpRisk === 'high' ||
-        (trapCheck.riskLevel === 'high' && (trapCheck.traps.bullTrap || trapCheck.traps.bearTrap))) {
+        (trapCheck.riskLevel === 'high' && (trapCheck.traps.bullTrap || trapCheck.traps.bearTrap)) ||
+        (criticalGatesFailed && avgGateConfidence < 30)) {
       verdict = 'avoid';
       direction = null;
       shouldGenerateTradePlan = false;
@@ -3879,13 +4680,27 @@ export const analysisEngine = {
                                  safetyCheck.score >= 7.0 &&
                                  trapCheck.score >= 7.0;
 
+    // Gate-based strength check
+    const allGatesPassed = gatesPassed === 5;
+    const mostGatesPassed = gatesPassed >= 4;
+    const highGateConfidence = avgGateConfidence >= 60;
+
     const veryStrongScore = score >= 7.5;
     const strongScore = score >= 6.5;
 
-    // GO conditions - AGGRESSIVE: Act early when indicators are aligned
+    // GO conditions - GATE-ENHANCED: Use RAG gate results for intelligent decisions
+    // Priority 0: All gates passed with high confidence = GO (new gate-first approach)
+    if (allGatesPassed &&
+        highGateConfidence &&
+        direction !== null &&
+        safetyCheck.riskLevel !== 'high') {
+      verdict = 'go';
+      shouldGenerateTradePlan = true;
+    }
     // Priority 1: Very strong score with strong components = GO regardless of direction confidence
-    if (veryStrongScore &&
+    else if (veryStrongScore &&
         allComponentsStrong &&
+        mostGatesPassed &&
         safetyCheck.riskLevel !== 'high' &&
         trapCheck.riskLevel !== 'high') {
       verdict = 'go';
@@ -3896,37 +4711,40 @@ export const analysisEngine = {
                    marketPulse.trend.direction === 'bearish' ? 'short' : 'long';
       }
     }
-    // Priority 2: Strong score with direction - lower confidence threshold (40% instead of 60%)
+    // Priority 2: Strong score with direction and most gates passed
     else if (score >= 7.0 &&
              direction !== null &&
              directionConfidence >= 40 &&
+             mostGatesPassed &&
              safetyCheck.riskLevel !== 'high' &&
              trapCheck.riskLevel !== 'high') {
       verdict = 'go';
       shouldGenerateTradePlan = true;
     }
-    // Priority 3: Good score with any direction signal
+    // Priority 3: Good score with any direction signal and gates mostly passing
     else if (strongScore &&
              direction !== null &&
              directionConfidence >= 30 &&
+             gatesPassed >= 3 &&
              safetyCheck.riskLevel !== 'high') {
       verdict = 'conditional_go';
       shouldGenerateTradePlan = true;
     }
-    // Priority 4: Moderate score but clear direction
+    // Priority 4: Moderate score but clear direction (gates may be mixed)
     else if (score >= 5.5 &&
              direction !== null &&
-             directionConfidence >= 40) {
+             directionConfidence >= 40 &&
+             gatesPassed >= 2) {
       verdict = 'conditional_go';
       shouldGenerateTradePlan = true;
     }
-    // WAIT only when score is truly low or safety is compromised
-    else if (score < 5.0 || safetyCheck.riskLevel === 'high') {
+    // WAIT only when score is truly low, safety is compromised, or most gates failed
+    else if (score < 5.0 || safetyCheck.riskLevel === 'high' || gatesPassed < 2) {
       verdict = 'wait';
       shouldGenerateTradePlan = false;
     }
-    // Default: If we have decent score, give conditional go
-    else if (score >= 5.0) {
+    // Default: If we have decent score and some gates passed, give conditional go
+    else if (score >= 5.0 && gatesPassed >= 2) {
       verdict = 'conditional_go';
       shouldGenerateTradePlan = true;
       if (direction === null) {
@@ -3935,9 +4753,10 @@ export const analysisEngine = {
       }
     }
 
-    // Final confidence calculation
+    // Final confidence calculation - now factors in gate confidence
+    const gateConfidenceBonus = (avgGateConfidence - 50) / 100; // -0.5 to +0.5
     const confidence = direction !== null
-      ? parseFloat((directionConfidence * (score / 10)).toFixed(1))
+      ? parseFloat((directionConfidence * (score / 10) * (1 + gateConfidenceBonus)).toFixed(1))
       : 0;
 
     return {
@@ -4268,7 +5087,18 @@ export const analysisEngine = {
       },
       score,
       sources,
-      confidence: preliminaryVerdict.confidence
+      confidence: preliminaryVerdict.confidence,
+      // Gate evaluation for integrated trade plan
+      gate: {
+        canProceed: riskReward >= 1.5 && winRateEstimate >= 45,
+        reason: riskReward >= 1.5 && winRateEstimate >= 45
+          ? `Integrated plan has R:R ${riskReward.toFixed(1)} with ${winRateEstimate}% win rate`
+          : `R:R ${riskReward.toFixed(1)} or win rate ${winRateEstimate}% below threshold`,
+        confidence: Math.round((riskReward / 3 + winRateEstimate / 100) * 50),
+        planQuality: riskReward >= 3 && winRateEstimate >= 60 ? 'excellent'
+          : riskReward >= 2 && winRateEstimate >= 50 ? 'good'
+          : riskReward >= 1.5 ? 'acceptable' : 'poor',
+      },
     };
   },
 
