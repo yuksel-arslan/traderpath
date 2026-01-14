@@ -4,13 +4,20 @@ Exposes REST API endpoints for crypto price predictions
 """
 
 import os
+import threading
+import asyncio
+from datetime import datetime
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from loguru import logger
 
 from .predictor import get_predictor_service
+
+# Global training thread reference
+_training_thread: Optional[threading.Thread] = None
+_stop_training_flag = threading.Event()
 
 # Initialize FastAPI
 app = FastAPI(
@@ -223,10 +230,15 @@ async def get_training_progress():
 
 
 @app.post("/train/start", tags=["Training"])
-async def start_training(request: TrainRequest, background_tasks: BackgroundTasks):
-    """Start model training in background."""
+async def start_training(request: TrainRequest):
+    """Start model training in background thread."""
+    global _training_thread
+
     if training_state["status"] == "training":
         raise HTTPException(status_code=400, detail="Training already in progress")
+
+    # Reset stop flag
+    _stop_training_flag.clear()
 
     # Initialize training state
     training_state["status"] = "training"
@@ -241,13 +253,15 @@ async def start_training(request: TrainRequest, background_tasks: BackgroundTask
         "logs": [f"Training started with symbols: {', '.join(training_state['symbols'])}"]
     }
 
-    # Run training in background
-    background_tasks.add_task(
-        run_training,
-        training_state["symbols"],
-        request.epochs,
-        request.batch_size
+    # Run training in separate thread (more reliable than BackgroundTasks)
+    _training_thread = threading.Thread(
+        target=run_training_sync,
+        args=(training_state["symbols"], request.epochs, request.batch_size),
+        daemon=True
     )
+    _training_thread.start()
+
+    logger.info(f"Training thread started for symbols: {training_state['symbols']}")
 
     return {"message": "Training started", "symbols": training_state["symbols"]}
 
@@ -258,55 +272,92 @@ async def stop_training():
     if training_state["status"] != "training":
         raise HTTPException(status_code=400, detail="No training in progress")
 
+    # Signal the training thread to stop
+    _stop_training_flag.set()
+
     training_state["status"] = "not_trained"
     training_state["progress"]["status"] = "stopped"
     training_state["progress"]["logs"].append("Training stopped by user")
 
+    logger.info("Training stop requested")
+
     return {"message": "Training stopped"}
 
 
-async def run_training(symbols: List[str], epochs: int, batch_size: int):
-    """Background training task."""
-    import asyncio
-    from datetime import datetime
+def run_training_sync(symbols: List[str], epochs: int, batch_size: int):
+    """
+    Synchronous training task running in a separate thread.
+    More reliable than FastAPI BackgroundTasks for long-running operations.
+    """
+    import time
+    import random
+
+    logger.info(f"Training thread started: symbols={symbols}, epochs={epochs}, batch_size={batch_size}")
 
     try:
+        start_time = time.time()
+
         for epoch in range(1, epochs + 1):
-            if training_state["status"] != "training":
+            # Check stop flag
+            if _stop_training_flag.is_set():
+                logger.info("Training stopped by user request")
                 break
 
-            # Simulate training progress (replace with actual training)
-            await asyncio.sleep(2)
+            # Check if status changed externally
+            if training_state["status"] != "training":
+                logger.info(f"Training stopped: status changed to {training_state['status']}")
+                break
 
+            # Simulate training progress (replace with actual TFT training)
+            # Using time.sleep instead of asyncio.sleep since we're in a thread
+            time.sleep(2)
+
+            # Calculate metrics with some randomness for realism
+            base_loss = 1.0 - (epoch / epochs) * 0.8
+            noise = random.uniform(-0.05, 0.05)
+            loss = max(0.01, base_loss + noise)
+            val_loss = max(0.02, base_loss + 0.05 + noise)
+
+            # Update progress
             training_state["progress"]["epoch"] = epoch
-            training_state["progress"]["loss"] = max(0.01, 1.0 - (epoch / epochs) * 0.8 + (hash(str(epoch)) % 100) / 1000)
-            training_state["progress"]["val_loss"] = max(0.02, 1.0 - (epoch / epochs) * 0.75 + (hash(str(epoch + 1)) % 100) / 1000)
+            training_state["progress"]["loss"] = round(loss, 4)
+            training_state["progress"]["val_loss"] = round(val_loss, 4)
 
             remaining = epochs - epoch
-            training_state["progress"]["eta"] = f"{remaining * 2}s"
-            training_state["progress"]["logs"].append(
-                f"Epoch {epoch}/{epochs} - Loss: {training_state['progress']['loss']:.4f}, Val Loss: {training_state['progress']['val_loss']:.4f}"
-            )
+            elapsed = time.time() - start_time
+            avg_epoch_time = elapsed / epoch
+            eta_seconds = int(remaining * avg_epoch_time)
+            training_state["progress"]["eta"] = f"{eta_seconds}s" if eta_seconds < 60 else f"{eta_seconds // 60}m {eta_seconds % 60}s"
+
+            log_msg = f"Epoch {epoch}/{epochs} - Loss: {loss:.4f}, Val Loss: {val_loss:.4f}"
+            training_state["progress"]["logs"].append(log_msg)
+            logger.info(log_msg)
+
+            # Keep only last 100 logs to prevent memory issues
+            if len(training_state["progress"]["logs"]) > 100:
+                training_state["progress"]["logs"] = training_state["progress"]["logs"][-100:]
 
         # Training complete
-        if training_state["status"] == "training":
+        if training_state["status"] == "training" and not _stop_training_flag.is_set():
             training_state["status"] = "trained"
             training_state["last_trained_at"] = datetime.now().isoformat()
             training_state["model_version"] = f"v{int(datetime.now().timestamp())}"
             training_state["metrics"] = {
                 "validationLoss": training_state["progress"]["val_loss"],
-                "mape": 2.5 + (hash(str(epochs)) % 200) / 100,
+                "mape": round(2.0 + random.uniform(0, 1.5), 2),
                 "trainingSamples": len(symbols) * 1000,
                 "epochs": epochs
             }
             training_state["progress"]["status"] = "completed"
             training_state["progress"]["logs"].append("Training completed successfully!")
+            logger.info("Training completed successfully!")
 
     except Exception as e:
-        logger.error(f"Training failed: {e}")
+        error_msg = f"Training failed: {str(e)}"
+        logger.error(error_msg, exc_info=True)
         training_state["status"] = "error"
         training_state["progress"]["status"] = "failed"
-        training_state["progress"]["logs"].append(f"Training failed: {str(e)}")
+        training_state["progress"]["logs"].append(error_msg)
 
 
 # ============ Main Entry Point ============
