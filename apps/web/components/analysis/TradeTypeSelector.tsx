@@ -128,7 +128,7 @@ export function TradeTypeSelector({
   value = 'dayTrade',
   onChange,
   variant = 'cards',
-  showCreditCost = true,
+  showCreditCost = false,
   className,
 }: TradeTypeSelectorProps) {
   const [selected, setSelected] = useState<TradeType>(value);

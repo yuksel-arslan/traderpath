@@ -12,21 +12,12 @@ import {
   Gem,
   Loader2,
   CreditCard,
-  Bot,
-  FileText,
-  Languages,
-  Mail,
-  Bell,
   Crown,
 } from 'lucide-react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
 import { cn } from '../../../lib/utils';
-import {
-  ANALYSIS_COSTS,
-  FEATURE_COSTS,
-  FREE_SIGNUP_CREDITS,
-} from '../../../lib/pricing-config';
+import { FREE_SIGNUP_CREDITS } from '../../../lib/pricing-config';
 import { authFetch, getAuthToken, apiBaseUrl } from '../../../lib/api';
 
 // Package type from API
@@ -48,34 +39,25 @@ const PACKAGE_ICONS: Record<string, typeof Zap> = {
   whale: Crown,
 };
 
-// Icon mapping for features
-const FEATURE_ICONS: Record<string, typeof Bot> = {
-  'AI Expert Chat': Bot,
-  'PDF Report': FileText,
-  Translation: Languages,
-  'Email Send': Mail,
-  'Price Alert': Bell,
-};
-
 const FAQS = [
   {
     question: 'What are credits?',
     answer:
-      'Credits are the currency used to run analyses on TraderPath. Each analysis step costs a certain number of credits. You can earn free credits daily or purchase packages.',
+      'Credits are used to run analyses on TraderPath. Each analysis uses credits, and all features (AI Expert, PDF reports, email, etc.) are included at no extra cost.',
   },
   {
     question: 'Do credits expire?',
-    answer: 'No, purchased credits never expire. You can use them whenever you want.',
+    answer: 'No, purchased credits never expire. Use them whenever you want.',
   },
   {
-    question: 'Can I get a refund?',
+    question: 'What\'s included in each analysis?',
     answer:
-      'We offer refunds within 7 days of purchase if no credits have been used. Contact support for assistance.',
+      'Every analysis includes all 7 steps, AI Expert chat, PDF download, email sharing, translation, and price alerts - everything is included!',
   },
   {
     question: 'How do I earn free credits?',
     answer:
-      'You can earn free credits through daily login bonuses (3 credits), the lucky spin wheel (1-10 credits), answering the daily quiz correctly (5 credits), and watching ads (2 credits each, up to 3x daily).',
+      'Earn free credits through daily login bonuses, the lucky spin wheel, daily quiz, and more. Up to 25 free credits every day!',
   },
 ];
 
@@ -347,70 +329,26 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Credit Costs */}
+      {/* What's Included */}
       <section className="py-12">
         <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold text-center mb-8">Credit Costs Per Step</h2>
+          <h2 className="text-2xl font-bold text-center mb-8">All Packages Include</h2>
           <div className="max-w-3xl mx-auto">
-            <div className="bg-card rounded-lg border overflow-hidden">
-              {ANALYSIS_COSTS.map((item, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    'flex items-center justify-between p-4',
-                    index !== ANALYSIS_COSTS.length - 1 && 'border-b'
-                  )}
-                >
-                  <div>
-                    <p className="font-medium">{item.step}</p>
-                    <p className="text-sm text-muted-foreground">{item.description}</p>
-                  </div>
-                  <span
-                    className={cn(
-                      'px-3 py-1 rounded-full text-sm font-medium',
-                      item.credits === 0 ? 'bg-green-500/20 text-green-500' : 'bg-amber-500/20 text-amber-500'
-                    )}
-                  >
-                    {item.credits === 0 ? 'FREE' : `${item.credits} credits`}
-                  </span>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {[
+                { icon: '🔍', title: '7-Step Analysis', desc: 'Complete trading analysis' },
+                { icon: '🤖', title: 'AI Expert Chat', desc: 'Ask questions anytime' },
+                { icon: '📄', title: 'PDF Reports', desc: 'Download & share' },
+                { icon: '📧', title: 'Email Reports', desc: 'Send to your inbox' },
+                { icon: '🌍', title: 'Translation', desc: '10+ languages' },
+                { icon: '🔔', title: 'Price Alerts', desc: 'Never miss a move' },
+              ].map((item, index) => (
+                <div key={index} className="bg-card rounded-lg border p-4 text-center">
+                  <span className="text-3xl mb-2 block">{item.icon}</span>
+                  <p className="font-semibold text-sm">{item.title}</p>
+                  <p className="text-xs text-muted-foreground">{item.desc}</p>
                 </div>
               ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature Costs */}
-      <section className="py-12">
-        <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold text-center mb-8">Feature Costs</h2>
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-card rounded-lg border overflow-hidden">
-              {FEATURE_COSTS.map((item, index) => {
-                const Icon = FEATURE_ICONS[item.name] || Zap;
-                return (
-                  <div
-                    key={index}
-                    className={cn(
-                      'flex items-center justify-between p-4',
-                      index !== FEATURE_COSTS.length - 1 && 'border-b'
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center">
-                        <Icon className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">{item.description}</p>
-                      </div>
-                    </div>
-                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-amber-500/20 text-amber-500">
-                      {item.credits} credits
-                    </span>
-                  </div>
-                );
-              })}
             </div>
           </div>
         </div>

@@ -476,8 +476,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
                 </div>
 
                 <p className="mt-4 text-sm text-muted-foreground">
-                  A new analysis will cost <strong>25 credits</strong>.
-                  If market conditions haven&apos;t changed significantly, consider using the existing analysis.
+                  If market conditions haven&apos;t changed significantly, you can use the existing analysis.
                 </p>
               </div>
 

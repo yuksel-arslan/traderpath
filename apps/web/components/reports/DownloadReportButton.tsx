@@ -1081,11 +1081,6 @@ export function DownloadReportButton({
             <Globe className="w-4 h-4" />
             <span>{REPORT_LANGUAGES[selectedLanguage as keyof typeof REPORT_LANGUAGES] || 'English'}</span>
             <ChevronDown className="w-3 h-3" />
-            {needsTranslation && (
-              <span className="ml-1 px-1.5 py-0.5 text-xs bg-amber-500/20 text-amber-500 rounded">
-                +{TRANSLATION_CREDIT_COST}
-              </span>
-            )}
           </button>
 
           {showLanguageMenu && (
@@ -1103,9 +1098,6 @@ export function DownloadReportButton({
                   )}
                 >
                   <span>{name}</span>
-                  {code !== 'en' && (
-                    <span className="text-xs text-muted-foreground">+{TRANSLATION_CREDIT_COST}</span>
-                  )}
                 </button>
               ))}
             </div>
