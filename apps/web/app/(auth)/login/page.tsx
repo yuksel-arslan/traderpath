@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { FirstLoginModal } from '../../../components/modals/FirstLoginModal';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +18,9 @@ export default function LoginPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [emailNotVerified, setEmailNotVerified] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState('');
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [firstLoginBonus, setFirstLoginBonus] = useState(0);
+  const [welcomeName, setWelcomeName] = useState('');
 
   // Check if email is from Gmail
   const isGoogleEmail = (email: string) => {
@@ -84,8 +88,15 @@ export default function LoginPage() {
           setError(data.error?.message || 'Invalid email or password');
         }
       } else {
-        router.push('/dashboard');
-        router.refresh();
+        // Check if this is first login
+        if (data.data?.isFirstLogin && data.data?.firstLoginBonus) {
+          setFirstLoginBonus(data.data.firstLoginBonus);
+          setWelcomeName(data.data.user?.name || '');
+          setShowWelcomeModal(true);
+        } else {
+          router.push('/dashboard');
+          router.refresh();
+        }
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -100,6 +111,13 @@ export default function LoginPage() {
     setLoadingProvider(provider);
     setError('');
     window.location.href = `/api/auth/${provider}`;
+  };
+
+  // Handle welcome modal close
+  const handleWelcomeModalClose = () => {
+    setShowWelcomeModal(false);
+    router.push('/dashboard');
+    router.refresh();
   };
 
   return (
@@ -283,6 +301,14 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+
+      {/* First Login Welcome Modal */}
+      <FirstLoginModal
+        isOpen={showWelcomeModal}
+        onClose={handleWelcomeModalClose}
+        bonusCredits={firstLoginBonus}
+        userName={welcomeName}
+      />
     </div>
   );
 }
