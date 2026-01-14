@@ -54,6 +54,8 @@ async function evaluateMarketGateWithRAG(input: GateEvaluationInput): Promise<Ga
 
     const prompt = `You are a professional crypto trader. Based on the market data below, evaluate whether current market conditions are suitable for opening trades.
 
+IMPORTANT: You MUST respond in English only.
+
 ## Market Data:
 - Fear & Greed Index: ${input.fearGreedIndex} (${input.fearGreedLabel})
 - BTC Daily Trend: ${input.btcTrend.direction} (${input.btcTrend.strength}% strength)
@@ -242,6 +244,8 @@ async function evaluateAssetGateWithRAG(input: AssetGateEvaluationInput): Promis
     const tradingKnowledge = getTradingKnowledgeForAI();
 
     const prompt = `You are a professional crypto trader. Based on the asset data below, evaluate whether this specific asset is suitable for trading.
+
+IMPORTANT: You MUST respond in English only.
 
 ## Asset Data for ${input.symbol}:
 - Current Price: $${input.currentPrice.toLocaleString()}
@@ -971,6 +975,7 @@ interface AssetScanResult {
       price: number;
       probability: number;
     }>;
+    modelType?: string; // 'tft' or 'statistical_fallback'
   };
   levels: {
     resistance: number[];
