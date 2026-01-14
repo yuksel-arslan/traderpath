@@ -971,6 +971,7 @@ interface AssetScanResult {
       price: number;
       probability: number;
     }>;
+    modelType?: string; // 'tft' or 'statistical_fallback'
   };
   levels: {
     resistance: number[];
