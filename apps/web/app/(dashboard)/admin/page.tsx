@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
   DollarSign,
+  Brain,
 } from 'lucide-react';
 import Link from 'next/link';
 import { authFetch } from '../../../lib/api';
@@ -352,6 +353,13 @@ export default function AdminPage() {
         >
           <DollarSign className="w-4 h-4" />
           Finance
+        </Link>
+        <Link
+          href="/admin/models"
+          className="flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-muted-foreground hover:text-foreground transition"
+        >
+          <Brain className="w-4 h-4" />
+          AI Models
         </Link>
       </div>
 

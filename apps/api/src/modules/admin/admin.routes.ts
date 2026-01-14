@@ -672,6 +672,165 @@ export default async function adminRoutes(app: FastifyInstance) {
       message: 'Credit costs reset to defaults',
     });
   });
+
+  // ===========================================
+  // TFT Model Training Endpoints (Admin Only)
+  // ===========================================
+
+  // TFT training state (in-memory for simplicity)
+  const tftState = {
+    status: 'not_trained' as 'not_trained' | 'training' | 'trained' | 'error',
+    lastTrainedAt: null as string | null,
+    modelVersion: null as string | null,
+    metrics: null as { validationLoss: number; mape: number; trainingSamples: number; epochs: number } | null,
+    symbols: [] as string[],
+    progress: null as { epoch: number; totalEpochs: number; loss: number; valLoss: number; eta: string; logs: string[] } | null,
+    trainingProcess: null as ReturnType<typeof setTimeout> | null,
+  };
+
+  // GET /api/admin/tft/status - Get TFT model status
+  app.get('/tft/status', {
+    preHandler: requireAdmin,
+  }, async (_request: FastifyRequest, reply: FastifyReply) => {
+    // Check if model file exists (simulate)
+    const modelExists = tftState.status === 'trained' || tftState.metrics !== null;
+
+    return reply.send({
+      success: true,
+      data: {
+        status: tftState.status,
+        lastTrainedAt: tftState.lastTrainedAt,
+        modelVersion: tftState.modelVersion,
+        metrics: tftState.metrics,
+        symbols: tftState.symbols,
+      },
+    });
+  });
+
+  // GET /api/admin/tft/progress - Get training progress
+  app.get('/tft/progress', {
+    preHandler: requireAdmin,
+  }, async (_request: FastifyRequest, reply: FastifyReply) => {
+    return reply.send({
+      success: true,
+      data: tftState.progress || {
+        epoch: 0,
+        totalEpochs: 0,
+        loss: 0,
+        valLoss: 0,
+        eta: '-',
+        status: 'idle',
+        logs: [],
+      },
+    });
+  });
+
+  // POST /api/admin/tft/train - Start TFT training
+  app.post('/tft/train', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest<{
+    Body: { symbols: string[]; epochs: number; batchSize: number }
+  }>, reply: FastifyReply) => {
+    const { symbols, epochs = 50, batchSize = 64 } = request.body;
+
+    if (tftState.status === 'training') {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'TRAINING_IN_PROGRESS', message: 'Training is already in progress' },
+      });
+    }
+
+    if (!symbols || symbols.length === 0) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'NO_SYMBOLS', message: 'At least one symbol is required' },
+      });
+    }
+
+    // Start training (simulated for now - will be replaced with actual TFT service call)
+    tftState.status = 'training';
+    tftState.symbols = symbols;
+    tftState.progress = {
+      epoch: 0,
+      totalEpochs: epochs,
+      loss: 1.0,
+      valLoss: 1.0,
+      eta: 'Calculating...',
+      logs: [`Training started with symbols: ${symbols.join(', ')}`],
+    };
+
+    // Simulate training progress (in production, this would call the TFT Python service)
+    const simulateTraining = () => {
+      if (tftState.status !== 'training' || !tftState.progress) return;
+
+      tftState.progress.epoch += 1;
+      tftState.progress.loss = Math.max(0.01, 1.0 - (tftState.progress.epoch / epochs) * 0.8 + Math.random() * 0.1);
+      tftState.progress.valLoss = Math.max(0.02, 1.0 - (tftState.progress.epoch / epochs) * 0.75 + Math.random() * 0.15);
+
+      const remainingEpochs = epochs - tftState.progress.epoch;
+      const etaSeconds = remainingEpochs * 30; // ~30 seconds per epoch
+      tftState.progress.eta = formatUptime(etaSeconds);
+
+      tftState.progress.logs.push(
+        `Epoch ${tftState.progress.epoch}/${epochs} - Loss: ${tftState.progress.loss.toFixed(4)}, Val Loss: ${tftState.progress.valLoss.toFixed(4)}`
+      );
+
+      if (tftState.progress.epoch >= epochs) {
+        // Training complete
+        tftState.status = 'trained';
+        tftState.lastTrainedAt = new Date().toISOString();
+        tftState.modelVersion = `v${Date.now()}`;
+        tftState.metrics = {
+          validationLoss: tftState.progress.valLoss,
+          mape: 2.5 + Math.random() * 2,
+          trainingSamples: symbols.length * 1000,
+          epochs: epochs,
+        };
+        tftState.progress.logs.push('Training completed successfully!');
+        tftState.trainingProcess = null;
+      } else {
+        // Continue training
+        tftState.trainingProcess = setTimeout(simulateTraining, 2000); // 2 seconds per epoch for demo
+      }
+    };
+
+    // Start simulation
+    tftState.trainingProcess = setTimeout(simulateTraining, 1000);
+
+    return reply.send({
+      success: true,
+      data: { message: 'Training started', symbols, epochs },
+    });
+  });
+
+  // POST /api/admin/tft/stop - Stop TFT training
+  app.post('/tft/stop', {
+    preHandler: requireAdmin,
+  }, async (_request: FastifyRequest, reply: FastifyReply) => {
+    if (tftState.status !== 'training') {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'NOT_TRAINING', message: 'No training in progress' },
+      });
+    }
+
+    // Stop training
+    if (tftState.trainingProcess) {
+      clearTimeout(tftState.trainingProcess);
+      tftState.trainingProcess = null;
+    }
+
+    tftState.status = 'not_trained';
+    if (tftState.progress) {
+      tftState.progress.logs.push('Training stopped by user');
+    }
+    tftState.progress = null;
+
+    return reply.send({
+      success: true,
+      data: { message: 'Training stopped' },
+    });
+  });
 }
 
 // Helper functions
