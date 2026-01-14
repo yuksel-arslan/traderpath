@@ -337,6 +337,7 @@ export default function PricingPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {[
                 { icon: '🔍', title: '7-Step Analysis', desc: 'Complete trading analysis' },
+                { icon: '🧠', title: 'AI Price Prediction', desc: 'TFT deep learning model' },
                 { icon: '🤖', title: 'AI Expert Chat', desc: 'Ask questions anytime' },
                 { icon: '📄', title: 'PDF Reports', desc: 'Download & share' },
                 { icon: '📧', title: 'Email Reports', desc: 'Send to your inbox' },
