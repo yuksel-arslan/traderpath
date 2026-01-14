@@ -30,7 +30,7 @@ function StarLogo({ size, uniqueId }: { size: number; uniqueId: string }) {
       viewBox="0 0 200 200"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="flex-shrink-0"
+      className="flex-shrink-0 star-logo-animated"
     >
       <defs>
         <linearGradient id={tealId} x1="0%" y1="0%" x2="100%" y2="100%">

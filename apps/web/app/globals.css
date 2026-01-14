@@ -281,6 +281,16 @@
     font-weight: 700;
   }
 
+  /* TraderPath Star Logo Animation - Slow clockwise rotation */
+  .star-logo-animated {
+    animation: star-rotate 12s linear infinite;
+    filter: drop-shadow(0 0 8px rgba(45, 212, 168, 0.4));
+  }
+
+  .star-logo-animated:hover {
+    filter: drop-shadow(0 0 12px rgba(45, 212, 168, 0.6));
+  }
+
   /* Trading Gradient - Red to Green */
   .gradient-trading {
     @apply bg-gradient-to-r from-red-500 via-amber-500 to-green-500;
@@ -452,6 +462,16 @@
   }
   100% {
     background-position: 0% 50%;
+  }
+}
+
+/* Star logo slow clockwise rotation */
+@keyframes star-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 
