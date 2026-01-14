@@ -19,6 +19,7 @@ import {
   Bell,
 } from 'lucide-react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
+import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
 import { cn } from '../../../lib/utils';
 import {
   ANALYSIS_COSTS,
@@ -166,13 +167,9 @@ export default function PricingPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link
-            href="/"
-            className="text-2xl font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent"
-          >
-            TraderPath
-          </Link>
+        <div className="w-full px-2 sm:px-4 lg:px-6 py-4 flex items-center justify-between">
+          <TraderPathLogo size="sm" showText={true} showTagline={false} href="/" className="flex sm:hidden" />
+          <TraderPathLogo size="md" showText={true} showTagline={true} href="/" className="hidden sm:flex" />
           <nav className="hidden md:flex items-center gap-6">
             <Link href="/#features" className="text-muted-foreground hover:text-foreground transition">
               Features
@@ -221,7 +218,7 @@ export default function PricingPage() {
       {/* Hero */}
       <section className="py-16 text-center">
         <div className="container mx-auto px-4">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Simple, Transparent Pricing</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">Transparent Pricing</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Pay only for what you use. No subscriptions, no hidden fees.
             {!isLoggedIn && ` Start with ${FREE_SIGNUP_CREDITS} free credits.`}
