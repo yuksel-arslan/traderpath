@@ -11,6 +11,195 @@ import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/
 import { IndicatorAnalysis } from '@traderpath/types';
 import { IndicatorsService, OHLCV, IndicatorResult } from './services/indicators.service';
 import { getTFTClient, TFTForecast } from './services/tft-client.service';
+import { getTradingKnowledgeForAI } from '../ai-expert/trading-knowledge-base';
+
+// ===========================================
+// RAG Gate Evaluation with Gemini
+// ===========================================
+
+interface GateEvaluationInput {
+  fearGreedIndex: number;
+  fearGreedLabel: string;
+  btcTrend: { direction: string; strength: number };
+  trend4h: { direction: string; strength: number };
+  trend1h: { direction: string; strength: number };
+  timeframesAligned: number;
+  marketRegime: string;
+  fundingRate: number;
+  longShortRatio: number;
+  topTraderLongShortRatio: number;
+  takerBuySellRatio: number;
+  openInterestValue: number;
+  btcPrice24hChange: number;
+  newsSentiment: string;
+}
+
+interface GateEvaluationResult {
+  canProceed: boolean;
+  reason: string;
+  confidence: number;
+}
+
+async function evaluateMarketGateWithRAG(input: GateEvaluationInput): Promise<GateEvaluationResult> {
+  const GEMINI_API_KEY = config.gemini?.apiKey;
+
+  // Fallback to rule-based if no API key
+  if (!GEMINI_API_KEY) {
+    return evaluateMarketGateRuleBased(input);
+  }
+
+  try {
+    // Get trading knowledge for context (RAG)
+    const tradingKnowledge = getTradingKnowledgeForAI();
+
+    const prompt = `Sen profesyonel bir kripto trader'sın. Aşağıdaki piyasa verilerine bakarak, şu anda işlem açmak için piyasa koşullarının uygun olup olmadığını değerlendir.
+
+## Piyasa Verileri:
+- Fear & Greed Index: ${input.fearGreedIndex} (${input.fearGreedLabel})
+- BTC Günlük Trend: ${input.btcTrend.direction} (%${input.btcTrend.strength} güç)
+- BTC 4H Trend: ${input.trend4h.direction} (%${input.trend4h.strength} güç)
+- BTC 1H Trend: ${input.trend1h.direction} (%${input.trend1h.strength} güç)
+- Timeframe Uyumu: ${input.timeframesAligned}/4
+- Market Regime: ${input.marketRegime}
+- BTC 24h Değişim: %${input.btcPrice24hChange.toFixed(2)}
+- Funding Rate: %${input.fundingRate.toFixed(4)}
+- Long/Short Ratio: ${input.longShortRatio.toFixed(2)}
+- Top Trader L/S Ratio: ${input.topTraderLongShortRatio.toFixed(2)}
+- Taker Buy/Sell Ratio: ${input.takerBuySellRatio.toFixed(2)}
+- Open Interest: $${(input.openInterestValue / 1e9).toFixed(2)}B
+- Haber Sentiment: ${input.newsSentiment}
+
+## Trading Bilgisi:
+${tradingKnowledge}
+
+## Görev:
+Yukarıdaki verilere dayanarak, piyasanın işlem açmak için uygun olup olmadığını değerlendir.
+
+Yanıtını SADECE aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
+{
+  "canProceed": true veya false,
+  "reason": "Kısa ve net açıklama (maksimum 2 cümle)",
+  "confidence": 0-100 arası güven skoru
+}`;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 200,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn('Gemini API error, falling back to rule-based evaluation');
+      return evaluateMarketGateRuleBased(input);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    // Parse JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        canProceed: Boolean(parsed.canProceed),
+        reason: String(parsed.reason || 'Değerlendirme tamamlandı'),
+        confidence: Number(parsed.confidence) || 50,
+      };
+    }
+
+    return evaluateMarketGateRuleBased(input);
+  } catch (error) {
+    console.warn('RAG gate evaluation failed, falling back to rule-based:', error);
+    return evaluateMarketGateRuleBased(input);
+  }
+}
+
+function evaluateMarketGateRuleBased(input: GateEvaluationInput): GateEvaluationResult {
+  const reasons: string[] = [];
+  let score = 50; // Base score
+
+  // Fear & Greed evaluation
+  if (input.fearGreedIndex <= 20) {
+    reasons.push('Extreme fear - yüksek risk');
+    score -= 20;
+  } else if (input.fearGreedIndex <= 35) {
+    reasons.push('Fear mode - dikkatli olunmalı');
+    score -= 10;
+  } else if (input.fearGreedIndex >= 80) {
+    reasons.push('Extreme greed - düzeltme riski');
+    score -= 15;
+  } else if (input.fearGreedIndex >= 55) {
+    score += 10;
+  }
+
+  // Trend alignment
+  if (input.timeframesAligned >= 3) {
+    score += 15;
+  } else if (input.timeframesAligned <= 1) {
+    reasons.push('Timeframe uyumsuzluğu');
+    score -= 10;
+  }
+
+  // BTC trend strength
+  if (input.btcTrend.strength >= 70) {
+    score += 10;
+  } else if (input.btcTrend.strength <= 30) {
+    reasons.push('Zayıf trend');
+    score -= 10;
+  }
+
+  // Funding rate (extreme values indicate crowded trades)
+  if (Math.abs(input.fundingRate) > 0.1) {
+    reasons.push(`Aşırı funding rate (%${input.fundingRate.toFixed(3)})`);
+    score -= 15;
+  }
+
+  // Long/Short imbalance
+  if (input.longShortRatio > 2) {
+    reasons.push('Aşırı long pozisyon yoğunluğu');
+    score -= 10;
+  } else if (input.longShortRatio < 0.5) {
+    reasons.push('Aşırı short pozisyon yoğunluğu');
+    score -= 10;
+  }
+
+  // News sentiment
+  if (input.newsSentiment === 'bearish') {
+    score -= 10;
+  } else if (input.newsSentiment === 'bullish') {
+    score += 5;
+  }
+
+  // Market regime
+  if (input.marketRegime === 'risk_off') {
+    reasons.push('Risk-off market ortamı');
+    score -= 20;
+  } else if (input.marketRegime === 'risk_on') {
+    score += 15;
+  }
+
+  // Clamp score
+  score = Math.max(0, Math.min(100, score));
+
+  const canProceed = score >= 45;
+  const reason = canProceed
+    ? 'Piyasa koşulları işlem için uygun'
+    : reasons.length > 0
+      ? reasons.slice(0, 2).join(', ')
+      : 'Piyasa koşulları belirsiz';
+
+  return {
+    canProceed,
+    reason,
+    confidence: score,
+  };
+}
 
 // ===========================================
 // Price Formatting Utility
@@ -518,6 +707,18 @@ interface MarketPulseResult {
     strength: number;
     timeframesAligned: number;
   };
+  // NEW: Futures market data
+  futuresData?: {
+    fundingRate: number; // percentage
+    fundingRateInterpretation: 'bullish' | 'bearish' | 'neutral';
+    openInterest: number; // in USDT
+    openInterestChange24h?: number;
+    longShortRatio: number;
+    longAccount: number; // percentage
+    shortAccount: number; // percentage
+    topTraderLongShortRatio: number;
+    takerBuySellRatio: number;
+  };
   macroEvents: Array<{
     name: string;
     date: string;
@@ -535,6 +736,12 @@ interface MarketPulseResult {
   summary: string;
   verdict: 'suitable' | 'caution' | 'avoid';
   score: number;
+  // NEW: Gate decision for sequential approach
+  gate: {
+    canProceed: boolean;
+    reason: string;
+    confidence: number;
+  };
 }
 
 // Step 2 Types
@@ -964,6 +1171,211 @@ async function fetchRecentTrades(
   const url = `https://api.binance.com/api/v3/trades?symbol=${symbol}USDT&limit=${limit}`;
   const response = await fetchWithRetry(url);
   return safeJsonParse<Array<{ price: string; qty: string; time: number; isBuyerMaker: boolean }>>(response);
+}
+
+// =========================================
+// Binance Futures API - Market Pulse Data
+// =========================================
+
+interface FundingRateData {
+  symbol: string;
+  fundingRate: number;
+  fundingTime: number;
+  nextFundingTime: number;
+}
+
+async function fetchFundingRate(symbol: string = 'BTC'): Promise<FundingRateData> {
+  const cacheKey = `funding_rate:${symbol}`;
+  const cached = getCached<FundingRateData>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const url = `https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=1`;
+    const response = await fetchWithRetry(url);
+    const data = await safeJsonParse<Array<{
+      symbol: string;
+      fundingRate: string;
+      fundingTime: number;
+    }>>(response);
+
+    if (data.length === 0) {
+      return { symbol, fundingRate: 0, fundingTime: Date.now(), nextFundingTime: Date.now() + 8 * 60 * 60 * 1000 };
+    }
+
+    const result: FundingRateData = {
+      symbol: data[0].symbol,
+      fundingRate: parseFloat(data[0].fundingRate) * 100, // Convert to percentage
+      fundingTime: data[0].fundingTime,
+      nextFundingTime: data[0].fundingTime + 8 * 60 * 60 * 1000, // 8 hours later
+    };
+
+    setCache(cacheKey, result, 60 * 1000); // 1 minute cache
+    return result;
+  } catch {
+    return { symbol, fundingRate: 0, fundingTime: Date.now(), nextFundingTime: Date.now() + 8 * 60 * 60 * 1000 };
+  }
+}
+
+interface OpenInterestData {
+  symbol: string;
+  openInterest: number;
+  openInterestValue: number; // in USDT
+  change24h?: number;
+}
+
+async function fetchOpenInterest(symbol: string = 'BTC'): Promise<OpenInterestData> {
+  const cacheKey = `open_interest:${symbol}`;
+  const cached = getCached<OpenInterestData>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const url = `https://fapi.binance.com/fapi/v1/openInterest?symbol=${symbol}USDT`;
+    const response = await fetchWithRetry(url);
+    const data = await safeJsonParse<{
+      symbol: string;
+      openInterest: string;
+    }>(response);
+
+    // Get current price to calculate value
+    const ticker = await fetch24hTicker(symbol);
+
+    const result: OpenInterestData = {
+      symbol: data.symbol,
+      openInterest: parseFloat(data.openInterest),
+      openInterestValue: parseFloat(data.openInterest) * ticker.price,
+    };
+
+    setCache(cacheKey, result, 60 * 1000); // 1 minute cache
+    return result;
+  } catch {
+    return { symbol, openInterest: 0, openInterestValue: 0 };
+  }
+}
+
+interface LongShortRatioData {
+  symbol: string;
+  longShortRatio: number;
+  longAccount: number;
+  shortAccount: number;
+  timestamp: number;
+}
+
+async function fetchLongShortRatio(symbol: string = 'BTC'): Promise<LongShortRatioData> {
+  const cacheKey = `long_short_ratio:${symbol}`;
+  const cached = getCached<LongShortRatioData>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const url = `https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${symbol}USDT&period=5m&limit=1`;
+    const response = await fetchWithRetry(url);
+    const data = await safeJsonParse<Array<{
+      symbol: string;
+      longShortRatio: string;
+      longAccount: string;
+      shortAccount: string;
+      timestamp: number;
+    }>>(response);
+
+    if (data.length === 0) {
+      return { symbol, longShortRatio: 1, longAccount: 50, shortAccount: 50, timestamp: Date.now() };
+    }
+
+    const result: LongShortRatioData = {
+      symbol: data[0].symbol,
+      longShortRatio: parseFloat(data[0].longShortRatio),
+      longAccount: parseFloat(data[0].longAccount) * 100,
+      shortAccount: parseFloat(data[0].shortAccount) * 100,
+      timestamp: data[0].timestamp,
+    };
+
+    setCache(cacheKey, result, 60 * 1000); // 1 minute cache
+    return result;
+  } catch {
+    return { symbol, longShortRatio: 1, longAccount: 50, shortAccount: 50, timestamp: Date.now() };
+  }
+}
+
+interface TopTraderSentiment {
+  symbol: string;
+  topTraderLongShortRatio: number;
+  topTraderLongAccount: number;
+  topTraderShortAccount: number;
+  timestamp: number;
+}
+
+async function fetchTopTraderSentiment(symbol: string = 'BTC'): Promise<TopTraderSentiment> {
+  const cacheKey = `top_trader_sentiment:${symbol}`;
+  const cached = getCached<TopTraderSentiment>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const url = `https://fapi.binance.com/futures/data/topLongShortAccountRatio?symbol=${symbol}USDT&period=5m&limit=1`;
+    const response = await fetchWithRetry(url);
+    const data = await safeJsonParse<Array<{
+      symbol: string;
+      longShortRatio: string;
+      longAccount: string;
+      shortAccount: string;
+      timestamp: number;
+    }>>(response);
+
+    if (data.length === 0) {
+      return { symbol, topTraderLongShortRatio: 1, topTraderLongAccount: 50, topTraderShortAccount: 50, timestamp: Date.now() };
+    }
+
+    const result: TopTraderSentiment = {
+      symbol: data[0].symbol,
+      topTraderLongShortRatio: parseFloat(data[0].longShortRatio),
+      topTraderLongAccount: parseFloat(data[0].longAccount) * 100,
+      topTraderShortAccount: parseFloat(data[0].shortAccount) * 100,
+      timestamp: data[0].timestamp,
+    };
+
+    setCache(cacheKey, result, 60 * 1000); // 1 minute cache
+    return result;
+  } catch {
+    return { symbol, topTraderLongShortRatio: 1, topTraderLongAccount: 50, topTraderShortAccount: 50, timestamp: Date.now() };
+  }
+}
+
+interface TakerBuySellRatio {
+  buySellRatio: number;
+  buyVolume: number;
+  sellVolume: number;
+  timestamp: number;
+}
+
+async function fetchTakerBuySellRatio(symbol: string = 'BTC'): Promise<TakerBuySellRatio> {
+  const cacheKey = `taker_buy_sell:${symbol}`;
+  const cached = getCached<TakerBuySellRatio>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const url = `https://fapi.binance.com/futures/data/takerlongshortRatio?symbol=${symbol}USDT&period=5m&limit=1`;
+    const response = await fetchWithRetry(url);
+    const data = await safeJsonParse<Array<{
+      buySellRatio: string;
+      buyVol: string;
+      sellVol: string;
+      timestamp: number;
+    }>>(response);
+
+    if (data.length === 0) {
+      return { buySellRatio: 1, buyVolume: 0, sellVolume: 0, timestamp: Date.now() };
+    }
+
+    const result: TakerBuySellRatio = {
+      buySellRatio: parseFloat(data[0].buySellRatio),
+      buyVolume: parseFloat(data[0].buyVol),
+      sellVolume: parseFloat(data[0].sellVol),
+      timestamp: data[0].timestamp,
+    };
+
+    setCache(cacheKey, result, 60 * 1000); // 1 minute cache
+    return result;
+  } catch {
+    return { buySellRatio: 1, buyVolume: 0, sellVolume: 0, timestamp: Date.now() };
+  }
 }
 
 interface GlobalMetrics {
@@ -1765,12 +2177,29 @@ export const analysisEngine = {
   // Step 1: Market Pulse (FREE)
   // =========================================
   async getMarketPulse(): Promise<MarketPulseResult> {
-    const [btcData, ethData, globalMetrics, fearGreed, btcNewsSentiment] = await Promise.all([
+    // Fetch all data in parallel for performance
+    const [
+      btcData,
+      ethData,
+      globalMetrics,
+      fearGreed,
+      btcNewsSentiment,
+      btcFundingRate,
+      btcOpenInterest,
+      btcLongShortRatio,
+      btcTopTraderSentiment,
+      btcTakerBuySell,
+    ] = await Promise.all([
       fetch24hTicker('BTC'),
       fetch24hTicker('ETH'),
       fetchGlobalMetrics(),
       fetchFearGreedIndex(),
       fetchNewsSentiment('BTC'),
+      fetchFundingRate('BTC'),
+      fetchOpenInterest('BTC'),
+      fetchLongShortRatio('BTC'),
+      fetchTopTraderSentiment('BTC'),
+      fetchTakerBuySellRatio('BTC'),
     ]);
 
     // Fetch BTC candles for trend analysis
@@ -1800,11 +2229,35 @@ export const analysisEngine = {
       btcDominanceTrend = 'falling';
     }
 
-    // Market regime
+    // Funding rate interpretation
+    let fundingRateInterpretation: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+    if (btcFundingRate.fundingRate > 0.05) {
+      fundingRateInterpretation = 'bearish'; // Too many longs, potential reversal
+    } else if (btcFundingRate.fundingRate < -0.05) {
+      fundingRateInterpretation = 'bullish'; // Too many shorts, potential squeeze
+    }
+
+    // Market regime - Enhanced with futures data
     let marketRegime: 'risk_on' | 'risk_off' | 'neutral' = 'neutral';
-    if (fearGreed.value >= 55 && btcTrend.direction === 'bullish') {
+    const bullishSignals = [
+      fearGreed.value >= 50,
+      btcTrend.direction === 'bullish',
+      btcLongShortRatio.longShortRatio > 1,
+      btcTakerBuySell.buySellRatio > 1,
+      btcData.priceChangePercent24h > 0,
+    ].filter(Boolean).length;
+
+    const bearishSignals = [
+      fearGreed.value <= 40,
+      btcTrend.direction === 'bearish',
+      btcLongShortRatio.longShortRatio < 0.8,
+      btcTakerBuySell.buySellRatio < 0.8,
+      btcData.priceChangePercent24h < -3,
+    ].filter(Boolean).length;
+
+    if (bullishSignals >= 4) {
       marketRegime = 'risk_on';
-    } else if (fearGreed.value <= 40 && btcTrend.direction === 'bearish') {
+    } else if (bearishSignals >= 3) {
       marketRegime = 'risk_off';
     }
 
@@ -1816,24 +2269,50 @@ export const analysisEngine = {
     else if (fearGreed.value <= 74) fearGreedLabel = 'greed';
     else fearGreedLabel = 'extreme_greed';
 
-    // Calculate verdict
+    // RAG-based Gate Evaluation
+    const gateInput: GateEvaluationInput = {
+      fearGreedIndex: fearGreed.value,
+      fearGreedLabel,
+      btcTrend: { direction: btcTrend.direction, strength: btcTrend.strength },
+      trend4h: { direction: trend4h.direction, strength: trend4h.strength },
+      trend1h: { direction: trend1h.direction, strength: trend1h.strength },
+      timeframesAligned,
+      marketRegime,
+      fundingRate: btcFundingRate.fundingRate,
+      longShortRatio: btcLongShortRatio.longShortRatio,
+      topTraderLongShortRatio: btcTopTraderSentiment.topTraderLongShortRatio,
+      takerBuySellRatio: btcTakerBuySell.buySellRatio,
+      openInterestValue: btcOpenInterest.openInterestValue,
+      btcPrice24hChange: btcData.priceChangePercent24h,
+      newsSentiment: btcNewsSentiment.overallSentiment,
+    };
+
+    const gateResult = await evaluateMarketGateWithRAG(gateInput);
+
+    // Calculate verdict based on gate result
     let verdict: 'suitable' | 'caution' | 'avoid' = 'caution';
-    if (marketRegime === 'risk_on' && btcTrend.strength >= 60) {
+    if (gateResult.canProceed && gateResult.confidence >= 70) {
       verdict = 'suitable';
-    } else if (marketRegime === 'risk_off' || fearGreed.value <= 25) {
+    } else if (!gateResult.canProceed || gateResult.confidence < 30) {
       verdict = 'avoid';
     }
 
-    // Calculate score (0-10)
+    // Calculate score (0-10) - Enhanced with futures data
     let score = 5;
-    if (marketRegime === 'risk_on') score += 2;
-    else if (marketRegime === 'risk_off') score -= 2;
+    if (marketRegime === 'risk_on') score += 1.5;
+    else if (marketRegime === 'risk_off') score -= 1.5;
     if (btcTrend.direction === 'bullish') score += 1;
-    if (fearGreed.value >= 50 && fearGreed.value <= 75) score += 1;
+    else if (btcTrend.direction === 'bearish') score -= 0.5;
+    if (fearGreed.value >= 45 && fearGreed.value <= 75) score += 1;
     if (timeframesAligned >= 3) score += 1;
+    // Futures data impact
+    if (Math.abs(btcFundingRate.fundingRate) < 0.03) score += 0.5; // Healthy funding
+    if (btcLongShortRatio.longShortRatio > 0.8 && btcLongShortRatio.longShortRatio < 1.5) score += 0.5;
     // News sentiment bonus/penalty
     if (btcNewsSentiment.overallSentiment === 'bullish') score += 0.5;
     else if (btcNewsSentiment.overallSentiment === 'bearish') score -= 0.5;
+    // Gate confidence impact
+    score += (gateResult.confidence - 50) / 50; // -1 to +1 based on confidence
     score = Math.max(1, Math.min(10, parseFloat(score.toFixed(1))));
 
     const summary = `Market is in ${fearGreedLabel === 'extreme_fear' ? 'extreme fear' :
@@ -1841,7 +2320,8 @@ export const analysisEngine = {
       fearGreedLabel === 'neutral' ? 'neutral' :
       fearGreedLabel === 'greed' ? 'greed' : 'extreme greed'} mode. ` +
       `BTC dominance ${globalMetrics.btcDominance.toFixed(1)}% (${btcDominanceTrend === 'rising' ? 'rising' : btcDominanceTrend === 'falling' ? 'falling' : 'stable'}). ` +
-      `Overall trend is ${btcTrend.direction}, strength: ${btcTrend.strength}%.`;
+      `Overall trend is ${btcTrend.direction}, strength: ${btcTrend.strength}%. ` +
+      `Funding rate: ${btcFundingRate.fundingRate.toFixed(4)}%, L/S ratio: ${btcLongShortRatio.longShortRatio.toFixed(2)}.`;
 
     return {
       btcDominance: parseFloat(globalMetrics.btcDominance.toFixed(1)),
@@ -1855,6 +2335,16 @@ export const analysisEngine = {
         direction: btcTrend.direction,
         strength: btcTrend.strength,
         timeframesAligned,
+      },
+      futuresData: {
+        fundingRate: btcFundingRate.fundingRate,
+        fundingRateInterpretation,
+        openInterest: btcOpenInterest.openInterestValue,
+        longShortRatio: btcLongShortRatio.longShortRatio,
+        longAccount: btcLongShortRatio.longAccount,
+        shortAccount: btcLongShortRatio.shortAccount,
+        topTraderLongShortRatio: btcTopTraderSentiment.topTraderLongShortRatio,
+        takerBuySellRatio: btcTakerBuySell.buySellRatio,
       },
       newsSentiment: {
         overall: btcNewsSentiment.overallSentiment,
@@ -1872,6 +2362,11 @@ export const analysisEngine = {
       summary,
       verdict,
       score,
+      gate: {
+        canProceed: gateResult.canProceed,
+        reason: gateResult.reason,
+        confidence: gateResult.confidence,
+      },
     };
   },
 
