@@ -10,6 +10,7 @@ import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, Indi
 import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/indicator-interpreter.service';
 import { IndicatorAnalysis } from '@traderpath/types';
 import { IndicatorsService, OHLCV, IndicatorResult } from './services/indicators.service';
+import { getTFTClient, TFTForecast } from './services/tft-client.service';
 
 // ===========================================
 // Price Formatting Utility
@@ -1927,7 +1928,17 @@ export const analysisEngine = {
     // Support/Resistance levels
     const levels = findSupportResistance(candles1d);
 
-    // Forecast calculation
+    // ===== TFT FORECAST (Primary) or Statistical Fallback =====
+    // Try to get prediction from TFT service first
+    let tftForecast: TFTForecast | null = null;
+    try {
+      const tftClient = getTFTClient();
+      tftForecast = await tftClient.predict(symbol.replace('USDT', ''));
+    } catch (error) {
+      console.warn(`TFT prediction unavailable for ${symbol}, using fallback`);
+    }
+
+    // Statistical fallback calculation
     const recentReturns = prices1d.slice(-7).map((p, i, arr) => {
       if (i === 0) return 0;
       const prev = arr[i - 1];
@@ -1940,23 +1951,47 @@ export const analysisEngine = {
       ? Math.sqrt(recentReturns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / recentReturns.length)
       : 0.02;
 
-    const price24h = roundPrice(ticker.price * (1 + avgReturn));
-    const price7d = roundPrice(ticker.price * (1 + avgReturn * 7));
+    // Use TFT prediction if available, otherwise fallback
+    const price24h = tftForecast
+      ? roundPrice(tftForecast.price24h)
+      : roundPrice(ticker.price * (1 + avgReturn));
+    const price7d = tftForecast
+      ? roundPrice(tftForecast.price7d)
+      : roundPrice(ticker.price * (1 + avgReturn * 7));
 
-    // Confidence based on trend alignment
-    let confidence = 50;
-    if (trend1d.direction === trend4h.direction) confidence += 15;
-    if (trend4h.direction === trend1h.direction) confidence += 10;
-    if (rsi > 30 && rsi < 70) confidence += 10;
-    if (Math.abs(macd.histogram) > 0 && macd.histogram * (trend4h.direction === 'bullish' ? 1 : -1) > 0) {
-      confidence += 10;
+    // Confidence: TFT confidence or calculated from trend alignment
+    let confidence = tftForecast ? tftForecast.confidence : 50;
+    if (!tftForecast) {
+      if (trend1d.direction === trend4h.direction) confidence += 15;
+      if (trend4h.direction === trend1h.direction) confidence += 10;
+      if (rsi > 30 && rsi < 70) confidence += 10;
+      if (Math.abs(macd.histogram) > 0 && macd.histogram * (trend4h.direction === 'bullish' ? 1 : -1) > 0) {
+        confidence += 10;
+      }
     }
     confidence = Math.min(90, Math.max(20, confidence));
 
-    // Scenario probabilities based on trend
-    const bullProb = trend4h.direction === 'bullish' ? 40 : trend4h.direction === 'bearish' ? 20 : 30;
-    const bearProb = trend4h.direction === 'bearish' ? 40 : trend4h.direction === 'bullish' ? 20 : 30;
-    const baseProb = 100 - bullProb - bearProb;
+    // Scenario probabilities: TFT scenarios or trend-based
+    let bullProb: number, bearProb: number, baseProb: number;
+    let scenarios: Array<{ name: 'bull' | 'base' | 'bear'; price: number; probability: number }>;
+
+    if (tftForecast && tftForecast.scenarios.length > 0) {
+      // Use TFT scenarios directly
+      scenarios = tftForecast.scenarios;
+      bullProb = scenarios.find(s => s.name === 'bull')?.probability || 25;
+      bearProb = scenarios.find(s => s.name === 'bear')?.probability || 25;
+      baseProb = scenarios.find(s => s.name === 'base')?.probability || 50;
+    } else {
+      // Fallback scenario calculation
+      bullProb = trend4h.direction === 'bullish' ? 40 : trend4h.direction === 'bearish' ? 20 : 30;
+      bearProb = trend4h.direction === 'bearish' ? 40 : trend4h.direction === 'bullish' ? 20 : 30;
+      baseProb = 100 - bullProb - bearProb;
+      scenarios = [
+        { name: 'bull', price: roundPrice(price7d * (1 + volatility * 2)), probability: bullProb },
+        { name: 'base', price: price7d, probability: baseProb },
+        { name: 'bear', price: roundPrice(price7d * (1 - volatility * 2)), probability: bearProb },
+      ];
+    }
 
     // Calculate score
     let score = 5;
@@ -1985,19 +2020,9 @@ export const analysisEngine = {
         price24h,
         price7d,
         confidence,
-        scenarios: [
-          {
-            name: 'bull',
-            price: roundPrice(price7d * (1 + volatility * 2)),
-            probability: bullProb,
-          },
-          { name: 'base', price: price7d, probability: baseProb },
-          {
-            name: 'bear',
-            price: roundPrice(price7d * (1 - volatility * 2)),
-            probability: bearProb,
-          },
-        ],
+        scenarios,
+        // Metadata: which model generated this forecast
+        modelType: tftForecast ? tftForecast.modelType : 'statistical_fallback',
       },
       levels: {
         resistance: levels.resistance.length > 0 ? levels.resistance : [
