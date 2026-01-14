@@ -56,37 +56,37 @@ export default function AnalyzePage() {
   };
 
   return (
-    <div className="w-full px-6 md:px-12 lg:px-16 py-8">
+    <div className="w-full px-3 sm:px-6 md:px-12 lg:px-16 py-4 sm:py-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 mb-6 sm:mb-8">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Link
             href="/analyze"
-            className="p-2 hover:bg-accent rounded-lg transition"
+            className="p-2 hover:bg-accent rounded-lg transition flex-shrink-0"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <div>
-            <h1 className="text-3xl font-bold">{symbol}/USDT</h1>
-            <p className="text-muted-foreground">
-              7-Step Trading Analysis
-              <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary text-sm rounded-full">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-3xl font-bold truncate">{symbol}/USDT</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              7-Step Analysis
+              <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary text-xs sm:text-sm rounded-full">
                 {TRADE_TYPE_LABELS[tradeType]}
               </span>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           {/* Price Display */}
-          <div className="bg-card border rounded-lg px-4 py-2">
-            <div className="flex items-center gap-3">
+          <div className="bg-card border rounded-lg px-3 sm:px-4 py-2 flex-shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3">
               <div>
-                <p className="text-xs text-muted-foreground">Price</p>
-                <p className="text-lg font-bold">${formatPrice(currentPrice)}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Price</p>
+                <p className="text-base sm:text-lg font-bold">${formatPrice(currentPrice)}</p>
               </div>
               {priceChange !== 0 && (
-                <span className={`text-sm font-medium px-2 py-1 rounded ${
+                <span className={`text-xs sm:text-sm font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded ${
                   priceChange >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
                 }`}>
                   {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}%
@@ -95,9 +95,9 @@ export default function AnalyzePage() {
               <button
                 onClick={fetchCurrentPrice}
                 disabled={isRefreshing}
-                className="p-1.5 hover:bg-accent rounded transition disabled:opacity-50"
+                className="p-1 sm:p-1.5 hover:bg-accent rounded transition disabled:opacity-50"
               >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               </button>
             </div>
           </div>
