@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,11 +15,22 @@ export default function LoginPage() {
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+
+  // Check if email is from Gmail
+  const isGoogleEmail = (email: string) => {
+    const domain = email.toLowerCase().split('@')[1];
+    return domain === 'gmail.com' || domain === 'googlemail.com';
+  };
 
   // Check for success/error messages from URL
   useEffect(() => {
     if (searchParams.get('registered') === 'true') {
-      setSuccessMessage('Account created successfully! Please sign in.');
+      setSuccessMessage('Account created! Please check your email to verify your account before signing in.');
+    }
+    if (searchParams.get('verified') === 'true') {
+      setSuccessMessage('Email verified successfully! You can now sign in.');
     }
     const errorParam = searchParams.get('error');
     if (errorParam) {
@@ -42,6 +53,14 @@ export default function LoginPage() {
     setIsLoading(true);
     setError('');
     setSuccessMessage('');
+    setEmailNotVerified(false);
+
+    // SECURITY: Redirect Gmail users to Google OAuth
+    if (isGoogleEmail(email)) {
+      setIsLoading(false);
+      setError('Gmail users must sign in with Google for security. Click the Google button below.');
+      return;
+    }
 
     try {
       const response = await fetch('/api/auth/login', {
@@ -56,7 +75,14 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        setError(data.error?.message || 'Invalid email or password');
+        // Handle email not verified error specially
+        if (data.error?.code === 'EMAIL_NOT_VERIFIED') {
+          setEmailNotVerified(true);
+          setVerificationEmail(data.error?.email || email);
+          setError('');
+        } else {
+          setError(data.error?.message || 'Invalid email or password');
+        }
       } else {
         router.push('/dashboard');
         router.refresh();
@@ -93,6 +119,25 @@ export default function LoginPage() {
               <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-600 text-sm flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 flex-shrink-0" />
                 {successMessage}
+              </div>
+            )}
+
+            {/* Email Not Verified Warning */}
+            {emailNotVerified && (
+              <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-600">Email verification required</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Please check your inbox at <strong>{verificationEmail}</strong> and click the verification link.
+                      A new verification email has been sent.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Check your spam folder if you don&apos;t see it.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 

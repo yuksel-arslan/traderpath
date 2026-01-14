@@ -288,6 +288,30 @@ export default async function authRoutes(app: FastifyInstance) {
         });
       }
 
+      // Check if email is verified (SECURITY: Require email verification before login)
+      if (!user.emailVerified) {
+        // Resend verification email
+        const BASE_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+        const verificationResult = await createEmailVerificationToken(user.id);
+        if (verificationResult.success && verificationResult.token) {
+          const verificationUrl = `${BASE_URL}/verify-email?token=${verificationResult.token}`;
+          emailService.sendEmailVerification(
+            user.email,
+            user.name || 'User',
+            verificationUrl
+          ).catch(console.error);
+        }
+
+        return reply.status(403).send({
+          success: false,
+          error: {
+            code: 'EMAIL_NOT_VERIFIED',
+            message: 'Please verify your email address before logging in. A new verification email has been sent.',
+            email: user.email,
+          },
+        });
+      }
+
       // Check if 2FA is enabled
       if (user.twoFactorEnabled) {
         // Return partial success - user needs to complete 2FA
