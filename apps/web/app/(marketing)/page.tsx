@@ -1300,28 +1300,28 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="max-w-4xl mx-auto">
-            <div className="overflow-x-auto">
-              <table className="w-full bg-card border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+              <table className="w-full bg-card border rounded-lg overflow-hidden min-w-[500px] sm:min-w-0">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-4 font-semibold">Feature</th>
-                    <th className="text-center p-4 font-semibold text-muted-foreground">Traditional Tools</th>
-                    <th className="text-center p-4 font-semibold gradient-text">TraderPath</th>
+                    <th className="text-left p-2 sm:p-4 font-semibold text-xs sm:text-base">Feature</th>
+                    <th className="text-center p-2 sm:p-4 font-semibold text-muted-foreground text-xs sm:text-base">Traditional</th>
+                    <th className="text-center p-2 sm:p-4 font-semibold gradient-text text-xs sm:text-base">TraderPath</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    { feature: 'Time to Decision', traditional: 'Hours of chart analysis', tradepath: '60 seconds' },
-                    { feature: 'Manipulation Detection', traditional: 'Manual research required', tradepath: 'AI-powered auto-detection' },
-                    { feature: 'Entry/Exit Points', traditional: 'Self-calculated', tradepath: 'Precise levels provided' },
-                    { feature: 'Risk Management', traditional: 'DIY stop-loss', tradepath: 'Complete trade plan included' },
+                    { feature: 'Time to Decision', traditional: 'Hours of analysis', tradepath: '60 seconds' },
+                    { feature: 'Manipulation Detection', traditional: 'Manual research', tradepath: 'AI auto-detection' },
+                    { feature: 'Entry/Exit Points', traditional: 'Self-calculated', tradepath: 'Precise levels' },
+                    { feature: 'Risk Management', traditional: 'DIY stop-loss', tradepath: 'Complete plan' },
                     { feature: 'Learning Curve', traditional: 'Months to master', tradepath: 'Start immediately' },
-                    { feature: 'Pricing', traditional: '$50-300/month subscriptions', tradepath: 'Pay per analysis' },
+                    { feature: 'Pricing', traditional: '$50-300/month', tradepath: 'Pay per analysis' },
                   ].map((row, index) => (
                     <tr key={index} className="border-b last:border-b-0">
-                      <td className="p-4 font-medium">{row.feature}</td>
-                      <td className="p-4 text-center text-muted-foreground">{row.traditional}</td>
-                      <td className="p-4 text-center text-green-500 font-medium">{row.tradepath}</td>
+                      <td className="p-2 sm:p-4 font-medium text-xs sm:text-base">{row.feature}</td>
+                      <td className="p-2 sm:p-4 text-center text-muted-foreground text-xs sm:text-base">{row.traditional}</td>
+                      <td className="p-2 sm:p-4 text-center text-green-500 font-medium text-xs sm:text-base">{row.tradepath}</td>
                     </tr>
                   ))}
                 </tbody>
