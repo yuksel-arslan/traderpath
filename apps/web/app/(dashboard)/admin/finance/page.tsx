@@ -604,13 +604,19 @@ export default function FinancePage() {
                 <div className="space-y-4">
                   {[
                     { key: 'creditCostFullAnalysis', label: 'Full Analysis (7-Step)', desc: 'Complete trading analysis' },
-                    { key: 'creditCostQuickCheck', label: 'Quick Check', desc: 'Asset Scanner + Verdict' },
-                    { key: 'creditCostSmartEntry', label: 'Smart Entry', desc: 'Steps 2-4 + Verdict' },
-                  ].map(({ key, label, desc }) => (
+                    { key: 'creditCostTftAnalysis', label: 'TFT Analysis', desc: 'Full Analysis + AI Price Prediction', comingSoon: true },
+                  ].map(({ key, label, desc, comingSoon }) => (
                     <div key={key} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{label}</p>
-                        <p className="text-sm text-muted-foreground">{desc}</p>
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <p className="font-medium">{label}</p>
+                          <p className="text-sm text-muted-foreground">{desc}</p>
+                        </div>
+                        {comingSoon && (
+                          <span className="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                            COMING SOON
+                          </span>
+                        )}
                       </div>
                       <input
                         type="number"
@@ -618,6 +624,7 @@ export default function FinancePage() {
                         value={editingCosts[key] ?? ''}
                         onChange={(e) => setEditingCosts({ ...editingCosts, [key]: parseInt(e.target.value) || 0 })}
                         className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
+                        disabled={comingSoon}
                       />
                     </div>
                   ))}
