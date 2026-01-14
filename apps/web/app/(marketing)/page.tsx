@@ -41,7 +41,9 @@ import {
   MessageCircle,
   Send,
   Smartphone,
-  Rocket
+  Rocket,
+  Menu,
+  X
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
@@ -1032,6 +1034,7 @@ export default function LandingPage() {
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
   const [packages, setPackages] = useState<ApiPackage[]>([]);
   const [packagesLoading, setPackagesLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const fetchPackages = useCallback(async () => {
     try {
@@ -1113,8 +1116,18 @@ export default function LandingPage() {
 
       {/* Header */}
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <TraderPathLogo size="md" showText showTagline href="/" />
+        <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
+          {/* Logo - hide tagline and text on very small screens */}
+          <div className="flex-shrink-0">
+            <div className="hidden sm:block">
+              <TraderPathLogo size="md" showText showTagline href="/" />
+            </div>
+            <div className="block sm:hidden">
+              <TraderPathLogo size="sm" showText={true} showTagline={false} href="/" />
+            </div>
+          </div>
+
+          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-muted-foreground hover:text-foreground transition">
               Features
@@ -1126,67 +1139,125 @@ export default function LandingPage() {
               Pricing
             </a>
           </nav>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
+
+          {/* Right side buttons */}
+          <div className="flex items-center gap-1 sm:gap-3">
+            <div className="hidden sm:block">
+              <ThemeToggle />
+            </div>
             <Link
               href="/login"
-              className="px-4 py-2 text-muted-foreground hover:text-foreground transition"
+              className="hidden sm:block px-2 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base text-muted-foreground hover:text-foreground transition"
             >
               Sign In
             </Link>
             <Link
               href="/register"
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition whitespace-nowrap"
             >
               Get Started
             </Link>
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 text-muted-foreground hover:text-foreground transition"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Menu Panel */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t bg-background/95 backdrop-blur">
+            <nav className="container mx-auto px-4 py-4 flex flex-col gap-3">
+              <a
+                href="#features"
+                className="py-2 text-muted-foreground hover:text-foreground transition"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Features
+              </a>
+              <a
+                href="#how-it-works"
+                className="py-2 text-muted-foreground hover:text-foreground transition"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                How it Works
+              </a>
+              <a
+                href="#pricing"
+                className="py-2 text-muted-foreground hover:text-foreground transition"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Pricing
+              </a>
+              <hr className="border-border" />
+              <div className="flex items-center justify-between py-2">
+                <Link
+                  href="/login"
+                  className="text-muted-foreground hover:text-foreground transition"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Sign In
+                </Link>
+                <ThemeToggle />
+              </div>
+            </nav>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 md:py-32 relative overflow-hidden">
-        {/* Background gradient orbs */}
-        <div className="absolute top-20 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-green-500/10 rounded-full blur-3xl"></div>
+      <section className="py-12 sm:py-20 md:py-32 relative overflow-hidden">
+        {/* Background gradient orbs - smaller on mobile */}
+        <div className="absolute top-10 sm:top-20 left-1/4 w-48 sm:w-96 h-48 sm:h-96 bg-amber-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-10 sm:bottom-20 right-1/4 w-48 sm:w-96 h-48 sm:h-96 bg-green-500/10 rounded-full blur-3xl"></div>
 
         <div className="container mx-auto px-4 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-500 text-sm mb-6 shimmer">
-            <Zap className="w-4 h-4" />
+          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-500 text-xs sm:text-sm mb-4 sm:mb-6 shimmer">
+            <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
             AI-Powered Trading Analysis
           </div>
-          <div className="flex justify-center mb-8">
+          <div className="flex justify-center mb-6 sm:mb-8">
             <div className="float">
-              <TraderPathLogo size="xl" showText={false} />
+              {/* Smaller logo on mobile */}
+              <div className="hidden sm:block">
+                <TraderPathLogo size="xl" showText={false} />
+              </div>
+              <div className="block sm:hidden">
+                <TraderPathLogo size="lg" showText={false} />
+              </div>
             </div>
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+          <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2">
             From Analysis to Action{' '}
             <span className="gradient-text-animate">
               in 60 Seconds
             </span>
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+          <p className="text-base sm:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto px-2">
             Stop drowning in charts. Our AI-powered 7-step analysis gives you clear
             buy/sell decisions with exact entry points, targets, and stop-losses.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 sm:px-0">
             <Link
               href="/register"
-              className="px-8 py-4 bg-slate-200 dark:bg-slate-700 rounded-lg font-semibold hover:scale-105 hover:shadow-lg transition-all flex items-center justify-center gap-2 border border-slate-300 dark:border-slate-600"
+              className="px-6 sm:px-8 py-3 sm:py-4 bg-slate-200 dark:bg-slate-700 rounded-lg font-semibold hover:scale-105 hover:shadow-lg transition-all flex items-center justify-center gap-2 border border-slate-300 dark:border-slate-600"
             >
-              <span className="gradient-text-rg-animate">Start Free Analysis</span>
-              <ArrowRight className="w-5 h-5 gradient-text-rg-animate" />
+              <span className="gradient-text-rg-animate text-sm sm:text-base">Start Free Analysis</span>
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 gradient-text-rg-animate" />
             </Link>
             <a
               href="#see-it-in-action"
-              className="px-8 py-4 border rounded-lg font-semibold hover:bg-accent transition flex items-center justify-center gap-2"
+              className="px-6 sm:px-8 py-3 sm:py-4 border rounded-lg font-semibold hover:bg-accent transition flex items-center justify-center gap-2 text-sm sm:text-base"
             >
-              <Play className="w-5 h-5" />
+              <Play className="w-4 h-4 sm:w-5 sm:h-5" />
               See It In Action
             </a>
           </div>
-          <p className="text-sm text-muted-foreground mt-4">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
             Get 25 free credits on signup. No credit card required.
           </p>
         </div>
