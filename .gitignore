@@ -34,3 +34,4 @@ coverage/
 # Misc
 .turbo/
 *.tsbuildinfo
+services/tft-predictor/venv/

@@ -211,25 +211,25 @@ export default function AdminModelsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Brain className="w-8 h-8 text-primary" />
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 sm:gap-3">
+            <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
             AI Model Management
           </h1>
-          <p className="text-muted-foreground mt-1">Train and manage TFT prediction models</p>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">Train and manage TFT prediction models</p>
         </div>
         <Link
           href="/admin"
-          className="px-4 py-2 border rounded-lg hover:bg-accent transition"
+          className="px-3 py-2 text-sm border rounded-lg hover:bg-accent transition w-fit"
         >
           Back to Admin
         </Link>
       </div>
 
       {/* Model Status Card */}
-      <div className={`p-6 rounded-lg border mb-8 ${getStatusColor(modelStatus?.status || 'not_trained')}`}>
-        <div className="flex items-center justify-between">
+      <div className={`p-4 sm:p-6 rounded-lg border mb-6 sm:mb-8 ${getStatusColor(modelStatus?.status || 'not_trained')}`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             {getStatusIcon(modelStatus?.status || 'not_trained')}
             <div>
@@ -255,11 +255,11 @@ export default function AdminModelsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
         {/* Training Configuration */}
-        <div className="bg-card border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Cpu className="w-5 h-5 text-primary" />
+        <div className="bg-card border rounded-lg p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center gap-2">
+            <Cpu className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             Training Configuration
           </h3>
 
@@ -332,9 +332,9 @@ export default function AdminModelsPage() {
         </div>
 
         {/* Training Progress / Metrics */}
-        <div className="bg-card border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-primary" />
+        <div className="bg-card border rounded-lg p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             {modelStatus?.status === 'training' ? 'Training Progress' : 'Model Metrics'}
           </h3>
 
@@ -413,14 +413,14 @@ export default function AdminModelsPage() {
 
       {/* Training Logs */}
       {trainingLogs.length > 0 && (
-        <div className="mt-8 bg-card border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-primary" />
+        <div className="mt-6 sm:mt-8 bg-card border rounded-lg p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center gap-2">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             Training Logs
           </h3>
-          <div className="bg-black/90 rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-sm text-green-400">
+          <div className="bg-black/90 rounded-lg p-3 sm:p-4 max-h-48 sm:max-h-64 overflow-y-auto font-mono text-xs sm:text-sm text-green-400">
             {trainingLogs.map((log, i) => (
-              <div key={i} className="py-0.5">{log}</div>
+              <div key={i} className="py-0.5 break-all">{log}</div>
             ))}
           </div>
         </div>
