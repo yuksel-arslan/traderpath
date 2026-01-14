@@ -759,7 +759,8 @@ export async function generateDetailedReport(data: DetailedReportData): Promise<
     }
   }
 
-  const fileName = `TraderPath_${data.symbol}_Detailed_${new Date().toISOString().split('T')[0]}.pdf`;
+  const tradeTypeShort = data.tradeType === 'scalping' ? 'Scalp' : data.tradeType === 'dayTrade' ? 'Day' : 'Swing';
+  const fileName = `TraderPath_${data.symbol}_${tradeTypeShort}_Detailed_${new Date().toISOString().split('T')[0]}.pdf`;
   const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
   pdf.save(fileName);
