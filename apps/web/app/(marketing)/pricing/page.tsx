@@ -13,6 +13,17 @@ import {
   Loader2,
   CreditCard,
   Crown,
+  Search,
+  Bot,
+  FileText,
+  Mail,
+  Bell,
+  Brain,
+  Gift,
+  Dices,
+  CircleHelp,
+  PlayCircle,
+  type LucideIcon,
 } from 'lucide-react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
@@ -336,14 +347,16 @@ export default function PricingPage() {
           <div className="max-w-3xl mx-auto">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {[
-                { icon: '🔍', title: '7-Step Analysis', desc: 'Complete trading analysis' },
-                { icon: '🤖', title: 'AI Expert Chat', desc: 'Ask questions anytime' },
-                { icon: '📄', title: 'PDF Reports', desc: 'Download & share' },
-                { icon: '📧', title: 'Email Reports', desc: 'Send to your inbox' },
-                { icon: '🔔', title: 'Price Alerts', desc: 'Never miss a move' },
+                { Icon: Search, title: '7-Step Analysis', desc: 'Complete trading analysis', color: 'text-teal-500' },
+                { Icon: Bot, title: 'AI Expert Chat', desc: 'Ask questions anytime', color: 'text-violet-500' },
+                { Icon: FileText, title: 'PDF Reports', desc: 'Download & share', color: 'text-blue-500' },
+                { Icon: Mail, title: 'Email Reports', desc: 'Send to your inbox', color: 'text-emerald-500' },
+                { Icon: Bell, title: 'Price Alerts', desc: 'Never miss a move', color: 'text-amber-500' },
               ].map((item, index) => (
                 <div key={index} className="bg-card rounded-lg border p-4 text-center">
-                  <span className="text-3xl mb-2 block">{item.icon}</span>
+                  <div className="flex justify-center mb-2">
+                    <item.Icon className={cn('w-8 h-8', item.color)} />
+                  </div>
                   <p className="font-semibold text-sm">{item.title}</p>
                   <p className="text-xs text-muted-foreground">{item.desc}</p>
                 </div>
@@ -353,7 +366,9 @@ export default function PricingPage() {
                 <div className="absolute top-1 right-1 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                   COMING SOON
                 </div>
-                <span className="text-3xl mb-2 block">🧠</span>
+                <div className="flex justify-center mb-2">
+                  <Brain className="w-8 h-8 text-pink-500" />
+                </div>
                 <p className="font-semibold text-sm">AI Price Prediction</p>
                 <p className="text-xs text-muted-foreground">TFT deep learning model</p>
                 <p className="text-[10px] text-amber-600 mt-1">+credits per analysis</p>
@@ -373,13 +388,15 @@ export default function PricingPage() {
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               {[
-                { name: 'Daily Login', credits: 3, icon: '🎁' },
-                { name: 'Lucky Spin', credits: '1-10', icon: '🎰' },
-                { name: 'Daily Quiz', credits: 5, icon: '🧠' },
-                { name: 'Watch Ads', credits: '6', subtitle: '(3x2)', icon: '📺' },
+                { name: 'Daily Login', credits: 3, Icon: Gift, color: 'text-rose-500' },
+                { name: 'Lucky Spin', credits: '1-10', Icon: Dices, color: 'text-purple-500' },
+                { name: 'Daily Quiz', credits: 5, Icon: CircleHelp, color: 'text-cyan-500' },
+                { name: 'Watch Ads', credits: '6', subtitle: '(3x2)', Icon: PlayCircle, color: 'text-green-500' },
               ].map((item, index) => (
                 <div key={index} className="bg-card rounded-lg border p-4 text-center">
-                  <span className="text-3xl mb-2 block">{item.icon}</span>
+                  <div className="flex justify-center mb-2">
+                    <item.Icon className={cn('w-8 h-8', item.color)} />
+                  </div>
                   <p className="font-medium text-sm">{item.name}</p>
                   <p className="text-amber-500 font-bold">
                     +{item.credits} credits
