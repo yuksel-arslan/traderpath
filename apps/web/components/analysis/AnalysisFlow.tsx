@@ -552,7 +552,7 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
                 className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-semibold flex items-center gap-2 hover:shadow-lg hover:scale-[1.02] transition-all"
               >
                 <Rocket className="w-5 h-5" />
-                <span>Run Quick Analysis (25 cr)</span>
+                <span>Run Quick Analysis</span>
               </button>
             </div>
           )}
@@ -785,7 +785,7 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
               className="px-5 py-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg font-semibold flex items-center gap-2 hover:shadow-lg hover:scale-[1.02] transition-all border border-slate-300 dark:border-slate-600"
             >
               <TrendingUp className="w-4 h-4 gradient-text-rg-animate" />
-              <span className="gradient-text-rg-animate">Full Analysis (25 cr)</span>
+              <span className="gradient-text-rg-animate">Full Analysis</span>
             </button>
           </div>
         </div>
