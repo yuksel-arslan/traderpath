@@ -2,7 +2,7 @@
 
 // ===========================================
 // TraderPath Brand Logo Component
-// Logo + Brand Text + Motto
+// 4-Pointed Star Logo + Brand Text + Motto
 // ===========================================
 
 import { cn } from '../../lib/utils';
@@ -29,74 +29,42 @@ export function TradepathLogo({
 
   const s = sizes[size];
 
-  // Stylized T Logo as SVG
+  // 4-Pointed Star Logo as SVG
   const LogoIcon = () => (
     <svg
       width={s.icon}
       height={s.icon}
-      viewBox="0 0 100 100"
+      viewBox="0 0 200 200"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        {/* Gold gradient for the logo */}
-        <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#D4A574" />
-          <stop offset="30%" stopColor="#C9956C" />
-          <stop offset="60%" stopColor="#B8834F" />
-          <stop offset="100%" stopColor="#8B6914" />
+        {/* Teal gradient for top and right points */}
+        <linearGradient id="tealGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#5EEDC3" />
+          <stop offset="50%" stopColor="#2DD4A8" />
+          <stop offset="100%" stopColor="#14B8A6" />
         </linearGradient>
-        {/* Highlight gradient */}
-        <linearGradient id="highlightGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#E8C599" />
-          <stop offset="50%" stopColor="#D4A574" />
-          <stop offset="100%" stopColor="#A67C3D" />
+
+        {/* Coral gradient for left and bottom points */}
+        <linearGradient id="coralGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FF8A9B" />
+          <stop offset="50%" stopColor="#F87171" />
+          <stop offset="100%" stopColor="#EF5A6F" />
         </linearGradient>
       </defs>
 
-      {/* Main T shape with flowing design */}
-      <path
-        d="M15 20
-           C15 15, 20 12, 28 12
-           L72 12
-           C80 12, 85 15, 85 20
-           C85 28, 78 32, 70 32
-           L58 32
-           L58 35
-           C58 45, 62 55, 70 65
-           C78 75, 82 82, 75 88
-           C68 94, 55 90, 48 82
-           C42 75, 42 65, 42 55
-           L42 32
-           L30 32
-           C22 32, 15 28, 15 20
-           Z"
-        fill="url(#goldGradient)"
-      />
+      {/* Top point (teal) */}
+      <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealGradient)" />
 
-      {/* Inner highlight on the T top */}
-      <path
-        d="M20 20
-           C20 17, 24 15, 30 15
-           L70 15
-           C76 15, 80 17, 80 20
-           C80 25, 75 28, 68 28
-           L32 28
-           C25 28, 20 25, 20 20
-           Z"
-        fill="url(#highlightGradient)"
-        opacity="0.3"
-      />
+      {/* Right point (teal) */}
+      <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealGradient)" />
 
-      {/* Flowing tail accent */}
-      <ellipse
-        cx="72"
-        cy="78"
-        rx="8"
-        ry="6"
-        fill="url(#goldGradient)"
-        opacity="0.8"
-      />
+      {/* Bottom point (coral) */}
+      <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralGradient)" />
+
+      {/* Left point (coral) */}
+      <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralGradient)" />
     </svg>
   );
 
@@ -106,24 +74,18 @@ export function TradepathLogo({
       <span
         className={cn(
           s.text,
-          'font-serif font-medium tracking-wide'
+          'font-semibold tracking-wide'
         )}
-        style={{
-          background: 'linear-gradient(135deg, #E8C599 0%, #D4A574 30%, #C9956C 60%, #A67C3D 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-        }}
       >
-        TraderPath
+        <span className="text-teal-400">Trader</span>
+        <span className="text-coral-400" style={{ color: '#F87171' }}>Path</span>
       </span>
       {showMotto && (
         <span
           className={cn(
             s.motto,
-            'tracking-[0.3em] uppercase font-light'
+            'tracking-[0.3em] uppercase font-light text-muted-foreground'
           )}
-          style={{ color: '#E8D5C4' }}
         >
           FROM CHARTS TO CLARITY
         </span>
@@ -158,39 +120,44 @@ export function TradepathLogo({
 // Alternative: Simple inline logo for headers
 export function TradepathLogoInline({ className }: { className?: string }) {
   return (
-    <span className={cn('font-serif font-medium', className)}>
-      <span style={{ color: '#D4A574' }}>Trade</span>
-      <span style={{ color: '#E8C599' }}>Path</span>
+    <span className={cn('font-semibold', className)}>
+      <span className="text-teal-400">Trader</span>
+      <span style={{ color: '#F87171' }}>Path</span>
     </span>
   );
 }
 
 // Export for PDF reports (static HTML/CSS version)
 export const TRADEPATH_LOGO_SVG = `
-<svg width="48" height="48" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="48" height="48" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#D4A574" />
-      <stop offset="30%" stop-color="#C9956C" />
-      <stop offset="60%" stop-color="#B8834F" />
-      <stop offset="100%" stop-color="#8B6914" />
+    <linearGradient id="tealGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5EEDC3" />
+      <stop offset="50%" stop-color="#2DD4A8" />
+      <stop offset="100%" stop-color="#14B8A6" />
+    </linearGradient>
+    <linearGradient id="coralGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF8A9B" />
+      <stop offset="50%" stop-color="#F87171" />
+      <stop offset="100%" stop-color="#EF5A6F" />
     </linearGradient>
   </defs>
-  <path
-    d="M15 20 C15 15, 20 12, 28 12 L72 12 C80 12, 85 15, 85 20 C85 28, 78 32, 70 32 L58 32 L58 35 C58 45, 62 55, 70 65 C78 75, 82 82, 75 88 C68 94, 55 90, 48 82 C42 75, 42 65, 42 55 L42 32 L30 32 C22 32, 15 28, 15 20 Z"
-    fill="url(#goldGradient)"
-  />
+  <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealGradient)" />
+  <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealGradient)" />
+  <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralGradient)" />
+  <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralGradient)" />
 </svg>
 `;
 
 export const TRADEPATH_BRAND_COLORS = {
-  gold: {
-    light: '#E8C599',
-    base: '#D4A574',
-    medium: '#C9956C',
-    dark: '#A67C3D',
-    darker: '#8B6914',
+  teal: {
+    light: '#5EEDC3',
+    base: '#2DD4A8',
+    dark: '#14B8A6',
   },
-  cream: '#E8D5C4',
-  motto: '#E8D5C4',
+  coral: {
+    light: '#FF8A9B',
+    base: '#F87171',
+    dark: '#EF5A6F',
+  },
 };

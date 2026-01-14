@@ -11,11 +11,45 @@ interface TraderPathLogoProps {
 }
 
 const sizes = {
-  sm: { wrapper: 'h-7 px-1', letter: 'text-base', text: 'text-base', tagline: 'text-[8px]' },
-  md: { wrapper: 'h-8 px-1.5', letter: 'text-lg', text: 'text-lg', tagline: 'text-[9px]' },
-  lg: { wrapper: 'h-10 px-2', letter: 'text-xl', text: 'text-xl', tagline: 'text-[10px]' },
-  xl: { wrapper: 'h-14 px-2.5', letter: 'text-2xl', text: 'text-2xl', tagline: 'text-xs' },
+  sm: { icon: 28, text: 'text-base', tagline: 'text-[8px]' },
+  md: { icon: 32, text: 'text-lg', tagline: 'text-[9px]' },
+  lg: { icon: 40, text: 'text-xl', tagline: 'text-[10px]' },
+  xl: { icon: 56, text: 'text-2xl', tagline: 'text-xs' },
 };
+
+// 4-Pointed Star Logo Icon
+function StarLogo({ size }: { size: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 200 200"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <linearGradient id="headerTealGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#5EEDC3" />
+          <stop offset="50%" stopColor="#2DD4A8" />
+          <stop offset="100%" stopColor="#14B8A6" />
+        </linearGradient>
+        <linearGradient id="headerCoralGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FF8A9B" />
+          <stop offset="50%" stopColor="#F87171" />
+          <stop offset="100%" stopColor="#EF5A6F" />
+        </linearGradient>
+      </defs>
+      {/* Top point (teal) */}
+      <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#headerTealGradient)" />
+      {/* Right point (teal) */}
+      <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#headerTealGradient)" />
+      {/* Bottom point (coral) */}
+      <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#headerCoralGradient)" />
+      {/* Left point (coral) */}
+      <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#headerCoralGradient)" />
+    </svg>
+  );
+}
 
 export function TraderPathLogo({
   size = 'md',
@@ -28,19 +62,15 @@ export function TraderPathLogo({
 
   const LogoContent = (
     <div className={`flex items-center gap-2 ${className}`}>
-      {/* Logo Icon - T and P side by side */}
-      {/* Transparent background with border for visibility */}
-      <div
-        className={`${s.wrapper} rounded-lg flex items-center justify-center border-2 border-slate-300 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm`}
-      >
-        <span className={`${s.letter} font-black gradient-text-rg-animate`}>TP</span>
-      </div>
+      {/* Logo Icon - 4-Pointed Star */}
+      <StarLogo size={s.icon} />
 
       {/* Logo Text */}
       {showText && (
         <div className="flex flex-col">
-          <span className={`${s.text} font-bold gradient-text-rg-animate`}>
-            TraderPath
+          <span className={`${s.text} font-bold`}>
+            <span className="text-brand-teal">Trader</span>
+            <span className="text-brand-coral">Path</span>
           </span>
           {showTagline && (
             <span className={`${s.tagline} text-muted-foreground -mt-0.5`}>

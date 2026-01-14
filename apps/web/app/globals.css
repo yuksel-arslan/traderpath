@@ -147,6 +147,37 @@
    =========================================== */
 
 @layer utilities {
+  /* ===========================================
+     TraderPath Brand Gradients
+     =========================================== */
+
+  /* Brand Gradient - Teal to Coral */
+  .gradient-brand {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #5EEDC3, #2DD4A8, #F87171, #EF5A6F);
+  }
+
+  /* Brand Gradient Background */
+  .bg-gradient-brand {
+    background: linear-gradient(135deg, #2DD4A8 0%, #14B8A6 50%, #F87171 100%);
+  }
+
+  /* Brand Teal Gradient */
+  .gradient-teal {
+    background: linear-gradient(135deg, #5EEDC3, #2DD4A8, #14B8A6);
+  }
+
+  /* Brand Coral Gradient */
+  .gradient-coral {
+    background: linear-gradient(135deg, #FF8A9B, #F87171, #EF5A6F);
+  }
+
+  /* Brand Text Gradient */
+  .text-gradient-brand {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(90deg, #2DD4A8, #F87171);
+  }
+
   /* Gradient Text - Trading Colors */
   .gradient-text {
     @apply bg-clip-text text-transparent;
