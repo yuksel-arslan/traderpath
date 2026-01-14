@@ -2895,24 +2895,24 @@ export const analysisEngine = {
     // Use ALL available data sources with lower thresholds for EARLY ENTRY
     const directionSources: PreliminaryVerdictResult['directionSources'] = [];
 
-    // 1. Asset Scanner Daily Trend (25% weight) - lowered threshold to 30%
+    // 1. Asset Scanner Daily Trend (10% weight) - lowered threshold to 30%
     const dailyTrend = assetScan.timeframes.find(t => t.tf === '1D');
     if (dailyTrend && dailyTrend.strength >= 30) {
       directionSources.push({
         source: 'Asset Scanner (Daily)',
         direction: dailyTrend.trend === 'bearish' ? 'short' : 'long',
-        weight: 0.25,
+        weight: 0.10,
         reason: `Daily trend ${dailyTrend.trend} with ${dailyTrend.strength}% strength`
       });
     }
 
-    // 2. Asset Scanner 4H Trend (20% weight) - lowered threshold to 30%
+    // 2. Asset Scanner 4H Trend (10% weight) - lowered threshold to 30%
     const h4Trend = assetScan.timeframes.find(t => t.tf === '4H');
     if (h4Trend && h4Trend.strength >= 30) {
       directionSources.push({
         source: 'Asset Scanner (4H)',
         direction: h4Trend.trend === 'bearish' ? 'short' : 'long',
-        weight: 0.2,
+        weight: 0.10,
         reason: `4H trend ${h4Trend.trend} with ${h4Trend.strength}% strength`
       });
     }
@@ -2948,16 +2948,71 @@ export const analysisEngine = {
       });
     }
 
-    // 6. Timing TradeNow Signal (15% weight) - Use timing readiness
+    // 6. Timing TradeNow Signal (10% weight) - Use timing readiness
     if (timing.tradeNow && timing.score >= 6) {
       // When timing says trade now with good score, follow market trend direction
       const timingDirection = marketPulse.trend.direction === 'bearish' ? 'short' : 'long';
       directionSources.push({
         source: 'Timing Ready',
         direction: timingDirection,
-        weight: 0.15,
+        weight: 0.10,
         reason: `Timing score ${timing.score}/10, conditions met for entry`
       });
+    }
+
+    // 7. Leading Indicators Signal from Asset Scanner (20% weight) - CRITICAL: Uses 40+ indicators
+    if (assetScan.indicatorDetails?.summary) {
+      const summary = assetScan.indicatorDetails.summary;
+      const signal = summary.leadingIndicatorsSignal || summary.overallSignal;
+      const confidence = summary.signalConfidence || 50;
+
+      if (signal && signal !== 'neutral' && confidence >= 40) {
+        directionSources.push({
+          source: 'Leading Indicators (Asset)',
+          direction: signal === 'bullish' ? 'long' : 'short',
+          weight: 0.20,
+          reason: `${summary.bullishIndicators} bullish vs ${summary.bearishIndicators} bearish (${confidence}% confidence)`
+        });
+      }
+    }
+
+    // 8. Leading Indicators Signal from Safety Check (15% weight) - Volume & Advanced indicators
+    if (safetyCheck.indicatorDetails?.summary) {
+      const summary = safetyCheck.indicatorDetails.summary;
+      const signal = summary.leadingIndicatorsSignal || summary.overallSignal;
+      const confidence = summary.signalConfidence || 50;
+
+      if (signal && signal !== 'neutral' && confidence >= 40) {
+        directionSources.push({
+          source: 'Leading Indicators (Safety)',
+          direction: signal === 'bullish' ? 'long' : 'short',
+          weight: 0.15,
+          reason: `Volume/Advanced indicators: ${signal} (${confidence}% confidence)`
+        });
+      }
+    }
+
+    // 9. Whale Activity Bias (10% weight) - Smart money positioning
+    if (safetyCheck.whaleActivity?.bias && safetyCheck.whaleActivity.bias !== 'neutral') {
+      directionSources.push({
+        source: 'Whale Activity',
+        direction: safetyCheck.whaleActivity.bias === 'accumulation' ? 'long' : 'short',
+        weight: 0.10,
+        reason: `Smart money ${safetyCheck.whaleActivity.bias}`
+      });
+    }
+
+    // 10. Order Flow Imbalance (10% weight) - Real-time buy/sell pressure
+    if (safetyCheck.whaleActivity?.orderFlowBias && safetyCheck.whaleActivity.orderFlowBias !== 'neutral') {
+      const imbalance = Math.abs(safetyCheck.whaleActivity.orderFlowImbalance || 0);
+      if (imbalance >= 0.1) { // At least 10% imbalance
+        directionSources.push({
+          source: 'Order Flow',
+          direction: safetyCheck.whaleActivity.orderFlowBias === 'buying' ? 'long' : 'short',
+          weight: 0.10,
+          reason: `Order flow ${(imbalance * 100).toFixed(0)}% ${safetyCheck.whaleActivity.orderFlowBias}`
+        });
+      }
     }
 
     // Calculate weighted direction
