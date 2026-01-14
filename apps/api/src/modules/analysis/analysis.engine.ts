@@ -2866,48 +2866,72 @@ export const analysisEngine = {
     // Collect reasons for decision
     const reasons: PreliminaryVerdictResult['reasons'] = [];
 
-    // ===== DIRECTION DETERMINATION =====
+    // ===== AGGRESSIVE DIRECTION DETERMINATION =====
+    // Use ALL available data sources with lower thresholds for EARLY ENTRY
     const directionSources: PreliminaryVerdictResult['directionSources'] = [];
 
-    // 1. Asset Scanner Daily Trend (40% weight)
+    // 1. Asset Scanner Daily Trend (25% weight) - lowered threshold to 30%
     const dailyTrend = assetScan.timeframes.find(t => t.tf === '1D');
-    if (dailyTrend && dailyTrend.strength >= 50) {
+    if (dailyTrend && dailyTrend.strength >= 30) {
       directionSources.push({
         source: 'Asset Scanner (Daily)',
         direction: dailyTrend.trend === 'bearish' ? 'short' : 'long',
-        weight: 0.4,
+        weight: 0.25,
         reason: `Daily trend ${dailyTrend.trend} with ${dailyTrend.strength}% strength`
       });
     }
 
-    // 2. Asset Scanner 4H Trend (30% weight)
+    // 2. Asset Scanner 4H Trend (20% weight) - lowered threshold to 30%
     const h4Trend = assetScan.timeframes.find(t => t.tf === '4H');
-    if (h4Trend && h4Trend.strength >= 50) {
+    if (h4Trend && h4Trend.strength >= 30) {
       directionSources.push({
         source: 'Asset Scanner (4H)',
         direction: h4Trend.trend === 'bearish' ? 'short' : 'long',
-        weight: 0.3,
+        weight: 0.2,
         reason: `4H trend ${h4Trend.trend} with ${h4Trend.strength}% strength`
       });
     }
 
-    // 3. Market Pulse Regime (20% weight)
+    // 3. Asset Scanner 1H Trend (15% weight) - NEW: short-term for early signals
+    const h1Trend = assetScan.timeframes.find(t => t.tf === '1H');
+    if (h1Trend && h1Trend.strength >= 25) {
+      directionSources.push({
+        source: 'Asset Scanner (1H)',
+        direction: h1Trend.trend === 'bearish' ? 'short' : 'long',
+        weight: 0.15,
+        reason: `1H trend ${h1Trend.trend} with ${h1Trend.strength}% strength`
+      });
+    }
+
+    // 4. Market Pulse Regime (15% weight) - always include
     if (marketPulse.marketRegime !== 'neutral') {
       directionSources.push({
         source: 'Market Pulse',
         direction: marketPulse.marketRegime === 'risk_on' ? 'long' : 'short',
-        weight: 0.2,
+        weight: 0.15,
         reason: `Market regime is ${marketPulse.marketRegime}`
       });
     }
 
-    // 4. Market Pulse Trend (10% weight)
-    if (marketPulse.trend.direction !== 'neutral' && marketPulse.trend.strength >= 50) {
+    // 5. Market Pulse Trend (10% weight) - lowered threshold to 30%
+    if (marketPulse.trend.direction !== 'neutral' && marketPulse.trend.strength >= 30) {
       directionSources.push({
         source: 'Market Pulse Trend',
         direction: marketPulse.trend.direction === 'bearish' ? 'short' : 'long',
         weight: 0.1,
         reason: `Market trend ${marketPulse.trend.direction}`
+      });
+    }
+
+    // 6. Timing TradeNow Signal (15% weight) - Use timing readiness
+    if (timing.tradeNow && timing.score >= 6) {
+      // When timing says trade now with good score, follow market trend direction
+      const timingDirection = marketPulse.trend.direction === 'bearish' ? 'short' : 'long';
+      directionSources.push({
+        source: 'Timing Ready',
+        direction: timingDirection,
+        weight: 0.15,
+        reason: `Timing score ${timing.score}/10, conditions met for entry`
       });
     }
 
@@ -2919,15 +2943,32 @@ export const analysisEngine = {
       else shortWeight += ds.weight;
     });
 
-    // Direction decision
+    // AGGRESSIVE Direction decision - lowered threshold from 0.5 to 0.25
     let direction: 'long' | 'short' | null = null;
     let directionConfidence = 0;
-    if (longWeight > shortWeight && longWeight >= 0.5) {
-      direction = 'long';
-      directionConfidence = longWeight / (longWeight + shortWeight) * 100;
-    } else if (shortWeight > longWeight && shortWeight >= 0.5) {
-      direction = 'short';
-      directionConfidence = shortWeight / (longWeight + shortWeight) * 100;
+    const totalWeight = longWeight + shortWeight;
+
+    if (totalWeight > 0) {
+      if (longWeight > shortWeight && longWeight >= 0.25) {
+        direction = 'long';
+        directionConfidence = (longWeight / totalWeight) * 100;
+      } else if (shortWeight > longWeight && shortWeight >= 0.25) {
+        direction = 'short';
+        directionConfidence = (shortWeight / totalWeight) * 100;
+      } else if (longWeight >= shortWeight) {
+        // Even with low weight, if we have ANY signal, use it
+        direction = 'long';
+        directionConfidence = totalWeight > 0 ? (longWeight / totalWeight) * 100 : 50;
+      } else {
+        direction = 'short';
+        directionConfidence = totalWeight > 0 ? (shortWeight / totalWeight) * 100 : 50;
+      }
+    }
+
+    // Fallback: If still no direction but we have good scores, use market trend
+    if (direction === null && marketPulse.trend.direction !== 'neutral') {
+      direction = marketPulse.trend.direction === 'bullish' ? 'long' : 'short';
+      directionConfidence = 40; // Base confidence for fallback
     }
 
     // ===== SCORE CALCULATION (without trade plan) =====
@@ -2999,28 +3040,68 @@ export const analysisEngine = {
       direction = null;
       shouldGenerateTradePlan = false;
     }
-    // GO conditions
+    // ===== EARLY ENTRY LOGIC =====
+    // Strong components override low direction confidence
+    // When all indicators are strong, we should act early - not wait for confirmation
+    const allComponentsStrong = marketPulse.score >= 7.0 &&
+                                 assetScan.score >= 7.0 &&
+                                 safetyCheck.score >= 7.0 &&
+                                 trapCheck.score >= 7.0;
+
+    const veryStrongScore = score >= 7.5;
+    const strongScore = score >= 6.5;
+
+    // GO conditions - AGGRESSIVE: Act early when indicators are aligned
+    // Priority 1: Very strong score with strong components = GO regardless of direction confidence
+    if (veryStrongScore &&
+        allComponentsStrong &&
+        safetyCheck.riskLevel !== 'high' &&
+        trapCheck.riskLevel !== 'high') {
+      verdict = 'go';
+      shouldGenerateTradePlan = true;
+      // If direction is null but score is very high, infer from market pulse
+      if (direction === null) {
+        direction = marketPulse.trend.direction === 'bullish' ? 'long' :
+                   marketPulse.trend.direction === 'bearish' ? 'short' : 'long';
+      }
+    }
+    // Priority 2: Strong score with direction - lower confidence threshold (40% instead of 60%)
     else if (score >= 7.0 &&
              direction !== null &&
-             directionConfidence >= 60 &&
-             safetyCheck.riskLevel === 'low' &&
+             directionConfidence >= 40 &&
+             safetyCheck.riskLevel !== 'high' &&
              trapCheck.riskLevel !== 'high') {
       verdict = 'go';
       shouldGenerateTradePlan = true;
     }
-    // CONDITIONAL_GO conditions
-    // Note: safetyCheck.riskLevel is already not 'high' due to AVOID check above
-    else if (score >= 5.5 &&
+    // Priority 3: Good score with any direction signal
+    else if (strongScore &&
              direction !== null &&
-             directionConfidence >= 50) {
+             directionConfidence >= 30 &&
+             safetyCheck.riskLevel !== 'high') {
       verdict = 'conditional_go';
       shouldGenerateTradePlan = true;
     }
-    // WAIT conditions (conflicting signals or low confidence)
-    else if (direction === null || directionConfidence < 50 || score < 5.5) {
+    // Priority 4: Moderate score but clear direction
+    else if (score >= 5.5 &&
+             direction !== null &&
+             directionConfidence >= 40) {
+      verdict = 'conditional_go';
+      shouldGenerateTradePlan = true;
+    }
+    // WAIT only when score is truly low or safety is compromised
+    else if (score < 5.0 || safetyCheck.riskLevel === 'high') {
       verdict = 'wait';
-      direction = null;
       shouldGenerateTradePlan = false;
+    }
+    // Default: If we have decent score, give conditional go
+    else if (score >= 5.0) {
+      verdict = 'conditional_go';
+      shouldGenerateTradePlan = true;
+      if (direction === null) {
+        direction = marketPulse.trend.direction === 'bullish' ? 'long' :
+                   marketPulse.trend.direction === 'bearish' ? 'short' : 'long';
+      }
     }
 
     // Final confidence calculation
