@@ -52,34 +52,34 @@ async function evaluateMarketGateWithRAG(input: GateEvaluationInput): Promise<Ga
     // Get trading knowledge for context (RAG)
     const tradingKnowledge = getTradingKnowledgeForAI();
 
-    const prompt = `Sen profesyonel bir kripto trader'sın. Aşağıdaki piyasa verilerine bakarak, şu anda işlem açmak için piyasa koşullarının uygun olup olmadığını değerlendir.
+    const prompt = `You are a professional crypto trader. Based on the market data below, evaluate whether current market conditions are suitable for opening trades.
 
-## Piyasa Verileri:
+## Market Data:
 - Fear & Greed Index: ${input.fearGreedIndex} (${input.fearGreedLabel})
-- BTC Günlük Trend: ${input.btcTrend.direction} (%${input.btcTrend.strength} güç)
-- BTC 4H Trend: ${input.trend4h.direction} (%${input.trend4h.strength} güç)
-- BTC 1H Trend: ${input.trend1h.direction} (%${input.trend1h.strength} güç)
-- Timeframe Uyumu: ${input.timeframesAligned}/4
+- BTC Daily Trend: ${input.btcTrend.direction} (${input.btcTrend.strength}% strength)
+- BTC 4H Trend: ${input.trend4h.direction} (${input.trend4h.strength}% strength)
+- BTC 1H Trend: ${input.trend1h.direction} (${input.trend1h.strength}% strength)
+- Timeframe Alignment: ${input.timeframesAligned}/4
 - Market Regime: ${input.marketRegime}
-- BTC 24h Değişim: %${input.btcPrice24hChange.toFixed(2)}
-- Funding Rate: %${input.fundingRate.toFixed(4)}
+- BTC 24h Change: ${input.btcPrice24hChange.toFixed(2)}%
+- Funding Rate: ${input.fundingRate.toFixed(4)}%
 - Long/Short Ratio: ${input.longShortRatio.toFixed(2)}
 - Top Trader L/S Ratio: ${input.topTraderLongShortRatio.toFixed(2)}
 - Taker Buy/Sell Ratio: ${input.takerBuySellRatio.toFixed(2)}
 - Open Interest: $${(input.openInterestValue / 1e9).toFixed(2)}B
-- Haber Sentiment: ${input.newsSentiment}
+- News Sentiment: ${input.newsSentiment}
 
-## Trading Bilgisi:
+## Trading Knowledge:
 ${tradingKnowledge}
 
-## Görev:
-Yukarıdaki verilere dayanarak, piyasanın işlem açmak için uygun olup olmadığını değerlendir.
+## Task:
+Based on the data above, evaluate whether market conditions are suitable for trading.
 
-Yanıtını SADECE aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
+Respond ONLY in the following JSON format, nothing else:
 {
-  "canProceed": true veya false,
-  "reason": "Kısa ve net açıklama (maksimum 2 cümle)",
-  "confidence": 0-100 arası güven skoru
+  "canProceed": true or false,
+  "reason": "Brief and clear explanation (maximum 2 sentences)",
+  "confidence": confidence score between 0-100
 }`;
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
@@ -108,7 +108,7 @@ Yanıtını SADECE aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
       const parsed = JSON.parse(jsonMatch[0]);
       return {
         canProceed: Boolean(parsed.canProceed),
-        reason: String(parsed.reason || 'Değerlendirme tamamlandı'),
+        reason: String(parsed.reason || 'Evaluation completed'),
         confidence: Number(parsed.confidence) || 50,
       };
     }
@@ -126,13 +126,13 @@ function evaluateMarketGateRuleBased(input: GateEvaluationInput): GateEvaluation
 
   // Fear & Greed evaluation
   if (input.fearGreedIndex <= 20) {
-    reasons.push('Extreme fear - yüksek risk');
+    reasons.push('Extreme fear - high risk');
     score -= 20;
   } else if (input.fearGreedIndex <= 35) {
-    reasons.push('Fear mode - dikkatli olunmalı');
+    reasons.push('Fear mode - caution advised');
     score -= 10;
   } else if (input.fearGreedIndex >= 80) {
-    reasons.push('Extreme greed - düzeltme riski');
+    reasons.push('Extreme greed - correction risk');
     score -= 15;
   } else if (input.fearGreedIndex >= 55) {
     score += 10;
@@ -142,7 +142,7 @@ function evaluateMarketGateRuleBased(input: GateEvaluationInput): GateEvaluation
   if (input.timeframesAligned >= 3) {
     score += 15;
   } else if (input.timeframesAligned <= 1) {
-    reasons.push('Timeframe uyumsuzluğu');
+    reasons.push('Timeframe misalignment');
     score -= 10;
   }
 
@@ -150,22 +150,22 @@ function evaluateMarketGateRuleBased(input: GateEvaluationInput): GateEvaluation
   if (input.btcTrend.strength >= 70) {
     score += 10;
   } else if (input.btcTrend.strength <= 30) {
-    reasons.push('Zayıf trend');
+    reasons.push('Weak trend');
     score -= 10;
   }
 
   // Funding rate (extreme values indicate crowded trades)
   if (Math.abs(input.fundingRate) > 0.1) {
-    reasons.push(`Aşırı funding rate (%${input.fundingRate.toFixed(3)})`);
+    reasons.push(`Extreme funding rate (${input.fundingRate.toFixed(3)}%)`);
     score -= 15;
   }
 
   // Long/Short imbalance
   if (input.longShortRatio > 2) {
-    reasons.push('Aşırı long pozisyon yoğunluğu');
+    reasons.push('Excessive long position concentration');
     score -= 10;
   } else if (input.longShortRatio < 0.5) {
-    reasons.push('Aşırı short pozisyon yoğunluğu');
+    reasons.push('Excessive short position concentration');
     score -= 10;
   }
 
@@ -178,7 +178,7 @@ function evaluateMarketGateRuleBased(input: GateEvaluationInput): GateEvaluation
 
   // Market regime
   if (input.marketRegime === 'risk_off') {
-    reasons.push('Risk-off market ortamı');
+    reasons.push('Risk-off market environment');
     score -= 20;
   } else if (input.marketRegime === 'risk_on') {
     score += 15;
@@ -189,10 +189,10 @@ function evaluateMarketGateRuleBased(input: GateEvaluationInput): GateEvaluation
 
   const canProceed = score >= 45;
   const reason = canProceed
-    ? 'Piyasa koşulları işlem için uygun'
+    ? 'Market conditions suitable for trading'
     : reasons.length > 0
       ? reasons.slice(0, 2).join(', ')
-      : 'Piyasa koşulları belirsiz';
+      : 'Market conditions uncertain';
 
   return {
     canProceed,
