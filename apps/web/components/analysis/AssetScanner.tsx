@@ -5,7 +5,7 @@
 // Matches API response structure
 // ===========================================
 
-import { Target, TrendingUp, TrendingDown, Minus, Brain, BarChart3 } from 'lucide-react';
+import { Target, TrendingUp, TrendingDown, Minus, Brain, BarChart3, Sparkles, Clock, Zap } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { IndicatorDetails } from './IndicatorDetails';
 
@@ -40,6 +40,18 @@ interface AssetScannerData {
   levels: {
     support: number[];
     resistance: number[];
+  };
+  // TFT Forecast data
+  forecast?: {
+    price24h: number;
+    price7d: number;
+    confidence: number;
+    scenarios: Array<{
+      name: 'bull' | 'base' | 'bear';
+      price: number;
+      probability: number;
+    }>;
+    modelType?: string;
   };
   aiInsight?: string;
   // New: detailed indicator analysis
@@ -130,6 +142,103 @@ export function AssetScanner({ data, symbol }: AssetScannerProps) {
           </p>
         </div>
       </div>
+
+      {/* TFT Price Forecast */}
+      {data.forecast && (
+        <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg p-4 border border-purple-500/20">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-purple-500" />
+            <h4 className="font-semibold text-purple-400">AI Price Forecast</h4>
+            {data.forecast.modelType && (
+              <span className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded-full">
+                {data.forecast.modelType === 'tft' ? 'TFT Model' : 'Statistical'}
+              </span>
+            )}
+          </div>
+
+          {/* Price Predictions */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+            <div className="bg-background/50 rounded-lg p-3 border border-purple-500/10">
+              <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                <Clock className="w-3 h-3" />
+                24 Saat Sonra
+              </div>
+              <p className="text-xl font-bold">${data.forecast.price24h?.toLocaleString()}</p>
+              {data.currentPrice && (
+                <p className={cn(
+                  "text-xs",
+                  data.forecast.price24h > data.currentPrice ? "text-green-500" : "text-red-500"
+                )}>
+                  {data.forecast.price24h > data.currentPrice ? '+' : ''}
+                  {(((data.forecast.price24h - data.currentPrice) / data.currentPrice) * 100).toFixed(2)}%
+                </p>
+              )}
+            </div>
+
+            <div className="bg-background/50 rounded-lg p-3 border border-purple-500/10">
+              <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                <Clock className="w-3 h-3" />
+                7 Gün Sonra
+              </div>
+              <p className="text-xl font-bold">${data.forecast.price7d?.toLocaleString()}</p>
+              {data.currentPrice && (
+                <p className={cn(
+                  "text-xs",
+                  data.forecast.price7d > data.currentPrice ? "text-green-500" : "text-red-500"
+                )}>
+                  {data.forecast.price7d > data.currentPrice ? '+' : ''}
+                  {(((data.forecast.price7d - data.currentPrice) / data.currentPrice) * 100).toFixed(2)}%
+                </p>
+              )}
+            </div>
+
+            <div className="bg-background/50 rounded-lg p-3 border border-purple-500/10">
+              <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                <Zap className="w-3 h-3" />
+                Model Güveni
+              </div>
+              <p className={cn(
+                "text-xl font-bold",
+                data.forecast.confidence >= 70 ? "text-green-500" :
+                data.forecast.confidence >= 50 ? "text-yellow-500" : "text-red-500"
+              )}>
+                {data.forecast.confidence?.toFixed(1)}%
+              </p>
+            </div>
+          </div>
+
+          {/* Scenarios */}
+          {data.forecast.scenarios && data.forecast.scenarios.length > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Senaryolar</p>
+              <div className="grid grid-cols-3 gap-2">
+                {data.forecast.scenarios.map((scenario) => (
+                  <div
+                    key={scenario.name}
+                    className={cn(
+                      "text-center p-2 rounded-lg border",
+                      scenario.name === 'bull' ? "bg-green-500/10 border-green-500/20" :
+                      scenario.name === 'bear' ? "bg-red-500/10 border-red-500/20" :
+                      "bg-yellow-500/10 border-yellow-500/20"
+                    )}
+                  >
+                    <p className={cn(
+                      "text-xs font-medium capitalize",
+                      scenario.name === 'bull' ? "text-green-500" :
+                      scenario.name === 'bear' ? "text-red-500" : "text-yellow-500"
+                    )}>
+                      {scenario.name === 'bull' ? '🐂 Boğa' :
+                       scenario.name === 'bear' ? '🐻 Ayı' : '📊 Baz'}
+                    </p>
+                    <p className="text-sm font-bold mt-1">${scenario.price?.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">%{scenario.probability} olasılık</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Timeframe Analysis */}
       {data.timeframes && data.timeframes.length > 0 && (
