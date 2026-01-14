@@ -11,7 +11,6 @@ import {
   Brain,
   Send,
   Loader2,
-  Coins,
   Lightbulb,
   BookOpen,
   TrendingUp,
@@ -190,18 +189,12 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-lg border border-amber-500/20">
-                  <Coins className="w-4 h-4 text-amber-500" />
-                  <span className="text-sm font-medium text-amber-500">5 Credits</span>
-                </div>
-                <button
-                  onClick={onClose}
-                  className="p-2 hover:bg-muted rounded-lg transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-muted rounded-lg transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
@@ -435,7 +428,7 @@ export function ExpertAI({ isOpen, onClose, onCreditsUpdate }: ExpertAIProps) {
                   ) : (
                     <>
                       <Send className="w-5 h-5" />
-                      <span className="hidden sm:inline">Ask (5 Credits)</span>
+                      <span className="hidden sm:inline">Ask</span>
                     </>
                   )}
                 </button>
@@ -472,9 +465,6 @@ export function ExpertAITrigger({ onClick, className }: ExpertAITriggerProps) {
       <Brain className="w-5 h-5 text-purple-500" />
       <span className="bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 text-transparent bg-clip-text">
         Expert AI
-      </span>
-      <span className="text-xs px-1.5 py-0.5 bg-amber-500/10 text-amber-500 rounded ml-1">
-        5 Credits
       </span>
     </button>
   );

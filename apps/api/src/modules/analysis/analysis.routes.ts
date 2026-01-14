@@ -1149,15 +1149,15 @@ Explain the key risks and what conditions would need to change before trading th
         return Number((sum / arr.length).toFixed(1));
       };
 
-      // Convert step scores to accuracy rates (score out of 10 -> percentage)
+      // Convert step scores to accuracy rates (score out of 10 -> percentage, capped at 100)
       const stepAccuracyRates = {
-        marketPulse: calcAvg(stepScores.marketPulse) * 10,
-        assetScanner: calcAvg(stepScores.assetScanner) * 10,
-        safetyCheck: calcAvg(stepScores.safetyCheck) * 10,
-        timing: calcAvg(stepScores.timing) * 10,
-        tradePlan: calcAvg(stepScores.tradePlan) * 10,
-        trapCheck: calcAvg(stepScores.trapCheck) * 10,
-        finalVerdict: calcAvg(stepScores.finalVerdict) * 10
+        marketPulse: Math.min(100, calcAvg(stepScores.marketPulse) * 10),
+        assetScanner: Math.min(100, calcAvg(stepScores.assetScanner) * 10),
+        safetyCheck: Math.min(100, calcAvg(stepScores.safetyCheck) * 10),
+        timing: Math.min(100, calcAvg(stepScores.timing) * 10),
+        tradePlan: Math.min(100, calcAvg(stepScores.tradePlan) * 10),
+        trapCheck: Math.min(100, calcAvg(stepScores.trapCheck) * 10),
+        finalVerdict: Math.min(100, calcAvg(stepScores.finalVerdict) * 10)
       };
 
       // Get real accuracy from CLOSED trades only (correct or incorrect, not neutral)

@@ -31,11 +31,23 @@ export default function RegisterPage() {
 
   const passwordStrength = getPasswordStrength(password);
 
+  // Check if email is from a provider that supports OAuth
+  const isGoogleEmail = (email: string) => {
+    const domain = email.toLowerCase().split('@')[1];
+    return domain === 'gmail.com' || domain === 'googlemail.com';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!agreedToTerms) {
       setError('Please agree to the Terms of Service and Privacy Policy');
+      return;
+    }
+
+    // SECURITY: Redirect Gmail users to Google OAuth for verified email
+    if (isGoogleEmail(email)) {
+      setError('Gmail users must sign up with Google for security verification. Click "Continue with Google" below.');
       return;
     }
 

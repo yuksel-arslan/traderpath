@@ -14,11 +14,18 @@ import {
   CheckCircle2,
   XCircle,
   Timer,
+  LineChart,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
 import { CreditBalance } from '../../../components/credits/CreditBalance';
 import type { TradeType } from '../../../components/analysis/TradeTypeSelector';
+
+// Lazy load TradingView widget
+const TradingViewWidget = dynamic(
+  () => import('../../../components/charts/TradingViewWidget').then(mod => ({ default: mod.TradingViewWidget })),
+  { ssr: false, loading: () => <div className="h-[400px] bg-muted/30 rounded-lg animate-pulse" /> }
+);
 
 // Lazy load heavy components for better performance
 const CoinSelector = dynamic(
@@ -45,9 +52,25 @@ interface AnalysisStats {
   accuracy: number;
 }
 
+// Popular coins for quick selection
+const POPULAR_COINS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'DOGE'];
+
 export default function AnalyzePage() {
   const [stats, setStats] = useState<AnalysisStats | null>(null);
   const [tradeType, setTradeType] = useState<TradeType>('dayTrade');
+  const [chartSymbol, setChartSymbol] = useState('BINANCE:BTCUSDT');
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  // Detect theme
+  useEffect(() => {
+    const checkTheme = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+    checkTheme();
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -123,7 +146,40 @@ export default function AnalyzePage() {
         </div>
       </div>
 
-      {/* ===== SECTION 2: New Analysis ===== */}
+      {/* ===== SECTION 2: TradingView Chart ===== */}
+      <div className="bg-white dark:bg-slate-800/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-200 dark:border-slate-700/50">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <LineChart className="w-5 h-5 text-teal-500" />
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Live Chart</h2>
+          </div>
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            {POPULAR_COINS.map((coin) => (
+              <button
+                key={coin}
+                onClick={() => setChartSymbol(`BINANCE:${coin}USDT`)}
+                className={cn(
+                  'px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all',
+                  chartSymbol === `BINANCE:${coin}USDT`
+                    ? 'bg-teal-500 text-white'
+                    : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                )}
+              >
+                {coin}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-slate-700">
+          <TradingViewWidget
+            symbol={chartSymbol}
+            theme={isDarkMode ? 'dark' : 'light'}
+            height={350}
+          />
+        </div>
+      </div>
+
+      {/* ===== SECTION 3: New Analysis ===== */}
       <div className="bg-white dark:bg-slate-800/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-200 dark:border-slate-700/50">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div>
