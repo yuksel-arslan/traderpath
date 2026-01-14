@@ -21,7 +21,6 @@ import {
   Brain,
   Gift,
   Dices,
-  CircleHelp,
   PlayCircle,
   type LucideIcon,
 } from 'lucide-react';
@@ -390,7 +389,7 @@ export default function PricingPage() {
               {[
                 { name: 'Daily Login', credits: 3, Icon: Gift, color: 'text-rose-500' },
                 { name: 'Lucky Spin', credits: '1-10', Icon: Dices, color: 'text-purple-500' },
-                { name: 'Daily Quiz', credits: 5, Icon: CircleHelp, color: 'text-cyan-500' },
+                { name: 'Daily Quiz', credits: 5, Icon: HelpCircle, color: 'text-cyan-500' },
                 { name: 'Watch Ads', credits: '6', subtitle: '(3x2)', Icon: PlayCircle, color: 'text-green-500' },
               ].map((item, index) => (
                 <div key={index} className="bg-card rounded-lg border p-4 text-center">
