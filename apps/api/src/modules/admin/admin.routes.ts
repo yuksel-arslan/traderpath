@@ -767,9 +767,9 @@ export default async function adminRoutes(app: FastifyInstance) {
   app.post('/tft/train', {
     preHandler: requireAdmin,
   }, async (request: FastifyRequest<{
-    Body: { symbols: string[]; epochs: number; batchSize: number }
+    Body: { symbols: string[]; epochs: number; batchSize: number; tradeType?: string }
   }>, reply: FastifyReply) => {
-    const { symbols, epochs = 50, batchSize = 64 } = request.body;
+    const { symbols, epochs = 50, batchSize = 64, tradeType = 'swing' } = request.body;
 
     if (!symbols || symbols.length === 0) {
       return reply.status(400).send({
@@ -778,11 +778,20 @@ export default async function adminRoutes(app: FastifyInstance) {
       });
     }
 
+    // Validate trade type
+    const validTradeTypes = ['scalp', 'swing', 'position'];
+    if (!validTradeTypes.includes(tradeType)) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'INVALID_TRADE_TYPE', message: 'Trade type must be: scalp, swing, or position' },
+      });
+    }
+
     try {
       const response = await fetch(`${TFT_SERVICE_URL}/train/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbols, epochs, batch_size: batchSize }),
+        body: JSON.stringify({ symbols, epochs, batch_size: batchSize, trade_type: tradeType }),
         signal: AbortSignal.timeout(10000),
       });
 
