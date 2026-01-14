@@ -1278,9 +1278,15 @@ export default function DashboardPage() {
                         <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center cursor-help border border-gray-300 dark:border-slate-600 hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors">
                           <Info className="w-3 h-3 text-gray-500 dark:text-slate-400" />
                         </div>
-                        {/* Tooltip Popup */}
-                        <div className="absolute right-0 top-6 w-64 p-3 bg-slate-900 dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-700 opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all duration-200 z-50">
-                          <div className="absolute -top-1.5 right-2 w-3 h-3 bg-slate-900 dark:bg-slate-800 rotate-45 border-l border-t border-slate-700" />
+                        {/* Tooltip Popup - Odd steps open right, even steps open left */}
+                        <div className={cn(
+                          "absolute top-6 w-64 p-3 bg-slate-900 dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-700 opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all duration-200 z-50",
+                          step.step % 2 === 1 ? "left-0" : "right-0"
+                        )}>
+                          <div className={cn(
+                            "absolute -top-1.5 w-3 h-3 bg-slate-900 dark:bg-slate-800 rotate-45 border-l border-t border-slate-700",
+                            step.step % 2 === 1 ? "left-2" : "right-2"
+                          )} />
                           <h4 className={cn("font-bold text-sm mb-2", step.color)}>{step.name}</h4>
                           <p className="text-xs text-slate-300 leading-relaxed">{step.detailedInfo}</p>
                           <div className="mt-2 pt-2 border-t border-slate-700">
