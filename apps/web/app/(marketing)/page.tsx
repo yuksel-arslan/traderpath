@@ -1117,15 +1117,21 @@ export default function LandingPage() {
       {/* Header */}
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
         <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
-          {/* Logo - hide tagline and text on very small screens */}
-          <div className="flex-shrink-0">
-            <div className="hidden sm:block">
-              <TraderPathLogo size="md" showText showTagline href="/" />
-            </div>
-            <div className="block sm:hidden">
-              <TraderPathLogo size="sm" showText={true} showTagline={false} href="/" />
-            </div>
-          </div>
+          {/* Logo */}
+          <TraderPathLogo
+            size="sm"
+            showText={true}
+            showTagline={false}
+            href="/"
+            className="flex-shrink-0 sm:hidden"
+          />
+          <TraderPathLogo
+            size="md"
+            showText={true}
+            showTagline={true}
+            href="/"
+            className="flex-shrink-0 hidden sm:flex"
+          />
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
@@ -1222,13 +1228,8 @@ export default function LandingPage() {
           </div>
           <div className="flex justify-center mb-6 sm:mb-8">
             <div className="float">
-              {/* Smaller logo on mobile */}
-              <div className="hidden sm:block">
-                <TraderPathLogo size="xl" showText={false} />
-              </div>
-              <div className="block sm:hidden">
-                <TraderPathLogo size="lg" showText={false} />
-              </div>
+              <TraderPathLogo size="lg" showText={false} className="flex sm:hidden" />
+              <TraderPathLogo size="xl" showText={false} className="hidden sm:flex" />
             </div>
           </div>
           <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2">
