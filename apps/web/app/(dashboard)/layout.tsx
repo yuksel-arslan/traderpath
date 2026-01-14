@@ -150,8 +150,8 @@ export default function DashboardLayout({
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <TraderPathLogo size="md" showText showTagline href="/dashboard" className="hidden sm:flex" />
-            <TraderPathLogo size="md" showText={false} href="/dashboard" className="sm:hidden" />
+            <TraderPathLogo size="sm" showText={true} showTagline={false} href="/dashboard" className="flex sm:hidden" />
+            <TraderPathLogo size="md" showText={true} showTagline={true} href="/dashboard" className="hidden sm:flex" />
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-1">

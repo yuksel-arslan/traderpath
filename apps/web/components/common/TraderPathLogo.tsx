@@ -11,10 +11,10 @@ interface TraderPathLogoProps {
 }
 
 const sizes = {
-  sm: { icon: 28, text: 'text-base', tagline: 'text-[8px]' },
-  md: { icon: 32, text: 'text-lg', tagline: 'text-[9px]' },
-  lg: { icon: 40, text: 'text-xl', tagline: 'text-[10px]' },
-  xl: { icon: 56, text: 'text-2xl', tagline: 'text-xs' },
+  sm: { icon: 35, text: 'text-lg', tagline: 'text-[10px]' },
+  md: { icon: 40, text: 'text-xl', tagline: 'text-[11px]' },
+  lg: { icon: 50, text: 'text-2xl', tagline: 'text-xs' },
+  xl: { icon: 70, text: 'text-3xl', tagline: 'text-sm' },
 };
 
 // 4-Pointed Star Logo Icon
