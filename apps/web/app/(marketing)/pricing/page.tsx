@@ -17,6 +17,7 @@ import {
   Languages,
   Mail,
   Bell,
+  Crown,
 } from 'lucide-react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
@@ -44,6 +45,7 @@ const PACKAGE_ICONS: Record<string, typeof Zap> = {
   starter: Zap,
   trader: Star,
   pro: TrendingUp,
+  whale: Crown,
 };
 
 // Icon mapping for features
@@ -272,7 +274,7 @@ export default function PricingPage() {
               No packages available at the moment.
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
               {packages.map((pkg) => {
                 // Map package name to icon
                 const nameKey = pkg.name.toLowerCase().split(' ')[0]; // "Starter Pack" -> "starter"
