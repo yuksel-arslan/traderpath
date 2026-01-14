@@ -52,7 +52,7 @@ const FAQS = [
   {
     question: 'What\'s included in each analysis?',
     answer:
-      'Every analysis includes all 7 steps, AI Expert chat, PDF download, email sharing, translation, and price alerts - everything is included!',
+      'Every analysis includes all 7 steps, AI Expert chat, PDF download, email sharing, and price alerts - everything is included!',
   },
   {
     question: 'How do I earn free credits?',
@@ -340,7 +340,6 @@ export default function PricingPage() {
                 { icon: '🤖', title: 'AI Expert Chat', desc: 'Ask questions anytime' },
                 { icon: '📄', title: 'PDF Reports', desc: 'Download & share' },
                 { icon: '📧', title: 'Email Reports', desc: 'Send to your inbox' },
-                { icon: '🌍', title: 'Translation', desc: '10+ languages' },
                 { icon: '🔔', title: 'Price Alerts', desc: 'Never miss a move' },
               ].map((item, index) => (
                 <div key={index} className="bg-card rounded-lg border p-4 text-center">
