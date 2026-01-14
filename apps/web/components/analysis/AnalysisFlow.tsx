@@ -621,12 +621,6 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
                 <h2 className="text-xl font-bold">{currentStep.name}</h2>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-xs text-muted-foreground">Cost</div>
-              <div className={cn('text-lg font-bold', colors.text)}>
-                {currentStep.cost === 0 ? 'FREE' : `${currentStep.cost} cr`}
-              </div>
-            </div>
           </div>
         </div>
 
