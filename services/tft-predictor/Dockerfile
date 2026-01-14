@@ -17,7 +17,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy source code
 COPY src/ src/
 COPY scripts/ scripts/
-COPY models/ models/ 2>/dev/null || mkdir -p models
+
+# Create models directory (models will be downloaded/trained at runtime)
+RUN mkdir -p models
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1
