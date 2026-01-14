@@ -317,11 +317,11 @@ export default function DashboardLayout({
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center overflow-hidden">
+                  <div className="w-8 h-8 bg-gradient-to-br from-brand-teal to-brand-coral rounded-full flex items-center justify-center overflow-hidden">
                     {user?.avatarUrl ? (
                       <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
                     ) : (
-                      <User className="w-4 h-4 text-primary-foreground" />
+                      <User className="w-4 h-4 text-white" />
                     )}
                   </div>
                   <ChevronDown className={cn(
@@ -345,11 +345,11 @@ export default function DashboardLayout({
                     {user && (
                       <div className="p-3 border-b border-border">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center overflow-hidden shrink-0">
+                          <div className="w-10 h-10 bg-gradient-to-br from-brand-teal to-brand-coral rounded-full flex items-center justify-center overflow-hidden shrink-0">
                             {user.avatarUrl ? (
                               <img src={user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
                             ) : (
-                              <User className="w-5 h-5 text-primary-foreground" />
+                              <User className="w-5 h-5 text-white" />
                             )}
                           </div>
                           <div className="min-w-0 flex-1">

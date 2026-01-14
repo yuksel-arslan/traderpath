@@ -64,6 +64,19 @@ module.exports = {
           DEFAULT: 'hsl(var(--info))',
           foreground: 'hsl(var(--info-foreground))',
         },
+        // TraderPath Brand Colors
+        brand: {
+          teal: {
+            light: '#5EEDC3',
+            DEFAULT: '#2DD4A8',
+            dark: '#14B8A6',
+          },
+          coral: {
+            light: '#FF8A9B',
+            DEFAULT: '#F87171',
+            dark: '#EF5A6F',
+          },
+        },
         // Chart colors
         chart: {
           1: 'hsl(var(--chart-1))',
@@ -72,9 +85,9 @@ module.exports = {
           4: 'hsl(var(--chart-4))',
           5: 'hsl(var(--chart-5))',
         },
-        // Trader AI specific colors
+        // Custom shades
         slate: {
-          850: '#1a2332', // Custom shade between 800 and 900
+          850: '#1a2332',
         },
       },
       borderRadius: {
@@ -152,9 +165,11 @@ module.exports = {
         'bounce-subtle': 'bounce-subtle 2s ease-in-out infinite',
       },
       boxShadow: {
-        'glow-teal': '0 0 30px rgba(20, 184, 166, 0.4), 0 0 60px rgba(6, 182, 212, 0.2)',
-        'glow-teal-sm': '0 0 15px rgba(20, 184, 166, 0.3)',
-        'inner-glow': 'inset 0 0 20px rgba(20, 184, 166, 0.1)',
+        'glow-teal': '0 0 30px rgba(45, 212, 168, 0.4), 0 0 60px rgba(20, 184, 166, 0.2)',
+        'glow-teal-sm': '0 0 15px rgba(45, 212, 168, 0.3)',
+        'glow-coral': '0 0 30px rgba(248, 113, 113, 0.4), 0 0 60px rgba(239, 90, 111, 0.2)',
+        'glow-coral-sm': '0 0 15px rgba(248, 113, 113, 0.3)',
+        'inner-glow': 'inset 0 0 20px rgba(45, 212, 168, 0.1)',
       },
       backdropBlur: {
         xs: '2px',
