@@ -337,7 +337,6 @@ export default function PricingPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {[
                 { icon: '🔍', title: '7-Step Analysis', desc: 'Complete trading analysis' },
-                { icon: '🧠', title: 'AI Price Prediction', desc: 'TFT deep learning model' },
                 { icon: '🤖', title: 'AI Expert Chat', desc: 'Ask questions anytime' },
                 { icon: '📄', title: 'PDF Reports', desc: 'Download & share' },
                 { icon: '📧', title: 'Email Reports', desc: 'Send to your inbox' },
@@ -349,6 +348,16 @@ export default function PricingPage() {
                   <p className="text-xs text-muted-foreground">{item.desc}</p>
                 </div>
               ))}
+              {/* Coming Soon Feature */}
+              <div className="bg-card rounded-lg border p-4 text-center relative overflow-hidden">
+                <div className="absolute top-1 right-1 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                  COMING SOON
+                </div>
+                <span className="text-3xl mb-2 block">🧠</span>
+                <p className="font-semibold text-sm">AI Price Prediction</p>
+                <p className="text-xs text-muted-foreground">TFT deep learning model</p>
+                <p className="text-[10px] text-amber-600 mt-1">+credits per analysis</p>
+              </div>
             </div>
           </div>
         </div>
