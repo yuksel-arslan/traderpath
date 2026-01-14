@@ -52,34 +52,34 @@ async function evaluateMarketGateWithRAG(input: GateEvaluationInput): Promise<Ga
     // Get trading knowledge for context (RAG)
     const tradingKnowledge = getTradingKnowledgeForAI();
 
-    const prompt = `Sen profesyonel bir kripto trader'sın. Aşağıdaki piyasa verilerine bakarak, şu anda işlem açmak için piyasa koşullarının uygun olup olmadığını değerlendir.
+    const prompt = `You are a professional crypto trader. Based on the market data below, evaluate whether current market conditions are suitable for opening trades.
 
-## Piyasa Verileri:
+## Market Data:
 - Fear & Greed Index: ${input.fearGreedIndex} (${input.fearGreedLabel})
-- BTC Günlük Trend: ${input.btcTrend.direction} (%${input.btcTrend.strength} güç)
-- BTC 4H Trend: ${input.trend4h.direction} (%${input.trend4h.strength} güç)
-- BTC 1H Trend: ${input.trend1h.direction} (%${input.trend1h.strength} güç)
-- Timeframe Uyumu: ${input.timeframesAligned}/4
+- BTC Daily Trend: ${input.btcTrend.direction} (${input.btcTrend.strength}% strength)
+- BTC 4H Trend: ${input.trend4h.direction} (${input.trend4h.strength}% strength)
+- BTC 1H Trend: ${input.trend1h.direction} (${input.trend1h.strength}% strength)
+- Timeframe Alignment: ${input.timeframesAligned}/4
 - Market Regime: ${input.marketRegime}
-- BTC 24h Değişim: %${input.btcPrice24hChange.toFixed(2)}
-- Funding Rate: %${input.fundingRate.toFixed(4)}
+- BTC 24h Change: ${input.btcPrice24hChange.toFixed(2)}%
+- Funding Rate: ${input.fundingRate.toFixed(4)}%
 - Long/Short Ratio: ${input.longShortRatio.toFixed(2)}
 - Top Trader L/S Ratio: ${input.topTraderLongShortRatio.toFixed(2)}
 - Taker Buy/Sell Ratio: ${input.takerBuySellRatio.toFixed(2)}
 - Open Interest: $${(input.openInterestValue / 1e9).toFixed(2)}B
-- Haber Sentiment: ${input.newsSentiment}
+- News Sentiment: ${input.newsSentiment}
 
-## Trading Bilgisi:
+## Trading Knowledge:
 ${tradingKnowledge}
 
-## Görev:
-Yukarıdaki verilere dayanarak, piyasanın işlem açmak için uygun olup olmadığını değerlendir.
+## Task:
+Based on the data above, evaluate whether market conditions are suitable for trading.
 
-Yanıtını SADECE aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
+Respond ONLY in the following JSON format, nothing else:
 {
-  "canProceed": true veya false,
-  "reason": "Kısa ve net açıklama (maksimum 2 cümle)",
-  "confidence": 0-100 arası güven skoru
+  "canProceed": true or false,
+  "reason": "Brief and clear explanation (maximum 2 sentences)",
+  "confidence": confidence score between 0-100
 }`;
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
@@ -108,7 +108,7 @@ Yanıtını SADECE aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
       const parsed = JSON.parse(jsonMatch[0]);
       return {
         canProceed: Boolean(parsed.canProceed),
-        reason: String(parsed.reason || 'Değerlendirme tamamlandı'),
+        reason: String(parsed.reason || 'Evaluation completed'),
         confidence: Number(parsed.confidence) || 50,
       };
     }
@@ -126,13 +126,13 @@ function evaluateMarketGateRuleBased(input: GateEvaluationInput): GateEvaluation
 
   // Fear & Greed evaluation
   if (input.fearGreedIndex <= 20) {
-    reasons.push('Extreme fear - yüksek risk');
+    reasons.push('Extreme fear - high risk');
     score -= 20;
   } else if (input.fearGreedIndex <= 35) {
-    reasons.push('Fear mode - dikkatli olunmalı');
+    reasons.push('Fear mode - caution advised');
     score -= 10;
   } else if (input.fearGreedIndex >= 80) {
-    reasons.push('Extreme greed - düzeltme riski');
+    reasons.push('Extreme greed - correction risk');
     score -= 15;
   } else if (input.fearGreedIndex >= 55) {
     score += 10;
@@ -142,7 +142,7 @@ function evaluateMarketGateRuleBased(input: GateEvaluationInput): GateEvaluation
   if (input.timeframesAligned >= 3) {
     score += 15;
   } else if (input.timeframesAligned <= 1) {
-    reasons.push('Timeframe uyumsuzluğu');
+    reasons.push('Timeframe misalignment');
     score -= 10;
   }
 
@@ -150,22 +150,22 @@ function evaluateMarketGateRuleBased(input: GateEvaluationInput): GateEvaluation
   if (input.btcTrend.strength >= 70) {
     score += 10;
   } else if (input.btcTrend.strength <= 30) {
-    reasons.push('Zayıf trend');
+    reasons.push('Weak trend');
     score -= 10;
   }
 
   // Funding rate (extreme values indicate crowded trades)
   if (Math.abs(input.fundingRate) > 0.1) {
-    reasons.push(`Aşırı funding rate (%${input.fundingRate.toFixed(3)})`);
+    reasons.push(`Extreme funding rate (${input.fundingRate.toFixed(3)}%)`);
     score -= 15;
   }
 
   // Long/Short imbalance
   if (input.longShortRatio > 2) {
-    reasons.push('Aşırı long pozisyon yoğunluğu');
+    reasons.push('Excessive long position concentration');
     score -= 10;
   } else if (input.longShortRatio < 0.5) {
-    reasons.push('Aşırı short pozisyon yoğunluğu');
+    reasons.push('Excessive short position concentration');
     score -= 10;
   }
 
@@ -178,7 +178,7 @@ function evaluateMarketGateRuleBased(input: GateEvaluationInput): GateEvaluation
 
   // Market regime
   if (input.marketRegime === 'risk_off') {
-    reasons.push('Risk-off market ortamı');
+    reasons.push('Risk-off market environment');
     score -= 20;
   } else if (input.marketRegime === 'risk_on') {
     score += 15;
@@ -189,15 +189,222 @@ function evaluateMarketGateRuleBased(input: GateEvaluationInput): GateEvaluation
 
   const canProceed = score >= 45;
   const reason = canProceed
-    ? 'Piyasa koşulları işlem için uygun'
+    ? 'Market conditions suitable for trading'
     : reasons.length > 0
       ? reasons.slice(0, 2).join(', ')
-      : 'Piyasa koşulları belirsiz';
+      : 'Market conditions uncertain';
 
   return {
     canProceed,
     reason,
     confidence: score,
+  };
+}
+
+// ===========================================
+// Asset Scanner Gate Evaluation
+// ===========================================
+
+interface AssetGateEvaluationInput {
+  symbol: string;
+  rsi: number;
+  macdHistogram: number;
+  trendDirection: string;
+  trendStrength: number;
+  timeframeAlignment: number; // How many timeframes agree
+  priceChange24h: number;
+  volume24h: number;
+  atr: number;
+  currentPrice: number;
+  supportLevels: number[];
+  resistanceLevels: number[];
+  leadingIndicatorsSignal?: string;
+  signalConfidence?: number;
+}
+
+interface AssetGateEvaluationResult {
+  canProceed: boolean;
+  reason: string;
+  confidence: number;
+  direction: 'long' | 'short' | null;
+  directionConfidence: number;
+}
+
+async function evaluateAssetGateWithRAG(input: AssetGateEvaluationInput): Promise<AssetGateEvaluationResult> {
+  const GEMINI_API_KEY = config.gemini?.apiKey;
+
+  // Fallback to rule-based if no API key
+  if (!GEMINI_API_KEY) {
+    return evaluateAssetGateRuleBased(input);
+  }
+
+  try {
+    const tradingKnowledge = getTradingKnowledgeForAI();
+
+    const prompt = `You are a professional crypto trader. Based on the asset data below, evaluate whether this specific asset is suitable for trading.
+
+## Asset Data for ${input.symbol}:
+- Current Price: $${input.currentPrice.toLocaleString()}
+- 24h Price Change: ${input.priceChange24h.toFixed(2)}%
+- RSI (14): ${input.rsi.toFixed(1)}
+- MACD Histogram: ${input.macdHistogram > 0 ? 'Positive' : 'Negative'} (${input.macdHistogram.toFixed(4)})
+- Trend Direction: ${input.trendDirection}
+- Trend Strength: ${input.trendStrength}%
+- Timeframe Alignment: ${input.timeframeAlignment}/5 timeframes agree
+- Leading Indicators Signal: ${input.leadingIndicatorsSignal || 'N/A'}
+- Signal Confidence: ${input.signalConfidence || 0}%
+- ATR: ${input.atr.toFixed(2)} (volatility measure)
+- Support Levels: ${input.supportLevels.slice(0, 2).map(s => '$' + s.toLocaleString()).join(', ')}
+- Resistance Levels: ${input.resistanceLevels.slice(0, 2).map(r => '$' + r.toLocaleString()).join(', ')}
+
+## Trading Knowledge:
+${tradingKnowledge}
+
+## Task:
+1. Evaluate if this asset is suitable for trading (not the market, the specific asset)
+2. If suitable, determine the recommended direction (long or short)
+
+Respond ONLY in the following JSON format:
+{
+  "canProceed": true or false,
+  "reason": "Brief explanation (max 2 sentences)",
+  "confidence": 0-100,
+  "direction": "long" or "short" or null,
+  "directionConfidence": 0-100
+}`;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 250,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      return evaluateAssetGateRuleBased(input);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        canProceed: Boolean(parsed.canProceed),
+        reason: String(parsed.reason || 'Evaluation completed'),
+        confidence: Number(parsed.confidence) || 50,
+        direction: parsed.direction === 'long' ? 'long' : parsed.direction === 'short' ? 'short' : null,
+        directionConfidence: Number(parsed.directionConfidence) || 0,
+      };
+    }
+
+    return evaluateAssetGateRuleBased(input);
+  } catch (error) {
+    console.warn('Asset RAG gate evaluation failed:', error);
+    return evaluateAssetGateRuleBased(input);
+  }
+}
+
+function evaluateAssetGateRuleBased(input: AssetGateEvaluationInput): AssetGateEvaluationResult {
+  const reasons: string[] = [];
+  let score = 50;
+  let direction: 'long' | 'short' | null = null;
+  let directionScore = 0;
+
+  // RSI evaluation
+  if (input.rsi > 80) {
+    reasons.push('RSI extremely overbought');
+    score -= 15;
+    directionScore -= 20;
+  } else if (input.rsi > 70) {
+    reasons.push('RSI overbought');
+    score -= 5;
+    directionScore -= 10;
+  } else if (input.rsi < 20) {
+    reasons.push('RSI extremely oversold');
+    score -= 10;
+    directionScore += 15; // Potential bounce
+  } else if (input.rsi < 30) {
+    directionScore += 10;
+  } else if (input.rsi >= 40 && input.rsi <= 60) {
+    score += 5; // Neutral zone is good for entry
+  }
+
+  // MACD evaluation
+  if (input.macdHistogram > 0) {
+    score += 5;
+    directionScore += 15;
+  } else {
+    directionScore -= 15;
+  }
+
+  // Trend evaluation
+  if (input.trendDirection === 'bullish') {
+    score += 10;
+    directionScore += 20;
+  } else if (input.trendDirection === 'bearish') {
+    directionScore -= 20;
+  }
+
+  // Trend strength
+  if (input.trendStrength >= 70) {
+    score += 10;
+  } else if (input.trendStrength <= 30) {
+    reasons.push('Weak trend strength');
+    score -= 10;
+  }
+
+  // Timeframe alignment
+  if (input.timeframeAlignment >= 4) {
+    score += 15;
+  } else if (input.timeframeAlignment <= 1) {
+    reasons.push('Poor timeframe alignment');
+    score -= 15;
+  }
+
+  // Leading indicators signal
+  if (input.leadingIndicatorsSignal === 'bullish' && (input.signalConfidence || 0) >= 60) {
+    score += 10;
+    directionScore += 15;
+  } else if (input.leadingIndicatorsSignal === 'bearish' && (input.signalConfidence || 0) >= 60) {
+    directionScore -= 15;
+  }
+
+  // 24h price change - extreme moves are risky
+  if (Math.abs(input.priceChange24h) > 15) {
+    reasons.push('Extreme 24h price movement');
+    score -= 10;
+  }
+
+  // Determine direction
+  if (directionScore >= 20) {
+    direction = 'long';
+  } else if (directionScore <= -20) {
+    direction = 'short';
+  }
+
+  score = Math.max(0, Math.min(100, score));
+  const directionConfidence = Math.min(100, Math.abs(directionScore) + 30);
+
+  const canProceed = score >= 45;
+  const reason = canProceed
+    ? `Asset shows ${direction === 'long' ? 'bullish' : direction === 'short' ? 'bearish' : 'neutral'} setup with ${input.trendStrength}% trend strength`
+    : reasons.length > 0
+      ? reasons.slice(0, 2).join(', ')
+      : 'Asset conditions uncertain';
+
+  return {
+    canProceed,
+    reason,
+    confidence: score,
+    direction,
+    directionConfidence,
   };
 }
 
@@ -780,6 +987,15 @@ interface AssetScanResult {
   // Detailed indicator analysis with interpretations
   indicatorDetails?: IndicatorAnalysis;
   score: number;
+  // Gate decision for sequential approach
+  gate: {
+    canProceed: boolean;
+    reason: string;
+    confidence: number;
+  };
+  // Direction recommendation from this step
+  direction: 'long' | 'short' | null;
+  directionConfidence: number;
 }
 
 // Step 3 Types
@@ -2499,6 +2715,43 @@ export const analysisEngine = {
     if (ticker.price > ma200) score += 0.5;
     score = Math.max(1, Math.min(10, parseFloat(score.toFixed(1))));
 
+    // Count how many timeframes agree on direction
+    const timeframeAlignment = [trend1m, trend1w, trend1d, trend4h, trend1h]
+      .filter(t => t.direction === trend4h.direction).length;
+
+    // Get leading indicators signal from step indicators
+    const indicatorAnalysis = buildIndicatorAnalysis({
+      ...indicatorResultsToAnalysisInputs(stepIndicators, ticker.price, ticker.priceChangePercent24h, prices4h),
+      rsi: stepIndicators.get('RSI')?.value ?? rsi,
+      macd: stepIndicators.get('MACD')?.metadata
+        ? { value: stepIndicators.get('MACD')!.metadata!.macd, signal: stepIndicators.get('MACD')!.metadata!.signal, histogram: stepIndicators.get('MACD')!.metadata!.histogram }
+        : { value: macd.macd, signal: macd.signal, histogram: macd.histogram },
+      bollingerBands: stepIndicators.get('BOLLINGER')?.metadata
+        ? { upper: stepIndicators.get('BOLLINGER')!.metadata!.upper, middle: stepIndicators.get('BOLLINGER')!.metadata!.middle, lower: stepIndicators.get('BOLLINGER')!.metadata!.lower }
+        : { upper: bb.upper, middle: bb.middle, lower: bb.lower },
+      movingAverages: { ma50, ma200 },
+    });
+
+    // Gate evaluation for Asset Scanner
+    const gateInput: AssetGateEvaluationInput = {
+      symbol,
+      rsi,
+      macdHistogram: macd.histogram,
+      trendDirection: trend4h.direction,
+      trendStrength: trend4h.strength,
+      timeframeAlignment,
+      priceChange24h: ticker.priceChangePercent24h,
+      volume24h: ticker.quoteVolume24h,
+      atr,
+      currentPrice: ticker.price,
+      supportLevels: levels.support,
+      resistanceLevels: levels.resistance,
+      leadingIndicatorsSignal: indicatorAnalysis.summary?.leadingIndicatorsSignal,
+      signalConfidence: indicatorAnalysis.summary?.signalConfidence,
+    };
+
+    const gateResult = await evaluateAssetGateWithRAG(gateInput);
+
     return {
       symbol,
       currentPrice: ticker.price,
@@ -2553,19 +2806,17 @@ export const analysisEngine = {
       },
       // Build detailed indicator analysis with ALL configured indicators
       // Uses full 40+ indicators from trade-config.ts for rich analysis
-      indicatorDetails: buildIndicatorAnalysis({
-        ...indicatorResultsToAnalysisInputs(stepIndicators, ticker.price, ticker.priceChangePercent24h, prices4h),
-        // Include traditional indicators as fallback
-        rsi: stepIndicators.get('RSI')?.value ?? rsi,
-        macd: stepIndicators.get('MACD')?.metadata
-          ? { value: stepIndicators.get('MACD')!.metadata!.macd, signal: stepIndicators.get('MACD')!.metadata!.signal, histogram: stepIndicators.get('MACD')!.metadata!.histogram }
-          : { value: macd.macd, signal: macd.signal, histogram: macd.histogram },
-        bollingerBands: stepIndicators.get('BOLLINGER')?.metadata
-          ? { upper: stepIndicators.get('BOLLINGER')!.metadata!.upper, middle: stepIndicators.get('BOLLINGER')!.metadata!.middle, lower: stepIndicators.get('BOLLINGER')!.metadata!.lower }
-          : { upper: bb.upper, middle: bb.middle, lower: bb.lower },
-        movingAverages: { ma50, ma200 },
-      }),
+      indicatorDetails: indicatorAnalysis,
       score,
+      // Gate decision for sequential approach
+      gate: {
+        canProceed: gateResult.canProceed,
+        reason: gateResult.reason,
+        confidence: gateResult.confidence,
+      },
+      // Direction recommendation from this step
+      direction: gateResult.direction,
+      directionConfidence: gateResult.directionConfidence,
     };
   },
 
