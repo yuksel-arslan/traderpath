@@ -246,6 +246,7 @@ export function RecentAnalyses() {
       const reportData = {
         symbol: analysis.symbol,
         generatedAt: analysis.createdAt,
+        analysisId: analysis.id,
         tradePlan: {
           direction: step5.direction || analysis.direction,
           averageEntry: step5.averageEntry || step5.entryPrice || analysis.entryPrice,
