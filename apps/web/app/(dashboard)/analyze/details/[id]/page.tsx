@@ -187,7 +187,7 @@ export default function AnalysisDetailsPage() {
 
       const data = await response.json();
       if (data.success && data.data?.id) {
-        router.push(`/reports/${data.data.id}`);
+        alert(`✅ Report created successfully for ${analysis.symbol}!`);
       }
     } catch (err) {
       console.error('Failed to generate report:', err);
