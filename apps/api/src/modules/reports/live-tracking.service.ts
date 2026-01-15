@@ -288,12 +288,11 @@ export async function getUserActiveTrades(userId: string): Promise<LiveTrackingS
   const cached = await cache.get<LiveTrackingStatus[]>(cacheKey);
   if (cached) return cached;
 
-  // Get active reports
+  // Get active reports - trades stay active until TP or SL is hit
   const reports = await prisma.report.findMany({
     where: {
       userId,
-      expiresAt: { gt: new Date() },
-      outcome: null, // Only pending trades
+      outcome: null, // Only pending trades (no TP/SL hit yet)
     },
     select: {
       id: true,
@@ -399,11 +398,11 @@ export async function checkAndUpdateOutcomes(): Promise<{
   tpHits: number;
   slHits: number;
 }> {
-  // Get active reports without outcomes
+  // Get all reports without outcomes (regardless of expiration date)
+  // Reports stay active until TP or SL is hit - no time-based expiration
   const reports = await prisma.report.findMany({
     where: {
       outcome: null,
-      expiresAt: { gt: new Date() },
     },
     select: {
       id: true,
