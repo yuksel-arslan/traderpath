@@ -754,6 +754,55 @@ function FeaturesSection() {
         </div>
       </section>
 
+      {/* Feature 5: TFT Model Prediction (Coming Soon) */}
+      <section className="py-20 bg-gradient-to-b from-pink-500/5 via-purple-500/5 to-transparent">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <span className="inline-flex items-center gap-2 px-3 py-1 bg-pink-500/10 border border-pink-500/20 rounded-full text-pink-500 text-sm font-medium mb-4">
+              <Brain className="w-4 h-4" />
+              Feature 5
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
+              TFT Model Prediction
+              <span className="text-sm bg-amber-500 text-white px-3 py-1 rounded-full font-medium">COMING SOON</span>
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Advanced AI-powered price prediction using Temporal Fusion Transformer deep learning model. Get data-driven price forecasts to complement your technical analysis.
+            </p>
+          </div>
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-6 bg-card border-2 border-dashed border-pink-500/30 rounded-xl text-center">
+                <div className="w-14 h-14 bg-pink-500/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                  <TrendingUp className="w-7 h-7 text-pink-500" />
+                </div>
+                <h3 className="font-bold text-lg mb-2">Price Forecasting</h3>
+                <p className="text-sm text-muted-foreground">AI-generated price predictions for multiple timeframes based on historical patterns and market dynamics.</p>
+              </div>
+              <div className="p-6 bg-card border-2 border-dashed border-purple-500/30 rounded-xl text-center">
+                <div className="w-14 h-14 bg-purple-500/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                  <Target className="w-7 h-7 text-purple-500" />
+                </div>
+                <h3 className="font-bold text-lg mb-2">Target Zones</h3>
+                <p className="text-sm text-muted-foreground">Machine learning-identified support and resistance zones with probability scores.</p>
+              </div>
+              <div className="p-6 bg-card border-2 border-dashed border-cyan-500/30 rounded-xl text-center">
+                <div className="w-14 h-14 bg-cyan-500/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                  <BarChart3 className="w-7 h-7 text-cyan-500" />
+                </div>
+                <h3 className="font-bold text-lg mb-2">Confidence Scores</h3>
+                <p className="text-sm text-muted-foreground">Transparent confidence intervals showing prediction reliability for informed decision-making.</p>
+              </div>
+            </div>
+            <div className="mt-8 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-center">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-amber-500">Coming Soon:</span> TFT Analysis will be available as an enhanced analysis option for <span className="font-semibold">{ANALYSIS_BUNDLES.find(b => b.comingSoon)?.credits || 50} credits</span>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Analysis Step Modal */}
       {activeStep !== null && (
         <div
