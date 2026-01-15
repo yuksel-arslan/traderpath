@@ -1,23 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Clock,
   TrendingUp,
   TrendingDown,
   RefreshCw,
   Target,
-  Timer,
   Zap,
   Activity,
   Calendar,
   List,
   LayoutGrid,
   ChevronRight,
+  FileText,
+  Download,
+  Mail,
+  Loader2,
 } from 'lucide-react';
 import { CoinIcon } from '../common/CoinIcon';
 import { cn } from '../../lib/utils';
-import { getAuthToken, getApiUrl } from '../../lib/api';
+import { getAuthToken, getApiUrl, authFetch } from '../../lib/api';
 import Link from 'next/link';
 
 // Trade type definitions
@@ -62,10 +66,12 @@ const verdictConfig = {
 type ViewMode = 'list' | 'card';
 
 export function RecentAnalyses() {
+  const router = useRouter();
   const [analyses, setAnalyses] = useState<RecentAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [actionLoading, setActionLoading] = useState<{ id: string; action: string } | null>(null);
 
   useEffect(() => {
     fetchAnalyses();
@@ -177,6 +183,201 @@ export function RecentAnalyses() {
     }
   };
 
+  // Create report from analysis
+  const handleCreateReport = async (e: React.MouseEvent, analysisId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setActionLoading({ id: analysisId, action: 'report' });
+
+    try {
+      // Check if report already exists
+      const checkResponse = await authFetch(`/api/reports?analysisId=${analysisId}`);
+      if (checkResponse.ok) {
+        const checkData = await checkResponse.json();
+        if (checkData.data?.reports?.length > 0) {
+          router.push(`/reports/${checkData.data.reports[0].id}`);
+          return;
+        }
+      }
+
+      // Create new report
+      const response = await authFetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analysisId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create report');
+      }
+
+      const data = await response.json();
+      if (data.success && data.data?.id) {
+        router.push(`/reports/${data.data.id}`);
+      }
+    } catch (err) {
+      console.error('Failed to create report:', err);
+      alert('Failed to create report');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Download PDF
+  const handleDownload = async (e: React.MouseEvent, analysis: RecentAnalysis) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setActionLoading({ id: analysis.id, action: 'download' });
+
+    try {
+      // Fetch full analysis data
+      const response = await authFetch(`/api/analysis/${analysis.id}`);
+      if (!response.ok) throw new Error('Failed to fetch analysis');
+
+      const data = await response.json();
+      if (!data.success || !data.data) throw new Error('Analysis not found');
+
+      const analysisData = data.data;
+      const step2 = analysisData.step2Result || {};
+      const step5 = analysisData.step5Result || {};
+      const step7 = analysisData.step7Result || {};
+
+      // Build report data
+      const reportData = {
+        symbol: analysis.symbol,
+        generatedAt: analysis.createdAt,
+        analysisId: analysis.id,
+        tradePlan: {
+          direction: step5.direction || analysis.direction,
+          averageEntry: step5.averageEntry || step5.entryPrice || analysis.entryPrice,
+          stopLoss: { price: step5.stopLoss?.price || step5.stopLoss || analysis.stopLoss },
+          takeProfits: [
+            { price: step5.takeProfit1 || analysis.takeProfit1 },
+            { price: step5.takeProfit2 || analysis.takeProfit2 },
+            { price: step5.takeProfit3 || analysis.takeProfit3 },
+          ].filter(tp => tp.price),
+          riskReward: step5.riskReward || 2,
+        },
+        assetScan: {
+          currentPrice: step2.currentPrice || analysis.currentPrice,
+          priceChange24h: step2.priceChange24h || 0,
+          indicators: step2.indicators || { rsi: 50, macd: { histogram: 0 } },
+        },
+        verdict: {
+          action: step7.action || step7.verdict || analysis.verdict,
+          overallScore: analysis.score,
+          aiSummary: step7.aiSummary || step7.summary,
+        },
+        marketPulse: analysisData.step1Result || {},
+        safetyCheck: analysisData.step3Result || {},
+        timing: analysisData.step4Result || {},
+        trapCheck: analysisData.step6Result || {},
+      };
+
+      const { generateAnalysisReport } = await import('../reports/AnalysisReport');
+      await generateAnalysisReport(reportData);
+    } catch (err) {
+      console.error('Failed to download:', err);
+      alert('Failed to download PDF');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Send email
+  const handleEmail = async (e: React.MouseEvent, analysis: RecentAnalysis) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setActionLoading({ id: analysis.id, action: 'email' });
+
+    try {
+      // Fetch full analysis data
+      const response = await authFetch(`/api/analysis/${analysis.id}`);
+      if (!response.ok) throw new Error('Failed to fetch analysis');
+
+      const data = await response.json();
+      if (!data.success || !data.data) throw new Error('Analysis not found');
+
+      const analysisData = data.data;
+      const step1 = analysisData.step1Result || {};
+      const step2 = analysisData.step2Result || {};
+      const step3 = analysisData.step3Result || {};
+      const step4 = analysisData.step4Result || {};
+      const step5 = analysisData.step5Result || {};
+      const step6 = analysisData.step6Result || {};
+      const step7 = analysisData.step7Result || {};
+
+      // Build report data for email
+      const reportData = {
+        symbol: analysis.symbol,
+        generatedAt: analysis.createdAt,
+        analysisId: analysis.id,
+        marketPulse: {
+          btcDominance: step1.btcDominance,
+          fearGreedIndex: step1.fearGreedIndex,
+          fearGreedLabel: step1.fearGreedLabel,
+          trend: step1.trend || { direction: 'neutral', strength: 0 },
+        },
+        assetScan: {
+          currentPrice: step2.currentPrice || analysis.currentPrice,
+          priceChange24h: step2.priceChange24h || 0,
+          indicators: step2.indicators || { rsi: 50, macd: { histogram: 0 } },
+          levels: step2.levels,
+        },
+        safetyCheck: {
+          riskLevel: step3.riskLevel,
+          manipulation: step3.manipulation || { pumpDumpRisk: 'low' },
+          whaleActivity: step3.whaleActivity || { bias: 'neutral' },
+        },
+        timing: {
+          tradeNow: step4.tradeNow,
+          reason: step4.reason,
+        },
+        tradePlan: {
+          direction: step5.direction || analysis.direction,
+          averageEntry: step5.averageEntry || step5.entryPrice || analysis.entryPrice,
+          stopLoss: { price: step5.stopLoss?.price || step5.stopLoss || analysis.stopLoss },
+          takeProfits: [
+            { price: step5.takeProfit1 || analysis.takeProfit1 },
+            { price: step5.takeProfit2 || analysis.takeProfit2 },
+            { price: step5.takeProfit3 || analysis.takeProfit3 },
+          ].filter(tp => tp.price),
+          riskReward: step5.riskReward || 2,
+        },
+        trapCheck: {
+          traps: step6.traps || { bullTrap: false, bearTrap: false, fakeoutRisk: 'low' },
+        },
+        verdict: {
+          action: step7.action || step7.verdict || analysis.verdict,
+          overallScore: analysis.score,
+          aiSummary: step7.aiSummary || step7.summary,
+        },
+      };
+
+      // Send email
+      const emailResponse = await authFetch('/api/reports/send-html-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportId: analysis.id,
+          reportData,
+        }),
+      });
+
+      if (!emailResponse.ok) {
+        const errData = await emailResponse.json();
+        throw new Error(errData.error?.message || 'Failed to send email');
+      }
+
+      alert('Email sent successfully!');
+    } catch (err) {
+      console.error('Failed to send email:', err);
+      alert(err instanceof Error ? err.message : 'Failed to send email');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center py-6">
@@ -249,106 +450,159 @@ export function RecentAnalyses() {
       </div>
 
       {viewMode === 'list' ? (
-        <ListView analyses={analyses} />
+        <ListView
+          analyses={analyses}
+          actionLoading={actionLoading}
+          onCreateReport={handleCreateReport}
+          onDownload={handleDownload}
+          onEmail={handleEmail}
+        />
       ) : (
-        <CardView analyses={analyses} />
+        <CardView
+          analyses={analyses}
+          actionLoading={actionLoading}
+          onCreateReport={handleCreateReport}
+          onDownload={handleDownload}
+          onEmail={handleEmail}
+        />
       )}
     </div>
   );
 }
 
+interface ViewProps {
+  analyses: RecentAnalysis[];
+  actionLoading: { id: string; action: string } | null;
+  onCreateReport: (e: React.MouseEvent, id: string) => void;
+  onDownload: (e: React.MouseEvent, analysis: RecentAnalysis) => void;
+  onEmail: (e: React.MouseEvent, analysis: RecentAnalysis) => void;
+}
+
 // Compact List View
-function ListView({ analyses }: { analyses: RecentAnalysis[] }) {
+function ListView({ analyses, actionLoading, onCreateReport, onDownload, onEmail }: ViewProps) {
   return (
     <div className="space-y-1 max-h-[400px] overflow-y-auto">
       {analyses.map((analysis) => {
         const config = verdictConfig[analysis.verdict] || verdictConfig.wait;
         const isActive = analysis.expiresAt && new Date(analysis.expiresAt) > new Date() && analysis.outcome !== 'correct' && analysis.outcome !== 'incorrect';
+        const isLoading = actionLoading?.id === analysis.id;
 
         return (
-          <Link
+          <div
             key={analysis.id}
-            href={`/reports/${analysis.id}`}
             className={cn(
               "flex items-center gap-2 p-2 rounded-lg transition-all hover:bg-gray-100 dark:hover:bg-slate-700/50 group",
               analysis.outcome === 'correct' && "bg-green-500/5",
               analysis.outcome === 'incorrect' && "bg-red-500/5"
             )}
           >
-            {/* Coin Icon */}
-            <CoinIcon symbol={analysis.symbol} size={28} className="shrink-0" />
+            {/* Main clickable area */}
+            <Link
+              href={`/analyze/details/${analysis.id}`}
+              className="flex items-center gap-2 flex-1 min-w-0"
+            >
+              {/* Coin Icon */}
+              <CoinIcon symbol={analysis.symbol} size={28} className="shrink-0" />
 
-            {/* Symbol + Direction */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="font-medium text-sm text-gray-900 dark:text-white">{analysis.symbol}</span>
-                {analysis.direction && (
-                  <span className={cn(
-                    "flex items-center text-[10px]",
-                    analysis.direction === 'long' ? "text-green-500" : "text-red-500"
-                  )}>
-                    {analysis.direction === 'long' ? (
-                      <TrendingUp className="w-3 h-3" />
-                    ) : (
-                      <TrendingDown className="w-3 h-3" />
-                    )}
-                  </span>
-                )}
-                {analysis.tradeType && TRADE_TYPE_CONFIG[analysis.tradeType] && (
-                  <span className={cn(
-                    "text-[9px] px-1 py-0.5 rounded",
-                    TRADE_TYPE_CONFIG[analysis.tradeType].color === 'purple' && "bg-purple-500/10 text-purple-500",
-                    TRADE_TYPE_CONFIG[analysis.tradeType].color === 'blue' && "bg-blue-500/10 text-blue-500",
-                    TRADE_TYPE_CONFIG[analysis.tradeType].color === 'amber' && "bg-amber-500/10 text-amber-500"
-                  )}>
-                    {TRADE_TYPE_CONFIG[analysis.tradeType].label}
-                  </span>
-                )}
-                {isActive && analysis.hasTradePlan && (
-                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
-                )}
+              {/* Symbol + Direction */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-medium text-sm text-gray-900 dark:text-white">{analysis.symbol}</span>
+                  {analysis.direction && (
+                    <span className={cn(
+                      "flex items-center text-[10px]",
+                      analysis.direction === 'long' ? "text-green-500" : "text-red-500"
+                    )}>
+                      {analysis.direction === 'long' ? (
+                        <TrendingUp className="w-3 h-3" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3" />
+                      )}
+                    </span>
+                  )}
+                  {analysis.tradeType && TRADE_TYPE_CONFIG[analysis.tradeType] && (
+                    <span className={cn(
+                      "text-[9px] px-1 py-0.5 rounded",
+                      TRADE_TYPE_CONFIG[analysis.tradeType].color === 'purple' && "bg-purple-500/10 text-purple-500",
+                      TRADE_TYPE_CONFIG[analysis.tradeType].color === 'blue' && "bg-blue-500/10 text-blue-500",
+                      TRADE_TYPE_CONFIG[analysis.tradeType].color === 'amber' && "bg-amber-500/10 text-amber-500"
+                    )}>
+                      {TRADE_TYPE_CONFIG[analysis.tradeType].label}
+                    </span>
+                  )}
+                  {isActive && analysis.hasTradePlan && (
+                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                  )}
+                </div>
+                <span className="text-[10px] text-gray-500 dark:text-slate-400">{analysis.createdAt}</span>
               </div>
-              <span className="text-[10px] text-gray-500 dark:text-slate-400">{analysis.createdAt}</span>
-            </div>
 
-            {/* Score */}
-            <div className={cn(
-              "text-xs font-bold px-1.5 py-0.5 rounded",
-              analysis.score >= 7 ? "text-green-600 dark:text-green-400" :
-              analysis.score >= 5 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"
-            )}>
-              {((analysis.score ?? 0) * 10).toFixed(0)}%
-            </div>
-
-            {/* P/L if available */}
-            {analysis.unrealizedPnL !== undefined && (
+              {/* Score */}
               <div className={cn(
-                "text-xs font-bold min-w-[45px] text-right",
-                analysis.unrealizedPnL >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                "text-xs font-bold px-1.5 py-0.5 rounded",
+                analysis.score >= 7 ? "text-green-600 dark:text-green-400" :
+                analysis.score >= 5 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"
               )}>
-                {analysis.unrealizedPnL >= 0 ? '+' : ''}{(analysis.unrealizedPnL ?? 0).toFixed(1)}%
+                {((analysis.score ?? 0) * 10).toFixed(0)}%
               </div>
-            )}
 
-            {/* Verdict Badge */}
-            <span className={cn(
-              "text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0",
-              config.bg, config.color
-            )}>
-              {config.label}
-            </span>
+              {/* Verdict Badge */}
+              <span className={cn(
+                "text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0",
+                config.bg, config.color
+              )}>
+                {config.label}
+              </span>
 
-            {/* Outcome indicator */}
-            {analysis.outcome === 'correct' && (
-              <span className="text-[9px] text-green-500 font-bold">TP</span>
-            )}
-            {analysis.outcome === 'incorrect' && (
-              <span className="text-[9px] text-red-500 font-bold">SL</span>
-            )}
+              {/* Arrow */}
+              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-slate-300 shrink-0" />
+            </Link>
 
-            {/* Arrow */}
-            <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-slate-300 shrink-0" />
-          </Link>
+            {/* Action buttons */}
+            <div className="flex items-center gap-0.5 shrink-0">
+              {/* Create Report */}
+              <button
+                onClick={(e) => onCreateReport(e, analysis.id)}
+                disabled={isLoading}
+                className="p-1.5 rounded hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition"
+                title="Create Report"
+              >
+                {isLoading && actionLoading?.action === 'report' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FileText className="w-3.5 h-3.5" />
+                )}
+              </button>
+
+              {/* Download PDF */}
+              <button
+                onClick={(e) => onDownload(e, analysis)}
+                disabled={isLoading}
+                className="p-1.5 rounded hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 transition"
+                title="Download PDF"
+              >
+                {isLoading && actionLoading?.action === 'download' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Download className="w-3.5 h-3.5" />
+                )}
+              </button>
+
+              {/* Email */}
+              <button
+                onClick={(e) => onEmail(e, analysis)}
+                disabled={isLoading}
+                className="p-1.5 rounded hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition"
+                title="Send Email"
+              >
+                {isLoading && actionLoading?.action === 'email' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Mail className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </div>
+          </div>
         );
       })}
     </div>
@@ -356,12 +610,13 @@ function ListView({ analyses }: { analyses: RecentAnalysis[] }) {
 }
 
 // Card View
-function CardView({ analyses }: { analyses: RecentAnalysis[] }) {
+function CardView({ analyses, actionLoading, onCreateReport, onDownload, onEmail }: ViewProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto">
       {analyses.map((analysis) => {
         const config = verdictConfig[analysis.verdict] || verdictConfig.wait;
         const isActive = analysis.expiresAt && new Date(analysis.expiresAt) > new Date() && analysis.outcome !== 'correct' && analysis.outcome !== 'incorrect';
+        const isLoading = actionLoading?.id === analysis.id;
 
         // Calculate TP progress
         const tpProgress = analysis.tpProgress ?? (() => {
@@ -383,128 +638,167 @@ function CardView({ analyses }: { analyses: RecentAnalysis[] }) {
         })();
 
         return (
-          <Link
+          <div
             key={analysis.id}
-            href={`/reports/${analysis.id}`}
             className={cn(
-              "block p-3 rounded-lg border transition-all hover:border-gray-300 dark:hover:border-slate-600 hover:shadow-sm group",
+              "block p-3 rounded-lg border transition-all hover:border-gray-300 dark:hover:border-slate-600 hover:shadow-sm",
               "bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700",
               analysis.outcome === 'correct' && "border-green-500/30 bg-green-500/5",
               analysis.outcome === 'incorrect' && "border-red-500/30 bg-red-500/5"
             )}
           >
-            {/* Top: Symbol + Verdict */}
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <CoinIcon symbol={analysis.symbol} size={32} className="shrink-0" />
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-semibold text-sm text-gray-900 dark:text-white">{analysis.symbol}</span>
-                    {analysis.direction && (
-                      <span className={cn(
-                        "flex items-center gap-0.5 text-[10px] font-medium px-1 py-0.5 rounded",
-                        analysis.direction === 'long'
-                          ? "bg-green-500/10 text-green-500"
-                          : "bg-red-500/10 text-red-500"
-                      )}>
-                        {analysis.direction === 'long' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                        {analysis.direction.toUpperCase()}
-                      </span>
-                    )}
+            {/* Top: Symbol + Verdict (clickable) */}
+            <Link href={`/analyze/details/${analysis.id}`} className="block">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <CoinIcon symbol={analysis.symbol} size={32} className="shrink-0" />
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-sm text-gray-900 dark:text-white">{analysis.symbol}</span>
+                      {analysis.direction && (
+                        <span className={cn(
+                          "flex items-center gap-0.5 text-[10px] font-medium px-1 py-0.5 rounded",
+                          analysis.direction === 'long'
+                            ? "bg-green-500/10 text-green-500"
+                            : "bg-red-500/10 text-red-500"
+                        )}>
+                          {analysis.direction === 'long' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                          {analysis.direction.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-gray-500 dark:text-slate-400">{analysis.createdAt}</span>
                   </div>
-                  <span className="text-[10px] text-gray-500 dark:text-slate-400">{analysis.createdAt}</span>
+                </div>
+
+                <div className="flex flex-col items-end gap-1">
+                  <span className={cn(
+                    "text-[10px] font-bold px-2 py-0.5 rounded",
+                    config.bg, config.color
+                  )}>
+                    {config.label}
+                  </span>
+                  {isActive && analysis.hasTradePlan && (
+                    <span className="flex items-center gap-1 text-[9px] text-blue-500">
+                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping" />
+                      LIVE
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <div className="flex flex-col items-end gap-1">
-                <span className={cn(
-                  "text-[10px] font-bold px-2 py-0.5 rounded",
-                  config.bg, config.color
+              {/* Stats Row */}
+              <div className="flex items-center gap-2 text-xs mb-2">
+                {/* Score */}
+                <div className={cn(
+                  "px-2 py-1 rounded",
+                  analysis.score >= 7 ? "bg-green-100 dark:bg-green-500/20" :
+                  analysis.score >= 5 ? "bg-yellow-100 dark:bg-yellow-500/20" : "bg-red-100 dark:bg-red-500/20"
                 )}>
-                  {config.label}
-                </span>
-                {isActive && analysis.hasTradePlan && (
-                  <span className="flex items-center gap-1 text-[9px] text-blue-500">
-                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping" />
-                    LIVE
+                  <span className="text-[9px] text-gray-500 dark:text-slate-400 block">Score</span>
+                  <span className={cn(
+                    "font-bold",
+                    analysis.score >= 7 ? "text-green-600 dark:text-green-400" :
+                    analysis.score >= 5 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"
+                  )}>
+                    {((analysis.score ?? 0) * 10).toFixed(0)}%
                   </span>
+                </div>
+
+                {/* P/L */}
+                {analysis.unrealizedPnL !== undefined && (
+                  <div className={cn(
+                    "px-2 py-1 rounded",
+                    analysis.unrealizedPnL >= 0
+                      ? "bg-green-100 dark:bg-green-500/20"
+                      : "bg-red-100 dark:bg-red-500/20"
+                  )}>
+                    <span className="text-[9px] text-gray-500 dark:text-slate-400 block">P/L</span>
+                    <span className={cn(
+                      "font-bold",
+                      analysis.unrealizedPnL >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                    )}>
+                      {analysis.unrealizedPnL >= 0 ? '+' : ''}{(analysis.unrealizedPnL ?? 0).toFixed(1)}%
+                    </span>
+                  </div>
+                )}
+
+                {/* TP Progress */}
+                {analysis.takeProfit1 && tpProgress !== null && (
+                  <div className={cn(
+                    "px-2 py-1 rounded",
+                    analysis.outcome === 'correct' ? "bg-green-200 dark:bg-green-500/30" :
+                    analysis.outcome === 'incorrect' ? "bg-red-200 dark:bg-red-500/30" :
+                    "bg-blue-100 dark:bg-blue-500/20"
+                  )}>
+                    <span className="text-[9px] text-gray-500 dark:text-slate-400 flex items-center gap-0.5">
+                      <Target className="w-2.5 h-2.5" />
+                      {analysis.outcome === 'correct' ? 'TP!' : analysis.outcome === 'incorrect' ? 'SL' : 'TP'}
+                    </span>
+                    <span className={cn(
+                      "font-bold",
+                      analysis.outcome === 'correct' ? "text-green-600 dark:text-green-300" :
+                      analysis.outcome === 'incorrect' ? "text-red-600 dark:text-red-300" :
+                      "text-blue-600 dark:text-blue-400"
+                    )}>
+                      {(tpProgress ?? 0).toFixed(0)}%
+                    </span>
+                  </div>
+                )}
+
+                {/* Trade Type */}
+                {analysis.tradeType && TRADE_TYPE_CONFIG[analysis.tradeType] && (
+                  <div className="ml-auto flex items-center gap-1 text-[10px] text-gray-500 dark:text-slate-400">
+                    {(() => {
+                      const Icon = TRADE_TYPE_CONFIG[analysis.tradeType!].icon;
+                      return <Icon className="w-3 h-3" />;
+                    })()}
+                    {TRADE_TYPE_CONFIG[analysis.tradeType].label}
+                  </div>
                 )}
               </div>
+            </Link>
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-1 pt-2 border-t border-gray-200 dark:border-slate-700">
+              <button
+                onClick={(e) => onCreateReport(e, analysis.id)}
+                disabled={isLoading}
+                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-[10px] font-medium bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition"
+              >
+                {isLoading && actionLoading?.action === 'report' ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <FileText className="w-3 h-3" />
+                )}
+                Report
+              </button>
+              <button
+                onClick={(e) => onDownload(e, analysis)}
+                disabled={isLoading}
+                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-[10px] font-medium bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition"
+              >
+                {isLoading && actionLoading?.action === 'download' ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Download className="w-3 h-3" />
+                )}
+                PDF
+              </button>
+              <button
+                onClick={(e) => onEmail(e, analysis)}
+                disabled={isLoading}
+                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-[10px] font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 transition"
+              >
+                {isLoading && actionLoading?.action === 'email' ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Mail className="w-3 h-3" />
+                )}
+                Email
+              </button>
             </div>
-
-            {/* Stats Row */}
-            <div className="flex items-center gap-2 text-xs">
-              {/* Score */}
-              <div className={cn(
-                "px-2 py-1 rounded",
-                analysis.score >= 7 ? "bg-green-100 dark:bg-green-500/20" :
-                analysis.score >= 5 ? "bg-yellow-100 dark:bg-yellow-500/20" : "bg-red-100 dark:bg-red-500/20"
-              )}>
-                <span className="text-[9px] text-gray-500 dark:text-slate-400 block">Score</span>
-                <span className={cn(
-                  "font-bold",
-                  analysis.score >= 7 ? "text-green-600 dark:text-green-400" :
-                  analysis.score >= 5 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"
-                )}>
-                  {((analysis.score ?? 0) * 10).toFixed(0)}%
-                </span>
-              </div>
-
-              {/* P/L */}
-              {analysis.unrealizedPnL !== undefined && (
-                <div className={cn(
-                  "px-2 py-1 rounded",
-                  analysis.unrealizedPnL >= 0
-                    ? "bg-green-100 dark:bg-green-500/20"
-                    : "bg-red-100 dark:bg-red-500/20"
-                )}>
-                  <span className="text-[9px] text-gray-500 dark:text-slate-400 block">P/L</span>
-                  <span className={cn(
-                    "font-bold",
-                    analysis.unrealizedPnL >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                  )}>
-                    {analysis.unrealizedPnL >= 0 ? '+' : ''}{(analysis.unrealizedPnL ?? 0).toFixed(1)}%
-                  </span>
-                </div>
-              )}
-
-              {/* TP Progress */}
-              {analysis.takeProfit1 && tpProgress !== null && (
-                <div className={cn(
-                  "px-2 py-1 rounded",
-                  analysis.outcome === 'correct' ? "bg-green-200 dark:bg-green-500/30" :
-                  analysis.outcome === 'incorrect' ? "bg-red-200 dark:bg-red-500/30" :
-                  "bg-blue-100 dark:bg-blue-500/20"
-                )}>
-                  <span className="text-[9px] text-gray-500 dark:text-slate-400 flex items-center gap-0.5">
-                    <Target className="w-2.5 h-2.5" />
-                    {analysis.outcome === 'correct' ? 'TP!' : analysis.outcome === 'incorrect' ? 'SL' : 'TP'}
-                  </span>
-                  <span className={cn(
-                    "font-bold",
-                    analysis.outcome === 'correct' ? "text-green-600 dark:text-green-300" :
-                    analysis.outcome === 'incorrect' ? "text-red-600 dark:text-red-300" :
-                    "text-blue-600 dark:text-blue-400"
-                  )}>
-                    {(tpProgress ?? 0).toFixed(0)}%
-                  </span>
-                </div>
-              )}
-
-              {/* Trade Type */}
-              {analysis.tradeType && TRADE_TYPE_CONFIG[analysis.tradeType] && (
-                <div className="ml-auto flex items-center gap-1 text-[10px] text-gray-500 dark:text-slate-400">
-                  {(() => {
-                    const Icon = TRADE_TYPE_CONFIG[analysis.tradeType!].icon;
-                    return <Icon className="w-3 h-3" />;
-                  })()}
-                  {TRADE_TYPE_CONFIG[analysis.tradeType].label}
-                </div>
-              )}
-
-              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-slate-300 ml-auto" />
-            </div>
-          </Link>
+          </div>
         );
       })}
     </div>
