@@ -30,7 +30,6 @@ interface TradePlanChartProps {
   resistance?: number[];
   onChartReady?: () => void; // Callback when chart is fully rendered with data
   chartId?: string; // Optional custom ID for the chart container (default: 'trade-plan-chart')
-  zoomToTradePlan?: boolean; // When true, zoom into the trade plan area (for PDF reports)
 }
 
 interface KlineData {
@@ -53,7 +52,6 @@ export function TradePlanChart({
   resistance = [],
   onChartReady,
   chartId = 'trade-plan-chart',
-  zoomToTradePlan = false,
 }: TradePlanChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -130,7 +128,7 @@ export function TradePlanChart({
     candleSeriesRef.current = candleSeries;
 
     // Fetch kline data
-    fetchKlineData(symbol, candleSeries, chart, zoomToTradePlan);
+    fetchKlineData(symbol, candleSeries, chart);
 
     // Handle resize
     const handleResize = () => {
@@ -159,7 +157,7 @@ export function TradePlanChart({
         // Chart may already be disposed
       }
     };
-  }, [symbol, zoomToTradePlan]);
+  }, [symbol]);
 
   // Add price lines when chart is ready
   useEffect(() => {
@@ -271,19 +269,15 @@ export function TradePlanChart({
   const fetchKlineData = async (
     sym: string,
     series: ISeriesApi<'Candlestick'>,
-    chart: IChartApi,
-    zoom: boolean
+    chart: IChartApi
   ) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Use 100 candles for zoomed view (PDF reports), 200 for normal view
-      const candleLimit = zoom ? 100 : 200;
-
-      // Fetch from Binance directly (public endpoint)
+      // Fetch 100 candles for chart display
       const response = await fetch(
-        `https://api.binance.com/api/v3/klines?symbol=${sym}USDT&interval=1h&limit=${candleLimit}`
+        `https://api.binance.com/api/v3/klines?symbol=${sym}USDT&interval=1h&limit=100`
       );
 
       if (!response.ok) {
@@ -317,7 +311,6 @@ export function TradePlanChart({
       // Guard chart operations with try-catch in case of disposal
       try {
         if (!isDisposedRef.current) {
-          // Use all fetched candles (100 for zoom, 200 for normal)
           series.setData(candleData);
           chart.timeScale().fitContent();
         }
