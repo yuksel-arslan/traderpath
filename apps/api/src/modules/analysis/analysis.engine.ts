@@ -13,6 +13,16 @@ import { IndicatorsService, OHLCV, IndicatorResult } from './services/indicators
 import { getTFTClient, TFTForecast } from './services/tft-client.service';
 import { getTradingKnowledgeForAI } from '../ai-expert/trading-knowledge-base';
 
+// NEW: Tokenomics and Indicator Classification imports
+import { analyzeTokenomics, calculateTokenomicsRiskFactor, TokenomicsData } from './services/tokenomics.service';
+import {
+  isLeadingIndicator,
+  getIndicatorDecisionWeight,
+  calculateLeadingOnlyScore,
+  LEADING_INDICATORS,
+  LAGGING_INDICATORS,
+} from './config/indicator-classification';
+
 // ===========================================
 // RAG Gate Evaluation with Gemini
 // ===========================================
@@ -1620,6 +1630,8 @@ interface AssetScanResult {
   };
   // Detailed indicator analysis with interpretations
   indicatorDetails?: IndicatorAnalysis;
+  // NEW: Tokenomics analysis (financial structure of the token)
+  tokenomics?: TokenomicsData;
   score: number;
   // Gate decision for sequential approach
   gate: {
@@ -3254,12 +3266,20 @@ export const analysisEngine = {
   async scanAsset(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<AssetScanResult> {
     const tf = getTimeframesForTradeType(tradeType);
 
-    // Fetch candles based on trade type timeframes
-    const [ticker, candlesPrimary, candlesSecondary, candlesConfirmation] = await Promise.all([
+    // Extract base symbol for tokenomics (e.g., BTCUSDT -> BTC)
+    const baseSymbol = symbol.replace('USDT', '').replace('BUSD', '').replace('USDC', '');
+
+    // Fetch candles and tokenomics in parallel
+    const [ticker, candlesPrimary, candlesSecondary, candlesConfirmation, tokenomicsData] = await Promise.all([
       fetch24hTicker(symbol),
       fetchKlines(symbol, tf.primary, tf.candleCounts.primary),
       fetchKlines(symbol, tf.secondary, tf.candleCounts.secondary),
       fetchKlines(symbol, tf.confirmation, tf.candleCounts.confirmation),
+      // NEW: Fetch tokenomics analysis (financial structure)
+      analyzeTokenomics(baseSymbol).catch(err => {
+        console.warn(`Tokenomics analysis failed for ${baseSymbol}:`, err);
+        return null;
+      }),
     ]);
 
     // For higher timeframe analysis (needed for trends), also fetch daily candles if not already
@@ -3469,6 +3489,9 @@ export const analysisEngine = {
       // Build detailed indicator analysis with ALL configured indicators
       // Uses full 40+ indicators from trade-config.ts for rich analysis
       indicatorDetails: indicatorAnalysis,
+      // NEW: Tokenomics analysis (financial structure of the token)
+      // Includes: supply metrics, market cap/FDV, whale concentration, distribution
+      tokenomics: tokenomicsData || undefined,
       score,
       // Gate decision for sequential approach
       gate: {
@@ -4583,6 +4606,36 @@ export const analysisEngine = {
     }
     if (safetyCheck.manipulation.pumpDumpRisk === 'high') {
       reasons.push({ factor: 'High pump & dump risk', positive: false, impact: 'high', source: 'Safety Check' });
+    }
+
+    // NEW: Tokenomics risk assessment (from Asset Scanner)
+    if (assetScan.tokenomics) {
+      const tokenomics = assetScan.tokenomics;
+      const tokenomicsRiskFactor = calculateTokenomicsRiskFactor(tokenomics);
+
+      // Add tokenomics-specific reasons
+      if (tokenomics.assessment.overallScore >= 70) {
+        reasons.push({ factor: `Strong tokenomics (score: ${tokenomics.assessment.overallScore}/100)`, positive: true, impact: 'medium', source: 'Tokenomics' });
+      } else if (tokenomics.assessment.overallScore < 40) {
+        reasons.push({ factor: `Weak tokenomics (score: ${tokenomics.assessment.overallScore}/100)`, positive: false, impact: 'high', source: 'Tokenomics' });
+      }
+
+      if (tokenomics.market.dilutionRisk === 'high') {
+        reasons.push({ factor: 'High dilution risk (low MC/FDV ratio)', positive: false, impact: 'medium', source: 'Tokenomics' });
+      }
+
+      if (tokenomics.whaleConcentration.concentrationRisk === 'high') {
+        reasons.push({ factor: 'High whale concentration', positive: false, impact: 'medium', source: 'Tokenomics' });
+      }
+
+      if (tokenomics.supply.inflationRisk === 'high') {
+        reasons.push({ factor: `High inflation risk (only ${tokenomics.supply.circulatingPercent?.toFixed(0) || '?'}% circulating)`, positive: false, impact: 'medium', source: 'Tokenomics' });
+      }
+
+      // Adjust confidence based on tokenomics risk
+      if (tokenomicsRiskFactor > 0.5) {
+        directionConfidence = Math.max(30, directionConfidence * (1 - tokenomicsRiskFactor * 0.3));
+      }
     }
 
     // Timing reasons

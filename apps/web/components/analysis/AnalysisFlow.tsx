@@ -302,6 +302,8 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
         trapCheck: results[5],
         tradePlan: results[6],
         verdict: results[7],
+        // Full 40+ Indicator Details
+        indicatorDetails: (results[2] as { indicatorDetails?: unknown })?.indicatorDetails || (results[3] as { indicatorDetails?: unknown })?.indicatorDetails,
       };
 
       const response = await fetch(getApiUrl('/api/reports'), {
