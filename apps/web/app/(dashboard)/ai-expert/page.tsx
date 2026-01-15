@@ -350,15 +350,10 @@ export default function AIExpertsPage() {
                       <ChevronRight className={cn("w-4 h-4 group-hover:translate-x-1 transition-transform", expert.color)} />
                     </div>
 
-                    {isAdmin ? (
+                    {isAdmin && (
                       <div className="flex items-center gap-1.5 text-emerald-500">
                         <Shield className="w-4 h-4" />
-                        <span className="text-sm font-bold">Free</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5 text-amber-500">
-                        <Zap className="w-4 h-4" />
-                        <span className="text-sm font-bold">{expert.creditCost} credits</span>
+                        <span className="text-sm font-bold">Admin</span>
                       </div>
                     )}
                   </div>
@@ -373,15 +368,10 @@ export default function AIExpertsPage() {
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-200 dark:border-slate-700 shadow-sm">
         <div className="flex items-center gap-2 text-sm">
           <Sparkles className="w-4 h-4 text-amber-500" />
-          {isAdmin ? (
-            <span className="text-gray-700 dark:text-slate-300">
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold">Admin</span> - All AI experts are free for you
-            </span>
-          ) : (
-            <span className="text-gray-700 dark:text-slate-300">
-              Each message costs <span className="text-amber-600 dark:text-amber-400 font-bold">5 credits</span> - powered by TraderPath examples
-            </span>
-          )}
+          <span className="text-gray-700 dark:text-slate-300">
+            Powered by TraderPath examples
+            {isAdmin && <span className="text-emerald-600 dark:text-emerald-400 font-bold ml-2">(Admin)</span>}
+          </span>
         </div>
         <p className="text-xs text-gray-500 dark:text-slate-400 mt-1.5">
           AI Experts use real examples from your TraderPath analyses and quiz questions to give you personalized answers.
