@@ -55,6 +55,7 @@ import { TraderPathLogo } from '../../components/common/TraderPathLogo';
 import { LiveAnalysisPreview } from '../../components/marketing/LiveAnalysisPreview';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../lib/coin-icons';
 import { apiBaseUrl } from '../../lib/api';
+import { CREDIT_PACKAGES, ANALYSIS_BUNDLES, FREE_SIGNUP_CREDITS } from '../../lib/pricing-config';
 
 // Package type from API
 interface ApiPackage {
@@ -1300,43 +1301,43 @@ export default function LandingPage() {
               Why Choose TraderPath?
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Everything you need for smart trading decisions, all in one analysis
+              Professional-grade analysis tools at transparent, affordable prices
             </p>
           </div>
 
           {/* Pricing Highlight */}
           <div className="max-w-4xl mx-auto mb-12">
-            <div className="bg-gradient-to-r from-teal-500/10 via-transparent to-coral-500/10 border border-teal-500/20 rounded-2xl p-6 sm:p-8">
+            <div className="bg-gradient-to-r from-cyan-500/10 via-transparent to-amber-500/10 border border-cyan-500/20 rounded-2xl p-6 sm:p-8">
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="text-center md:text-left">
                   <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
                     <Coins className="w-6 h-6 text-amber-500" />
-                    <span className="text-lg font-semibold">Simple Pricing</span>
+                    <span className="text-lg font-semibold">Credit-Based Pricing</span>
                   </div>
                   <p className="text-3xl sm:text-4xl font-bold">
-                    <span className="gradient-text">35 Credits</span>
-                    <span className="text-lg font-normal text-muted-foreground ml-2">per analysis</span>
+                    <span className="gradient-text">{ANALYSIS_BUNDLES[0].credits} Credits</span>
+                    <span className="text-lg font-normal text-muted-foreground ml-2">per full analysis</span>
                   </p>
-                  <p className="text-sm text-muted-foreground mt-2">All features included. No hidden costs.</p>
+                  <p className="text-sm text-muted-foreground mt-2">All 7 steps included. No hidden fees.</p>
                 </div>
                 <div className="bg-card rounded-xl border p-4 w-full md:w-auto">
-                  <p className="text-xs text-muted-foreground mb-3 text-center">Credit cost varies by package</p>
+                  <p className="text-xs text-muted-foreground mb-3 text-center">Cost per analysis by package</p>
                   <div className="grid grid-cols-3 gap-3 text-center">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Starter</p>
-                      <p className="font-bold text-blue-500">$0.16</p>
-                      <p className="text-[10px] text-muted-foreground">≈$5.60/analysis</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Trader</p>
-                      <p className="font-bold text-purple-500">$0.12</p>
-                      <p className="text-[10px] text-muted-foreground">≈$4.20/analysis</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Pro</p>
-                      <p className="font-bold text-amber-500">$0.10</p>
-                      <p className="text-[10px] text-muted-foreground">≈$3.50/analysis</p>
-                    </div>
+                    {CREDIT_PACKAGES.map((pkg) => {
+                      const perCreditCost = pkg.price / (pkg.credits + pkg.bonus);
+                      const analysisCredits = ANALYSIS_BUNDLES[0].credits;
+                      const perAnalysisCost = (perCreditCost * analysisCredits).toFixed(2);
+                      const colorClass = pkg.color === 'blue' ? 'text-blue-500' :
+                                        pkg.color === 'purple' ? 'text-purple-500' :
+                                        pkg.color === 'amber' ? 'text-amber-500' : 'text-green-500';
+                      return (
+                        <div key={pkg.id}>
+                          <p className="text-xs text-muted-foreground">{pkg.name.replace(' Pack', '')}</p>
+                          <p className={`font-bold ${colorClass}`}>{pkg.perCredit}</p>
+                          <p className="text-[10px] text-muted-foreground">≈${perAnalysisCost}/analysis</p>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -1345,19 +1346,19 @@ export default function LandingPage() {
 
           {/* All Features Included */}
           <div className="max-w-5xl mx-auto">
-            <h3 className="text-xl font-semibold text-center mb-6">All Features Included in Every Analysis</h3>
+            <h3 className="text-xl font-semibold text-center mb-6">Included in Every {ANALYSIS_BUNDLES[0].credits}-Credit Analysis</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {[
-                { Icon: Search, title: '7-Step Analysis', desc: 'Complete market analysis', color: 'text-teal-500' },
+                { Icon: Search, title: '7-Step Analysis', desc: 'Complete market scan', color: 'text-cyan-500' },
                 { Icon: ShieldAlert, title: 'Safety Check', desc: 'Manipulation detection', color: 'text-red-500' },
-                { Icon: Target, title: 'Entry/Exit Points', desc: 'Precise price levels', color: 'text-green-500' },
-                { Icon: BarChart3, title: 'Trade Plan', desc: 'Risk/reward strategy', color: 'text-blue-500' },
-                { Icon: Bot, title: 'AI Expert Chat', desc: 'Ask questions anytime', color: 'text-violet-500' },
-                { Icon: FileText, title: 'PDF Reports', desc: 'Download & share', color: 'text-orange-500' },
+                { Icon: Target, title: 'Entry/SL/TP Levels', desc: 'Precise price points', color: 'text-green-500' },
+                { Icon: BarChart3, title: 'Trade Plan', desc: 'R:R calculated strategy', color: 'text-blue-500' },
+                { Icon: Bot, title: 'AI Expert Chat', desc: 'Ask follow-up questions', color: 'text-violet-500' },
+                { Icon: FileText, title: 'PDF Reports', desc: 'Download & archive', color: 'text-orange-500' },
                 { Icon: Mail, title: 'Email Reports', desc: 'Send to your inbox', color: 'text-emerald-500' },
-                { Icon: Bell, title: 'Price Alerts', desc: 'Never miss a move', color: 'text-amber-500' },
+                { Icon: Bell, title: 'Price Alerts', desc: 'Auto-created from plan', color: 'text-amber-500' },
               ].map((item, index) => (
-                <div key={index} className="bg-card rounded-lg border p-3 sm:p-4 text-center hover:border-teal-500/50 transition-colors">
+                <div key={index} className="bg-card rounded-lg border p-3 sm:p-4 text-center hover:border-cyan-500/50 transition-colors">
                   <div className="flex justify-center mb-2">
                     <item.Icon className={`w-6 h-6 sm:w-8 sm:h-8 ${item.color}`} />
                   </div>
@@ -1367,36 +1368,38 @@ export default function LandingPage() {
               ))}
             </div>
 
-            {/* Coming Soon */}
-            <div className="mt-6 flex justify-center">
-              <div className="bg-card rounded-lg border p-4 text-center relative inline-flex items-center gap-4 pr-6">
-                <div className="absolute -top-2 -right-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  COMING SOON
-                </div>
-                <Brain className="w-8 h-8 text-pink-500" />
-                <div className="text-left">
-                  <p className="font-semibold text-sm">AI Price Prediction</p>
-                  <p className="text-xs text-muted-foreground">TFT deep learning model</p>
+            {/* Coming Soon - TFT */}
+            {ANALYSIS_BUNDLES.filter(b => b.comingSoon).map((bundle, idx) => (
+              <div key={idx} className="mt-6 flex justify-center">
+                <div className="bg-card rounded-lg border border-dashed border-amber-500/30 p-4 text-center relative inline-flex items-center gap-4 pr-6">
+                  <div className="absolute -top-2 -right-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    COMING SOON
+                  </div>
+                  <Brain className="w-8 h-8 text-pink-500" />
+                  <div className="text-left">
+                    <p className="font-semibold text-sm">{bundle.name}</p>
+                    <p className="text-xs text-muted-foreground">{bundle.description} • {bundle.credits} credits</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            ))}
 
             {/* Stats */}
             <div className="mt-10 grid grid-cols-3 gap-4 max-w-2xl mx-auto">
               <div className="p-4 bg-card border rounded-lg text-center">
-                <div className="text-2xl sm:text-3xl font-bold text-teal-500 mb-1">7</div>
+                <div className="text-2xl sm:text-3xl font-bold text-cyan-500 mb-1">7</div>
                 <p className="text-xs sm:text-sm text-muted-foreground">Analysis Steps</p>
               </div>
               <div className="p-4 bg-card border rounded-lg text-center">
-                <div className="text-2xl sm:text-3xl font-bold text-amber-500 mb-1">60s</div>
-                <p className="text-xs sm:text-sm text-muted-foreground">To Trade Plan</p>
+                <div className="text-2xl sm:text-3xl font-bold text-amber-500 mb-1">~60s</div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Full Analysis Time</p>
               </div>
               <div className="p-4 bg-card border rounded-lg text-center">
                 <div className="flex items-center justify-center gap-1">
                   <Gift className="w-5 h-5 sm:w-6 sm:h-6 text-rose-500" />
-                  <span className="text-2xl sm:text-3xl font-bold text-rose-500">25</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-rose-500">{FREE_SIGNUP_CREDITS}</span>
                 </div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Free Credits Daily</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Free Credits at Signup</p>
               </div>
             </div>
           </div>
