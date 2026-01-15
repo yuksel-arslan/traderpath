@@ -1304,11 +1304,11 @@ export default function LandingPage() {
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 gradient-text-rg-animate" />
             </Link>
             <a
-              href="#see-it-in-action"
+              href="#features"
               className="px-6 sm:px-8 py-3 sm:py-4 border rounded-lg font-semibold hover:bg-accent transition flex items-center justify-center gap-2 text-sm sm:text-base"
             >
               <Play className="w-4 h-4 sm:w-5 sm:h-5" />
-              See It In Action
+              See Features
             </a>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
