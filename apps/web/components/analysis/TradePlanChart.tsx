@@ -317,20 +317,13 @@ export function TradePlanChart({
       // Guard chart operations with try-catch in case of disposal
       try {
         if (!isDisposedRef.current) {
-          series.setData(candleData);
+          // When zooming, only use the last 30 candles from the data
+          const dataToUse = zoom && candleData.length > 30
+            ? candleData.slice(-30)
+            : candleData;
 
-          if (zoom && candleData.length > 0) {
-            // Show only the last 30 candles for zoomed view
-            // Use setVisibleLogicalRange which works with bar indices (more reliable)
-            const visibleBars = Math.min(30, candleData.length);
-            const fromIndex = candleData.length - visibleBars;
-            chart.timeScale().setVisibleLogicalRange({
-              from: fromIndex,
-              to: candleData.length - 1,
-            });
-          } else {
-            chart.timeScale().fitContent();
-          }
+          series.setData(dataToUse);
+          chart.timeScale().fitContent();
         }
       } catch (chartErr) {
         // Chart may be disposed - log for debugging
