@@ -30,7 +30,20 @@ interface TradePlanChartProps {
   resistance?: number[];
   onChartReady?: () => void; // Callback when chart is fully rendered with data
   chartId?: string; // Optional custom ID for the chart container (default: 'trade-plan-chart')
-  zoomToTradePlan?: boolean; // When true, zoom into the trade plan area (for PDF reports)
+  tradeType?: 'scalping' | 'dayTrade' | 'swing'; // Trade type to determine chart interval
+}
+
+// Get Binance interval based on trade type
+function getChartInterval(tradeType?: string): { interval: string; label: string } {
+  switch (tradeType) {
+    case 'scalping':
+      return { interval: '5m', label: '5 Min' };
+    case 'swing':
+      return { interval: '1d', label: '1 Day' };
+    case 'dayTrade':
+    default:
+      return { interval: '1h', label: '1 Hour' };
+  }
 }
 
 interface KlineData {
@@ -53,8 +66,9 @@ export function TradePlanChart({
   resistance = [],
   onChartReady,
   chartId = 'trade-plan-chart',
-  zoomToTradePlan = false,
+  tradeType = 'dayTrade',
 }: TradePlanChartProps) {
+  const { interval: chartInterval, label: intervalLabel } = getChartInterval(tradeType);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -129,8 +143,8 @@ export function TradePlanChart({
 
     candleSeriesRef.current = candleSeries;
 
-    // Fetch kline data
-    fetchKlineData(symbol, candleSeries, chart, zoomToTradePlan);
+    // Fetch kline data with the appropriate interval
+    fetchKlineData(symbol, candleSeries, chart, chartInterval);
 
     // Handle resize
     const handleResize = () => {
@@ -159,7 +173,7 @@ export function TradePlanChart({
         // Chart may already be disposed
       }
     };
-  }, [symbol, zoomToTradePlan]);
+  }, [symbol, chartInterval]);
 
   // Add price lines when chart is ready
   useEffect(() => {
@@ -272,18 +286,15 @@ export function TradePlanChart({
     sym: string,
     series: ISeriesApi<'Candlestick'>,
     chart: IChartApi,
-    zoom: boolean
+    interval: string
   ) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Use 100 candles for zoomed view (PDF reports), 200 for normal view
-      const candleLimit = zoom ? 100 : 200;
-
-      // Fetch from Binance directly (public endpoint)
+      // Fetch 100 candles for chart display with the specified interval
       const response = await fetch(
-        `https://api.binance.com/api/v3/klines?symbol=${sym}USDT&interval=1h&limit=${candleLimit}`
+        `https://api.binance.com/api/v3/klines?symbol=${sym}USDT&interval=${interval}&limit=100`
       );
 
       if (!response.ok) {
@@ -317,7 +328,6 @@ export function TradePlanChart({
       // Guard chart operations with try-catch in case of disposal
       try {
         if (!isDisposedRef.current) {
-          // Use all fetched candles (100 for zoom, 200 for normal)
           series.setData(candleData);
           chart.timeScale().fitContent();
         }
@@ -371,12 +381,16 @@ export function TradePlanChart({
             <div>
               <h3 className="font-bold text-lg">{symbol}/USDT Trade Plan</h3>
               <p className="text-sm text-muted-foreground">
-                {direction === 'long' ? 'Long Position' : 'Short Position'}
+                {direction === 'long' ? 'Long Position' : 'Short Position'} • {intervalLabel} Chart
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-4 text-sm">
+            <div className="text-right">
+              <div className="text-muted-foreground">Timeframe</div>
+              <div className="font-bold text-blue-500">{intervalLabel}</div>
+            </div>
             <div className="text-right">
               <div className="text-muted-foreground">Risk</div>
               <div className="font-bold text-red-500">{riskPercent.toFixed(2)}%</div>

@@ -34,6 +34,7 @@ interface ReportData {
   symbol: string;
   generatedAt: string;
   analysisId: string;
+  tradeType?: 'scalping' | 'dayTrade' | 'swing'; // Trade type for chart interval
   marketPulse: {
     btcDominance: number;
     fearGreedIndex: number;
@@ -386,7 +387,7 @@ export default function ReportViewPage() {
             </p>
           </div>
 
-          {/* Trade Plan Chart - Zoomed to trade plan area for better visibility */}
+          {/* Trade Plan Chart */}
           {report.tradePlan && (
             <div className="mb-6">
               <TradePlanChart
@@ -402,7 +403,7 @@ export default function ReportViewPage() {
                 currentPrice={report.assetScan?.currentPrice || report.tradePlan.averageEntry || 0}
                 support={report.assetScan?.levels?.support}
                 resistance={report.assetScan?.levels?.resistance}
-                zoomToTradePlan={true}
+                tradeType={report.tradeType}
               />
             </div>
           )}
