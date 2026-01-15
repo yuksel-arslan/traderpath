@@ -54,7 +54,7 @@ import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../lib/coin-icons';
 import { apiBaseUrl } from '../../lib/api';
-import { CREDIT_PACKAGES, ANALYSIS_BUNDLES, FREE_SIGNUP_CREDITS } from '../../lib/pricing-config';
+import { CREDIT_PACKAGES, ANALYSIS_BUNDLES, FREE_SIGNUP_CREDITS, getPerCreditCost } from '../../lib/pricing-config';
 
 // Package type from API
 interface ApiPackage {
@@ -1332,7 +1332,7 @@ export default function LandingPage() {
                       return (
                         <div key={pkg.id}>
                           <p className="text-xs text-muted-foreground">{pkg.name.replace(' Pack', '')}</p>
-                          <p className={`font-bold ${colorClass}`}>{pkg.perCredit}</p>
+                          <p className={`font-bold ${colorClass}`}>{getPerCreditCost(pkg)}</p>
                           <p className="text-[10px] text-muted-foreground">≈${perAnalysisCost}/analysis</p>
                         </div>
                       );
