@@ -6,6 +6,7 @@ import { Search, ChevronDown, TrendingUp, Clock, X, AlertTriangle, RefreshCw } f
 import { cn } from '../../lib/utils';
 import { getAuthToken } from '../../lib/api';
 import { CoinIcon } from './CoinIcon';
+import { AnalysisDialog } from '../analysis/AnalysisDialog';
 
 // Recent analysis info for duplicate warning
 interface RecentAnalysis {
@@ -99,6 +100,9 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [recentAnalysis, setRecentAnalysis] = useState<RecentAnalysis | null>(null);
   const [isCheckingRecent, setIsCheckingRecent] = useState(false);
+
+  // Analysis dialog state
+  const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
 
   // Load recent coins from localStorage
   useEffect(() => {
@@ -209,16 +213,26 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
       setRecentAnalysis(recent);
       setShowDuplicateWarning(true);
     } else {
-      // No recent analysis, proceed directly
-      router.push(`/analyze/${selectedCoin.symbol}?tradeType=${tradeType}`);
+      // No recent analysis, show analysis dialog
+      setShowAnalysisDialog(true);
     }
   };
 
   const handleProceedAnyway = () => {
     if (selectedCoin) {
       setShowDuplicateWarning(false);
-      router.push(`/analyze/${selectedCoin.symbol}?tradeType=${tradeType}`);
+      // Show analysis dialog instead of navigating
+      setShowAnalysisDialog(true);
     }
+  };
+
+  const handleDialogClose = () => {
+    setShowAnalysisDialog(false);
+  };
+
+  const handleAnalysisComplete = () => {
+    // Optionally navigate to reports page after completion
+    // router.push('/reports');
   };
 
   const handleCancelAnalysis = () => {
@@ -503,6 +517,18 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Analysis Dialog */}
+      {selectedCoin && (
+        <AnalysisDialog
+          isOpen={showAnalysisDialog}
+          onClose={handleDialogClose}
+          symbol={selectedCoin.symbol}
+          coinName={selectedCoin.name}
+          tradeType={tradeType}
+          onComplete={handleAnalysisComplete}
+        />
       )}
     </div>
   );
