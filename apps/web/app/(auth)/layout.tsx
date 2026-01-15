@@ -191,31 +191,6 @@ export default function AuthLayout({
             <div className="w-full max-w-md relative z-10">
               {children}
             </div>
-
-            {/* CSS Animations */}
-            <style jsx>{`
-              @keyframes wave1 {
-                0%, 100% { transform: translate(0%, 0%) scale(1); }
-                25% { transform: translate(10%, 15%) scale(1.05); }
-                50% { transform: translate(5%, 25%) scale(1.1); }
-                75% { transform: translate(-5%, 10%) scale(1.02); }
-              }
-              @keyframes wave2 {
-                0%, 100% { transform: translate(0%, 0%) scale(1); }
-                25% { transform: translate(-15%, -10%) scale(1.08); }
-                50% { transform: translate(-10%, 5%) scale(0.95); }
-                75% { transform: translate(5%, -15%) scale(1.05); }
-              }
-              @keyframes wave3 {
-                0%, 100% { transform: translate(0%, 0%) scale(1); }
-                33% { transform: translate(20%, -15%) scale(1.15); }
-                66% { transform: translate(-10%, 20%) scale(0.9); }
-              }
-              @keyframes wave4 {
-                0%, 100% { transform: translate(0%, 0%) scale(1); }
-                50% { transform: translate(15%, -20%) scale(1.1); }
-              }
-            `}</style>
           </div>
         </div>
       </div>
