@@ -121,16 +121,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">
-            TraderPath
-          </h1>
-          <p className="text-muted-foreground mt-2">Welcome back!</p>
-        </div>
+    <>
+      <div className="text-center mb-8">
+        <h1 className="text-2xl font-bold">Welcome back!</h1>
+        <p className="text-muted-foreground mt-2">Sign in to your account to continue</p>
+      </div>
 
-        <div className="bg-card border rounded-lg p-6 shadow-lg">
+      <div className="bg-card border rounded-lg p-6 shadow-lg">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Success Message */}
             {successMessage && (
@@ -293,13 +290,12 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{' '}
-            <Link href="/register" className="text-primary hover:underline font-medium">
-              Sign up
-            </Link>
-          </p>
-        </div>
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Don&apos;t have an account?{' '}
+          <Link href="/register" className="text-primary hover:underline font-medium">
+            Sign up
+          </Link>
+        </p>
       </div>
 
       {/* First Login Welcome Modal */}
@@ -309,6 +305,6 @@ export default function LoginPage() {
         bonusCredits={firstLoginBonus}
         userName={welcomeName}
       />
-    </div>
+    </>
   );
 }

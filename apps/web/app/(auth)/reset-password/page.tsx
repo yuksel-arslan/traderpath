@@ -101,211 +101,176 @@ export default function ResetPasswordPage() {
   // Loading
   if (isValidating) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">
-              TraderPath
-            </h1>
-          </div>
-
-          <div className="bg-card border rounded-lg p-6 shadow-lg text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Validating Link</h2>
-            <p className="text-muted-foreground">Please wait...</p>
-          </div>
+      <>
+        <div className="bg-card border rounded-lg p-6 shadow-lg text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Validating Link</h2>
+          <p className="text-muted-foreground">Please wait...</p>
         </div>
-      </div>
+      </>
     );
   }
 
   // Invalid token
   if (!tokenValid) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">
-              TraderPath
-            </h1>
+      <>
+        <div className="bg-card border rounded-lg p-6 shadow-lg text-center">
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <XCircle className="w-8 h-8 text-red-500" />
           </div>
-
-          <div className="bg-card border rounded-lg p-6 shadow-lg text-center">
-            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <XCircle className="w-8 h-8 text-red-500" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Invalid Reset Link</h2>
-            <p className="text-muted-foreground mb-6">
-              {errorMessage || 'This password reset link is invalid or has expired.'}
-            </p>
-            <div className="space-y-3">
-              <Link
-                href="/forgot-password"
-                className="block w-full py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition text-center"
-              >
-                Request New Link
-              </Link>
-              <Link
-                href="/login"
-                className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Login
-              </Link>
-            </div>
+          <h2 className="text-xl font-semibold mb-2">Invalid Reset Link</h2>
+          <p className="text-muted-foreground mb-6">
+            {errorMessage || 'This password reset link is invalid or has expired.'}
+          </p>
+          <div className="space-y-3">
+            <Link
+              href="/forgot-password"
+              className="block w-full py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition text-center"
+            >
+              Request New Link
+            </Link>
+            <Link
+              href="/login"
+              className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Login
+            </Link>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
   // Success
   if (status === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">
-              TraderPath
-            </h1>
+      <>
+        <div className="bg-card border rounded-lg p-6 shadow-lg text-center">
+          <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-8 h-8 text-green-500" />
           </div>
-
-          <div className="bg-card border rounded-lg p-6 shadow-lg text-center">
-            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-green-500" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Password Reset!</h2>
-            <p className="text-muted-foreground mb-6">
-              Your password has been successfully reset. Redirecting to login...
-            </p>
-            <Link
-              href="/login"
-              className="block w-full py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition text-center"
-            >
-              Go to Login
-            </Link>
-          </div>
+          <h2 className="text-xl font-semibold mb-2">Password Reset!</h2>
+          <p className="text-muted-foreground mb-6">
+            Your password has been successfully reset. Redirecting to login...
+          </p>
+          <Link
+            href="/login"
+            className="block w-full py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition text-center"
+          >
+            Go to Login
+          </Link>
         </div>
-      </div>
+      </>
     );
   }
 
   // Reset form
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">
-            TraderPath
-          </h1>
-          <p className="text-muted-foreground mt-2">Create new password</p>
-        </div>
+    <>
+      <div className="text-center mb-8">
+        <h1 className="text-2xl font-bold">Reset Your Password</h1>
+        <p className="text-muted-foreground mt-2">Create a new secure password</p>
+      </div>
 
-        <div className="bg-card border rounded-lg p-6 shadow-lg">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2">Reset Your Password</h2>
-            <p className="text-sm text-muted-foreground">
-              Enter your new password below.
-            </p>
+      <div className="bg-card border rounded-lg p-6 shadow-lg">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {errorMessage && status === 'error' && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+              {errorMessage}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium mb-2">New Password</label>
+            <div className="relative">
+              <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter new password"
+                required
+                className="w-full pl-10 pr-10 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {errorMessage && status === 'error' && (
-              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
-                {errorMessage}
+          {/* Password requirements */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {[
+              { key: 'length', label: '8+ characters' },
+              { key: 'uppercase', label: 'Uppercase letter' },
+              { key: 'lowercase', label: 'Lowercase letter' },
+              { key: 'number', label: 'Number' },
+            ].map((req) => (
+              <div
+                key={req.key}
+                className={`flex items-center gap-1 ${
+                  passwordChecks[req.key as keyof typeof passwordChecks]
+                    ? 'text-green-500'
+                    : 'text-muted-foreground'
+                }`}
+              >
+                <Check className="w-3 h-3" />
+                {req.label}
               </div>
+            ))}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Confirm Password</label>
+            <div className="relative">
+              <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                required
+                className={`w-full pl-10 pr-10 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none ${
+                  confirmPassword && !passwordsMatch ? 'border-red-500' : ''
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+            {confirmPassword && !passwordsMatch && (
+              <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
             )}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">New Password</label>
-              <div className="relative">
-                <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter new password"
-                  required
-                  className="w-full pl-10 pr-10 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Password requirements */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {[
-                { key: 'length', label: '8+ characters' },
-                { key: 'uppercase', label: 'Uppercase letter' },
-                { key: 'lowercase', label: 'Lowercase letter' },
-                { key: 'number', label: 'Number' },
-              ].map((req) => (
-                <div
-                  key={req.key}
-                  className={`flex items-center gap-1 ${
-                    passwordChecks[req.key as keyof typeof passwordChecks]
-                      ? 'text-green-500'
-                      : 'text-muted-foreground'
-                  }`}
-                >
-                  <Check className="w-3 h-3" />
-                  {req.label}
-                </div>
-              ))}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Confirm Password</label>
-              <div className="relative">
-                <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
-                  required
-                  className={`w-full pl-10 pr-10 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none ${
-                    confirmPassword && !passwordsMatch ? 'border-red-500' : ''
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-              {confirmPassword && !passwordsMatch && (
-                <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading || !isPasswordStrong || !passwordsMatch}
-              className="w-full py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isLoading ? 'Resetting...' : 'Reset Password'}
-            </button>
-          </form>
-
-          <Link
-            href="/login"
-            className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition"
+          <button
+            type="submit"
+            disabled={isLoading || !isPasswordStrong || !passwordsMatch}
+            className="w-full py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Login
-          </Link>
-        </div>
+            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isLoading ? 'Resetting...' : 'Reset Password'}
+          </button>
+        </form>
+
+        <Link
+          href="/login"
+          className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Login
+        </Link>
       </div>
-    </div>
+    </>
   );
 }
