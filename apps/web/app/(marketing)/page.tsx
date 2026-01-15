@@ -1558,17 +1558,17 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              {/* Real-time Monitoring */}
+              {/* Outcome Tracking */}
               <div className="bg-card border rounded-xl p-5">
                 <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mb-3">
                   <Eye className="w-5 h-5 text-blue-500" />
                 </div>
-                <h4 className="font-semibold mb-2 text-sm">48h Validity Period</h4>
+                <h4 className="font-semibold mb-2 text-sm">Outcome Tracking</h4>
                 <p className="text-xs text-muted-foreground">
-                  Each analysis has a 48-hour validity window. Outcomes are marked as
-                  <span className="text-green-500 font-medium"> Correct</span>,
-                  <span className="text-red-500 font-medium"> Incorrect</span>, or
-                  <span className="text-gray-500 font-medium"> Expired</span>.
+                  We monitor each trade until price hits
+                  <span className="text-green-500 font-medium"> Take Profit</span> or
+                  <span className="text-red-500 font-medium"> Stop Loss</span>.
+                  No arbitrary time limits—real market outcomes.
                 </p>
               </div>
 
