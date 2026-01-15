@@ -1410,7 +1410,7 @@ export default function LandingPage() {
             ))}
 
             {/* Stats */}
-            <div className="mt-10 grid grid-cols-3 gap-4 max-w-2xl mx-auto">
+            <div className="mt-10 grid grid-cols-2 gap-4 max-w-md mx-auto">
               <div className="p-4 bg-card border rounded-lg text-center">
                 <div className="text-2xl sm:text-3xl font-bold text-cyan-500 mb-1">7</div>
                 <p className="text-xs sm:text-sm text-muted-foreground">Analysis Steps</p>
@@ -1418,13 +1418,6 @@ export default function LandingPage() {
               <div className="p-4 bg-card border rounded-lg text-center">
                 <div className="text-2xl sm:text-3xl font-bold text-amber-500 mb-1">~60s</div>
                 <p className="text-xs sm:text-sm text-muted-foreground">Full Analysis Time</p>
-              </div>
-              <div className="p-4 bg-card border rounded-lg text-center">
-                <div className="flex items-center justify-center gap-1">
-                  <Gift className="w-5 h-5 sm:w-6 sm:h-6 text-rose-500" />
-                  <span className="text-2xl sm:text-3xl font-bold text-rose-500">{FREE_SIGNUP_CREDITS}</span>
-                </div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Free Credits at Signup</p>
               </div>
             </div>
           </div>
