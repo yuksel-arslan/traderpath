@@ -386,7 +386,21 @@ export async function calculateReportOutcome(reportId: string): Promise<OutcomeR
   // Calculate price change
   const priceChange = ((currentPrice - entryPrice) / entryPrice) * 100;
 
-  // Calculate step outcomes
+  // Only update the database when TP or SL is actually hit
+  // If still pending, don't update - this allows the report to be checked again later
+  if (outcome === 'pending') {
+    return {
+      outcome,
+      priceChange,
+      outcomePrice: currentPrice,
+      hitType: hitResult.hitType,
+      hitPrice: hitResult.hitPrice,
+      hitTime: hitResult.hitTime,
+      stepOutcomes: {}
+    };
+  }
+
+  // Calculate step outcomes only when we have a definitive result
   const stepOutcomes = calculateStepOutcomes(
     reportData,
     entryPrice,
