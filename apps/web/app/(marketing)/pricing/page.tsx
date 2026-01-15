@@ -346,7 +346,7 @@ export default function PricingPage() {
           <div className="max-w-3xl mx-auto">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {[
-                { Icon: Gem, title: '35 Free Credits', desc: 'On sign up', color: 'text-amber-500' },
+                { Icon: Gem, title: '35 Credits', desc: 'Per analysis', color: 'text-amber-500' },
                 { Icon: Search, title: '7-Step Analysis', desc: 'Complete trading analysis', color: 'text-teal-500' },
                 { Icon: Bot, title: 'AI Expert Chat', desc: 'Ask questions anytime', color: 'text-violet-500' },
                 { Icon: FileText, title: 'PDF Reports', desc: 'Download & share', color: 'text-blue-500' },
