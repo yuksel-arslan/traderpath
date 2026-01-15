@@ -226,9 +226,8 @@ export async function getReportLiveStatus(reportId: string): Promise<LiveTrackin
     const stepOutcomes = report.stepOutcomes as Record<string, unknown> | null;
     const meta = stepOutcomes?._meta as { hitTime?: string } | undefined;
     hitTime = meta?.hitTime;
-  } else if (report.expiresAt < now) {
-    status = 'expired';
   } else {
+    // No expiration-based status - trade stays active until TP or SL is hit
     // Check live if SL or TP was just hit
     const slHit = direction === 'long'
       ? currentPrice <= stopLoss.price
