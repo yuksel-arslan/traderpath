@@ -74,7 +74,7 @@ export function TraderPathLogo({
       {/* Logo Text */}
       {showText && (
         <div className="flex flex-col">
-          <span className={`${s.text} gradient-text-brand`}>
+          <span className={`${s.text} font-bold gradient-text-brand`}>
             TraderPath
           </span>
           {showTagline && (

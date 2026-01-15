@@ -38,6 +38,8 @@ import {
   List,
   Info,
   Calendar,
+  Gem,
+  Plus,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -844,6 +846,97 @@ export default function DashboardPage() {
 
   return (
     <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-8">
+
+      {/* ===== OVERVIEW SECTION - Credit Balance & Quick Stats ===== */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+        {/* Background Effects */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-brand-teal/20 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-brand-coral/20 via-transparent to-transparent" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-amber-500/10 to-transparent rounded-full blur-3xl" />
+
+        <div className="relative z-10 p-6 md:p-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            {/* Left: Credit Balance Card */}
+            <div className="flex items-center gap-4 sm:gap-6">
+              {/* Credit Icon with Glow */}
+              <div className="relative shrink-0">
+                <div className="absolute inset-0 bg-amber-500/40 blur-xl rounded-full animate-pulse" />
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-500 flex items-center justify-center shadow-2xl shadow-amber-500/30">
+                  <Gem className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                </div>
+              </div>
+
+              {/* Credit Info */}
+              <div>
+                <p className="text-xs sm:text-sm font-medium text-slate-400 uppercase tracking-wider mb-1">Available Credits</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl sm:text-5xl font-black text-white tracking-tight">{credits}</span>
+                  <span className="text-lg sm:text-xl text-slate-400 font-medium">credits</span>
+                </div>
+                <Link
+                  href="/pricing"
+                  className="inline-flex items-center gap-1.5 mt-2 text-xs sm:text-sm font-medium text-amber-400 hover:text-amber-300 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Buy more credits
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Right: Quick Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+              {/* Total Analyses */}
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/10">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <BarChart3 className="w-4 h-4 text-purple-400" />
+                  <span className="text-[10px] sm:text-xs text-slate-400 font-medium">Total Analyses</span>
+                </div>
+                <p className="text-xl sm:text-2xl font-bold text-white">{userStats?.totalAnalyses ?? 0}</p>
+              </div>
+
+              {/* Accuracy */}
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/10">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Target className="w-4 h-4 text-emerald-400" />
+                  <span className="text-[10px] sm:text-xs text-slate-400 font-medium">Accuracy</span>
+                </div>
+                <p className="text-xl sm:text-2xl font-bold text-white">
+                  {userStats?.verifiedAnalyses && userStats.verifiedAnalyses > 0
+                    ? `${userStats.accuracy?.toFixed(0) ?? 0}%`
+                    : '—'}
+                </p>
+              </div>
+
+              {/* GO Signals */}
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/10">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <TrendingUp className="w-4 h-4 text-green-400" />
+                  <span className="text-[10px] sm:text-xs text-slate-400 font-medium">GO Signals</span>
+                </div>
+                <p className="text-xl sm:text-2xl font-bold text-white">{userStats?.goSignals ?? 0}</p>
+              </div>
+
+              {/* Active Performance */}
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/10">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Activity className="w-4 h-4 text-cyan-400" />
+                  <span className="text-[10px] sm:text-xs text-slate-400 font-medium">Active P/L</span>
+                </div>
+                <p className={cn(
+                  "text-xl sm:text-2xl font-bold",
+                  userStats?.activePerformance && userStats.activePerformance >= 0 ? "text-emerald-400" : "text-red-400"
+                )}>
+                  {userStats?.activeCount && userStats.activeCount > 0
+                    ? `${userStats.activePerformance >= 0 ? '+' : ''}${userStats.activePerformance?.toFixed(1) ?? 0}%`
+                    : '—'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* ===== GLOBAL TRADE TYPE FILTER ===== */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

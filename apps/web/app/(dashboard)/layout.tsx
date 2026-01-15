@@ -35,7 +35,7 @@ const PriceTicker = dynamic(
 
 // Main navigation items
 const mainNav = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'AI Experts', href: '/ai-expert', icon: Brain },
@@ -147,7 +147,7 @@ export default function DashboardLayout({
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 border-b border-border">
-        <div className="w-full px-2 sm:px-4 lg:px-6">
+        <div className="w-full px-1 sm:px-3 lg:px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <TraderPathLogo size="sm" showText={true} showTagline={false} href="/dashboard" className="flex sm:hidden" />
