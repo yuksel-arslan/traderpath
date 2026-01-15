@@ -9,10 +9,16 @@ export interface CreditPackage {
   bonus: number;
   price: number;
   priceDisplay: string;
-  perCredit: string;
   popular?: boolean;
   features: string[];
   color: 'blue' | 'purple' | 'amber' | 'green';
+}
+
+// Helper function to calculate per-credit cost dynamically
+export function getPerCreditCost(pkg: CreditPackage): string {
+  const totalCredits = pkg.credits + pkg.bonus;
+  const perCredit = pkg.price / totalCredits;
+  return `$${perCredit.toFixed(2)}`;
 }
 
 export const CREDIT_PACKAGES: CreditPackage[] = [
@@ -23,7 +29,6 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
     bonus: 0,
     price: 7.99,
     priceDisplay: '$7.99',
-    perCredit: '$0.16',
     features: [
       '50 analysis credits',
       'All 7 analysis steps',
@@ -39,7 +44,6 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
     bonus: 15,
     price: 19.99,
     priceDisplay: '$19.99',
-    perCredit: '$0.12',
     popular: true,
     features: [
       '150 + 15 bonus credits',
@@ -56,7 +60,6 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
     bonus: 60,
     price: 44.99,
     priceDisplay: '$44.99',
-    perCredit: '$0.10',
     features: [
       '400 + 60 bonus credits',
       'All 7 analysis steps',

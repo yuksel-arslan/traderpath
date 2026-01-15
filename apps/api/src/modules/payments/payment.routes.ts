@@ -21,16 +21,20 @@ export default async function paymentRoutes(app: FastifyInstance) {
       orderBy: { priceUsd: 'asc' },
     });
 
-    // Format packages for frontend
-    const packages = dbPackages.map((pkg) => ({
-      id: pkg.id,
-      name: pkg.name,
-      credits: pkg.credits,
-      bonus: pkg.bonusCredits,
-      price: `$${Number(pkg.priceUsd).toFixed(2)}`,
-      perCredit: `$${Number(pkg.pricePerCredit).toFixed(2)}`,
-      popular: pkg.isPopular,
-    }));
+    // Format packages for frontend - calculate perCredit dynamically
+    const packages = dbPackages.map((pkg) => {
+      const totalCredits = pkg.credits + pkg.bonusCredits;
+      const perCreditCost = Number(pkg.priceUsd) / totalCredits;
+      return {
+        id: pkg.id,
+        name: pkg.name,
+        credits: pkg.credits,
+        bonus: pkg.bonusCredits,
+        price: `$${Number(pkg.priceUsd).toFixed(2)}`,
+        perCredit: `$${perCreditCost.toFixed(2)}`,
+        popular: pkg.isPopular,
+      };
+    });
 
     return reply.send({
       success: true,

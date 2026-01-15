@@ -371,25 +371,16 @@ export async function calculateReportOutcome(reportId: string): Promise<OutcomeR
   // Check if TP or SL was hit
   const hitResult = checkTPSLHit(klines, tradePlan.direction, entryPrice, slPrice, tpPrices);
 
-  // Determine outcome
+  // Determine outcome - ONLY based on TP/SL hit, no time-based expiration
   let outcome: 'correct' | 'incorrect' | 'pending' = 'pending';
   if (hitResult.hitType === 'tp1' || hitResult.hitType === 'tp2' || hitResult.hitType === 'tp3') {
     outcome = 'correct'; // TP hit = successful trade = correct analysis
   } else if (hitResult.hitType === 'sl') {
     outcome = 'incorrect'; // SL hit = failed trade = incorrect analysis
   } else {
-    // Neither hit yet - check if expired
-    if (report.expiresAt < now) {
-      // Expired without hitting TP or SL - check current price
-      const priceChange = ((currentPrice - entryPrice) / entryPrice) * 100;
-      if (tradePlan.direction === 'long') {
-        outcome = priceChange > 0 ? 'correct' : 'incorrect';
-      } else {
-        outcome = priceChange < 0 ? 'correct' : 'incorrect';
-      }
-    } else {
-      outcome = 'pending'; // Still active, neither TP nor SL hit
-    }
+    // Neither TP nor SL hit yet - keep as pending until one is hit
+    // No arbitrary time limits - we wait for real market outcomes
+    outcome = 'pending';
   }
 
   // Calculate price change
