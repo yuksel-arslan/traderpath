@@ -8,9 +8,7 @@ import {
   Target,
   Clock,
   Brain,
-  TrendingUp,
   CheckCircle,
-  Sparkles,
 } from 'lucide-react';
 
 const FEATURES = [
@@ -42,26 +40,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link href="/" className="flex items-center">
-              <TraderPathLogo size="sm" showText={true} />
-            </Link>
-
-            {/* Right side */}
-            <div className="flex items-center gap-4">
-              <ThemeToggle />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="flex-1 flex">
+    <div className="min-h-screen flex bg-background">
         {/* Left Side - Marketing (hidden on mobile) */}
         <div className="hidden lg:flex lg:w-1/2 xl:w-[45%] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
           {/* Background Pattern */}
@@ -78,6 +57,13 @@ export default function AuthLayout({
 
           {/* Content */}
           <div className="relative z-10 flex flex-col justify-center px-12 xl:px-16 py-12">
+            {/* Logo */}
+            <div className="mb-10">
+              <Link href="/">
+                <TraderPathLogo size="lg" showText={true} showTagline={true} />
+              </Link>
+            </div>
+
             {/* Motto */}
             <div className="mb-12">
               <h1 className="text-4xl xl:text-5xl font-bold text-white mb-4">
@@ -138,6 +124,18 @@ export default function AuthLayout({
 
         {/* Right Side - Form */}
         <div className="flex-1 flex items-center justify-center px-4 py-8 lg:py-12 relative overflow-hidden">
+          {/* Theme Toggle - Top Right */}
+          <div className="absolute top-4 right-4 z-20">
+            <ThemeToggle />
+          </div>
+
+          {/* Mobile Logo - Only shown on small screens */}
+          <div className="lg:hidden absolute top-4 left-4 z-20">
+            <Link href="/">
+              <TraderPathLogo size="sm" showText={true} />
+            </Link>
+          </div>
+
           {/* Animated Gradient Wave Background */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             {/* Wave 1 - Teal */}
