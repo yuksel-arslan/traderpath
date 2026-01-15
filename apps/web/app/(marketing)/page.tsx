@@ -1343,31 +1343,8 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* All Features Included */}
+          {/* Coming Soon - TFT */}
           <div className="max-w-5xl mx-auto">
-            <h3 className="text-xl font-semibold text-center mb-6">Included in Every {ANALYSIS_BUNDLES[0].credits}-Credit Analysis</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {[
-                { Icon: Search, title: '7-Step Analysis', desc: 'Complete market scan', color: 'text-cyan-500' },
-                { Icon: ShieldAlert, title: 'Safety Check', desc: 'Manipulation detection', color: 'text-red-500' },
-                { Icon: Target, title: 'Entry/SL/TP Levels', desc: 'Precise price points', color: 'text-green-500' },
-                { Icon: BarChart3, title: 'Trade Plan', desc: 'R:R calculated strategy', color: 'text-blue-500' },
-                { Icon: Bot, title: 'AI Expert Chat', desc: 'Ask follow-up questions', color: 'text-violet-500' },
-                { Icon: FileText, title: 'PDF Reports', desc: 'Download & archive', color: 'text-orange-500' },
-                { Icon: Mail, title: 'Email Reports', desc: 'Send to your inbox', color: 'text-emerald-500' },
-                { Icon: Bell, title: 'Price Alerts', desc: 'Auto-created from plan', color: 'text-amber-500' },
-              ].map((item, index) => (
-                <div key={index} className="bg-card rounded-lg border p-3 sm:p-4 text-center hover:border-cyan-500/50 transition-colors">
-                  <div className="flex justify-center mb-2">
-                    <item.Icon className={`w-6 h-6 sm:w-8 sm:h-8 ${item.color}`} />
-                  </div>
-                  <p className="font-semibold text-xs sm:text-sm">{item.title}</p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Coming Soon - TFT */}
             {ANALYSIS_BUNDLES.filter(b => b.comingSoon).map((bundle, idx) => (
               <div key={idx} className="mt-6 flex justify-center">
                 <div className="bg-card rounded-lg border border-dashed border-amber-500/30 p-4 text-center relative inline-flex items-center gap-4 pr-6">
