@@ -8,9 +8,7 @@ import {
   Target,
   Clock,
   Brain,
-  TrendingUp,
   CheckCircle,
-  Sparkles,
 } from 'lucide-react';
 
 const FEATURES = [
@@ -42,26 +40,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link href="/" className="flex items-center">
-              <TraderPathLogo size="sm" showText={true} />
-            </Link>
-
-            {/* Right side */}
-            <div className="flex items-center gap-4">
-              <ThemeToggle />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="flex-1 flex">
+    <div className="min-h-screen flex bg-background">
         {/* Left Side - Marketing (hidden on mobile) */}
         <div className="hidden lg:flex lg:w-1/2 xl:w-[45%] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
           {/* Background Pattern */}
@@ -78,6 +57,13 @@ export default function AuthLayout({
 
           {/* Content */}
           <div className="relative z-10 flex flex-col justify-center px-12 xl:px-16 py-12">
+            {/* Logo */}
+            <div className="mb-10">
+              <Link href="/">
+                <TraderPathLogo size="lg" showText={true} showTagline={true} />
+              </Link>
+            </div>
+
             {/* Motto */}
             <div className="mb-12">
               <h1 className="text-4xl xl:text-5xl font-bold text-white mb-4">
@@ -137,60 +123,75 @@ export default function AuthLayout({
         </div>
 
         {/* Right Side - Form */}
-        <div className="flex-1 flex items-center justify-center px-4 py-8 lg:py-12 relative overflow-hidden">
-          {/* Animated Gradient Wave Background */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {/* Wave 1 - Teal */}
-            <div
-              className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] opacity-[0.03] dark:opacity-[0.05]"
-              style={{
-                background: 'radial-gradient(ellipse at center, #14B8A6 0%, transparent 70%)',
-                animation: 'wave1 15s ease-in-out infinite',
-              }}
-            />
-            {/* Wave 2 - Coral */}
-            <div
-              className="absolute -bottom-1/2 -right-1/2 w-[200%] h-[200%] opacity-[0.03] dark:opacity-[0.05]"
-              style={{
-                background: 'radial-gradient(ellipse at center, #F87171 0%, transparent 70%)',
-                animation: 'wave2 18s ease-in-out infinite',
-              }}
-            />
-            {/* Wave 3 - Amber accent */}
-            <div
-              className="absolute top-1/4 left-1/4 w-[150%] h-[150%] opacity-[0.02] dark:opacity-[0.03]"
-              style={{
-                background: 'radial-gradient(ellipse at center, #F59E0B 0%, transparent 60%)',
-                animation: 'wave3 20s ease-in-out infinite',
-              }}
-            />
+        <div className="flex-1 flex flex-col min-h-screen lg:min-h-0 relative overflow-hidden">
+          {/* Mobile Header */}
+          <div className="lg:hidden flex items-center justify-between px-4 py-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-20">
+            <Link href="/">
+              <TraderPathLogo size="sm" showText={true} />
+            </Link>
+            <ThemeToggle />
           </div>
 
-          {/* Form Content */}
-          <div className="w-full max-w-md relative z-10">
-            {children}
+          {/* Desktop Theme Toggle */}
+          <div className="hidden lg:block absolute top-4 right-4 z-20">
+            <ThemeToggle />
           </div>
 
-          {/* CSS Animations */}
-          <style jsx>{`
-            @keyframes wave1 {
-              0%, 100% { transform: translate(0%, 0%) rotate(0deg); }
-              25% { transform: translate(5%, 10%) rotate(5deg); }
-              50% { transform: translate(10%, 5%) rotate(-5deg); }
-              75% { transform: translate(5%, -5%) rotate(3deg); }
-            }
-            @keyframes wave2 {
-              0%, 100% { transform: translate(0%, 0%) rotate(0deg); }
-              25% { transform: translate(-10%, 5%) rotate(-5deg); }
-              50% { transform: translate(-5%, 10%) rotate(5deg); }
-              75% { transform: translate(5%, 5%) rotate(-3deg); }
-            }
-            @keyframes wave3 {
-              0%, 100% { transform: translate(0%, 0%) scale(1); }
-              33% { transform: translate(10%, -10%) scale(1.1); }
-              66% { transform: translate(-5%, 10%) scale(0.95); }
-            }
-          `}</style>
+          {/* Form Container */}
+          <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 lg:py-12 relative overflow-hidden">
+            {/* Animated Gradient Wave Background */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {/* Wave 1 - Teal - Large flowing wave */}
+              <div
+                className="absolute w-[600px] h-[600px] sm:w-[800px] sm:h-[800px] rounded-full opacity-[0.08] dark:opacity-[0.12]"
+                style={{
+                  background: 'radial-gradient(ellipse at center, #14B8A6 0%, #14B8A6 20%, transparent 70%)',
+                  top: '-20%',
+                  left: '-10%',
+                  animation: 'wave1 12s ease-in-out infinite',
+                  filter: 'blur(60px)',
+                }}
+              />
+              {/* Wave 2 - Coral - Bottom right wave */}
+              <div
+                className="absolute w-[500px] h-[500px] sm:w-[700px] sm:h-[700px] rounded-full opacity-[0.08] dark:opacity-[0.12]"
+                style={{
+                  background: 'radial-gradient(ellipse at center, #F87171 0%, #EF5A6F 30%, transparent 70%)',
+                  bottom: '-30%',
+                  right: '-20%',
+                  animation: 'wave2 14s ease-in-out infinite',
+                  filter: 'blur(60px)',
+                }}
+              />
+              {/* Wave 3 - Amber accent - Center floating */}
+              <div
+                className="absolute w-[350px] h-[350px] sm:w-[500px] sm:h-[500px] rounded-full opacity-[0.06] dark:opacity-[0.08]"
+                style={{
+                  background: 'radial-gradient(ellipse at center, #F59E0B 0%, transparent 60%)',
+                  top: '30%',
+                  left: '20%',
+                  animation: 'wave3 16s ease-in-out infinite',
+                  filter: 'blur(50px)',
+                }}
+              />
+              {/* Wave 4 - Secondary teal - Small accent */}
+              <div
+                className="absolute w-[300px] h-[300px] sm:w-[400px] sm:h-[400px] rounded-full opacity-[0.05] dark:opacity-[0.08]"
+                style={{
+                  background: 'radial-gradient(ellipse at center, #2DD4A8 0%, transparent 60%)',
+                  bottom: '10%',
+                  left: '-5%',
+                  animation: 'wave4 18s ease-in-out infinite',
+                  filter: 'blur(40px)',
+                }}
+              />
+            </div>
+
+            {/* Form Content */}
+            <div className="w-full max-w-md relative z-10">
+              {children}
+            </div>
+          </div>
         </div>
       </div>
     </div>
