@@ -163,7 +163,7 @@ interface AnalysisReportData {
     riskLevel: string;
     manipulation: { pumpDumpRisk: string };
     whaleActivity: { bias: string };
-    smartMoney: { positioning: string };
+    smartMoney?: { positioning: string; confidence?: number };
     warnings: string[];
     aiInsight?: string;
   };
@@ -202,6 +202,43 @@ interface AnalysisReportData {
     aiSummary?: string;
   };
   aiExpertComment?: string; // AI Expert review comment
+  // Full 40+ Indicator Details
+  indicatorDetails?: {
+    trend?: Record<string, IndicatorDetailItemLocal | undefined>;
+    momentum?: Record<string, IndicatorDetailItemLocal | undefined>;
+    volatility?: Record<string, IndicatorDetailItemLocal | undefined>;
+    volume?: Record<string, IndicatorDetailItemLocal | undefined>;
+    advanced?: Record<string, IndicatorDetailItemLocal | undefined>;
+    divergences?: Array<{
+      type: 'bullish' | 'bearish' | 'none';
+      indicator: string;
+      description: string;
+      reliability: 'high' | 'medium' | 'low';
+      isEarlySignal: boolean;
+    }>;
+    summary?: {
+      bullishIndicators: number;
+      bearishIndicators: number;
+      neutralIndicators: number;
+      totalIndicatorsUsed: number;
+      overallSignal: 'bullish' | 'bearish' | 'neutral';
+      signalConfidence: number;
+      leadingIndicatorsSignal: 'bullish' | 'bearish' | 'neutral' | 'mixed';
+    };
+  };
+}
+
+// Indicator detail item interface (local definition for type compatibility)
+interface IndicatorDetailItemLocal {
+  name: string;
+  value: number | string | null;
+  signal: 'bullish' | 'bearish' | 'neutral';
+  signalStrength: 'strong' | 'moderate' | 'weak';
+  interpretation: string;
+  category: 'trend' | 'momentum' | 'volatility' | 'volume' | 'advanced';
+  isLeadingIndicator: boolean;
+  weight: number;
+  metadata?: Record<string, unknown>;
 }
 
 interface DownloadReportButtonProps {

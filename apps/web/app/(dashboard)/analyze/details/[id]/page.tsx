@@ -378,6 +378,9 @@ export default function AnalysisDetailsPage() {
         confidenceFactors: step7.confidenceFactors,
         recommendation: step7.recommendation,
       },
+
+      // Full 40+ Indicator Details (from step2 Asset Scan or step3 Safety Check)
+      indicatorDetails: step2.indicatorDetails || step3.indicatorDetails,
     };
   };
 

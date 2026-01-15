@@ -89,7 +89,7 @@ export interface AnalysisReportData {
       historicalVolatility?: number;
       liquidityScore?: number;
     };
-    smartMoney?: { positioning: string; confidence: number };
+    smartMoney?: { positioning: string; confidence?: number };
     newsSentiment?: {
       overall: string;
       score: number;
@@ -104,8 +104,8 @@ export interface AnalysisReportData {
   timing: {
     tradeNow: boolean;
     reason: string;
-    conditions?: Array<{ name: string; met: boolean; details: string }>;
-    entryZones?: Array<{ priceLow: number; priceHigh: number; probability: number; quality: number }>;
+    conditions?: Array<{ name: string; met: boolean; details?: string }>;
+    entryZones?: Array<{ priceLow: number; priceHigh: number; probability: number; quality?: number; eta?: string }>;
     optimalEntry?: number;
     waitFor?: { event: string; estimatedTime: string };
     gate?: { canProceed: boolean; reason: string; confidence: number; urgency?: string };
@@ -115,7 +115,7 @@ export interface AnalysisReportData {
   tradePlan: {
     direction: string;
     type?: string;
-    entries?: Array<{ price: number; percentage: number; source: string }>;
+    entries?: Array<{ price: number; percentage: number; source?: string; type?: string }>;
     averageEntry: number;
     stopLoss: { price: number; percentage?: number; reason?: string; safetyAdjusted?: boolean };
     takeProfits: Array<{ price: number; percentage?: number; reason?: string; source?: string }>;
@@ -153,11 +153,49 @@ export interface AnalysisReportData {
     overallScore: number;
     aiSummary?: string;
     componentScores?: Record<string, number>;
-    confidenceFactors?: Array<{ factor: string; positive: boolean; impact: string }>;
+    confidenceFactors?: Array<{ factor: string; positive: boolean; impact?: string }>;
     recommendation?: string;
   };
 
   aiExpertComment?: string;
+
+  // Full 40+ Indicator Details (from technical specification)
+  indicatorDetails?: {
+    trend?: Record<string, IndicatorDetailItem | undefined>;
+    momentum?: Record<string, IndicatorDetailItem | undefined>;
+    volatility?: Record<string, IndicatorDetailItem | undefined>;
+    volume?: Record<string, IndicatorDetailItem | undefined>;
+    advanced?: Record<string, IndicatorDetailItem | undefined>;
+    divergences?: Array<{
+      type: 'bullish' | 'bearish' | 'none';
+      indicator: string;
+      description: string;
+      reliability: 'high' | 'medium' | 'low';
+      isEarlySignal: boolean;
+    }>;
+    summary?: {
+      bullishIndicators: number;
+      bearishIndicators: number;
+      neutralIndicators: number;
+      totalIndicatorsUsed: number;
+      overallSignal: 'bullish' | 'bearish' | 'neutral';
+      signalConfidence: number;
+      leadingIndicatorsSignal: 'bullish' | 'bearish' | 'neutral' | 'mixed';
+    };
+  };
+}
+
+// Indicator detail item interface
+interface IndicatorDetailItem {
+  name: string;
+  value: number | string | null;
+  signal: 'bullish' | 'bearish' | 'neutral';
+  signalStrength: 'strong' | 'moderate' | 'weak';
+  interpretation: string;
+  category: 'trend' | 'momentum' | 'volatility' | 'volume' | 'advanced';
+  isLeadingIndicator: boolean;
+  weight: number;
+  metadata?: Record<string, unknown>;
 }
 
 // ===========================================
@@ -235,6 +273,83 @@ function getGateStatusHTML(gate: { canProceed: boolean; reason: string; confiden
   return `
     <div style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 12px; font-size: 8px; font-weight: 600; background: ${passed ? '#dcfce7' : '#fee2e2'}; color: ${passed ? '#166534' : '#991b1b'};">
       ${passed ? '&#10003; PASS' : '&#10007; FAIL'} (${conf}%)
+    </div>
+  `;
+}
+
+// Signal color mapping
+function getSignalColor(signal: string): string {
+  switch (signal) {
+    case 'bullish': return '#16a34a';
+    case 'bearish': return '#dc2626';
+    default: return '#6b7280';
+  }
+}
+
+// Signal strength badge
+function getStrengthBadge(strength: string): string {
+  const colors: Record<string, { bg: string; text: string }> = {
+    strong: { bg: '#dcfce7', text: '#166534' },
+    moderate: { bg: '#fef3c7', text: '#92400e' },
+    weak: { bg: '#f1f5f9', text: '#64748b' }
+  };
+  const c = colors[strength] || colors.weak;
+  return `<span style="display: inline-block; padding: 1px 4px; border-radius: 3px; font-size: 6px; background: ${c.bg}; color: ${c.text}; font-weight: 600;">${strength.toUpperCase()}</span>`;
+}
+
+// Render single indicator row from IndicatorDetailItem
+function renderIndicatorRow(ind: IndicatorDetailItem): string {
+  const signalColor = getSignalColor(ind.signal);
+  const signalIcon = ind.signal === 'bullish' ? '&#9650;' : ind.signal === 'bearish' ? '&#9660;' : '&#9679;';
+  const leadingBadge = ind.isLeadingIndicator ? '<span style="background: #dbeafe; color: #1e40af; padding: 1px 3px; border-radius: 2px; font-size: 5px; margin-left: 4px;">LEADING</span>' : '';
+
+  // Format value based on type
+  let displayValue = '-';
+  if (ind.value !== null && ind.value !== undefined) {
+    if (typeof ind.value === 'number') {
+      displayValue = ind.value >= 1000 ? ind.value.toLocaleString('en-US', { maximumFractionDigits: 0 }) :
+                     ind.value >= 1 ? ind.value.toFixed(2) :
+                     ind.value.toFixed(4);
+    } else {
+      displayValue = String(ind.value);
+    }
+  }
+
+  return `
+    <div style="display: flex; align-items: flex-start; padding: 4px 0; border-bottom: 1px solid #f1f5f9;">
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 8px; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 3px;">
+          <span style="color: ${signalColor};">${signalIcon}</span>
+          ${ind.name}${leadingBadge}
+        </div>
+        <div style="font-size: 7px; color: #64748b; margin-top: 2px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis;">${ind.interpretation}</div>
+      </div>
+      <div style="text-align: right; min-width: 70px; margin-left: 6px;">
+        <div style="font-size: 9px; font-weight: bold; color: ${signalColor};">${displayValue}</div>
+        <div style="margin-top: 2px;">${getStrengthBadge(ind.signalStrength)}</div>
+      </div>
+    </div>
+  `;
+}
+
+// Render indicator category section
+function renderIndicatorCategory(
+  title: string,
+  icon: string,
+  indicators: Record<string, IndicatorDetailItem | undefined> | undefined,
+  bgColor: string
+): string {
+  if (!indicators) return '';
+
+  const validIndicators = Object.values(indicators).filter((ind): ind is IndicatorDetailItem => ind !== undefined);
+  if (validIndicators.length === 0) return '';
+
+  return `
+    <div style="background: ${bgColor}; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; margin-bottom: 8px;">
+      <div style="font-size: 9px; font-weight: 600; color: #1e293b; margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
+        ${icon} ${title} <span style="color: #94a3b8; font-weight: normal;">(${validIndicators.length})</span>
+      </div>
+      ${validIndicators.map(ind => renderIndicatorRow(ind)).join('')}
     </div>
   `;
 }
@@ -515,182 +630,161 @@ function generatePage1HTML(data: AnalysisReportData): string {
 }
 
 // ===========================================
-// PAGE 2: ASSET SCAN (FULL INDICATORS)
+// PAGE 2: FULL TECHNICAL INDICATORS (40+)
 // ===========================================
 
 function generatePage2HTML(data: AnalysisReportData): string {
   const as = data.assetScan;
-  const ind = as.indicators || {};
   const price = as.currentPrice || 0;
-
-  // Indicator interpretations
-  const rsiInterp = interpretRSI(ind.rsi || 50);
-  const macdInterp = interpretMACD(ind.macd?.histogram || 0, ind.macd?.signal);
-  const bbInterp = ind.bollingerBands ? interpretBollinger(price, ind.bollingerBands) : { text: '-', color: '#6b7280' };
-
-  // MA interpretation
-  const ma20 = ind.movingAverages?.ma20 || 0;
-  const ma50 = ind.movingAverages?.ma50 || 0;
-  const ma200 = ind.movingAverages?.ma200 || 0;
-  const maInterp = price > ma20 && price > ma50 && price > ma200 ? { text: 'Above all MAs - Strong bullish', color: '#16a34a' }
-    : price > ma20 && price > ma50 ? { text: 'Above MA20 & MA50 - Bullish', color: '#22c55e' }
-    : price > ma20 ? { text: 'Above MA20 only - Weak bullish', color: '#84cc16' }
-    : price < ma20 && price < ma50 && price < ma200 ? { text: 'Below all MAs - Strong bearish', color: '#dc2626' }
-    : price < ma20 && price < ma50 ? { text: 'Below MA20 & MA50 - Bearish', color: '#ef4444' }
-    : { text: 'Mixed signals', color: '#d97706' };
-
-  // Direction
   const dirColor = as.direction === 'long' ? '#16a34a' : as.direction === 'short' ? '#dc2626' : '#6b7280';
+  const indDetails = data.indicatorDetails;
+
+  // Count total indicators from indicatorDetails
+  let totalIndicators = 0;
+  let bullishCount = 0;
+  let bearishCount = 0;
+
+  if (indDetails?.summary) {
+    totalIndicators = indDetails.summary.totalIndicatorsUsed || 0;
+    bullishCount = indDetails.summary.bullishIndicators || 0;
+    bearishCount = indDetails.summary.bearishIndicators || 0;
+  }
 
   return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><style>${commonStyles}</style></head>
 <body>
   <div class="page">
-    <div class="page-title"><span class="logo-red">Trade</span><span class="logo-green">Path</span> | <span class="symbol">${data.symbol}/USDT</span> Technical Analysis</div>
+    <div class="page-title"><span class="logo-red">Trade</span><span class="logo-green">Path</span> | <span class="symbol">${data.symbol}/USDT</span> Technical Indicators</div>
 
-    <!-- Step 2: Asset Scan -->
+    <!-- Step 2: Full Technical Analysis -->
     <div class="section">
       <div class="section-header">
         <div class="section-title">
           <span class="step-num">STEP 2</span>
-          Asset Scan
-          <span class="section-subtitle">Deep Technical Analysis</span>
+          Full Technical Analysis
+          <span class="section-subtitle">${totalIndicators > 0 ? `${totalIndicators} Indicators Analyzed` : 'Deep Indicator Analysis'}</span>
         </div>
         ${getGateStatusHTML(as.gate)}
       </div>
 
-      <!-- Price Overview -->
-      <div class="card">
-        <div class="card-title">&#128200; Price Overview</div>
-        <div class="metrics-grid">
-          <div class="metric-box">
-            <div class="metric-label">Current Price</div>
-            <div class="metric-value">${formatPrice(price)}</div>
-          </div>
-          <div class="metric-box">
-            <div class="metric-label">24h Change</div>
-            <div class="metric-value" style="color: ${(as.priceChange24h || 0) >= 0 ? '#16a34a' : '#dc2626'};">
-              ${formatPercent(as.priceChange24h)}
+      <!-- Price & Signal Overview -->
+      <div class="card" style="background: linear-gradient(135deg, ${as.direction === 'long' ? '#dcfce7' : as.direction === 'short' ? '#fee2e2' : '#f1f5f9'} 0%, #fff 100%);">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 11px; font-weight: bold; color: ${dirColor};">
+              ${formatPrice(price)} | ${as.direction ? as.direction.toUpperCase() : 'NEUTRAL'}
+            </div>
+            <div style="font-size: 8px; color: #475569; margin-top: 2px;">
+              24h: ${formatPercent(as.priceChange24h)} | Volume: ${formatVolume(as.volume24h)}
             </div>
           </div>
-          <div class="metric-box">
-            <div class="metric-label">24h Volume</div>
-            <div class="metric-value">${formatVolume(as.volume24h)}</div>
-          </div>
-          <div class="metric-box">
-            <div class="metric-label">Direction</div>
-            <div class="metric-value" style="color: ${dirColor};">
-              ${as.direction ? as.direction.toUpperCase() : 'N/A'}
+          ${indDetails?.summary ? `
+          <div style="display: flex; gap: 8px; text-align: center;">
+            <div style="padding: 6px 10px; background: #dcfce7; border-radius: 6px;">
+              <div style="font-size: 14px; font-weight: bold; color: #16a34a;">${bullishCount}</div>
+              <div style="font-size: 6px; color: #166534;">BULLISH</div>
             </div>
-            <div class="metric-interp">${as.directionConfidence ? `${(as.directionConfidence * 100).toFixed(0)}% conf.` : ''}</div>
+            <div style="padding: 6px 10px; background: #fee2e2; border-radius: 6px;">
+              <div style="font-size: 14px; font-weight: bold; color: #dc2626;">${bearishCount}</div>
+              <div style="font-size: 6px; color: #991b1b;">BEARISH</div>
+            </div>
+            <div style="padding: 6px 10px; background: ${indDetails.summary.overallSignal === 'bullish' ? '#16a34a' : indDetails.summary.overallSignal === 'bearish' ? '#dc2626' : '#6b7280'}; border-radius: 6px;">
+              <div style="font-size: 11px; font-weight: bold; color: white;">${indDetails.summary.signalConfidence}%</div>
+              <div style="font-size: 5px; color: rgba(255,255,255,0.9);">CONFIDENCE</div>
+            </div>
           </div>
+          ` : ''}
         </div>
       </div>
 
-      <!-- Technical Indicators -->
-      <div class="card">
-        <div class="card-title">&#128202; Technical Indicators</div>
+      ${indDetails ? `
+      <!-- TREND INDICATORS -->
+      ${renderIndicatorCategory('TREND INDICATORS', '&#128200;', indDetails.trend, '#f0f9ff')}
 
+      <!-- MOMENTUM INDICATORS -->
+      ${renderIndicatorCategory('MOMENTUM INDICATORS', '&#9889;', indDetails.momentum, '#fefce8')}
+
+      <!-- VOLATILITY INDICATORS -->
+      ${renderIndicatorCategory('VOLATILITY INDICATORS', '&#127754;', indDetails.volatility, '#fff7ed')}
+
+      <!-- VOLUME INDICATORS -->
+      ${renderIndicatorCategory('VOLUME INDICATORS', '&#128202;', indDetails.volume, '#f0fdf4')}
+
+      <!-- ADVANCED INDICATORS -->
+      ${renderIndicatorCategory('ADVANCED/ON-CHAIN', '&#128161;', indDetails.advanced, '#fdf4ff')}
+
+      <!-- DIVERGENCES -->
+      ${indDetails.divergences && indDetails.divergences.length > 0 ? `
+      <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 6px; padding: 8px; margin-bottom: 8px;">
+        <div style="font-size: 9px; font-weight: 600; color: #92400e; margin-bottom: 6px;">&#9888; DIVERGENCE ALERTS (Early Signals)</div>
+        ${indDetails.divergences.map(d => `
+          <div style="display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 7px;">
+            <span style="color: ${d.type === 'bullish' ? '#16a34a' : d.type === 'bearish' ? '#dc2626' : '#6b7280'}; font-weight: bold;">
+              ${d.type === 'bullish' ? '&#9650;' : d.type === 'bearish' ? '&#9660;' : '&#9679;'} ${d.indicator}
+            </span>
+            <span style="flex: 1; color: #78350f;">${d.description}</span>
+            <span style="background: ${d.reliability === 'high' ? '#dcfce7' : d.reliability === 'medium' ? '#fef3c7' : '#fee2e2'}; padding: 1px 4px; border-radius: 2px; font-size: 5px;">
+              ${d.reliability.toUpperCase()}
+            </span>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
+
+      <!-- INDICATOR SUMMARY -->
+      <div class="summary-box">
+        <div class="summary-title">&#128202; Full Indicator Analysis Summary</div>
+        <div class="summary-text">
+          <strong>Total Indicators:</strong> ${totalIndicators} analyzed | <strong>Bullish:</strong> ${bullishCount} | <strong>Bearish:</strong> ${bearishCount} | <strong>Neutral:</strong> ${indDetails.summary?.neutralIndicators || 0}<br/>
+          <strong>Overall Signal:</strong> ${(indDetails.summary?.overallSignal || 'neutral').toUpperCase()} with ${indDetails.summary?.signalConfidence || 0}% confidence<br/>
+          <strong>Leading Indicators:</strong> ${(indDetails.summary?.leadingIndicatorsSignal || 'neutral').toUpperCase()} - These provide early warning signals<br/>
+          <strong>Direction Bias:</strong> ${as.direction ? `${as.direction.toUpperCase()} with ${((as.directionConfidence || 0) * 100).toFixed(0)}% confidence` : 'No clear bias'}
+        </div>
+      </div>
+      ` : `
+      <!-- FALLBACK: Basic Indicators (when indicatorDetails not available) -->
+      <div class="card">
+        <div class="card-title">&#128202; Basic Indicators</div>
         <div class="indicator-row">
           <div class="indicator-name">RSI (14)</div>
-          <div class="indicator-value">${ind.rsi?.toFixed(1) || '-'}</div>
-          <div class="indicator-interp" style="color: ${rsiInterp.color};">${rsiInterp.text}</div>
+          <div class="indicator-value">${as.indicators?.rsi?.toFixed(1) || '-'}</div>
+          <div class="indicator-interp" style="color: ${interpretRSI(as.indicators?.rsi || 50).color};">${interpretRSI(as.indicators?.rsi || 50).text}</div>
         </div>
-
         <div class="indicator-row">
           <div class="indicator-name">MACD Histogram</div>
-          <div class="indicator-value" style="color: ${(ind.macd?.histogram || 0) >= 0 ? '#16a34a' : '#dc2626'};">
-            ${ind.macd?.histogram?.toFixed(4) || '-'}
-          </div>
-          <div class="indicator-interp" style="color: ${macdInterp.color};">${macdInterp.text}</div>
+          <div class="indicator-value">${as.indicators?.macd?.histogram?.toFixed(4) || '-'}</div>
+          <div class="indicator-interp">${interpretMACD(as.indicators?.macd?.histogram || 0).text}</div>
         </div>
-
         <div class="indicator-row">
-          <div class="indicator-name">MACD Signal</div>
-          <div class="indicator-value">${ind.macd?.signal?.toFixed(4) || '-'}</div>
-          <div class="indicator-interp" style="color: #64748b;">Line: ${ind.macd?.value?.toFixed(4) || '-'}</div>
+          <div class="indicator-name">ATR</div>
+          <div class="indicator-value">${as.indicators?.atr?.toFixed(4) || '-'}</div>
         </div>
-
-        <div class="indicator-row">
-          <div class="indicator-name">Bollinger Position</div>
-          <div class="indicator-value">${ind.bollingerBands ? `$${ind.bollingerBands.middle.toFixed(2)}` : '-'}</div>
-          <div class="indicator-interp" style="color: ${bbInterp.color};">${bbInterp.text}</div>
-        </div>
-
-        <div class="indicator-row">
-          <div class="indicator-name">ATR (Volatility)</div>
-          <div class="indicator-value">${ind.atr?.toFixed(4) || '-'}</div>
-          <div class="indicator-interp" style="color: #64748b;">${ind.atr ? `${((ind.atr / price) * 100).toFixed(2)}% of price` : '-'}</div>
+        <div style="font-size: 8px; color: #d97706; margin-top: 8px; padding: 6px; background: #fef3c7; border-radius: 4px;">
+          &#9888; Full indicator details not available. Generate new analysis for comprehensive 40+ indicator data.
         </div>
       </div>
-
-      <!-- Moving Averages -->
-      <div class="card">
-        <div class="card-title">&#128200; Moving Averages</div>
-        <div class="metrics-grid-3">
-          <div class="metric-box">
-            <div class="metric-label">MA 20</div>
-            <div class="metric-value" style="color: ${price > ma20 ? '#16a34a' : '#dc2626'};">${formatPrice(ma20)}</div>
-            <div class="metric-interp" style="color: ${price > ma20 ? '#16a34a' : '#dc2626'};">
-              ${price > ma20 ? '&#9650; Above' : '&#9660; Below'}
-            </div>
-          </div>
-          <div class="metric-box">
-            <div class="metric-label">MA 50</div>
-            <div class="metric-value" style="color: ${price > ma50 ? '#16a34a' : '#dc2626'};">${formatPrice(ma50)}</div>
-            <div class="metric-interp" style="color: ${price > ma50 ? '#16a34a' : '#dc2626'};">
-              ${price > ma50 ? '&#9650; Above' : '&#9660; Below'}
-            </div>
-          </div>
-          <div class="metric-box">
-            <div class="metric-label">MA 200</div>
-            <div class="metric-value" style="color: ${price > ma200 ? '#16a34a' : '#dc2626'};">${formatPrice(ma200)}</div>
-            <div class="metric-interp" style="color: ${price > ma200 ? '#16a34a' : '#dc2626'};">
-              ${price > ma200 ? '&#9650; Above' : '&#9660; Below'}
-            </div>
-          </div>
-        </div>
-        <div class="info-box">
-          <div class="info-text"><strong>MA Analysis:</strong> ${maInterp.text}</div>
-        </div>
-      </div>
+      `}
 
       <!-- Support & Resistance -->
       ${as.levels ? `
       <div class="card">
-        <div class="card-title">&#128205; Key Levels</div>
+        <div class="card-title">&#128205; Key Price Levels</div>
         <div class="metrics-grid-2">
           <div class="metric-box" style="border-color: #86efac;">
-            <div class="metric-label">Support Levels</div>
-            <div style="font-size: 9px; color: #16a34a; margin-top: 4px;">
-              S1: ${formatPrice(as.levels.support[0])}<br/>
-              S2: ${formatPrice(as.levels.support[1])}<br/>
-              ${as.levels.support[2] ? `S3: ${formatPrice(as.levels.support[2])}` : ''}
+            <div class="metric-label">Support</div>
+            <div style="font-size: 8px; color: #16a34a; margin-top: 3px;">
+              ${as.levels.support.slice(0, 3).map((s, i) => `S${i + 1}: ${formatPrice(s)}`).join('<br/>')}
             </div>
           </div>
           <div class="metric-box" style="border-color: #fca5a5;">
-            <div class="metric-label">Resistance Levels</div>
-            <div style="font-size: 9px; color: #dc2626; margin-top: 4px;">
-              R1: ${formatPrice(as.levels.resistance[0])}<br/>
-              R2: ${formatPrice(as.levels.resistance[1])}<br/>
-              ${as.levels.resistance[2] ? `R3: ${formatPrice(as.levels.resistance[2])}` : ''}
+            <div class="metric-label">Resistance</div>
+            <div style="font-size: 8px; color: #dc2626; margin-top: 3px;">
+              ${as.levels.resistance.slice(0, 3).map((r, i) => `R${i + 1}: ${formatPrice(r)}`).join('<br/>')}
             </div>
           </div>
         </div>
-        ${as.levels.poc ? `<div style="font-size: 8px; color: #64748b; margin-top: 6px; text-align: center;">Point of Control (POC): ${formatPrice(as.levels.poc)}</div>` : ''}
       </div>
       ` : ''}
-
-      <!-- Summary -->
-      <div class="summary-box">
-        <div class="summary-title">&#128202; Asset Scan Summary</div>
-        <div class="summary-text">
-          <strong>RSI:</strong> ${rsiInterp.text}<br/>
-          <strong>MACD:</strong> ${macdInterp.text}<br/>
-          <strong>MAs:</strong> ${maInterp.text}<br/>
-          <strong>Direction Bias:</strong> ${as.direction ? `${as.direction.toUpperCase()} with ${((as.directionConfidence || 0) * 100).toFixed(0)}% confidence` : 'No clear bias'}
-        </div>
-      </div>
 
       ${as.gate ? `
       <div class="gate-box ${as.gate.canProceed ? 'gate-pass' : 'gate-fail'}">
@@ -841,9 +935,11 @@ function generatePage3HTML(data: AnalysisReportData): string {
           <div style="font-size: 14px; font-weight: bold; color: ${sc.smartMoney.positioning === 'long' ? '#16a34a' : sc.smartMoney.positioning === 'short' ? '#dc2626' : '#6b7280'};">
             ${sc.smartMoney.positioning?.toUpperCase() || 'NEUTRAL'}
           </div>
+          ${sc.smartMoney.confidence !== undefined ? `
           <div style="font-size: 9px; color: #64748b;">
             Confidence: ${(sc.smartMoney.confidence * 100).toFixed(0)}%
           </div>
+          ` : ''}
         </div>
       </div>
       ` : ''}
@@ -960,7 +1056,7 @@ function generatePage4HTML(data: AnalysisReportData): string {
             <div class="condition-check ${c.met ? 'condition-met' : 'condition-not'}">${c.met ? '&#10003;' : '&#10007;'}</div>
             <div style="flex: 1;">
               <div style="font-weight: 500;">${c.name}</div>
-              <div style="font-size: 7px; color: #64748b;">${c.details}</div>
+              ${c.details ? `<div style="font-size: 7px; color: #64748b;">${c.details}</div>` : ''}
             </div>
           </div>
         `).join('')}
@@ -976,7 +1072,7 @@ function generatePage4HTML(data: AnalysisReportData): string {
             <div style="font-size: 9px; font-weight: 500;">Zone ${i + 1}</div>
             <div style="font-size: 9px;">${formatPrice(ez.priceLow)} - ${formatPrice(ez.priceHigh)}</div>
             <div style="font-size: 8px; color: #64748b;">Probability: ${(ez.probability * 100).toFixed(0)}%</div>
-            <div style="font-size: 8px; color: ${ez.quality >= 0.7 ? '#16a34a' : ez.quality >= 0.5 ? '#d97706' : '#dc2626'};">Quality: ${(ez.quality * 100).toFixed(0)}%</div>
+            ${ez.quality !== undefined ? `<div style="font-size: 8px; color: ${ez.quality >= 0.7 ? '#16a34a' : ez.quality >= 0.5 ? '#d97706' : '#dc2626'};">Quality: ${(ez.quality * 100).toFixed(0)}%</div>` : ''}
           </div>
         `).join('')}
         ${tm.optimalEntry ? `<div style="font-size: 9px; margin-top: 6px; text-align: center; font-weight: 600; color: #2563eb;">Optimal Entry: ${formatPrice(tm.optimalEntry)}</div>` : ''}
@@ -1230,7 +1326,7 @@ function generatePage5HTML(data: AnalysisReportData): string {
           <div class="condition-item">
             <div class="condition-check ${cf.positive ? 'condition-met' : 'condition-not'}">${cf.positive ? '+' : '-'}</div>
             <div style="flex: 1; font-size: 8px;">${cf.factor}</div>
-            <div style="font-size: 7px; color: #64748b;">${cf.impact}</div>
+            ${cf.impact ? `<div style="font-size: 7px; color: #64748b;">${cf.impact}</div>` : ''}
           </div>
         `).join('')}
       </div>

@@ -331,6 +331,9 @@ export function RecentAnalyses() {
           confidenceFactors: step7.confidenceFactors,
           recommendation: step7.recommendation,
         },
+
+        // Full 40+ Indicator Details (from step2 Asset Scan or step3 Safety Check)
+        indicatorDetails: step2.indicatorDetails || step3.indicatorDetails,
       };
 
       // Generate AI Expert comment
@@ -452,6 +455,8 @@ export function RecentAnalyses() {
         safetyCheck: analysisData.step3Result || {},
         timing: analysisData.step4Result || {},
         trapCheck: analysisData.step6Result || {},
+        // Full 40+ Indicator Details
+        indicatorDetails: step2.indicatorDetails || analysisData.step3Result?.indicatorDetails,
       };
 
       const { generateAnalysisReport } = await import('../reports/AnalysisReport');
@@ -532,6 +537,8 @@ export function RecentAnalyses() {
           overallScore: analysis.score,
           aiSummary: step7.aiSummary || step7.summary,
         },
+        // Full 40+ Indicator Details
+        indicatorDetails: step2.indicatorDetails || step3.indicatorDetails,
       };
 
       // Send email
