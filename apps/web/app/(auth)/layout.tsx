@@ -54,18 +54,21 @@ export default function AuthLayout({
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-16 py-12">
-          {/* Logo */}
-          <div className="mb-10">
+          {/* Logo Icon */}
+          <div className="mb-4">
             <Link href="/">
-              <TraderPathLogo size="lg" showText={true} showTagline={true} />
+              <TraderPathLogo size="xl" showText={false} />
             </Link>
+          </div>
+
+          {/* Brand Name */}
+          <div className="mb-8">
+            <h2 className="text-4xl xl:text-5xl font-bold gradient-text-brand">TraderPath</h2>
+            <p className="text-lg text-slate-400 mt-1">From Charts to Clarity</p>
           </div>
 
           {/* Motto */}
           <div className="mb-12">
-            <h1 className="text-4xl xl:text-5xl font-bold text-white mb-4">
-              From Charts to <span className="gradient-text-brand">Clarity</span>
-            </h1>
             <p className="text-lg xl:text-xl text-slate-300 leading-relaxed">
               Make smarter trading decisions with AI-powered analysis. Our 7-step system analyzes
               40+ indicators to give you clear GO or NO-GO signals.
