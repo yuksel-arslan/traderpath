@@ -52,7 +52,6 @@ import {
 import { useState, useEffect, useCallback } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
-import { LiveAnalysisPreview } from '../../components/marketing/LiveAnalysisPreview';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../lib/coin-icons';
 import { apiBaseUrl } from '../../lib/api';
 import { CREDIT_PACKAGES, ANALYSIS_BUNDLES, FREE_SIGNUP_CREDITS } from '../../lib/pricing-config';
@@ -1615,23 +1614,6 @@ export default function LandingPage() {
               &quot;We provide analysis tools and education—your trading decisions are always your own.&quot;
             </p>
           </div>
-        </div>
-      </section>
-
-      {/* Live Analysis Preview */}
-      <section id="see-it-in-action" className="py-20 bg-accent/50 scroll-mt-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              See TraderPath in Action
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Here's a real example of our 7-step analysis for Bitcoin
-            </p>
-          </div>
-
-          {/* Live Analysis Card - Real BTC Data */}
-          <LiveAnalysisPreview />
         </div>
       </section>
 
