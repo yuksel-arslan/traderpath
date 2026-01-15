@@ -41,7 +41,11 @@ async function fetchBalance(): Promise<CreditBalanceData> {
   }
 }
 
-export function CreditBalance() {
+interface CreditBalanceProps {
+  compact?: boolean;
+}
+
+export function CreditBalance({ compact = false }: CreditBalanceProps) {
   const [showDropdown, setShowDropdown] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
@@ -66,17 +70,18 @@ export function CreditBalance() {
       <button
         onClick={handleDropdownToggle}
         className={cn(
-          'flex items-center gap-2 px-4 py-2 rounded-full',
+          'flex items-center gap-1.5 rounded-full transition-all',
           'bg-gradient-to-r from-amber-500/10 to-yellow-500/10',
           'border border-amber-500/20',
-          'hover:border-amber-500/40 transition-all'
+          'hover:border-amber-500/40',
+          compact ? 'px-2 py-1' : 'px-4 py-2 gap-2'
         )}
       >
-        <Gem className="w-5 h-5 text-amber-500" />
-        <span className="font-semibold text-amber-600">
+        <Gem className={cn('text-amber-500', compact ? 'w-3.5 h-3.5' : 'w-5 h-5')} />
+        <span className={cn('font-semibold text-amber-600', compact ? 'text-xs' : '')}>
           {isLoading ? '...' : data?.balance || 0}
         </span>
-        <Plus className="w-4 h-4 text-amber-500" />
+        <Plus className={cn('text-amber-500', compact ? 'w-3 h-3' : 'w-4 h-4')} />
       </button>
 
       {/* Dropdown */}

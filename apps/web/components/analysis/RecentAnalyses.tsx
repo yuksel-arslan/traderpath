@@ -8,13 +8,12 @@ import {
   RefreshCw,
   Target,
   Timer,
-  CheckCircle2,
-  XCircle,
   Zap,
   Activity,
   Calendar,
-  LineChart,
-  Eye,
+  List,
+  LayoutGrid,
+  ChevronRight,
 } from 'lucide-react';
 import { CoinIcon } from '../common/CoinIcon';
 import { cn } from '../../lib/utils';
@@ -25,8 +24,8 @@ import Link from 'next/link';
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
 
 const TRADE_TYPE_CONFIG: Record<TradeType, { label: string; icon: typeof Zap; color: string }> = {
-  scalping: { label: 'Scalping', icon: Zap, color: 'purple' },
-  dayTrade: { label: 'Day Trade', icon: Activity, color: 'blue' },
+  scalping: { label: 'Scalp', icon: Zap, color: 'purple' },
+  dayTrade: { label: 'Day', icon: Activity, color: 'blue' },
   swing: { label: 'Swing', icon: Calendar, color: 'amber' },
 };
 
@@ -54,16 +53,19 @@ interface RecentAnalysis {
 }
 
 const verdictConfig = {
-  go: { label: 'GO', color: 'text-green-500', bg: 'bg-green-500/10' },
-  conditional_go: { label: 'CONDITIONAL', color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-  wait: { label: 'WAIT', color: 'text-orange-500', bg: 'bg-orange-500/10' },
-  avoid: { label: 'AVOID', color: 'text-red-500', bg: 'bg-red-500/10' },
+  go: { label: 'GO', color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/30' },
+  conditional_go: { label: 'COND', color: 'text-yellow-500', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
+  wait: { label: 'WAIT', color: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/30' },
+  avoid: { label: 'AVOID', color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/30' },
 };
+
+type ViewMode = 'list' | 'card';
 
 export function RecentAnalyses() {
   const [analyses, setAnalyses] = useState<RecentAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   useEffect(() => {
     fetchAnalyses();
@@ -177,20 +179,20 @@ export function RecentAnalyses() {
 
   if (loading) {
     return (
-      <div className="bg-card rounded-lg border p-8 text-center">
-        <RefreshCw className="w-8 h-8 mx-auto mb-4 text-muted-foreground animate-spin" />
-        <p className="text-sm text-muted-foreground">Loading analyses...</p>
+      <div className="text-center py-6">
+        <RefreshCw className="w-5 h-5 mx-auto mb-2 text-muted-foreground animate-spin" />
+        <p className="text-xs text-muted-foreground">Loading...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-card rounded-lg border p-8 text-center">
-        <p className="text-sm text-red-500 mb-2">{error}</p>
+      <div className="text-center py-6">
+        <p className="text-xs text-red-500 mb-1">{error}</p>
         <button
           onClick={fetchAnalyses}
-          className="text-sm text-primary hover:underline"
+          className="text-xs text-primary hover:underline"
         >
           Try again
         </button>
@@ -200,28 +202,172 @@ export function RecentAnalyses() {
 
   if (analyses.length === 0) {
     return (
-      <div className="bg-card rounded-lg border p-8 text-center">
-        <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-        <h3 className="font-semibold mb-2">No analyses yet</h3>
-        <p className="text-sm text-muted-foreground">
-          Select a coin above to start your first analysis
+      <div className="text-center py-6">
+        <Clock className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+        <h3 className="font-medium text-sm mb-1">No analyses yet</h3>
+        <p className="text-xs text-muted-foreground">
+          Select a coin above to start
         </p>
       </div>
     );
   }
 
   return (
-    <div className="bg-card rounded-lg border divide-y divide-border max-h-[500px] overflow-y-auto">
+    <div>
+      {/* Header with view toggle */}
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+          Recent Analyses
+          <span className="text-xs font-normal text-gray-500 dark:text-slate-400 ml-1">
+            ({analyses.length})
+          </span>
+        </h3>
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5">
+          <button
+            onClick={() => setViewMode('list')}
+            className={cn(
+              'p-1.5 rounded transition-all',
+              viewMode === 'list'
+                ? 'bg-white dark:bg-slate-700 shadow-sm'
+                : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
+            )}
+          >
+            <List className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setViewMode('card')}
+            className={cn(
+              'p-1.5 rounded transition-all',
+              viewMode === 'card'
+                ? 'bg-white dark:bg-slate-700 shadow-sm'
+                : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
+            )}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {viewMode === 'list' ? (
+        <ListView analyses={analyses} />
+      ) : (
+        <CardView analyses={analyses} />
+      )}
+    </div>
+  );
+}
+
+// Compact List View
+function ListView({ analyses }: { analyses: RecentAnalysis[] }) {
+  return (
+    <div className="space-y-1 max-h-[400px] overflow-y-auto">
       {analyses.map((analysis) => {
         const config = verdictConfig[analysis.verdict] || verdictConfig.wait;
         const isActive = analysis.expiresAt && new Date(analysis.expiresAt) > new Date() && analysis.outcome !== 'correct' && analysis.outcome !== 'incorrect';
 
-        // Calculate TP progress if not provided by API (relative to TP3 as max target)
+        return (
+          <Link
+            key={analysis.id}
+            href={`/reports/${analysis.id}`}
+            className={cn(
+              "flex items-center gap-2 p-2 rounded-lg transition-all hover:bg-gray-100 dark:hover:bg-slate-700/50 group",
+              analysis.outcome === 'correct' && "bg-green-500/5",
+              analysis.outcome === 'incorrect' && "bg-red-500/5"
+            )}
+          >
+            {/* Coin Icon */}
+            <CoinIcon symbol={analysis.symbol} size={28} className="shrink-0" />
+
+            {/* Symbol + Direction */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-medium text-sm text-gray-900 dark:text-white">{analysis.symbol}</span>
+                {analysis.direction && (
+                  <span className={cn(
+                    "flex items-center text-[10px]",
+                    analysis.direction === 'long' ? "text-green-500" : "text-red-500"
+                  )}>
+                    {analysis.direction === 'long' ? (
+                      <TrendingUp className="w-3 h-3" />
+                    ) : (
+                      <TrendingDown className="w-3 h-3" />
+                    )}
+                  </span>
+                )}
+                {analysis.tradeType && TRADE_TYPE_CONFIG[analysis.tradeType] && (
+                  <span className={cn(
+                    "text-[9px] px-1 py-0.5 rounded",
+                    TRADE_TYPE_CONFIG[analysis.tradeType].color === 'purple' && "bg-purple-500/10 text-purple-500",
+                    TRADE_TYPE_CONFIG[analysis.tradeType].color === 'blue' && "bg-blue-500/10 text-blue-500",
+                    TRADE_TYPE_CONFIG[analysis.tradeType].color === 'amber' && "bg-amber-500/10 text-amber-500"
+                  )}>
+                    {TRADE_TYPE_CONFIG[analysis.tradeType].label}
+                  </span>
+                )}
+                {isActive && analysis.hasTradePlan && (
+                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                )}
+              </div>
+              <span className="text-[10px] text-gray-500 dark:text-slate-400">{analysis.createdAt}</span>
+            </div>
+
+            {/* Score */}
+            <div className={cn(
+              "text-xs font-bold px-1.5 py-0.5 rounded",
+              analysis.score >= 7 ? "text-green-600 dark:text-green-400" :
+              analysis.score >= 5 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"
+            )}>
+              {((analysis.score ?? 0) * 10).toFixed(0)}%
+            </div>
+
+            {/* P/L if available */}
+            {analysis.unrealizedPnL !== undefined && (
+              <div className={cn(
+                "text-xs font-bold min-w-[45px] text-right",
+                analysis.unrealizedPnL >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+              )}>
+                {analysis.unrealizedPnL >= 0 ? '+' : ''}{(analysis.unrealizedPnL ?? 0).toFixed(1)}%
+              </div>
+            )}
+
+            {/* Verdict Badge */}
+            <span className={cn(
+              "text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0",
+              config.bg, config.color
+            )}>
+              {config.label}
+            </span>
+
+            {/* Outcome indicator */}
+            {analysis.outcome === 'correct' && (
+              <span className="text-[9px] text-green-500 font-bold">TP</span>
+            )}
+            {analysis.outcome === 'incorrect' && (
+              <span className="text-[9px] text-red-500 font-bold">SL</span>
+            )}
+
+            {/* Arrow */}
+            <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-slate-300 shrink-0" />
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+// Card View
+function CardView({ analyses }: { analyses: RecentAnalysis[] }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto">
+      {analyses.map((analysis) => {
+        const config = verdictConfig[analysis.verdict] || verdictConfig.wait;
+        const isActive = analysis.expiresAt && new Date(analysis.expiresAt) > new Date() && analysis.outcome !== 'correct' && analysis.outcome !== 'incorrect';
+
+        // Calculate TP progress
         const tpProgress = analysis.tpProgress ?? (() => {
           if (analysis.outcome === 'correct') return 100;
           if (analysis.entryPrice && analysis.currentPrice && analysis.takeProfit1) {
             const isLong = analysis.direction === 'long';
-            // Use TP3 as max target, fall back to TP2, then TP1
             const maxTarget = analysis.takeProfit3 || analysis.takeProfit2 || analysis.takeProfit1;
             const totalDistance = isLong
               ? (maxTarget - analysis.entryPrice)
@@ -237,164 +383,128 @@ export function RecentAnalyses() {
         })();
 
         return (
-          <div
+          <Link
             key={analysis.id}
+            href={`/reports/${analysis.id}`}
             className={cn(
-              "p-4 hover:bg-accent/30 transition-colors relative",
-              analysis.outcome === 'correct' && "bg-green-500/5",
-              analysis.outcome === 'incorrect' && "bg-red-500/5"
+              "block p-3 rounded-lg border transition-all hover:border-gray-300 dark:hover:border-slate-600 hover:shadow-sm group",
+              "bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700",
+              analysis.outcome === 'correct' && "border-green-500/30 bg-green-500/5",
+              analysis.outcome === 'incorrect' && "border-red-500/30 bg-red-500/5"
             )}
           >
-            {/* TP/SL Hit Ribbon */}
-            {analysis.outcome === 'correct' && (
-              <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden">
-                <div className="absolute top-2 -right-4 w-20 text-center py-0.5 bg-green-500 text-white text-[8px] font-bold rotate-45 shadow-sm">
-                  TP HIT ✓
-                </div>
-              </div>
-            )}
-            {analysis.outcome === 'incorrect' && (
-              <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden">
-                <div className="absolute top-2 -right-4 w-20 text-center py-0.5 bg-red-500 text-white text-[8px] font-bold rotate-45 shadow-sm">
-                  SL HIT ✗
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-3">
-              {/* Top Row: Coin Info + Badges */}
-              <div className="flex items-center gap-3 min-w-0">
-                <CoinIcon symbol={analysis.symbol} size={40} className="shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-semibold">{analysis.symbol}</span>
-
-                    {/* Direction Badge */}
+            {/* Top: Symbol + Verdict */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <CoinIcon symbol={analysis.symbol} size={32} className="shrink-0" />
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-sm text-gray-900 dark:text-white">{analysis.symbol}</span>
                     {analysis.direction && (
                       <span className={cn(
-                        "px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-0.5",
+                        "flex items-center gap-0.5 text-[10px] font-medium px-1 py-0.5 rounded",
                         analysis.direction === 'long'
                           ? "bg-green-500/10 text-green-500"
                           : "bg-red-500/10 text-red-500"
                       )}>
-                        {analysis.direction === 'long' ? (
-                          <TrendingUp className="w-3 h-3" />
-                        ) : (
-                          <TrendingDown className="w-3 h-3" />
-                        )}
+                        {analysis.direction === 'long' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                         {analysis.direction.toUpperCase()}
                       </span>
                     )}
-
-                    {/* Trade Type Badge */}
-                    {analysis.tradeType && TRADE_TYPE_CONFIG[analysis.tradeType] && (() => {
-                      const typeConfig = TRADE_TYPE_CONFIG[analysis.tradeType!];
-                      const Icon = typeConfig.icon;
-                      return (
-                        <span className={cn(
-                          "px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-0.5",
-                          typeConfig.color === 'purple' && "bg-purple-500/10 text-purple-500",
-                          typeConfig.color === 'blue' && "bg-blue-500/10 text-blue-500",
-                          typeConfig.color === 'amber' && "bg-amber-500/10 text-amber-500"
-                        )}>
-                          <Icon className="w-3 h-3" />
-                          {typeConfig.label}
-                        </span>
-                      );
-                    })()}
-
-                    {/* Live Tracking Badge */}
-                    {isActive && analysis.hasTradePlan && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-400 flex items-center gap-1 animate-pulse">
-                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping" />
-                        <Timer className="w-3 h-3" />
-                        LIVE TRACKING
-                      </span>
-                    )}
                   </div>
-                  <div className="text-xs text-muted-foreground">{analysis.createdAt}</div>
+                  <span className="text-[10px] text-gray-500 dark:text-slate-400">{analysis.createdAt}</span>
                 </div>
               </div>
 
-              {/* Bottom Row: Score + P/L + TP Progress */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Score Badge */}
-                <div className={cn(
-                  "text-center px-2.5 py-1 rounded-lg min-w-[50px]",
-                  analysis.score >= 7 ? "bg-green-100 dark:bg-green-500/20" :
-                  analysis.score >= 5 ? "bg-yellow-100 dark:bg-yellow-500/20" : "bg-red-100 dark:bg-red-500/20"
+              <div className="flex flex-col items-end gap-1">
+                <span className={cn(
+                  "text-[10px] font-bold px-2 py-0.5 rounded",
+                  config.bg, config.color
                 )}>
-                  <div className="text-[9px] text-gray-500 dark:text-muted-foreground">Score</div>
-                  <div className={cn(
-                    "font-bold text-sm",
-                    analysis.score >= 7 ? "text-green-600 dark:text-green-400" :
-                    analysis.score >= 5 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"
-                  )}>
-                    {((analysis.score ?? 0) * 10).toFixed(0)}%
-                  </div>
-                </div>
-
-                {/* P/L Badge - only if has current price */}
-                {analysis.currentPrice && analysis.unrealizedPnL !== undefined && (
-                  <>
-                    <div className="text-muted-foreground/30">|</div>
-                    <div className={cn(
-                      "text-center px-2.5 py-1 rounded-lg min-w-[55px]",
-                      analysis.unrealizedPnL >= 0
-                        ? "bg-green-100 dark:bg-green-500/20"
-                        : "bg-red-100 dark:bg-red-500/20"
-                    )}>
-                      <div className="text-[9px] text-gray-500 dark:text-muted-foreground">P/L</div>
-                      <div className={cn(
-                        "font-bold text-sm",
-                        analysis.unrealizedPnL >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                      )}>
-                        {analysis.unrealizedPnL >= 0 ? '+' : ''}{(analysis.unrealizedPnL ?? 0).toFixed(2)}%
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* TP Progress Badge */}
-                {analysis.takeProfit1 && tpProgress !== null && (
-                  <>
-                    <div className="text-muted-foreground/30">|</div>
-                    <div className={cn(
-                      "text-center px-2.5 py-1 rounded-lg min-w-[50px]",
-                      analysis.outcome === 'correct' ? "bg-green-200 dark:bg-green-500/30 ring-1 ring-green-500" :
-                      analysis.outcome === 'incorrect' ? "bg-red-200 dark:bg-red-500/30 ring-1 ring-red-500" :
-                      tpProgress >= 80 ? "bg-green-100 dark:bg-green-500/20" :
-                      tpProgress >= 50 ? "bg-yellow-100 dark:bg-yellow-500/20" : "bg-blue-100 dark:bg-blue-500/20"
-                    )}>
-                      <div className="text-[9px] text-gray-500 dark:text-muted-foreground flex items-center justify-center gap-0.5">
-                        <Target className="w-2.5 h-2.5" />
-                        {analysis.outcome === 'correct' ? 'TP HIT!' : analysis.outcome === 'incorrect' ? 'SL HIT' : 'TP'}
-                      </div>
-                      <div className={cn(
-                        "font-bold text-sm",
-                        analysis.outcome === 'correct' ? "text-green-600 dark:text-green-300" :
-                        analysis.outcome === 'incorrect' ? "text-red-600 dark:text-red-300" :
-                        tpProgress >= 80 ? "text-green-600 dark:text-green-400" :
-                        tpProgress >= 50 ? "text-yellow-600 dark:text-yellow-400" : "text-blue-600 dark:text-blue-400"
-                      )}>
-                        {(tpProgress ?? 0).toFixed(0)}%
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Verdict Badge - moved to end */}
-                <div className="ml-auto">
-                  <span className={cn(
-                    "px-2 py-1 rounded text-[10px] font-bold",
-                    config.bg, config.color
-                  )}>
-                    {config.label}
+                  {config.label}
+                </span>
+                {isActive && analysis.hasTradePlan && (
+                  <span className="flex items-center gap-1 text-[9px] text-blue-500">
+                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping" />
+                    LIVE
                   </span>
-                </div>
+                )}
               </div>
             </div>
-          </div>
+
+            {/* Stats Row */}
+            <div className="flex items-center gap-2 text-xs">
+              {/* Score */}
+              <div className={cn(
+                "px-2 py-1 rounded",
+                analysis.score >= 7 ? "bg-green-100 dark:bg-green-500/20" :
+                analysis.score >= 5 ? "bg-yellow-100 dark:bg-yellow-500/20" : "bg-red-100 dark:bg-red-500/20"
+              )}>
+                <span className="text-[9px] text-gray-500 dark:text-slate-400 block">Score</span>
+                <span className={cn(
+                  "font-bold",
+                  analysis.score >= 7 ? "text-green-600 dark:text-green-400" :
+                  analysis.score >= 5 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"
+                )}>
+                  {((analysis.score ?? 0) * 10).toFixed(0)}%
+                </span>
+              </div>
+
+              {/* P/L */}
+              {analysis.unrealizedPnL !== undefined && (
+                <div className={cn(
+                  "px-2 py-1 rounded",
+                  analysis.unrealizedPnL >= 0
+                    ? "bg-green-100 dark:bg-green-500/20"
+                    : "bg-red-100 dark:bg-red-500/20"
+                )}>
+                  <span className="text-[9px] text-gray-500 dark:text-slate-400 block">P/L</span>
+                  <span className={cn(
+                    "font-bold",
+                    analysis.unrealizedPnL >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                  )}>
+                    {analysis.unrealizedPnL >= 0 ? '+' : ''}{(analysis.unrealizedPnL ?? 0).toFixed(1)}%
+                  </span>
+                </div>
+              )}
+
+              {/* TP Progress */}
+              {analysis.takeProfit1 && tpProgress !== null && (
+                <div className={cn(
+                  "px-2 py-1 rounded",
+                  analysis.outcome === 'correct' ? "bg-green-200 dark:bg-green-500/30" :
+                  analysis.outcome === 'incorrect' ? "bg-red-200 dark:bg-red-500/30" :
+                  "bg-blue-100 dark:bg-blue-500/20"
+                )}>
+                  <span className="text-[9px] text-gray-500 dark:text-slate-400 flex items-center gap-0.5">
+                    <Target className="w-2.5 h-2.5" />
+                    {analysis.outcome === 'correct' ? 'TP!' : analysis.outcome === 'incorrect' ? 'SL' : 'TP'}
+                  </span>
+                  <span className={cn(
+                    "font-bold",
+                    analysis.outcome === 'correct' ? "text-green-600 dark:text-green-300" :
+                    analysis.outcome === 'incorrect' ? "text-red-600 dark:text-red-300" :
+                    "text-blue-600 dark:text-blue-400"
+                  )}>
+                    {(tpProgress ?? 0).toFixed(0)}%
+                  </span>
+                </div>
+              )}
+
+              {/* Trade Type */}
+              {analysis.tradeType && TRADE_TYPE_CONFIG[analysis.tradeType] && (
+                <div className="ml-auto flex items-center gap-1 text-[10px] text-gray-500 dark:text-slate-400">
+                  {(() => {
+                    const Icon = TRADE_TYPE_CONFIG[analysis.tradeType!].icon;
+                    return <Icon className="w-3 h-3" />;
+                  })()}
+                  {TRADE_TYPE_CONFIG[analysis.tradeType].label}
+                </div>
+              )}
+
+              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-slate-300 ml-auto" />
+            </div>
+          </Link>
         );
       })}
     </div>
