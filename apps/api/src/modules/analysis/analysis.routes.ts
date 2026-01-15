@@ -860,14 +860,17 @@ Explain the key risks and what conditions would need to change before trading th
         const tp2 = takeProfits?.[1]?.price || null;
         const tp3 = takeProfits?.[2]?.price || null;
 
-        // Calculate target progress (% towards TP1)
+        // Calculate target progress (% towards TP3 as max target)
+        // TP progress is relative to TP3: if TP1 hit, shows TP1/TP3 ratio
         let tpProgress: number | null = null;
         let distanceToTP1: number | null = null;
         let distanceToSL: number | null = null;
 
         if (entryPrice && currentPrice && tp1) {
           const isLong = direction === 'long';
-          const totalDistance = isLong ? (tp1 - entryPrice) : (entryPrice - tp1);
+          // Use TP3 as max target, fall back to TP2, then TP1
+          const maxTarget = tp3 || tp2 || tp1;
+          const totalDistance = isLong ? (maxTarget - entryPrice) : (entryPrice - maxTarget);
           const coveredDistance = isLong ? (currentPrice - entryPrice) : (entryPrice - currentPrice);
           tpProgress = totalDistance !== 0 ? Math.min(100, Math.max(-100, (coveredDistance / totalDistance) * 100)) : 0;
           distanceToTP1 = ((tp1 - currentPrice) / currentPrice) * 100;

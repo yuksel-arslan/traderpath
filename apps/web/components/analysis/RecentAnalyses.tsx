@@ -44,6 +44,8 @@ interface RecentAnalysis {
   unrealizedPnL?: number;
   stopLoss?: number;
   takeProfit1?: number;
+  takeProfit2?: number;
+  takeProfit3?: number;
   tpProgress?: number;
   distanceToTP1?: number;
   isSample?: boolean;
@@ -150,6 +152,8 @@ export function RecentAnalyses() {
             unrealizedPnL: a.unrealizedPnL,
             stopLoss: a.stopLoss,
             takeProfit1: a.takeProfit1,
+            takeProfit2: a.takeProfit2,
+            takeProfit3: a.takeProfit3,
             tpProgress: a.tpProgress,
             distanceToTP1: a.distanceToTP1,
             hasTradePlan: a.hasTradePlan,
@@ -212,14 +216,16 @@ export function RecentAnalyses() {
         const config = verdictConfig[analysis.verdict] || verdictConfig.wait;
         const isActive = analysis.expiresAt && new Date(analysis.expiresAt) > new Date() && analysis.outcome !== 'correct' && analysis.outcome !== 'incorrect';
 
-        // Calculate TP progress if not provided by API
+        // Calculate TP progress if not provided by API (relative to TP3 as max target)
         const tpProgress = analysis.tpProgress ?? (() => {
           if (analysis.outcome === 'correct') return 100;
           if (analysis.entryPrice && analysis.currentPrice && analysis.takeProfit1) {
             const isLong = analysis.direction === 'long';
+            // Use TP3 as max target, fall back to TP2, then TP1
+            const maxTarget = analysis.takeProfit3 || analysis.takeProfit2 || analysis.takeProfit1;
             const totalDistance = isLong
-              ? (analysis.takeProfit1 - analysis.entryPrice)
-              : (analysis.entryPrice - analysis.takeProfit1);
+              ? (maxTarget - analysis.entryPrice)
+              : (analysis.entryPrice - maxTarget);
             const coveredDistance = isLong
               ? (analysis.currentPrice - analysis.entryPrice)
               : (analysis.entryPrice - analysis.currentPrice);

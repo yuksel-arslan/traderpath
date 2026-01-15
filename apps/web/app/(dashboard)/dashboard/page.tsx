@@ -1598,16 +1598,18 @@ export default function DashboardPage() {
 
                         <div className="text-gray-300 dark:text-muted-foreground/30">|</div>
 
-                        {/* TP Progress - Use API value or calculate */}
+                        {/* TP Progress - Use API value or calculate (relative to TP3 as max target) */}
                         {(() => {
                           // Use tpProgress from API if available
                           const tpProgress = outcome.tpProgress ?? (() => {
                             if (outcome.outcome === 'correct') return 100;
                             if (outcome.entryPrice && outcome.currentPrice && outcome.takeProfit1) {
                               const isLong = outcome.direction === 'long' || outcome.direction === 'LONG';
+                              // Use TP3 as max target, fall back to TP2, then TP1
+                              const maxTarget = outcome.takeProfit3 || outcome.takeProfit2 || outcome.takeProfit1;
                               const totalDistance = isLong
-                                ? (outcome.takeProfit1 - outcome.entryPrice)
-                                : (outcome.entryPrice - outcome.takeProfit1);
+                                ? (maxTarget - outcome.entryPrice)
+                                : (outcome.entryPrice - maxTarget);
                               const coveredDistance = isLong
                                 ? (outcome.currentPrice - outcome.entryPrice)
                                 : (outcome.entryPrice - outcome.currentPrice);
@@ -1689,14 +1691,16 @@ export default function DashboardPage() {
                     {/* Table Body - Max 5 rows visible, vertical scroll */}
                     <div className="divide-y divide-gray-200 dark:divide-white/5 max-h-[220px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
                       {filteredOutcomes.map((outcome) => {
-                        // Use tpProgress from API if available, otherwise calculate
+                        // Use tpProgress from API if available, otherwise calculate (relative to TP3 as max target)
                         const tpProgress = outcome.tpProgress ?? (() => {
                           if (outcome.outcome === 'correct') return 100;
                           if (outcome.entryPrice && outcome.currentPrice && outcome.takeProfit1) {
                             const isLong = outcome.direction === 'long' || outcome.direction === 'LONG';
+                            // Use TP3 as max target, fall back to TP2, then TP1
+                            const maxTarget = outcome.takeProfit3 || outcome.takeProfit2 || outcome.takeProfit1;
                             const totalDistance = isLong
-                              ? (outcome.takeProfit1 - outcome.entryPrice)
-                              : (outcome.entryPrice - outcome.takeProfit1);
+                              ? (maxTarget - outcome.entryPrice)
+                              : (outcome.entryPrice - maxTarget);
                             const coveredDistance = isLong
                               ? (outcome.currentPrice - outcome.entryPrice)
                               : (outcome.entryPrice - outcome.currentPrice);
