@@ -408,7 +408,6 @@ function AnswerFooter({
             <>
               <Sparkles className="w-5 h-5" />
               Download Full Report
-              <span className="ml-1 px-2 py-0.5 bg-white/20 rounded text-xs">10 credits</span>
             </>
           )}
         </button>
@@ -679,15 +678,10 @@ export default function AIExpertChatPage() {
                   <BookOpen className="w-4 h-4" />
                   With real examples
                 </div>
-                {isAdmin ? (
+                {isAdmin && (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 rounded-full text-green-600 text-sm">
                     <Shield className="w-4 h-4" />
-                    Free (Admin)
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full text-amber-600 text-sm">
-                    <Zap className="w-4 h-4" />
-                    5 credits/msg
+                    Admin
                   </div>
                 )}
               </div>
@@ -913,18 +907,13 @@ export default function AIExpertChatPage() {
             </button>
           </form>
           <div className="flex items-center justify-center gap-4 mt-3 text-xs text-muted-foreground">
-            {isAdmin ? (
+            {isAdmin && (
               <span className="flex items-center gap-1">
                 <Shield className="w-3 h-3 text-green-500" />
-                Free (Admin)
-              </span>
-            ) : (
-              <span className="flex items-center gap-1">
-                <Zap className="w-3 h-3 text-amber-500" />
-                5 credits/msg
+                Admin
               </span>
             )}
-            <span>•</span>
+            {isAdmin && <span>•</span>}
             <span>Shift+Enter for new line</span>
           </div>
         </div>
