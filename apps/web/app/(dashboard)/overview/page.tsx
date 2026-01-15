@@ -92,7 +92,7 @@ export default function OverviewPage() {
 
       if (creditsRes.ok) {
         const data = await creditsRes.json();
-        setCredits(data.credits || 0);
+        setCredits(data.data?.balance || 0);
       }
 
       if (statsRes.ok) {
