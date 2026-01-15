@@ -278,8 +278,8 @@ export function TradePlanChart({
       setLoading(true);
       setError(null);
 
-      // Use fewer candles when zooming to trade plan (for PDF)
-      const candleLimit = zoom ? 50 : 200;
+      // Use 100 candles for zoomed view (PDF reports), 200 for normal view
+      const candleLimit = zoom ? 100 : 200;
 
       // Fetch from Binance directly (public endpoint)
       const response = await fetch(
@@ -317,12 +317,8 @@ export function TradePlanChart({
       // Guard chart operations with try-catch in case of disposal
       try {
         if (!isDisposedRef.current) {
-          // When zooming, only use the last 30 candles from the data
-          const dataToUse = zoom && candleData.length > 30
-            ? candleData.slice(-30)
-            : candleData;
-
-          series.setData(dataToUse);
+          // Use all fetched candles (100 for zoom, 200 for normal)
+          series.setData(candleData);
           chart.timeScale().fitContent();
         }
       } catch (chartErr) {
