@@ -104,16 +104,13 @@ export default function RegisterPage() {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-red-500 via-amber-500 to-green-500 bg-clip-text text-transparent">
-            TraderPath
-          </h1>
-          <p className="text-muted-foreground mt-2">Create your account</p>
-        </div>
+    <>
+      <div className="text-center mb-8">
+        <h1 className="text-2xl font-bold">Create your account</h1>
+        <p className="text-muted-foreground mt-2">Start your trading journey today</p>
+      </div>
 
-        <div className="bg-card border rounded-lg p-6 shadow-lg">
+      <div className="bg-card border rounded-lg p-6 shadow-lg">
           <div className="mb-6 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
             <div className="flex items-center gap-2 text-green-600">
               <Gift className="w-5 h-5" />
@@ -285,14 +282,13 @@ export default function RegisterPage() {
             </button>
           </div>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <Link href="/login" className="text-primary hover:underline font-medium">
-              Sign in
-            </Link>
-          </p>
-        </div>
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Already have an account?{' '}
+          <Link href="/login" className="text-primary hover:underline font-medium">
+            Sign in
+          </Link>
+        </p>
       </div>
-    </div>
+    </>
   );
 }
