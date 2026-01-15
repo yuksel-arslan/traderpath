@@ -499,7 +499,8 @@ function generatePage3HTML(data: AnalysisReportData): string {
 }
 
 // ===========================================
-// CHART CAPTURE - Original working version
+// CHART CAPTURE - Enhanced version for lightweight-charts
+// Handles multiple canvas layers (main chart + overlays)
 // ===========================================
 
 export async function captureChartAsImage(): Promise<string | null> {
@@ -510,9 +511,12 @@ export async function captureChartAsImage(): Promise<string | null> {
       return null;
     }
 
-    // Find the canvas element inside the chart (lightweight-charts creates canvas elements)
-    const chartCanvas = element.querySelector('canvas');
-    if (!chartCanvas) {
+    // Wait a bit for chart to be fully rendered
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Find ALL canvas elements inside the chart (lightweight-charts uses multiple canvases)
+    const chartCanvases = element.querySelectorAll('canvas');
+    if (!chartCanvases || chartCanvases.length === 0) {
       console.log('Chart canvas not found, using html2canvas fallback');
       // Fallback to html2canvas if no canvas found
       const canvas = await html2canvas(element, {
@@ -524,6 +528,8 @@ export async function captureChartAsImage(): Promise<string | null> {
       });
       return canvas.toDataURL('image/png');
     }
+
+    console.log(`Found ${chartCanvases.length} canvas elements in chart`);
 
     // Create a new canvas with white background that includes the chart and surrounding elements
     const containerRect = element.getBoundingClientRect();
@@ -541,7 +547,7 @@ export async function captureChartAsImage(): Promise<string | null> {
     // Scale for high DPI
     ctx.scale(scale, scale);
 
-    // Capture the entire element with html2canvas but ignore the canvas
+    // Capture the entire element with html2canvas but ignore all canvases
     const html2canvasResult = await html2canvas(element, {
       backgroundColor: '#ffffff',
       scale: 1,
@@ -582,20 +588,29 @@ export async function captureChartAsImage(): Promise<string | null> {
       },
     });
 
-    // Draw the html2canvas result (without the chart canvas)
+    // Draw the html2canvas result (without the chart canvases)
     ctx.drawImage(html2canvasResult, 0, 0);
 
-    // Now draw the chart canvas in its correct position
-    const chartCanvasRect = chartCanvas.getBoundingClientRect();
-    const offsetX = chartCanvasRect.left - containerRect.left;
-    const offsetY = chartCanvasRect.top - containerRect.top;
+    // Now draw ALL chart canvases in their correct positions (in order for proper layering)
+    chartCanvases.forEach((chartCanvas, index) => {
+      try {
+        const chartCanvasRect = chartCanvas.getBoundingClientRect();
+        const offsetX = chartCanvasRect.left - containerRect.left;
+        const offsetY = chartCanvasRect.top - containerRect.top;
 
-    // Draw white background behind the chart
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(offsetX, offsetY, chartCanvasRect.width, chartCanvasRect.height);
+        // For the first (main) canvas, draw white background
+        if (index === 0) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(offsetX, offsetY, chartCanvasRect.width, chartCanvasRect.height);
+        }
 
-    // Draw the chart canvas
-    ctx.drawImage(chartCanvas, offsetX, offsetY, chartCanvasRect.width, chartCanvasRect.height);
+        // Draw the chart canvas
+        ctx.drawImage(chartCanvas, offsetX, offsetY, chartCanvasRect.width, chartCanvasRect.height);
+        console.log(`Drew canvas ${index + 1} at offset (${offsetX}, ${offsetY})`);
+      } catch (canvasError) {
+        console.warn(`Failed to draw canvas ${index + 1}:`, canvasError);
+      }
+    });
 
     return combinedCanvas.toDataURL('image/png');
   } catch (error) {
