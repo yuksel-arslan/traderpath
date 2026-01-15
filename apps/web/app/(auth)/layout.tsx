@@ -123,96 +123,100 @@ export default function AuthLayout({
         </div>
 
         {/* Right Side - Form */}
-        <div className="flex-1 flex items-center justify-center px-4 py-8 lg:py-12 relative overflow-hidden">
-          {/* Theme Toggle - Top Right */}
-          <div className="absolute top-4 right-4 z-20">
-            <ThemeToggle />
-          </div>
-
-          {/* Mobile Logo - Only shown on small screens */}
-          <div className="lg:hidden absolute top-4 left-4 z-20">
+        <div className="flex-1 flex flex-col min-h-screen lg:min-h-0 relative overflow-hidden">
+          {/* Mobile Header */}
+          <div className="lg:hidden flex items-center justify-between px-4 py-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-20">
             <Link href="/">
               <TraderPathLogo size="sm" showText={true} />
             </Link>
+            <ThemeToggle />
           </div>
 
-          {/* Animated Gradient Wave Background */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {/* Wave 1 - Teal - Large flowing wave */}
-            <div
-              className="absolute w-[800px] h-[800px] rounded-full opacity-[0.08] dark:opacity-[0.12]"
-              style={{
-                background: 'radial-gradient(ellipse at center, #14B8A6 0%, #14B8A6 20%, transparent 70%)',
-                top: '-20%',
-                left: '-10%',
-                animation: 'wave1 12s ease-in-out infinite',
-                filter: 'blur(60px)',
-              }}
-            />
-            {/* Wave 2 - Coral - Bottom right wave */}
-            <div
-              className="absolute w-[700px] h-[700px] rounded-full opacity-[0.08] dark:opacity-[0.12]"
-              style={{
-                background: 'radial-gradient(ellipse at center, #F87171 0%, #EF5A6F 30%, transparent 70%)',
-                bottom: '-30%',
-                right: '-20%',
-                animation: 'wave2 14s ease-in-out infinite',
-                filter: 'blur(60px)',
-              }}
-            />
-            {/* Wave 3 - Amber accent - Center floating */}
-            <div
-              className="absolute w-[500px] h-[500px] rounded-full opacity-[0.06] dark:opacity-[0.08]"
-              style={{
-                background: 'radial-gradient(ellipse at center, #F59E0B 0%, transparent 60%)',
-                top: '30%',
-                left: '20%',
-                animation: 'wave3 16s ease-in-out infinite',
-                filter: 'blur(50px)',
-              }}
-            />
-            {/* Wave 4 - Secondary teal - Small accent */}
-            <div
-              className="absolute w-[400px] h-[400px] rounded-full opacity-[0.05] dark:opacity-[0.08]"
-              style={{
-                background: 'radial-gradient(ellipse at center, #2DD4A8 0%, transparent 60%)',
-                bottom: '10%',
-                left: '-5%',
-                animation: 'wave4 18s ease-in-out infinite',
-                filter: 'blur(40px)',
-              }}
-            />
+          {/* Desktop Theme Toggle */}
+          <div className="hidden lg:block absolute top-4 right-4 z-20">
+            <ThemeToggle />
           </div>
 
-          {/* Form Content */}
-          <div className="w-full max-w-md relative z-10">
-            {children}
-          </div>
+          {/* Form Container */}
+          <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 lg:py-12 relative overflow-hidden">
+            {/* Animated Gradient Wave Background */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {/* Wave 1 - Teal - Large flowing wave */}
+              <div
+                className="absolute w-[600px] h-[600px] sm:w-[800px] sm:h-[800px] rounded-full opacity-[0.08] dark:opacity-[0.12]"
+                style={{
+                  background: 'radial-gradient(ellipse at center, #14B8A6 0%, #14B8A6 20%, transparent 70%)',
+                  top: '-20%',
+                  left: '-10%',
+                  animation: 'wave1 12s ease-in-out infinite',
+                  filter: 'blur(60px)',
+                }}
+              />
+              {/* Wave 2 - Coral - Bottom right wave */}
+              <div
+                className="absolute w-[500px] h-[500px] sm:w-[700px] sm:h-[700px] rounded-full opacity-[0.08] dark:opacity-[0.12]"
+                style={{
+                  background: 'radial-gradient(ellipse at center, #F87171 0%, #EF5A6F 30%, transparent 70%)',
+                  bottom: '-30%',
+                  right: '-20%',
+                  animation: 'wave2 14s ease-in-out infinite',
+                  filter: 'blur(60px)',
+                }}
+              />
+              {/* Wave 3 - Amber accent - Center floating */}
+              <div
+                className="absolute w-[350px] h-[350px] sm:w-[500px] sm:h-[500px] rounded-full opacity-[0.06] dark:opacity-[0.08]"
+                style={{
+                  background: 'radial-gradient(ellipse at center, #F59E0B 0%, transparent 60%)',
+                  top: '30%',
+                  left: '20%',
+                  animation: 'wave3 16s ease-in-out infinite',
+                  filter: 'blur(50px)',
+                }}
+              />
+              {/* Wave 4 - Secondary teal - Small accent */}
+              <div
+                className="absolute w-[300px] h-[300px] sm:w-[400px] sm:h-[400px] rounded-full opacity-[0.05] dark:opacity-[0.08]"
+                style={{
+                  background: 'radial-gradient(ellipse at center, #2DD4A8 0%, transparent 60%)',
+                  bottom: '10%',
+                  left: '-5%',
+                  animation: 'wave4 18s ease-in-out infinite',
+                  filter: 'blur(40px)',
+                }}
+              />
+            </div>
 
-          {/* CSS Animations */}
-          <style jsx>{`
-            @keyframes wave1 {
-              0%, 100% { transform: translate(0%, 0%) scale(1); }
-              25% { transform: translate(10%, 15%) scale(1.05); }
-              50% { transform: translate(5%, 25%) scale(1.1); }
-              75% { transform: translate(-5%, 10%) scale(1.02); }
-            }
-            @keyframes wave2 {
-              0%, 100% { transform: translate(0%, 0%) scale(1); }
-              25% { transform: translate(-15%, -10%) scale(1.08); }
-              50% { transform: translate(-10%, 5%) scale(0.95); }
-              75% { transform: translate(5%, -15%) scale(1.05); }
-            }
-            @keyframes wave3 {
-              0%, 100% { transform: translate(0%, 0%) scale(1); }
-              33% { transform: translate(20%, -15%) scale(1.15); }
-              66% { transform: translate(-10%, 20%) scale(0.9); }
-            }
-            @keyframes wave4 {
-              0%, 100% { transform: translate(0%, 0%) scale(1); }
-              50% { transform: translate(15%, -20%) scale(1.1); }
-            }
-          `}</style>
+            {/* Form Content */}
+            <div className="w-full max-w-md relative z-10">
+              {children}
+            </div>
+
+            {/* CSS Animations */}
+            <style jsx>{`
+              @keyframes wave1 {
+                0%, 100% { transform: translate(0%, 0%) scale(1); }
+                25% { transform: translate(10%, 15%) scale(1.05); }
+                50% { transform: translate(5%, 25%) scale(1.1); }
+                75% { transform: translate(-5%, 10%) scale(1.02); }
+              }
+              @keyframes wave2 {
+                0%, 100% { transform: translate(0%, 0%) scale(1); }
+                25% { transform: translate(-15%, -10%) scale(1.08); }
+                50% { transform: translate(-10%, 5%) scale(0.95); }
+                75% { transform: translate(5%, -15%) scale(1.05); }
+              }
+              @keyframes wave3 {
+                0%, 100% { transform: translate(0%, 0%) scale(1); }
+                33% { transform: translate(20%, -15%) scale(1.15); }
+                66% { transform: translate(-10%, 20%) scale(0.9); }
+              }
+              @keyframes wave4 {
+                0%, 100% { transform: translate(0%, 0%) scale(1); }
+                50% { transform: translate(15%, -20%) scale(1.1); }
+              }
+            `}</style>
+          </div>
         </div>
       </div>
     </div>
