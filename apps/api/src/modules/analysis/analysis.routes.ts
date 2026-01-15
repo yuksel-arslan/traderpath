@@ -1102,6 +1102,20 @@ Explain the key risks and what conditions would need to change before trading th
           return Math.min(10, stepData.riskReward * 2);
         }
 
+        // For assetScan, try gate.confidence or calculate from timeframes
+        if (stepName === 'assetScan') {
+          const gate = stepData.gate as Record<string, unknown> | undefined;
+          if (gate && typeof gate.confidence === 'number') {
+            return Math.min(10, gate.confidence / 10);
+          }
+          // Calculate from timeframe alignment
+          const timeframes = stepData.timeframes as Array<{ trend: string; strength: number }> | undefined;
+          if (timeframes && timeframes.length > 0) {
+            const avgStrength = timeframes.reduce((sum, tf) => sum + (tf.strength || 50), 0) / timeframes.length;
+            return Math.min(10, avgStrength / 10);
+          }
+        }
+
         return null;
       };
 
@@ -1129,7 +1143,19 @@ Explain the key risks and what conditions would need to change before trading th
         const s6 = extractStepScore(rd, 'trapCheck');
 
         // Final verdict score is the report's overall score
-        const s7 = report.score ? Number(report.score) : null;
+        // Use typeof check instead of truthy check to handle score = 0
+        // Also try to extract from reportData.verdict as fallback
+        let s7: number | null = null;
+        if (report.score !== null && report.score !== undefined) {
+          s7 = Number(report.score);
+        } else {
+          // Try to extract from reportData.verdict
+          const verdictData = (rd as Record<string, unknown>)?.verdict as Record<string, unknown> | undefined;
+          if (verdictData) {
+            if (typeof verdictData.overallScore === 'number') s7 = verdictData.overallScore;
+            else if (typeof verdictData.score === 'number') s7 = verdictData.score;
+          }
+        }
 
         if (s1 !== null) stepScores.marketPulse.push(s1);
         if (s2 !== null) stepScores.assetScanner.push(s2);
