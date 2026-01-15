@@ -23,6 +23,7 @@ interface SaveReportBody {
   interval?: string; // e.g., '4h', '1h', '1d'
   entryPrice?: number; // Price at time of analysis
   tradeType?: string; // 'scalping', 'dayTrade', 'swing'
+  aiExpertComment?: string; // AI-generated analysis comment
 }
 
 interface SendEmailBody {
@@ -119,7 +120,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
           });
         }
 
-        const { symbol, analysisId, reportData, verdict, score, direction, interval = '4h', entryPrice, tradeType } = request.body as SaveReportBody;
+        const { symbol, analysisId, reportData, verdict, score, direction, interval = '4h', entryPrice, tradeType, aiExpertComment } = request.body as SaveReportBody;
 
         if (!symbol || !reportData || !verdict || score === undefined) {
           return reply.code(400).send({
@@ -158,6 +159,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
             entryPrice: finalEntryPrice,
             tradeType: finalTradeType, // 'scalping', 'dayTrade', 'swing'
             isPublic: isAdmin, // Admin reports are visible to all users
+            aiExpertComment, // AI-generated analysis comment
           },
         });
 
