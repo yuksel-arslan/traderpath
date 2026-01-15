@@ -321,18 +321,20 @@ export function TradePlanChart({
 
           if (zoom && candleData.length > 0) {
             // Show only the last 30 candles for zoomed view
+            // Use setVisibleLogicalRange which works with bar indices (more reliable)
             const visibleBars = Math.min(30, candleData.length);
             const fromIndex = candleData.length - visibleBars;
-            chart.timeScale().setVisibleRange({
-              from: candleData[fromIndex].time,
-              to: candleData[candleData.length - 1].time,
+            chart.timeScale().setVisibleLogicalRange({
+              from: fromIndex,
+              to: candleData.length - 1,
             });
           } else {
             chart.timeScale().fitContent();
           }
         }
-      } catch {
-        // Chart may be disposed
+      } catch (chartErr) {
+        // Chart may be disposed - log for debugging
+        console.warn('Chart operation failed:', chartErr);
       }
 
     } catch (err) {
