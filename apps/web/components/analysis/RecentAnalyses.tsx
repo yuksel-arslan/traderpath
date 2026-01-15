@@ -183,32 +183,146 @@ export function RecentAnalyses() {
     }
   };
 
-  // Create report from analysis
+  // Create report from analysis with AI Expert comment
   const handleCreateReport = async (e: React.MouseEvent, analysisId: string) => {
     e.preventDefault();
     e.stopPropagation();
     setActionLoading({ id: analysisId, action: 'report' });
 
     try {
-      // Check if report already exists
-      const checkResponse = await authFetch(`/api/reports?analysisId=${analysisId}`);
-      if (checkResponse.ok) {
-        const checkData = await checkResponse.json();
-        if (checkData.data?.reports?.length > 0) {
-          router.push(`/reports/${checkData.data.reports[0].id}`);
-          return;
-        }
-      }
+      // Fetch full analysis data
+      const analysisResponse = await authFetch(`/api/analysis/${analysisId}`);
+      if (!analysisResponse.ok) throw new Error('Failed to fetch analysis');
 
-      // Create new report
+      const analysisResult = await analysisResponse.json();
+      if (!analysisResult.success || !analysisResult.data) throw new Error('Analysis not found');
+
+      const analysis = analysisResult.data;
+      const step1 = analysis.step1Result || {};
+      const step2 = analysis.step2Result || {};
+      const step3 = analysis.step3Result || {};
+      const step4 = analysis.step4Result || {};
+      const step5 = analysis.step5Result || {};
+      const step6 = analysis.step6Result || {};
+      const step7 = analysis.step7Result || {};
+
+      // Build full reportData
+      const direction = step5.direction || step7.direction || 'long';
+      const entryPrice = step5.averageEntry || step5.entryPrice;
+      const stopLoss = step5.stopLoss?.price || step5.stopLoss;
+      const tp1 = step5.takeProfits?.[0]?.price || step5.takeProfit1;
+      const tp2 = step5.takeProfits?.[1]?.price || step5.takeProfit2;
+      const tp3 = step5.takeProfits?.[2]?.price || step5.takeProfit3;
+
+      const reportData = {
+        symbol: analysis.symbol,
+        generatedAt: new Date(analysis.createdAt).toLocaleDateString('en-US', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        analysisId: analysis.id,
+        tradeType: analysis.interval === '5m' || analysis.interval === '15m' ? 'scalping' :
+                   analysis.interval === '1h' || analysis.interval === '4h' ? 'dayTrade' : 'swing',
+        marketPulse: {
+          btcDominance: step1.btcDominance,
+          fearGreedIndex: step1.fearGreedIndex,
+          fearGreedLabel: step1.fearGreedLabel,
+          marketRegime: step1.marketRegime,
+          trend: step1.trend || { direction: 'neutral', strength: 0 },
+        },
+        assetScan: {
+          currentPrice: step2.currentPrice,
+          priceChange24h: step2.priceChange24h,
+          volume24h: step2.volume24h,
+          indicators: step2.indicators || { rsi: 50, macd: { histogram: 0, signal: 'neutral' } },
+          levels: step2.levels,
+        },
+        safetyCheck: {
+          riskLevel: step3.riskLevel,
+          manipulation: step3.manipulation || { pumpDumpRisk: 'low' },
+          whaleActivity: step3.whaleActivity || { bias: 'neutral' },
+        },
+        timing: {
+          tradeNow: step4.tradeNow,
+          reason: step4.reason,
+        },
+        tradePlan: {
+          direction,
+          averageEntry: entryPrice,
+          stopLoss: { price: stopLoss },
+          takeProfits: [tp1, tp2, tp3].filter(Boolean).map(price => ({ price })),
+          riskReward: step5.riskReward || 2,
+        },
+        trapCheck: {
+          traps: step6.traps || { bullTrap: false, bearTrap: false, fakeoutRisk: 'low' },
+          liquidityGrab: step6.liquidityGrab,
+        },
+        verdict: {
+          action: step7.action || step7.verdict,
+          overallScore: analysis.totalScore,
+          aiSummary: step7.aiSummary || step7.summary,
+        },
+      };
+
+      // Generate AI Expert comment
+      const isLong = direction === 'long';
+      const score = (analysis.totalScore || 0) * 10;
+      const riskLevel = step3.riskLevel || 'medium';
+      const fearGreed = step1.fearGreedIndex || 50;
+      const rsi = step2.indicators?.rsi || 50;
+
+      const aiExpertComment = `📊 AI Risk Assessment for ${analysis.symbol}/USDT
+
+**Overall Score: ${score}/100** - ${score >= 70 ? 'Strong' : score >= 50 ? 'Moderate' : 'Weak'} ${isLong ? 'Bullish' : 'Bearish'} Setup
+
+**Market Context:**
+• Fear & Greed Index: ${fearGreed} (${step1.fearGreedLabel || 'Neutral'})
+• BTC Dominance: ${step1.btcDominance?.toFixed(1) || 'N/A'}%
+• Market Regime: ${step1.marketRegime || 'Neutral'}
+
+**Technical Analysis:**
+• RSI: ${rsi?.toFixed(0) || 'N/A'} - ${rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral'}
+• 24h Change: ${step2.priceChange24h?.toFixed(2) || '0'}%
+
+**Risk Assessment:**
+• Risk Level: ${riskLevel.toUpperCase()}
+• Manipulation Risk: ${step3.manipulation?.pumpDumpRisk || 'Low'}
+• Whale Activity: ${step3.whaleActivity?.bias || 'Neutral'}
+
+**Trade Plan:**
+• Direction: ${direction.toUpperCase()}
+• Entry: $${entryPrice?.toFixed(entryPrice > 100 ? 2 : 4) || 'N/A'}
+• Stop Loss: $${stopLoss?.toFixed(stopLoss > 100 ? 2 : 4) || 'N/A'}
+• Take Profit: $${tp1?.toFixed(tp1 > 100 ? 2 : 4) || 'N/A'}
+• Risk/Reward: ${step5.riskReward?.toFixed(1) || '2.0'}:1
+
+**Recommendation:** ${step7.aiSummary || step7.summary || `${score >= 60 ? 'Conditions favor entry with proper risk management.' : 'Exercise caution and wait for better setup.'}`}`;
+
+      // Create report
+      const verdict = step7.action || step7.verdict || (isLong ? 'GO' : 'GO');
       const response = await authFetch('/api/reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysisId }),
+        body: JSON.stringify({
+          symbol: analysis.symbol,
+          analysisId: analysis.id,
+          reportData,
+          verdict,
+          score: analysis.totalScore,
+          direction,
+          interval: analysis.interval,
+          entryPrice,
+          tradeType: reportData.tradeType,
+          aiExpertComment,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create report');
+        const errData = await response.json();
+        throw new Error(errData.error?.message || 'Failed to create report');
       }
 
       const data = await response.json();
@@ -217,7 +331,7 @@ export function RecentAnalyses() {
       }
     } catch (err) {
       console.error('Failed to create report:', err);
-      alert('Failed to create report');
+      alert(err instanceof Error ? err.message : 'Failed to create report');
     } finally {
       setActionLoading(null);
     }
