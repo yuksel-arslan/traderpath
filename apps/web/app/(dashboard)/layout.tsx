@@ -21,6 +21,7 @@ import {
   Server,
   Brain,
   TrendingDown,
+  BarChart3,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -35,7 +36,8 @@ const PriceTicker = dynamic(
 
 // Main navigation items
 const mainNav = [
-  { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Overview', href: '/overview', icon: LayoutDashboard },
+  { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'AI Experts', href: '/ai-expert', icon: Brain },
