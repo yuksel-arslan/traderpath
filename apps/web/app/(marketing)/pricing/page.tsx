@@ -378,37 +378,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Free Credits */}
-      <section className="py-16 bg-accent/50">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-2xl font-bold mb-4">Earn Free Credits Daily</h2>
-            <p className="text-muted-foreground mb-8">
-              You don&apos;t always have to pay. Earn up to 25 free credits every day!
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-              {[
-                { name: 'Daily Login', credits: 3, Icon: Gift, color: 'text-rose-500' },
-                { name: 'Lucky Spin', credits: '1-10', Icon: Dices, color: 'text-purple-500' },
-                { name: 'Daily Quiz', credits: 5, Icon: HelpCircle, color: 'text-cyan-500' },
-                { name: 'Watch Ads', credits: '6', subtitle: '(3x2)', Icon: PlayCircle, color: 'text-green-500' },
-              ].map((item, index) => (
-                <div key={index} className="bg-card rounded-lg border p-4 text-center">
-                  <div className="flex justify-center mb-2">
-                    <item.Icon className={cn('w-8 h-8', item.color)} />
-                  </div>
-                  <p className="font-medium text-sm">{item.name}</p>
-                  <p className="text-amber-500 font-bold">
-                    +{item.credits} credits
-                    {item.subtitle && <span className="text-xs text-muted-foreground"> {item.subtitle}</span>}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* FAQs */}
       <section className="py-16">
         <div className="container mx-auto px-4">
