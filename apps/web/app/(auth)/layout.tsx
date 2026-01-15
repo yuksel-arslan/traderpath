@@ -138,28 +138,48 @@ export default function AuthLayout({
 
           {/* Animated Gradient Wave Background */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {/* Wave 1 - Teal */}
+            {/* Wave 1 - Teal - Large flowing wave */}
             <div
-              className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] opacity-[0.03] dark:opacity-[0.05]"
+              className="absolute w-[800px] h-[800px] rounded-full opacity-[0.08] dark:opacity-[0.12]"
               style={{
-                background: 'radial-gradient(ellipse at center, #14B8A6 0%, transparent 70%)',
-                animation: 'wave1 15s ease-in-out infinite',
+                background: 'radial-gradient(ellipse at center, #14B8A6 0%, #14B8A6 20%, transparent 70%)',
+                top: '-20%',
+                left: '-10%',
+                animation: 'wave1 12s ease-in-out infinite',
+                filter: 'blur(60px)',
               }}
             />
-            {/* Wave 2 - Coral */}
+            {/* Wave 2 - Coral - Bottom right wave */}
             <div
-              className="absolute -bottom-1/2 -right-1/2 w-[200%] h-[200%] opacity-[0.03] dark:opacity-[0.05]"
+              className="absolute w-[700px] h-[700px] rounded-full opacity-[0.08] dark:opacity-[0.12]"
               style={{
-                background: 'radial-gradient(ellipse at center, #F87171 0%, transparent 70%)',
-                animation: 'wave2 18s ease-in-out infinite',
+                background: 'radial-gradient(ellipse at center, #F87171 0%, #EF5A6F 30%, transparent 70%)',
+                bottom: '-30%',
+                right: '-20%',
+                animation: 'wave2 14s ease-in-out infinite',
+                filter: 'blur(60px)',
               }}
             />
-            {/* Wave 3 - Amber accent */}
+            {/* Wave 3 - Amber accent - Center floating */}
             <div
-              className="absolute top-1/4 left-1/4 w-[150%] h-[150%] opacity-[0.02] dark:opacity-[0.03]"
+              className="absolute w-[500px] h-[500px] rounded-full opacity-[0.06] dark:opacity-[0.08]"
               style={{
                 background: 'radial-gradient(ellipse at center, #F59E0B 0%, transparent 60%)',
-                animation: 'wave3 20s ease-in-out infinite',
+                top: '30%',
+                left: '20%',
+                animation: 'wave3 16s ease-in-out infinite',
+                filter: 'blur(50px)',
+              }}
+            />
+            {/* Wave 4 - Secondary teal - Small accent */}
+            <div
+              className="absolute w-[400px] h-[400px] rounded-full opacity-[0.05] dark:opacity-[0.08]"
+              style={{
+                background: 'radial-gradient(ellipse at center, #2DD4A8 0%, transparent 60%)',
+                bottom: '10%',
+                left: '-5%',
+                animation: 'wave4 18s ease-in-out infinite',
+                filter: 'blur(40px)',
               }}
             />
           </div>
@@ -172,21 +192,25 @@ export default function AuthLayout({
           {/* CSS Animations */}
           <style jsx>{`
             @keyframes wave1 {
-              0%, 100% { transform: translate(0%, 0%) rotate(0deg); }
-              25% { transform: translate(5%, 10%) rotate(5deg); }
-              50% { transform: translate(10%, 5%) rotate(-5deg); }
-              75% { transform: translate(5%, -5%) rotate(3deg); }
+              0%, 100% { transform: translate(0%, 0%) scale(1); }
+              25% { transform: translate(10%, 15%) scale(1.05); }
+              50% { transform: translate(5%, 25%) scale(1.1); }
+              75% { transform: translate(-5%, 10%) scale(1.02); }
             }
             @keyframes wave2 {
-              0%, 100% { transform: translate(0%, 0%) rotate(0deg); }
-              25% { transform: translate(-10%, 5%) rotate(-5deg); }
-              50% { transform: translate(-5%, 10%) rotate(5deg); }
-              75% { transform: translate(5%, 5%) rotate(-3deg); }
+              0%, 100% { transform: translate(0%, 0%) scale(1); }
+              25% { transform: translate(-15%, -10%) scale(1.08); }
+              50% { transform: translate(-10%, 5%) scale(0.95); }
+              75% { transform: translate(5%, -15%) scale(1.05); }
             }
             @keyframes wave3 {
               0%, 100% { transform: translate(0%, 0%) scale(1); }
-              33% { transform: translate(10%, -10%) scale(1.1); }
-              66% { transform: translate(-5%, 10%) scale(0.95); }
+              33% { transform: translate(20%, -15%) scale(1.15); }
+              66% { transform: translate(-10%, 20%) scale(0.9); }
+            }
+            @keyframes wave4 {
+              0%, 100% { transform: translate(0%, 0%) scale(1); }
+              50% { transform: translate(15%, -20%) scale(1.1); }
             }
           `}</style>
         </div>
