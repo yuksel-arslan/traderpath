@@ -1409,75 +1409,125 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">How TraderPath Works</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              We don&apos;t trade for you. We provide scientific analysis and education so you can make informed decisions.
+              Professional-grade analysis tools for informed trading decisions. We analyze, you decide.
             </p>
           </div>
 
-          {/* Integrated Flow */}
-          <div className="max-w-5xl mx-auto space-y-8">
-            {/* Step 1: Research */}
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-blue-500/20">
-                1
+          {/* Workflow Steps */}
+          <div className="max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {/* Step 1: Select */}
+              <div className="bg-card border rounded-xl p-6 relative">
+                <div className="absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
+                  1
+                </div>
+                <div className="pt-4">
+                  <h3 className="text-lg font-bold mb-2">Select Coin & Trade Type</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Choose from 200+ coins and select your trading style</p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-2 py-1 bg-accent text-xs rounded">Scalping (5m-15m)</span>
+                    <span className="px-2 py-1 bg-cyan-500/20 text-cyan-500 text-xs rounded">Day Trade (1h-4h)</span>
+                    <span className="px-2 py-1 bg-accent text-xs rounded">Swing (1D-1W)</span>
+                  </div>
+                </div>
               </div>
-              <div className="text-center max-w-md">
-                <h3 className="text-xl font-bold mb-1">Research & Explore</h3>
-                <p className="text-muted-foreground text-sm">Select a coin and let our AI gather comprehensive market data, technicals, and fundamentals</p>
+
+              {/* Step 2: Analysis */}
+              <div className="bg-card border rounded-xl p-6 relative">
+                <div className="absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
+                  2
+                </div>
+                <div className="pt-4">
+                  <h3 className="text-lg font-bold mb-2">Run 7-Step Analysis</h3>
+                  <p className="text-sm text-muted-foreground mb-4">AI analyzes market conditions across 7 key dimensions</p>
+                  <div className="grid grid-cols-4 gap-1">
+                    {ANALYSIS_STEPS.slice(0, 7).map((step, idx) => {
+                      const Icon = step.icon;
+                      return (
+                        <div key={idx} className={`p-1.5 ${step.bg} rounded flex items-center justify-center`}>
+                          <Icon className={`w-3.5 h-3.5 ${step.color}`} />
+                        </div>
+                      );
+                    })}
+                    <div className="p-1.5 bg-green-500/10 rounded flex items-center justify-center col-span-1">
+                      <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3: Verdict */}
+              <div className="bg-card border rounded-xl p-6 relative">
+                <div className="absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
+                  3
+                </div>
+                <div className="pt-4">
+                  <h3 className="text-lg font-bold mb-2">Get Clear Verdict</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Receive actionable signal with entry, SL & TP levels</p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-2 py-1 bg-green-500/20 text-green-500 text-xs font-medium rounded">GO</span>
+                    <span className="px-2 py-1 bg-amber-500/20 text-amber-500 text-xs font-medium rounded">CONDITIONAL</span>
+                    <span className="px-2 py-1 bg-gray-500/20 text-gray-400 text-xs font-medium rounded">WAIT</span>
+                    <span className="px-2 py-1 bg-red-500/20 text-red-500 text-xs font-medium rounded">AVOID</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Arrow */}
-            <div className="flex justify-center">
-              <div className="w-0.5 h-6 bg-border" />
-            </div>
-
-            {/* Step 2: Scientific Analysis */}
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-purple-500/20">
-                2
-              </div>
-              <div className="text-center max-w-md mb-4">
-                <h3 className="text-xl font-bold mb-1">Scientific 7-Step Analysis</h3>
-                <p className="text-muted-foreground text-sm">Our AI applies proven methodologies across 7 specialized disciplines for objective insights</p>
-              </div>
-
-              {/* 7 Steps Grid */}
-              <AnalysisStepsGrid />
-            </div>
-
-            {/* Arrow */}
-            <div className="flex justify-center">
-              <div className="w-0.5 h-6 bg-border" />
-            </div>
-
-            {/* Step 3: Learn & Decide */}
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-green-500/20">
-                3
-              </div>
-              <div className="text-center max-w-md">
-                <h3 className="text-xl font-bold mb-1">Learn & Make Informed Decisions</h3>
-                <p className="text-muted-foreground text-sm">Understand the analysis, chat with AI experts for deeper insights, and decide what&apos;s right for you</p>
-              </div>
-
-              {/* AI Experts Grid */}
-              <div className="bg-card border rounded-xl p-4">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {AI_EXPERTS.map((expert, idx) => {
+            {/* Additional Features Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* AI Expert */}
+              <div className="bg-card border rounded-xl p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+                    <Brain className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">AI Expert Chat</h4>
+                    <p className="text-xs text-muted-foreground">Ask questions about your analysis</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {AI_EXPERTS.slice(0, 4).map((expert, idx) => {
                     const ExpertIcon = expert.icon;
                     return (
-                      <div
-                        key={idx}
-                        className="flex flex-col items-center text-center p-2 rounded-lg hover:bg-accent/50 transition"
-                      >
-                        <div className={`w-9 h-9 ${expert.bg} rounded-lg flex items-center justify-center mb-1`}>
-                          <ExpertIcon className={`w-4 h-4 ${expert.color}`} />
-                        </div>
-                        <span className="text-[11px] font-medium">{expert.name}</span>
+                      <div key={idx} className={`p-1.5 ${expert.bg} rounded`}>
+                        <ExpertIcon className={`w-3.5 h-3.5 ${expert.color}`} />
                       </div>
                     );
                   })}
                 </div>
+              </div>
+
+              {/* PDF Report */}
+              <div className="bg-card border rounded-xl p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-500 rounded-lg flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">PDF Report</h4>
+                    <p className="text-xs text-muted-foreground">Download detailed analysis report</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Full 7-step analysis with charts, indicators, and trade plan in professional PDF format.</p>
+              </div>
+
+              {/* TFT Model - Coming Soon */}
+              <div className="bg-card border border-dashed border-amber-500/30 rounded-xl p-5 relative overflow-hidden">
+                <div className="absolute top-2 right-2">
+                  <span className="px-2 py-0.5 bg-amber-500/20 text-amber-500 text-[10px] font-bold rounded-full">COMING SOON</span>
+                </div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">TFT AI Model</h4>
+                    <p className="text-xs text-muted-foreground">AI-powered price prediction</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Temporal Fusion Transformer model for 24h/7d price predictions with confidence intervals.</p>
               </div>
             </div>
           </div>
@@ -1487,51 +1537,79 @@ export default function LandingPage() {
             <div className="text-center mb-10">
               <h3 className="text-2xl md:text-3xl font-bold mb-3">How We Measure Analysis Accuracy</h3>
               <p className="text-muted-foreground max-w-xl mx-auto">
-                Transparent methodology to validate our analysis quality
+                Outcome-verified methodology based on real price movements
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-              {/* Scientific Method */}
-              <div className="bg-card border rounded-xl p-6 text-center">
-                <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Target className="w-6 h-6 text-green-500" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto mb-8">
+              {/* TP/SL Based */}
+              <div className="bg-card border rounded-xl p-5">
+                <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center mb-3">
+                  <Target className="w-5 h-5 text-green-500" />
                 </div>
-                <h4 className="font-semibold mb-2">Scientific Method</h4>
-                <p className="text-sm text-muted-foreground">
-                  Each analysis includes specific price levels. We verify if the market
-                  <span className="text-green-500 font-medium"> confirms</span> or
-                  <span className="text-red-500 font-medium"> invalidates</span> our projections.
+                <h4 className="font-semibold mb-2 text-sm">TP/SL Verification</h4>
+                <p className="text-xs text-muted-foreground">
+                  Each GO signal includes Entry, Stop Loss, and Take Profit levels. We track if price hits
+                  <span className="text-green-500 font-medium"> TP</span> or
+                  <span className="text-red-500 font-medium"> SL</span> first.
                 </p>
               </div>
 
-              {/* Tracked Accuracy */}
-              <div className="bg-card border rounded-xl p-6 text-center">
-                <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Eye className="w-6 h-6 text-blue-500" />
+              {/* Real-time Monitoring */}
+              <div className="bg-card border rounded-xl p-5">
+                <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mb-3">
+                  <Eye className="w-5 h-5 text-blue-500" />
                 </div>
-                <h4 className="font-semibold mb-2">Tracked Accuracy</h4>
-                <p className="text-sm text-muted-foreground">
-                  We monitor price movements against our analysis projections.
-                  Every analysis outcome is logged and visible.
+                <h4 className="font-semibold mb-2 text-sm">48h Validity Period</h4>
+                <p className="text-xs text-muted-foreground">
+                  Each analysis has a 48-hour validity window. Outcomes are marked as
+                  <span className="text-green-500 font-medium"> Correct</span>,
+                  <span className="text-red-500 font-medium"> Incorrect</span>, or
+                  <span className="text-gray-500 font-medium"> Expired</span>.
                 </p>
               </div>
 
-              {/* Full Transparency */}
-              <div className="bg-card border rounded-xl p-6 text-center">
-                <div className="w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Shield className="w-6 h-6 text-purple-500" />
+              {/* GO Signal Rate */}
+              <div className="bg-card border rounded-xl p-5">
+                <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center mb-3">
+                  <TrendingUp className="w-5 h-5 text-amber-500" />
                 </div>
-                <h4 className="font-semibold mb-2">Full Transparency</h4>
-                <p className="text-sm text-muted-foreground">
-                  All analyses are recorded. We show both accurate and inaccurate calls.
-                  No hidden results, just honest data.
+                <h4 className="font-semibold mb-2 text-sm">GO Signal Accuracy</h4>
+                <p className="text-xs text-muted-foreground">
+                  We specifically track GO and CONDITIONAL_GO signals. Platform accuracy shows how often these signals hit their first Take Profit target.
+                </p>
+              </div>
+
+              {/* Public Dashboard */}
+              <div className="bg-card border rounded-xl p-5">
+                <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mb-3">
+                  <Shield className="w-5 h-5 text-purple-500" />
+                </div>
+                <h4 className="font-semibold mb-2 text-sm">Dashboard Transparency</h4>
+                <p className="text-xs text-muted-foreground">
+                  All users see the same platform accuracy stats on their dashboard. Every outcome—correct or incorrect—is counted in real-time.
                 </p>
               </div>
             </div>
 
+            {/* Accuracy Formula */}
+            <div className="max-w-2xl mx-auto bg-accent/50 rounded-xl p-6 border">
+              <h4 className="font-semibold text-center mb-4">Accuracy Calculation Formula</h4>
+              <div className="flex items-center justify-center gap-2 text-sm mb-4 flex-wrap">
+                <span className="px-3 py-1.5 bg-background rounded-lg font-mono">Accuracy</span>
+                <span>=</span>
+                <span className="px-3 py-1.5 bg-green-500/10 text-green-500 rounded-lg font-mono">TP Hits</span>
+                <span>÷</span>
+                <span className="px-3 py-1.5 bg-background rounded-lg font-mono">(TP Hits + SL Hits)</span>
+                <span>× 100</span>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Only closed trades count. Expired or neutral outcomes are excluded from accuracy calculation.
+              </p>
+            </div>
+
             <p className="text-center mt-8 text-muted-foreground italic text-sm">
-              &quot;We provide analysis and education - what you do with it is your informed decision.&quot;
+              &quot;We provide analysis tools and education—your trading decisions are always your own.&quot;
             </p>
           </div>
         </div>
@@ -1562,7 +1640,7 @@ export default function LandingPage() {
               Your Trading Command Center
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              A clean, intuitive dashboard designed for traders who want results, not complexity
+              Professional-grade analysis dashboard with 7-step methodology and AI-powered insights
             </p>
           </div>
 
@@ -1580,58 +1658,96 @@ export default function LandingPage() {
                     <span className="text-sm font-medium text-primary">Dashboard</span>
                     <span className="text-sm text-muted-foreground">Analyze</span>
                     <span className="text-sm text-muted-foreground">Reports</span>
-                    <span className="text-sm text-muted-foreground">Alerts</span>
+                    <span className="text-sm text-muted-foreground">AI Expert</span>
                   </nav>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="px-3 py-1 bg-amber-500/20 text-amber-500 rounded-full text-sm font-medium">
-                    125 Credits
+                    485 Credits
                   </div>
-                  <div className="w-8 h-8 bg-gradient-to-br from-red-500 via-amber-500 to-green-500 rounded-full"></div>
+                  <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">JD</div>
                 </div>
               </div>
 
               {/* Dashboard Content */}
-              <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Quick Stats */}
-                <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-4 bg-accent/50 rounded-lg">
-                    <p className="text-sm text-muted-foreground mb-1">Total Analyses</p>
-                    <p className="text-2xl font-bold">147</p>
-                  </div>
-                  <div className="p-4 bg-accent/50 rounded-lg">
-                    <p className="text-sm text-muted-foreground mb-1">Win Rate</p>
-                    <p className="text-2xl font-bold text-green-500">73%</p>
-                  </div>
-                  <div className="p-4 bg-accent/50 rounded-lg">
-                    <p className="text-sm text-muted-foreground mb-1">Active Alerts</p>
-                    <p className="text-2xl font-bold text-cyan-500">5</p>
-                  </div>
-                  <div className="p-4 bg-accent/50 rounded-lg">
-                    <p className="text-sm text-muted-foreground mb-1">Credits Left</p>
-                    <p className="text-2xl font-bold">125</p>
+              <div className="p-6">
+                {/* 7-Step Analysis Overview */}
+                <div className="mb-6">
+                  <h4 className="font-semibold mb-4 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    7-Step Analysis Performance
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                    {[
+                      { step: 1, name: 'Market Pulse', score: 78, color: 'from-blue-500 to-cyan-500' },
+                      { step: 2, name: 'Asset Scanner', score: 82, color: 'from-purple-500 to-pink-500' },
+                      { step: 3, name: 'Safety Check', score: 71, color: 'from-green-500 to-emerald-500' },
+                      { step: 4, name: 'Timing', score: 85, color: 'from-orange-500 to-amber-500' },
+                      { step: 5, name: 'Trade Plan', score: 79, color: 'from-red-500 to-rose-500' },
+                      { step: 6, name: 'Trap Check', score: 74, color: 'from-indigo-500 to-violet-500' },
+                      { step: 7, name: 'Final Verdict', score: 76, color: 'from-cyan-500 to-teal-500' },
+                    ].map((item) => (
+                      <div key={item.step} className="p-3 bg-accent/50 rounded-lg text-center">
+                        <div className={`w-8 h-8 mx-auto mb-2 rounded-full bg-gradient-to-br ${item.color} flex items-center justify-center text-white text-xs font-bold`}>
+                          {item.step}
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-1 truncate">{item.name}</p>
+                        <p className="text-lg font-bold">{item.score}%</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Quick Actions */}
-                <div className="p-4 bg-gradient-to-br from-red-500/10 via-amber-500/10 to-green-500/10 rounded-lg border border-amber-500/20">
-                  <h4 className="font-semibold mb-3">Quick Analysis</h4>
-                  <div className="flex gap-2 flex-wrap">
-                    <span className="px-3 py-1 bg-background border rounded-full text-sm cursor-pointer hover:bg-accent">BTC</span>
-                    <span className="px-3 py-1 bg-background border rounded-full text-sm cursor-pointer hover:bg-accent">ETH</span>
-                    <span className="px-3 py-1 bg-background border rounded-full text-sm cursor-pointer hover:bg-accent">SOL</span>
-                    <span className="px-3 py-1 bg-background border rounded-full text-sm cursor-pointer hover:bg-accent">+50</span>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Platform Stats */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-4 bg-accent/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">Platform Accuracy</p>
+                      <p className="text-2xl font-bold text-green-500">76.4%</p>
+                      <p className="text-xs text-muted-foreground">from 2,847 analyses</p>
+                    </div>
+                    <div className="p-4 bg-accent/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">Your Analyses</p>
+                      <p className="text-2xl font-bold">23</p>
+                      <p className="text-xs text-muted-foreground">this month</p>
+                    </div>
+                    <div className="p-4 bg-accent/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">GO Signals</p>
+                      <p className="text-2xl font-bold text-cyan-500">78%</p>
+                      <p className="text-xs text-muted-foreground">accuracy rate</p>
+                    </div>
+                    <div className="p-4 bg-accent/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">Active Alerts</p>
+                      <p className="text-2xl font-bold">3</p>
+                      <p className="text-xs text-muted-foreground">price targets</p>
+                    </div>
+                  </div>
+
+                  {/* Quick Analysis */}
+                  <div className="md:col-span-2 p-4 bg-gradient-to-br from-slate-500/10 via-cyan-500/10 to-emerald-500/10 rounded-lg border border-cyan-500/20">
+                    <h4 className="font-semibold mb-3">Start New Analysis</h4>
+                    <div className="flex gap-2 flex-wrap mb-4">
+                      {['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'DOGE'].map((coin) => (
+                        <span key={coin} className="px-3 py-1.5 bg-background border rounded-full text-sm cursor-pointer hover:bg-accent hover:border-cyan-500/50 transition">{coin}</span>
+                      ))}
+                      <span className="px-3 py-1.5 bg-cyan-500/20 text-cyan-500 border border-cyan-500/30 rounded-full text-sm cursor-pointer hover:bg-cyan-500/30 transition">+200 coins</span>
+                    </div>
+                    <div className="flex gap-2 text-xs text-muted-foreground">
+                      <span className="px-2 py-1 bg-background rounded">Scalping</span>
+                      <span className="px-2 py-1 bg-cyan-500/20 text-cyan-500 rounded">Day Trade</span>
+                      <span className="px-2 py-1 bg-background rounded">Swing</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Recent Analyses */}
-                <div className="md:col-span-3">
+                <div className="mt-6">
                   <h4 className="font-semibold mb-4">Recent Analyses</h4>
                   <div className="space-y-3">
                     {[
-                      { coin: 'BTC', verdict: 'LONG', score: 87, time: '2 hours ago', profit: '+4.2%' },
-                      { coin: 'ETH', verdict: 'SHORT', score: 72, time: '5 hours ago', profit: '+2.8%' },
-                      { coin: 'SOL', verdict: 'WAIT', score: 55, time: '1 day ago', profit: '—' },
+                      { coin: 'BTC', verdict: 'GO', direction: 'LONG', score: 8.2, time: '2 hours ago', status: 'active' },
+                      { coin: 'ETH', verdict: 'CONDITIONAL_GO', direction: 'LONG', score: 6.8, time: '5 hours ago', status: 'tp1_hit' },
+                      { coin: 'SOL', verdict: 'WAIT', direction: null, score: 5.4, time: '1 day ago', status: 'expired' },
                     ].map((item, index) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-accent/50 rounded-lg">
                         <div className="flex items-center gap-3">
@@ -1648,17 +1764,29 @@ export default function LandingPage() {
                             <p className="text-xs text-muted-foreground">{item.time}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            item.verdict === 'LONG' ? 'bg-green-500/20 text-green-500' :
-                            item.verdict === 'SHORT' ? 'bg-red-500/20 text-red-500' :
-                            'bg-gray-500/20 text-gray-500'
+                            item.verdict === 'GO' ? 'bg-green-500/20 text-green-500' :
+                            item.verdict === 'CONDITIONAL_GO' ? 'bg-amber-500/20 text-amber-500' :
+                            item.verdict === 'WAIT' ? 'bg-gray-500/20 text-gray-400' :
+                            'bg-red-500/20 text-red-500'
                           }`}>
-                            {item.verdict}
+                            {item.verdict.replace('_', ' ')}
                           </span>
-                          <span className="font-bold">{item.score}/100</span>
-                          <span className={`font-medium ${item.profit.startsWith('+') ? 'text-green-500' : 'text-muted-foreground'}`}>
-                            {item.profit}
+                          {item.direction && (
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              item.direction === 'LONG' ? 'bg-cyan-500/20 text-cyan-500' : 'bg-rose-500/20 text-rose-500'
+                            }`}>
+                              {item.direction}
+                            </span>
+                          )}
+                          <span className="font-bold text-sm">{item.score}/10</span>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            item.status === 'active' ? 'bg-blue-500/20 text-blue-500' :
+                            item.status === 'tp1_hit' ? 'bg-green-500/20 text-green-500' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {item.status === 'tp1_hit' ? 'TP1 ✓' : item.status === 'active' ? 'Active' : 'Expired'}
                           </span>
                         </div>
                       </div>
