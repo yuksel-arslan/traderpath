@@ -360,16 +360,12 @@ function generatePage1HTML(data: AnalysisReportData): string {
 
 // PAGE 2: Trade Plan & Chart
 function generatePage2HTML(data: AnalysisReportData): string {
+  const hasTradePlan = data.tradePlan?.averageEntry && data.tradePlan?.stopLoss?.price;
   const isLong = data.tradePlan?.direction === 'long';
+  const verdictAction = (data.verdict as Record<string, unknown>)?.action as string || 'N/A';
 
-  return `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><style>${commonStyles}</style></head>
-<body>
-  <div class="page">
-    ${generatePageTitle(data)}
-
-    <div class="section-title">Trade Plan & Price Levels <span>— Entry, targets, and risk management</span></div>
-
+  // Trade plan section - show actual plan or "not available" message
+  const tradePlanSection = hasTradePlan ? `
     <div class="trade-plan-box">
       <div class="trade-plan-header">
         <div class="trade-plan-title">${data.symbol}/USDT Trade Setup</div>
@@ -406,7 +402,16 @@ function generatePage2HTML(data: AnalysisReportData): string {
         </div>
       </div>
     </div>
+  ` : `
+    <div class="trade-plan-box" style="text-align: center; padding: 30px;">
+      <div style="font-size: 14px; font-weight: 600; color: #f59e0b; margin-bottom: 8px;">⚠️ Trade Plan Not Generated</div>
+      <div style="font-size: 11px; color: #64748b;">Analysis verdict: <strong style="color: #ef4444;">${verdictAction}</strong></div>
+      <div style="font-size: 10px; color: #94a3b8; margin-top: 8px;">Trade plans are only generated for GO and CONDITIONAL GO verdicts.</div>
+    </div>
+  `;
 
+  // Chart section - only show if trade plan exists
+  const chartSection = hasTradePlan ? `
     <div class="section-title">Price Chart <span>— Visual representation of trade levels</span></div>
     <div class="chart-box">
       <div class="chart-header">${data.symbol}/USDT with Entry, Stop Loss & Take Profit Levels</div>
@@ -415,6 +420,19 @@ function generatePage2HTML(data: AnalysisReportData): string {
         : `<div class="chart-placeholder">Chart visualization not available</div>`
       }
     </div>
+  ` : '';
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>${commonStyles}</style></head>
+<body>
+  <div class="page">
+    ${generatePageTitle(data)}
+
+    <div class="section-title">Trade Plan & Price Levels <span>— Entry, targets, and risk management</span></div>
+
+    ${tradePlanSection}
+
+    ${chartSection}
 
     <div class="page-footer"><span class="logo-red">Trade</span><span class="logo-green">Path</span> • ${data.analysisId?.slice(-12) || 'N/A'}</div>
     <div class="page-number">Page 2 of 3</div>
