@@ -30,6 +30,7 @@ interface TradePlanChartProps {
   resistance?: number[];
   onChartReady?: () => void; // Callback when chart is fully rendered with data
   chartId?: string; // Optional custom ID for the chart container (default: 'trade-plan-chart')
+  zoomToTradePlan?: boolean; // When true, zoom into the trade plan area (for PDF reports)
 }
 
 interface KlineData {
@@ -52,6 +53,7 @@ export function TradePlanChart({
   resistance = [],
   onChartReady,
   chartId = 'trade-plan-chart',
+  zoomToTradePlan = false,
 }: TradePlanChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -128,7 +130,7 @@ export function TradePlanChart({
     candleSeriesRef.current = candleSeries;
 
     // Fetch kline data
-    fetchKlineData(symbol, candleSeries, chart);
+    fetchKlineData(symbol, candleSeries, chart, zoomToTradePlan);
 
     // Handle resize
     const handleResize = () => {
@@ -157,7 +159,7 @@ export function TradePlanChart({
         // Chart may already be disposed
       }
     };
-  }, [symbol]);
+  }, [symbol, zoomToTradePlan]);
 
   // Add price lines when chart is ready
   useEffect(() => {
@@ -269,15 +271,19 @@ export function TradePlanChart({
   const fetchKlineData = async (
     sym: string,
     series: ISeriesApi<'Candlestick'>,
-    chart: IChartApi
+    chart: IChartApi,
+    zoom: boolean
   ) => {
     try {
       setLoading(true);
       setError(null);
 
+      // Use fewer candles when zooming to trade plan (for PDF)
+      const candleLimit = zoom ? 50 : 200;
+
       // Fetch from Binance directly (public endpoint)
       const response = await fetch(
-        `https://api.binance.com/api/v3/klines?symbol=${sym}USDT&interval=1h&limit=200`
+        `https://api.binance.com/api/v3/klines?symbol=${sym}USDT&interval=1h&limit=${candleLimit}`
       );
 
       if (!response.ok) {
@@ -312,7 +318,18 @@ export function TradePlanChart({
       try {
         if (!isDisposedRef.current) {
           series.setData(candleData);
-          chart.timeScale().fitContent();
+
+          if (zoom && candleData.length > 0) {
+            // Show only the last 30 candles for zoomed view
+            const visibleBars = Math.min(30, candleData.length);
+            const fromIndex = candleData.length - visibleBars;
+            chart.timeScale().setVisibleRange({
+              from: candleData[fromIndex].time,
+              to: candleData[candleData.length - 1].time,
+            });
+          } else {
+            chart.timeScale().fitContent();
+          }
         }
       } catch {
         // Chart may be disposed
