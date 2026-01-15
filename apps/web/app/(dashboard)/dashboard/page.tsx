@@ -1404,192 +1404,223 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ===== SECTION 3: Verdict Distribution & User Stats ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* ===== SECTION 3: My Performance ===== */}
+      <div className="relative overflow-hidden rounded-3xl">
+        {/* Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
 
-        {/* Left - Verdict Distribution */}
-        <div className="relative overflow-hidden rounded-3xl">
-          {/* Background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-500/5 dark:from-purple-500/10 via-transparent to-transparent" />
+        {/* Grid Pattern */}
+        <div className="absolute inset-0 opacity-[0.03] dark:opacity-5" style={{
+          backgroundImage: `linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)`,
+          backgroundSize: '40px 40px'
+        }} />
 
-          {/* Grid Pattern */}
-          <div className="absolute inset-0 opacity-[0.03] dark:opacity-5" style={{
-            backgroundImage: `linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)`,
-            backgroundSize: '40px 40px'
-          }} />
+        <div className="relative z-10 p-6 md:p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-amber-500/30 blur-lg rounded-full" />
+              <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                <Award className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">My Performance</h2>
+              <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm">Your personal trading statistics</p>
+            </div>
+          </div>
 
-          <div className="relative z-10 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="relative">
-                <div className="absolute inset-0 bg-purple-500/30 blur-lg rounded-full" />
-                <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                  <PieChart className="w-5 h-5 text-white" />
+          {userStats && userStats.totalAnalyses > 0 ? (
+            <div className="space-y-6">
+              {/* Two Performance Cards - Realized & Active */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Realized Performance */}
+                <div className="relative overflow-hidden bg-gradient-to-br from-emerald-100/80 to-green-100/80 dark:from-emerald-500/10 dark:to-green-500/10 rounded-xl p-5 text-center border border-emerald-200/50 dark:border-emerald-500/20">
+                  <div className="text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold mb-2">
+                    Realized Accuracy
+                  </div>
+                  <div className={cn(
+                    "text-4xl font-black",
+                    userStats.accuracy >= 70 ? 'text-green-600 dark:text-green-400' :
+                    userStats.accuracy >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
+                    userStats.verifiedAnalyses === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
+                  )}>
+                    {userStats.verifiedAnalyses > 0 ? `${userStats.accuracy.toFixed(1)}%` : '-'}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-slate-400 mt-2">
+                    {userStats.correctAnalyses} / {userStats.verifiedAnalyses} Closed
+                  </div>
+                </div>
+
+                {/* Active Performance */}
+                <div className="relative overflow-hidden bg-gradient-to-br from-blue-100/80 to-cyan-100/80 dark:from-blue-500/10 dark:to-cyan-500/10 rounded-xl p-5 text-center border border-blue-200/50 dark:border-blue-500/20">
+                  <div className="text-xs uppercase tracking-wider text-blue-600 dark:text-blue-400 font-semibold mb-2">
+                    Active Performance
+                  </div>
+                  <div className={cn(
+                    "text-4xl font-black",
+                    (userStats.activePerformance || 0) >= 70 ? 'text-green-600 dark:text-green-400' :
+                    (userStats.activePerformance || 0) >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
+                    (userStats.activeCount || 0) === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
+                  )}>
+                    {(userStats.activeCount || 0) > 0 ? `${(userStats.activePerformance || 0).toFixed(1)}%` : '-'}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-slate-400 mt-2">
+                    {userStats.activeProfitable || 0} / {userStats.activeCount || 0} Profitable
+                  </div>
+                </div>
+
+                {/* GO Signals */}
+                <div className="relative overflow-hidden bg-gradient-to-br from-green-100/80 to-emerald-100/80 dark:from-green-500/10 dark:to-emerald-500/10 rounded-xl p-5 text-center border border-green-200/50 dark:border-green-500/20">
+                  <div className="text-xs uppercase tracking-wider text-green-600 dark:text-green-400 font-semibold mb-2">
+                    GO Signals
+                  </div>
+                  <div className="text-4xl font-black text-green-600 dark:text-green-400">
+                    {userStats.goSignals}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-slate-400 mt-2">
+                    Trade recommendations
+                  </div>
+                </div>
+
+                {/* Avoid Signals */}
+                <div className="relative overflow-hidden bg-gradient-to-br from-red-100/80 to-rose-100/80 dark:from-red-500/10 dark:to-rose-500/10 rounded-xl p-5 text-center border border-red-200/50 dark:border-red-500/20">
+                  <div className="text-xs uppercase tracking-wider text-red-600 dark:text-red-400 font-semibold mb-2">
+                    Avoided
+                  </div>
+                  <div className="text-4xl font-black text-red-600 dark:text-red-400">
+                    {userStats.avoidSignals}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-slate-400 mt-2">
+                    Risky trades skipped
+                  </div>
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Verdict Distribution</h3>
-            </div>
 
-            {totalVerdicts > 0 ? (
-              <div className="grid grid-cols-2 gap-3 mb-5">
+              {/* Stats Grid - Compact */}
+              <div className="grid grid-cols-5 gap-3">
+                <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 text-center border border-gray-200 dark:border-white/10">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
+                  <div className="text-xs text-gray-500 dark:text-slate-400">Total</div>
+                </div>
+                <div className="bg-blue-100/80 dark:bg-blue-500/10 rounded-xl p-4 text-center border border-blue-200/50 dark:border-blue-500/20">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
+                  <div className="text-xs text-gray-500 dark:text-slate-400">Active</div>
+                </div>
+                <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 text-center border border-gray-200 dark:border-white/10">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
+                  <div className="text-xs text-gray-500 dark:text-slate-400">Closed</div>
+                </div>
+                <div className="bg-green-100/80 dark:bg-green-500/10 rounded-xl p-4 text-center border border-green-200/50 dark:border-green-500/20">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
+                  <div className="text-xs text-gray-500 dark:text-slate-400">TP Hit</div>
+                </div>
+                <div className="bg-red-100/80 dark:bg-red-500/10 rounded-xl p-4 text-center border border-red-200/50 dark:border-red-500/20">
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
+                  <div className="text-xs text-gray-500 dark:text-slate-400">SL Hit</div>
+                </div>
+              </div>
+
+              {/* Performance Comment */}
+              <div className={cn(
+                "text-center text-sm font-medium p-4 rounded-xl border",
+                userStats.verifiedAnalyses === 0
+                  ? "bg-blue-100/80 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-500/20"
+                  : userStats.accuracy >= 70
+                  ? "bg-green-100/80 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-500/20"
+                  : userStats.accuracy >= 50
+                  ? "bg-yellow-100/80 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-200/50 dark:border-yellow-500/20"
+                  : "bg-red-100/80 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-500/20"
+              )}>
+                {userStats.verifiedAnalyses === 0
+                  ? "Trades are still active. Results will update when TP/SL is hit."
+                  : userStats.accuracy >= 70
+                  ? "Excellent performance! Your analysis accuracy is outstanding."
+                  : userStats.accuracy >= 50
+                  ? "Good progress! There's room for improvement."
+                  : "Consider reviewing your analysis approach for better results."}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="relative w-20 h-20 mx-auto mb-4">
+                <div className="absolute inset-0 bg-gray-400/20 blur-xl rounded-full" />
+                <div className="relative w-full h-full rounded-full bg-gray-100/80 dark:bg-white/5 flex items-center justify-center border border-gray-200 dark:border-white/10">
+                  <BarChart3 className="w-10 h-10 text-gray-400 dark:text-slate-500" />
+                </div>
+              </div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-2 text-lg">No analyses yet</h4>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mb-6">
+                Start your first analysis to track your performance
+              </p>
+              <Link
+                href="/analyze"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl font-semibold transition shadow-lg shadow-amber-500/25"
+              >
+                Start First Analysis
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ===== SECTION 4: Verdict Distribution ===== */}
+      <div className="relative overflow-hidden rounded-3xl">
+        {/* Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-500/5 dark:from-purple-500/10 via-transparent to-transparent" />
+
+        {/* Grid Pattern */}
+        <div className="absolute inset-0 opacity-[0.03] dark:opacity-5" style={{
+          backgroundImage: `linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)`,
+          backgroundSize: '40px 40px'
+        }} />
+
+        <div className="relative z-10 p-6 md:p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-purple-500/30 blur-lg rounded-full" />
+              <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                <PieChart className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Verdict Distribution</h2>
+              <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm">Platform-wide signal distribution</p>
+            </div>
+          </div>
+
+          {totalVerdicts > 0 ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <VerdictBadge verdict="go" count={platformStats?.verdicts.go ?? 0} total={totalVerdicts} />
                 <VerdictBadge verdict="conditional_go" count={platformStats?.verdicts.conditional_go ?? 0} total={totalVerdicts} />
                 <VerdictBadge verdict="wait" count={platformStats?.verdicts.wait ?? 0} total={totalVerdicts} />
                 <VerdictBadge verdict="avoid" count={platformStats?.verdicts.avoid ?? 0} total={totalVerdicts} />
               </div>
-            ) : (
-              <div className="text-center py-8 mb-5 bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10">
-                <PieChart className="w-10 h-10 text-gray-400 dark:text-slate-600 mx-auto mb-2" />
-                <p className="text-sm text-gray-500 dark:text-slate-400">No verdicts yet</p>
-                <p className="text-xs text-gray-400 dark:text-slate-500">Complete analyses to see distribution</p>
-              </div>
-            )}
 
-            <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-gray-200 dark:border-white/10">
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Why It Matters?</h4>
-              <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed">
-                A balanced verdict distribution shows the system is responsive to market conditions.
-                Systems that only give "BUY" signals are not reliable.
-              </p>
-            </div>
-
-            <div className="mt-4 flex items-center justify-between text-sm px-1">
-              <span className="text-gray-500 dark:text-slate-400">Total Verdicts</span>
-              <span className="font-bold text-gray-900 dark:text-white">{totalVerdicts}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Right - My Performance */}
-        <div className="relative overflow-hidden rounded-3xl">
-          {/* Background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
-
-          {/* Grid Pattern */}
-          <div className="absolute inset-0 opacity-[0.03] dark:opacity-5" style={{
-            backgroundImage: `linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)`,
-            backgroundSize: '40px 40px'
-          }} />
-
-          <div className="relative z-10 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="relative">
-                <div className="absolute inset-0 bg-amber-500/30 blur-lg rounded-full" />
-                <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                  <Award className="w-5 h-5 text-white" />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-gray-200 dark:border-white/10">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Why It Matters?</h4>
+                  <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">
+                    A balanced verdict distribution shows the system is responsive to market conditions.
+                    Systems that only give "BUY" signals are not reliable.
+                  </p>
+                </div>
+                <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-gray-200 dark:border-white/10 flex items-center justify-between">
+                  <span className="text-gray-500 dark:text-slate-400">Total Verdicts</span>
+                  <span className="text-3xl font-bold text-gray-900 dark:text-white">{totalVerdicts}</span>
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">My Performance</h3>
             </div>
-
-            {userStats && userStats.totalAnalyses > 0 ? (
-              <>
-                {/* Two Performance Cards - Realized & Active */}
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {/* Realized Performance */}
-                  <div className="relative overflow-hidden bg-gradient-to-br from-emerald-100/80 to-green-100/80 dark:from-emerald-500/10 dark:to-green-500/10 rounded-xl p-4 text-center border border-emerald-200/50 dark:border-emerald-500/20">
-                    <div className="text-[10px] uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold mb-1">
-                      Realized
-                    </div>
-                    <div className={cn(
-                      "text-3xl font-black",
-                      userStats.accuracy >= 70 ? 'text-green-600 dark:text-green-400' :
-                      userStats.accuracy >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
-                      userStats.verifiedAnalyses === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
-                    )}>
-                      {userStats.verifiedAnalyses > 0 ? `${userStats.accuracy.toFixed(1)}%` : '-'}
-                    </div>
-                    <div className="text-[10px] text-gray-500 dark:text-slate-400 mt-1">
-                      {userStats.correctAnalyses} / {userStats.verifiedAnalyses} Closed
-                    </div>
-                  </div>
-
-                  {/* Active Performance */}
-                  <div className="relative overflow-hidden bg-gradient-to-br from-blue-100/80 to-cyan-100/80 dark:from-blue-500/10 dark:to-cyan-500/10 rounded-xl p-4 text-center border border-blue-200/50 dark:border-blue-500/20">
-                    <div className="text-[10px] uppercase tracking-wider text-blue-600 dark:text-blue-400 font-semibold mb-1">
-                      Active
-                    </div>
-                    <div className={cn(
-                      "text-3xl font-black",
-                      (userStats.activePerformance || 0) >= 70 ? 'text-green-600 dark:text-green-400' :
-                      (userStats.activePerformance || 0) >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
-                      (userStats.activeCount || 0) === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
-                    )}>
-                      {(userStats.activeCount || 0) > 0 ? `${(userStats.activePerformance || 0).toFixed(1)}%` : '-'}
-                    </div>
-                    <div className="text-[10px] text-gray-500 dark:text-slate-400 mt-1">
-                      {userStats.activeProfitable || 0} / {userStats.activeCount || 0} Profitable
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stats Grid - Compact */}
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
-                  <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-lg p-2 text-center border border-gray-200 dark:border-white/10">
-                    <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
-                    <div className="text-[8px] sm:text-[9px] text-gray-500 dark:text-slate-400">Total</div>
-                  </div>
-                  <div className="bg-blue-100/80 dark:bg-blue-500/10 rounded-lg p-2 text-center border border-blue-200/50 dark:border-blue-500/20">
-                    <div className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
-                    <div className="text-[8px] sm:text-[9px] text-gray-500 dark:text-slate-400">Active</div>
-                  </div>
-                  <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-lg p-2 text-center border border-gray-200 dark:border-white/10">
-                    <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
-                    <div className="text-[8px] sm:text-[9px] text-gray-500 dark:text-slate-400">Closed</div>
-                  </div>
-                  <div className="bg-green-100/80 dark:bg-green-500/10 rounded-lg p-2 text-center border border-green-200/50 dark:border-green-500/20">
-                    <div className="text-base sm:text-lg font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
-                    <div className="text-[8px] sm:text-[9px] text-gray-500 dark:text-slate-400">TP Hit</div>
-                  </div>
-                  <div className="bg-red-100/80 dark:bg-red-500/10 rounded-lg p-2 text-center border border-red-200/50 dark:border-red-500/20 col-span-3 sm:col-span-1">
-                    <div className="text-base sm:text-lg font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
-                    <div className="text-[8px] sm:text-[9px] text-gray-500 dark:text-slate-400">SL Hit</div>
-                  </div>
-                </div>
-
-                {/* Performance Comment */}
-                <div className={cn(
-                  "text-center text-sm font-medium p-3 rounded-xl border",
-                  userStats.verifiedAnalyses === 0
-                    ? "bg-blue-100/80 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-500/20"
-                    : userStats.accuracy >= 70
-                    ? "bg-green-100/80 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-500/20"
-                    : userStats.accuracy >= 50
-                    ? "bg-yellow-100/80 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-200/50 dark:border-yellow-500/20"
-                    : "bg-red-100/80 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-500/20"
-                )}>
-                  {userStats.verifiedAnalyses === 0
-                    ? "Trades are still active. Results will update when TP/SL is hit."
-                    : userStats.accuracy >= 70
-                    ? "Excellent performance! Your analysis accuracy is outstanding."
-                    : userStats.accuracy >= 50
-                    ? "Good progress! There's room for improvement."
-                    : "Consider reviewing your analysis approach for better results."}
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <div className="relative w-16 h-16 mx-auto mb-4">
-                  <div className="absolute inset-0 bg-gray-400/20 blur-xl rounded-full" />
-                  <div className="relative w-full h-full rounded-full bg-gray-100/80 dark:bg-white/5 flex items-center justify-center border border-gray-200 dark:border-white/10">
-                    <BarChart3 className="w-8 h-8 text-gray-400 dark:text-slate-500" />
-                  </div>
-                </div>
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">No analyses yet</h4>
-                <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">
-                  Start your first analysis to track your performance
-                </p>
-                <Link
-                  href="/analyze"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl text-sm font-semibold transition shadow-lg shadow-amber-500/25"
-                >
-                  Start First Analysis
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-            )}
-          </div>
+          ) : (
+            <div className="text-center py-12 bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10">
+              <PieChart className="w-12 h-12 text-gray-400 dark:text-slate-600 mx-auto mb-3" />
+              <p className="text-sm text-gray-500 dark:text-slate-400">No verdicts yet</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500">Complete analyses to see distribution</p>
+            </div>
+          )}
         </div>
       </div>
 
