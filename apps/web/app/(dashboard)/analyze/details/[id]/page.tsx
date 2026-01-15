@@ -22,11 +22,8 @@ import {
   CheckCircle,
   Search,
   Crosshair,
-  Bot,
-  Coins,
   FileText,
   Download,
-  RefreshCw,
 } from 'lucide-react';
 import { cn } from '../../../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../../lib/coin-icons';
@@ -588,11 +585,7 @@ export default function AnalysisDetailsPage() {
               ) : (
                 <>
                   <Mail className="w-5 h-5" />
-                  Email
-                  <span className="flex items-center gap-1 ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">
-                    <Coins className="w-3 h-3" />
-                    {EMAIL_CREDIT_COST}
-                  </span>
+                  Send Email
                 </>
               )}
             </button>
