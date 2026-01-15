@@ -214,6 +214,7 @@ export function RecentAnalyses() {
       const tp2 = step5.takeProfits?.[1]?.price || step5.takeProfit2;
       const tp3 = step5.takeProfits?.[2]?.price || step5.takeProfit3;
 
+      // Build comprehensive reportData with all analysis data
       const reportData = {
         symbol: analysis.symbol,
         generatedAt: new Date(analysis.createdAt).toLocaleDateString('en-US', {
@@ -226,44 +227,109 @@ export function RecentAnalyses() {
         analysisId: analysis.id,
         tradeType: analysis.interval === '5m' || analysis.interval === '15m' ? 'scalping' :
                    analysis.interval === '1h' || analysis.interval === '4h' ? 'dayTrade' : 'swing',
+
+        // Step 1: Market Pulse - Full data
         marketPulse: {
           btcDominance: step1.btcDominance,
           fearGreedIndex: step1.fearGreedIndex,
           fearGreedLabel: step1.fearGreedLabel,
           marketRegime: step1.marketRegime,
           trend: step1.trend || { direction: 'neutral', strength: 0 },
+          btcPrice: step1.btcPrice,
+          totalMarketCap: step1.totalMarketCap,
+          altcoinSeasonIndex: step1.altcoinSeasonIndex,
+          gate: step1.gate,
         },
+
+        // Step 2: Asset Scan - Full indicators
         assetScan: {
           currentPrice: step2.currentPrice,
           priceChange24h: step2.priceChange24h,
           volume24h: step2.volume24h,
-          indicators: step2.indicators || { rsi: 50, macd: { histogram: 0, signal: 'neutral' } },
+          timeframes: step2.timeframes,
+          forecast: step2.forecast,
           levels: step2.levels,
+          indicators: {
+            rsi: step2.indicators?.rsi || 50,
+            macd: step2.indicators?.macd || { histogram: 0 },
+            movingAverages: step2.indicators?.movingAverages,
+            bollingerBands: step2.indicators?.bollingerBands,
+            atr: step2.indicators?.atr,
+          },
+          direction: step2.direction,
+          directionConfidence: step2.directionConfidence,
+          gate: step2.gate,
         },
+
+        // Step 3: Safety Check - Full risk data
         safetyCheck: {
           riskLevel: step3.riskLevel,
+          warnings: step3.warnings,
           manipulation: step3.manipulation || { pumpDumpRisk: 'low' },
           whaleActivity: step3.whaleActivity || { bias: 'neutral' },
+          advancedMetrics: step3.advancedMetrics,
+          smartMoney: step3.smartMoney,
+          newsSentiment: step3.newsSentiment,
+          gate: step3.gate,
         },
+
+        // Step 4: Timing - Full conditions
         timing: {
           tradeNow: step4.tradeNow,
           reason: step4.reason,
+          conditions: step4.conditions,
+          entryZones: step4.entryZones,
+          optimalEntry: step4.optimalEntry,
+          waitFor: step4.waitFor,
+          gate: step4.gate,
         },
+
+        // Step 5: Trade Plan - Full execution strategy
         tradePlan: {
           direction,
+          type: step5.type,
+          entries: step5.entries,
           averageEntry: entryPrice,
-          stopLoss: { price: stopLoss },
-          takeProfits: [tp1, tp2, tp3].filter(Boolean).map(price => ({ price })),
+          stopLoss: {
+            price: stopLoss,
+            percentage: step5.stopLoss?.percentage,
+            reason: step5.stopLoss?.reason,
+            safetyAdjusted: step5.stopLoss?.safetyAdjusted,
+          },
+          takeProfits: (step5.takeProfits || []).map((tp: { price: number; percentage?: number; reason?: string; source?: string }) => ({
+            price: tp.price,
+            percentage: tp.percentage,
+            reason: tp.reason,
+            source: tp.source,
+          })),
           riskReward: step5.riskReward || 2,
+          winRateEstimate: step5.winRateEstimate,
+          positionSizePercent: step5.positionSizePercent,
+          riskAmount: step5.riskAmount,
+          trailingStop: step5.trailingStop,
+          sources: step5.sources,
+          confidence: step5.confidence,
+          gate: step5.gate,
         },
+
+        // Step 6: Trap Check - Full trap analysis
         trapCheck: {
           traps: step6.traps || { bullTrap: false, bearTrap: false, fakeoutRisk: 'low' },
-          liquidityGrab: step6.liquidityGrab,
+          liquidationLevels: step6.liquidationLevels,
+          counterStrategy: step6.counterStrategy,
+          proTip: step6.proTip,
+          riskLevel: step6.riskLevel,
+          gate: step6.gate,
         },
+
+        // Step 7: Verdict - Full decision data
         verdict: {
           action: step7.action || step7.verdict,
           overallScore: analysis.totalScore,
           aiSummary: step7.aiSummary || step7.summary,
+          componentScores: step7.componentScores,
+          confidenceFactors: step7.confidenceFactors,
+          recommendation: step7.recommendation,
         },
       };
 
