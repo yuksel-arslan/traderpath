@@ -57,14 +57,14 @@ const ALL_COINS = [
 
 const POPULAR_COINS = ALL_COINS.filter(c => c.popular);
 
-// Validity period for each trade type (in hours) - based on 3 candles
-// Scalping (5m/15m): 3 candles = 15-45 min ≈ 0.75 hours
-// Day Trade (1h/4h): 3 candles = 3-12 hours ≈ 6 hours
-// Swing (1d): 3 candles = 3 days = 72 hours
+// Validity period for each trade type (in hours) - based on 1 candle (max interval)
+// Scalping (5m/15m): 1 candle = 15 min = 0.25 hours
+// Day Trade (1h/4h): 1 candle = 4 hours
+// Swing (1d): 1 candle = 1 day = 24 hours
 const ANALYSIS_VALIDITY_HOURS: Record<TradeType, number> = {
-  scalping: 0.75, // 45 minutes
-  dayTrade: 6,    // 6 hours
-  swing: 72,      // 3 days
+  scalping: 0.25, // 15 minutes
+  dayTrade: 4,    // 4 hours
+  swing: 24,      // 1 day
 };
 
 // Trade type definition
