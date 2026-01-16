@@ -30,6 +30,33 @@ export interface AnalysisReportData {
     gate?: { canProceed: boolean; reason: string; confidence: number };
   };
 
+  // Tokenomics data (optional)
+  tokenomics?: {
+    supply: {
+      circulating: number;
+      total: number | null;
+      maxSupply: number | null;
+      circulatingPercent: number;
+      inflationRisk: 'low' | 'medium' | 'high';
+    };
+    market: {
+      marketCap: number;
+      fullyDilutedValuation: number | null;
+      mcapFdvRatio: number;
+      dilutionRisk: 'low' | 'medium' | 'high';
+      liquidityHealth: 'excellent' | 'good' | 'moderate' | 'poor';
+    };
+    whaleConcentration: {
+      concentrationRisk: 'low' | 'medium' | 'high';
+      top10HoldersPercent: number | null;
+    };
+    assessment: {
+      overallScore: number;
+      riskLevel: 'low' | 'medium' | 'high';
+      recommendation: string;
+    };
+  };
+
   assetScan: {
     currentPrice: number;
     priceChange24h: number;
@@ -117,6 +144,7 @@ export interface AnalysisReportData {
     divergences?: Array<{ type: 'bullish' | 'bearish' | 'none'; indicator: string; description: string; reliability: 'high' | 'medium' | 'low'; isEarlySignal: boolean }>;
     summary?: { bullishIndicators: number; bearishIndicators: number; neutralIndicators: number; totalIndicatorsUsed: number; overallSignal: 'bullish' | 'bearish' | 'neutral'; signalConfidence: number; leadingIndicatorsSignal: 'bullish' | 'bearish' | 'neutral' | 'mixed' };
   };
+
 }
 
 interface IndicatorDetailItem {
@@ -323,6 +351,14 @@ const styles = `
   .section-title { font-size: 10px; font-weight: 600; color: #1a1a1a; }
   .gate-status { margin-left: auto; font-size: 7px; font-weight: 600; }
 
+  /* Step Box Styling */
+  .step-box { border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; background: #fafafa; }
+  .step-box-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
+  .step-box-num { font-size: 9px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #14B8A6, #16a34a); padding: 2px 6px; border-radius: 4px; }
+  .step-box-title { font-size: 10px; font-weight: 600; color: #1a1a1a; }
+  .step-box-gate { margin-left: auto; font-size: 7px; font-weight: 600; }
+  .step-summary { font-size: 7px; color: #555; background: #f5f5f5; padding: 6px 8px; border-radius: 4px; margin-top: 6px; line-height: 1.4; font-style: italic; }
+
   .row { display: flex; gap: 8px; margin-bottom: 6px; }
   .col { flex: 1; }
   .col-2 { flex: 2; }
@@ -367,9 +403,18 @@ const styles = `
   .verdict-box { border: 2px solid #1a1a1a; border-radius: 4px; padding: 12px; margin-bottom: 10px; }
   .verdict-row { display: flex; justify-content: space-between; align-items: center; }
   .verdict-action { font-size: 16px; font-weight: 700; }
+  .verdict-action-centered { font-size: 16px; font-weight: 700; text-align: center; display: block; }
+  .verdict-subtitle-centered { font-size: 8px; color: #666; margin-top: 4px; text-align: center; }
   .verdict-score { text-align: center; }
   .verdict-score-value { font-size: 32px; font-weight: 700; }
   .verdict-score-label { font-size: 8px; color: #666; }
+
+  /* Indicator Summary Box */
+  .indicator-summary-box { border: 1px solid #d0d0d0; border-radius: 6px; padding: 12px; margin-top: 10px; background: linear-gradient(180deg, #f8f9fa 0%, #fff 100%); }
+  .indicator-summary-header { font-size: 10px; font-weight: 600; color: #1a1a1a; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
+  .ai-comment { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1px solid #86efac; border-radius: 4px; padding: 8px 10px; margin-top: 8px; }
+  .ai-comment-header { font-size: 7px; font-weight: 600; color: #166534; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+  .ai-comment-text { font-size: 7px; color: #15803d; line-height: 1.5; }
 
   .factor-list { }
   .factor-item { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 8px; }
@@ -392,6 +437,7 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
   const sc = data.safetyCheck;
   const tp = data.tradePlan;
   const v = data.verdict;
+  const tk = data.tokenomics;
   const isLong = tp?.direction === 'long';
   const score = formatPercent(v?.overallScore);
   const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'Day Trade', swing: 'Swing Trade' };
@@ -425,20 +471,16 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
       </div>
     </div>
 
-    <!-- Executive Summary -->
+    <!-- Executive Summary - Centered Verdict -->
     <div class="verdict-box">
-      <div class="verdict-row">
-        <div style="flex: 1;">
-          <div class="verdict-action">${formatAction(getVerdictAction(v))}</div>
-          <div style="font-size: 8px; color: #666; margin-top: 4px;">${v?.aiSummary?.slice(0, 300) || 'Review the detailed analysis sections below.'}${(v?.aiSummary?.length || 0) > 300 ? '...' : ''}</div>
-        </div>
-      </div>
+      <div class="verdict-action-centered">${formatAction(getVerdictAction(v))}</div>
+      <div class="verdict-subtitle-centered">${v?.aiSummary?.slice(0, 200) || 'Review the detailed analysis sections below.'}${(v?.aiSummary?.length || 0) > 200 ? '...' : ''}</div>
     </div>
 
-    <!-- Trade Plan Summary -->
-    <div class="section">
-      <div class="section-header">
-        <div class="section-title">Trade Plan</div>
+    <!-- Trade Plan Summary Box -->
+    <div class="step-box">
+      <div class="step-box-header">
+        <span class="step-box-title">Trade Plan</span>
       </div>
       <div class="row">
         <div class="col metric">
@@ -468,14 +510,14 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
           </div>
         `).join('')}
       </div>
-    </div>
+          </div>
 
-    <!-- Step 1: Market Pulse -->
-    <div class="section">
-      <div class="section-header">
-        <span class="step-num">01</span>
-        <span class="section-title">Market Pulse</span>
-        <span class="gate-status" style="color: ${mpGate.color}">${mpGate.text}</span>
+    <!-- Step 01: Market Pulse with Tokenomics -->
+    <div class="step-box">
+      <div class="step-box-header">
+        <span class="step-box-num">01</span>
+        <span class="step-box-title">Market Pulse</span>
+        <span class="step-box-gate" style="color: ${mpGate.color}">${mpGate.text}</span>
       </div>
       <div class="row">
         <div class="col metric metric-sm">
@@ -497,14 +539,35 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
           <div class="metric-value">${formatRegime(mp.marketRegime)}</div>
         </div>
       </div>
-    </div>
+      ${tk ? `
+      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Tokenomics</div>
+      <div class="row" style="margin-top: 4px;">
+        <div class="col metric metric-sm">
+          <div class="metric-label">Market Cap</div>
+          <div class="metric-value">${formatVolume(tk.market.marketCap)}</div>
+        </div>
+        <div class="col metric metric-sm">
+          <div class="metric-label">Circulating</div>
+          <div class="metric-value">${tk.supply.circulatingPercent?.toFixed(0) || '-'}%</div>
+        </div>
+        <div class="col metric metric-sm">
+          <div class="metric-label">Dilution Risk</div>
+          <div class="metric-value ${tk.market.dilutionRisk === 'low' ? 'text-green' : tk.market.dilutionRisk === 'high' ? 'text-red' : 'text-amber'}">${formatDirection(tk.market.dilutionRisk)}</div>
+        </div>
+        <div class="col metric metric-sm">
+          <div class="metric-label">Score</div>
+          <div class="metric-value ${tk.assessment.overallScore >= 70 ? 'text-green' : tk.assessment.overallScore < 40 ? 'text-red' : ''}">${tk.assessment.overallScore}/100</div>
+        </div>
+      </div>
+      ` : ''}
+          </div>
 
-    <!-- Step 2: Asset Scanner -->
-    <div class="section">
-      <div class="section-header">
-        <span class="step-num">02</span>
-        <span class="section-title">Asset Scanner</span>
-        <span class="gate-status" style="color: ${asGate.color}">${asGate.text}</span>
+    <!-- Step 02: Asset Scanner -->
+    <div class="step-box">
+      <div class="step-box-header">
+        <span class="step-box-num">02</span>
+        <span class="step-box-title">Asset Scanner</span>
+        <span class="step-box-gate" style="color: ${asGate.color}">${asGate.text}</span>
       </div>
       <div class="row">
         <div class="col metric metric-sm">
@@ -532,14 +595,14 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
         <span style="margin-left: 12px;">Resistance: <span class="text-red">${as.levels.resistance.slice(0, 2).map(r => formatPrice(r)).join(', ')}</span></span>
       </div>
       ` : ''}
-    </div>
+          </div>
 
-    <!-- Step 3: Safety Check -->
-    <div class="section">
-      <div class="section-header">
-        <span class="step-num">03</span>
-        <span class="section-title">Safety Check</span>
-        <span class="gate-status" style="color: ${scGate.color}">${scGate.text}</span>
+    <!-- Step 03: Safety Check -->
+    <div class="step-box">
+      <div class="step-box-header">
+        <span class="step-box-num">03</span>
+        <span class="step-box-title">Safety Check</span>
+        <span class="step-box-gate" style="color: ${scGate.color}">${scGate.text}</span>
       </div>
       <div class="row">
         <div class="col metric metric-sm">
@@ -559,7 +622,7 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
           <div class="metric-value">${formatDirection(sc.smartMoney?.positioning)}</div>
         </div>
       </div>
-    </div>
+          </div>
 
     <div class="footer">
       <span><span class="brand-trade">Trader</span><span class="brand-path">Path</span> | ID: ${data.analysisId?.slice(-10) || '-'}</span>
@@ -601,12 +664,12 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
       </div>
     </div>
 
-    <!-- Step 4: Timing Analysis -->
-    <div class="section">
-      <div class="section-header">
-        <span class="step-num">04</span>
-        <span class="section-title">Timing Analysis</span>
-        <span class="gate-status" style="color: ${tmGate.color}">${tmGate.text}</span>
+    <!-- Step 04: Timing Analysis -->
+    <div class="step-box">
+      <div class="step-box-header">
+        <span class="step-box-num">04</span>
+        <span class="step-box-title">Timing Analysis</span>
+        <span class="step-box-gate" style="color: ${tmGate.color}">${tmGate.text}</span>
       </div>
 
       <div class="row">
@@ -646,14 +709,14 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
         `).join('')}
       </div>
       ` : ''}
-    </div>
+          </div>
 
-    <!-- Step 5: Trade Plan -->
-    <div class="section">
-      <div class="section-header">
-        <span class="step-num">05</span>
-        <span class="section-title">Trade Plan</span>
-        <span class="gate-status" style="color: ${tpGate.color}">${tpGate.text}</span>
+    <!-- Step 05: Trade Plan with Chart Inside -->
+    <div class="step-box">
+      <div class="step-box-header">
+        <span class="step-box-num">05</span>
+        <span class="step-box-title">Trade Plan</span>
+        <span class="step-box-gate" style="color: ${tpGate.color}">${tpGate.text}</span>
       </div>
 
       <div class="row">
@@ -698,15 +761,22 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
           </tr>
         `).join('')}
       </table>
+
+      <!-- Trade Plan Chart Inside the Box -->
+      ${data.chartImage ? `
+      <div style="margin-top: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
+        <img src="${data.chartImage}" style="width: 100%; height: auto; max-height: 150px; display: block; object-fit: contain;" alt="Trade Plan Chart" />
+      </div>
+      ` : ''}
     </div>
 
-    <!-- Step 6: Trap Check -->
+    <!-- Step 06: Trap Check -->
     ${tc ? `
-    <div class="section">
-      <div class="section-header">
-        <span class="step-num">06</span>
-        <span class="section-title">Trap Check</span>
-        <span class="gate-status" style="color: ${tcGate.color}">${tcGate.text}</span>
+    <div class="step-box">
+      <div class="step-box-header">
+        <span class="step-box-num">06</span>
+        <span class="step-box-title">Trap Check</span>
+        <span class="step-box-gate" style="color: ${tcGate.color}">${tcGate.text}</span>
       </div>
       <div class="row">
         <div class="col metric metric-sm">
@@ -726,16 +796,14 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
           <div class="metric-value ${tc.traps.liquidityGrab?.detected ? 'text-amber' : 'text-green'}">${tc.traps.liquidityGrab?.detected ? 'Possible' : 'Unlikely'}</div>
         </div>
       </div>
-      ${tc.proTip ? `<div class="summary-box"><div class="summary-text"><strong>Pro Tip:</strong> ${tc.proTip}</div></div>` : ''}
-    </div>
+      ${tc.proTip ? `<div style="margin-top: 6px; font-size: 7px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 3px; padding: 6px;"><strong>Pro Tip:</strong> ${tc.proTip}</div>` : ''}
+          </div>
     ` : ''}
 
-    <!-- Key Indicators Used -->
+    <!-- Indicator Summary Box -->
     ${ind ? `
-    <div class="section">
-      <div class="section-header">
-        <span class="section-title">Key Indicators Summary</span>
-      </div>
+    <div class="indicator-summary-box">
+      <div class="indicator-summary-header">Indicator Summary</div>
       <div class="row">
         <div class="col metric metric-sm">
           <div class="metric-label">Total Analyzed</div>
@@ -750,22 +818,14 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
           <div class="metric-value text-red">${ind.summary?.bearishIndicators || 0}</div>
         </div>
         <div class="col metric metric-sm">
-          <div class="metric-label">Signal</div>
-          <div class="metric-value ${ind.summary?.overallSignal === 'bullish' ? 'text-green' : ind.summary?.overallSignal === 'bearish' ? 'text-red' : ''}">${formatDirection(ind.summary?.overallSignal)}</div>
-          <div class="metric-note">${formatPercent(ind.summary?.signalConfidence)} confidence</div>
+          <div class="metric-label">Neutral</div>
+          <div class="metric-value">${ind.summary?.neutralIndicators || 0}</div>
         </div>
-      </div>
-    </div>
-    ` : ''}
-
-    <!-- Trade Plan Chart -->
-    ${data.chartImage ? `
-    <div class="section">
-      <div class="section-header">
-        <span class="section-title">Trade Plan Chart</span>
-      </div>
-      <div style="background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
-        <img src="${data.chartImage}" style="width: 100%; height: auto; display: block;" alt="Trade Plan Chart" />
+        <div class="col metric metric-sm">
+          <div class="metric-label">Overall Signal</div>
+          <div class="metric-value ${ind.summary?.overallSignal === 'bullish' ? 'text-green' : ind.summary?.overallSignal === 'bearish' ? 'text-red' : ''}">${formatDirection(ind.summary?.overallSignal)}</div>
+          <div class="metric-note">${formatPercent(ind.summary?.signalConfidence)} conf</div>
+        </div>
       </div>
     </div>
     ` : ''}
@@ -865,13 +925,14 @@ function generatePage3(data: AnalysisReportData, totalPages: number = 5): string
       </div>
     </div>
 
-    <!-- AI Expert Comment -->
+    <!-- AI Expert Review -->
     ${data.aiExpertComment ? `
-    <div class="section">
-      <div class="section-header">
-        <span class="section-title">AI Expert Risk Assessment</span>
+    <div class="step-box" style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1px solid #86efac;">
+      <div class="step-box-header" style="border-bottom-color: #86efac;">
+        <span style="font-size: 9px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #22c55e, #16a34a); padding: 2px 6px; border-radius: 4px;">AI</span>
+        <span class="step-box-title" style="color: #166534;">AI Expert Review</span>
       </div>
-      <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 3px; padding: 10px; font-size: 8px; line-height: 1.5; white-space: pre-wrap; color: #333; max-height: 280px; overflow: hidden;">${data.aiExpertComment.slice(0, 1500)}${data.aiExpertComment.length > 1500 ? '...' : ''}</div>
+      <div style="font-size: 8px; line-height: 1.6; white-space: pre-wrap; color: #15803d; max-height: 260px; overflow: hidden;">${data.aiExpertComment.slice(0, 1500)}${data.aiExpertComment.length > 1500 ? '...' : ''}</div>
     </div>
     ` : ''}
 
