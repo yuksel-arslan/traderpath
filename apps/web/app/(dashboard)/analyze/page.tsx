@@ -106,99 +106,124 @@ export default function AnalyzePage() {
   };
 
   return (
-    <div className="w-full px-3 sm:px-4 md:px-6 py-3 sm:py-4 space-y-3 sm:space-y-4">
-      {/* ===== SECTION 1: Compact Statistics Bar ===== */}
-      <div className="bg-white dark:bg-slate-800/50 rounded-lg sm:rounded-xl p-2 sm:p-3 border border-gray-200 dark:border-slate-700/50">
-        <div className="flex items-center justify-between gap-2 overflow-x-auto scrollbar-hide">
-          <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-            {/* Total */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <FileText className="w-3.5 h-3.5 text-gray-500 dark:text-slate-400" />
-              <span className="text-xs text-gray-500 dark:text-slate-400">Total</span>
-              <span className="text-sm font-bold text-gray-900 dark:text-white">{stats?.totalAnalyses || 0}</span>
-            </div>
-
-            <div className="w-px h-4 bg-gray-200 dark:bg-slate-700 shrink-0 hidden sm:block" />
-
-            {/* Active */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Timer className="w-3.5 h-3.5 text-blue-500" />
-              <span className="text-xs text-gray-500 dark:text-slate-400 hidden sm:inline">Active</span>
-              <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{stats?.activeCount || 0}</span>
-            </div>
-
-            <div className="w-px h-4 bg-gray-200 dark:bg-slate-700 shrink-0 hidden sm:block" />
-
-            {/* TP/SL */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-              <span className="text-sm font-bold text-green-600 dark:text-green-400">{stats?.tpHits || 0}</span>
-              <span className="text-gray-400 dark:text-slate-500">/</span>
-              <XCircle className="w-3.5 h-3.5 text-red-500" />
-              <span className="text-sm font-bold text-red-600 dark:text-red-400">{stats?.slHits || 0}</span>
-            </div>
-
-            <div className="w-px h-4 bg-gray-200 dark:bg-slate-700 shrink-0 hidden sm:block" />
-
-            {/* Accuracy */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Target className="w-3.5 h-3.5 text-emerald-500" />
-              <span className="text-xs text-gray-500 dark:text-slate-400 hidden sm:inline">Acc</span>
-              <span className={cn("text-sm font-bold", getAccuracyColor(stats?.accuracy || 0))}>
-                {(stats?.accuracy || 0) > 0 ? `${stats?.accuracy.toFixed(0)}%` : '-'}
-              </span>
-            </div>
+    <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-6">
+      {/* ===== SECTION 1: Statistics Grid ===== */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {/* Total Analyses */}
+        <div className="relative overflow-hidden rounded-xl p-4 border bg-gray-100/80 dark:bg-white/5 border-gray-200 dark:border-white/10">
+          <div className="flex items-center gap-2 mb-1">
+            <FileText className="w-4 h-4 text-gray-500" />
+            <span className="text-xs text-gray-500 dark:text-slate-400">Total Analyses</span>
           </div>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.totalAnalyses || 0}</p>
+        </div>
 
-          <CreditBalance compact />
+        {/* Active */}
+        <div className="relative overflow-hidden rounded-xl p-4 border bg-blue-50 dark:bg-blue-500/10 border-blue-200/50 dark:border-blue-500/20">
+          <div className="flex items-center gap-2 mb-1">
+            <Timer className="w-4 h-4 text-blue-500" />
+            <span className="text-xs text-gray-500 dark:text-slate-400">Active</span>
+          </div>
+          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats?.activeCount || 0}</p>
+        </div>
+
+        {/* Closed */}
+        <div className="relative overflow-hidden rounded-xl p-4 border bg-gray-100/80 dark:bg-white/5 border-gray-200 dark:border-white/10">
+          <div className="flex items-center gap-2 mb-1">
+            <FileText className="w-4 h-4 text-gray-500" />
+            <span className="text-xs text-gray-500 dark:text-slate-400">Closed</span>
+          </div>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.closedCount || 0}</p>
+        </div>
+
+        {/* TP Hit */}
+        <div className="relative overflow-hidden rounded-xl p-4 border bg-green-50 dark:bg-green-500/10 border-green-200/50 dark:border-green-500/20">
+          <div className="flex items-center gap-2 mb-1">
+            <CheckCircle2 className="w-4 h-4 text-green-500" />
+            <span className="text-xs text-gray-500 dark:text-slate-400">TP Hit</span>
+          </div>
+          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats?.tpHits || 0}</p>
+        </div>
+
+        {/* SL Hit */}
+        <div className="relative overflow-hidden rounded-xl p-4 border bg-red-50 dark:bg-red-500/10 border-red-200/50 dark:border-red-500/20">
+          <div className="flex items-center gap-2 mb-1">
+            <XCircle className="w-4 h-4 text-red-500" />
+            <span className="text-xs text-gray-500 dark:text-slate-400">SL Hit</span>
+          </div>
+          <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats?.slHits || 0}</p>
+        </div>
+
+        {/* Accuracy */}
+        <div className="relative overflow-hidden rounded-xl p-4 border bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-500/20">
+          <div className="flex items-center gap-2 mb-1">
+            <Target className="w-4 h-4 text-emerald-500" />
+            <span className="text-xs text-gray-500 dark:text-slate-400">Accuracy</span>
+          </div>
+          <p className={cn("text-2xl font-bold", getAccuracyColor(stats?.accuracy || 0))}>
+            {(stats?.accuracy || 0) > 0 ? `${stats?.accuracy.toFixed(0)}%` : '—'}
+          </p>
         </div>
       </div>
 
-      {/* ===== SECTION 2: New Analysis (Trade Type + Coin) ===== */}
-      <div className="bg-white dark:bg-slate-800/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-slate-700/50">
-        <div className="space-y-3">
-          {/* Trade Type - Tabs variant for compact */}
-          <TradeTypeSelector
-            value={tradeType}
-            onChange={setTradeType}
-            variant="tabs"
-            showCreditCost
-          />
+      {/* ===== SECTION 2: New Analysis (Trade Type + Coin + Credit) ===== */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/5 dark:from-emerald-500/10 via-transparent to-transparent" />
 
-          {/* Coin Selector */}
-          <CoinSelector tradeType={tradeType} />
+        <div className="relative z-10 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">New Analysis</h2>
+            <CreditBalance compact />
+          </div>
+
+          <div className="space-y-4">
+            {/* Trade Type - Tabs variant */}
+            <TradeTypeSelector
+              value={tradeType}
+              onChange={setTradeType}
+              variant="tabs"
+              showCreditCost
+            />
+
+            {/* Coin Selector */}
+            <CoinSelector tradeType={tradeType} />
+          </div>
         </div>
       </div>
 
       {/* ===== SECTION 3: TradingView Chart (Collapsible) ===== */}
-      <div className="bg-white dark:bg-slate-800/50 rounded-lg sm:rounded-xl border border-gray-200 dark:border-slate-700/50 overflow-hidden">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
         <button
           onClick={() => setShowChart(!showChart)}
-          className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors"
+          className="w-full flex items-center justify-between p-4 hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors"
         >
-          <div className="flex items-center gap-2">
-            <LineChart className="w-4 h-4 text-teal-500" />
-            <span className="text-sm font-medium text-gray-900 dark:text-white">Live Chart</span>
-            <span className="text-xs text-gray-500 dark:text-slate-400">({chartSymbol.split(':')[1]})</span>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/30">
+              <LineChart className="w-4.5 h-4.5 text-white" />
+            </div>
+            <div className="text-left">
+              <span className="text-sm font-bold text-gray-900 dark:text-white">Live Chart</span>
+              <p className="text-xs text-gray-500 dark:text-slate-400">{chartSymbol.split(':')[1]}</p>
+            </div>
           </div>
           {showChart ? (
-            <ChevronUp className="w-4 h-4 text-gray-500" />
+            <ChevronUp className="w-5 h-5 text-gray-500" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-gray-500" />
+            <ChevronDown className="w-5 h-5 text-gray-500" />
           )}
         </button>
 
         {showChart && (
           <div className="border-t border-gray-200 dark:border-slate-700">
-            <div className="flex flex-wrap gap-1 p-2 bg-gray-50 dark:bg-slate-900/30">
+            <div className="flex flex-wrap gap-2 p-3 bg-gray-50 dark:bg-slate-900/30">
               {POPULAR_COINS.map((coin) => (
                 <button
                   key={coin}
                   onClick={() => setChartSymbol(`BINANCE:${coin}USDT`)}
                   className={cn(
-                    'px-2 py-1 text-xs font-medium rounded transition-all',
+                    'px-3 py-1.5 text-xs font-medium rounded-lg transition-all',
                     chartSymbol === `BINANCE:${coin}USDT`
-                      ? 'bg-teal-500 text-white'
+                      ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30'
                       : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600'
                   )}
                 >
@@ -209,15 +234,17 @@ export default function AnalyzePage() {
             <TradingViewWidget
               symbol={chartSymbol}
               theme={isDarkMode ? 'dark' : 'light'}
-              height={280}
+              height={300}
             />
           </div>
         )}
       </div>
 
       {/* ===== SECTION 4: Recent Analyses ===== */}
-      <div className="bg-white dark:bg-slate-800/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-slate-700/50">
-        <RecentAnalyses />
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
+        <div className="relative z-10 p-5">
+          <RecentAnalyses />
+        </div>
       </div>
     </div>
   );
