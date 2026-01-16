@@ -269,10 +269,11 @@ function interpretBollinger(price: number, bb: { upper: number; middle: number; 
 function getGateStatusHTML(gate: { canProceed: boolean; reason: string; confidence: number } | undefined): string {
   if (!gate) return '';
   const passed = gate.canProceed;
-  const conf = Math.round(gate.confidence * 100);
+  // Handle both decimal (0-1) and percentage (0-100) confidence values
+  const conf = gate.confidence > 1 ? Math.round(gate.confidence) : Math.round(gate.confidence * 100);
   return `
     <div style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 12px; font-size: 8px; font-weight: 600; background: ${passed ? '#dcfce7' : '#fee2e2'}; color: ${passed ? '#166534' : '#991b1b'};">
-      ${passed ? '&#10003; PASS' : '&#10007; FAIL'} (${conf}%)
+      ${passed ? 'PASS' : 'FAIL'} (${conf}%)
     </div>
   `;
 }
@@ -300,7 +301,7 @@ function getStrengthBadge(strength: string): string {
 // Render single indicator row from IndicatorDetailItem
 function renderIndicatorRow(ind: IndicatorDetailItem): string {
   const signalColor = getSignalColor(ind.signal);
-  const signalIcon = ind.signal === 'bullish' ? '&#9650;' : ind.signal === 'bearish' ? '&#9660;' : '&#9679;';
+  const signalIcon = ind.signal === 'bullish' ? '[+]' : ind.signal === 'bearish' ? '[-]' : '[=]';
   const leadingBadge = ind.isLeadingIndicator ? '<span style="background: #dbeafe; color: #1e40af; padding: 1px 3px; border-radius: 2px; font-size: 5px; margin-left: 4px;">LEADING</span>' : '';
 
   // Format value based on type
@@ -335,7 +336,6 @@ function renderIndicatorRow(ind: IndicatorDetailItem): string {
 // Render indicator category section
 function renderIndicatorCategory(
   title: string,
-  icon: string,
   indicators: Record<string, IndicatorDetailItem | undefined> | undefined,
   bgColor: string
 ): string {
@@ -347,7 +347,7 @@ function renderIndicatorCategory(
   return `
     <div style="background: ${bgColor}; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; margin-bottom: 8px;">
       <div style="font-size: 9px; font-weight: 600; color: #1e293b; margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
-        ${icon} ${title} <span style="color: #94a3b8; font-weight: normal;">(${validIndicators.length})</span>
+        ${title} <span style="color: #94a3b8; font-weight: normal;">(${validIndicators.length})</span>
       </div>
       ${validIndicators.map(ind => renderIndicatorRow(ind)).join('')}
     </div>
@@ -509,7 +509,7 @@ function generatePage1HTML(data: AnalysisReportData): string {
         <img src="${getCoinIconUrl(data.symbol)}" class="coin-logo" alt="${data.symbol}" onerror="this.src='${FALLBACK_COIN_ICON}'" />
         <div class="coin-info">
           <div class="coin-symbol">${data.symbol}/USDT</div>
-          <div class="coin-badge ${isLong ? 'badge-green' : 'badge-red'}">${isLong ? '&#9650; LONG' : '&#9660; SHORT'} | ${score}/100</div>
+          <div class="coin-badge ${isLong ? 'badge-green' : 'badge-red'}">${isLong ? 'LONG' : 'SHORT'} | ${score}/100</div>
         </div>
       </div>
     </div>
@@ -570,7 +570,7 @@ function generatePage1HTML(data: AnalysisReportData): string {
         </div>
 
         <div class="summary-box">
-          <div class="summary-title">&#128202; Market Pulse Summary</div>
+          <div class="summary-title">Market Pulse Summary</div>
           <div class="summary-text">
             <strong>Fear & Greed:</strong> ${fgInterp}<br/>
             <strong>BTC Dominance:</strong> ${btcDomInterp}<br/>
@@ -580,9 +580,9 @@ function generatePage1HTML(data: AnalysisReportData): string {
 
         ${mp.gate ? `
         <div class="gate-box ${mp.gate.canProceed ? 'gate-pass' : 'gate-fail'}">
-          <div class="gate-icon">${mp.gate.canProceed ? '&#10003;' : '&#10007;'}</div>
+          <div class="gate-icon">${mp.gate.canProceed ? '[OK]' : '[X]'}</div>
           <div class="gate-text">
-            <div class="gate-label">Gate ${mp.gate.canProceed ? 'PASSED' : 'FAILED'} - Confidence: ${(mp.gate.confidence * 100).toFixed(0)}%</div>
+            <div class="gate-label">Gate ${mp.gate.canProceed ? 'PASSED' : 'FAILED'} - Confidence: ${mp.gate.confidence > 1 ? mp.gate.confidence.toFixed(0) : (mp.gate.confidence * 100).toFixed(0)}%</div>
             <div class="gate-reason">${mp.gate.reason}</div>
           </div>
         </div>
@@ -592,7 +592,7 @@ function generatePage1HTML(data: AnalysisReportData): string {
 
     <!-- Quick Trade Summary -->
     <div class="section">
-      <div class="card-title">&#128176; QUICK TRADE SUMMARY</div>
+      <div class="card-title">QUICK TRADE SUMMARY</div>
       <div class="trade-grid">
         <div class="trade-item">
           <div class="trade-label">Entry Price</div>
@@ -699,28 +699,28 @@ function generatePage2HTML(data: AnalysisReportData): string {
 
       ${indDetails ? `
       <!-- TREND INDICATORS -->
-      ${renderIndicatorCategory('TREND INDICATORS', '&#128200;', indDetails.trend, '#f0f9ff')}
+      ${renderIndicatorCategory('TREND INDICATORS', indDetails.trend, '#f0f9ff')}
 
       <!-- MOMENTUM INDICATORS -->
-      ${renderIndicatorCategory('MOMENTUM INDICATORS', '&#9889;', indDetails.momentum, '#fefce8')}
+      ${renderIndicatorCategory('MOMENTUM INDICATORS', indDetails.momentum, '#fefce8')}
 
       <!-- VOLATILITY INDICATORS -->
-      ${renderIndicatorCategory('VOLATILITY INDICATORS', '&#127754;', indDetails.volatility, '#fff7ed')}
+      ${renderIndicatorCategory('VOLATILITY INDICATORS', indDetails.volatility, '#fff7ed')}
 
       <!-- VOLUME INDICATORS -->
-      ${renderIndicatorCategory('VOLUME INDICATORS', '&#128202;', indDetails.volume, '#f0fdf4')}
+      ${renderIndicatorCategory('VOLUME INDICATORS', indDetails.volume, '#f0fdf4')}
 
       <!-- ADVANCED INDICATORS -->
-      ${renderIndicatorCategory('ADVANCED/ON-CHAIN', '&#128161;', indDetails.advanced, '#fdf4ff')}
+      ${renderIndicatorCategory('ADVANCED/ON-CHAIN', indDetails.advanced, '#fdf4ff')}
 
       <!-- DIVERGENCES -->
       ${indDetails.divergences && indDetails.divergences.length > 0 ? `
       <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 6px; padding: 8px; margin-bottom: 8px;">
-        <div style="font-size: 9px; font-weight: 600; color: #92400e; margin-bottom: 6px;">&#9888; DIVERGENCE ALERTS (Early Signals)</div>
+        <div style="font-size: 9px; font-weight: 600; color: #92400e; margin-bottom: 6px;">DIVERGENCE ALERTS (Early Signals)</div>
         ${indDetails.divergences.map(d => `
           <div style="display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 7px;">
             <span style="color: ${d.type === 'bullish' ? '#16a34a' : d.type === 'bearish' ? '#dc2626' : '#6b7280'}; font-weight: bold;">
-              ${d.type === 'bullish' ? '&#9650;' : d.type === 'bearish' ? '&#9660;' : '&#9679;'} ${d.indicator}
+              ${d.type === 'bullish' ? '[+]' : d.type === 'bearish' ? '[-]' : '[=]'} ${d.indicator}
             </span>
             <span style="flex: 1; color: #78350f;">${d.description}</span>
             <span style="background: ${d.reliability === 'high' ? '#dcfce7' : d.reliability === 'medium' ? '#fef3c7' : '#fee2e2'}; padding: 1px 4px; border-radius: 2px; font-size: 5px;">
@@ -733,7 +733,7 @@ function generatePage2HTML(data: AnalysisReportData): string {
 
       <!-- INDICATOR SUMMARY -->
       <div class="summary-box">
-        <div class="summary-title">&#128202; Full Indicator Analysis Summary</div>
+        <div class="summary-title">Full Indicator Analysis Summary</div>
         <div class="summary-text">
           <strong>Total Indicators:</strong> ${totalIndicators} analyzed | <strong>Bullish:</strong> ${bullishCount} | <strong>Bearish:</strong> ${bearishCount} | <strong>Neutral:</strong> ${indDetails.summary?.neutralIndicators || 0}<br/>
           <strong>Overall Signal:</strong> ${(indDetails.summary?.overallSignal || 'neutral').toUpperCase()} with ${indDetails.summary?.signalConfidence || 0}% confidence<br/>
@@ -744,7 +744,7 @@ function generatePage2HTML(data: AnalysisReportData): string {
       ` : `
       <!-- FALLBACK: Basic Indicators (when indicatorDetails not available) -->
       <div class="card">
-        <div class="card-title">&#128202; Basic Indicators</div>
+        <div class="card-title">Basic Indicators</div>
         <div class="indicator-row">
           <div class="indicator-name">RSI (14)</div>
           <div class="indicator-value">${as.indicators?.rsi?.toFixed(1) || '-'}</div>
@@ -760,7 +760,7 @@ function generatePage2HTML(data: AnalysisReportData): string {
           <div class="indicator-value">${as.indicators?.atr?.toFixed(4) || '-'}</div>
         </div>
         <div style="font-size: 8px; color: #d97706; margin-top: 8px; padding: 6px; background: #fef3c7; border-radius: 4px;">
-          &#9888; Full indicator details not available. Generate new analysis for comprehensive 40+ indicator data.
+          Note: Full indicator details not available. Generate new analysis for comprehensive 40+ indicator data.
         </div>
       </div>
       `}
@@ -768,7 +768,7 @@ function generatePage2HTML(data: AnalysisReportData): string {
       <!-- Support & Resistance -->
       ${as.levels ? `
       <div class="card">
-        <div class="card-title">&#128205; Key Price Levels</div>
+        <div class="card-title">Key Price Levels</div>
         <div class="metrics-grid-2">
           <div class="metric-box" style="border-color: #86efac;">
             <div class="metric-label">Support</div>
@@ -788,9 +788,9 @@ function generatePage2HTML(data: AnalysisReportData): string {
 
       ${as.gate ? `
       <div class="gate-box ${as.gate.canProceed ? 'gate-pass' : 'gate-fail'}">
-        <div class="gate-icon">${as.gate.canProceed ? '&#10003;' : '&#10007;'}</div>
+        <div class="gate-icon">${as.gate.canProceed ? '[OK]' : '[X]'}</div>
         <div class="gate-text">
-          <div class="gate-label">Gate ${as.gate.canProceed ? 'PASSED' : 'FAILED'} - Confidence: ${(as.gate.confidence * 100).toFixed(0)}%</div>
+          <div class="gate-label">Gate ${as.gate.canProceed ? 'PASSED' : 'FAILED'} - Confidence: ${as.gate.confidence > 1 ? as.gate.confidence.toFixed(0) : (as.gate.confidence * 100).toFixed(0)}%</div>
           <div class="gate-reason">${as.gate.reason}</div>
         </div>
       </div>
@@ -831,7 +831,7 @@ function generatePage3HTML(data: AnalysisReportData): string {
       <!-- Risk Level Overview -->
       <div class="card" style="background: ${sc.riskLevel === 'low' ? '#dcfce7' : sc.riskLevel === 'high' ? '#fee2e2' : '#fef3c7'};">
         <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="font-size: 24px;">${sc.riskLevel === 'low' ? '&#9989;' : sc.riskLevel === 'high' ? '&#9888;' : '&#9888;'}</div>
+          <div style="font-size: 16px; font-weight: bold; color: ${riskColor};">${sc.riskLevel === 'low' ? '[LOW]' : sc.riskLevel === 'high' ? '[HIGH]' : '[MED]'}</div>
           <div>
             <div style="font-size: 12px; font-weight: bold; color: ${riskColor};">
               RISK LEVEL: ${sc.riskLevel?.toUpperCase() || 'UNKNOWN'}
@@ -845,7 +845,7 @@ function generatePage3HTML(data: AnalysisReportData): string {
 
       <!-- Manipulation Detection -->
       <div class="card">
-        <div class="card-title">&#128270; Manipulation Detection</div>
+        <div class="card-title">Manipulation Detection</div>
         <div class="metrics-grid">
           <div class="metric-box">
             <div class="metric-label">Pump/Dump Risk</div>
@@ -876,7 +876,7 @@ function generatePage3HTML(data: AnalysisReportData): string {
 
       <!-- Whale Activity -->
       <div class="card">
-        <div class="card-title">&#128051; Whale Activity</div>
+        <div class="card-title">Whale Activity</div>
         <div class="metrics-grid-3">
           <div class="metric-box">
             <div class="metric-label">Whale Bias</div>
@@ -903,7 +903,7 @@ function generatePage3HTML(data: AnalysisReportData): string {
       <!-- Advanced Metrics -->
       ${sc.advancedMetrics ? `
       <div class="card">
-        <div class="card-title">&#128200; Advanced Metrics</div>
+        <div class="card-title">Advanced Metrics</div>
         <div class="metrics-grid">
           <div class="metric-box">
             <div class="metric-label">Volume Spike</div>
@@ -930,7 +930,7 @@ function generatePage3HTML(data: AnalysisReportData): string {
       <!-- Smart Money -->
       ${sc.smartMoney ? `
       <div class="card">
-        <div class="card-title">&#128176; Smart Money Positioning</div>
+        <div class="card-title">Smart Money Positioning</div>
         <div style="display: flex; align-items: center; gap: 12px;">
           <div style="font-size: 14px; font-weight: bold; color: ${sc.smartMoney.positioning === 'long' ? '#16a34a' : sc.smartMoney.positioning === 'short' ? '#dc2626' : '#6b7280'};">
             ${sc.smartMoney.positioning?.toUpperCase() || 'NEUTRAL'}
@@ -947,7 +947,7 @@ function generatePage3HTML(data: AnalysisReportData): string {
       <!-- News Sentiment -->
       ${sc.newsSentiment ? `
       <div class="card">
-        <div class="card-title">&#128240; News Sentiment</div>
+        <div class="card-title">News Sentiment</div>
         <div class="metrics-grid">
           <div class="metric-box">
             <div class="metric-label">Overall</div>
@@ -975,7 +975,7 @@ function generatePage3HTML(data: AnalysisReportData): string {
       ${sc.warnings && sc.warnings.length > 0 ? `
       <div class="warning-box">
         <div class="warning-text">
-          <strong>&#9888; Warnings:</strong><br/>
+          <strong>Warnings:</strong><br/>
           ${sc.warnings.map(w => `• ${w}`).join('<br/>')}
         </div>
       </div>
@@ -983,7 +983,7 @@ function generatePage3HTML(data: AnalysisReportData): string {
 
       <!-- Summary -->
       <div class="summary-box">
-        <div class="summary-title">&#128737; Safety Check Summary</div>
+        <div class="summary-title">Safety Check Summary</div>
         <div class="summary-text">
           <strong>Risk Level:</strong> ${sc.riskLevel?.toUpperCase()} - ${sc.riskLevel === 'low' ? 'No significant risks detected' : sc.riskLevel === 'high' ? 'Multiple risk factors present' : 'Some risk factors to monitor'}<br/>
           <strong>Whale Activity:</strong> ${sc.whaleActivity.bias === 'accumulation' ? 'Whales are buying - bullish signal' : sc.whaleActivity.bias === 'distribution' ? 'Whales are selling - bearish signal' : 'No clear whale bias'}<br/>
@@ -993,9 +993,9 @@ function generatePage3HTML(data: AnalysisReportData): string {
 
       ${sc.gate ? `
       <div class="gate-box ${sc.gate.canProceed ? 'gate-pass' : 'gate-fail'}">
-        <div class="gate-icon">${sc.gate.canProceed ? '&#10003;' : '&#10007;'}</div>
+        <div class="gate-icon">${sc.gate.canProceed ? '[OK]' : '[X]'}</div>
         <div class="gate-text">
-          <div class="gate-label">Gate ${sc.gate.canProceed ? 'PASSED' : 'FAILED'} - Confidence: ${(sc.gate.confidence * 100).toFixed(0)}%</div>
+          <div class="gate-label">Gate ${sc.gate.canProceed ? 'PASSED' : 'FAILED'} - Confidence: ${sc.gate.confidence > 1 ? sc.gate.confidence.toFixed(0) : (sc.gate.confidence * 100).toFixed(0)}%</div>
           <div class="gate-reason">${sc.gate.reason}</div>
         </div>
       </div>
@@ -1036,7 +1036,7 @@ function generatePage4HTML(data: AnalysisReportData): string {
 
       <div class="card" style="background: ${tm.tradeNow ? '#dcfce7' : '#fef3c7'};">
         <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="font-size: 24px;">${tm.tradeNow ? '&#9989;' : '&#9203;'}</div>
+          <div style="font-size: 14px; font-weight: bold; color: ${tm.tradeNow ? '#166534' : '#92400e'};">${tm.tradeNow ? '[GO]' : '[WAIT]'}</div>
           <div>
             <div style="font-size: 12px; font-weight: bold; color: ${tm.tradeNow ? '#166534' : '#92400e'};">
               ${tm.tradeNow ? 'TRADE NOW' : 'WAIT FOR BETTER ENTRY'}
@@ -1050,10 +1050,10 @@ function generatePage4HTML(data: AnalysisReportData): string {
       <!-- Timing Conditions -->
       ${tm.conditions && tm.conditions.length > 0 ? `
       <div class="card">
-        <div class="card-title">&#9745; Entry Conditions</div>
+        <div class="card-title">Entry Conditions</div>
         ${tm.conditions.map(c => `
           <div class="condition-item">
-            <div class="condition-check ${c.met ? 'condition-met' : 'condition-not'}">${c.met ? '&#10003;' : '&#10007;'}</div>
+            <div class="condition-check ${c.met ? 'condition-met' : 'condition-not'}">${c.met ? 'Y' : 'N'}</div>
             <div style="flex: 1;">
               <div style="font-weight: 500;">${c.name}</div>
               ${c.details ? `<div style="font-size: 7px; color: #64748b;">${c.details}</div>` : ''}
@@ -1066,7 +1066,7 @@ function generatePage4HTML(data: AnalysisReportData): string {
       <!-- Entry Zones -->
       ${tm.entryZones && tm.entryZones.length > 0 ? `
       <div class="card">
-        <div class="card-title">&#127919; Entry Zones</div>
+        <div class="card-title">Entry Zones</div>
         ${tm.entryZones.slice(0, 3).map((ez, i) => `
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f1f5f9;">
             <div style="font-size: 9px; font-weight: 500;">Zone ${i + 1}</div>
@@ -1096,7 +1096,7 @@ function generatePage4HTML(data: AnalysisReportData): string {
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div>
             <div style="font-size: 14px; font-weight: bold; color: ${isLong ? '#166534' : '#991b1b'};">
-              ${isLong ? '&#9650; LONG POSITION' : '&#9660; SHORT POSITION'}
+              ${isLong ? 'LONG POSITION' : 'SHORT POSITION'}
             </div>
             <div style="font-size: 8px; color: #475569; margin-top: 2px;">
               ${tp.gate?.planQuality ? `Plan Quality: ${tp.gate.planQuality.toUpperCase()}` : ''} | Confidence: ${((tp.confidence || 0) * 100).toFixed(0)}%
@@ -1111,7 +1111,7 @@ function generatePage4HTML(data: AnalysisReportData): string {
 
       <!-- Trade Levels -->
       <div class="card">
-        <div class="card-title">&#128176; Trade Levels</div>
+        <div class="card-title">Trade Levels</div>
         <div class="trade-grid">
           <div class="trade-item" style="border-color: #93c5fd;">
             <div class="trade-label">Entry Price</div>
@@ -1147,7 +1147,7 @@ function generatePage4HTML(data: AnalysisReportData): string {
       <!-- Entry Details -->
       ${tp.entries && tp.entries.length > 0 ? `
       <div class="card">
-        <div class="card-title">&#127919; Entry Breakdown</div>
+        <div class="card-title">Entry Breakdown</div>
         ${tp.entries.map((e, i) => `
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f1f5f9;">
             <div style="font-size: 9px; font-weight: 500;">Entry ${i + 1}</div>
@@ -1162,13 +1162,13 @@ function generatePage4HTML(data: AnalysisReportData): string {
       <!-- Trailing Stop -->
       ${tp.trailingStop ? `
       <div class="info-box">
-        <div class="info-text"><strong>&#128200; Trailing Stop:</strong> Activates ${tp.trailingStop.activateAfter} with ${tp.trailingStop.trailPercent.toFixed(2)}% trail distance</div>
+        <div class="info-text"><strong>Trailing Stop:</strong> Activates ${tp.trailingStop.activateAfter} with ${tp.trailingStop.trailPercent.toFixed(2)}% trail distance</div>
       </div>
       ` : ''}
 
       <!-- Summary -->
       <div class="summary-box">
-        <div class="summary-title">&#128176; Trade Plan Summary</div>
+        <div class="summary-title">Trade Plan Summary</div>
         <div class="summary-text">
           <strong>Direction:</strong> ${tp.direction?.toUpperCase()} with ${tp.riskReward?.toFixed(1)}:1 risk-reward<br/>
           <strong>Entry:</strong> ${formatPrice(tp.averageEntry)} | <strong>Stop:</strong> ${formatPrice(tp.stopLoss?.price)} (${tp.stopLoss?.percentage?.toFixed(2) || '-'}% risk)<br/>
@@ -1214,7 +1214,7 @@ function generatePage5HTML(data: AnalysisReportData): string {
 
       <!-- Trap Detection -->
       <div class="card">
-        <div class="card-title">&#128683; Trap Detection</div>
+        <div class="card-title">Trap Detection</div>
         <div class="metrics-grid">
           <div class="metric-box">
             <div class="metric-label">Bull Trap</div>
@@ -1248,12 +1248,12 @@ function generatePage5HTML(data: AnalysisReportData): string {
       <!-- Stop Hunt Zones -->
       ${tc.traps.stopHuntZones && tc.traps.stopHuntZones.length > 0 ? `
       <div class="card">
-        <div class="card-title">&#128270; Stop Hunt Zones</div>
+        <div class="card-title">Stop Hunt Zones</div>
         <div style="font-size: 9px; color: #475569;">
           ${tc.traps.stopHuntZones.map(z => formatPrice(z)).join(' | ')}
         </div>
         <div class="warning-box" style="margin-top: 6px;">
-          <div class="warning-text">&#9888; Avoid placing stops near these levels - high probability of stop hunting</div>
+          <div class="warning-text">Warning: Avoid placing stops near these levels - high probability of stop hunting</div>
         </div>
       </div>
       ` : ''}
@@ -1261,15 +1261,15 @@ function generatePage5HTML(data: AnalysisReportData): string {
       <!-- Counter Strategy -->
       ${tc.counterStrategy && tc.counterStrategy.length > 0 ? `
       <div class="card">
-        <div class="card-title">&#128161; Counter Strategy</div>
-        ${tc.counterStrategy.map(s => `<div style="font-size: 8px; color: #475569; padding: 3px 0;">&#8226; ${s}</div>`).join('')}
+        <div class="card-title">Counter Strategy</div>
+        ${tc.counterStrategy.map(s => `<div style="font-size: 8px; color: #475569; padding: 3px 0;">- ${s}</div>`).join('')}
       </div>
       ` : ''}
 
       <!-- Pro Tip -->
       ${tc.proTip ? `
       <div class="info-box">
-        <div class="info-text"><strong>&#128161; Pro Tip:</strong> ${tc.proTip}</div>
+        <div class="info-text"><strong>Pro Tip:</strong> ${tc.proTip}</div>
       </div>
       ` : ''}
     </div>
@@ -1306,7 +1306,7 @@ function generatePage5HTML(data: AnalysisReportData): string {
       <!-- Component Scores -->
       ${v.componentScores ? `
       <div class="card">
-        <div class="card-title">&#128200; Component Scores</div>
+        <div class="card-title">Component Scores</div>
         <div class="metrics-grid">
           ${Object.entries(v.componentScores).slice(0, 8).map(([key, val]) => `
             <div class="metric-box">
@@ -1321,7 +1321,7 @@ function generatePage5HTML(data: AnalysisReportData): string {
       <!-- Confidence Factors -->
       ${v.confidenceFactors && v.confidenceFactors.length > 0 ? `
       <div class="card">
-        <div class="card-title">&#128170; Confidence Factors</div>
+        <div class="card-title">Confidence Factors</div>
         ${v.confidenceFactors.slice(0, 6).map(cf => `
           <div class="condition-item">
             <div class="condition-check ${cf.positive ? 'condition-met' : 'condition-not'}">${cf.positive ? '+' : '-'}</div>
@@ -1334,7 +1334,7 @@ function generatePage5HTML(data: AnalysisReportData): string {
 
       <!-- AI Summary -->
       <div class="summary-box" style="background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%); border-color: #fcd34d;">
-        <div class="summary-title">&#129302; AI Analysis Summary</div>
+        <div class="summary-title">AI Analysis Summary</div>
         <div class="summary-text">${v.aiSummary || v.recommendation || 'Analysis complete. Review all sections for detailed insights.'}</div>
       </div>
     </div>
@@ -1378,7 +1378,7 @@ function generatePage6HTML(data: AnalysisReportData): string {
 
     <div class="section">
       <div class="section-title" style="margin-bottom: 12px;">
-        &#129302; AI Expert Risk Assessment
+        AI Expert Risk Assessment
         <span class="section-subtitle">Multi-perspective analysis by NEXUS AI Panel</span>
       </div>
 
@@ -1397,7 +1397,7 @@ function generatePage6HTML(data: AnalysisReportData): string {
       </div>
       ` : `
       <div style="text-align: center; padding: 40px; color: #94a3b8;">
-        <div style="font-size: 32px; margin-bottom: 10px;">&#129302;</div>
+        <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">[AI]</div>
         <div style="font-size: 11px;">No AI Expert comments available for this analysis.</div>
         <div style="font-size: 9px; margin-top: 8px;">Generate a report with AI Expert analysis enabled to see detailed insights.</div>
       </div>
@@ -1408,7 +1408,7 @@ function generatePage6HTML(data: AnalysisReportData): string {
     <div style="position: absolute; bottom: 60px; left: 25px; right: 25px;">
       <div class="warning-box" style="background: #fef2f2; border-color: #fecaca;">
         <div class="warning-text" style="color: #991b1b;">
-          <strong>&#9888; RISK DISCLAIMER</strong><br/><br/>
+          <strong>RISK DISCLAIMER</strong><br/><br/>
           This report is generated by TraderPath AI for <strong>educational and informational purposes only</strong>. It does not constitute financial advice, investment recommendation, or an offer to buy or sell any financial instruments.<br/><br/>
           <strong>Cryptocurrency trading involves substantial risk of loss.</strong> Past performance is not indicative of future results. The market can move against your position at any time.<br/><br/>
           Always conduct your own research (DYOR) and consult with a qualified financial advisor before making any investment decisions. Never invest more than you can afford to lose.
@@ -1417,7 +1417,7 @@ function generatePage6HTML(data: AnalysisReportData): string {
     </div>
 
     <div class="page-footer">
-      &#169; ${new Date().getFullYear()} TraderPath. All rights reserved. | www.traderpath.io | Analysis ID: ${data.analysisId?.slice(-12) || 'N/A'}
+      (c) ${new Date().getFullYear()} TraderPath. All rights reserved. | www.traderpath.io | Analysis ID: ${data.analysisId?.slice(-12) || 'N/A'}
     </div>
     <div class="page-number">Page 6 of 6</div>
   </div>
