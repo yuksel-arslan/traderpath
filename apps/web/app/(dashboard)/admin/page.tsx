@@ -290,7 +290,8 @@ export default function AdminPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setCleanupResult(`Granted ${amount} credits to ${selectedUser.name || selectedUser.email}. New balance: ${data.data.newBalance}`);
+        const emailStatus = data.data.emailSent ? ' (Email sent)' : ' (Email not sent)';
+        setCleanupResult(`Granted ${amount} credits to ${selectedUser.name || selectedUser.email}. New balance: ${data.data.newBalance}${emailStatus}`);
         setTimeout(() => setCleanupResult(null), 5000);
         setGrantModalOpen(false);
         setSelectedUser(null);

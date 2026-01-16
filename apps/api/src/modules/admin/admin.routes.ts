@@ -745,6 +745,18 @@ export default async function adminRoutes(app: FastifyInstance) {
     const { cache, cacheKeys } = await import('../../core/cache');
     await cache.del(cacheKeys.userCredits(userId));
 
+    // Send email notification to user
+    const { emailService } = await import('../email/email.service');
+    const emailResult = await emailService.sendCreditGrantNotification(
+      user.email,
+      user.name || 'Trader',
+      {
+        amount,
+        reason: reason || 'Admin credit grant',
+        newBalance: updated.balance,
+      }
+    );
+
     return reply.send({
       success: true,
       data: {
@@ -752,6 +764,7 @@ export default async function adminRoutes(app: FastifyInstance) {
         creditsAdded: amount,
         newBalance: updated.balance,
         reason: reason || 'Admin credit grant',
+        emailSent: emailResult.success,
       },
     });
   });

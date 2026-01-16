@@ -1006,6 +1006,150 @@ TraderPath - Professional Trading Analysis
   }
 
   /**
+   * Send credit grant notification
+   */
+  async sendCreditGrantNotification(
+    email: string,
+    userName: string,
+    data: { amount: number; reason: string; newBalance: number }
+  ): Promise<{ success: boolean; error?: string }> {
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Free Credits Received - TraderPath</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 30px; text-align: center;">
+              <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
+                TraderPath
+              </h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
+                🎁 Free Credits Received!
+              </p>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 50%; margin: 0 auto 20px; line-height: 80px;">
+                  <span style="font-size: 40px;">🎁</span>
+                </div>
+                <h2 style="color: #22c55e; font-size: 24px; margin: 0;">
+                  +${data.amount} Credits!
+                </h2>
+              </div>
+
+              <p style="color: #475569; font-size: 16px; margin: 0 0 25px;">
+                Hello <strong style="color: #1e293b;">${userName}</strong>,
+              </p>
+
+              <p style="color: #64748b; font-size: 15px; margin: 0 0 20px; line-height: 1.6;">
+                Great news! You have received free credits to your TraderPath account.
+              </p>
+
+              <!-- Credit Details -->
+              <div style="background: #f0fdf4; border-radius: 12px; padding: 25px; margin: 25px 0; border: 1px solid #bbf7d0;">
+                <table width="100%" style="color: #166534; font-size: 14px;">
+                  <tr>
+                    <td style="padding: 10px 0; border-bottom: 1px solid #bbf7d0;">
+                      <strong>Credits Added:</strong>
+                    </td>
+                    <td style="padding: 10px 0; border-bottom: 1px solid #bbf7d0; text-align: right; font-size: 20px; font-weight: bold; color: #22c55e;">
+                      +${data.amount}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; border-bottom: 1px solid #bbf7d0;">
+                      <strong>Reason:</strong>
+                    </td>
+                    <td style="padding: 10px 0; border-bottom: 1px solid #bbf7d0; text-align: right;">
+                      ${data.reason}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0;">
+                      <strong>New Balance:</strong>
+                    </td>
+                    <td style="padding: 10px 0; text-align: right; font-size: 18px; font-weight: bold;">
+                      ${data.newBalance} credits
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <p style="color: #64748b; font-size: 14px; margin: 0 0 25px; line-height: 1.6;">
+                You can use these credits for AI analysis, expert reports, and more!
+              </p>
+
+              <!-- CTA Button -->
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://traderpath.io/dashboard" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; text-decoration: none; padding: 16px 50px; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);">
+                  Start Analyzing
+                </a>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #64748b; font-size: 13px; margin: 0;">
+                TraderPath - Professional Trading Analysis
+              </p>
+              <p style="color: #94a3b8; font-size: 11px; margin: 10px 0 0;">
+                Thank you for being part of our community!
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+
+    const text = `
+Hello ${userName},
+
+Great news! You have received free credits to your TraderPath account.
+
+CREDIT DETAILS:
+- Credits Added: +${data.amount}
+- Reason: ${data.reason}
+- New Balance: ${data.newBalance} credits
+
+You can use these credits for AI analysis, expert reports, and more!
+
+Visit https://traderpath.io/dashboard to start analyzing.
+
+---
+TraderPath - Professional Trading Analysis
+Thank you for being part of our community!
+    `.trim();
+
+    const result = await this.sendEmail({
+      to: email,
+      subject: `🎁 You received ${data.amount} free credits - TraderPath`,
+      html,
+      text,
+    });
+
+    return { success: result.success, error: result.error };
+  }
+
+  /**
    * Send suspicious login alert
    */
   async sendSuspiciousLoginAlert(
