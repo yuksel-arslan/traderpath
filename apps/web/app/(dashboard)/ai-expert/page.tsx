@@ -175,91 +175,50 @@ export default function AIExpertsPage() {
   return (
     <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-6">
 
-      {/* ===== Premium Header Section ===== */}
-      <div className="relative overflow-hidden rounded-3xl">
-        {/* Background Gradients */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
+      {/* ===== Compact Header ===== */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-purple-500/5 dark:from-purple-500/10 via-transparent to-transparent" />
 
-        {/* Grid Pattern Overlay */}
-        <div className="absolute inset-0 opacity-[0.03] dark:opacity-5" style={{
-          backgroundImage: `linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)`,
-          backgroundSize: '50px 50px'
-        }} />
-
-        {/* Content */}
-        <div className="relative z-10 p-6 md:p-8">
+        <div className="relative z-10 p-5">
           {/* Header Row */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="absolute inset-0 bg-amber-500/30 blur-lg rounded-full" />
-                <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                  <Bot className="w-7 h-7 text-white" />
-                </div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                <Bot className="w-5 h-5 text-white" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">AI Expert Team</h1>
-                  <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded text-xs font-bold border border-emerald-500/20">NEW</span>
-                </div>
-                <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">
-                  Four world-class specialists, each mastering their own domain
-                </p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Expert Team</h1>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Four world-class specialists</p>
               </div>
             </div>
 
             {/* Admin/Credits Badge */}
             {isAdmin ? (
-              <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                <Shield className="w-5 h-5 text-emerald-500" />
-                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Admin</span>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                <Shield className="w-4 h-4 text-emerald-500" />
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Admin</span>
               </div>
             ) : (
-              <div className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm border border-gray-200 dark:border-white/10 rounded-xl">
-                <Gem className="w-5 h-5 text-amber-500" />
-                <span className="text-sm font-bold text-gray-900 dark:text-white">{credits?.balance || 0} credits</span>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg">
+                <Gem className="w-4 h-4 text-amber-500" />
+                <span className="text-xs font-bold text-gray-900 dark:text-white">{credits?.balance || 0} credits</span>
               </div>
             )}
           </div>
 
           {/* Stats Row */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 transition-colors group">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <MessageCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{expertStats?.totalConversations || 0}</div>
-                  <div className="text-xs text-gray-500 dark:text-slate-500">Conversations</div>
-                </div>
-              </div>
+            <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-200 dark:border-white/10">
+              <div className="text-xl font-bold text-gray-900 dark:text-white">{expertStats?.totalConversations || 0}</div>
+              <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Conversations</div>
             </div>
-
-            <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 transition-colors group">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{expertStats?.totalMessages || 0}</div>
-                  <div className="text-xs text-gray-500 dark:text-slate-500">Messages</div>
-                </div>
-              </div>
+            <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-xl p-3 text-center border border-emerald-200/50 dark:border-emerald-500/20">
+              <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{expertStats?.totalMessages || 0}</div>
+              <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Messages</div>
             </div>
-
-            <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 transition-colors group">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <BarChart3 className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalUsage}</div>
-                  <div className="text-xs text-gray-500 dark:text-slate-500">Total Calls</div>
-                </div>
-              </div>
+            <div className="bg-amber-50 dark:bg-amber-500/10 rounded-xl p-3 text-center border border-amber-200/50 dark:border-amber-500/20">
+              <div className="text-xl font-bold text-amber-600 dark:text-amber-400">{totalUsage}</div>
+              <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Total Calls</div>
             </div>
           </div>
         </div>
@@ -364,19 +323,6 @@ export default function AIExpertsPage() {
         })}
       </div>
 
-      {/* ===== Bottom Info ===== */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-200 dark:border-slate-700 shadow-sm">
-        <div className="flex items-center gap-2 text-sm">
-          <Sparkles className="w-4 h-4 text-amber-500" />
-          <span className="text-gray-700 dark:text-slate-300">
-            Powered by TraderPath examples
-            {isAdmin && <span className="text-emerald-600 dark:text-emerald-400 font-bold ml-2">(Admin)</span>}
-          </span>
-        </div>
-        <p className="text-xs text-gray-500 dark:text-slate-400 mt-1.5">
-          AI Experts use real examples from your TraderPath analyses and quiz questions to give you personalized answers.
-        </p>
-      </div>
     </div>
   );
 }

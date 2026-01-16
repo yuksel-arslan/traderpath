@@ -9,30 +9,19 @@ import {
   FileText,
   Download,
   Trash2,
-  Clock,
   TrendingUp,
   TrendingDown,
   Search,
-  Filter,
   RefreshCw,
-  AlertTriangle,
-  ChevronRight,
   LineChart,
   Eye,
   CheckCircle2,
   XCircle,
   Timer,
-  DollarSign,
   X,
   Target,
   Shield,
-  BarChart3,
-  Percent,
   Bot,
-  MessageSquare,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
   Zap,
   Activity,
   Calendar,
@@ -232,15 +221,16 @@ interface ReportsResponse {
   };
 }
 
+// Date filter options
+type DateFilter = 'all' | 'today' | 'week' | 'month';
+
 export default function ReportsPage() {
   const router = useRouter();
   const [reports, setReports] = useState<Report[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'long' | 'short'>('all');
-  const [tradeTypeFilter, setTradeTypeFilter] = useState<TradeType>('swing');
-  const [sortBy, setSortBy] = useState<'date' | 'score' | 'pnl' | 'tp'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [tradeTypeFilter, setTradeTypeFilter] = useState<TradeType | 'all'>('all');
   const [pagination, setPagination] = useState({ total: 0, limit: 20, offset: 0 });
   const [stats, setStats] = useState<ReportStats>({ total: 0, active: 0, closed: 0, tpHits: 0, slHits: 0 });
   const [chartModal, setChartModal] = useState<{ isOpen: boolean; report: Report | null }>({ isOpen: false, report: null });
@@ -412,152 +402,152 @@ Could you share your risk assessment and recommendations based on this analysis?
       : 0;
   };
 
+  // Date filter helper
+  const isInDateRange = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+
+    switch (dateFilter) {
+      case 'today':
+        return date.toDateString() === now.toDateString();
+      case 'week':
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        return date >= weekAgo;
+      case 'month':
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        return date >= monthAgo;
+      default:
+        return true;
+    }
+  };
+
   const filteredReports = reports
     .filter(r =>
       r.symbol.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      (filter === 'all' || r.direction === filter) &&
-      r.tradeType === tradeTypeFilter
+      isInDateRange(r.generatedAt) &&
+      (tradeTypeFilter === 'all' || r.tradeType === tradeTypeFilter)
     )
-    .sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortBy) {
-        case 'score':
-          comparison = (a.score || 0) - (b.score || 0);
-          break;
-        case 'pnl':
-          comparison = (a.unrealizedPnL || 0) - (b.unrealizedPnL || 0);
-          break;
-        case 'tp':
-          comparison = calculateTpProgress(a) - calculateTpProgress(b);
-          break;
-        case 'date':
-        default:
-          comparison = new Date(a.generatedAt).getTime() - new Date(b.generatedAt).getTime();
-          break;
-      }
-
-      return sortOrder === 'desc' ? -comparison : comparison;
-    });
+    .sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime());
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Reports</h1>
-          <p className="text-gray-500 dark:text-slate-400">Your saved analysis reports</p>
+    <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-6">
+      {/* ===== Compact Header ===== */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-500/5 dark:from-purple-500/10 via-transparent to-transparent" />
+
+        <div className="relative z-10 p-5">
+          {/* Header Row */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                <FileText className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">My Reports</h1>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Your saved analysis reports</p>
+              </div>
+            </div>
+            <button
+              onClick={() => fetchReports()}
+              disabled={isLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg transition disabled:opacity-50"
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5", isLoading && "animate-spin")} />
+              Refresh
+            </button>
+          </div>
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-4 gap-3">
+            <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-200 dark:border-white/10">
+              <div className="text-xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
+              <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Total</div>
+            </div>
+            <div className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-3 text-center border border-blue-200/50 dark:border-blue-500/20">
+              <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{stats.active}</div>
+              <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Active</div>
+            </div>
+            <div className="bg-green-50 dark:bg-green-500/10 rounded-xl p-3 text-center border border-green-200/50 dark:border-green-500/20">
+              <div className="text-xl font-bold text-green-600 dark:text-green-400">{stats.tpHits}</div>
+              <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">TP Hit</div>
+            </div>
+            <div className="bg-red-50 dark:bg-red-500/10 rounded-xl p-3 text-center border border-red-200/50 dark:border-red-500/20">
+              <div className="text-xl font-bold text-red-600 dark:text-red-400">{stats.slHits}</div>
+              <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">SL Hit</div>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={fetchReports}
-          disabled={isLoading}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition disabled:opacity-50"
-        >
-          <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
-          Refresh
-        </button>
       </div>
 
-      {/* Search, Filters, and Sorting */}
-      <div className="flex flex-col gap-3 sm:gap-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search coin..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-card border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-            />
-          </div>
-          {/* Direction Filter */}
-          <div className="flex gap-2 flex-wrap">
-            {[
-              { value: 'all', label: 'All' },
-              { value: 'long', label: 'Long' },
-              { value: 'short', label: 'Short' },
-            ].map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setFilter(f.value as typeof filter)}
-                className={cn(
-                  "px-4 py-2 rounded-lg font-medium transition",
-                  filter === f.value
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card border hover:bg-accent"
-                )}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Trade Type Filter */}
-          <div className="flex gap-2 flex-wrap">
-            {(Object.keys(TRADE_TYPE_CONFIG) as TradeType[]).map((type) => {
-              const config = TRADE_TYPE_CONFIG[type];
-              const Icon = config.icon;
-              return (
-                <button
-                  key={type}
-                  onClick={() => setTradeTypeFilter(type)}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium transition text-sm",
-                    tradeTypeFilter === type
-                      ? `bg-${config.color}-500 text-white`
-                      : "bg-card border hover:bg-accent"
-                  )}
-                  style={tradeTypeFilter === type ? {
-                    backgroundColor: config.color === 'purple' ? '#a855f7' : config.color === 'blue' ? '#3b82f6' : '#f59e0b'
-                  } : {}}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {config.label}
-                </button>
-              );
-            })}
-          </div>
+      {/* ===== Compact Filters ===== */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+        {/* Symbol Search */}
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search symbol..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+          />
         </div>
 
-        {/* Sorting Options */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground flex items-center gap-1">
-            <ArrowUpDown className="w-4 h-4" />
-            Sort by:
-          </span>
+        {/* Date Filter */}
+        <div className="flex bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
           {[
-            { value: 'date', label: 'Date', icon: Clock },
-            { value: 'score', label: 'Score', icon: BarChart3 },
-            { value: 'pnl', label: 'P/L', icon: DollarSign },
-            { value: 'tp', label: 'TP Progress', icon: Target },
-          ].map((s) => (
+            { value: 'all', label: 'All' },
+            { value: 'today', label: 'Today' },
+            { value: 'week', label: 'Week' },
+            { value: 'month', label: 'Month' },
+          ].map((f) => (
             <button
-              key={s.value}
-              onClick={() => {
-                if (sortBy === s.value) {
-                  setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
-                } else {
-                  setSortBy(s.value as typeof sortBy);
-                  setSortOrder('desc');
-                }
-              }}
+              key={f.value}
+              onClick={() => setDateFilter(f.value as DateFilter)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition",
-                sortBy === s.value
-                  ? "bg-emerald-500 text-white"
-                  : "bg-card border hover:bg-accent"
+                "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                dateFilter === f.value
+                  ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
               )}
             >
-              <s.icon className="w-3.5 h-3.5" />
-              {s.label}
-              {sortBy === s.value && (
-                sortOrder === 'desc'
-                  ? <ArrowDown className="w-3.5 h-3.5" />
-                  : <ArrowUp className="w-3.5 h-3.5" />
-              )}
+              {f.label}
             </button>
           ))}
+        </div>
+
+        {/* Trade Type Filter */}
+        <div className="flex bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
+          <button
+            onClick={() => setTradeTypeFilter('all')}
+            className={cn(
+              "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+              tradeTypeFilter === 'all'
+                ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
+            )}
+          >
+            All
+          </button>
+          {(Object.keys(TRADE_TYPE_CONFIG) as TradeType[]).map((type) => {
+            const config = TRADE_TYPE_CONFIG[type];
+            const Icon = config.icon;
+            return (
+              <button
+                key={type}
+                onClick={() => setTradeTypeFilter(type)}
+                className={cn(
+                  "flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                  tradeTypeFilter === type
+                    ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
+                    : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
+                )}
+              >
+                <Icon className="w-3 h-3" />
+                {config.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -892,40 +882,26 @@ Could you share your risk assessment and recommendations based on this analysis?
 
       {/* Pagination */}
       {pagination.total > pagination.limit && (
-        <div className="flex justify-center gap-2 mt-8">
+        <div className="flex justify-center items-center gap-2">
           <button
             onClick={() => setPagination(p => ({ ...p, offset: Math.max(0, p.offset - p.limit) }))}
             disabled={pagination.offset === 0}
-            className="px-4 py-2 bg-card border rounded-lg hover:bg-accent transition disabled:opacity-50"
+            className="px-3 py-1.5 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition disabled:opacity-50"
           >
             Previous
           </button>
-          <span className="px-4 py-2 text-muted-foreground">
+          <span className="px-3 py-1.5 text-sm text-gray-500 dark:text-slate-400">
             {Math.floor(pagination.offset / pagination.limit) + 1} / {Math.ceil(pagination.total / pagination.limit)}
           </span>
           <button
             onClick={() => setPagination(p => ({ ...p, offset: p.offset + p.limit }))}
             disabled={pagination.offset + pagination.limit >= pagination.total}
-            className="px-4 py-2 bg-card border rounded-lg hover:bg-accent transition disabled:opacity-50"
+            className="px-3 py-1.5 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition disabled:opacity-50"
           >
             Next
           </button>
         </div>
       )}
-
-      {/* Info Box */}
-      <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-lg">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-blue-600 dark:text-blue-500 mt-0.5" />
-          <div className="text-sm text-blue-700 dark:text-blue-400">
-            <p className="font-medium text-blue-600 dark:text-blue-500 mb-1">Live Tracking</p>
-            <p>
-              Reports are tracked live. When TP or SL is hit, the trade automatically closes.
-              Click the Chart button to view multi-timeframe analysis.
-            </p>
-          </div>
-        </div>
-      </div>
 
       {/* TradingView Chart Modal - 4 Panel Multi-Timeframe */}
       {chartModal.isOpen && chartModal.report && (
