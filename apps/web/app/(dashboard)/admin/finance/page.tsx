@@ -598,6 +598,32 @@ export default function FinancePage() {
                   </tfoot>
                 </table>
               </div>
+              {/* Cost per Analysis */}
+              {(() => {
+                const MONTHLY_FIXED_COST = 160;
+                const analysisCount = Object.entries(summary.monthly.operationBreakdown)
+                  .filter(([key]) => key.toLowerCase().includes('analysis'))
+                  .reduce((sum, [, data]) => sum + data.count, 0) || 1;
+                const costPerAnalysis = MONTHLY_FIXED_COST / analysisCount;
+                return (
+                  <div className="mt-4 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border border-primary/20">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-foreground">Cost per Analysis</p>
+                        <p className="text-sm text-muted-foreground">
+                          Based on {analysisCount} analyses this month
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold font-mono text-primary">
+                          ${costPerAnalysis.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">per analysis</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </>
