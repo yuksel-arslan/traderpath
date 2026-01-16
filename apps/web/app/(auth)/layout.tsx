@@ -9,22 +9,22 @@ const FEATURES = [
   {
     icon: Brain,
     title: 'AI-Powered Analysis',
-    description: '40+ technical indicators analyzed by advanced AI models',
+    description: '40+ indicators analyzed by AI',
   },
   {
     icon: Shield,
     title: 'Safety First',
-    description: 'Detect manipulation, whale activity, and market traps',
+    description: 'Detect manipulation & traps',
   },
   {
     icon: Target,
     title: 'Precise Trade Plans',
-    description: 'Get exact entry, stop-loss, and take-profit levels',
+    description: 'Entry, stop-loss & take-profit',
   },
   {
     icon: Clock,
     title: 'Perfect Timing',
-    description: 'Know exactly when to enter and exit your trades',
+    description: 'Know when to enter & exit',
   },
 ];
 
@@ -36,7 +36,7 @@ export default function AuthLayout({
   return (
     <div className="min-h-screen flex bg-background">
       {/* Left Side - Marketing (hidden on mobile) */}
-      <div className="hidden lg:block lg:w-1/2 xl:w-[45%] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-[45%] xl:w-[40%] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div
@@ -49,71 +49,61 @@ export default function AuthLayout({
         </div>
 
         {/* Gradient Orbs */}
-        <div className="absolute top-20 left-20 w-72 h-72 bg-teal-500/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-coral-500/20 rounded-full blur-3xl" />
+        <div className="absolute top-10 left-10 w-48 h-48 bg-teal-500/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-10 right-10 w-64 h-64 bg-coral-500/20 rounded-full blur-3xl" />
 
         {/* Content - Centered */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="relative z-10 flex flex-col items-center text-center max-w-md px-8 py-12">
-          {/* Logo Icon */}
-          <div className="mb-4">
-            <Link href="/">
-              <TraderPathLogo size="xl" showText={false} />
+        <div className="relative z-10 flex flex-col items-center justify-center w-full px-8 py-8">
+          {/* Logo & Brand */}
+          <div className="text-center mb-6">
+            <Link href="/" className="inline-block mb-3">
+              <TraderPathLogo size="lg" showText={false} />
             </Link>
-          </div>
-
-          {/* Brand Name */}
-          <div className="mb-8">
-            <h2 className="text-4xl xl:text-5xl font-bold gradient-text-brand">TraderPath</h2>
-            <p className="text-lg text-slate-400 mt-1">From Charts to Clarity</p>
+            <h2 className="text-3xl font-bold gradient-text-brand">TraderPath</h2>
+            <p className="text-sm text-slate-400 mt-1">From Charts to Clarity</p>
           </div>
 
           {/* Motto */}
-          <div className="mb-12">
-            <p className="text-lg xl:text-xl text-slate-300 leading-relaxed">
-              Make smarter trading decisions with AI-powered analysis. Our 7-step system analyzes
-              40+ indicators to give you clear GO or NO-GO signals.
-            </p>
-          </div>
+          <p className="text-center text-slate-300 text-sm leading-relaxed max-w-xs mb-6">
+            Make smarter trading decisions with AI-powered analysis. Our 7-step system analyzes
+            40+ indicators to give you clear GO or NO-GO signals.
+          </p>
 
-          {/* Features */}
-          <div className="space-y-6">
+          {/* Features - Compact Grid */}
+          <div className="grid grid-cols-2 gap-3 mb-6 w-full max-w-sm">
             {FEATURES.map((feature, index) => (
-              <div key={index} className="flex flex-col items-center gap-3 group">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                  <feature.icon className="w-6 h-6 text-teal-400" />
+              <div key={index} className="flex items-start gap-2 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                  <feature.icon className="w-4 h-4 text-teal-400" />
                 </div>
-                <div>
-                  <h3 className="font-semibold text-white text-lg">{feature.title}</h3>
-                  <p className="text-slate-400 text-sm">{feature.description}</p>
+                <div className="min-w-0">
+                  <h3 className="font-medium text-white text-xs">{feature.title}</h3>
+                  <p className="text-slate-400 text-[10px] leading-tight">{feature.description}</p>
                 </div>
               </div>
             ))}
           </div>
 
           {/* Stats */}
-          <div className="mt-12 pt-8 border-t border-white/10">
-            <div className="grid grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white">40+</div>
-                <div className="text-sm text-slate-400">Indicators</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white">7</div>
-                <div className="text-sm text-slate-400">Analysis Steps</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white">AI</div>
-                <div className="text-sm text-slate-400">Powered</div>
-              </div>
+          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/10 w-full max-w-xs">
+            <div className="text-center">
+              <div className="text-xl font-bold text-white">40+</div>
+              <div className="text-[10px] text-slate-400">Indicators</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-bold text-white">7</div>
+              <div className="text-[10px] text-slate-400">Steps</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-bold text-white">AI</div>
+              <div className="text-[10px] text-slate-400">Powered</div>
             </div>
           </div>
 
           {/* Trust Badge */}
-          <div className="mt-8 flex items-center gap-2 text-slate-400 text-sm">
-            <CheckCircle className="w-4 h-4 text-teal-400" />
+          <div className="mt-4 flex items-center gap-1.5 text-slate-400 text-xs">
+            <CheckCircle className="w-3.5 h-3.5 text-teal-400" />
             <span>Trusted by traders worldwide</span>
-          </div>
           </div>
         </div>
       </div>
