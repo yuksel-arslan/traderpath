@@ -10,6 +10,7 @@ import { AnalysisDialog } from '../analysis/AnalysisDialog';
 
 // Recent analysis info for duplicate warning
 interface RecentAnalysis {
+  id: string;
   symbol: string;
   generatedAt: string;
   hoursAgo: number;
@@ -17,6 +18,7 @@ interface RecentAnalysis {
   score?: number;
   interval?: string;
   tradeType?: string;
+  validityHours: number;
 }
 
 // Coin data
@@ -55,8 +57,15 @@ const ALL_COINS = [
 
 const POPULAR_COINS = ALL_COINS.filter(c => c.popular);
 
-// Minimum hours between analyses for the same coin (to avoid unnecessary duplicates)
-const MIN_HOURS_BETWEEN_ANALYSES = 4;
+// Validity period for each trade type (in hours) - based on 3 candles
+// Scalping (5m/15m): 3 candles = 15-45 min ≈ 0.75 hours
+// Day Trade (1h/4h): 3 candles = 3-12 hours ≈ 6 hours
+// Swing (1d): 3 candles = 3 days = 72 hours
+const ANALYSIS_VALIDITY_HOURS: Record<TradeType, number> = {
+  scalping: 0.75, // 45 minutes
+  dayTrade: 6,    // 6 hours
+  swing: 72,      // 3 days
+};
 
 // Trade type definition
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
@@ -119,7 +128,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
       if (!token) return null;
 
       // Fetch from analysis history instead of reports
-      const response = await fetch(`/api/analysis/history?limit=20`, {
+      const response = await fetch(`/api/analysis/history?limit=50`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
@@ -130,12 +139,21 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
 
       // Get intervals for current trade type
       const currentIntervals = TRADE_TYPE_INTERVALS[tradeType];
+      const validityHours = ANALYSIS_VALIDITY_HOURS[tradeType];
 
       // Find the most recent analysis for this symbol with the same timeframe
       const recentAnalysis = data.data.analyses.find(
-        (a: { symbol: string; interval: string }) =>
-          a.symbol.toUpperCase() === symbol.toUpperCase() &&
-          currentIntervals.includes(a.interval)
+        (a: { symbol: string; interval: string; createdAt: string }) => {
+          if (a.symbol.toUpperCase() !== symbol.toUpperCase()) return false;
+          if (!currentIntervals.includes(a.interval)) return false;
+
+          // Check if analysis is still valid (within 3 candles)
+          const generatedAt = new Date(a.createdAt);
+          const now = new Date();
+          const hoursAgo = (now.getTime() - generatedAt.getTime()) / (1000 * 60 * 60);
+
+          return hoursAgo < validityHours;
+        }
       );
 
       if (!recentAnalysis) return null;
@@ -148,6 +166,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
       const analysisTradeType = getTradeTypeFromInterval(recentAnalysis.interval);
 
       return {
+        id: recentAnalysis.id,
         symbol: recentAnalysis.symbol,
         generatedAt: recentAnalysis.createdAt,
         hoursAgo,
@@ -155,6 +174,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
         score: recentAnalysis.totalScore,
         interval: recentAnalysis.interval,
         tradeType: analysisTradeType || undefined,
+        validityHours,
       };
     } catch (error) {
       console.error('Failed to check recent analysis:', error);
@@ -208,8 +228,8 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
 
     setIsCheckingRecent(false);
 
-    if (recent && recent.hoursAgo < MIN_HOURS_BETWEEN_ANALYSES) {
-      // Show warning for recent analysis
+    if (recent && recent.hoursAgo < recent.validityHours) {
+      // Show warning for recent analysis (still valid within 3 candles)
       setRecentAnalysis(recent);
       setShowDuplicateWarning(true);
     } else {
@@ -413,15 +433,15 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Warning Header */}
-            <div className="bg-amber-500 p-4">
+            <div className="bg-emerald-500 p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-white" />
+                  <Clock className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Recently Analyzed</h3>
+                  <h3 className="text-lg font-bold text-white">Analysis Available</h3>
                   <p className="text-sm text-white/80">
-                    This coin was already analyzed for {recentAnalysis.tradeType ? TRADE_TYPE_LABELS[recentAnalysis.tradeType as TradeType] : 'this timeframe'}
+                    A recent {recentAnalysis.tradeType ? TRADE_TYPE_LABELS[recentAnalysis.tradeType as TradeType] : ''} analysis exists
                   </p>
                 </div>
               </div>
@@ -432,14 +452,29 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
               <div className="mb-4">
                 <div className="flex items-center gap-3 mb-4">
                   <CoinIcon symbol={recentAnalysis.symbol} size={40} />
-                  <div>
+                  <div className="flex-1">
                     <div className="font-semibold text-lg">{recentAnalysis.symbol}/USDT</div>
                     <div className="text-sm text-muted-foreground">
                       Analyzed {recentAnalysis.hoursAgo < 1
                         ? `${Math.round(recentAnalysis.hoursAgo * 60)} minutes ago`
                         : `${recentAnalysis.hoursAgo.toFixed(1)} hours ago`
                       }
-                      {recentAnalysis.interval && ` (${recentAnalysis.interval})`}
+                    </div>
+                  </div>
+                  {/* Validity Badge */}
+                  <div className="text-center px-3 py-1.5 bg-emerald-100 dark:bg-emerald-500/20 rounded-lg border border-emerald-300 dark:border-emerald-500/30">
+                    <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Valid for</div>
+                    <div className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                      {(() => {
+                        const remainingHours = recentAnalysis.validityHours - recentAnalysis.hoursAgo;
+                        if (remainingHours < 1) {
+                          return `${Math.round(remainingHours * 60)}m`;
+                        } else if (remainingHours < 24) {
+                          return `${remainingHours.toFixed(1)}h`;
+                        } else {
+                          return `${(remainingHours / 24).toFixed(1)}d`;
+                        }
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -447,13 +482,13 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
                 {/* Previous Analysis Info */}
                 <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Timeframe:</span>
+                    <span className="text-muted-foreground">Trade Type:</span>
                     <span className="font-medium px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400">
                       {recentAnalysis.tradeType ? TRADE_TYPE_LABELS[recentAnalysis.tradeType as TradeType] : recentAnalysis.interval || 'N/A'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Previous Direction:</span>
+                    <span className="text-muted-foreground">Direction:</span>
                     <span className={cn(
                       "font-medium px-2 py-0.5 rounded",
                       recentAnalysis.direction === 'long'
@@ -465,7 +500,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
                   </div>
                   {recentAnalysis.score && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Previous Score:</span>
+                      <span className="text-muted-foreground">Score:</span>
                       <span className={cn(
                         "font-medium px-2 py-0.5 rounded",
                         (recentAnalysis.score * 10) >= 70 ? 'bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400' :
@@ -476,43 +511,59 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
                       </span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Date:</span>
-                    <span className="font-medium text-foreground">
-                      {new Date(recentAnalysis.generatedAt).toLocaleString('en-US', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
-                  </div>
                 </div>
 
-                <p className="mt-4 text-sm text-muted-foreground">
-                  If market conditions haven&apos;t changed significantly, you can use the existing analysis.
-                </p>
+                {/* Pricing Info */}
+                <div className="mt-4 p-3 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-500/10 dark:to-green-500/10 rounded-lg border border-emerald-200 dark:border-emerald-500/20">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-emerald-700 dark:text-emerald-300 font-medium">Use existing analysis</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">20 credits</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <span className="text-muted-foreground">New analysis</span>
+                    <span className="text-muted-foreground">35 credits</span>
+                  </div>
+                  <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 text-center font-medium">
+                    Save 15 credits!
+                  </div>
+                </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3">
+              <div className="space-y-2">
+                {/* Primary: View Existing Analysis */}
                 <button
-                  onClick={handleCancelAnalysis}
-                  className="flex-1 px-4 py-2.5 border border-border rounded-lg font-medium text-foreground hover:bg-muted transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleProceedAnyway}
+                  onClick={() => {
+                    setShowDuplicateWarning(false);
+                    router.push(`/analysis/${recentAnalysis.id}`);
+                  }}
                   className={cn(
-                    "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition",
-                    "bg-gradient-to-r from-amber-500 to-orange-500 text-white",
-                    "hover:from-amber-600 hover:to-orange-600"
+                    "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition",
+                    "bg-gradient-to-r from-emerald-500 to-green-500 text-white",
+                    "hover:from-emerald-600 hover:to-green-600 shadow-lg shadow-emerald-500/25"
                   )}
                 >
-                  <RefreshCw className="w-4 h-4" />
-                  Analyze Anyway
+                  <TrendingUp className="w-5 h-5" />
+                  Use Existing Analysis
+                  <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">20 credits</span>
                 </button>
+
+                {/* Secondary: Analyze Anyway */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCancelAnalysis}
+                    className="flex-1 px-4 py-2.5 border border-border rounded-lg font-medium text-muted-foreground hover:bg-muted transition text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleProceedAnyway}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 rounded-lg font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition text-sm"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    New (35 cr)
+                  </button>
+                </div>
               </div>
             </div>
           </div>
