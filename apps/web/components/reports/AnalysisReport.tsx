@@ -353,11 +353,12 @@ const styles = `
 
   /* Step Box Styling */
   .step-box { border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; background: #fafafa; }
-  .step-box-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
-  .step-box-num { font-size: 9px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #14B8A6, #16a34a); padding: 2px 6px; border-radius: 4px; }
+  .step-box-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
+  .step-box-num { font-size: 9px; font-weight: 700; color: #666; }
   .step-box-title { font-size: 10px; font-weight: 600; color: #1a1a1a; }
   .step-box-gate { margin-left: auto; font-size: 7px; font-weight: 600; }
-  .step-summary { font-size: 7px; color: #555; background: #f5f5f5; padding: 6px 8px; border-radius: 4px; margin-top: 6px; line-height: 1.4; font-style: italic; }
+  .step-summary { font-size: 7px; color: #333; background: #f0f0f0; border-left: 2px solid #16a34a; padding: 6px 8px; margin-top: 8px; line-height: 1.5; }
+  .step-summary-title { font-size: 7px; font-weight: 600; color: #666; margin-bottom: 3px; }
 
   .row { display: flex; gap: 8px; margin-bottom: 6px; }
   .col { flex: 1; }
@@ -438,6 +439,7 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
   const tp = data.tradePlan;
   const v = data.verdict;
   const tk = data.tokenomics;
+  const ind = data.indicatorDetails;
   const isLong = tp?.direction === 'long';
   const score = formatPercent(v?.overallScore);
   const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'Day Trade', swing: 'Swing Trade' };
@@ -445,6 +447,15 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
   const mpGate = getGateStatus(mp.gate);
   const asGate = getGateStatus(as.gate);
   const scGate = getGateStatus(sc.gate);
+
+  // Generate step summaries from AI insights
+  const mpSummary = mp.aiSummary || (mp.gate?.reason ? `Market conditions: ${mp.gate.reason}` : '');
+  const asSummary = as.aiInsight || (as.gate?.reason ? `Asset analysis: ${as.gate.reason}` : '');
+  const scSummary = sc.aiInsight || (sc.gate?.reason ? `Safety assessment: ${sc.gate.reason}` : '');
+
+  // Get trend indicators for Asset Scanner step
+  const trendIndicators = ind?.trend ? Object.values(ind.trend).filter(Boolean).slice(0, 4) : [];
+  const momentumIndicators = ind?.momentum ? Object.values(ind.momentum).filter(Boolean).slice(0, 3) : [];
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
@@ -560,7 +571,8 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
         </div>
       </div>
       ` : ''}
-          </div>
+      ${mpSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${mpSummary}</div>` : ''}
+    </div>
 
     <!-- Step 02: Asset Scanner -->
     <div class="step-box">
@@ -595,7 +607,20 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
         <span style="margin-left: 12px;">Resistance: <span class="text-red">${as.levels.resistance.slice(0, 2).map(r => formatPrice(r)).join(', ')}</span></span>
       </div>
       ` : ''}
+      ${trendIndicators.length > 0 ? `
+      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Key Indicators</div>
+      <div class="row" style="margin-top: 4px;">
+        ${trendIndicators.slice(0, 4).map(i => `
+          <div class="col metric metric-sm">
+            <div class="metric-label">${i?.name || ''}</div>
+            <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? i.value.toFixed(2) : i?.value || '-'}</div>
+            <div class="metric-note">${i?.signal || ''}</div>
           </div>
+        `).join('')}
+      </div>
+      ` : ''}
+      ${asSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${asSummary}</div>` : ''}
+    </div>
 
     <!-- Step 03: Safety Check -->
     <div class="step-box">
@@ -622,7 +647,13 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
           <div class="metric-value">${formatDirection(sc.smartMoney?.positioning)}</div>
         </div>
       </div>
-          </div>
+      ${sc.warnings && sc.warnings.length > 0 ? `
+      <div style="margin-top: 4px; font-size: 7px; color: #dc2626;">
+        ${sc.warnings.slice(0, 2).map(w => `<span style="margin-right: 8px;">⚠ ${w}</span>`).join('')}
+      </div>
+      ` : ''}
+      ${scSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${scSummary}</div>` : ''}
+    </div>
 
     <div class="footer">
       <span><span class="brand-trade">Trader</span><span class="brand-path">Path</span> | ID: ${data.analysisId?.slice(-10) || '-'}</span>
@@ -648,6 +679,14 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
 
   // Get relevant indicators for timing decision
   const ind = data.indicatorDetails;
+
+  // Step summaries
+  const tmSummary = tm.aiInsight || (tm.gate?.reason ? `Timing analysis: ${tm.gate.reason}` : '');
+  const tpSummary = tp.aiInsight || (tp.gate?.reason ? `Trade plan: ${tp.gate.reason}` : '');
+  const tcSummary = tc?.aiInsight || (tc?.gate?.reason ? `Trap check: ${tc.gate.reason}` : '');
+
+  // Get momentum indicators for timing step
+  const momentumIndicators = ind?.momentum ? Object.values(ind.momentum).filter(Boolean).slice(0, 4) : [];
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
@@ -709,7 +748,20 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
         `).join('')}
       </div>
       ` : ''}
+      ${momentumIndicators.length > 0 ? `
+      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Momentum Indicators</div>
+      <div class="row" style="margin-top: 4px;">
+        ${momentumIndicators.slice(0, 4).map(i => `
+          <div class="col metric metric-sm">
+            <div class="metric-label">${i?.name || ''}</div>
+            <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? i.value.toFixed(2) : i?.value || '-'}</div>
+            <div class="metric-note">${i?.signal || ''}</div>
           </div>
+        `).join('')}
+      </div>
+      ` : ''}
+      ${tmSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tmSummary}</div>` : ''}
+    </div>
 
     <!-- Step 05: Trade Plan with Chart Inside -->
     <div class="step-box">
@@ -768,6 +820,7 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
         <img src="${data.chartImage}" style="width: 100%; height: auto; max-height: 150px; display: block; object-fit: contain;" alt="Trade Plan Chart" />
       </div>
       ` : ''}
+      ${tpSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tpSummary}</div>` : ''}
     </div>
 
     <!-- Step 06: Trap Check -->
@@ -797,7 +850,8 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
         </div>
       </div>
       ${tc.proTip ? `<div style="margin-top: 6px; font-size: 7px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 3px; padding: 6px;"><strong>Pro Tip:</strong> ${tc.proTip}</div>` : ''}
-          </div>
+      ${tcSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tcSummary}</div>` : ''}
+    </div>
     ` : ''}
 
     <!-- Indicator Summary Box -->
