@@ -36,7 +36,7 @@ export default function AuthLayout({
   return (
     <div className="min-h-screen flex bg-background">
       {/* Left Side - Marketing (hidden on mobile) */}
-      <div className="hidden lg:flex lg:w-[45%] xl:w-[40%] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div
@@ -49,60 +49,67 @@ export default function AuthLayout({
         </div>
 
         {/* Gradient Orbs */}
-        <div className="absolute top-10 left-10 w-48 h-48 bg-teal-500/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-64 h-64 bg-coral-500/20 rounded-full blur-3xl" />
+        <div className="absolute top-20 left-20 w-64 h-64 bg-teal-500/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-20 w-80 h-80 bg-coral-500/20 rounded-full blur-3xl" />
 
-        {/* Content - Centered */}
-        <div className="relative z-10 flex flex-col items-center justify-center w-full px-8 py-8">
-          {/* Logo & Brand */}
-          <div className="text-center mb-6">
-            <Link href="/" className="inline-block mb-3">
+        {/* Content */}
+        <div className="relative z-10 flex flex-col w-full px-12 py-10">
+          {/* Logo at Top */}
+          <div className="mb-auto">
+            <Link href="/">
               <TraderPathLogo size="lg" showText={false} />
             </Link>
-            <h2 className="text-3xl font-bold gradient-text-brand">TraderPath</h2>
-            <p className="text-sm text-slate-400 mt-1">From Charts to Clarity</p>
           </div>
 
-          {/* Motto */}
-          <p className="text-center text-slate-300 text-sm leading-relaxed max-w-xs mb-6">
-            Make smarter trading decisions with AI-powered analysis. Our 7-step system analyzes
-            40+ indicators to give you clear GO or NO-GO signals.
-          </p>
+          {/* Main Content - Vertically Centered */}
+          <div className="flex-1 flex flex-col justify-center">
+            {/* Brand Name - Aligned with "Welcome back!" */}
+            <div className="mb-6">
+              <h2 className="text-4xl font-bold gradient-text-brand">TraderPath</h2>
+              <p className="text-base text-slate-400 mt-2">From Charts to Clarity</p>
+            </div>
 
-          {/* Features - Compact Grid */}
-          <div className="grid grid-cols-2 gap-3 mb-6 w-full max-w-sm">
-            {FEATURES.map((feature, index) => (
-              <div key={index} className="flex items-start gap-2 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
-                  <feature.icon className="w-4 h-4 text-teal-400" />
+            {/* Motto */}
+            <p className="text-slate-300 text-base leading-relaxed max-w-md mb-8">
+              Make smarter trading decisions with AI-powered analysis. Our 7-step system analyzes
+              40+ indicators to give you clear GO or NO-GO signals.
+            </p>
+
+            {/* Features - 2x2 Grid */}
+            <div className="grid grid-cols-2 gap-4 mb-8 max-w-md">
+              {FEATURES.map((feature, index) => (
+                <div key={index} className="flex items-start gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
+                    <feature.icon className="w-5 h-5 text-teal-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-white text-sm">{feature.title}</h3>
+                    <p className="text-slate-400 text-xs leading-snug">{feature.description}</p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <h3 className="font-medium text-white text-xs">{feature.title}</h3>
-                  <p className="text-slate-400 text-[10px] leading-tight">{feature.description}</p>
-                </div>
+              ))}
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-6 pt-6 border-t border-white/10 max-w-md">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-white">40+</div>
+                <div className="text-xs text-slate-400">Indicators</div>
               </div>
-            ))}
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/10 w-full max-w-xs">
-            <div className="text-center">
-              <div className="text-xl font-bold text-white">40+</div>
-              <div className="text-[10px] text-slate-400">Indicators</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-white">7</div>
-              <div className="text-[10px] text-slate-400">Steps</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-white">AI</div>
-              <div className="text-[10px] text-slate-400">Powered</div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-white">7</div>
+                <div className="text-xs text-slate-400">Steps</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-white">AI</div>
+                <div className="text-xs text-slate-400">Powered</div>
+              </div>
             </div>
           </div>
 
-          {/* Trust Badge */}
-          <div className="mt-4 flex items-center gap-1.5 text-slate-400 text-xs">
-            <CheckCircle className="w-3.5 h-3.5 text-teal-400" />
+          {/* Trust Badge at Bottom */}
+          <div className="mt-auto flex items-center gap-2 text-slate-400 text-sm">
+            <CheckCircle className="w-4 h-4 text-teal-400" />
             <span>Trusted by traders worldwide</span>
           </div>
         </div>
@@ -124,7 +131,7 @@ export default function AuthLayout({
         </div>
 
         {/* Form Container */}
-        <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 lg:py-12 relative overflow-hidden">
+        <div className="flex-1 flex items-center justify-center px-6 sm:px-8 py-10 lg:py-12 relative overflow-hidden">
           {/* Animated Gradient Wave Background */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div
