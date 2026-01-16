@@ -127,6 +127,7 @@ export interface AnalysisReportData {
     verdict?: string;
     overallScore: number;
     aiSummary?: string;
+    tokenomicsInsight?: string;
     componentScores?: Record<string, number>;
     confidenceFactors?: Array<{ factor: string; positive: boolean; impact?: string }>;
     recommendation?: string;
@@ -383,18 +384,17 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
-    <div class="header">
-      <div class="brand">
+    <!-- Centered Brand Header for Executive Summary -->
+    <div style="text-align: center; padding: 15px 0 20px 0; border-bottom: 2px solid #1a1a1a; margin-bottom: 15px;">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px;">
         <div class="logo">${logoSvg}</div>
-        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+        <div class="brand-name" style="font-size: 28px;"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
       </div>
-      <div class="header-center">
-        <div class="report-title">Executive Summary</div>
-        <div class="report-subtitle">${tradeTypes[data.tradeType || ''] || 'Analysis'} | ${data.generatedAt}</div>
-      </div>
-      <div class="header-right">
-        <span class="symbol">${data.symbol}/USDT</span>
-        <span class="direction-tag ${isLong ? 'tag-long' : 'tag-short'}">${isLong ? 'LONG' : 'SHORT'}</span>
+      <div style="font-size: 11px; font-weight: 600; color: #1a1a1a; text-transform: uppercase; letter-spacing: 1px;">Executive Summary</div>
+      <div style="font-size: 9px; color: #666; margin-top: 3px;">${tradeTypes[data.tradeType || ''] || 'Analysis'} | ${data.generatedAt}</div>
+      <div style="margin-top: 8px;">
+        <span class="symbol" style="font-size: 18px;">${data.symbol}/USDT</span>
+        <span class="direction-tag ${isLong ? 'tag-long' : 'tag-short'}" style="font-size: 14px; margin-left: 10px;">${isLong ? 'LONG' : 'SHORT'}</span>
       </div>
     </div>
 
@@ -681,6 +681,14 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
         </div>
       </div>
     </div>
+
+    <!-- AI Tokenomics Insight -->
+    ${data.verdict?.tokenomicsInsight ? `
+    <div class="step-summary" style="margin-top: 15px; background: #f0f9f0; border-left: 3px solid #16a34a; padding: 10px 12px;">
+      <div style="font-size: 9px; font-weight: 600; color: #16a34a; margin-bottom: 5px;">AI Tokenomics Analysis</div>
+      <div style="font-size: 8px; color: #333; line-height: 1.5;">${data.verdict.tokenomicsInsight}</div>
+    </div>
+    ` : ''}
     ` : `
     <!-- No Tokenomics Data -->
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 500px; text-align: center;">
@@ -1211,13 +1219,29 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
 
 export async function captureChartAsImage(): Promise<string | null> {
   try {
-    const element = document.getElementById('trade-plan-chart');
-    if (!element) return null;
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Try multiple possible chart IDs
+    const chartIds = ['trade-plan-chart-visible', 'trade-plan-chart', 'tradingview-chart'];
+    let element: HTMLElement | null = null;
+
+    for (const id of chartIds) {
+      element = document.getElementById(id);
+      if (element) {
+        console.log(`[Chart Capture] Found chart element with id: ${id}`);
+        break;
+      }
+    }
+
+    if (!element) {
+      console.warn('[Chart Capture] No chart element found with IDs:', chartIds);
+      return null;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 800));
     const canvas = await html2canvas(element, { backgroundColor: '#ffffff', scale: 2, logging: false, useCORS: true, allowTaint: true });
+    console.log('[Chart Capture] Chart captured successfully');
     return canvas.toDataURL('image/png');
   } catch (error) {
-    console.error('Chart capture failed:', error);
+    console.error('[Chart Capture] Failed:', error);
     return null;
   }
 }
