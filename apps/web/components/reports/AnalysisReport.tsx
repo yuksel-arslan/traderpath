@@ -1210,13 +1210,29 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
 
 export async function captureChartAsImage(): Promise<string | null> {
   try {
-    const element = document.getElementById('trade-plan-chart');
-    if (!element) return null;
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Try multiple possible chart IDs
+    const chartIds = ['trade-plan-chart-visible', 'trade-plan-chart', 'tradingview-chart'];
+    let element: HTMLElement | null = null;
+
+    for (const id of chartIds) {
+      element = document.getElementById(id);
+      if (element) {
+        console.log(`[Chart Capture] Found chart element with id: ${id}`);
+        break;
+      }
+    }
+
+    if (!element) {
+      console.warn('[Chart Capture] No chart element found with IDs:', chartIds);
+      return null;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 800));
     const canvas = await html2canvas(element, { backgroundColor: '#ffffff', scale: 2, logging: false, useCORS: true, allowTaint: true });
+    console.log('[Chart Capture] Chart captured successfully');
     return canvas.toDataURL('image/png');
   } catch (error) {
-    console.error('Chart capture failed:', error);
+    console.error('[Chart Capture] Failed:', error);
     return null;
   }
 }

@@ -523,15 +523,33 @@ export function DownloadReportButton({
 
       // Extract tokenomics from assetScan data (Step 2)
       const step2Data = analysisData[2] as Record<string, unknown>;
+      console.log('[PDF Report] Step 2 data keys:', step2Data ? Object.keys(step2Data) : 'none');
+      console.log('[PDF Report] Tokenomics data:', step2Data?.tokenomics ? 'present' : 'missing');
       if (step2Data?.tokenomics) {
         reportData.tokenomics = step2Data.tokenomics as AnalysisReportData['tokenomics'];
+      }
+
+      // Extract indicatorDetails from assetScan data (Step 2)
+      if (step2Data?.indicatorDetails) {
+        reportData.indicatorDetails = step2Data.indicatorDetails as AnalysisReportData['indicatorDetails'];
+        console.log('[PDF Report] Indicator details: present');
       }
 
       // Fetch existing AI Expert comment if we have an analysisId
       if (analysisId) {
         const aiExpertComment = await fetchAiExpertComment(analysisId);
         if (aiExpertComment) {
-          reportData.aiExpertComment = aiExpertComment;
+          // Verify the comment is for the correct symbol (check if symbol appears in comment)
+          const upperSymbol = symbol.toUpperCase();
+          const commentHasSymbol = aiExpertComment.includes(upperSymbol) ||
+                                   aiExpertComment.includes(`${upperSymbol}/USDT`) ||
+                                   aiExpertComment.includes(`${upperSymbol}USDT`);
+          if (commentHasSymbol) {
+            reportData.aiExpertComment = aiExpertComment;
+            console.log('[PDF Report] AI Expert comment matches symbol:', upperSymbol);
+          } else {
+            console.warn('[PDF Report] AI Expert comment is for a different symbol, skipping');
+          }
         }
       }
 
