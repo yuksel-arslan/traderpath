@@ -36,7 +36,7 @@ export default function AuthLayout({
   return (
     <div className="min-h-screen flex bg-background">
       {/* Left Side - Marketing (hidden on mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-[45%] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+      <div className="hidden lg:flex lg:items-center lg:justify-center lg:w-1/2 xl:w-[45%] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div
@@ -53,7 +53,7 @@ export default function AuthLayout({
         <div className="absolute bottom-20 right-20 w-96 h-96 bg-coral-500/20 rounded-full blur-3xl" />
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center h-full px-12 xl:px-16 py-12">
+        <div className="relative z-10 flex flex-col px-12 xl:px-16 py-12">
           {/* Logo Icon */}
           <div className="mb-4">
             <Link href="/">
