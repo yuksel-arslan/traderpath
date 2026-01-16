@@ -179,7 +179,7 @@ function formatRegime(regime: string | undefined): string {
   return map[regime.toLowerCase()] || regime.charAt(0).toUpperCase() + regime.slice(1).replace(/_/g, ' ');
 }
 
-function formatDirection(dir: string | undefined): string {
+function formatDirection(dir: string | null | undefined): string {
   if (!dir) return 'Neutral';
   return dir.charAt(0).toUpperCase() + dir.slice(1);
 }
