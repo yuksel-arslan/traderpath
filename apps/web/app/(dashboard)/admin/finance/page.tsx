@@ -406,14 +406,23 @@ export default function FinancePage() {
             <p className="text-muted-foreground mt-1">Revenue, costs, pricing & packages</p>
           </div>
         </div>
-        <button
-          onClick={() => fetchData(true)}
-          disabled={isRefreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/simulation"
+            className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-accent transition"
+          >
+            <Calculator className="w-4 h-4" />
+            Simulation
+          </Link>
+          <button
+            onClick={() => fetchData(true)}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Success Message */}
