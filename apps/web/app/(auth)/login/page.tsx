@@ -46,6 +46,10 @@ export default function LoginPage() {
         backend_error: 'Server error during login. Please try again.',
         no_token: 'Authentication failed. Please try again.',
         oauth_error: 'OAuth error occurred. Please try again.',
+        SERVER_ERROR: 'Google OAuth server error. Please check OAuth configuration or try again later.',
+        access_denied: 'Access denied. Please grant permissions to continue.',
+        invalid_request: 'Invalid OAuth request. Please try again.',
+        redirect_uri_mismatch: 'OAuth redirect URI mismatch. Please contact support.',
       };
       setError(errorMessages[errorParam] || `Login error: ${errorParam}`);
     }
