@@ -534,7 +534,7 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
       <!-- Trade Plan Chart -->
       ${data.chartImage ? `
       <div style="margin-top: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
-        <img src="${data.chartImage}" style="width: 100%; height: auto; max-height: 120px; display: block; object-fit: contain;" alt="Trade Plan Chart" />
+        <img src="${data.chartImage}" style="width: 100%; height: auto; max-height: 200px; display: block; object-fit: contain;" alt="Trade Plan Chart" />
       </div>
       ` : ''}
     </div>
@@ -878,7 +878,7 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
       <!-- Trade Plan Chart Inside the Box -->
       ${data.chartImage ? `
       <div style="margin-top: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
-        <img src="${data.chartImage}" style="width: 100%; height: auto; max-height: 150px; display: block; object-fit: contain;" alt="Trade Plan Chart" />
+        <img src="${data.chartImage}" style="width: 100%; height: auto; max-height: 220px; display: block; object-fit: contain;" alt="Trade Plan Chart" />
       </div>
       ` : ''}
       ${tpSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tpSummary}</div>` : ''}
