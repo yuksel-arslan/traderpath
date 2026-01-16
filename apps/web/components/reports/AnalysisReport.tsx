@@ -30,7 +30,6 @@ export interface AnalysisReportData {
     gate?: { canProceed: boolean; reason: string; confidence: number };
   };
 
-  // Tokenomics data (optional)
   tokenomics?: {
     supply: {
       circulating: number;
@@ -125,7 +124,7 @@ export interface AnalysisReportData {
 
   verdict: {
     action?: string;
-    verdict?: string; // API returns 'verdict', some places use 'action'
+    verdict?: string;
     overallScore: number;
     aiSummary?: string;
     componentScores?: Record<string, number>;
@@ -144,7 +143,6 @@ export interface AnalysisReportData {
     divergences?: Array<{ type: 'bullish' | 'bearish' | 'none'; indicator: string; description: string; reliability: 'high' | 'medium' | 'low'; isEarlySignal: boolean }>;
     summary?: { bullishIndicators: number; bearishIndicators: number; neutralIndicators: number; totalIndicatorsUsed: number; overallSignal: 'bullish' | 'bearish' | 'neutral'; signalConfidence: number; leadingIndicatorsSignal: 'bullish' | 'bearish' | 'neutral' | 'mixed' };
   };
-
 }
 
 interface IndicatorDetailItem {
@@ -171,6 +169,15 @@ function formatPrice(price: number | undefined): string {
   return `$${price.toFixed(6)}`;
 }
 
+function formatLargeNumber(num: number | undefined | null): string {
+  if (!num) return '-';
+  if (num >= 1e12) return `$${(num / 1e12).toFixed(2)}T`;
+  if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
+  if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
+  if (num >= 1e3) return `$${(num / 1e3).toFixed(2)}K`;
+  return `$${num.toFixed(0)}`;
+}
+
 function formatVolume(vol: number | undefined): string {
   if (!vol) return '-';
   if (vol >= 1e9) return `$${(vol / 1e9).toFixed(2)}B`;
@@ -181,18 +188,10 @@ function formatVolume(vol: number | undefined): string {
 
 function formatPercent(val: number | undefined): string {
   if (val === undefined || isNaN(val)) return '-';
-  // Normalize: handle different scales
-  // 0-1 range (0.75) -> multiply by 100 = 75%
-  // 0-10 range (7.5) -> multiply by 10 = 75%
-  // 0-100 range (75) -> keep as is = 75%
   let pct: number;
-  if (val <= 1) {
-    pct = val * 100;
-  } else if (val <= 10) {
-    pct = val * 10;
-  } else {
-    pct = val;
-  }
+  if (val <= 1) pct = val * 100;
+  else if (val <= 10) pct = val * 10;
+  else pct = val;
   const capped = Math.min(Math.max(pct, 0), 100);
   return `${capped.toFixed(0)}%`;
 }
@@ -205,14 +204,8 @@ function formatRiskReward(rr: number | undefined): string {
 function formatRegime(regime: string | undefined): string {
   if (!regime) return 'Normal';
   const map: Record<string, string> = {
-    'risk_on': 'Risk On',
-    'risk_off': 'Risk Off',
-    'risk-on': 'Risk On',
-    'risk-off': 'Risk Off',
-    'normal': 'Normal',
-    'volatile': 'Volatile',
-    'trending': 'Trending',
-    'ranging': 'Ranging'
+    'risk_on': 'Risk On', 'risk_off': 'Risk Off', 'risk-on': 'Risk On', 'risk-off': 'Risk Off',
+    'normal': 'Normal', 'volatile': 'Volatile', 'trending': 'Trending', 'ranging': 'Ranging'
   };
   return map[regime.toLowerCase()] || regime.charAt(0).toUpperCase() + regime.slice(1).replace(/_/g, ' ');
 }
@@ -222,41 +215,26 @@ function formatDirection(dir: string | null | undefined): string {
   return dir.charAt(0).toUpperCase() + dir.slice(1);
 }
 
-// Gate status - softer language
 function getGateStatus(gate: { canProceed: boolean; confidence: number } | undefined): { text: string; color: string } {
   if (!gate) return { text: '', color: '#666' };
   const conf = formatPercent(gate.confidence);
-  if (gate.canProceed) {
-    return { text: `Passed ${conf}`, color: '#16a34a' };
-  } else {
-    return { text: `Review ${conf}`, color: '#d97706' };
-  }
+  return gate.canProceed ? { text: `Passed ${conf}`, color: '#16a34a' } : { text: `Review ${conf}`, color: '#d97706' };
 }
 
-// Format action text (conditional_go → Conditionally GO)
-// Accepts either verdict.action or verdict.verdict field
 function formatAction(actionOrVerdict: string | undefined): string {
   if (!actionOrVerdict) return 'ANALYSIS COMPLETE';
   const map: Record<string, string> = {
-    'go': 'GO',
-    'conditional_go': 'Conditionally GO',
-    'conditionally_go': 'Conditionally GO',
-    'wait': 'WAIT',
-    'no_go': 'NO GO',
-    'avoid': 'AVOID',
-    'stop': 'STOP',
-    'hold': 'HOLD',
+    'go': 'GO', 'conditional_go': 'Conditionally GO', 'conditionally_go': 'Conditionally GO',
+    'wait': 'WAIT', 'no_go': 'NO GO', 'avoid': 'AVOID', 'stop': 'STOP', 'hold': 'HOLD',
   };
   const lower = actionOrVerdict.toLowerCase().replace(/-/g, '_');
   return map[lower] || actionOrVerdict.toUpperCase().replace(/_/g, ' ');
 }
 
-// Get action from verdict object (supports both action and verdict fields)
 function getVerdictAction(v: { action?: string; verdict?: string } | undefined): string {
   return v?.action || v?.verdict || '';
 }
 
-// Format indicator value for display
 function formatIndicatorValue(value: number | string | null | undefined): string {
   if (value === null || value === undefined) return '-';
   if (typeof value === 'string') return value;
@@ -266,30 +244,21 @@ function formatIndicatorValue(value: number | string | null | undefined): string
   return value.toFixed(4);
 }
 
-// Render indicator table for a category
 function renderIndicatorTable(indicators: Record<string, IndicatorDetailItem | undefined> | undefined, title: string): string {
   if (!indicators) return '';
   const items = Object.values(indicators).filter((i): i is IndicatorDetailItem => i !== undefined);
   if (items.length === 0) return '';
-
   return `
-    <div class="section" style="margin-bottom: 8px;">
-      <div style="font-size: 8px; font-weight: 600; margin-bottom: 4px; color: #333;">${title} Indicators (${items.length})</div>
+    <div class="section" style="margin-bottom: 6px;">
+      <div style="font-size: 7px; font-weight: 600; margin-bottom: 3px; color: #333;">${title} (${items.length})</div>
       <table class="table indicator-table">
-        <tr>
-          <th style="width: 22%;">Indicator</th>
-          <th style="width: 15%;">Value</th>
-          <th style="width: 12%;">Signal</th>
-          <th style="width: 10%;">Strength</th>
-          <th style="width: 41%;">Interpretation</th>
-        </tr>
-        ${items.map(ind => `
+        <tr><th style="width: 25%;">Indicator</th><th style="width: 15%;">Value</th><th style="width: 12%;">Signal</th><th style="width: 48%;">Interpretation</th></tr>
+        ${items.slice(0, 6).map(ind => `
           <tr>
             <td style="font-weight: 500;">${ind.name}${ind.isLeadingIndicator ? ' *' : ''}</td>
             <td>${formatIndicatorValue(ind.value)}</td>
             <td class="${ind.signal === 'bullish' ? 'text-green' : ind.signal === 'bearish' ? 'text-red' : ''}" style="font-weight: 600;">${ind.signal.toUpperCase()}</td>
-            <td>${ind.signalStrength}</td>
-            <td style="font-size: 6.5px;">${ind.interpretation?.slice(0, 80) || '-'}${(ind.interpretation?.length || 0) > 80 ? '...' : ''}</td>
+            <td style="font-size: 6px;">${ind.interpretation?.slice(0, 60) || '-'}${(ind.interpretation?.length || 0) > 60 ? '...' : ''}</td>
           </tr>
         `).join('')}
       </table>
@@ -297,18 +266,13 @@ function renderIndicatorTable(indicators: Record<string, IndicatorDetailItem | u
   `;
 }
 
-// Logo SVG inline
 const logoSvg = `<svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="tealGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#5EEDC3"/>
-      <stop offset="50%" stop-color="#2DD4A8"/>
-      <stop offset="100%" stop-color="#14B8A6"/>
+      <stop offset="0%" stop-color="#5EEDC3"/><stop offset="50%" stop-color="#2DD4A8"/><stop offset="100%" stop-color="#14B8A6"/>
     </linearGradient>
     <linearGradient id="coralGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FF8A9B"/>
-      <stop offset="50%" stop-color="#F87171"/>
-      <stop offset="100%" stop-color="#EF5A6F"/>
+      <stop offset="0%" stop-color="#FF8A9B"/><stop offset="50%" stop-color="#F87171"/><stop offset="100%" stop-color="#EF5A6F"/>
     </linearGradient>
   </defs>
   <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealGradient)"/>
@@ -325,11 +289,9 @@ const styles = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 9px; color: #1a1a1a; background: #fff; line-height: 1.35; }
   .page { width: 595px; height: 842px; padding: 20px 24px; position: relative; }
-
-  .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 2px solid #1a1a1a; margin-bottom: 14px; }
+  .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid #1a1a1a; margin-bottom: 12px; }
   .brand { display: flex; align-items: center; gap: 8px; }
   .logo { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
-  .logo svg { width: 32px; height: 32px; }
   .brand-name { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
   .brand-trade { color: #dc2626; }
   .brand-path { color: #16a34a; }
@@ -344,83 +306,47 @@ const styles = `
   .score-box { margin-top: 4px; }
   .score-value { font-size: 16px; font-weight: 700; }
   .score-label { font-size: 7px; color: #666; }
-
-  .section { margin-bottom: 12px; }
-  .section-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
+  .section { margin-bottom: 10px; }
+  .section-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; border-bottom: 1px solid #e0e0e0; padding-bottom: 3px; }
   .step-num { font-size: 8px; font-weight: 600; color: #666; }
   .section-title { font-size: 10px; font-weight: 600; color: #1a1a1a; }
-  .gate-status { margin-left: auto; font-size: 7px; font-weight: 600; }
-
-  /* Step Box Styling */
-  .step-box { border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; background: #fafafa; }
-  .step-box-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
+  .step-box { border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; background: #fafafa; }
+  .step-box-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid #eee; }
   .step-box-num { font-size: 9px; font-weight: 700; color: #666; }
   .step-box-title { font-size: 10px; font-weight: 600; color: #1a1a1a; }
   .step-box-gate { margin-left: auto; font-size: 7px; font-weight: 600; }
-  .step-summary { font-size: 7px; color: #333; background: #f0f0f0; border-left: 2px solid #16a34a; padding: 6px 8px; margin-top: 8px; line-height: 1.5; }
-  .step-summary-title { font-size: 7px; font-weight: 600; color: #666; margin-bottom: 3px; }
-
-  .row { display: flex; gap: 8px; margin-bottom: 6px; }
+  .row { display: flex; gap: 6px; margin-bottom: 5px; }
   .col { flex: 1; }
   .col-2 { flex: 2; }
-
-  .metric { background: #fafafa; border: 1px solid #eee; border-radius: 3px; padding: 6px 8px; }
-  .metric-sm { padding: 4px 6px; }
-  .metric-label { font-size: 7px; color: #666; text-transform: uppercase; letter-spacing: 0.3px; }
-  .metric-value { font-size: 11px; font-weight: 600; color: #1a1a1a; margin-top: 1px; }
-  .metric-value-lg { font-size: 13px; }
-  .metric-note { font-size: 7px; color: #888; margin-top: 1px; }
-
+  .metric { background: #fafafa; border: 1px solid #eee; border-radius: 3px; padding: 5px 7px; }
+  .metric-sm { padding: 3px 5px; }
+  .metric-label { font-size: 6px; color: #666; text-transform: uppercase; letter-spacing: 0.3px; }
+  .metric-value { font-size: 10px; font-weight: 600; color: #1a1a1a; margin-top: 1px; }
+  .metric-value-lg { font-size: 12px; }
+  .metric-value-xl { font-size: 18px; }
+  .metric-note { font-size: 6px; color: #888; margin-top: 1px; }
   .text-green { color: #16a34a; }
   .text-red { color: #dc2626; }
   .text-amber { color: #d97706; }
   .text-muted { color: #666; }
-
-  .list { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; }
-  .list-item { display: flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 8px; }
-  .list-icon { width: 12px; text-align: center; font-weight: 600; }
+  .list { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; }
+  .list-item { display: flex; align-items: center; gap: 5px; padding: 2px 0; font-size: 7px; }
+  .list-icon { width: 10px; text-align: center; font-weight: 600; }
   .list-icon-y { color: #16a34a; }
   .list-icon-n { color: #dc2626; }
-
   .table { width: 100%; border-collapse: collapse; }
-  .table th { text-align: left; font-size: 7px; font-weight: 600; color: #666; text-transform: uppercase; padding: 4px 6px; border-bottom: 1px solid #ddd; background: #f9fafb; }
-  .table td { font-size: 7px; padding: 4px 6px; border-bottom: 1px solid #f0f0f0; }
+  .table th { text-align: left; font-size: 6px; font-weight: 600; color: #666; text-transform: uppercase; padding: 3px 5px; border-bottom: 1px solid #ddd; background: #f9fafb; }
+  .table td { font-size: 7px; padding: 3px 5px; border-bottom: 1px solid #f0f0f0; }
   .table tr:last-child td { border-bottom: none; }
-  .table tr:nth-child(even) { background: #fafafa; }
-  .indicator-table { font-size: 7px; }
-  .indicator-table th { font-size: 6px; padding: 3px 4px; }
-  .indicator-table td { font-size: 6.5px; padding: 2px 4px; }
-
-  .indicator-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
-  .indicator-item { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; border-bottom: 1px solid #f5f5f5; font-size: 8px; }
-  .indicator-name { color: #444; }
-  .indicator-value { font-weight: 600; min-width: 50px; text-align: right; }
-  .indicator-signal { font-size: 7px; min-width: 45px; text-align: right; }
-  .leading-badge { font-size: 6px; background: #e0e7ff; color: #3730a3; padding: 1px 3px; border-radius: 2px; margin-left: 3px; }
-
+  .indicator-table th { font-size: 5px; padding: 2px 3px; }
+  .indicator-table td { font-size: 6px; padding: 2px 3px; }
+  .verdict-box { border: 2px solid #1a1a1a; border-radius: 6px; padding: 15px; margin-bottom: 12px; text-align: center; }
+  .verdict-action { font-size: 28px; font-weight: 700; }
+  .verdict-subtitle { font-size: 9px; color: #666; margin-top: 6px; line-height: 1.5; }
+  .chart-container { border: 1px solid #ddd; border-radius: 6px; background: #fff; padding: 8px; margin: 10px 0; }
+  .chart-container img { width: 100%; height: auto; display: block; }
   .summary-box { background: #f8f9fa; border-left: 3px solid #1a1a1a; padding: 8px 10px; margin-top: 8px; }
   .summary-text { font-size: 8px; color: #333; line-height: 1.5; }
-
-  .verdict-box { border: 2px solid #1a1a1a; border-radius: 4px; padding: 12px; margin-bottom: 10px; }
-  .verdict-row { display: flex; justify-content: space-between; align-items: center; }
-  .verdict-action { font-size: 16px; font-weight: 700; }
-  .verdict-action-centered { font-size: 16px; font-weight: 700; text-align: center; display: block; }
-  .verdict-subtitle-centered { font-size: 8px; color: #666; margin-top: 4px; text-align: center; }
-  .verdict-score { text-align: center; }
-  .verdict-score-value { font-size: 32px; font-weight: 700; }
-  .verdict-score-label { font-size: 8px; color: #666; }
-
-  /* Indicator Summary Box */
-  .indicator-summary-box { border: 1px solid #d0d0d0; border-radius: 6px; padding: 12px; margin-top: 10px; background: linear-gradient(180deg, #f8f9fa 0%, #fff 100%); }
-  .indicator-summary-header { font-size: 10px; font-weight: 600; color: #1a1a1a; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
-  .ai-comment { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1px solid #86efac; border-radius: 4px; padding: 8px 10px; margin-top: 8px; }
-  .ai-comment-header { font-size: 7px; font-weight: 600; color: #166534; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
-  .ai-comment-text { font-size: 7px; color: #15803d; line-height: 1.5; }
-
-  .factor-list { }
-  .factor-item { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 8px; }
-  .factor-icon { font-weight: 700; width: 14px; text-align: center; }
-
   .footer { position: absolute; bottom: 8px; left: 24px; right: 24px; font-size: 6px; color: #999; border-top: 1px solid #eee; padding-top: 4px; }
   .footer-row { display: flex; justify-content: space-between; align-items: center; }
   .footer-disclaimer { font-size: 5px; color: #b91c1c; margin-top: 2px; line-height: 1.3; }
@@ -443,100 +369,354 @@ function generateFooter(data: AnalysisReportData, pageNum: number, totalPages: n
 // PAGE 1: Executive Summary
 // ===========================================
 
-function generatePage1(data: AnalysisReportData, totalPages: number = 5): string {
-  const mp = data.marketPulse;
-  const as = data.assetScan;
+function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: number): string {
   const tp = data.tradePlan;
   const v = data.verdict;
-  const tk = data.tokenomics;
-  const ind = data.indicatorDetails;
+  const as = data.assetScan;
+  const mp = data.marketPulse;
   const isLong = tp?.direction === 'long';
   const score = formatPercent(v?.overallScore);
   const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'Day Trade', swing: 'Swing Trade' };
-
-  const mpGate = getGateStatus(mp.gate);
-  const asGate = getGateStatus(as.gate);
-
-  // Generate step summaries from gate reasons
-  const mpSummary = mp.gate?.reason ? `Market conditions: ${mp.gate.reason}` : '';
-  const asSummary = as.gate?.reason ? `Asset analysis: ${as.gate.reason}` : '';
-
-  // STEP 1: Market Pulse → TREND indicators (ADX, ICHIMOKU, EMA, BOLLINGER)
-  const mpIndicators = ind?.trend ? Object.values(ind.trend).filter(Boolean).slice(0, 4) : [];
-
-  // STEP 2: Asset Scanner → VOLUME indicators (VWAP, OBV, CMF, AD, LIQUIDITY_SCORE)
-  const asIndicators = ind?.volume ? Object.values(ind.volume).filter(Boolean).slice(0, 4) : [];
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
     <div class="header">
       <div class="brand">
         <div class="logo">${logoSvg}</div>
-        <div>
-          <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
-        </div>
+        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">AI-Based Analysis Report</div>
-        <div class="report-subtitle">${tradeTypes[data.tradeType || ''] || 'Comprehensive Analysis'} | ${data.generatedAt}</div>
+        <div class="report-title">Executive Summary</div>
+        <div class="report-subtitle">${tradeTypes[data.tradeType || ''] || 'Analysis'} | ${data.generatedAt}</div>
       </div>
       <div class="header-right">
-        <div>
-          <span class="symbol">${data.symbol}/USDT</span>
-          <span class="direction-tag ${isLong ? 'tag-long' : 'tag-short'}">${isLong ? 'LONG' : 'SHORT'}</span>
-        </div>
-        <div class="score-box">
-          <span class="score-value ${isLong ? 'text-green' : 'text-red'}">${score}</span>
-          <span class="score-label"> confidence</span>
-        </div>
+        <span class="symbol">${data.symbol}/USDT</span>
+        <span class="direction-tag ${isLong ? 'tag-long' : 'tag-short'}">${isLong ? 'LONG' : 'SHORT'}</span>
       </div>
     </div>
 
-    <!-- Executive Summary - Centered Verdict -->
-    <div class="verdict-box">
-      <div class="verdict-action-centered">${formatAction(getVerdictAction(v))}</div>
-      <div class="verdict-subtitle-centered">${v?.aiSummary?.slice(0, 200) || 'Review the detailed analysis sections below.'}${(v?.aiSummary?.length || 0) > 200 ? '...' : ''}</div>
+    <!-- Main Verdict Box -->
+    <div class="verdict-box" style="background: ${isLong ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fef2f2, #fee2e2)'}; border-color: ${isLong ? '#16a34a' : '#dc2626'};">
+      <div class="verdict-action ${isLong ? 'text-green' : 'text-red'}">${formatAction(getVerdictAction(v))}</div>
+      <div style="font-size: 36px; font-weight: 800; margin: 10px 0; color: ${isLong ? '#16a34a' : '#dc2626'};">${score}</div>
+      <div style="font-size: 10px; color: #666;">Confidence Score</div>
     </div>
 
-    <!-- Trade Plan Summary Box -->
+    <!-- Key Metrics Row -->
+    <div class="row" style="margin-bottom: 15px;">
+      <div class="col metric" style="text-align: center;">
+        <div class="metric-label">Current Price</div>
+        <div class="metric-value-lg">${formatPrice(as?.currentPrice)}</div>
+        <div class="metric-note ${(as?.priceChange24h || 0) >= 0 ? 'text-green' : 'text-red'}">${(as?.priceChange24h || 0) >= 0 ? '+' : ''}${as?.priceChange24h?.toFixed(2) || '0'}% 24h</div>
+      </div>
+      <div class="col metric" style="text-align: center;">
+        <div class="metric-label">Entry Price</div>
+        <div class="metric-value-lg">${formatPrice(tp?.averageEntry)}</div>
+      </div>
+      <div class="col metric" style="text-align: center;">
+        <div class="metric-label">Stop Loss</div>
+        <div class="metric-value-lg text-red">${formatPrice(tp?.stopLoss?.price)}</div>
+        <div class="metric-note">${tp?.stopLoss?.percentage ? `-${tp.stopLoss.percentage.toFixed(1)}%` : ''}</div>
+      </div>
+      <div class="col metric" style="text-align: center;">
+        <div class="metric-label">Risk:Reward</div>
+        <div class="metric-value-lg">${formatRiskReward(tp?.riskReward)}</div>
+      </div>
+    </div>
+
+    <!-- Take Profit Targets -->
     <div class="step-box">
       <div class="step-box-header">
-        <span class="step-box-title">Trade Plan</span>
-      </div>
-      <div class="row">
-        <div class="col metric">
-          <div class="metric-label">Direction</div>
-          <div class="metric-value ${isLong ? 'text-green' : 'text-red'}">${formatDirection(tp?.direction)}</div>
-        </div>
-        <div class="col metric">
-          <div class="metric-label">Entry</div>
-          <div class="metric-value">${formatPrice(tp?.averageEntry)}</div>
-        </div>
-        <div class="col metric">
-          <div class="metric-label">Stop Loss</div>
-          <div class="metric-value text-red">${formatPrice(tp?.stopLoss?.price)}</div>
-          <div class="metric-note">${tp?.stopLoss?.percentage ? `${tp.stopLoss.percentage.toFixed(1)}% risk` : ''}</div>
-        </div>
-        <div class="col metric">
-          <div class="metric-label">Risk:Reward</div>
-          <div class="metric-value">${formatRiskReward(tp?.riskReward)}</div>
-        </div>
+        <span class="step-box-title">Take Profit Targets</span>
       </div>
       <div class="row">
         ${(tp?.takeProfits || []).slice(0, 4).map((t, i) => `
-          <div class="col metric metric-sm">
+          <div class="col metric" style="text-align: center;">
             <div class="metric-label">Target ${i + 1}</div>
             <div class="metric-value text-green">${formatPrice(t.price)}</div>
             <div class="metric-note">${t.percentage ? `+${t.percentage.toFixed(1)}%` : ''}</div>
           </div>
         `).join('')}
       </div>
-      <!-- Trade Plan Chart -->
-      ${data.chartImage ? `
-      <div style="margin-top: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
-        <img src="${data.chartImage}" style="width: 100%; height: auto; max-height: 200px; display: block; object-fit: contain;" alt="Trade Plan Chart" />
+    </div>
+
+    <!-- Market Context -->
+    <div class="row">
+      <div class="col metric metric-sm">
+        <div class="metric-label">Market Trend</div>
+        <div class="metric-value ${mp?.trend?.direction === 'bullish' ? 'text-green' : mp?.trend?.direction === 'bearish' ? 'text-red' : ''}">${formatDirection(mp?.trend?.direction)}</div>
+      </div>
+      <div class="col metric metric-sm">
+        <div class="metric-label">Fear & Greed</div>
+        <div class="metric-value">${mp?.fearGreedIndex || 0}</div>
+        <div class="metric-note">${mp?.fearGreedLabel || ''}</div>
+      </div>
+      <div class="col metric metric-sm">
+        <div class="metric-label">RSI</div>
+        <div class="metric-value ${(as?.indicators?.rsi || 50) >= 70 ? 'text-red' : (as?.indicators?.rsi || 50) <= 30 ? 'text-green' : ''}">${as?.indicators?.rsi?.toFixed(0) || '-'}</div>
+      </div>
+      <div class="col metric metric-sm">
+        <div class="metric-label">Volume 24h</div>
+        <div class="metric-value">${formatVolume(as?.volume24h)}</div>
+      </div>
+    </div>
+
+    <!-- AI Summary -->
+    <div class="summary-box" style="margin-top: 15px;">
+      <div style="font-size: 9px; font-weight: 600; margin-bottom: 5px;">AI Analysis Summary</div>
+      <div class="summary-text">${v?.aiSummary || v?.recommendation || 'Analysis complete. See detailed report for full insights.'}</div>
+    </div>
+
+    <!-- Note about full report -->
+    <div style="margin-top: 15px; padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; text-align: center;">
+      <div style="font-size: 9px; color: #0369a1; font-weight: 600;">📊 Full detailed analysis available in the following pages</div>
+    </div>
+
+    ${generateFooter(data, 1, totalPages)}
+  </div>
+</body></html>`;
+}
+
+// ===========================================
+// PAGE 2: Trade Plan (Full Page Chart)
+// ===========================================
+
+function generatePageTradePlan(data: AnalysisReportData, totalPages: number): string {
+  const tp = data.tradePlan;
+  const as = data.assetScan;
+  const isLong = tp?.direction === 'long';
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
+  <div class="page">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">${logoSvg}</div>
+        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+      </div>
+      <div class="header-center">
+        <div class="report-title">Trade Plan</div>
+      </div>
+      <div class="header-right">
+        <span class="symbol">${data.symbol}/USDT</span>
+        <span class="direction-tag ${isLong ? 'tag-long' : 'tag-short'}">${isLong ? 'LONG' : 'SHORT'}</span>
+      </div>
+    </div>
+
+    <!-- Trade Levels Table -->
+    <table class="table" style="margin-bottom: 10px;">
+      <tr><th style="width: 25%;">Level</th><th style="width: 25%;">Price</th><th style="width: 20%;">Change</th><th style="width: 30%;">Note</th></tr>
+      <tr style="background: #f0fdf4;">
+        <td style="font-weight: 600;">Entry</td>
+        <td style="font-weight: 700; font-size: 9px;">${formatPrice(tp?.averageEntry)}</td>
+        <td>-</td>
+        <td style="font-size: 6px;">${tp?.entries?.length ? `${tp.entries.length} entry zones` : 'Single entry'}</td>
+      </tr>
+      <tr style="background: #fef2f2;">
+        <td style="font-weight: 600;">Stop Loss</td>
+        <td style="font-weight: 700; font-size: 9px;" class="text-red">${formatPrice(tp?.stopLoss?.price)}</td>
+        <td class="text-red">${tp?.stopLoss?.percentage ? `-${tp.stopLoss.percentage.toFixed(2)}%` : ''}</td>
+        <td style="font-size: 6px;">${tp?.stopLoss?.reason?.slice(0, 30) || ''}</td>
+      </tr>
+      ${(tp?.takeProfits || []).slice(0, 3).map((t, i) => `
+        <tr>
+          <td style="font-weight: 600;">Target ${i + 1}</td>
+          <td style="font-weight: 700; font-size: 9px;" class="text-green">${formatPrice(t.price)}</td>
+          <td class="text-green">${t.percentage ? `+${t.percentage.toFixed(1)}%` : ''}</td>
+          <td style="font-size: 6px;">${t.reason?.slice(0, 30) || ''}</td>
+        </tr>
+      `).join('')}
+    </table>
+
+    <!-- Full Page Chart -->
+    ${data.chartImage ? `
+    <div class="chart-container" style="height: 480px; display: flex; align-items: center; justify-content: center;">
+      <img src="${data.chartImage}" style="max-height: 100%; width: auto; max-width: 100%;" alt="Trade Plan Chart" />
+    </div>
+    ` : `
+    <div class="chart-container" style="height: 480px; display: flex; align-items: center; justify-content: center; background: #f9fafb;">
+      <div style="text-align: center; color: #666;">
+        <div style="font-size: 14px; margin-bottom: 5px;">📈</div>
+        <div style="font-size: 10px;">Chart not available</div>
+      </div>
+    </div>
+    `}
+
+    <!-- Key Levels Summary -->
+    <div class="row" style="margin-top: 10px;">
+      ${as?.levels?.support ? `
+      <div class="col metric metric-sm">
+        <div class="metric-label">Support Levels</div>
+        <div class="metric-value text-green" style="font-size: 8px;">${as.levels.support.slice(0, 3).map(s => formatPrice(s)).join(' | ')}</div>
       </div>
       ` : ''}
+      ${as?.levels?.resistance ? `
+      <div class="col metric metric-sm">
+        <div class="metric-label">Resistance Levels</div>
+        <div class="metric-value text-red" style="font-size: 8px;">${as.levels.resistance.slice(0, 3).map(r => formatPrice(r)).join(' | ')}</div>
+      </div>
+      ` : ''}
+    </div>
+
+    ${generateFooter(data, 2, totalPages)}
+  </div>
+</body></html>`;
+}
+
+// ===========================================
+// PAGE 3: Tokenomics
+// ===========================================
+
+function generatePageTokenomics(data: AnalysisReportData, totalPages: number): string {
+  const tk = data.tokenomics;
+  const as = data.assetScan;
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
+  <div class="page">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">${logoSvg}</div>
+        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+      </div>
+      <div class="header-center">
+        <div class="report-title">Tokenomics Analysis</div>
+      </div>
+      <div class="header-right">
+        <span class="symbol">${data.symbol}/USDT</span>
+      </div>
+    </div>
+
+    ${tk ? `
+    <!-- Overall Assessment -->
+    <div class="verdict-box" style="padding: 12px; margin-bottom: 15px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 10px; color: #666; margin-bottom: 3px;">Tokenomics Score</div>
+          <div style="font-size: 32px; font-weight: 700; ${tk.assessment.overallScore >= 70 ? 'color: #16a34a' : tk.assessment.overallScore < 40 ? 'color: #dc2626' : 'color: #d97706'}">${tk.assessment.overallScore}/100</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 10px; color: #666; margin-bottom: 3px;">Risk Level</div>
+          <div style="font-size: 18px; font-weight: 700; ${tk.assessment.riskLevel === 'low' ? 'color: #16a34a' : tk.assessment.riskLevel === 'high' ? 'color: #dc2626' : 'color: #d97706'}">${formatDirection(tk.assessment.riskLevel)}</div>
+        </div>
+      </div>
+      <div style="margin-top: 10px; font-size: 8px; color: #444; border-top: 1px solid #eee; padding-top: 8px;">${tk.assessment.recommendation}</div>
+    </div>
+
+    <!-- Supply Information -->
+    <div class="step-box">
+      <div class="step-box-header">
+        <span class="step-box-title">Supply Information</span>
+      </div>
+      <div class="row">
+        <div class="col metric">
+          <div class="metric-label">Circulating Supply</div>
+          <div class="metric-value">${tk.supply.circulating?.toLocaleString() || '-'}</div>
+          <div class="metric-note">${tk.supply.circulatingPercent?.toFixed(1) || '-'}% of total</div>
+        </div>
+        <div class="col metric">
+          <div class="metric-label">Total Supply</div>
+          <div class="metric-value">${tk.supply.total?.toLocaleString() || 'Unlimited'}</div>
+        </div>
+        <div class="col metric">
+          <div class="metric-label">Max Supply</div>
+          <div class="metric-value">${tk.supply.maxSupply?.toLocaleString() || 'No cap'}</div>
+        </div>
+        <div class="col metric">
+          <div class="metric-label">Inflation Risk</div>
+          <div class="metric-value ${tk.supply.inflationRisk === 'low' ? 'text-green' : tk.supply.inflationRisk === 'high' ? 'text-red' : 'text-amber'}">${formatDirection(tk.supply.inflationRisk)}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Market Metrics -->
+    <div class="step-box">
+      <div class="step-box-header">
+        <span class="step-box-title">Market Metrics</span>
+      </div>
+      <div class="row">
+        <div class="col metric">
+          <div class="metric-label">Market Cap</div>
+          <div class="metric-value-lg">${formatLargeNumber(tk.market.marketCap)}</div>
+        </div>
+        <div class="col metric">
+          <div class="metric-label">Fully Diluted Value</div>
+          <div class="metric-value">${formatLargeNumber(tk.market.fullyDilutedValuation)}</div>
+        </div>
+        <div class="col metric">
+          <div class="metric-label">MCap/FDV Ratio</div>
+          <div class="metric-value">${(tk.market.mcapFdvRatio * 100).toFixed(1)}%</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col metric">
+          <div class="metric-label">Dilution Risk</div>
+          <div class="metric-value ${tk.market.dilutionRisk === 'low' ? 'text-green' : tk.market.dilutionRisk === 'high' ? 'text-red' : 'text-amber'}">${formatDirection(tk.market.dilutionRisk)}</div>
+        </div>
+        <div class="col metric">
+          <div class="metric-label">Liquidity Health</div>
+          <div class="metric-value ${tk.market.liquidityHealth === 'excellent' || tk.market.liquidityHealth === 'good' ? 'text-green' : tk.market.liquidityHealth === 'poor' ? 'text-red' : 'text-amber'}">${formatDirection(tk.market.liquidityHealth)}</div>
+        </div>
+        <div class="col metric">
+          <div class="metric-label">24h Volume</div>
+          <div class="metric-value">${formatVolume(as?.volume24h)}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Whale Concentration -->
+    <div class="step-box">
+      <div class="step-box-header">
+        <span class="step-box-title">Whale Concentration</span>
+      </div>
+      <div class="row">
+        <div class="col metric">
+          <div class="metric-label">Concentration Risk</div>
+          <div class="metric-value ${tk.whaleConcentration.concentrationRisk === 'low' ? 'text-green' : tk.whaleConcentration.concentrationRisk === 'high' ? 'text-red' : 'text-amber'}">${formatDirection(tk.whaleConcentration.concentrationRisk)}</div>
+        </div>
+        <div class="col metric">
+          <div class="metric-label">Top 10 Holders</div>
+          <div class="metric-value">${tk.whaleConcentration.top10HoldersPercent?.toFixed(1) || '-'}%</div>
+        </div>
+      </div>
+    </div>
+    ` : `
+    <!-- No Tokenomics Data -->
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 500px; text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 15px;">📊</div>
+      <div style="font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px;">Tokenomics Data Not Available</div>
+      <div style="font-size: 10px; color: #666; max-width: 300px;">Detailed tokenomics analysis is not available for this asset. This may be due to limited data availability or the asset type.</div>
+    </div>
+    `}
+
+    ${generateFooter(data, 3, totalPages)}
+  </div>
+</body></html>`;
+}
+
+// ===========================================
+// PAGE 4: Steps 1-3 (Market, Asset, Safety)
+// ===========================================
+
+function generatePageSteps123(data: AnalysisReportData, totalPages: number): string {
+  const mp = data.marketPulse;
+  const as = data.assetScan;
+  const sc = data.safetyCheck;
+  const mpGate = getGateStatus(mp.gate);
+  const asGate = getGateStatus(as.gate);
+  const scGate = getGateStatus(sc.gate);
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
+  <div class="page">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">${logoSvg}</div>
+        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+      </div>
+      <div class="header-center">
+        <div class="report-title">Analysis Steps 1-3</div>
+      </div>
+      <div class="header-right">
+        <span class="symbol">${data.symbol}/USDT</span>
+      </div>
     </div>
 
     <!-- Step 01: Market Pulse -->
@@ -566,19 +746,7 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
           <div class="metric-value">${formatRegime(mp.marketRegime)}</div>
         </div>
       </div>
-      ${mpIndicators.length > 0 ? `
-      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Trend Indicators (ADX, EMA, ICHIMOKU, BOLLINGER)</div>
-      <div class="row" style="margin-top: 4px;">
-        ${mpIndicators.slice(0, 4).map(i => `
-          <div class="col metric metric-sm">
-            <div class="metric-label">${i?.name || ''}</div>
-            <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? i.value.toFixed(2) : i?.value || '-'}</div>
-            <div class="metric-note">${i?.signal || ''}</div>
-          </div>
-        `).join('')}
-      </div>
-      ` : ''}
-      ${mpSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${mpSummary}</div>` : ''}
+      ${mp.gate?.reason ? `<div style="margin-top: 5px; font-size: 7px; color: #666; background: #f5f5f5; padding: 5px; border-radius: 3px;">${mp.gate.reason}</div>` : ''}
     </div>
 
     <!-- Step 02: Asset Scanner -->
@@ -592,7 +760,7 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
         <div class="col metric metric-sm">
           <div class="metric-label">Price</div>
           <div class="metric-value">${formatPrice(as.currentPrice)}</div>
-          <div class="metric-note ${as.priceChange24h >= 0 ? 'text-green' : 'text-red'}">${as.priceChange24h >= 0 ? '+' : ''}${as.priceChange24h?.toFixed(2)}% 24h</div>
+          <div class="metric-note ${as.priceChange24h >= 0 ? 'text-green' : 'text-red'}">${as.priceChange24h >= 0 ? '+' : ''}${as.priceChange24h?.toFixed(2)}%</div>
         </div>
         <div class="col metric metric-sm">
           <div class="metric-label">Volume 24h</div>
@@ -600,111 +768,20 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
         </div>
         <div class="col metric metric-sm">
           <div class="metric-label">RSI</div>
-          <div class="metric-value ${(as.indicators?.rsi || 50) >= 70 ? 'text-red' : (as.indicators?.rsi || 50) <= 30 ? 'text-green' : ''}">${as.indicators?.rsi?.toFixed(1) || '-'}</div>
+          <div class="metric-value ${(as.indicators?.rsi || 50) >= 70 ? 'text-red' : (as.indicators?.rsi || 50) <= 30 ? 'text-green' : ''}">${as.indicators?.rsi?.toFixed(0) || '-'}</div>
         </div>
         <div class="col metric metric-sm">
           <div class="metric-label">Signal</div>
           <div class="metric-value ${as.direction === 'long' ? 'text-green' : as.direction === 'short' ? 'text-red' : ''}">${formatDirection(as.direction)}</div>
-          <div class="metric-note">${formatPercent(as.directionConfidence)} conf</div>
         </div>
       </div>
       ${as.levels ? `
-      <div style="margin-top: 4px; font-size: 7px; color: #666;">
+      <div style="margin-top: 5px; font-size: 7px;">
         <span>Support: <span class="text-green">${as.levels.support.slice(0, 2).map(s => formatPrice(s)).join(', ')}</span></span>
-        <span style="margin-left: 12px;">Resistance: <span class="text-red">${as.levels.resistance.slice(0, 2).map(r => formatPrice(r)).join(', ')}</span></span>
+        <span style="margin-left: 10px;">Resistance: <span class="text-red">${as.levels.resistance.slice(0, 2).map(r => formatPrice(r)).join(', ')}</span></span>
       </div>
       ` : ''}
-      ${tk ? `
-      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Tokenomics</div>
-      <div class="row" style="margin-top: 4px;">
-        <div class="col metric metric-sm">
-          <div class="metric-label">Market Cap</div>
-          <div class="metric-value">${formatVolume(tk.market.marketCap)}</div>
-        </div>
-        <div class="col metric metric-sm">
-          <div class="metric-label">Circulating</div>
-          <div class="metric-value">${tk.supply.circulatingPercent?.toFixed(0) || '-'}%</div>
-        </div>
-        <div class="col metric metric-sm">
-          <div class="metric-label">Dilution Risk</div>
-          <div class="metric-value ${tk.market.dilutionRisk === 'low' ? 'text-green' : tk.market.dilutionRisk === 'high' ? 'text-red' : 'text-amber'}">${formatDirection(tk.market.dilutionRisk)}</div>
-        </div>
-        <div class="col metric metric-sm">
-          <div class="metric-label">Score</div>
-          <div class="metric-value ${tk.assessment.overallScore >= 70 ? 'text-green' : tk.assessment.overallScore < 40 ? 'text-red' : ''}">${tk.assessment.overallScore}/100</div>
-        </div>
-      </div>
-      ` : ''}
-      ${asIndicators.length > 0 ? `
-      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Volume Indicators (VWAP, OBV, CMF, AD)</div>
-      <div class="row" style="margin-top: 4px;">
-        ${asIndicators.slice(0, 4).map(i => `
-          <div class="col metric metric-sm">
-            <div class="metric-label">${i?.name || ''}</div>
-            <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? i.value.toFixed(2) : i?.value || '-'}</div>
-            <div class="metric-note">${i?.signal || ''}</div>
-          </div>
-        `).join('')}
-      </div>
-      ` : ''}
-      ${asSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${asSummary}</div>` : ''}
-    </div>
-
-    ${generateFooter(data, 1, totalPages)}
-  </div>
-</body></html>`;
-}
-
-// ===========================================
-// PAGE 2: Execution & Analysis
-// ===========================================
-
-function generatePage2(data: AnalysisReportData, totalPages: number = 5): string {
-  const sc = data.safetyCheck;
-  const tm = data.timing;
-  const tp = data.tradePlan;
-  const tc = data.trapCheck;
-  const isLong = tp.direction === 'long';
-
-  const scGate = getGateStatus(sc.gate);
-  const tmGate = getGateStatus(tm.gate);
-  const tpGate = getGateStatus(tp.gate);
-  const tcGate = tc?.gate ? getGateStatus(tc.gate) : { text: '', color: '#666' };
-
-  // Get relevant indicators for timing decision
-  const ind = data.indicatorDetails;
-
-  // Step summaries from gate reasons
-  const scSummary = sc.gate?.reason ? `Safety assessment: ${sc.gate.reason}` : '';
-  const tmSummary = tm.gate?.reason ? `Timing analysis: ${tm.gate.reason}` : '';
-  const tpSummary = tp.gate?.reason ? `Trade plan: ${tp.gate.reason}` : '';
-  const tcSummary = tc?.gate?.reason ? `Trap check: ${tc.gate.reason}` : '';
-
-  // STEP 3: Safety Check → ADVANCED indicators (SPOOFING, ORDER_FLOW, WHALE_ACTIVITY, SQUEEZE)
-  const scIndicators = ind?.advanced ? Object.values(ind.advanced).filter(Boolean).slice(0, 4) : [];
-
-  // STEP 4: Timing → MOMENTUM indicators (RSI, STOCHASTIC, STOCH_RSI, MACD, SUPERTREND)
-  const tmIndicators = ind?.momentum ? Object.values(ind.momentum).filter(Boolean).slice(0, 4) : [];
-
-  // STEP 5: Trade Plan → VOLATILITY indicators (ATR, PSAR, KELTNER, DONCHIAN)
-  const tpIndicators = ind?.volatility ? Object.values(ind.volatility).filter(Boolean).slice(0, 4) : [];
-
-  // STEP 6: Trap Check → Divergence indicators from volume (OBV, AD, FORCE_INDEX) + momentum (RSI, MACD)
-  const tcDivergences = ind?.divergences || [];
-
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
-  <div class="page">
-    <div class="header">
-      <div class="brand">
-        <div class="logo">${logoSvg}</div>
-        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
-      </div>
-      <div class="header-center">
-        <div class="report-title">Execution Analysis</div>
-      </div>
-      <div class="header-right">
-        <span class="symbol">${data.symbol}/USDT</span>
-      </div>
+      ${as.gate?.reason ? `<div style="margin-top: 5px; font-size: 7px; color: #666; background: #f5f5f5; padding: 5px; border-radius: 3px;">${as.gate.reason}</div>` : ''}
     </div>
 
     <!-- Step 03: Safety Check -->
@@ -733,186 +810,30 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
         </div>
       </div>
       ${sc.warnings && sc.warnings.length > 0 ? `
-      <div style="margin-top: 4px; font-size: 7px; color: #dc2626;">
-        ${sc.warnings.slice(0, 2).map(w => `<span style="margin-right: 8px;">⚠ ${w}</span>`).join('')}
+      <div style="margin-top: 5px; font-size: 7px; color: #dc2626;">
+        ${sc.warnings.slice(0, 2).map(w => `⚠ ${w}`).join(' | ')}
       </div>
       ` : ''}
-      ${scIndicators.length > 0 ? `
-      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Advanced Indicators (ORDER_FLOW, WHALE, SQUEEZE)</div>
-      <div class="row" style="margin-top: 4px;">
-        ${scIndicators.slice(0, 4).map(i => `
-          <div class="col metric metric-sm">
-            <div class="metric-label">${i?.name || ''}</div>
-            <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? i.value.toFixed(2) : i?.value || '-'}</div>
-            <div class="metric-note">${i?.signal || ''}</div>
-          </div>
-        `).join('')}
-      </div>
-      ` : ''}
-      ${scSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${scSummary}</div>` : ''}
+      ${sc.gate?.reason ? `<div style="margin-top: 5px; font-size: 7px; color: #666; background: #f5f5f5; padding: 5px; border-radius: 3px;">${sc.gate.reason}</div>` : ''}
     </div>
 
-    <!-- Step 04: Timing Analysis -->
-    <div class="step-box">
-      <div class="step-box-header">
-        <span class="step-box-num">04</span>
-        <span class="step-box-title">Timing Analysis</span>
-        <span class="step-box-gate" style="color: ${tmGate.color}">${tmGate.text}</span>
-      </div>
-
-      <div class="row">
-        <div class="col-2 metric">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div class="metric-value metric-value-lg ${tm.tradeNow ? 'text-green' : 'text-amber'}">${tm.tradeNow ? 'TRADE NOW' : 'WAIT'}</div>
-              <div class="metric-note">${tm.reason}</div>
-            </div>
-            ${tm.gate?.urgency ? `<div style="font-size: 8px; font-weight: 600; color: ${tm.gate.urgency === 'immediate' ? '#dc2626' : '#d97706'};">${tm.gate.urgency.toUpperCase()}</div>` : ''}
-          </div>
-        </div>
-      </div>
-
-      ${tm.conditions && tm.conditions.length > 0 ? `
-      <div style="margin-top: 6px;">
-        <div style="font-size: 7px; color: #666; margin-bottom: 4px;">Entry Conditions (${tm.conditions.filter(c => c.met).length}/${tm.conditions.length} met):</div>
-        <div class="list">
-          ${tm.conditions.map(c => `
-            <div class="list-item">
-              <span class="list-icon ${c.met ? 'list-icon-y' : 'list-icon-n'}">${c.met ? 'Y' : 'N'}</span>
-              <span>${c.name}</span>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-      ` : ''}
-
-      ${tm.entryZones && tm.entryZones.length > 0 ? `
-      <div class="row" style="margin-top: 6px;">
-        ${tm.entryZones.slice(0, 3).map((ez, i) => `
-          <div class="col metric metric-sm">
-            <div class="metric-label">Zone ${i + 1}</div>
-            <div class="metric-value" style="font-size: 9px;">${formatPrice(ez.priceLow)} - ${formatPrice(ez.priceHigh)}</div>
-            <div class="metric-note">${formatPercent(ez.probability)} probability</div>
-          </div>
-        `).join('')}
-      </div>
-      ` : ''}
-      ${tmIndicators.length > 0 ? `
-      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Momentum Indicators (RSI, STOCHASTIC, MACD, SUPERTREND)</div>
-      <div class="row" style="margin-top: 4px;">
-        ${tmIndicators.slice(0, 4).map(i => `
-          <div class="col metric metric-sm">
-            <div class="metric-label">${i?.name || ''}</div>
-            <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? i.value.toFixed(2) : i?.value || '-'}</div>
-            <div class="metric-note">${i?.signal || ''}</div>
-          </div>
-        `).join('')}
-      </div>
-      ` : ''}
-      ${tmSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tmSummary}</div>` : ''}
-    </div>
-
-    <!-- Step 05: Trade Plan with Chart Inside -->
-    <div class="step-box">
-      <div class="step-box-header">
-        <span class="step-box-num">05</span>
-        <span class="step-box-title">Trade Plan</span>
-        <span class="step-box-gate" style="color: ${tpGate.color}">${tpGate.text}</span>
-      </div>
-
-      <div class="row">
-        <div class="col metric">
-          <div class="metric-label">Direction</div>
-          <div class="metric-value metric-value-lg ${isLong ? 'text-green' : 'text-red'}">${isLong ? 'LONG' : 'SHORT'}</div>
-        </div>
-        <div class="col metric">
-          <div class="metric-label">Risk:Reward</div>
-          <div class="metric-value metric-value-lg">${formatRiskReward(tp.riskReward)}</div>
-        </div>
-        <div class="col metric">
-          <div class="metric-label">Win Rate Est.</div>
-          <div class="metric-value">${tp.winRateEstimate || 50}%</div>
-        </div>
-        <div class="col metric">
-          <div class="metric-label">Position Size</div>
-          <div class="metric-value">${tp.positionSizePercent?.toFixed(1) || '-'}%</div>
-        </div>
-      </div>
-
-      <table class="table" style="margin-top: 6px;">
-        <tr><th style="width: 20%;">Level</th><th style="width: 25%;">Price</th><th style="width: 20%;">Change</th><th>Note</th></tr>
-        <tr>
-          <td>Entry</td>
-          <td style="font-weight: 600;">${formatPrice(tp.averageEntry)}</td>
-          <td>-</td>
-          <td style="font-size: 7px; color: #666;">${tp.entries?.length ? `${tp.entries.length} entry zones` : ''}</td>
-        </tr>
-        <tr>
-          <td>Stop Loss</td>
-          <td style="font-weight: 600;" class="text-red">${formatPrice(tp.stopLoss?.price)}</td>
-          <td class="text-red">${tp.stopLoss?.percentage ? `-${tp.stopLoss.percentage.toFixed(2)}%` : ''}</td>
-          <td style="font-size: 7px; color: #666;">${tp.stopLoss?.reason?.slice(0, 40) || ''}</td>
-        </tr>
-        ${(tp.takeProfits || []).slice(0, 3).map((t, i) => `
-          <tr>
-            <td>Target ${i + 1}</td>
-            <td style="font-weight: 600;" class="text-green">${formatPrice(t.price)}</td>
-            <td class="text-green">${t.percentage ? `+${t.percentage.toFixed(1)}%` : ''}</td>
-            <td style="font-size: 7px; color: #666;">${t.reason?.slice(0, 40) || ''}</td>
-          </tr>
-        `).join('')}
-      </table>
-
-      ${tpIndicators.length > 0 ? `
-      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Volatility Indicators (ATR, PSAR, KELTNER, DONCHIAN)</div>
-      <div class="row" style="margin-top: 4px;">
-        ${tpIndicators.slice(0, 4).map(i => `
-          <div class="col metric metric-sm">
-            <div class="metric-label">${i?.name || ''}</div>
-            <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? i.value.toFixed(2) : i?.value || '-'}</div>
-            <div class="metric-note">${i?.signal || ''}</div>
-          </div>
-        `).join('')}
-      </div>
-      ` : ''}
-      <!-- Trade Plan Chart Inside the Box -->
-      ${data.chartImage ? `
-      <div style="margin-top: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
-        <img src="${data.chartImage}" style="width: 100%; height: auto; max-height: 220px; display: block; object-fit: contain;" alt="Trade Plan Chart" />
-      </div>
-      ` : ''}
-      ${tpSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tpSummary}</div>` : ''}
-    </div>
-
-    ${generateFooter(data, 2, totalPages)}
+    ${generateFooter(data, 4, totalPages)}
   </div>
 </body></html>`;
 }
 
 // ===========================================
-// PAGE 3: Verdict & Expert Analysis
+// PAGE 5: Steps 4-6 (Timing, Plan, Trap)
 // ===========================================
 
-function generatePage3(data: AnalysisReportData, totalPages: number = 5): string {
+function generatePageSteps456(data: AnalysisReportData, totalPages: number): string {
+  const tm = data.timing;
+  const tp = data.tradePlan;
   const tc = data.trapCheck;
-  const ind = data.indicatorDetails;
-  const v = data.verdict;
-  const isLong = data.tradePlan?.direction === 'long';
-  const score = formatPercent(v.overallScore);
-
+  const isLong = tp?.direction === 'long';
+  const tmGate = getGateStatus(tm.gate);
+  const tpGate = getGateStatus(tp.gate);
   const tcGate = tc?.gate ? getGateStatus(tc.gate) : { text: '', color: '#666' };
-  const tcSummary = tc?.gate?.reason ? `Trap check: ${tc.gate.reason}` : '';
-  const tcDivergences = ind?.divergences || [];
-
-  // Get step scores from gates
-  const stepScores = [
-    { name: 'Market Pulse', score: data.marketPulse.gate?.confidence },
-    { name: 'Asset Scanner', score: data.assetScan.gate?.confidence },
-    { name: 'Safety Check', score: data.safetyCheck.gate?.confidence },
-    { name: 'Timing', score: data.timing.gate?.confidence },
-    { name: 'Trade Plan', score: data.tradePlan.gate?.confidence },
-    { name: 'Trap Check', score: data.trapCheck?.gate?.confidence },
-  ].filter(s => s.score !== undefined);
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
@@ -922,11 +843,89 @@ function generatePage3(data: AnalysisReportData, totalPages: number = 5): string
         <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Final Verdict</div>
+        <div class="report-title">Analysis Steps 4-6</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
       </div>
+    </div>
+
+    <!-- Step 04: Timing Analysis -->
+    <div class="step-box">
+      <div class="step-box-header">
+        <span class="step-box-num">04</span>
+        <span class="step-box-title">Timing Analysis</span>
+        <span class="step-box-gate" style="color: ${tmGate.color}">${tmGate.text}</span>
+      </div>
+      <div class="row">
+        <div class="col-2 metric">
+          <div class="metric-value-lg ${tm.tradeNow ? 'text-green' : 'text-amber'}">${tm.tradeNow ? 'TRADE NOW' : 'WAIT'}</div>
+          <div class="metric-note">${tm.reason}</div>
+        </div>
+      </div>
+      ${tm.conditions && tm.conditions.length > 0 ? `
+      <div style="margin-top: 5px;">
+        <div style="font-size: 7px; color: #666; margin-bottom: 3px;">Conditions (${tm.conditions.filter(c => c.met).length}/${tm.conditions.length} met):</div>
+        <div class="list">
+          ${tm.conditions.slice(0, 6).map(c => `
+            <div class="list-item">
+              <span class="list-icon ${c.met ? 'list-icon-y' : 'list-icon-n'}">${c.met ? '✓' : '✗'}</span>
+              <span>${c.name}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      ` : ''}
+    </div>
+
+    <!-- Step 05: Trade Plan -->
+    <div class="step-box">
+      <div class="step-box-header">
+        <span class="step-box-num">05</span>
+        <span class="step-box-title">Trade Plan Details</span>
+        <span class="step-box-gate" style="color: ${tpGate.color}">${tpGate.text}</span>
+      </div>
+      <div class="row">
+        <div class="col metric">
+          <div class="metric-label">Direction</div>
+          <div class="metric-value ${isLong ? 'text-green' : 'text-red'}">${isLong ? 'LONG' : 'SHORT'}</div>
+        </div>
+        <div class="col metric">
+          <div class="metric-label">Risk:Reward</div>
+          <div class="metric-value">${formatRiskReward(tp?.riskReward)}</div>
+        </div>
+        <div class="col metric">
+          <div class="metric-label">Win Rate Est.</div>
+          <div class="metric-value">${tp?.winRateEstimate || 50}%</div>
+        </div>
+        <div class="col metric">
+          <div class="metric-label">Position Size</div>
+          <div class="metric-value">${tp?.positionSizePercent?.toFixed(1) || '-'}%</div>
+        </div>
+      </div>
+      <table class="table" style="margin-top: 5px;">
+        <tr><th>Level</th><th>Price</th><th>Change</th><th>Note</th></tr>
+        <tr>
+          <td>Entry</td>
+          <td style="font-weight: 600;">${formatPrice(tp?.averageEntry)}</td>
+          <td>-</td>
+          <td style="font-size: 6px;">${tp?.entries?.length ? `${tp.entries.length} zones` : ''}</td>
+        </tr>
+        <tr>
+          <td>Stop Loss</td>
+          <td class="text-red" style="font-weight: 600;">${formatPrice(tp?.stopLoss?.price)}</td>
+          <td class="text-red">${tp?.stopLoss?.percentage ? `-${tp.stopLoss.percentage.toFixed(1)}%` : ''}</td>
+          <td style="font-size: 6px;">${tp?.stopLoss?.reason?.slice(0, 25) || ''}</td>
+        </tr>
+        ${(tp?.takeProfits || []).slice(0, 3).map((t, i) => `
+          <tr>
+            <td>TP ${i + 1}</td>
+            <td class="text-green" style="font-weight: 600;">${formatPrice(t.price)}</td>
+            <td class="text-green">${t.percentage ? `+${t.percentage.toFixed(1)}%` : ''}</td>
+            <td style="font-size: 6px;">${t.reason?.slice(0, 25) || ''}</td>
+          </tr>
+        `).join('')}
+      </table>
     </div>
 
     <!-- Step 06: Trap Check -->
@@ -955,130 +954,23 @@ function generatePage3(data: AnalysisReportData, totalPages: number = 5): string
           <div class="metric-value ${tc.traps.liquidityGrab?.detected ? 'text-amber' : 'text-green'}">${tc.traps.liquidityGrab?.detected ? 'Possible' : 'Unlikely'}</div>
         </div>
       </div>
-      ${tc.proTip ? `<div style="margin-top: 6px; font-size: 7px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 3px; padding: 6px;"><strong>Pro Tip:</strong> ${tc.proTip}</div>` : ''}
-      ${tcDivergences.length > 0 ? `
-      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Divergence Analysis (OBV, RSI, MACD)</div>
-      <div class="row" style="margin-top: 4px;">
-        ${tcDivergences.slice(0, 3).map(d => `
-          <div class="col metric metric-sm">
-            <div class="metric-label">${d.indicator}</div>
-            <div class="metric-value ${d.type === 'bullish' ? 'text-green' : d.type === 'bearish' ? 'text-red' : ''}">${formatDirection(d.type)}</div>
-            <div class="metric-note">${d.reliability} reliability</div>
-          </div>
-        `).join('')}
-      </div>
-      ` : ''}
-      ${tcSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tcSummary}</div>` : ''}
+      ${tc.proTip ? `<div style="margin-top: 5px; font-size: 7px; background: #fef3c7; padding: 5px; border-radius: 3px;"><strong>Pro Tip:</strong> ${tc.proTip}</div>` : ''}
     </div>
     ` : ''}
 
-    <!-- Indicator Summary Box -->
-    ${ind ? `
-    <div class="indicator-summary-box">
-      <div class="indicator-summary-header">Indicator Summary</div>
-      <div class="row">
-        <div class="col metric metric-sm">
-          <div class="metric-label">Total Analyzed</div>
-          <div class="metric-value">${ind.summary?.totalIndicatorsUsed || 0}</div>
-        </div>
-        <div class="col metric metric-sm">
-          <div class="metric-label">Bullish</div>
-          <div class="metric-value text-green">${ind.summary?.bullishIndicators || 0}</div>
-        </div>
-        <div class="col metric metric-sm">
-          <div class="metric-label">Bearish</div>
-          <div class="metric-value text-red">${ind.summary?.bearishIndicators || 0}</div>
-        </div>
-        <div class="col metric metric-sm">
-          <div class="metric-label">Neutral</div>
-          <div class="metric-value">${ind.summary?.neutralIndicators || 0}</div>
-        </div>
-        <div class="col metric metric-sm">
-          <div class="metric-label">Overall Signal</div>
-          <div class="metric-value ${ind.summary?.overallSignal === 'bullish' ? 'text-green' : ind.summary?.overallSignal === 'bearish' ? 'text-red' : ''}">${formatDirection(ind.summary?.overallSignal)}</div>
-          <div class="metric-note">${formatPercent(ind.summary?.signalConfidence)} conf</div>
-        </div>
-      </div>
-    </div>
-    ` : ''}
-
-    <!-- Final Verdict -->
-    <div class="section">
-      <div class="section-header">
-        <span class="step-num">07</span>
-        <span class="section-title">Final Verdict</span>
-      </div>
-
-      <div class="verdict-box">
-        <div class="verdict-row">
-          <div style="flex: 1;">
-            <div class="verdict-action">${formatAction(getVerdictAction(v))}</div>
-            <div style="font-size: 9px; color: #666; margin-top: 4px;">${isLong ? 'Bullish setup - Long position recommended' : 'Bearish setup - Short position recommended'}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Step Scores -->
-      ${stepScores.length > 0 ? `
-      <div style="margin-bottom: 10px;">
-        <div style="font-size: 8px; font-weight: 600; margin-bottom: 6px;">Step Analysis Scores</div>
-        <div class="row">
-          ${stepScores.map(s => `
-            <div class="col metric metric-sm">
-              <div class="metric-label">${s.name}</div>
-              <div class="metric-value ${(s.score || 0) >= 0.7 || (s.score || 0) >= 70 ? 'text-green' : (s.score || 0) >= 0.5 || (s.score || 0) >= 50 ? 'text-amber' : 'text-red'}">${formatPercent(s.score)}</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-      ` : ''}
-
-      <!-- Confidence Factors -->
-      ${v.confidenceFactors && v.confidenceFactors.length > 0 ? `
-      <div style="margin-bottom: 10px;">
-        <div style="font-size: 8px; font-weight: 600; margin-bottom: 6px;">Confidence Factors</div>
-        <div class="list">
-          ${v.confidenceFactors.slice(0, 8).map(cf => `
-            <div class="factor-item">
-              <span class="factor-icon ${cf.positive ? 'text-green' : 'text-red'}">${cf.positive ? '+' : '-'}</span>
-              <span>${cf.factor}</span>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-      ` : ''}
-
-      <!-- AI Summary -->
-      <div class="summary-box">
-        <div style="font-size: 8px; font-weight: 600; margin-bottom: 4px;">AI Analysis Summary</div>
-        <div class="summary-text">${v.aiSummary || v.recommendation || 'Analysis complete. Review all sections for detailed insights.'}</div>
-      </div>
-    </div>
-
-    <!-- AI Expert Review -->
-    ${data.aiExpertComment ? `
-    <div class="step-box" style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1px solid #86efac;">
-      <div class="step-box-header" style="border-bottom-color: #86efac;">
-        <span style="font-size: 9px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #22c55e, #16a34a); padding: 2px 6px; border-radius: 4px;">AI</span>
-        <span class="step-box-title" style="color: #166534;">AI Expert Review</span>
-      </div>
-      <div style="font-size: 8px; line-height: 1.6; white-space: pre-wrap; color: #15803d; max-height: 260px; overflow: hidden;">${data.aiExpertComment.slice(0, 1500)}${data.aiExpertComment.length > 1500 ? '...' : ''}</div>
-    </div>
-    ` : ''}
-
-    ${generateFooter(data, 3, totalPages)}
+    ${generateFooter(data, 5, totalPages)}
   </div>
 </body></html>`;
 }
 
 // ===========================================
-// PAGE 4: Technical Indicators - All Categories Combined
+// PAGE 6: Final Verdict & Technical Indicators
 // ===========================================
 
-function generatePage4(data: AnalysisReportData, totalPages: number = 4): string {
+function generatePageVerdict(data: AnalysisReportData, totalPages: number): string {
+  const v = data.verdict;
   const ind = data.indicatorDetails;
-  const tradeTypeLabels: Record<string, string> = { scalping: 'Scalping', dayTrade: 'Day Trade', swing: 'Swing Trade' };
-  const totalIndicators = ind?.summary?.totalIndicatorsUsed || 0;
+  const isLong = data.tradePlan?.direction === 'long';
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
@@ -1088,85 +980,88 @@ function generatePage4(data: AnalysisReportData, totalPages: number = 4): string
         <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Technical Indicator Analysis</div>
-        <div class="report-subtitle">${tradeTypeLabels[data.tradeType || ''] || ''} | ${totalIndicators} Indicators</div>
+        <div class="report-title">Final Verdict</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
       </div>
     </div>
 
-    <!-- Indicator Summary -->
+    <!-- Step 07: Final Verdict -->
+    <div class="step-box" style="background: ${isLong ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fef2f2, #fee2e2)'};">
+      <div class="step-box-header">
+        <span class="step-box-num">07</span>
+        <span class="step-box-title">Final Verdict</span>
+      </div>
+      <div style="text-align: center; padding: 10px 0;">
+        <div style="font-size: 24px; font-weight: 700; ${isLong ? 'color: #16a34a' : 'color: #dc2626'}">${formatAction(getVerdictAction(v))}</div>
+        <div style="font-size: 28px; font-weight: 800; margin: 8px 0;">${formatPercent(v?.overallScore)}</div>
+        <div style="font-size: 9px; color: #666;">${isLong ? 'Bullish setup - Long position recommended' : 'Bearish setup - Short position recommended'}</div>
+      </div>
+    </div>
+
+    <!-- Confidence Factors -->
+    ${v?.confidenceFactors && v.confidenceFactors.length > 0 ? `
+    <div class="step-box">
+      <div class="step-box-header">
+        <span class="step-box-title">Confidence Factors</span>
+      </div>
+      <div class="list">
+        ${v.confidenceFactors.slice(0, 8).map(cf => `
+          <div class="list-item">
+            <span class="list-icon ${cf.positive ? 'list-icon-y' : 'list-icon-n'}">${cf.positive ? '+' : '-'}</span>
+            <span>${cf.factor}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
+
+    <!-- Technical Indicator Summary -->
     ${ind?.summary ? `
-    <div class="section" style="margin-bottom: 6px;">
+    <div class="step-box">
+      <div class="step-box-header">
+        <span class="step-box-title">Technical Indicator Summary (${ind.summary.totalIndicatorsUsed} indicators)</span>
+      </div>
       <div class="row">
-        <div class="col metric metric-sm">
+        <div class="col metric metric-sm" style="text-align: center;">
+          <div class="metric-value text-green" style="font-size: 16px;">${ind.summary.bullishIndicators}</div>
           <div class="metric-label">Bullish</div>
-          <div class="metric-value text-green">${ind.summary.bullishIndicators}</div>
         </div>
-        <div class="col metric metric-sm">
+        <div class="col metric metric-sm" style="text-align: center;">
+          <div class="metric-value text-red" style="font-size: 16px;">${ind.summary.bearishIndicators}</div>
           <div class="metric-label">Bearish</div>
-          <div class="metric-value text-red">${ind.summary.bearishIndicators}</div>
         </div>
-        <div class="col metric metric-sm">
+        <div class="col metric metric-sm" style="text-align: center;">
+          <div class="metric-value" style="font-size: 16px;">${ind.summary.neutralIndicators}</div>
           <div class="metric-label">Neutral</div>
-          <div class="metric-value">${ind.summary.neutralIndicators}</div>
         </div>
-        <div class="col metric metric-sm">
-          <div class="metric-label">Overall Signal</div>
+        <div class="col metric metric-sm" style="text-align: center;">
           <div class="metric-value ${ind.summary.overallSignal === 'bullish' ? 'text-green' : ind.summary.overallSignal === 'bearish' ? 'text-red' : ''}">${formatDirection(ind.summary.overallSignal)}</div>
-        </div>
-        <div class="col metric metric-sm">
-          <div class="metric-label">Leading</div>
-          <div class="metric-value ${ind.summary.leadingIndicatorsSignal === 'bullish' ? 'text-green' : ind.summary.leadingIndicatorsSignal === 'bearish' ? 'text-red' : ''}">${formatDirection(ind.summary.leadingIndicatorsSignal)}</div>
+          <div class="metric-label">Overall Signal</div>
         </div>
       </div>
     </div>
     ` : ''}
 
-    <!-- Trend Indicators -->
-    ${renderIndicatorTable(ind?.trend, 'Trend')}
-
-    <!-- Momentum Indicators -->
-    ${renderIndicatorTable(ind?.momentum, 'Momentum')}
-
-    <!-- Volatility Indicators -->
-    ${renderIndicatorTable(ind?.volatility, 'Volatility')}
-
-    <!-- Volume Indicators -->
-    ${renderIndicatorTable(ind?.volume, 'Volume')}
-
-    <!-- Advanced Indicators -->
-    ${renderIndicatorTable(ind?.advanced, 'Advanced')}
-
-    <!-- Divergences Section -->
-    ${ind?.divergences && ind.divergences.length > 0 ? `
-    <div class="section" style="margin-bottom: 6px;">
-      <div style="font-size: 8px; font-weight: 600; margin-bottom: 4px; color: #333;">Detected Divergences</div>
-      <table class="table indicator-table">
-        <tr>
-          <th style="width: 15%;">Type</th>
-          <th style="width: 20%;">Indicator</th>
-          <th style="width: 15%;">Reliability</th>
-          <th style="width: 50%;">Description</th>
-        </tr>
-        ${ind.divergences.slice(0, 4).map(div => `
-          <tr>
-            <td class="${div.type === 'bullish' ? 'text-green' : div.type === 'bearish' ? 'text-red' : ''}" style="font-weight: 600;">${div.type.toUpperCase()}</td>
-            <td>${div.indicator}</td>
-            <td>${div.reliability}</td>
-            <td style="font-size: 6px;">${div.description.slice(0, 60)}${div.description.length > 60 ? '...' : ''}</td>
-          </tr>
-        `).join('')}
-      </table>
+    <!-- AI Expert Comment -->
+    ${data.aiExpertComment ? `
+    <div class="step-box" style="background: linear-gradient(135deg, #f0fdf4, #ecfdf5); border-color: #86efac;">
+      <div class="step-box-header" style="border-color: #86efac;">
+        <span style="font-size: 8px; font-weight: 700; color: #fff; background: #16a34a; padding: 2px 5px; border-radius: 3px;">AI</span>
+        <span class="step-box-title" style="color: #166534;">Expert Review</span>
+      </div>
+      <div style="font-size: 7px; line-height: 1.5; color: #15803d; max-height: 150px; overflow: hidden;">${data.aiExpertComment.slice(0, 800)}${data.aiExpertComment.length > 800 ? '...' : ''}</div>
     </div>
     ` : ''}
 
-    <div style="margin-top: 4px; padding: 4px 6px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 3px; font-size: 6px; color: #0369a1;">
-      <strong>* Leading Indicators</strong> signal changes before price. <strong>Trade Type: ${tradeTypeLabels[data.tradeType || ''] || 'Standard'}</strong>
+    <!-- AI Summary -->
+    <div class="summary-box">
+      <div style="font-size: 8px; font-weight: 600; margin-bottom: 4px;">Analysis Summary</div>
+      <div class="summary-text">${v?.aiSummary || v?.recommendation || 'Analysis complete. Review all sections for detailed insights.'}</div>
     </div>
 
-    ${generateFooter(data, 4, totalPages)}
+    ${generateFooter(data, 6, totalPages)}
   </div>
 </body></html>`;
 }
@@ -1242,36 +1137,37 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
   const pdfWidth = pdf.internal.pageSize.getWidth();
   const pdfHeight = pdf.internal.pageSize.getHeight();
 
-  // Determine total pages based on indicator details availability
-  const hasIndicatorDetails = data.indicatorDetails && (
-    (data.indicatorDetails.trend && Object.keys(data.indicatorDetails.trend).length > 0) ||
-    (data.indicatorDetails.momentum && Object.keys(data.indicatorDetails.momentum).length > 0) ||
-    (data.indicatorDetails.volatility && Object.keys(data.indicatorDetails.volatility).length > 0) ||
-    (data.indicatorDetails.volume && Object.keys(data.indicatorDetails.volume).length > 0) ||
-    (data.indicatorDetails.advanced && Object.keys(data.indicatorDetails.advanced).length > 0)
-  );
-  const totalPages = hasIndicatorDetails ? 4 : 3;
+  // Total pages: 6 (Executive Summary, Trade Plan, Tokenomics, Steps 1-3, Steps 4-6, Verdict)
+  const totalPages = 6;
 
-  // Page 1
-  const canvas1 = await renderPageToCanvas(generatePage1(data, totalPages));
+  // Page 1: Executive Summary
+  const canvas1 = await renderPageToCanvas(generatePageExecutiveSummary(data, totalPages));
   pdf.addImage(canvas1.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-  // Page 2
+  // Page 2: Trade Plan (Full Chart)
   pdf.addPage();
-  const canvas2 = await renderPageToCanvas(generatePage2(data, totalPages));
+  const canvas2 = await renderPageToCanvas(generatePageTradePlan(data, totalPages));
   pdf.addImage(canvas2.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-  // Page 3
+  // Page 3: Tokenomics
   pdf.addPage();
-  const canvas3 = await renderPageToCanvas(generatePage3(data, totalPages));
+  const canvas3 = await renderPageToCanvas(generatePageTokenomics(data, totalPages));
   pdf.addImage(canvas3.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-  // Page 4: Technical Indicators (all categories combined) - only if indicator details exist
-  if (hasIndicatorDetails) {
-    pdf.addPage();
-    const canvas4 = await renderPageToCanvas(generatePage4(data, totalPages));
-    pdf.addImage(canvas4.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
-  }
+  // Page 4: Steps 1-3
+  pdf.addPage();
+  const canvas4 = await renderPageToCanvas(generatePageSteps123(data, totalPages));
+  pdf.addImage(canvas4.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+  // Page 5: Steps 4-6
+  pdf.addPage();
+  const canvas5 = await renderPageToCanvas(generatePageSteps456(data, totalPages));
+  pdf.addImage(canvas5.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+  // Page 6: Final Verdict
+  pdf.addPage();
+  const canvas6 = await renderPageToCanvas(generatePageVerdict(data, totalPages));
+  pdf.addImage(canvas6.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
   const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'DayTrade', swing: 'Swing' };
   const tradeType = data.tradeType ? tradeTypes[data.tradeType] || '' : '';
@@ -1280,8 +1176,7 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
   const pdfBase64 = pdf.output('datauristring').split(',')[1];
   pdf.save(fileName);
 
-  // Log detailed report availability
-  console.log(`[TraderPath] Detailed report generated: ${hasIndicatorDetails ? '4 pages with full indicator analysis' : '3 pages summary'}`);
+  console.log(`[TraderPath] Report generated: 6 pages`);
 
   return { base64: pdfBase64, fileName };
 }
