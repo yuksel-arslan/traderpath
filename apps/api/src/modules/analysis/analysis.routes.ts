@@ -500,11 +500,12 @@ Warn about potential traps and give protective advice.`;
       );
 
       // Step 8: Final Verdict - combines everything
-      const verdict = analysisEngine.getFinalVerdict(
+      const verdict = await analysisEngine.getFinalVerdict(
         body.symbol,
         preliminaryVerdict,
         { marketPulse, assetScan, safetyCheck, timing, trapCheck },
-        tradePlan
+        tradePlan,
+        body.tradeType
       );
 
       // Save analysis to database (regardless of verdict)

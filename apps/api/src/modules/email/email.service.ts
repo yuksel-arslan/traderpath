@@ -65,6 +65,8 @@ class EmailService {
       return { success: true, messageId: 'mock-' + Date.now() };
     }
 
+    console.log('[EmailService] Sending email to:', options.to, 'Subject:', options.subject);
+
     try {
       const emailPayload: Record<string, unknown> = {
         from: this.FROM_EMAIL,
@@ -77,6 +79,7 @@ class EmailService {
       // Add attachments if provided
       if (options.attachments && options.attachments.length > 0) {
         emailPayload.attachments = options.attachments;
+        console.log('[EmailService] Attachments:', options.attachments.length, 'files');
       }
 
       const response = await fetch('https://api.resend.com/emails', {
@@ -88,13 +91,16 @@ class EmailService {
         body: JSON.stringify(emailPayload),
       });
 
+      const responseText = await response.text();
+
       if (!response.ok) {
-        const error = await response.text();
-        console.error('[EmailService] Failed to send email:', error);
-        return { success: false, error };
+        console.error('[EmailService] Failed to send email. Status:', response.status);
+        console.error('[EmailService] Response:', responseText);
+        return { success: false, error: responseText };
       }
 
-      const data = await response.json();
+      const data = JSON.parse(responseText);
+      console.log('[EmailService] Email sent successfully. ID:', data.id);
       return { success: true, messageId: data.id };
     } catch (error) {
       console.error('[EmailService] Error sending email:', error);
