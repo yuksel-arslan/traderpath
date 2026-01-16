@@ -423,6 +423,9 @@ model Analysis {
   totalScore     Decimal? @map("total_score") @db.Decimal(3, 1)
   creditsSpent   Int      @default(0) @map("credits_spent")
 
+  // AI Expert question tracking (3 free per analysis, then 5 credits each)
+  aiExpertQuestionsUsed Int @default(0) @map("ai_expert_questions_used")
+
   // Outcome tracking for TP/SL hit detection
   outcome            String?   @db.VarChar(20) // 'tp1_hit', 'tp2_hit', 'tp3_hit', 'sl_hit', 'pending'
   outcomePrice       Decimal?  @map("outcome_price") @db.Decimal(20, 8) // Price when TP/SL was hit
