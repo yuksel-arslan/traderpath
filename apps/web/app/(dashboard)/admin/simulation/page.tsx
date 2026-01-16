@@ -15,6 +15,7 @@ import {
   UserCheck,
   ShoppingBag,
   Package,
+  Cpu,
 } from 'lucide-react';
 import Link from 'next/link';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Area, ComposedChart } from 'recharts';
@@ -23,12 +24,18 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 // Types
 // ===========================================
 
+type AIModel = 'gemini-2.5-flash' | 'gemini-2.5-pro';
+
 interface SimulationConfig {
   // Fixed Costs (Monthly)
   claudeCodeCost: number;
   vercelCost: number;
   railwayCost: number;
   neonDbCost: number;
+
+  // AI Costs (per analysis)
+  aiModel: AIModel;
+  aiCostPerAnalysis: number; // USD per analysis
 
   // Revenue Settings
   creditPriceUsd: number;
@@ -75,6 +82,8 @@ interface WeeklyData {
   secondHandPurchases: number;
   packageRevenue: number;
   revenue: number;
+  fixedCost: number;
+  aiCost: number;
   cost: number;
   profit: number;
   cumProfit: number;
@@ -84,12 +93,22 @@ interface WeeklyData {
 // Default Configuration
 // ===========================================
 
+// AI Model Costs (USD per analysis - approximate)
+const AI_MODEL_COSTS: Record<AIModel, number> = {
+  'gemini-2.5-flash': 0.003, // ~$0.003 per analysis (faster, cheaper)
+  'gemini-2.5-pro': 0.02,    // ~$0.02 per analysis (better quality)
+};
+
 const defaultConfig: SimulationConfig = {
   // Fixed Costs
   claudeCodeCost: 100,
   vercelCost: 20,
   railwayCost: 20,
   neonDbCost: 20,
+
+  // AI Costs
+  aiModel: 'gemini-2.5-flash',
+  aiCostPerAnalysis: AI_MODEL_COSTS['gemini-2.5-flash'],
 
   // Revenue
   creditPriceUsd: 0.10,
@@ -191,8 +210,12 @@ export default function SimulationPage() {
       // Total revenue
       const revenue = packageRevenue + additionalCreditRevenue;
 
+      // AI cost: only new analyses require AI processing
+      const aiCost = newAnalyses * config.aiCostPerAnalysis;
+
       // Cost and profit
-      const cost = weeklyFixedCost;
+      const fixedCost = weeklyFixedCost;
+      const cost = fixedCost + aiCost;
       const profit = revenue - cost;
       cumProfit += profit;
 
@@ -206,6 +229,8 @@ export default function SimulationPage() {
         secondHandPurchases,
         packageRevenue: Number(packageRevenue.toFixed(2)),
         revenue: Number(revenue.toFixed(2)),
+        fixedCost: Number(fixedCost.toFixed(2)),
+        aiCost: Number(aiCost.toFixed(2)),
         cost: Number(cost.toFixed(2)),
         profit: Number(profit.toFixed(2)),
         cumProfit: Number(cumProfit.toFixed(2)),
@@ -240,6 +265,14 @@ export default function SimulationPage() {
 
   const updateConfig = (key: keyof SimulationConfig, value: number) => {
     setConfig(prev => ({ ...prev, [key]: value }));
+  };
+
+  const updateAIModel = (model: AIModel) => {
+    setConfig(prev => ({
+      ...prev,
+      aiModel: model,
+      aiCostPerAnalysis: AI_MODEL_COSTS[model],
+    }));
   };
 
   return (
@@ -346,6 +379,66 @@ export default function SimulationPage() {
                   <span className="font-mono">
                     ${config.claudeCodeCost + config.vercelCost + config.railwayCost + config.neonDbCost}
                   </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Costs */}
+          <div className="bg-card border rounded-lg p-4">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <Cpu className="w-4 h-4" />
+              AI Maliyeti
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <span className="text-sm text-muted-foreground mb-2 block">Model Seçimi</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => updateAIModel('gemini-2.5-flash')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition ${
+                      config.aiModel === 'gemini-2.5-flash'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-accent hover:bg-accent/80'
+                    }`}
+                  >
+                    Gemini 2.5 Flash
+                  </button>
+                  <button
+                    onClick={() => updateAIModel('gemini-2.5-pro')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition ${
+                      config.aiModel === 'gemini-2.5-pro'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-accent hover:bg-accent/80'
+                    }`}
+                  >
+                    Gemini 2.5 Pro
+                  </button>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-sm">Analiz Başına Maliyet</span>
+                  <span className="text-sm font-mono text-red-400">${config.aiCostPerAnalysis.toFixed(4)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.001"
+                  max="0.05"
+                  step="0.001"
+                  value={config.aiCostPerAnalysis}
+                  onChange={(e) => updateConfig('aiCostPerAnalysis', Number(e.target.value))}
+                  className="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+              <div className="pt-2 border-t text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-cyan-500" />
+                  Flash: Hızlı, ekonomik (~$0.003/analiz)
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="w-2 h-2 rounded-full bg-purple-500" />
+                  Pro: Yüksek kalite (~$0.02/analiz)
                 </div>
               </div>
             </div>
@@ -891,7 +984,9 @@ export default function SimulationPage() {
                     <th className="text-right p-2">Users</th>
                     <th className="text-right p-2">Analyses</th>
                     <th className="text-right p-2">Revenue</th>
-                    <th className="text-right p-2">Cost</th>
+                    <th className="text-right p-2">Fixed</th>
+                    <th className="text-right p-2">AI Cost</th>
+                    <th className="text-right p-2">Total Cost</th>
                     <th className="text-right p-2">Profit</th>
                     <th className="text-right p-2">Cum. Profit</th>
                   </tr>
@@ -903,6 +998,8 @@ export default function SimulationPage() {
                       <td className="p-2 text-right">{w.users}</td>
                       <td className="p-2 text-right">{w.analyses}</td>
                       <td className="p-2 text-right font-mono text-green-500">${w.revenue}</td>
+                      <td className="p-2 text-right font-mono text-orange-400">${w.fixedCost}</td>
+                      <td className="p-2 text-right font-mono text-cyan-400">${w.aiCost}</td>
                       <td className="p-2 text-right font-mono text-red-500">${w.cost}</td>
                       <td className={`p-2 text-right font-mono ${w.profit >= 0 ? 'text-blue-500' : 'text-red-500'}`}>
                         ${w.profit}
