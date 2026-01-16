@@ -421,12 +421,23 @@ const styles = `
   .factor-item { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 8px; }
   .factor-icon { font-weight: 700; width: 14px; text-align: center; }
 
-  .footer { position: absolute; bottom: 10px; left: 24px; right: 24px; display: flex; justify-content: space-between; font-size: 7px; color: #999; border-top: 1px solid #eee; padding-top: 6px; }
-
-  .disclaimer { background: #fef2f2; border: 1px solid #fecaca; border-radius: 3px; padding: 8px; margin-top: 10px; }
-  .disclaimer-title { font-size: 7px; font-weight: 600; color: #991b1b; margin-bottom: 3px; }
-  .disclaimer-text { font-size: 6px; color: #991b1b; line-height: 1.4; }
+  .footer { position: absolute; bottom: 8px; left: 24px; right: 24px; font-size: 6px; color: #999; border-top: 1px solid #eee; padding-top: 4px; }
+  .footer-row { display: flex; justify-content: space-between; align-items: center; }
+  .footer-disclaimer { font-size: 5px; color: #b91c1c; margin-top: 2px; line-height: 1.3; }
 `;
+
+const DISCLAIMER_TEXT = 'RISK DISCLAIMER: This report is for educational purposes only. Not financial advice. Crypto trading involves substantial risk. DYOR. Never invest more than you can afford to lose.';
+
+function generateFooter(data: AnalysisReportData, pageNum: number, totalPages: number): string {
+  return `
+    <div class="footer">
+      <div class="footer-row">
+        <span><span class="brand-trade">Trader</span><span class="brand-path">Path</span> | ID: ${data.analysisId?.slice(-10) || '-'}</span>
+        <span>Page ${pageNum} of ${totalPages}</span>
+      </div>
+      <div class="footer-disclaimer">${DISCLAIMER_TEXT}</div>
+    </div>`;
+}
 
 // ===========================================
 // PAGE 1: Executive Summary
@@ -520,9 +531,15 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
           </div>
         `).join('')}
       </div>
-          </div>
+      <!-- Trade Plan Chart -->
+      ${data.chartImage ? `
+      <div style="margin-top: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
+        <img src="${data.chartImage}" style="width: 100%; height: auto; max-height: 120px; display: block; object-fit: contain;" alt="Trade Plan Chart" />
+      </div>
+      ` : ''}
+    </div>
 
-    <!-- Step 01: Market Pulse with Tokenomics -->
+    <!-- Step 01: Market Pulse -->
     <div class="step-box">
       <div class="step-box-header">
         <span class="step-box-num">01</span>
@@ -549,27 +566,6 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
           <div class="metric-value">${formatRegime(mp.marketRegime)}</div>
         </div>
       </div>
-      ${tk ? `
-      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Tokenomics</div>
-      <div class="row" style="margin-top: 4px;">
-        <div class="col metric metric-sm">
-          <div class="metric-label">Market Cap</div>
-          <div class="metric-value">${formatVolume(tk.market.marketCap)}</div>
-        </div>
-        <div class="col metric metric-sm">
-          <div class="metric-label">Circulating</div>
-          <div class="metric-value">${tk.supply.circulatingPercent?.toFixed(0) || '-'}%</div>
-        </div>
-        <div class="col metric metric-sm">
-          <div class="metric-label">Dilution Risk</div>
-          <div class="metric-value ${tk.market.dilutionRisk === 'low' ? 'text-green' : tk.market.dilutionRisk === 'high' ? 'text-red' : 'text-amber'}">${formatDirection(tk.market.dilutionRisk)}</div>
-        </div>
-        <div class="col metric metric-sm">
-          <div class="metric-label">Score</div>
-          <div class="metric-value ${tk.assessment.overallScore >= 70 ? 'text-green' : tk.assessment.overallScore < 40 ? 'text-red' : ''}">${tk.assessment.overallScore}/100</div>
-        </div>
-      </div>
-      ` : ''}
       ${mpIndicators.length > 0 ? `
       <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Trend Indicators (ADX, EMA, ICHIMOKU, BOLLINGER)</div>
       <div class="row" style="margin-top: 4px;">
@@ -618,6 +614,27 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
         <span style="margin-left: 12px;">Resistance: <span class="text-red">${as.levels.resistance.slice(0, 2).map(r => formatPrice(r)).join(', ')}</span></span>
       </div>
       ` : ''}
+      ${tk ? `
+      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Tokenomics</div>
+      <div class="row" style="margin-top: 4px;">
+        <div class="col metric metric-sm">
+          <div class="metric-label">Market Cap</div>
+          <div class="metric-value">${formatVolume(tk.market.marketCap)}</div>
+        </div>
+        <div class="col metric metric-sm">
+          <div class="metric-label">Circulating</div>
+          <div class="metric-value">${tk.supply.circulatingPercent?.toFixed(0) || '-'}%</div>
+        </div>
+        <div class="col metric metric-sm">
+          <div class="metric-label">Dilution Risk</div>
+          <div class="metric-value ${tk.market.dilutionRisk === 'low' ? 'text-green' : tk.market.dilutionRisk === 'high' ? 'text-red' : 'text-amber'}">${formatDirection(tk.market.dilutionRisk)}</div>
+        </div>
+        <div class="col metric metric-sm">
+          <div class="metric-label">Score</div>
+          <div class="metric-value ${tk.assessment.overallScore >= 70 ? 'text-green' : tk.assessment.overallScore < 40 ? 'text-red' : ''}">${tk.assessment.overallScore}/100</div>
+        </div>
+      </div>
+      ` : ''}
       ${asIndicators.length > 0 ? `
       <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Volume Indicators (VWAP, OBV, CMF, AD)</div>
       <div class="row" style="margin-top: 4px;">
@@ -633,10 +650,7 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
       ${asSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${asSummary}</div>` : ''}
     </div>
 
-    <div class="footer">
-      <span><span class="brand-trade">Trader</span><span class="brand-path">Path</span> | ID: ${data.analysisId?.slice(-10) || '-'}</span>
-      <span>Page 1 of ${totalPages}</span>
-    </div>
+    ${generateFooter(data, 1, totalPages)}
   </div>
 </body></html>`;
 }
@@ -870,10 +884,7 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
       ${tpSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tpSummary}</div>` : ''}
     </div>
 
-    <div class="footer">
-      <span><span class="brand-trade">Trader</span><span class="brand-path">Path</span> | ID: ${data.analysisId?.slice(-10) || '-'}</span>
-      <span>Page 2 of ${totalPages}</span>
-    </div>
+    ${generateFooter(data, 2, totalPages)}
   </div>
 </body></html>`;
 }
@@ -1055,18 +1066,7 @@ function generatePage3(data: AnalysisReportData, totalPages: number = 5): string
     </div>
     ` : ''}
 
-    <!-- Disclaimer -->
-    <div class="disclaimer">
-      <div class="disclaimer-title">RISK DISCLAIMER</div>
-      <div class="disclaimer-text">
-        This report is generated by TraderPath AI for educational and informational purposes only. It does not constitute financial advice, investment recommendation, or an offer to buy or sell any financial instruments. Cryptocurrency trading involves substantial risk of loss. Past performance is not indicative of future results. Always conduct your own research (DYOR) and consult with a qualified financial advisor before making investment decisions. Never invest more than you can afford to lose.
-      </div>
-    </div>
-
-    <div class="footer">
-      <span>(c) ${new Date().getFullYear()} TraderPath | ID: ${data.analysisId?.slice(-10) || '-'}</span>
-      <span>Page 3 of ${totalPages}</span>
-    </div>
+    ${generateFooter(data, 3, totalPages)}
   </div>
 </body></html>`;
 }
@@ -1075,7 +1075,7 @@ function generatePage3(data: AnalysisReportData, totalPages: number = 5): string
 // PAGE 4: Technical Indicators - Trend & Momentum
 // ===========================================
 
-function generatePage4(data: AnalysisReportData): string {
+function generatePage4(data: AnalysisReportData, totalPages: number = 5): string {
   const ind = data.indicatorDetails;
   const tradeTypeLabels: Record<string, string> = { scalping: 'Scalping', dayTrade: 'Day Trade', swing: 'Swing Trade' };
 
@@ -1143,10 +1143,7 @@ function generatePage4(data: AnalysisReportData): string {
       <strong>* Leading Indicators:</strong> These indicators typically signal changes before they occur in price. They are weighted more heavily in the analysis.
     </div>
 
-    <div class="footer">
-      <span><span class="brand-trade">Trader</span><span class="brand-path">Path</span> | ID: ${data.analysisId?.slice(-10) || '-'}</span>
-      <span>Page 4 of 5</span>
-    </div>
+    ${generateFooter(data, 4, totalPages)}
   </div>
 </body></html>`;
 }
@@ -1155,7 +1152,7 @@ function generatePage4(data: AnalysisReportData): string {
 // PAGE 5: Technical Indicators - Volatility, Volume & Advanced
 // ===========================================
 
-function generatePage5(data: AnalysisReportData): string {
+function generatePage5(data: AnalysisReportData, totalPages: number = 5): string {
   const ind = data.indicatorDetails;
   const tradeTypeLabels: Record<string, string> = { scalping: 'Scalping', dayTrade: 'Day Trade', swing: 'Swing Trade' };
 
@@ -1229,10 +1226,7 @@ function generatePage5(data: AnalysisReportData): string {
       </div>
     </div>
 
-    <div class="footer">
-      <span><span class="brand-trade">Trader</span><span class="brand-path">Path</span> | ID: ${data.analysisId?.slice(-10) || '-'}</span>
-      <span>Page 5 of 5</span>
-    </div>
+    ${generateFooter(data, 5, totalPages)}
   </div>
 </body></html>`;
 }
@@ -1335,11 +1329,11 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
   // Page 4 & 5: Technical Indicators - only if indicator details exist
   if (hasIndicatorDetails) {
     pdf.addPage();
-    const canvas4 = await renderPageToCanvas(generatePage4(data));
+    const canvas4 = await renderPageToCanvas(generatePage4(data, totalPages));
     pdf.addImage(canvas4.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
     pdf.addPage();
-    const canvas5 = await renderPageToCanvas(generatePage5(data));
+    const canvas5 = await renderPageToCanvas(generatePage5(data, totalPages));
     pdf.addImage(canvas5.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
   }
 
