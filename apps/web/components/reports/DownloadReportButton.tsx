@@ -159,6 +159,31 @@ interface AnalysisReportData {
     };
     aiInsight?: string;
   };
+  tokenomics?: {
+    supply: {
+      circulating: number;
+      total: number | null;
+      maxSupply: number | null;
+      circulatingPercent: number;
+      inflationRisk: 'low' | 'medium' | 'high';
+    };
+    market: {
+      marketCap: number;
+      fullyDilutedValuation: number | null;
+      mcapFdvRatio: number;
+      dilutionRisk: 'low' | 'medium' | 'high';
+      liquidityHealth: 'excellent' | 'good' | 'moderate' | 'poor';
+    };
+    whaleConcentration: {
+      concentrationRisk: 'low' | 'medium' | 'high';
+      top10HoldersPercent: number | null;
+    };
+    assessment: {
+      overallScore: number;
+      riskLevel: 'low' | 'medium' | 'high';
+      recommendation: string;
+    };
+  };
   safetyCheck: {
     riskLevel: string;
     manipulation: { pumpDumpRisk: string };
@@ -495,6 +520,12 @@ export function DownloadReportButton({
           confidenceFactors: [],
         },
       };
+
+      // Extract tokenomics from assetScan data (Step 2)
+      const step2Data = analysisData[2] as Record<string, unknown>;
+      if (step2Data?.tokenomics) {
+        reportData.tokenomics = step2Data.tokenomics as AnalysisReportData['tokenomics'];
+      }
 
       // Fetch existing AI Expert comment if we have an analysisId
       if (analysisId) {

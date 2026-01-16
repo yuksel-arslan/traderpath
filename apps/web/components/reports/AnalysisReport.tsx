@@ -347,6 +347,9 @@ const styles = `
   .chart-container img { width: 100%; height: auto; display: block; }
   .summary-box { background: #f8f9fa; border-left: 3px solid #1a1a1a; padding: 8px 10px; margin-top: 8px; }
   .summary-text { font-size: 8px; color: #333; line-height: 1.5; }
+  .step-summary { font-size: 7px; color: #333; background: #f0f9f0; border-left: 2px solid #16a34a; padding: 6px 8px; margin-top: 8px; line-height: 1.5; }
+  .step-summary-title { font-size: 7px; font-weight: 600; color: #16a34a; margin-bottom: 3px; }
+  .step-box-expanded { border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; background: #fafafa; min-height: 200px; }
   .footer { position: absolute; bottom: 8px; left: 24px; right: 24px; font-size: 6px; color: #999; border-top: 1px solid #eee; padding-top: 4px; }
   .footer-row { display: flex; justify-content: space-between; align-items: center; }
   .footer-disclaimer { font-size: 5px; color: #b91c1c; margin-top: 2px; line-height: 1.3; }
@@ -700,9 +703,21 @@ function generatePageSteps123(data: AnalysisReportData, totalPages: number): str
   const mp = data.marketPulse;
   const as = data.assetScan;
   const sc = data.safetyCheck;
+  const tk = data.tokenomics;
   const mpGate = getGateStatus(mp.gate);
   const asGate = getGateStatus(as.gate);
   const scGate = getGateStatus(sc.gate);
+
+  // Step Summaries from gate reasons
+  const mpSummary = mp.gate?.reason ? `Market Pulse: ${mp.gate.reason}` : '';
+  const asSummary = as.gate?.reason ? `Asset Scan: ${as.gate.reason}` : '';
+  const scSummary = sc.gate?.reason ? `Safety Check: ${sc.gate.reason}` : '';
+
+  // Get indicators for each step
+  const ind = data.indicatorDetails;
+  const trendIndicators = ind?.trend ? Object.values(ind.trend).filter(Boolean).slice(0, 4) : [];
+  const volumeIndicators = ind?.volume ? Object.values(ind.volume).filter(Boolean).slice(0, 4) : [];
+  const advancedIndicators = ind?.advanced ? Object.values(ind.advanced).filter(Boolean).slice(0, 4) : [];
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
@@ -720,7 +735,7 @@ function generatePageSteps123(data: AnalysisReportData, totalPages: number): str
     </div>
 
     <!-- Step 01: Market Pulse -->
-    <div class="step-box">
+    <div class="step-box-expanded">
       <div class="step-box-header">
         <span class="step-box-num">01</span>
         <span class="step-box-title">Market Pulse</span>
@@ -746,11 +761,23 @@ function generatePageSteps123(data: AnalysisReportData, totalPages: number): str
           <div class="metric-value">${formatRegime(mp.marketRegime)}</div>
         </div>
       </div>
-      ${mp.gate?.reason ? `<div style="margin-top: 5px; font-size: 7px; color: #666; background: #f5f5f5; padding: 5px; border-radius: 3px;">${mp.gate.reason}</div>` : ''}
+      ${trendIndicators.length > 0 ? `
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Trend Indicators (SMA, EMA, ADX, Ichimoku)</div>
+      <div class="row" style="margin-top: 4px;">
+        ${trendIndicators.map(i => `
+          <div class="col metric metric-sm">
+            <div class="metric-label">${i?.name || ''}</div>
+            <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? formatIndicatorValue(i.value) : i?.value || '-'}</div>
+            <div class="metric-note">${i?.signal || ''}</div>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
+      ${mpSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${mpSummary}</div>` : ''}
     </div>
 
     <!-- Step 02: Asset Scanner -->
-    <div class="step-box">
+    <div class="step-box-expanded">
       <div class="step-box-header">
         <span class="step-box-num">02</span>
         <span class="step-box-title">Asset Scanner</span>
@@ -773,19 +800,53 @@ function generatePageSteps123(data: AnalysisReportData, totalPages: number): str
         <div class="col metric metric-sm">
           <div class="metric-label">Signal</div>
           <div class="metric-value ${as.direction === 'long' ? 'text-green' : as.direction === 'short' ? 'text-red' : ''}">${formatDirection(as.direction)}</div>
+          <div class="metric-note">${formatPercent(as.directionConfidence)} conf</div>
         </div>
       </div>
       ${as.levels ? `
-      <div style="margin-top: 5px; font-size: 7px;">
+      <div style="margin-top: 6px; font-size: 7px;">
         <span>Support: <span class="text-green">${as.levels.support.slice(0, 2).map(s => formatPrice(s)).join(', ')}</span></span>
-        <span style="margin-left: 10px;">Resistance: <span class="text-red">${as.levels.resistance.slice(0, 2).map(r => formatPrice(r)).join(', ')}</span></span>
+        <span style="margin-left: 12px;">Resistance: <span class="text-red">${as.levels.resistance.slice(0, 2).map(r => formatPrice(r)).join(', ')}</span></span>
       </div>
       ` : ''}
-      ${as.gate?.reason ? `<div style="margin-top: 5px; font-size: 7px; color: #666; background: #f5f5f5; padding: 5px; border-radius: 3px;">${as.gate.reason}</div>` : ''}
+      ${tk ? `
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Tokenomics</div>
+      <div class="row" style="margin-top: 4px;">
+        <div class="col metric metric-sm">
+          <div class="metric-label">Market Cap</div>
+          <div class="metric-value">${formatVolume(tk.market.marketCap)}</div>
+        </div>
+        <div class="col metric metric-sm">
+          <div class="metric-label">Circulating</div>
+          <div class="metric-value">${tk.supply.circulatingPercent?.toFixed(0) || '-'}%</div>
+        </div>
+        <div class="col metric metric-sm">
+          <div class="metric-label">Dilution Risk</div>
+          <div class="metric-value ${tk.market.dilutionRisk === 'low' ? 'text-green' : tk.market.dilutionRisk === 'high' ? 'text-red' : 'text-amber'}">${formatDirection(tk.market.dilutionRisk)}</div>
+        </div>
+        <div class="col metric metric-sm">
+          <div class="metric-label">Score</div>
+          <div class="metric-value ${tk.assessment.overallScore >= 70 ? 'text-green' : tk.assessment.overallScore < 40 ? 'text-red' : ''}">${tk.assessment.overallScore}/100</div>
+        </div>
+      </div>
+      ` : ''}
+      ${volumeIndicators.length > 0 ? `
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Volume Indicators (VWAP, OBV, CMF, AD)</div>
+      <div class="row" style="margin-top: 4px;">
+        ${volumeIndicators.map(i => `
+          <div class="col metric metric-sm">
+            <div class="metric-label">${i?.name || ''}</div>
+            <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? formatIndicatorValue(i.value) : i?.value || '-'}</div>
+            <div class="metric-note">${i?.signal || ''}</div>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
+      ${asSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${asSummary}</div>` : ''}
     </div>
 
     <!-- Step 03: Safety Check -->
-    <div class="step-box">
+    <div class="step-box-expanded">
       <div class="step-box-header">
         <span class="step-box-num">03</span>
         <span class="step-box-title">Safety Check</span>
@@ -810,11 +871,23 @@ function generatePageSteps123(data: AnalysisReportData, totalPages: number): str
         </div>
       </div>
       ${sc.warnings && sc.warnings.length > 0 ? `
-      <div style="margin-top: 5px; font-size: 7px; color: #dc2626;">
-        ${sc.warnings.slice(0, 2).map(w => `⚠ ${w}`).join(' | ')}
+      <div style="margin-top: 6px; font-size: 7px; color: #dc2626;">
+        ${sc.warnings.slice(0, 3).map(w => `<span style="margin-right: 8px;">⚠ ${w}</span>`).join('')}
       </div>
       ` : ''}
-      ${sc.gate?.reason ? `<div style="margin-top: 5px; font-size: 7px; color: #666; background: #f5f5f5; padding: 5px; border-radius: 3px;">${sc.gate.reason}</div>` : ''}
+      ${advancedIndicators.length > 0 ? `
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Advanced Indicators (ORDER_FLOW, WHALE, SQUEEZE)</div>
+      <div class="row" style="margin-top: 4px;">
+        ${advancedIndicators.map(i => `
+          <div class="col metric metric-sm">
+            <div class="metric-label">${i?.name || ''}</div>
+            <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? formatIndicatorValue(i.value) : i?.value || '-'}</div>
+            <div class="metric-note">${i?.signal || ''}</div>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
+      ${scSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${scSummary}</div>` : ''}
     </div>
 
     ${generateFooter(data, 4, totalPages)}
@@ -835,6 +908,17 @@ function generatePageSteps456(data: AnalysisReportData, totalPages: number): str
   const tpGate = getGateStatus(tp.gate);
   const tcGate = tc?.gate ? getGateStatus(tc.gate) : { text: '', color: '#666' };
 
+  // Step Summaries from gate reasons
+  const tmSummary = tm.gate?.reason ? `Timing: ${tm.gate.reason}` : '';
+  const tpSummary = tp.gate?.reason ? `Trade Plan: ${tp.gate.reason}` : '';
+  const tcSummary = tc?.gate?.reason ? `Trap Check: ${tc.gate.reason}` : '';
+
+  // Get indicators
+  const ind = data.indicatorDetails;
+  const momentumIndicators = ind?.momentum ? Object.values(ind.momentum).filter(Boolean).slice(0, 4) : [];
+  const volatilityIndicators = ind?.volatility ? Object.values(ind.volatility).filter(Boolean).slice(0, 4) : [];
+  const divergences = ind?.divergences || [];
+
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
     <div class="header">
@@ -851,7 +935,7 @@ function generatePageSteps456(data: AnalysisReportData, totalPages: number): str
     </div>
 
     <!-- Step 04: Timing Analysis -->
-    <div class="step-box">
+    <div class="step-box-expanded">
       <div class="step-box-header">
         <span class="step-box-num">04</span>
         <span class="step-box-title">Timing Analysis</span>
@@ -859,27 +943,56 @@ function generatePageSteps456(data: AnalysisReportData, totalPages: number): str
       </div>
       <div class="row">
         <div class="col-2 metric">
-          <div class="metric-value-lg ${tm.tradeNow ? 'text-green' : 'text-amber'}">${tm.tradeNow ? 'TRADE NOW' : 'WAIT'}</div>
-          <div class="metric-note">${tm.reason}</div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div class="metric-value metric-value-lg ${tm.tradeNow ? 'text-green' : 'text-amber'}">${tm.tradeNow ? 'TRADE NOW' : 'WAIT'}</div>
+              <div class="metric-note">${tm.reason}</div>
+            </div>
+            ${tm.gate?.urgency ? `<div style="font-size: 8px; font-weight: 600; color: ${tm.gate.urgency === 'immediate' ? '#dc2626' : '#d97706'};">${tm.gate.urgency.toUpperCase()}</div>` : ''}
+          </div>
         </div>
       </div>
       ${tm.conditions && tm.conditions.length > 0 ? `
-      <div style="margin-top: 5px;">
-        <div style="font-size: 7px; color: #666; margin-bottom: 3px;">Conditions (${tm.conditions.filter(c => c.met).length}/${tm.conditions.length} met):</div>
+      <div style="margin-top: 6px;">
+        <div style="font-size: 7px; color: #666; margin-bottom: 4px;">Entry Conditions (${tm.conditions.filter(c => c.met).length}/${tm.conditions.length} met):</div>
         <div class="list">
-          ${tm.conditions.slice(0, 6).map(c => `
+          ${tm.conditions.map(c => `
             <div class="list-item">
-              <span class="list-icon ${c.met ? 'list-icon-y' : 'list-icon-n'}">${c.met ? '✓' : '✗'}</span>
+              <span class="list-icon ${c.met ? 'list-icon-y' : 'list-icon-n'}">${c.met ? 'Y' : 'N'}</span>
               <span>${c.name}</span>
             </div>
           `).join('')}
         </div>
       </div>
       ` : ''}
+      ${tm.entryZones && tm.entryZones.length > 0 ? `
+      <div class="row" style="margin-top: 6px;">
+        ${tm.entryZones.slice(0, 3).map((ez, i) => `
+          <div class="col metric metric-sm">
+            <div class="metric-label">Zone ${i + 1}</div>
+            <div class="metric-value" style="font-size: 9px;">${formatPrice(ez.priceLow)} - ${formatPrice(ez.priceHigh)}</div>
+            <div class="metric-note">${formatPercent(ez.probability)} probability</div>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
+      ${momentumIndicators.length > 0 ? `
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Momentum Indicators (RSI, STOCH, MACD, SUPERTREND)</div>
+      <div class="row" style="margin-top: 4px;">
+        ${momentumIndicators.map(i => `
+          <div class="col metric metric-sm">
+            <div class="metric-label">${i?.name || ''}</div>
+            <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? formatIndicatorValue(i.value) : i?.value || '-'}</div>
+            <div class="metric-note">${i?.signal || ''}</div>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
+      ${tmSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tmSummary}</div>` : ''}
     </div>
 
     <!-- Step 05: Trade Plan -->
-    <div class="step-box">
+    <div class="step-box-expanded">
       <div class="step-box-header">
         <span class="step-box-num">05</span>
         <span class="step-box-title">Trade Plan Details</span>
@@ -903,7 +1016,7 @@ function generatePageSteps456(data: AnalysisReportData, totalPages: number): str
           <div class="metric-value">${tp?.positionSizePercent?.toFixed(1) || '-'}%</div>
         </div>
       </div>
-      <table class="table" style="margin-top: 5px;">
+      <table class="table" style="margin-top: 6px;">
         <tr><th>Level</th><th>Price</th><th>Change</th><th>Note</th></tr>
         <tr>
           <td>Entry</td>
@@ -926,11 +1039,24 @@ function generatePageSteps456(data: AnalysisReportData, totalPages: number): str
           </tr>
         `).join('')}
       </table>
+      ${volatilityIndicators.length > 0 ? `
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Volatility Indicators (ATR, PSAR, KELTNER, BB)</div>
+      <div class="row" style="margin-top: 4px;">
+        ${volatilityIndicators.map(i => `
+          <div class="col metric metric-sm">
+            <div class="metric-label">${i?.name || ''}</div>
+            <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? formatIndicatorValue(i.value) : i?.value || '-'}</div>
+            <div class="metric-note">${i?.signal || ''}</div>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
+      ${tpSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tpSummary}</div>` : ''}
     </div>
 
     <!-- Step 06: Trap Check -->
     ${tc ? `
-    <div class="step-box">
+    <div class="step-box-expanded">
       <div class="step-box-header">
         <span class="step-box-num">06</span>
         <span class="step-box-title">Trap Check</span>
@@ -954,7 +1080,20 @@ function generatePageSteps456(data: AnalysisReportData, totalPages: number): str
           <div class="metric-value ${tc.traps.liquidityGrab?.detected ? 'text-amber' : 'text-green'}">${tc.traps.liquidityGrab?.detected ? 'Possible' : 'Unlikely'}</div>
         </div>
       </div>
-      ${tc.proTip ? `<div style="margin-top: 5px; font-size: 7px; background: #fef3c7; padding: 5px; border-radius: 3px;"><strong>Pro Tip:</strong> ${tc.proTip}</div>` : ''}
+      ${divergences.length > 0 ? `
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Detected Divergences</div>
+      <div style="margin-top: 4px; font-size: 7px;">
+        ${divergences.slice(0, 3).map(d => `
+          <div style="display: flex; align-items: center; margin-bottom: 2px;">
+            <span style="width: 60px; font-weight: 500;">${d.indicator}</span>
+            <span class="${d.type === 'bullish' ? 'text-green' : d.type === 'bearish' ? 'text-red' : ''}" style="width: 60px;">${d.type}</span>
+            <span style="color: #666;">${d.description?.slice(0, 40) || ''}</span>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
+      ${tc.proTip ? `<div style="margin-top: 6px; font-size: 7px; background: #fef3c7; padding: 6px 8px; border-radius: 3px;"><strong>Pro Tip:</strong> ${tc.proTip}</div>` : ''}
+      ${tcSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tcSummary}</div>` : ''}
     </div>
     ` : ''}
 
