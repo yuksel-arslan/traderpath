@@ -542,24 +542,61 @@ export default function FinancePage() {
             <div className="bg-card border rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-primary" />
-                Cost by Service
+                Cost Breakdown
               </h3>
-              <div className="space-y-3">
-                {Object.entries(summary.monthly.serviceBreakdown)
-                  .sort((a, b) => b[1].cost - a[1].cost)
-                  .slice(0, 5)
-                  .map(([service, data]) => (
-                    <div key={service} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium capitalize">{service}</p>
-                        <p className="text-sm text-muted-foreground">{data.count} calls</p>
-                      </div>
-                      <span className="font-mono">${data.cost.toFixed(4)}</span>
-                    </div>
-                  ))}
-                {Object.keys(summary.monthly.serviceBreakdown).length === 0 && (
-                  <p className="text-muted-foreground text-center py-4">No data available</p>
-                )}
+              <div className="overflow-hidden rounded-lg border">
+                <table className="w-full text-sm">
+                  <thead className="bg-accent/50">
+                    <tr>
+                      <th className="text-left p-3 font-medium">Service</th>
+                      <th className="text-right p-3 font-medium">Monthly Cost</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    <tr>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-purple-500" />
+                          Claude Code
+                        </div>
+                      </td>
+                      <td className="p-3 text-right font-mono">$100.00</td>
+                    </tr>
+                    <tr>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-blue-500" />
+                          Vercel
+                        </div>
+                      </td>
+                      <td className="p-3 text-right font-mono">$20.00</td>
+                    </tr>
+                    <tr>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                          Railway
+                        </div>
+                      </td>
+                      <td className="p-3 text-right font-mono">$20.00</td>
+                    </tr>
+                    <tr>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-green-500" />
+                          Neon DB
+                        </div>
+                      </td>
+                      <td className="p-3 text-right font-mono">$20.00</td>
+                    </tr>
+                  </tbody>
+                  <tfoot className="bg-accent/30 border-t-2">
+                    <tr>
+                      <td className="p-3 font-semibold">Total</td>
+                      <td className="p-3 text-right font-mono font-semibold">$160.00</td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             </div>
           </div>
