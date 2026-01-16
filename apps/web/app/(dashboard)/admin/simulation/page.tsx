@@ -12,6 +12,9 @@ import {
   Target,
   Zap,
   Users,
+  UserCheck,
+  ShoppingBag,
+  Package,
 } from 'lucide-react';
 import Link from 'next/link';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Area, ComposedChart } from 'recharts';
@@ -38,13 +41,39 @@ interface SimulationConfig {
 
   // Growth
   weeklyGrowthRate: number; // percentage
+
+  // User Behavior Distribution
+  analysisCreatorRate: number; // percentage - users who create new analyses
+  secondHandBuyerRate: number; // percentage - users who buy existing analyses
+
+  // Package Distribution (for paying users)
+  starterPackRate: number; // percentage
+  traderPackRate: number; // percentage
+  proPackRate: number; // percentage
+
+  // Package Credits
+  starterPackCredits: number;
+  traderPackCredits: number;
+  proPackCredits: number;
+
+  // Package Prices
+  starterPackPrice: number;
+  traderPackPrice: number;
+  proPackPrice: number;
+
+  // Second-hand analysis price (credits)
+  secondHandAnalysisCredits: number;
 }
 
 interface WeeklyData {
   week: string;
   weekNum: number;
   users: number;
+  creators: number;
+  buyers: number;
   analyses: number;
+  secondHandPurchases: number;
+  packageRevenue: number;
   revenue: number;
   cost: number;
   profit: number;
@@ -73,6 +102,28 @@ const defaultConfig: SimulationConfig = {
 
   // Growth
   weeklyGrowthRate: 5,
+
+  // User Behavior Distribution (must total 100%)
+  analysisCreatorRate: 40, // 40% create new analyses
+  secondHandBuyerRate: 60, // 60% buy second-hand analyses
+
+  // Package Distribution (must total 100%)
+  starterPackRate: 50,
+  traderPackRate: 35,
+  proPackRate: 15,
+
+  // Package Credits
+  starterPackCredits: 50,
+  traderPackCredits: 150,
+  proPackCredits: 500,
+
+  // Package Prices
+  starterPackPrice: 9.99,
+  traderPackPrice: 24.99,
+  proPackPrice: 69.99,
+
+  // Second-hand analysis price
+  secondHandAnalysisCredits: 5,
 };
 
 // ===========================================
@@ -90,16 +141,55 @@ export default function SimulationPage() {
     let cumProfit = 0;
     const weeklyFixedCost = (config.claudeCodeCost + config.vercelCost + config.railwayCost + config.neonDbCost) / 4;
 
+    // Calculate average package revenue per user
+    const avgPackageRevenue = (
+      (config.starterPackRate / 100) * config.starterPackPrice +
+      (config.traderPackRate / 100) * config.traderPackPrice +
+      (config.proPackRate / 100) * config.proPackPrice
+    );
+
+    // Calculate average credits per user from packages
+    const avgCreditsFromPackage = (
+      (config.starterPackRate / 100) * config.starterPackCredits +
+      (config.traderPackRate / 100) * config.traderPackCredits +
+      (config.proPackRate / 100) * config.proPackCredits
+    );
+
     for (let i = 1; i <= weeks; i++) {
       // Calculate users with growth and retention
       const newUsers = Math.round(config.weeklyNewUsers * Math.pow(1 + config.weeklyGrowthRate / 100, i - 1));
       const retainedUsers = Math.round(totalUsers * (config.userRetentionRate / 100));
       totalUsers = retainedUsers + newUsers;
 
-      // Calculate analyses and revenue
-      const analyses = Math.round(totalUsers * config.analysesPerUserPerWeek);
-      const creditsUsed = analyses * config.creditsPerAnalysis;
-      const revenue = creditsUsed * config.creditPriceUsd;
+      // Split users by behavior
+      const creators = Math.round(totalUsers * (config.analysisCreatorRate / 100));
+      const buyers = Math.round(totalUsers * (config.secondHandBuyerRate / 100));
+
+      // Creators make new analyses (costs more credits)
+      const newAnalyses = Math.round(creators * config.analysesPerUserPerWeek);
+
+      // Buyers purchase second-hand analyses (costs less credits)
+      const secondHandPurchases = Math.round(buyers * config.analysesPerUserPerWeek);
+
+      // Total analyses consumed
+      const totalAnalyses = newAnalyses + secondHandPurchases;
+
+      // Revenue from package purchases (new users buy packages)
+      const packageRevenue = newUsers * avgPackageRevenue;
+
+      // Credit usage revenue (from credit consumption - this is implicit in package revenue)
+      // But we can also track as additional top-up revenue
+      const creditUsageByCreators = newAnalyses * config.creditsPerAnalysis;
+      const creditUsageByBuyers = secondHandPurchases * config.secondHandAnalysisCredits;
+      const totalCreditUsage = creditUsageByCreators + creditUsageByBuyers;
+
+      // Estimate additional credit purchases needed beyond initial package
+      const avgWeeklyCreditsNeeded = totalCreditUsage / totalUsers;
+      const additionalCreditsNeeded = Math.max(0, avgWeeklyCreditsNeeded - (avgCreditsFromPackage / 4)); // Spread package over ~4 weeks
+      const additionalCreditRevenue = retainedUsers * additionalCreditsNeeded * config.creditPriceUsd;
+
+      // Total revenue
+      const revenue = packageRevenue + additionalCreditRevenue;
 
       // Cost and profit
       const cost = weeklyFixedCost;
@@ -110,7 +200,11 @@ export default function SimulationPage() {
         week: `W${i}`,
         weekNum: i,
         users: totalUsers,
-        analyses,
+        creators,
+        buyers,
+        analyses: totalAnalyses,
+        secondHandPurchases,
+        packageRevenue: Number(packageRevenue.toFixed(2)),
         revenue: Number(revenue.toFixed(2)),
         cost: Number(cost.toFixed(2)),
         profit: Number(profit.toFixed(2)),
@@ -366,6 +460,197 @@ export default function SimulationPage() {
                   onChange={(e) => updateConfig('weeklyGrowthRate', Number(e.target.value))}
                   className="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* User Behavior Distribution */}
+          <div className="bg-card border rounded-lg p-4">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <UserCheck className="w-4 h-4" />
+              Kullanıcı Davranışı
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-sm">Analiz Yapanlar</span>
+                  <span className="text-sm font-mono text-blue-500">{config.analysisCreatorRate}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={config.analysisCreatorRate}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    updateConfig('analysisCreatorRate', value);
+                    updateConfig('secondHandBuyerRate', 100 - value);
+                  }}
+                  className="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-sm">İkinci El Alanlar</span>
+                  <span className="text-sm font-mono text-purple-500">{config.secondHandBuyerRate}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={config.secondHandBuyerRate}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    updateConfig('secondHandBuyerRate', value);
+                    updateConfig('analysisCreatorRate', 100 - value);
+                  }}
+                  className="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-sm">İkinci El Kredi Ücreti</span>
+                  <span className="text-sm font-mono">{config.secondHandAnalysisCredits} kredi</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="20"
+                  value={config.secondHandAnalysisCredits}
+                  onChange={(e) => updateConfig('secondHandAnalysisCredits', Number(e.target.value))}
+                  className="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+              <div className="pt-2 border-t text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500" />
+                  Yapanlar: {config.creditsPerAnalysis} kredi/analiz
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="w-2 h-2 rounded-full bg-purple-500" />
+                  Alanlar: {config.secondHandAnalysisCredits} kredi/analiz
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Package Distribution */}
+          <div className="bg-card border rounded-lg p-4">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Paket Dağılımı
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <span className="text-sm">Starter Pack</span>
+                  </div>
+                  <span className="text-sm font-mono">{config.starterPackRate}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={config.starterPackRate}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    const remaining = 100 - value;
+                    const currentOther = config.traderPackRate + config.proPackRate;
+                    if (currentOther > 0) {
+                      const ratio = remaining / currentOther;
+                      updateConfig('starterPackRate', value);
+                      updateConfig('traderPackRate', Math.round(config.traderPackRate * ratio));
+                      updateConfig('proPackRate', remaining - Math.round(config.traderPackRate * ratio));
+                    } else {
+                      updateConfig('starterPackRate', value);
+                      updateConfig('traderPackRate', remaining);
+                    }
+                  }}
+                  className="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="text-xs text-muted-foreground mt-1">
+                  {config.starterPackCredits} kredi • ${config.starterPackPrice}
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span className="text-sm">Trader Pack</span>
+                  </div>
+                  <span className="text-sm font-mono">{config.traderPackRate}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={config.traderPackRate}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    const remaining = 100 - value;
+                    const currentOther = config.starterPackRate + config.proPackRate;
+                    if (currentOther > 0) {
+                      const ratio = remaining / currentOther;
+                      updateConfig('traderPackRate', value);
+                      updateConfig('starterPackRate', Math.round(config.starterPackRate * ratio));
+                      updateConfig('proPackRate', remaining - Math.round(config.starterPackRate * ratio));
+                    } else {
+                      updateConfig('traderPackRate', value);
+                      updateConfig('starterPackRate', remaining);
+                    }
+                  }}
+                  className="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="text-xs text-muted-foreground mt-1">
+                  {config.traderPackCredits} kredi • ${config.traderPackPrice}
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-purple-500" />
+                    <span className="text-sm">Pro Pack</span>
+                  </div>
+                  <span className="text-sm font-mono">{config.proPackRate}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={config.proPackRate}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    const remaining = 100 - value;
+                    const currentOther = config.starterPackRate + config.traderPackRate;
+                    if (currentOther > 0) {
+                      const ratio = remaining / currentOther;
+                      updateConfig('proPackRate', value);
+                      updateConfig('starterPackRate', Math.round(config.starterPackRate * ratio));
+                      updateConfig('traderPackRate', remaining - Math.round(config.starterPackRate * ratio));
+                    } else {
+                      updateConfig('proPackRate', value);
+                      updateConfig('starterPackRate', remaining);
+                    }
+                  }}
+                  className="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="text-xs text-muted-foreground mt-1">
+                  {config.proPackCredits} kredi • ${config.proPackPrice}
+                </div>
+              </div>
+              <div className="pt-2 border-t">
+                <div className="flex justify-between text-sm">
+                  <span>Ort. Paket Geliri</span>
+                  <span className="font-mono text-green-500">
+                    ${(
+                      (config.starterPackRate / 100) * config.starterPackPrice +
+                      (config.traderPackRate / 100) * config.traderPackPrice +
+                      (config.proPackRate / 100) * config.proPackPrice
+                    ).toFixed(2)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

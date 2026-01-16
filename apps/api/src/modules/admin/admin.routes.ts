@@ -674,6 +674,114 @@ export default async function adminRoutes(app: FastifyInstance) {
   });
 
   // ===========================================
+  // POST /api/admin/users/:userId/credits - Grant free credits to user
+  // ===========================================
+  app.post('/users/:userId/credits', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { userId } = request.params as { userId: string };
+    const { amount, reason } = request.body as { amount: number; reason?: string };
+
+    // Validate amount
+    if (!amount || !Number.isInteger(amount) || amount <= 0 || amount > 10000) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'INVALID_AMOUNT', message: 'Amount must be a positive integer (max 10000)' },
+      });
+    }
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, name: true, telegramChatId: true, discordWebhookUrl: true },
+    });
+
+    if (!user) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: 'USER_NOT_FOUND', message: 'User not found' },
+      });
+    }
+
+    // Get or create credit balance
+    let balance = await prisma.creditBalance.findUnique({
+      where: { userId },
+    });
+
+    if (!balance) {
+      balance = await prisma.creditBalance.create({
+        data: {
+          userId,
+          balance: 0,
+        },
+      });
+    }
+
+    // Add credits and create transaction
+    const [updated] = await prisma.$transaction([
+      prisma.creditBalance.update({
+        where: { userId },
+        data: {
+          balance: { increment: amount },
+          lifetimeEarned: { increment: amount },
+        },
+      }),
+      prisma.creditTransaction.create({
+        data: {
+          userId,
+          amount,
+          balanceAfter: balance.balance + amount,
+          type: 'BONUS',
+          source: 'admin_grant',
+          metadata: {
+            grantedBy: request.user?.email || 'admin',
+            reason: reason || 'Admin credit grant',
+          },
+        },
+      }),
+    ]);
+
+    // Clear cache
+    const { cache, cacheKeys } = await import('../../core/cache');
+    await cache.del(cacheKeys.userCredits(userId));
+
+    // Send email notification to user
+    const { emailService } = await import('../email/email.service');
+    const emailResult = await emailService.sendCreditGrantNotification(
+      user.email,
+      user.name || 'Trader',
+      {
+        amount,
+        reason: reason || 'Admin credit grant',
+        newBalance: updated.balance,
+      }
+    );
+
+    // Send social notifications (Telegram, Discord)
+    const { socialNotificationService } = await import('../notifications/social-notification.service');
+    const socialResult = await socialNotificationService.sendCreditGrantNotifications(user, {
+      amount,
+      reason: reason || 'Admin credit grant',
+      newBalance: updated.balance,
+    });
+
+    return reply.send({
+      success: true,
+      data: {
+        user: { id: user.id, email: user.email, name: user.name },
+        creditsAdded: amount,
+        newBalance: updated.balance,
+        reason: reason || 'Admin credit grant',
+        notifications: {
+          email: emailResult.success,
+          social: socialResult.sent,
+          channels: socialResult.results.map(r => ({ channel: r.channel, success: r.success })),
+        },
+      },
+    });
+  });
+
+  // ===========================================
   // TFT Model Training Endpoints (Admin Only)
   // Proxies to TFT Python service
   // ===========================================

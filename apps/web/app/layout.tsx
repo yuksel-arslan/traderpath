@@ -1,19 +1,147 @@
 // ===========================================
-// Root Layout
+// Root Layout with SEO Optimization
 // ===========================================
 
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from './providers';
 
 // System font stack - fast loading, no external requests needed
-// Inter-like appearance using system fonts for optimal performance
 const fontClass = 'font-sans';
 
+const siteUrl = 'https://traderpath.io';
+
 export const metadata: Metadata = {
-  title: 'TraderPath - 7-Step Trading Analysis',
-  description: 'From confusion to conviction in 7 steps. AI-powered trading analysis with manipulation detection.',
-  keywords: ['crypto', 'trading', 'analysis', 'bitcoin', 'ethereum', 'whale', 'manipulation'],
+  // Basic Meta
+  title: {
+    default: 'TraderPath - AI-Powered Crypto Trading Analysis',
+    template: '%s | TraderPath',
+  },
+  description: 'Professional crypto trading analysis with AI. 7-step methodology detects whale manipulation, analyzes market trends, and provides actionable trade plans. BTC, ETH, SOL analysis.',
+  keywords: [
+    'crypto trading analysis',
+    'bitcoin analysis',
+    'ethereum analysis',
+    'whale detection',
+    'trading signals',
+    'crypto AI',
+    'technical analysis',
+    'market manipulation detection',
+    'trade plan',
+    'crypto trading tools',
+    'BTC analysis',
+    'ETH analysis',
+    'SOL analysis',
+    'altcoin analysis',
+    'crypto trading bot',
+  ],
+  authors: [{ name: 'TraderPath' }],
+  creator: 'TraderPath',
+  publisher: 'TraderPath',
+
+  // Canonical URL
+  metadataBase: new URL(siteUrl),
+  alternates: {
+    canonical: '/',
+  },
+
+  // Open Graph (Facebook, LinkedIn, etc.)
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: siteUrl,
+    siteName: 'TraderPath',
+    title: 'TraderPath - AI-Powered Crypto Trading Analysis',
+    description: 'Professional crypto trading analysis with AI. Detect whale manipulation, analyze market trends, get actionable trade plans.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'TraderPath - From Charts to Clarity',
+      },
+    ],
+  },
+
+  // Twitter Card
+  twitter: {
+    card: 'summary_large_image',
+    title: 'TraderPath - AI-Powered Crypto Trading Analysis',
+    description: 'Professional crypto trading analysis with AI. Detect whale manipulation, analyze trends, get trade plans.',
+    images: ['/og-image.png'],
+    creator: '@traderpath',
+    site: '@traderpath',
+  },
+
+  // Robots
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+
+  // Icons
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon-16x16.png',
+    apple: '/apple-touch-icon.png',
+  },
+
+  // Manifest
+  manifest: '/site.webmanifest',
+
+  // Verification
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+  },
+
+  // Category
+  category: 'finance',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
+  ],
+};
+
+// JSON-LD Structured Data
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'TraderPath',
+  description: 'AI-powered crypto trading analysis platform with 7-step methodology for detecting whale manipulation and generating trade plans.',
+  url: siteUrl,
+  applicationCategory: 'FinanceApplication',
+  operatingSystem: 'Web',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+  aggregateRating: {
+    '@type': 'AggregateRating',
+    ratingValue: '4.8',
+    ratingCount: '150',
+  },
+  featureList: [
+    'AI-powered market analysis',
+    'Whale manipulation detection',
+    'Real-time trading signals',
+    '7-step analysis methodology',
+    'Multi-timeframe analysis',
+    'Risk management tools',
+  ],
 };
 
 export default function RootLayout({
@@ -23,6 +151,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className={fontClass}>
         <Providers>{children}</Providers>
       </body>

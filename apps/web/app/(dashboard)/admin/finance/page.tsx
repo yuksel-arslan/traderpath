@@ -24,7 +24,6 @@ import {
   FileText,
 } from 'lucide-react';
 import Link from 'next/link';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { authFetch } from '../../../../lib/api';
 
 // ===========================================
@@ -50,6 +49,11 @@ interface CostSummary {
     profitMargin: number;
     operationBreakdown: Record<string, { count: number; cost: number; avgCost: number }>;
     serviceBreakdown: Record<string, { count: number; cost: number }>;
+  };
+  cumulative?: {
+    totalCost: number;
+    totalRevenue: number;
+    profit: number;
   };
   pricing: {
     currentPrice: number;
@@ -459,17 +463,18 @@ export default function FinancePage() {
       {/* Dashboard Tab */}
       {activeTab === 'dashboard' && summary && (
         <>
-          {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {/* Monthly Metrics */}
+          <h3 className="text-lg font-semibold mb-4 text-muted-foreground">Bu Ay (30 gün)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <div className="bg-card border rounded-lg p-4">
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 bg-red-500/10 rounded-lg">
                   <TrendingDown className="w-5 h-5 text-red-500" />
                 </div>
-                <span className="text-sm text-muted-foreground">Total Cost (30d)</span>
+                <span className="text-sm text-muted-foreground">Aylık Gider</span>
               </div>
-              <p className="text-3xl font-bold">${summary.monthly.totalCost.toFixed(2)}</p>
-              <p className="text-sm text-muted-foreground">Today: ${summary.today.cost.toFixed(4)}</p>
+              <p className="text-3xl font-bold text-red-500">${summary.monthly.totalCost.toFixed(2)}</p>
+              <p className="text-sm text-muted-foreground">Bugün: ${summary.today.cost.toFixed(4)}</p>
             </div>
 
             <div className="bg-card border rounded-lg p-4">
@@ -477,10 +482,10 @@ export default function FinancePage() {
                 <div className="p-2 bg-green-500/10 rounded-lg">
                   <TrendingUp className="w-5 h-5 text-green-500" />
                 </div>
-                <span className="text-sm text-muted-foreground">Total Revenue (30d)</span>
+                <span className="text-sm text-muted-foreground">Aylık Gelir</span>
               </div>
-              <p className="text-3xl font-bold">${summary.monthly.totalRevenue.toFixed(2)}</p>
-              <p className="text-sm text-muted-foreground">API calls today: {summary.today.apiCalls}</p>
+              <p className="text-3xl font-bold text-green-500">${summary.monthly.totalRevenue.toFixed(2)}</p>
+              <p className="text-sm text-muted-foreground">API çağrıları: {summary.today.apiCalls}</p>
             </div>
 
             <div className="bg-card border rounded-lg p-4">
@@ -488,25 +493,54 @@ export default function FinancePage() {
                 <div className="p-2 bg-blue-500/10 rounded-lg">
                   <DollarSign className="w-5 h-5 text-blue-500" />
                 </div>
-                <span className="text-sm text-muted-foreground">Net Profit (30d)</span>
+                <span className="text-sm text-muted-foreground">Aylık Kar</span>
               </div>
               <p className={`text-3xl font-bold ${summary.monthly.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                 ${summary.monthly.profit.toFixed(2)}
               </p>
               <p className={`text-sm ${profitColor(summary.monthly.profitMargin)}`}>
-                Margin: {summary.monthly.profitMargin.toFixed(1)}%
+                Marj: {summary.monthly.profitMargin.toFixed(1)}%
+              </p>
+            </div>
+          </div>
+
+          {/* Cumulative Metrics */}
+          <h3 className="text-lg font-semibold mb-4 text-muted-foreground">Kümüle (Toplam)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="bg-card border rounded-lg p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-red-500/10 rounded-lg">
+                  <TrendingDown className="w-5 h-5 text-red-500" />
+                </div>
+                <span className="text-sm text-muted-foreground">Toplam Gider</span>
+              </div>
+              <p className="text-3xl font-bold text-red-500">
+                ${((summary.cumulative?.totalCost ?? summary.monthly.totalCost)).toFixed(2)}
               </p>
             </div>
 
             <div className="bg-card border rounded-lg p-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-purple-500/10 rounded-lg">
-                  <Package className="w-5 h-5 text-purple-500" />
+                <div className="p-2 bg-green-500/10 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-green-500" />
                 </div>
-                <span className="text-sm text-muted-foreground">Active Packages</span>
+                <span className="text-sm text-muted-foreground">Toplam Gelir</span>
               </div>
-              <p className="text-3xl font-bold">{packages.filter(p => p.isActive).length}</p>
-              <p className="text-sm text-muted-foreground">{packages.length} total</p>
+              <p className="text-3xl font-bold text-green-500">
+                ${((summary.cumulative?.totalRevenue ?? summary.monthly.totalRevenue)).toFixed(2)}
+              </p>
+            </div>
+
+            <div className="bg-card border rounded-lg p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <DollarSign className="w-5 h-5 text-blue-500" />
+                </div>
+                <span className="text-sm text-muted-foreground">Toplam Kar</span>
+              </div>
+              <p className={`text-3xl font-bold ${(summary.cumulative?.profit ?? summary.monthly.profit) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                ${((summary.cumulative?.profit ?? summary.monthly.profit)).toFixed(2)}
+              </p>
             </div>
           </div>
 
@@ -515,15 +549,15 @@ export default function FinancePage() {
             <div className="bg-card border rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <Calculator className="w-5 h-5 text-primary" />
-                Pricing Recommendation
+                Fiyat Önerisi
               </h3>
               <div className="space-y-4">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Current Price</span>
+                  <span className="text-muted-foreground">Mevcut Fiyat</span>
                   <span className="font-mono text-lg">${summary.pricing.currentPrice.toFixed(4)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Recommended</span>
+                  <span className="text-muted-foreground">Önerilen Fiyat</span>
                   <span className={`font-mono text-lg ${
                     summary.pricing.recommendedPrice > summary.pricing.currentPrice ? 'text-red-500' :
                     summary.pricing.recommendedPrice < summary.pricing.currentPrice ? 'text-green-500' : ''
@@ -532,7 +566,7 @@ export default function FinancePage() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Avg Cost/Credit</span>
+                  <span className="text-muted-foreground">Ort. Kredi Maliyeti</span>
                   <span className="font-mono">${summary.pricing.avgCostPerCredit.toFixed(4)}</span>
                 </div>
                 <div className="pt-4 border-t">
@@ -542,7 +576,7 @@ export default function FinancePage() {
                       onClick={handleApplyRecommendation}
                       className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90"
                     >
-                      Apply Recommended Price
+                      Önerilen Fiyatı Uygula
                     </button>
                   )}
                 </div>
@@ -552,14 +586,14 @@ export default function FinancePage() {
             <div className="bg-card border rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-primary" />
-                Cost Breakdown
+                Sabit Gider Dağılımı
               </h3>
               <div className="overflow-hidden rounded-lg border">
                 <table className="w-full text-sm">
                   <thead className="bg-accent/50">
                     <tr>
-                      <th className="text-left p-3 font-medium">Service</th>
-                      <th className="text-right p-3 font-medium">Monthly Cost</th>
+                      <th className="text-left p-3 font-medium">Servis</th>
+                      <th className="text-right p-3 font-medium">Aylık Maliyet</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -602,7 +636,7 @@ export default function FinancePage() {
                   </tbody>
                   <tfoot className="bg-accent/30 border-t-2">
                     <tr>
-                      <td className="p-3 font-semibold">Total</td>
+                      <td className="p-3 font-semibold">Toplam</td>
                       <td className="p-3 text-right font-mono font-semibold">$160.00</td>
                     </tr>
                   </tfoot>
@@ -616,138 +650,23 @@ export default function FinancePage() {
                   .reduce((sum, [, data]) => sum + data.count, 0) || 1;
                 const costPerAnalysis = MONTHLY_FIXED_COST / analysisCount;
 
-                // Generate weekly data (simulated based on current data)
-                // In production, this would come from the API with historical data
-                const weeklyFixedCost = MONTHLY_FIXED_COST / 4; // $40/week
-                const avgWeeklyAnalyses = Math.ceil(analysisCount / 4);
-                const weeklyData = [
-                  { week: 'Week 1', analyses: Math.max(1, avgWeeklyAnalyses - 2), cost: 0 },
-                  { week: 'Week 2', analyses: Math.max(1, avgWeeklyAnalyses + 1), cost: 0 },
-                  { week: 'Week 3', analyses: Math.max(1, avgWeeklyAnalyses - 1), cost: 0 },
-                  { week: 'Week 4', analyses: Math.max(1, avgWeeklyAnalyses + 2), cost: 0 },
-                ].map(w => ({
-                  ...w,
-                  cost: Number((weeklyFixedCost / w.analyses).toFixed(2)),
-                }));
-
                 return (
-                  <>
-                    <div className="mt-4 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border border-primary/20">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold text-foreground">Cost per Analysis</p>
-                          <p className="text-sm text-muted-foreground">
-                            Based on {analysisCount} analyses this month
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-bold font-mono text-primary">
-                            ${costPerAnalysis.toFixed(2)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">per analysis</p>
-                        </div>
+                  <div className="mt-4 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border border-primary/20">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-foreground">Analiz Başına Maliyet</p>
+                        <p className="text-sm text-muted-foreground">
+                          Bu ay {analysisCount} analiz yapıldı
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold font-mono text-primary">
+                          ${costPerAnalysis.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">analiz başına</p>
                       </div>
                     </div>
-
-                    {/* Weekly Cost per Analysis Chart */}
-                    <div className="mt-4 p-4 bg-card border rounded-lg">
-                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                        <TrendingDown className="w-4 h-4 text-primary" />
-                        Weekly Cost per Analysis Trend
-                      </h4>
-                      <div className="h-48">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={weeklyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-                            <XAxis
-                              dataKey="week"
-                              tick={{ fontSize: 12, fill: '#9ca3af' }}
-                              axisLine={{ stroke: '#374151' }}
-                              tickLine={{ stroke: '#374151' }}
-                            />
-                            <YAxis
-                              tick={{ fontSize: 12, fill: '#9ca3af' }}
-                              axisLine={{ stroke: '#374151' }}
-                              tickLine={{ stroke: '#374151' }}
-                              tickFormatter={(value) => `$${value}`}
-                            />
-                            <Tooltip
-                              contentStyle={{
-                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                                border: '1px solid #374151',
-                                borderRadius: '8px',
-                                padding: '8px 12px',
-                              }}
-                              formatter={(value: number, name: string) => {
-                                if (name === 'cost') return [`$${value.toFixed(2)}`, 'Cost/Analysis'];
-                                return [value, 'Analyses'];
-                              }}
-                              labelStyle={{ color: '#9ca3af', marginBottom: '4px' }}
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="cost"
-                              stroke="#10b981"
-                              strokeWidth={2}
-                              dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
-                              activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                      <p className="text-xs text-muted-foreground text-center mt-2">
-                        Lower cost per analysis = better efficiency (more analyses with same fixed cost)
-                      </p>
-                    </div>
-
-                    {/* Weekly Analysis Count Chart */}
-                    <div className="mt-4 p-4 bg-card border rounded-lg">
-                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4 text-blue-500" />
-                        Weekly Analysis Count
-                      </h4>
-                      <div className="h-48">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={weeklyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-                            <XAxis
-                              dataKey="week"
-                              tick={{ fontSize: 12, fill: '#9ca3af' }}
-                              axisLine={{ stroke: '#374151' }}
-                              tickLine={{ stroke: '#374151' }}
-                            />
-                            <YAxis
-                              tick={{ fontSize: 12, fill: '#9ca3af' }}
-                              axisLine={{ stroke: '#374151' }}
-                              tickLine={{ stroke: '#374151' }}
-                              allowDecimals={false}
-                            />
-                            <Tooltip
-                              contentStyle={{
-                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                                border: '1px solid #374151',
-                                borderRadius: '8px',
-                                padding: '8px 12px',
-                              }}
-                              formatter={(value: number) => [value, 'Analyses']}
-                              labelStyle={{ color: '#9ca3af', marginBottom: '4px' }}
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="analyses"
-                              stroke="#3b82f6"
-                              strokeWidth={2}
-                              dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-                              activeDot={{ r: 6, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                      <p className="text-xs text-muted-foreground text-center mt-2">
-                        Total this month: {analysisCount} analyses
-                      </p>
-                    </div>
-                  </>
+                  </div>
                 );
               })()}
             </div>

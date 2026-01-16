@@ -24,6 +24,8 @@ import {
   ChevronRight,
   DollarSign,
   Brain,
+  Gift,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { authFetch } from '../../../lib/api';
@@ -138,6 +140,13 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [cleanupResult, setCleanupResult] = useState<string | null>(null);
 
+  // Grant credits modal state
+  const [grantModalOpen, setGrantModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+  const [grantAmount, setGrantAmount] = useState('');
+  const [grantReason, setGrantReason] = useState('');
+  const [isGranting, setIsGranting] = useState(false);
+
   const fetchData = useCallback(async (showRefresh = false) => {
     if (showRefresh) setIsRefreshing(true);
     setError(null);
@@ -250,6 +259,60 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const openGrantModal = (user: UserData) => {
+    setSelectedUser(user);
+    setGrantAmount('');
+    setGrantReason('');
+    setGrantModalOpen(true);
+  };
+
+  const handleGrantCredits = async () => {
+    if (!selectedUser || !grantAmount) return;
+
+    const amount = parseInt(grantAmount);
+    if (isNaN(amount) || amount <= 0 || amount > 10000) {
+      alert('Please enter a valid amount (1-10000)');
+      return;
+    }
+
+    setIsGranting(true);
+    try {
+      const response = await authFetch(`/api/admin/users/${selectedUser.id}/credits`, {
+        method: 'POST',
+        body: JSON.stringify({
+          amount,
+          reason: grantReason || undefined,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const notifications = data.data.notifications;
+        const channels: string[] = [];
+        if (notifications?.email) channels.push('Email');
+        if (notifications?.social > 0) {
+          notifications.channels?.forEach((c: { channel: string; success: boolean }) => {
+            if (c.success) channels.push(c.channel.charAt(0).toUpperCase() + c.channel.slice(1));
+          });
+        }
+        const notifStatus = channels.length > 0 ? ` (Sent: ${channels.join(', ')})` : ' (No notifications sent)';
+        setCleanupResult(`Granted ${amount} credits to ${selectedUser.name || selectedUser.email}. New balance: ${data.data.newBalance}${notifStatus}`);
+        setTimeout(() => setCleanupResult(null), 5000);
+        setGrantModalOpen(false);
+        setSelectedUser(null);
+        fetchUsers();
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error?.message || 'Failed to grant credits');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to grant credits');
+    } finally {
+      setIsGranting(false);
     }
   };
 
@@ -601,6 +664,7 @@ export default function AdminPage() {
                   <th className="p-4 font-medium text-muted-foreground">Streak</th>
                   <th className="p-4 font-medium text-muted-foreground">Joined</th>
                   <th className="p-4 font-medium text-muted-foreground">Last Login</th>
+                  <th className="p-4 font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -631,6 +695,16 @@ export default function AdminPage() {
                       {user.lastLoginAt
                         ? new Date(user.lastLoginAt).toLocaleDateString()
                         : '-'}
+                    </td>
+                    <td className="p-4">
+                      <button
+                        onClick={() => openGrantModal(user)}
+                        className="flex items-center gap-1 px-2 py-1 text-sm bg-green-500/10 text-green-500 rounded hover:bg-green-500/20 transition"
+                        title="Grant free credits"
+                      >
+                        <Gift className="w-4 h-4" />
+                        Grant
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -704,6 +778,93 @@ export default function AdminPage() {
             {activity.length === 0 && (
               <p className="p-8 text-center text-muted-foreground">No activity yet</p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Grant Credits Modal */}
+      {grantModalOpen && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setGrantModalOpen(false)}
+          />
+          <div className="relative bg-card border rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
+            <button
+              onClick={() => setGrantModalOpen(false)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Gift className="w-5 h-5 text-green-500" />
+              Grant Free Credits
+            </h3>
+
+            <div className="mb-4 p-3 bg-accent/50 rounded-lg">
+              <p className="font-medium">{selectedUser.name || 'No name'}</p>
+              <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Current balance: <span className="font-mono text-foreground">{selectedUser.creditBalance}</span> credits
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Credit Amount <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10000"
+                  value={grantAmount}
+                  onChange={(e) => setGrantAmount(e.target.value)}
+                  placeholder="Enter amount (1-10000)"
+                  className="w-full px-3 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Reason (optional)
+                </label>
+                <input
+                  type="text"
+                  value={grantReason}
+                  onChange={(e) => setGrantReason(e.target.value)}
+                  placeholder="e.g., Bug compensation, promotion"
+                  className="w-full px-3 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                />
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setGrantModalOpen(false)}
+                  className="flex-1 px-4 py-2 border rounded-lg hover:bg-accent transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleGrantCredits}
+                  disabled={!grantAmount || isGranting}
+                  className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isGranting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Granting...
+                    </>
+                  ) : (
+                    <>
+                      <Gift className="w-4 h-4" />
+                      Grant Credits
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
