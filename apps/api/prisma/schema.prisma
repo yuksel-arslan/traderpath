@@ -725,6 +725,9 @@ model CostSettings {
   creditCostPriceAlert     Int @default(1) @map("credit_cost_price_alert")
   creditCostWatchlistSlot  Int @default(3) @map("credit_cost_watchlist_slot")
 
+  // Credit Economy (Marketplace)
+  creditCostAnalysisPurchase Int @default(15) @map("credit_cost_analysis_purchase") // Second-hand analysis purchase cost
+
   // Auto-pricing settings
   autoPricingEnabled    Boolean  @default(false) @map("auto_pricing_enabled")
   autoPricingInterval   Int      @default(24) @map("auto_pricing_interval") // hours

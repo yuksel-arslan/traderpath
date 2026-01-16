@@ -551,14 +551,14 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
                 <div className="mt-4 p-3 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-500/10 dark:to-green-500/10 rounded-lg border border-emerald-200 dark:border-emerald-500/20">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-emerald-700 dark:text-emerald-300 font-medium">Use existing analysis</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">20 credits</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">15 credits</span>
                   </div>
                   <div className="flex items-center justify-between text-sm mt-1">
                     <span className="text-muted-foreground">New analysis</span>
-                    <span className="text-muted-foreground">35 credits</span>
+                    <span className="text-muted-foreground">25 credits</span>
                   </div>
                   <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 text-center font-medium">
-                    Save 15 credits!
+                    Save 10 credits!
                   </div>
                 </div>
               </div>
@@ -599,7 +599,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
                     <>
                       <TrendingUp className="w-5 h-5" />
                       Use Existing Analysis
-                      <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">20 credits</span>
+                      <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">15 credits</span>
                     </>
                   )}
                 </button>
@@ -617,7 +617,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
                     className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 rounded-lg font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition text-sm"
                   >
                     <RefreshCw className="w-4 h-4" />
-                    New (35 cr)
+                    New (25 cr)
                   </button>
                 </div>
               </div>

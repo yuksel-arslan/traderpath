@@ -761,7 +761,7 @@ Explain the key risks and what conditions would need to change before trading th
           error: {
             code: 'ACCESS_DENIED',
             message: 'You need to purchase this analysis to view it',
-            purchaseCost: 20,
+            purchaseCost: 15,
           },
         });
       }
@@ -4505,11 +4505,15 @@ Explain the key risks and what conditions would need to change before trading th
             remainingHours: Math.max(0, Math.round(remainingHours * 100) / 100),
             validityHours,
           },
-          pricing: {
-            newAnalysisCost: 35,
-            purchaseCost: 20,
-            savings: 15,
-          },
+          pricing: await (async () => {
+            const newAnalysisCost = await creditCostsService.getCreditCost('BUNDLE_FULL_ANALYSIS');
+            const purchaseCost = await creditCostsService.getCreditCost('ANALYSIS_PURCHASE');
+            return {
+              newAnalysisCost,
+              purchaseCost,
+              savings: newAnalysisCost - purchaseCost,
+            };
+          })(),
         },
       });
     } catch (error) {
@@ -4523,7 +4527,7 @@ Explain the key risks and what conditions would need to change before trading th
 
   /**
    * POST /api/analysis/:id/purchase
-   * Purchase access to an existing analysis (20 credits)
+   * Purchase access to an existing analysis (15 credits)
    * Includes: view, PDF download, email
    */
   app.post('/:id/purchase', {
@@ -4598,8 +4602,8 @@ Explain the key risks and what conditions would need to change before trading th
         });
       }
 
-      // Charge 20 credits for purchase
-      const PURCHASE_COST = 20;
+      // Get purchase cost from admin settings
+      const PURCHASE_COST = await creditCostsService.getCreditCost('ANALYSIS_PURCHASE');
 
       const chargeResult = await creditService.charge(userId, PURCHASE_COST, 'analysis_purchase', {
         analysisId,
