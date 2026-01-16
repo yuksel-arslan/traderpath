@@ -6,6 +6,7 @@
 // ===========================================
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Globe,
   Target,
@@ -25,7 +26,8 @@ import {
   GraduationCap,
   Rocket,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  ExternalLink
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getAuthToken, getApiUrl } from '../../lib/api';
@@ -38,7 +40,6 @@ import { TradePlan } from './TradePlan';
 import { TrapCheck } from './TrapCheck';
 import { FinalVerdict } from './FinalVerdict';
 import { TradePlanChart } from './TradePlanChart';
-import { DownloadReportButton } from '../reports/DownloadReportButton';
 import { AnalysisProgressBar } from './AnalysisProgressBar';
 
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
@@ -170,6 +171,7 @@ const STORAGE_KEYS = {
 type AnalysisMode = 'educational' | 'quick';
 
 export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', accountSize = 10000, onComplete, onCreditsUpdate }: AnalysisFlowProps) {
+  const router = useRouter();
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [activeStep, setActiveStep] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'intro' | 'result'>('intro');
@@ -707,39 +709,25 @@ export function AnalysisFlow({ symbol, tradeType = 'dayTrade', interval = '4h', 
               )}
               {activeStep === 7 && <FinalVerdict data={results[7]} symbol={symbol} allResults={results} />}
 
-              {/* Download Report Button */}
+              {/* Analysis Completed - Navigate to Details */}
               {activeStep === 7 && isStepCompleted && completedSteps.length === 7 && (
-                <div className="flex flex-col items-center gap-3 pt-5 border-t">
-                  {reportSaved && (
-                    <div className="flex items-center gap-2 text-sm text-green-500">
-                      <CheckCircle className="w-4 h-4" />
-                      <span>Report saved - View in Reports page</span>
-                    </div>
-                  )}
-                  <DownloadReportButton analysisData={results} symbol={symbol} analysisId={savedAnalysisId || undefined} tradeType={tradeType} />
-
-                  {/* Hidden TradePlanChart for PDF capture - must have id="trade-plan-chart" for capture to work */}
-                  {results[6] && (
-                    <div
-                      style={{
-                        position: 'fixed',
-                        left: '-2000px',
-                        top: '0',
-                        width: '800px',
-                        height: '600px',
-                        background: '#ffffff',
-                        pointerEvents: 'none',
-                        overflow: 'hidden',
-                      }}
+                <div className="flex flex-col items-center gap-4 pt-5 border-t">
+                  <div className="flex items-center gap-2 text-lg font-semibold text-green-500">
+                    <CheckCircle className="w-6 h-6" />
+                    <span>Analysis Completed!</span>
+                  </div>
+                  {reportSaved && savedAnalysisId ? (
+                    <button
+                      onClick={() => router.push(`/analyze/details/${savedAnalysisId}`)}
+                      className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium flex items-center gap-2 hover:bg-primary/90 transition"
                     >
-                      <TradePlanChart
-                        symbol={symbol}
-                        entries={(results[6] as { entries?: Array<{ price: number; percentage: number }> })?.entries ?? []}
-                        stopLoss={(results[6] as { stopLoss?: { price: number; percentage: number } })?.stopLoss ?? { price: 0, percentage: 0 }}
-                        takeProfits={(results[6] as { takeProfits?: Array<{ price: number; percentage: number; riskReward?: number }> })?.takeProfits?.map((tp, i) => ({ ...tp, riskReward: tp.riskReward ?? (i + 1) })) ?? []}
-                        direction={((results[6] as { direction?: 'long' | 'short' })?.direction) || 'long'}
-                        currentPrice={(results[2] as { currentPrice?: number })?.currentPrice ?? 0}
-                      />
+                      <ExternalLink className="w-5 h-5" />
+                      View Analysis Details
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving analysis...</span>
                     </div>
                   )}
                 </div>

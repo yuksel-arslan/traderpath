@@ -5,7 +5,7 @@
 // Shows analysis data directly (without report)
 // ===========================================
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -24,7 +24,9 @@ import {
   Crosshair,
   FileText,
   Download,
+  Camera,
 } from 'lucide-react';
+import html2canvas from 'html2canvas';
 import { cn } from '../../../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../../lib/coin-icons';
 import { TradePlanChart } from '../../../../../components/analysis/TradePlanChart';
@@ -61,6 +63,7 @@ export default function AnalysisDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const analysisId = params.id as string;
+  const chartRef = useRef<HTMLDivElement>(null);
 
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,6 +72,7 @@ export default function AnalysisDetailsPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
+  const [capturingScreenshot, setCapturingScreenshot] = useState(false);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -246,6 +250,35 @@ export default function AnalysisDetailsPage() {
       alert(err instanceof Error ? err.message : 'Failed to send email');
     } finally {
       setSendingEmail(false);
+    }
+  };
+
+  // Screenshot chart
+  const handleScreenshot = async () => {
+    if (!chartRef.current || capturingScreenshot) return;
+
+    setCapturingScreenshot(true);
+    try {
+      const canvas = await html2canvas(chartRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+      });
+
+      // Create download link
+      const link = document.createElement('a');
+      const symbol = analysis?.symbol || 'Chart';
+      const date = new Date().toISOString().split('T')[0];
+      link.download = `TraderPath_${symbol}_${date}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      console.error('Failed to capture screenshot:', err);
+      alert('Failed to capture screenshot');
+    } finally {
+      setCapturingScreenshot(false);
     }
   };
 
@@ -630,21 +663,39 @@ export default function AnalysisDetailsPage() {
           {/* Trade Plan Chart */}
           {entryPrice && (
             <div className="mb-6">
-              <TradePlanChart
-                symbol={analysis.symbol}
-                direction={direction as 'long' | 'short'}
-                entries={[{ price: entryPrice, percentage: 100 }]}
-                stopLoss={{ price: stopLossPrice || 0, percentage: 0 }}
-                takeProfits={[tp1, tp2, tp3].filter(Boolean).map((tp, i) => ({
-                  price: tp,
-                  percentage: 0,
-                  riskReward: step5.riskReward || (i + 1),
-                }))}
-                currentPrice={step2.currentPrice || entryPrice}
-                support={step2.levels?.support}
-                resistance={step2.levels?.resistance}
-                tradeType={getTradeType(analysis.interval)}
-              />
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-gray-900 dark:text-white">Trade Plan Chart</h3>
+                <button
+                  onClick={handleScreenshot}
+                  disabled={capturingScreenshot}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 transition disabled:opacity-50"
+                  title="Save chart as image"
+                >
+                  {capturingScreenshot ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Camera className="w-4 h-4" />
+                  )}
+                  <span className="hidden sm:inline">Screenshot</span>
+                </button>
+              </div>
+              <div ref={chartRef} className="bg-white dark:bg-slate-800 rounded-xl p-2">
+                <TradePlanChart
+                  symbol={analysis.symbol}
+                  direction={direction as 'long' | 'short'}
+                  entries={[{ price: entryPrice, percentage: 100 }]}
+                  stopLoss={{ price: stopLossPrice || 0, percentage: 0 }}
+                  takeProfits={[tp1, tp2, tp3].filter(Boolean).map((tp, i) => ({
+                    price: tp,
+                    percentage: 0,
+                    riskReward: step5.riskReward || (i + 1),
+                  }))}
+                  currentPrice={step2.currentPrice || entryPrice}
+                  support={step2.levels?.support}
+                  resistance={step2.levels?.resistance}
+                  tradeType={getTradeType(analysis.interval)}
+                />
+              </div>
             </div>
           )}
 
