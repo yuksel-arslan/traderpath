@@ -7,13 +7,14 @@ import {
   Trash2,
   TrendingUp,
   TrendingDown,
-  AlertTriangle,
   Check,
   X,
   ChevronDown,
-  Clock
+  Clock,
+  Search
 } from 'lucide-react';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
+import { cn } from '../../../lib/utils';
 
 interface PriceAlert {
   id: string;
@@ -75,6 +76,7 @@ export default function AlertsPage() {
   const [alerts, setAlerts] = useState<PriceAlert[]>(MOCK_ALERTS);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'active' | 'triggered'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // New alert form state
   const [newSymbol, setNewSymbol] = useState('BTC');
@@ -82,9 +84,11 @@ export default function AlertsPage() {
   const [newPrice, setNewPrice] = useState('');
 
   const filteredAlerts = alerts.filter((alert) => {
-    if (filter === 'active') return alert.active && !alert.triggered;
-    if (filter === 'triggered') return alert.triggered;
-    return true;
+    const matchesSearch = alert.symbol.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filter === 'all' ||
+      (filter === 'active' && alert.active && !alert.triggered) ||
+      (filter === 'triggered' && alert.triggered);
+    return matchesSearch && matchesFilter;
   });
 
   const handleCreateAlert = () => {
@@ -122,80 +126,85 @@ export default function AlertsPage() {
   const triggeredCount = alerts.filter((a) => a.triggered).length;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Price Alerts</h1>
-          <p className="text-muted-foreground">
-            Get notified when prices hit your targets
-          </p>
-        </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition"
-        >
-          <Plus className="w-4 h-4" />
-          New Alert
-        </button>
-      </div>
+    <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-6">
+      {/* ===== Compact Header ===== */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500/5 dark:from-blue-500/10 via-transparent to-transparent" />
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8">
-        <div className="bg-card border rounded-lg p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 text-center sm:text-left">
-            <div className="p-2 bg-blue-500/10 rounded-full">
-              <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+        <div className="relative z-10 p-5">
+          {/* Header Row */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                <Bell className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Price Alerts</h1>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Get notified when prices hit your targets</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
-              <p className="text-xl sm:text-2xl font-bold">{alerts.length}</p>
-            </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg transition"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Alert
+            </button>
           </div>
-        </div>
-        <div className="bg-card border rounded-lg p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 text-center sm:text-left">
-            <div className="p-2 bg-green-500/10 rounded-full">
-              <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-200 dark:border-white/10">
+              <div className="text-xl font-bold text-gray-900 dark:text-white">{alerts.length}</div>
+              <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Total</div>
             </div>
-            <div>
-              <p className="text-xs sm:text-sm text-muted-foreground">Active</p>
-              <p className="text-xl sm:text-2xl font-bold">{activeCount}</p>
+            <div className="bg-green-50 dark:bg-green-500/10 rounded-xl p-3 text-center border border-green-200/50 dark:border-green-500/20">
+              <div className="text-xl font-bold text-green-600 dark:text-green-400">{activeCount}</div>
+              <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Active</div>
             </div>
-          </div>
-        </div>
-        <div className="bg-card border rounded-lg p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 text-center sm:text-left">
-            <div className="p-2 bg-amber-500/10 rounded-full">
-              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-sm text-muted-foreground">Triggered</p>
-              <p className="text-xl sm:text-2xl font-bold">{triggeredCount}</p>
+            <div className="bg-amber-50 dark:bg-amber-500/10 rounded-xl p-3 text-center border border-amber-200/50 dark:border-amber-500/20">
+              <div className="text-xl font-bold text-amber-600 dark:text-amber-400">{triggeredCount}</div>
+              <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Triggered</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 mb-4 sm:mb-6 overflow-x-auto pb-2">
-        {[
-          { id: 'all', label: 'All' },
-          { id: 'active', label: 'Active' },
-          { id: 'triggered', label: 'Triggered' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setFilter(tab.id as typeof filter)}
-            className={`px-4 py-2 rounded-lg transition ${
-              filter === tab.id
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-card border hover:bg-accent'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* ===== Compact Filters ===== */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+        {/* Symbol Search */}
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search symbol..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+          />
+        </div>
+
+        {/* Status Filter */}
+        <div className="flex bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
+          {[
+            { id: 'all', label: 'All' },
+            { id: 'active', label: 'Active' },
+            { id: 'triggered', label: 'Triggered' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setFilter(tab.id as typeof filter)}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                filter === tab.id
+                  ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Alerts List */}

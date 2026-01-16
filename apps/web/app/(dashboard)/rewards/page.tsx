@@ -144,75 +144,73 @@ export default function RewardsPage() {
   const unlockedCodes = ['FIRST_ANALYSIS', 'STREAK_7', 'ANALYST_10'];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold mb-2">Rewards & Achievements</h1>
-        <p className="text-muted-foreground">
-          Track your progress and earn rewards
-        </p>
-      </div>
+    <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-6">
+      {/* ===== Compact Header ===== */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        {/* Level Card */}
-        <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-lg p-6">
+        <div className="relative z-10 p-5">
+          {/* Header Row */}
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-purple-500/20 rounded-full">
-              <Crown className="w-6 h-6 text-purple-500" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+              <Trophy className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Current Level</p>
-              <p className="text-2xl font-bold">{currentLevelInfo.level}</p>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Rewards & Achievements</h1>
+              <p className="text-xs text-gray-500 dark:text-slate-400">Track your progress and earn rewards</p>
             </div>
           </div>
-          {nextLevelInfo && (
-            <>
-              <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-2">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${xpProgress}%` }}
-                  transition={{ duration: 0.5 }}
-                />
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-3 gap-3">
+            {/* Level */}
+            <div className="bg-purple-50 dark:bg-purple-500/10 rounded-xl p-3 border border-purple-200/50 dark:border-purple-500/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Crown className="w-4 h-4 text-purple-500" />
+                <span className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Level</span>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {userXp.toLocaleString()} / {nextLevelInfo.xp.toLocaleString()} XP
+              <div className="text-xl font-bold text-purple-600 dark:text-purple-400">{currentLevelInfo.level}</div>
+              {nextLevelInfo && (
+                <>
+                  <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-2">
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${xpProgress}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-1">
+                    {userXp.toLocaleString()}/{nextLevelInfo.xp.toLocaleString()} XP
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* Streak */}
+            <div className="bg-orange-50 dark:bg-orange-500/10 rounded-xl p-3 border border-orange-200/50 dark:border-orange-500/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Flame className="w-4 h-4 text-orange-500" />
+                <span className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Streak</span>
+              </div>
+              <div className="text-xl font-bold text-orange-600 dark:text-orange-400">{dailyState.streak.days} Days</div>
+              <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-1">
+                Next: 14 days (+30)
               </p>
-            </>
-          )}
-        </div>
-
-        {/* Streak Card */}
-        <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-lg p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-orange-500/20 rounded-full">
-              <Flame className="w-6 h-6 text-orange-500" />
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Current Streak</p>
-              <p className="text-2xl font-bold">{dailyState.streak.days} Days</p>
+
+            {/* Achievements */}
+            <div className="bg-amber-50 dark:bg-amber-500/10 rounded-xl p-3 border border-amber-200/50 dark:border-amber-500/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Award className="w-4 h-4 text-amber-500" />
+                <span className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Achievements</span>
+              </div>
+              <div className="text-xl font-bold text-amber-600 dark:text-amber-400">{unlockedCodes.length}/{DEFAULT_ACHIEVEMENTS.length}</div>
+              <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-1">
+                {DEFAULT_ACHIEVEMENTS.length - unlockedCodes.length} to unlock
+              </p>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Next bonus at 14 days: +30 credits
-          </p>
-        </div>
-
-        {/* Achievements Card */}
-        <div className="bg-gradient-to-br from-amber-500/10 to-yellow-500/10 border border-amber-500/20 rounded-lg p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-amber-500/20 rounded-full">
-              <Trophy className="w-6 h-6 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Achievements</p>
-              <p className="text-2xl font-bold">{unlockedCodes.length}/{DEFAULT_ACHIEVEMENTS.length}</p>
-            </div>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {DEFAULT_ACHIEVEMENTS.length - unlockedCodes.length} more to unlock!
-          </p>
         </div>
       </div>
 
