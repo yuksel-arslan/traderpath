@@ -97,7 +97,8 @@ export interface AnalysisReportData {
   };
 
   verdict: {
-    action: string;
+    action?: string;
+    verdict?: string; // API returns 'verdict', some places use 'action'
     overallScore: number;
     aiSummary?: string;
     componentScores?: Record<string, number>;
@@ -152,9 +153,18 @@ function formatVolume(vol: number | undefined): string {
 
 function formatPercent(val: number | undefined): string {
   if (val === undefined || isNaN(val)) return '-';
-  // Normalize: if > 1, assume it's already percentage, if <= 1, multiply by 100
-  const pct = val > 1 ? val : val * 100;
-  // Cap at reasonable values
+  // Normalize: handle different scales
+  // 0-1 range (0.75) -> multiply by 100 = 75%
+  // 0-10 range (7.5) -> multiply by 10 = 75%
+  // 0-100 range (75) -> keep as is = 75%
+  let pct: number;
+  if (val <= 1) {
+    pct = val * 100;
+  } else if (val <= 10) {
+    pct = val * 10;
+  } else {
+    pct = val;
+  }
   const capped = Math.min(Math.max(pct, 0), 100);
   return `${capped.toFixed(0)}%`;
 }
@@ -196,19 +206,67 @@ function getGateStatus(gate: { canProceed: boolean; confidence: number } | undef
 }
 
 // Format action text (conditional_go → Conditionally GO)
-function formatAction(action: string | undefined): string {
-  if (!action) return 'ANALYSIS COMPLETE';
+// Accepts either verdict.action or verdict.verdict field
+function formatAction(actionOrVerdict: string | undefined): string {
+  if (!actionOrVerdict) return 'ANALYSIS COMPLETE';
   const map: Record<string, string> = {
     'go': 'GO',
     'conditional_go': 'Conditionally GO',
     'conditionally_go': 'Conditionally GO',
     'wait': 'WAIT',
     'no_go': 'NO GO',
+    'avoid': 'AVOID',
     'stop': 'STOP',
     'hold': 'HOLD',
   };
-  const lower = action.toLowerCase().replace(/-/g, '_');
-  return map[lower] || action.toUpperCase().replace(/_/g, ' ');
+  const lower = actionOrVerdict.toLowerCase().replace(/-/g, '_');
+  return map[lower] || actionOrVerdict.toUpperCase().replace(/_/g, ' ');
+}
+
+// Get action from verdict object (supports both action and verdict fields)
+function getVerdictAction(v: { action?: string; verdict?: string } | undefined): string {
+  return v?.action || v?.verdict || '';
+}
+
+// Format indicator value for display
+function formatIndicatorValue(value: number | string | null | undefined): string {
+  if (value === null || value === undefined) return '-';
+  if (typeof value === 'string') return value;
+  if (isNaN(value)) return '-';
+  if (Math.abs(value) >= 1000) return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  if (Math.abs(value) >= 1) return value.toFixed(2);
+  return value.toFixed(4);
+}
+
+// Render indicator table for a category
+function renderIndicatorTable(indicators: Record<string, IndicatorDetailItem | undefined> | undefined, title: string): string {
+  if (!indicators) return '';
+  const items = Object.values(indicators).filter((i): i is IndicatorDetailItem => i !== undefined);
+  if (items.length === 0) return '';
+
+  return `
+    <div class="section" style="margin-bottom: 8px;">
+      <div style="font-size: 8px; font-weight: 600; margin-bottom: 4px; color: #333;">${title} Indicators (${items.length})</div>
+      <table class="table indicator-table">
+        <tr>
+          <th style="width: 22%;">Indicator</th>
+          <th style="width: 15%;">Value</th>
+          <th style="width: 12%;">Signal</th>
+          <th style="width: 10%;">Strength</th>
+          <th style="width: 41%;">Interpretation</th>
+        </tr>
+        ${items.map(ind => `
+          <tr>
+            <td style="font-weight: 500;">${ind.name}${ind.isLeadingIndicator ? ' *' : ''}</td>
+            <td>${formatIndicatorValue(ind.value)}</td>
+            <td class="${ind.signal === 'bullish' ? 'text-green' : ind.signal === 'bearish' ? 'text-red' : ''}" style="font-weight: 600;">${ind.signal.toUpperCase()}</td>
+            <td>${ind.signalStrength}</td>
+            <td style="font-size: 6.5px;">${ind.interpretation?.slice(0, 80) || '-'}${(ind.interpretation?.length || 0) > 80 ? '...' : ''}</td>
+          </tr>
+        `).join('')}
+      </table>
+    </div>
+  `;
 }
 
 // Logo SVG inline
@@ -288,9 +346,13 @@ const styles = `
   .list-icon-n { color: #dc2626; }
 
   .table { width: 100%; border-collapse: collapse; }
-  .table th { text-align: left; font-size: 7px; font-weight: 600; color: #666; text-transform: uppercase; padding: 4px 6px; border-bottom: 1px solid #ddd; }
-  .table td { font-size: 8px; padding: 5px 6px; border-bottom: 1px solid #f0f0f0; }
+  .table th { text-align: left; font-size: 7px; font-weight: 600; color: #666; text-transform: uppercase; padding: 4px 6px; border-bottom: 1px solid #ddd; background: #f9fafb; }
+  .table td { font-size: 7px; padding: 4px 6px; border-bottom: 1px solid #f0f0f0; }
   .table tr:last-child td { border-bottom: none; }
+  .table tr:nth-child(even) { background: #fafafa; }
+  .indicator-table { font-size: 7px; }
+  .indicator-table th { font-size: 6px; padding: 3px 4px; }
+  .indicator-table td { font-size: 6.5px; padding: 2px 4px; }
 
   .indicator-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
   .indicator-item { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; border-bottom: 1px solid #f5f5f5; font-size: 8px; }
@@ -324,7 +386,7 @@ const styles = `
 // PAGE 1: Executive Summary
 // ===========================================
 
-function generatePage1(data: AnalysisReportData): string {
+function generatePage1(data: AnalysisReportData, totalPages: number = 5): string {
   const mp = data.marketPulse;
   const as = data.assetScan;
   const sc = data.safetyCheck;
@@ -366,13 +428,9 @@ function generatePage1(data: AnalysisReportData): string {
     <!-- Executive Summary -->
     <div class="verdict-box">
       <div class="verdict-row">
-        <div>
-          <div class="verdict-action">${formatAction(v?.action)}</div>
-          <div style="font-size: 8px; color: #666; margin-top: 4px; max-width: 360px;">${v?.aiSummary?.slice(0, 200) || 'Review the detailed analysis sections below.'}${(v?.aiSummary?.length || 0) > 200 ? '...' : ''}</div>
-        </div>
-        <div class="verdict-score">
-          <div class="verdict-score-value ${isLong ? 'text-green' : 'text-red'}">${score}</div>
-          <div class="verdict-score-label">Overall Score</div>
+        <div style="flex: 1;">
+          <div class="verdict-action">${formatAction(getVerdictAction(v))}</div>
+          <div style="font-size: 8px; color: #666; margin-top: 4px;">${v?.aiSummary?.slice(0, 300) || 'Review the detailed analysis sections below.'}${(v?.aiSummary?.length || 0) > 300 ? '...' : ''}</div>
         </div>
       </div>
     </div>
@@ -505,7 +563,7 @@ function generatePage1(data: AnalysisReportData): string {
 
     <div class="footer">
       <span><span class="brand-trade">Trader</span><span class="brand-path">Path</span> | ID: ${data.analysisId?.slice(-10) || '-'}</span>
-      <span>Page 1 of 3</span>
+      <span>Page 1 of ${totalPages}</span>
     </div>
   </div>
 </body></html>`;
@@ -515,7 +573,7 @@ function generatePage1(data: AnalysisReportData): string {
 // PAGE 2: Execution & Analysis
 // ===========================================
 
-function generatePage2(data: AnalysisReportData): string {
+function generatePage2(data: AnalysisReportData, totalPages: number = 5): string {
   const tm = data.timing;
   const tp = data.tradePlan;
   const tc = data.trapCheck;
@@ -714,7 +772,7 @@ function generatePage2(data: AnalysisReportData): string {
 
     <div class="footer">
       <span><span class="brand-trade">Trader</span><span class="brand-path">Path</span> | ID: ${data.analysisId?.slice(-10) || '-'}</span>
-      <span>Page 2 of 3</span>
+      <span>Page 2 of ${totalPages}</span>
     </div>
   </div>
 </body></html>`;
@@ -724,7 +782,7 @@ function generatePage2(data: AnalysisReportData): string {
 // PAGE 3: Verdict & Expert Analysis
 // ===========================================
 
-function generatePage3(data: AnalysisReportData): string {
+function generatePage3(data: AnalysisReportData, totalPages: number = 5): string {
   const v = data.verdict;
   const isLong = data.tradePlan?.direction === 'long';
   const score = formatPercent(v.overallScore);
@@ -763,13 +821,9 @@ function generatePage3(data: AnalysisReportData): string {
 
       <div class="verdict-box">
         <div class="verdict-row">
-          <div>
-            <div class="verdict-action">${formatAction(v.action)}</div>
+          <div style="flex: 1;">
+            <div class="verdict-action">${formatAction(getVerdictAction(v))}</div>
             <div style="font-size: 9px; color: #666; margin-top: 4px;">${isLong ? 'Bullish setup - Long position recommended' : 'Bearish setup - Short position recommended'}</div>
-          </div>
-          <div class="verdict-score">
-            <div class="verdict-score-value ${isLong ? 'text-green' : 'text-red'}">${score}</div>
-            <div class="verdict-score-label">Overall Confidence</div>
           </div>
         </div>
       </div>
@@ -831,7 +885,173 @@ function generatePage3(data: AnalysisReportData): string {
 
     <div class="footer">
       <span>(c) ${new Date().getFullYear()} TraderPath | ID: ${data.analysisId?.slice(-10) || '-'}</span>
-      <span>Page 3 of 3</span>
+      <span>Page 3 of ${totalPages}</span>
+    </div>
+  </div>
+</body></html>`;
+}
+
+// ===========================================
+// PAGE 4: Technical Indicators - Trend & Momentum
+// ===========================================
+
+function generatePage4(data: AnalysisReportData): string {
+  const ind = data.indicatorDetails;
+  const tradeTypeLabels: Record<string, string> = { scalping: 'Scalping', dayTrade: 'Day Trade', swing: 'Swing Trade' };
+
+  // Count indicators
+  const trendCount = ind?.trend ? Object.values(ind.trend).filter(Boolean).length : 0;
+  const momentumCount = ind?.momentum ? Object.values(ind.momentum).filter(Boolean).length : 0;
+  const totalIndicators = ind?.summary?.totalIndicatorsUsed || 0;
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
+  <div class="page">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">${logoSvg}</div>
+        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+      </div>
+      <div class="header-center">
+        <div class="report-title">Technical Indicator Analysis</div>
+        <div class="report-subtitle">${tradeTypeLabels[data.tradeType || ''] || ''} | Trend & Momentum</div>
+      </div>
+      <div class="header-right">
+        <span class="symbol">${data.symbol}/USDT</span>
+        <div style="font-size: 8px; color: #666; margin-top: 2px;">${totalIndicators} Indicators Analyzed</div>
+      </div>
+    </div>
+
+    <!-- Indicator Summary -->
+    ${ind?.summary ? `
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Indicator Summary</span>
+      </div>
+      <div class="row">
+        <div class="col metric metric-sm">
+          <div class="metric-label">Bullish</div>
+          <div class="metric-value text-green">${ind.summary.bullishIndicators}</div>
+        </div>
+        <div class="col metric metric-sm">
+          <div class="metric-label">Bearish</div>
+          <div class="metric-value text-red">${ind.summary.bearishIndicators}</div>
+        </div>
+        <div class="col metric metric-sm">
+          <div class="metric-label">Neutral</div>
+          <div class="metric-value">${ind.summary.neutralIndicators}</div>
+        </div>
+        <div class="col metric metric-sm">
+          <div class="metric-label">Overall Signal</div>
+          <div class="metric-value ${ind.summary.overallSignal === 'bullish' ? 'text-green' : ind.summary.overallSignal === 'bearish' ? 'text-red' : ''}">${formatDirection(ind.summary.overallSignal)}</div>
+          <div class="metric-note">${formatPercent(ind.summary.signalConfidence)} confidence</div>
+        </div>
+        <div class="col metric metric-sm">
+          <div class="metric-label">Leading Indicators</div>
+          <div class="metric-value ${ind.summary.leadingIndicatorsSignal === 'bullish' ? 'text-green' : ind.summary.leadingIndicatorsSignal === 'bearish' ? 'text-red' : ''}">${formatDirection(ind.summary.leadingIndicatorsSignal)}</div>
+        </div>
+      </div>
+    </div>
+    ` : ''}
+
+    <!-- Trend Indicators -->
+    ${renderIndicatorTable(ind?.trend, 'Trend')}
+
+    <!-- Momentum Indicators -->
+    ${renderIndicatorTable(ind?.momentum, 'Momentum')}
+
+    <div style="margin-top: 8px; padding: 6px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 3px; font-size: 7px; color: #0369a1;">
+      <strong>* Leading Indicators:</strong> These indicators typically signal changes before they occur in price. They are weighted more heavily in the analysis.
+    </div>
+
+    <div class="footer">
+      <span><span class="brand-trade">Trader</span><span class="brand-path">Path</span> | ID: ${data.analysisId?.slice(-10) || '-'}</span>
+      <span>Page 4 of 5</span>
+    </div>
+  </div>
+</body></html>`;
+}
+
+// ===========================================
+// PAGE 5: Technical Indicators - Volatility, Volume & Advanced
+// ===========================================
+
+function generatePage5(data: AnalysisReportData): string {
+  const ind = data.indicatorDetails;
+  const tradeTypeLabels: Record<string, string> = { scalping: 'Scalping', dayTrade: 'Day Trade', swing: 'Swing Trade' };
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
+  <div class="page">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">${logoSvg}</div>
+        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+      </div>
+      <div class="header-center">
+        <div class="report-title">Technical Indicator Analysis</div>
+        <div class="report-subtitle">${tradeTypeLabels[data.tradeType || ''] || ''} | Volatility, Volume & Advanced</div>
+      </div>
+      <div class="header-right">
+        <span class="symbol">${data.symbol}/USDT</span>
+      </div>
+    </div>
+
+    <!-- Volatility Indicators -->
+    ${renderIndicatorTable(ind?.volatility, 'Volatility')}
+
+    <!-- Volume Indicators -->
+    ${renderIndicatorTable(ind?.volume, 'Volume')}
+
+    <!-- Advanced Indicators -->
+    ${renderIndicatorTable(ind?.advanced, 'Advanced')}
+
+    <!-- Divergences Section -->
+    ${ind?.divergences && ind.divergences.length > 0 ? `
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Detected Divergences</span>
+      </div>
+      <table class="table">
+        <tr>
+          <th style="width: 15%;">Type</th>
+          <th style="width: 20%;">Indicator</th>
+          <th style="width: 15%;">Reliability</th>
+          <th style="width: 50%;">Description</th>
+        </tr>
+        ${ind.divergences.map(div => `
+          <tr>
+            <td class="${div.type === 'bullish' ? 'text-green' : div.type === 'bearish' ? 'text-red' : ''}" style="font-weight: 600;">${div.type.toUpperCase()}${div.isEarlySignal ? ' (Early)' : ''}</td>
+            <td>${div.indicator}</td>
+            <td>${div.reliability}</td>
+            <td style="font-size: 6.5px;">${div.description}</td>
+          </tr>
+        `).join('')}
+      </table>
+    </div>
+    ` : `
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Detected Divergences</span>
+      </div>
+      <div style="padding: 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 3px; font-size: 8px; color: #6b7280; text-align: center;">
+        No significant divergences detected in current analysis
+      </div>
+    </div>
+    `}
+
+    <!-- Trade Type Specific Notes -->
+    <div class="summary-box" style="margin-top: auto;">
+      <div style="font-size: 8px; font-weight: 600; margin-bottom: 4px;">Trade Type: ${tradeTypeLabels[data.tradeType || ''] || 'Standard'}</div>
+      <div class="summary-text">
+        ${data.tradeType === 'scalping' ? 'Scalping analysis focuses on short-term momentum and volatility indicators. Quick entries/exits are prioritized. Volume confirmation is critical.' :
+          data.tradeType === 'dayTrade' ? 'Day trade analysis balances trend and momentum indicators. Intraday levels and volume patterns are weighted heavily. Risk management is key.' :
+          data.tradeType === 'swing' ? 'Swing trade analysis emphasizes trend indicators and support/resistance levels. Longer timeframes are prioritized. Patience is rewarded.' :
+          'Analysis includes comprehensive indicator coverage across all categories.'}
+      </div>
+    </div>
+
+    <div class="footer">
+      <span><span class="brand-trade">Trader</span><span class="brand-path">Path</span> | ID: ${data.analysisId?.slice(-10) || '-'}</span>
+      <span>Page 5 of 5</span>
     </div>
   </div>
 </body></html>`;
@@ -908,19 +1128,40 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
   const pdfWidth = pdf.internal.pageSize.getWidth();
   const pdfHeight = pdf.internal.pageSize.getHeight();
 
+  // Determine total pages based on indicator details availability
+  const hasIndicatorDetails = data.indicatorDetails && (
+    (data.indicatorDetails.trend && Object.keys(data.indicatorDetails.trend).length > 0) ||
+    (data.indicatorDetails.momentum && Object.keys(data.indicatorDetails.momentum).length > 0) ||
+    (data.indicatorDetails.volatility && Object.keys(data.indicatorDetails.volatility).length > 0) ||
+    (data.indicatorDetails.volume && Object.keys(data.indicatorDetails.volume).length > 0) ||
+    (data.indicatorDetails.advanced && Object.keys(data.indicatorDetails.advanced).length > 0)
+  );
+  const totalPages = hasIndicatorDetails ? 5 : 3;
+
   // Page 1
-  const canvas1 = await renderPageToCanvas(generatePage1(data));
+  const canvas1 = await renderPageToCanvas(generatePage1(data, totalPages));
   pdf.addImage(canvas1.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
   // Page 2
   pdf.addPage();
-  const canvas2 = await renderPageToCanvas(generatePage2(data));
+  const canvas2 = await renderPageToCanvas(generatePage2(data, totalPages));
   pdf.addImage(canvas2.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
   // Page 3
   pdf.addPage();
-  const canvas3 = await renderPageToCanvas(generatePage3(data));
+  const canvas3 = await renderPageToCanvas(generatePage3(data, totalPages));
   pdf.addImage(canvas3.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+  // Page 4 & 5: Technical Indicators - only if indicator details exist
+  if (hasIndicatorDetails) {
+    pdf.addPage();
+    const canvas4 = await renderPageToCanvas(generatePage4(data));
+    pdf.addImage(canvas4.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+    pdf.addPage();
+    const canvas5 = await renderPageToCanvas(generatePage5(data));
+    pdf.addImage(canvas5.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+  }
 
   const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'DayTrade', swing: 'Swing' };
   const tradeType = data.tradeType ? tradeTypes[data.tradeType] || '' : '';
@@ -928,6 +1169,9 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
 
   const pdfBase64 = pdf.output('datauristring').split(',')[1];
   pdf.save(fileName);
+
+  // Log detailed report availability
+  console.log(`[TraderPath] Detailed report generated: ${data.indicatorDetails ? '5 pages with full indicator analysis' : '3 pages summary'}`);
 
   return { base64: pdfBase64, fileName };
 }
