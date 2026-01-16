@@ -127,6 +127,7 @@ export interface AnalysisReportData {
     verdict?: string;
     overallScore: number;
     aiSummary?: string;
+    tokenomicsInsight?: string;
     componentScores?: Record<string, number>;
     confidenceFactors?: Array<{ factor: string; positive: boolean; impact?: string }>;
     recommendation?: string;
@@ -680,6 +681,14 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
         </div>
       </div>
     </div>
+
+    <!-- AI Tokenomics Insight -->
+    ${data.verdict?.tokenomicsInsight ? `
+    <div class="step-summary" style="margin-top: 15px; background: #f0f9f0; border-left: 3px solid #16a34a; padding: 10px 12px;">
+      <div style="font-size: 9px; font-weight: 600; color: #16a34a; margin-bottom: 5px;">AI Tokenomics Analysis</div>
+      <div style="font-size: 8px; color: #333; line-height: 1.5;">${data.verdict.tokenomicsInsight}</div>
+    </div>
+    ` : ''}
     ` : `
     <!-- No Tokenomics Data -->
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 500px; text-align: center;">

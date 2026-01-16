@@ -225,6 +225,8 @@ interface AnalysisReportData {
     overallScore: number;
     confidenceFactors: Array<{ factor: string; positive: boolean }>;
     aiSummary?: string;
+    tokenomicsInsight?: string;
+    recommendation?: string;
   };
   aiExpertComment?: string; // AI Expert review comment
   // Full 40+ Indicator Details
