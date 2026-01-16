@@ -195,6 +195,42 @@ function getGateStatus(gate: { canProceed: boolean; confidence: number } | undef
   }
 }
 
+// Format action text (conditional_go → Conditionally GO)
+function formatAction(action: string | undefined): string {
+  if (!action) return 'ANALYSIS COMPLETE';
+  const map: Record<string, string> = {
+    'go': 'GO',
+    'conditional_go': 'Conditionally GO',
+    'conditionally_go': 'Conditionally GO',
+    'wait': 'WAIT',
+    'no_go': 'NO GO',
+    'stop': 'STOP',
+    'hold': 'HOLD',
+  };
+  const lower = action.toLowerCase().replace(/-/g, '_');
+  return map[lower] || action.toUpperCase().replace(/_/g, ' ');
+}
+
+// Logo SVG inline
+const logoSvg = `<svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tealGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5EEDC3"/>
+      <stop offset="50%" stop-color="#2DD4A8"/>
+      <stop offset="100%" stop-color="#14B8A6"/>
+    </linearGradient>
+    <linearGradient id="coralGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF8A9B"/>
+      <stop offset="50%" stop-color="#F87171"/>
+      <stop offset="100%" stop-color="#EF5A6F"/>
+    </linearGradient>
+  </defs>
+  <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealGradient)"/>
+  <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealGradient)"/>
+  <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralGradient)"/>
+  <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralGradient)"/>
+</svg>`;
+
 // ===========================================
 // STYLES
 // ===========================================
@@ -206,8 +242,8 @@ const styles = `
 
   .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 2px solid #1a1a1a; margin-bottom: 14px; }
   .brand { display: flex; align-items: center; gap: 8px; }
-  .logo { width: 28px; height: 28px; background: linear-gradient(135deg, #dc2626 0%, #16a34a 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
-  .logo-text { color: white; font-weight: 800; font-size: 14px; }
+  .logo { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+  .logo svg { width: 32px; height: 32px; }
   .brand-name { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
   .brand-trade { color: #dc2626; }
   .brand-path { color: #16a34a; }
@@ -216,16 +252,16 @@ const styles = `
   .report-subtitle { font-size: 8px; color: #666; margin-top: 2px; }
   .header-right { text-align: right; }
   .symbol { font-size: 14px; font-weight: 700; }
-  .direction-tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 8px; font-weight: 600; margin-left: 6px; }
-  .tag-long { background: #dcfce7; color: #166534; }
-  .tag-short { background: #fee2e2; color: #991b1b; }
+  .direction-tag { display: inline-block; font-size: 10px; font-weight: 700; margin-left: 6px; }
+  .tag-long { color: #16a34a; }
+  .tag-short { color: #dc2626; }
   .score-box { margin-top: 4px; }
   .score-value { font-size: 16px; font-weight: 700; }
   .score-label { font-size: 7px; color: #666; }
 
   .section { margin-bottom: 12px; }
   .section-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
-  .step-badge { font-size: 7px; font-weight: 700; color: #fff; background: #1a1a1a; padding: 2px 6px; border-radius: 2px; }
+  .step-num { font-size: 8px; font-weight: 600; color: #666; }
   .section-title { font-size: 10px; font-weight: 600; color: #1a1a1a; }
   .gate-status { margin-left: auto; font-size: 7px; font-weight: 600; }
 
@@ -306,7 +342,7 @@ function generatePage1(data: AnalysisReportData): string {
   <div class="page">
     <div class="header">
       <div class="brand">
-        <div class="logo"><span class="logo-text">TP</span></div>
+        <div class="logo">${logoSvg}</div>
         <div>
           <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
         </div>
@@ -331,7 +367,7 @@ function generatePage1(data: AnalysisReportData): string {
     <div class="verdict-box">
       <div class="verdict-row">
         <div>
-          <div class="verdict-action">${v?.action || 'ANALYSIS COMPLETE'}</div>
+          <div class="verdict-action">${formatAction(v?.action)}</div>
           <div style="font-size: 8px; color: #666; margin-top: 4px; max-width: 360px;">${v?.aiSummary?.slice(0, 200) || 'Review the detailed analysis sections below.'}${(v?.aiSummary?.length || 0) > 200 ? '...' : ''}</div>
         </div>
         <div class="verdict-score">
@@ -379,7 +415,7 @@ function generatePage1(data: AnalysisReportData): string {
     <!-- Step 1: Market Pulse -->
     <div class="section">
       <div class="section-header">
-        <span class="step-badge">01</span>
+        <span class="step-num">01</span>
         <span class="section-title">Market Pulse</span>
         <span class="gate-status" style="color: ${mpGate.color}">${mpGate.text}</span>
       </div>
@@ -408,7 +444,7 @@ function generatePage1(data: AnalysisReportData): string {
     <!-- Step 2: Asset Scanner -->
     <div class="section">
       <div class="section-header">
-        <span class="step-badge">02</span>
+        <span class="step-num">02</span>
         <span class="section-title">Asset Scanner</span>
         <span class="gate-status" style="color: ${asGate.color}">${asGate.text}</span>
       </div>
@@ -443,7 +479,7 @@ function generatePage1(data: AnalysisReportData): string {
     <!-- Step 3: Safety Check -->
     <div class="section">
       <div class="section-header">
-        <span class="step-badge">03</span>
+        <span class="step-num">03</span>
         <span class="section-title">Safety Check</span>
         <span class="gate-status" style="color: ${scGate.color}">${scGate.text}</span>
       </div>
@@ -496,7 +532,7 @@ function generatePage2(data: AnalysisReportData): string {
   <div class="page">
     <div class="header">
       <div class="brand">
-        <div class="logo"><span class="logo-text">TP</span></div>
+        <div class="logo">${logoSvg}</div>
         <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
       </div>
       <div class="header-center">
@@ -510,7 +546,7 @@ function generatePage2(data: AnalysisReportData): string {
     <!-- Step 4: Timing Analysis -->
     <div class="section">
       <div class="section-header">
-        <span class="step-badge">04</span>
+        <span class="step-num">04</span>
         <span class="section-title">Timing Analysis</span>
         <span class="gate-status" style="color: ${tmGate.color}">${tmGate.text}</span>
       </div>
@@ -557,7 +593,7 @@ function generatePage2(data: AnalysisReportData): string {
     <!-- Step 5: Trade Plan -->
     <div class="section">
       <div class="section-header">
-        <span class="step-badge">05</span>
+        <span class="step-num">05</span>
         <span class="section-title">Trade Plan</span>
         <span class="gate-status" style="color: ${tpGate.color}">${tpGate.text}</span>
       </div>
@@ -610,7 +646,7 @@ function generatePage2(data: AnalysisReportData): string {
     ${tc ? `
     <div class="section">
       <div class="section-header">
-        <span class="step-badge">06</span>
+        <span class="step-num">06</span>
         <span class="section-title">Trap Check</span>
         <span class="gate-status" style="color: ${tcGate.color}">${tcGate.text}</span>
       </div>
@@ -670,8 +706,8 @@ function generatePage2(data: AnalysisReportData): string {
       <div class="section-header">
         <span class="section-title">Trade Plan Chart</span>
       </div>
-      <div style="text-align: center; background: #fafafa; border: 1px solid #eee; border-radius: 4px; padding: 8px;">
-        <img src="${data.chartImage}" style="max-width: 100%; max-height: 200px; object-fit: contain;" alt="Trade Plan Chart" />
+      <div style="background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
+        <img src="${data.chartImage}" style="width: 100%; height: auto; display: block;" alt="Trade Plan Chart" />
       </div>
     </div>
     ` : ''}
@@ -707,7 +743,7 @@ function generatePage3(data: AnalysisReportData): string {
   <div class="page">
     <div class="header">
       <div class="brand">
-        <div class="logo"><span class="logo-text">TP</span></div>
+        <div class="logo">${logoSvg}</div>
         <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
       </div>
       <div class="header-center">
@@ -721,14 +757,14 @@ function generatePage3(data: AnalysisReportData): string {
     <!-- Final Verdict -->
     <div class="section">
       <div class="section-header">
-        <span class="step-badge">07</span>
+        <span class="step-num">07</span>
         <span class="section-title">Final Verdict</span>
       </div>
 
       <div class="verdict-box">
         <div class="verdict-row">
           <div>
-            <div class="verdict-action">${v.action || 'ANALYSIS COMPLETE'}</div>
+            <div class="verdict-action">${formatAction(v.action)}</div>
             <div style="font-size: 9px; color: #666; margin-top: 4px;">${isLong ? 'Bullish setup - Long position recommended' : 'Bearish setup - Short position recommended'}</div>
           </div>
           <div class="verdict-score">
