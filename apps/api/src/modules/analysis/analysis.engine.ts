@@ -5464,14 +5464,14 @@ export const analysisEngine = {
       trapCheck
     });
 
-    // Use the new function
+    // Use the new function (default to dayTrade for legacy callers)
     return this.getFinalVerdict(symbol, preliminaryVerdict, {
       marketPulse,
       assetScan,
       safetyCheck,
       timing,
       trapCheck
-    }, tradePlan);
+    }, tradePlan, 'dayTrade');
   },
 };
 
