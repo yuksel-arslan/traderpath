@@ -448,10 +448,10 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
   const asGate = getGateStatus(as.gate);
   const scGate = getGateStatus(sc.gate);
 
-  // Generate step summaries from AI insights
-  const mpSummary = mp.aiSummary || (mp.gate?.reason ? `Market conditions: ${mp.gate.reason}` : '');
-  const asSummary = as.aiInsight || (as.gate?.reason ? `Asset analysis: ${as.gate.reason}` : '');
-  const scSummary = sc.aiInsight || (sc.gate?.reason ? `Safety assessment: ${sc.gate.reason}` : '');
+  // Generate step summaries from gate reasons
+  const mpSummary = mp.gate?.reason ? `Market conditions: ${mp.gate.reason}` : '';
+  const asSummary = as.gate?.reason ? `Asset analysis: ${as.gate.reason}` : '';
+  const scSummary = sc.gate?.reason ? `Safety assessment: ${sc.gate.reason}` : '';
 
   // STEP 1: Market Pulse → TREND indicators (ADX, ICHIMOKU, EMA, BOLLINGER)
   const mpIndicators = ind?.trend ? Object.values(ind.trend).filter(Boolean).slice(0, 4) : [];
@@ -709,10 +709,10 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
   // Get relevant indicators for timing decision
   const ind = data.indicatorDetails;
 
-  // Step summaries
-  const tmSummary = tm.aiInsight || (tm.gate?.reason ? `Timing analysis: ${tm.gate.reason}` : '');
-  const tpSummary = tp.aiInsight || (tp.gate?.reason ? `Trade plan: ${tp.gate.reason}` : '');
-  const tcSummary = tc?.aiInsight || (tc?.gate?.reason ? `Trap check: ${tc.gate.reason}` : '');
+  // Step summaries from gate reasons
+  const tmSummary = tm.gate?.reason ? `Timing analysis: ${tm.gate.reason}` : '';
+  const tpSummary = tp.gate?.reason ? `Trade plan: ${tp.gate.reason}` : '';
+  const tcSummary = tc?.gate?.reason ? `Trap check: ${tc.gate.reason}` : '';
 
   // STEP 4: Timing → MOMENTUM indicators (RSI, STOCHASTIC, STOCH_RSI, MACD, SUPERTREND)
   const tmIndicators = ind?.momentum ? Object.values(ind.momentum).filter(Boolean).slice(0, 4) : [];
