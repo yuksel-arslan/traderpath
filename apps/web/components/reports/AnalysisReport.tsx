@@ -453,9 +453,14 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
   const asSummary = as.aiInsight || (as.gate?.reason ? `Asset analysis: ${as.gate.reason}` : '');
   const scSummary = sc.aiInsight || (sc.gate?.reason ? `Safety assessment: ${sc.gate.reason}` : '');
 
-  // Get trend indicators for Asset Scanner step
-  const trendIndicators = ind?.trend ? Object.values(ind.trend).filter(Boolean).slice(0, 4) : [];
-  const momentumIndicators = ind?.momentum ? Object.values(ind.momentum).filter(Boolean).slice(0, 3) : [];
+  // STEP 1: Market Pulse → TREND indicators (ADX, ICHIMOKU, EMA, BOLLINGER)
+  const mpIndicators = ind?.trend ? Object.values(ind.trend).filter(Boolean).slice(0, 4) : [];
+
+  // STEP 2: Asset Scanner → VOLUME indicators (VWAP, OBV, CMF, AD, LIQUIDITY_SCORE)
+  const asIndicators = ind?.volume ? Object.values(ind.volume).filter(Boolean).slice(0, 4) : [];
+
+  // STEP 3: Safety Check → ADVANCED indicators (SPOOFING, ORDER_FLOW, WHALE_ACTIVITY, SQUEEZE)
+  const scIndicators = ind?.advanced ? Object.values(ind.advanced).filter(Boolean).slice(0, 4) : [];
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
@@ -571,6 +576,18 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
         </div>
       </div>
       ` : ''}
+      ${mpIndicators.length > 0 ? `
+      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Trend Indicators (ADX, EMA, ICHIMOKU, BOLLINGER)</div>
+      <div class="row" style="margin-top: 4px;">
+        ${mpIndicators.slice(0, 4).map(i => `
+          <div class="col metric metric-sm">
+            <div class="metric-label">${i?.name || ''}</div>
+            <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? i.value.toFixed(2) : i?.value || '-'}</div>
+            <div class="metric-note">${i?.signal || ''}</div>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
       ${mpSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${mpSummary}</div>` : ''}
     </div>
 
@@ -607,10 +624,10 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
         <span style="margin-left: 12px;">Resistance: <span class="text-red">${as.levels.resistance.slice(0, 2).map(r => formatPrice(r)).join(', ')}</span></span>
       </div>
       ` : ''}
-      ${trendIndicators.length > 0 ? `
-      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Key Indicators</div>
+      ${asIndicators.length > 0 ? `
+      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Volume Indicators (VWAP, OBV, CMF, AD)</div>
       <div class="row" style="margin-top: 4px;">
-        ${trendIndicators.slice(0, 4).map(i => `
+        ${asIndicators.slice(0, 4).map(i => `
           <div class="col metric metric-sm">
             <div class="metric-label">${i?.name || ''}</div>
             <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? i.value.toFixed(2) : i?.value || '-'}</div>
@@ -652,6 +669,18 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
         ${sc.warnings.slice(0, 2).map(w => `<span style="margin-right: 8px;">⚠ ${w}</span>`).join('')}
       </div>
       ` : ''}
+      ${scIndicators.length > 0 ? `
+      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Advanced Indicators (ORDER_FLOW, WHALE, SQUEEZE)</div>
+      <div class="row" style="margin-top: 4px;">
+        ${scIndicators.slice(0, 4).map(i => `
+          <div class="col metric metric-sm">
+            <div class="metric-label">${i?.name || ''}</div>
+            <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? i.value.toFixed(2) : i?.value || '-'}</div>
+            <div class="metric-note">${i?.signal || ''}</div>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
       ${scSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${scSummary}</div>` : ''}
     </div>
 
@@ -685,8 +714,14 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
   const tpSummary = tp.aiInsight || (tp.gate?.reason ? `Trade plan: ${tp.gate.reason}` : '');
   const tcSummary = tc?.aiInsight || (tc?.gate?.reason ? `Trap check: ${tc.gate.reason}` : '');
 
-  // Get momentum indicators for timing step
-  const momentumIndicators = ind?.momentum ? Object.values(ind.momentum).filter(Boolean).slice(0, 4) : [];
+  // STEP 4: Timing → MOMENTUM indicators (RSI, STOCHASTIC, STOCH_RSI, MACD, SUPERTREND)
+  const tmIndicators = ind?.momentum ? Object.values(ind.momentum).filter(Boolean).slice(0, 4) : [];
+
+  // STEP 5: Trade Plan → VOLATILITY indicators (ATR, PSAR, KELTNER, DONCHIAN)
+  const tpIndicators = ind?.volatility ? Object.values(ind.volatility).filter(Boolean).slice(0, 4) : [];
+
+  // STEP 6: Trap Check → Divergence indicators from volume (OBV, AD, FORCE_INDEX) + momentum (RSI, MACD)
+  const tcDivergences = ind?.divergences || [];
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
@@ -748,10 +783,10 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
         `).join('')}
       </div>
       ` : ''}
-      ${momentumIndicators.length > 0 ? `
-      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Momentum Indicators</div>
+      ${tmIndicators.length > 0 ? `
+      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Momentum Indicators (RSI, STOCHASTIC, MACD, SUPERTREND)</div>
       <div class="row" style="margin-top: 4px;">
-        ${momentumIndicators.slice(0, 4).map(i => `
+        ${tmIndicators.slice(0, 4).map(i => `
           <div class="col metric metric-sm">
             <div class="metric-label">${i?.name || ''}</div>
             <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? i.value.toFixed(2) : i?.value || '-'}</div>
@@ -814,6 +849,18 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
         `).join('')}
       </table>
 
+      ${tpIndicators.length > 0 ? `
+      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Volatility Indicators (ATR, PSAR, KELTNER, DONCHIAN)</div>
+      <div class="row" style="margin-top: 4px;">
+        ${tpIndicators.slice(0, 4).map(i => `
+          <div class="col metric metric-sm">
+            <div class="metric-label">${i?.name || ''}</div>
+            <div class="metric-value ${i?.signal === 'bullish' ? 'text-green' : i?.signal === 'bearish' ? 'text-red' : ''}">${typeof i?.value === 'number' ? i.value.toFixed(2) : i?.value || '-'}</div>
+            <div class="metric-note">${i?.signal || ''}</div>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
       <!-- Trade Plan Chart Inside the Box -->
       ${data.chartImage ? `
       <div style="margin-top: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
@@ -850,6 +897,18 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
         </div>
       </div>
       ${tc.proTip ? `<div style="margin-top: 6px; font-size: 7px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 3px; padding: 6px;"><strong>Pro Tip:</strong> ${tc.proTip}</div>` : ''}
+      ${tcDivergences.length > 0 ? `
+      <div style="margin-top: 6px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Divergence Analysis (OBV, RSI, MACD)</div>
+      <div class="row" style="margin-top: 4px;">
+        ${tcDivergences.slice(0, 3).map(d => `
+          <div class="col metric metric-sm">
+            <div class="metric-label">${d.indicator}</div>
+            <div class="metric-value ${d.type === 'bullish' ? 'text-green' : d.type === 'bearish' ? 'text-red' : ''}">${formatDirection(d.type)}</div>
+            <div class="metric-note">${d.reliability} reliability</div>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
       ${tcSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tcSummary}</div>` : ''}
     </div>
     ` : ''}
