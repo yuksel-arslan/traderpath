@@ -1334,12 +1334,19 @@ export class AIExpertService {
   detectCoinSymbol(message: string): string | null {
     const upperMessage = message.toUpperCase();
 
-    // Check for explicit patterns like "analyze BTC" or "BTC analizi"
+    // PRIORITY 1: Check for "FULL X ANALYSIS REPORT" pattern (from analysis context)
+    // This is the most reliable - it's explicitly set by the frontend
+    const fullAnalysisMatch = upperMessage.match(/FULL\s+([A-Z]{2,6})\s+ANALYSIS\s+REPORT/);
+    if (fullAnalysisMatch && this.SUPPORTED_SYMBOLS.includes(fullAnalysisMatch[1])) {
+      return fullAnalysisMatch[1];
+    }
+
+    // PRIORITY 2: Check for explicit patterns like "analyze ETH" or "ETH analizi"
+    // But EXCLUDE "BTC" if it appears in context like "BTC Dominance"
     const patterns = [
       /\b(ANALIZ|ANALYZE|ANALYSIS|ANALİZ)\s+([A-Z]{2,6})\b/i,
       /\b([A-Z]{2,6})\s+(ANALIZ|ANALYZE|ANALYSIS|ANALİZ)/i,
       /\b([A-Z]{2,6})\s+(İÇİN|FOR|ABOUT)\b/i,
-      /\b(BITCOIN|ETHEREUM|SOLANA|RIPPLE|CARDANO|DOGECOIN|POLKADOT|POLYGON|CHAINLINK|UNISWAP|COSMOS|LITECOIN)\b/i,
     ];
 
     // Map full names to symbols
@@ -1351,8 +1358,12 @@ export class AIExpertService {
       'APTOS': 'APT', 'CELESTIA': 'TIA', 'NEAR PROTOCOL': 'NEAR', 'FANTOM': 'FTM'
     };
 
-    // Check for full coin names
+    // Check for full coin names (but not in "BTC Dominance" context)
     for (const [name, symbol] of Object.entries(nameToSymbol)) {
+      // Skip BITCOIN if it only appears in "BTC Dominance" context
+      if (name === 'BITCOIN' && upperMessage.includes('BTC DOMINANCE') && !upperMessage.includes('BITCOIN')) {
+        continue;
+      }
       if (upperMessage.includes(name)) {
         return symbol;
       }
@@ -1369,8 +1380,23 @@ export class AIExpertService {
       }
     }
 
-    // Direct symbol check (with word boundaries)
+    // PRIORITY 3: Direct symbol check - but skip BTC if it only appears in "BTC Dominance" context
     for (const symbol of this.SUPPORTED_SYMBOLS) {
+      // Special handling for BTC - don't match if only in "BTC Dominance" or "BTC Dom" context
+      if (symbol === 'BTC') {
+        // Check if BTC appears in a trading context (not just market data)
+        const btcTradingPatterns = [
+          /\bBTC(USDT)?\s+(ANALIZ|ANALYZE|FOR|İÇİN)/i,
+          /\b(ANALIZ|ANALYZE)\s+BTC/i,
+          /\bFULL\s+BTC\s+ANALYSIS/i,
+          /\bBTC\/USDT\s+ANALYSIS/i,
+        ];
+        const isBtcTradingContext = btcTradingPatterns.some(p => p.test(upperMessage));
+        if (!isBtcTradingContext) {
+          continue; // Skip BTC, it's probably just "BTC Dominance" mention
+        }
+      }
+
       const regex = new RegExp(`\\b${symbol}(USDT)?\\b`, 'i');
       if (regex.test(upperMessage)) {
         return symbol;
