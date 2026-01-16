@@ -1,47 +1,43 @@
 'use client';
 
 // ===========================================
-// Dashboard Home Page - Trust & Accuracy Focused
-// Professional design to build user confidence
+// Unified Dashboard - Compact & Professional
+// Merged Overview + Dashboard pages
 // ===========================================
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import dynamic from 'next/dynamic';
 import {
-  BarChart3,
+  Gem,
+  Plus,
+  ChevronRight,
   TrendingUp,
   TrendingDown,
-  Shield,
   Target,
+  Activity,
+  BarChart3,
+  Loader2,
+  LineChart,
   CheckCircle2,
   XCircle,
   Clock,
-  Loader2,
-  Users,
-  Activity,
-  Database,
-  Zap,
-  AlertTriangle,
   ArrowRight,
-  Eye,
-  Brain,
-  LineChart,
-  Lock,
-  RefreshCw,
-  ChevronRight,
-  Sparkles,
-  Award,
-  PieChart,
-  LayoutGrid,
-  List,
-  Info,
+  Shield,
+  Users,
+  Zap,
   Calendar,
+  Eye,
+  Award,
+  FileText,
+  Brain,
 } from 'lucide-react';
-import dynamic from 'next/dynamic';
+import { cn } from '../../../lib/utils';
+import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
+import { getApiUrl, authFetch } from '../../../lib/api';
 
-// Lazy load chart component for better performance
+// Lazy load chart component
 const PnLChart = dynamic(
   () => import('../../../components/dashboard/PnLChart').then(mod => ({ default: mod.PnLChart })),
   {
@@ -53,24 +49,12 @@ const PnLChart = dynamic(
     )
   }
 );
-import { cn } from '../../../lib/utils';
-import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
-import { getApiUrl, authFetch } from '../../../lib/api';
-
-// ===========================================
-// Trade Type Configuration
-// ===========================================
-type TradeType = 'scalping' | 'dayTrade' | 'swing';
-
-const TRADE_TYPE_CONFIG: Record<TradeType, { label: string; icon: typeof Zap; color: string }> = {
-  scalping: { label: 'Scalping', icon: Zap, color: 'purple' },
-  dayTrade: { label: 'Day Trade', icon: Activity, color: 'blue' },
-  swing: { label: 'Swing', icon: Calendar, color: 'amber' },
-};
 
 // ===========================================
 // Types
 // ===========================================
+type TradeType = 'scalping' | 'dayTrade' | 'swing';
+
 interface PlatformStats {
   platform: {
     totalUsers: number;
@@ -78,63 +62,21 @@ interface PlatformStats {
     totalReports: number;
     weeklyAnalyses: number;
     monthlyAnalyses: number;
-    platformSince: string;
   };
   accuracy: {
     overall: number;
-    avgConfidence: number;
-    stepRates: {
-      marketPulse: number;
-      assetScanner: number;
-      safetyCheck: number;
-      timing: number;
-      tradePlan: number;
-      trapCheck: number;
-      finalVerdict: number;
-    };
-    lastUpdated: string;
-    methodology: 'outcome-verified' | 'score-based' | string;
-    sampleSize?: number; // Number of analyses used for accuracy calculation
-    outcomeVerifiedCount?: number; // Number of analyses with verified outcomes
-    period?: 'D' | 'W' | 'M' | 'all'; // Time period for step scores
+    sampleSize?: number;
+    methodology?: string;
   };
-  // GO Signal Rate: Success rate of GO/CONDITIONAL_GO signals
   goSignalRate?: {
     rate: number;
-    goCorrect: number;
-    goIncorrect: number;
-    pending: number;
     totalVerified: number;
-    totalSignals: number;
-    description: string;
-  };
-  // Caution Rate: Success rate of WAIT/AVOID recommendations
-  cautionRate?: {
-    rate: number;
-    cautionCorrect: number;
-    cautionIncorrect: number;
-    pending: number;
-    totalVerified: number;
-    totalSignals: number;
-    description: string;
-  };
-  // Analysis coverage
-  coverage?: {
-    totalReports: number;
-    withTradePlan: number;
-    tradePlanPercentage: number;
   };
   verdicts: {
     go: number;
     conditional_go: number;
     wait: number;
     avoid: number;
-  };
-  dataQuality: {
-    dataSourcesCount: number;
-    indicatorsUsed: number;
-    timeframesAnalyzed: number;
-    updateFrequency: string;
   };
 }
 
@@ -144,444 +86,243 @@ interface UserStats {
   verifiedAnalyses: number;
   correctAnalyses: number;
   pendingAnalyses: number;
-  accuracy: number; // Real accuracy from verified outcomes
-  // Active performance metrics
+  accuracy: number;
   activeCount: number;
   activeProfitable: number;
-  activePerformance: number; // Active profitable / active * 100
+  activePerformance: number;
   avgScore: number;
   goSignals: number;
   avoidSignals: number;
   lastAnalysisDate: string | null;
 }
 
-interface RecentOutcome {
+interface RecentAnalysis {
   id: string;
   symbol: string;
   verdict: 'go' | 'conditional_go' | 'wait' | 'avoid';
   score: number;
   outcome: 'correct' | 'incorrect' | 'pending';
-  priceChange?: number;
-  createdAt: string; // Raw ISO date for calculations
-  createdAtDisplay?: string; // Formatted date for UI display
-  expiresAt?: string;
-  isExpired?: boolean;
-  hoursRemaining?: number;
-  tradeType?: TradeType;
-  // Live tracking fields
+  unrealizedPnL?: number;
+  createdAt: string;
   direction?: string;
   entryPrice?: number;
   currentPrice?: number;
-  unrealizedPnL?: number;
+  tradeType?: TradeType;
   stopLoss?: number;
   takeProfit1?: number;
-  takeProfit2?: number;
-  takeProfit3?: number;
-  // NEW: Target progress and outcome
-  tpProgress?: number;
-  distanceToTP1?: number;
-  distanceToSL?: number;
-  outcomePrice?: number;
-  outcomeAt?: string;
 }
 
 // ===========================================
 // Helper Components
 // ===========================================
-
-// Premium Metric Ring with Glow Effects
-function PremiumMetricRing({
-  value,
-  label,
-  description,
+function StatCard({
   icon: Icon,
-  size = 140,
-  gradientFrom,
-  gradientTo,
-  glowColor,
-  hasData = true,
-  isProfit = false,
-}: {
-  value: number;
-  label: string;
-  description: string;
-  icon: React.ElementType;
-  size?: number;
-  gradientFrom: string;
-  gradientTo: string;
-  glowColor: string;
-  hasData?: boolean;
-  isProfit?: boolean;
-}) {
-  const strokeWidth = 10;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const displayValue = isProfit ? Math.min(Math.abs(value), 100) : (hasData ? Math.min(value, 100) : 0);
-  const offset = circumference - (displayValue / 100) * circumference;
-  const uniqueId = `ring-${label.toLowerCase().replace(/\s/g, '-')}`;
-
-  return (
-    <div className="group relative flex flex-col items-center">
-      {/* Main Ring Container */}
-      <div
-        className="relative"
-        style={{ width: size, height: size }}
-      >
-        {/* Outer Glow */}
-        {hasData && (
-          <div
-            className="absolute inset-0 rounded-full opacity-30 blur-xl animate-pulse"
-            style={{
-              background: `radial-gradient(circle, ${glowColor} 0%, transparent 70%)`,
-            }}
-          />
-        )}
-
-        {/* SVG Ring */}
-        <svg className="transform -rotate-90 relative z-10" width={size} height={size}>
-          <defs>
-            {/* Gradient Definition */}
-            <linearGradient id={`gradient-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={gradientFrom} />
-              <stop offset="100%" stopColor={gradientTo} />
-            </linearGradient>
-
-            {/* Glow Filter */}
-            <filter id={`glow-${uniqueId}`} x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-              <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-
-            {/* Shimmer Pattern */}
-            <linearGradient id={`shimmer-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="rgba(255,255,255,0)" />
-              <stop offset="50%" stopColor="rgba(255,255,255,0.3)" />
-              <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-              <animate attributeName="x1" from="-100%" to="100%" dur="2s" repeatCount="indefinite" />
-              <animate attributeName="x2" from="0%" to="200%" dur="2s" repeatCount="indefinite" />
-            </linearGradient>
-          </defs>
-
-          {/* Background Track */}
-          <circle
-            className="text-gray-200 dark:text-slate-700/50"
-            strokeWidth={strokeWidth}
-            stroke="currentColor"
-            fill="transparent"
-            r={radius}
-            cx={size / 2}
-            cy={size / 2}
-          />
-
-          {/* Progress Ring with Gradient */}
-          {hasData && (
-            <circle
-              stroke={`url(#gradient-${uniqueId})`}
-              strokeWidth={strokeWidth}
-              strokeDasharray={circumference}
-              strokeDashoffset={offset}
-              strokeLinecap="round"
-              fill="transparent"
-              r={radius}
-              cx={size / 2}
-              cy={size / 2}
-              filter={`url(#glow-${uniqueId})`}
-              style={{
-                transition: 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
-            />
-          )}
-
-          {/* Shimmer Overlay */}
-          {hasData && (
-            <circle
-              stroke={`url(#shimmer-${uniqueId})`}
-              strokeWidth={strokeWidth}
-              strokeDasharray={circumference}
-              strokeDashoffset={offset}
-              strokeLinecap="round"
-              fill="transparent"
-              r={radius}
-              cx={size / 2}
-              cy={size / 2}
-              style={{
-                transition: 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                mixBlendMode: 'overlay',
-              }}
-            />
-          )}
-        </svg>
-
-        {/* Center Content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-          {/* Icon */}
-          <Icon className={cn(
-            "w-5 h-5 mb-1 transition-transform group-hover:scale-110",
-            hasData ? "opacity-70" : "opacity-30"
-          )} style={{ color: hasData ? gradientFrom : '#64748b' }} />
-
-          {/* Value */}
-          {hasData ? (
-            <span className={cn(
-              "text-2xl font-black tracking-tight",
-              isProfit && value >= 0 ? "text-emerald-600 dark:text-emerald-400" :
-              isProfit && value < 0 ? "text-red-600 dark:text-red-400" :
-              "text-gray-900 dark:text-white"
-            )}>
-              {isProfit && value >= 0 ? '+' : ''}{value.toFixed(1)}%
-            </span>
-          ) : (
-            <span className="text-lg font-medium text-gray-400 dark:text-slate-500">—</span>
-          )}
-
-          {/* Label */}
-          <span className={cn(
-            "text-[10px] font-semibold uppercase tracking-widest mt-0.5",
-            hasData ? "text-gray-500 dark:text-slate-400" : "text-gray-400 dark:text-slate-600"
-          )}>
-            {label}
-          </span>
-        </div>
-      </div>
-
-      {/* Description - Shows on hover */}
-      <div className={cn(
-        "mt-3 text-center max-w-[140px] transition-all duration-300",
-        "opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0"
-      )}>
-        <p className="text-[10px] text-gray-500 dark:text-slate-500 leading-tight">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-// Legacy MetricRing for backward compatibility
-function MetricRing({
-  value,
   label,
-  size = 120,
-  strokeWidth = 8,
-  color = 'text-emerald-400',
-  hasData = true,
-  isProfit = false,
-  suffix = '%'
+  value,
+  subValue,
+  color = 'gray',
+  href
 }: {
-  value: number;
+  icon: React.ElementType;
   label: string;
-  size?: number;
-  strokeWidth?: number;
-  color?: string;
-  hasData?: boolean;
-  isProfit?: boolean;
-  suffix?: string;
+  value: string | number;
+  subValue?: string;
+  color?: 'gray' | 'emerald' | 'purple' | 'blue' | 'amber' | 'red' | 'green' | 'cyan';
+  href?: string;
 }) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  // For profit, cap at 100 for display purposes
-  const displayValue = isProfit ? Math.min(Math.abs(value), 100) : (hasData ? value : 0);
-  const offset = circumference - (displayValue / 100) * circumference;
+  const colorClasses = {
+    gray: 'bg-gray-100/80 dark:bg-white/5 border-gray-200 dark:border-white/10',
+    emerald: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-500/20',
+    purple: 'bg-purple-50 dark:bg-purple-500/10 border-purple-200/50 dark:border-purple-500/20',
+    blue: 'bg-blue-50 dark:bg-blue-500/10 border-blue-200/50 dark:border-blue-500/20',
+    amber: 'bg-amber-50 dark:bg-amber-500/10 border-amber-200/50 dark:border-amber-500/20',
+    red: 'bg-red-50 dark:bg-red-500/10 border-red-200/50 dark:border-red-500/20',
+    green: 'bg-green-50 dark:bg-green-500/10 border-green-200/50 dark:border-green-500/20',
+    cyan: 'bg-cyan-50 dark:bg-cyan-500/10 border-cyan-200/50 dark:border-cyan-500/20',
+  };
 
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg className="transform -rotate-90" width={size} height={size}>
-        <circle
-          className="text-gray-200 dark:text-slate-700"
-          strokeWidth={strokeWidth}
-          stroke="currentColor"
-          fill="transparent"
-          r={radius}
-          cx={size / 2}
-          cy={size / 2}
-        />
-        <circle
-          className={hasData ? color : 'text-gray-300 dark:text-slate-600'}
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          stroke="currentColor"
-          fill="transparent"
-          r={radius}
-          cx={size / 2}
-          cy={size / 2}
-          style={{ transition: 'stroke-dashoffset 1s ease-in-out' }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        {hasData ? (
-          <>
-            <span className={cn(
-              "text-2xl font-extrabold",
-              isProfit && value >= 0 ? "text-green-600 dark:text-green-400" :
-              isProfit && value < 0 ? "text-red-600 dark:text-red-400" :
-              "text-gray-900 dark:text-white"
-            )}>
-              {isProfit && value >= 0 ? '+' : ''}{value.toFixed(1)}{suffix}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-slate-400">{label}</span>
-          </>
-        ) : (
-          <>
-            <span className="text-lg font-medium text-gray-400 dark:text-slate-400">No Data</span>
-            <span className="text-xs text-gray-500 dark:text-slate-500">Yet</span>
-          </>
-        )}
+  const iconColors = {
+    gray: 'text-gray-500',
+    emerald: 'text-emerald-500',
+    purple: 'text-purple-500',
+    blue: 'text-blue-500',
+    amber: 'text-amber-500',
+    red: 'text-red-500',
+    green: 'text-green-500',
+    cyan: 'text-cyan-500',
+  };
+
+  const content = (
+    <div className={cn(
+      "relative overflow-hidden rounded-xl p-4 border transition-all",
+      colorClasses[color],
+      href && "hover:scale-[1.02] cursor-pointer"
+    )}>
+      <div className="flex items-center gap-2 mb-1">
+        <Icon className={cn("w-4 h-4", iconColors[color])} />
+        <span className="text-xs text-gray-500 dark:text-slate-400">{label}</span>
       </div>
+      <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+      {subValue && (
+        <p className="text-xs text-gray-500 dark:text-slate-500 mt-0.5">{subValue}</p>
+      )}
     </div>
   );
+
+  if (href) {
+    return <Link href={href}>{content}</Link>;
+  }
+  return content;
 }
 
-function VerdictBadge({ verdict, count, total }: { verdict: string; count: number; total: number }) {
-  const percentage = total > 0 ? ((count / total) * 100).toFixed(0) : 0;
-  const config = {
-    go: { label: 'GO', color: 'bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-500/30' },
-    conditional_go: { label: 'CONDITIONAL', color: 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-200 dark:border-yellow-500/30' },
-    wait: { label: 'WAIT', color: 'bg-gray-100 dark:bg-slate-500/20 text-gray-600 dark:text-slate-400 border-gray-200 dark:border-slate-500/30' },
-    avoid: { label: 'AVOID', color: 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30' },
-  }[verdict] || { label: verdict, color: 'bg-gray-100 dark:bg-slate-500/20 text-gray-600 dark:text-slate-400' };
+function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
+  const isProfit = (trade.unrealizedPnL || 0) >= 0;
+  const verdictConfig = {
+    go: { bg: 'bg-green-500', text: 'GO' },
+    conditional_go: { bg: 'bg-yellow-500', text: 'C-GO' },
+    wait: { bg: 'bg-gray-500', text: 'WAIT' },
+    avoid: { bg: 'bg-red-500', text: 'AVOID' },
+  };
 
   return (
-    <div className={cn("px-3 py-2 rounded-lg border text-center", config.color)}>
-      <div className="text-lg font-bold">{percentage}%</div>
-      <div className="text-xs opacity-80">{config.label}</div>
-    </div>
-  );
-}
+    <Link
+      href={`/analysis/${trade.id}`}
+      className="flex-shrink-0 w-[200px] bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-3 hover:border-primary/50 transition-colors"
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <img
+            src={getCoinIcon(trade.symbol)}
+            alt={trade.symbol}
+            className="w-6 h-6 rounded-full"
+            onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON; }}
+          />
+          <span className="font-semibold text-gray-900 dark:text-white text-sm">{trade.symbol}</span>
+        </div>
+        <span className={cn(
+          "px-1.5 py-0.5 rounded text-[10px] font-bold text-white",
+          verdictConfig[trade.verdict].bg
+        )}>
+          {verdictConfig[trade.verdict].text}
+        </span>
+      </div>
 
-function OutcomeIndicator({ outcome }: { outcome: 'correct' | 'incorrect' | 'pending' }) {
-  const config = {
-    correct: { icon: CheckCircle2, color: 'text-green-600 dark:text-green-400', label: 'Correct' },
-    incorrect: { icon: XCircle, color: 'text-red-600 dark:text-red-400', label: 'Wrong' },
-    pending: { icon: Clock, color: 'text-yellow-600 dark:text-yellow-400', label: 'Pending' },
-  }[outcome];
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-slate-400">
+          {trade.direction === 'LONG' ? (
+            <TrendingUp className="w-3 h-3 text-green-500" />
+          ) : (
+            <TrendingDown className="w-3 h-3 text-red-500" />
+          )}
+          {trade.direction}
+        </div>
+        <span className={cn(
+          "font-bold text-sm",
+          isProfit ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+        )}>
+          {isProfit ? '+' : ''}{trade.unrealizedPnL?.toFixed(1) || 0}%
+        </span>
+      </div>
 
-  const Icon = config.icon;
-  return (
-    <div className={cn("flex items-center gap-1", config.color)}>
-      <Icon className="w-4 h-4" />
-      <span className="text-sm">{config.label}</span>
-    </div>
+      {trade.outcome !== 'pending' && (
+        <div className={cn(
+          "mt-2 pt-2 border-t flex items-center justify-center gap-1 text-xs font-medium",
+          trade.outcome === 'correct'
+            ? "border-green-200 dark:border-green-500/20 text-green-600 dark:text-green-400"
+            : "border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400"
+        )}>
+          {trade.outcome === 'correct' ? (
+            <><CheckCircle2 className="w-3 h-3" /> TP Hit</>
+          ) : (
+            <><XCircle className="w-3 h-3" /> SL Hit</>
+          )}
+        </div>
+      )}
+    </Link>
   );
 }
 
 // ===========================================
-// Main Dashboard Component
+// Main Component
 // ===========================================
-// Cache key and duration for dashboard data
-const CACHE_KEY = 'dashboard_cache';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for better UX
+const CACHE_KEY = 'dashboard_unified_cache';
+const CACHE_DURATION = 5 * 60 * 1000;
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [credits, setCredits] = useState(0);
   const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
-  const [recentOutcomes, setRecentOutcomes] = useState<RecentOutcome[]>([]);
+  const [recentAnalyses, setRecentAnalyses] = useState<RecentAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
-  const [credits, setCredits] = useState(0);
-  const [outcomeViewMode, setOutcomeViewMode] = useState<'card' | 'list'>('card');
-  const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly'>('daily');
-  const [stepPeriod, setStepPeriod] = useState<'D' | 'W' | 'M' | 'all'>('all');
-  const [tradeTypeFilter, setTradeTypeFilter] = useState<TradeType | 'all'>('all');
-  const [nextCandleRefresh, setNextCandleRefresh] = useState<number | null>(null);
-  const candleRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly'>('weekly');
   const initialLoadDone = useRef(false);
 
-  const fetchDashboardData = useCallback(async (forceRefresh = false) => {
+  const fetchData = useCallback(async (forceRefresh = false) => {
     try {
-      // Check cache first (unless force refresh)
+      // Check cache first
       if (!forceRefresh) {
         try {
           const cached = sessionStorage.getItem(CACHE_KEY);
           if (cached) {
             const { data, timestamp } = JSON.parse(cached);
             if (Date.now() - timestamp < CACHE_DURATION) {
-              // Use cached data - instant navigation
+              setCredits(data.credits);
               setPlatformStats(data.platformStats);
               setUserStats(data.userStats);
-              setRecentOutcomes(data.recentOutcomes);
-              setCredits(data.credits);
+              setRecentAnalyses(data.recentAnalyses);
               setLoading(false);
               return;
             }
           }
-        } catch (e) {
-          // Cache read failed, continue with fetch
-        }
+        } catch {}
       }
 
-      // Fetch all data in parallel using authFetch
-      // Include tradeType filter in API calls
-      const tradeTypeQuery = tradeTypeFilter !== 'all' ? tradeTypeFilter : '';
-      const [platformRes, statsRes, livePricesRes, creditsRes] = await Promise.all([
-        fetch(getApiUrl(`/api/analysis/platform-stats?period=${stepPeriod}${tradeTypeQuery ? `&tradeType=${tradeTypeQuery}` : ''}`)),
-        authFetch('/api/analysis/statistics'),
-        authFetch('/api/analysis/live-prices'), // Use live-prices endpoint for current prices
+      const [creditsRes, platformRes, statsRes, livePricesRes] = await Promise.all([
         authFetch('/api/user/credits'),
+        fetch(getApiUrl('/api/analysis/platform-stats')),
+        authFetch('/api/analysis/statistics'),
+        authFetch('/api/analysis/live-prices'),
       ]);
 
-      // Debug: Log API responses
-      console.log('[Dashboard] API Response Status:', {
-        platform: platformRes.status,
-        stats: statsRes.status,
-        livePrices: livePricesRes.status,
-        credits: creditsRes.status,
-      });
-
+      let newCredits = 0;
       let newPlatformStats = null;
       let newUserStats = null;
-      let newRecentOutcomes: RecentOutcome[] = [];
-      let newCredits = 0;
+      let newRecentAnalyses: RecentAnalysis[] = [];
 
-      // Process platform stats
+      if (creditsRes.ok) {
+        const data = await creditsRes.json();
+        newCredits = data.data?.balance || data.credits || 0;
+        setCredits(newCredits);
+      }
+
       if (platformRes.ok) {
         const data = await platformRes.json();
         newPlatformStats = data.data;
         setPlatformStats(newPlatformStats);
-        console.log('[Dashboard] Platform stats loaded:', !!newPlatformStats);
-      } else {
-        console.warn('[Dashboard] Platform stats failed:', platformRes.status);
       }
 
-      // Process user stats
       if (statsRes.ok) {
         const data = await statsRes.json();
         newUserStats = data;
         setUserStats(newUserStats);
-        console.log('[Dashboard] User stats loaded:', newUserStats);
-      } else {
-        console.warn('[Dashboard] User stats failed:', statsRes.status);
       }
 
-      // Process analyses from live-prices endpoint (includes current price and P/L)
       if (livePricesRes.ok) {
         const data = await livePricesRes.json();
-        console.log('[Dashboard] Live prices raw response:', data);
         const analyses = data.data?.analyses || [];
-        const nextRefresh = data.data?.nextRefresh;
-
-        // Set next candle refresh time
-        if (nextRefresh) {
-          setNextCandleRefresh(nextRefresh);
-        }
-
-        newRecentOutcomes = analyses.map((a: any) => {
-          // Normalize verdict
+        newRecentAnalyses = analyses.map((a: any) => {
           const rawVerdict = (a.verdict || '').toLowerCase().replace(/[^a-z_]/g, '');
           let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
           if (rawVerdict === 'go' || rawVerdict === 'go!') verdict = 'go';
           else if (rawVerdict === 'conditional_go' || rawVerdict === 'conditionalgo') verdict = 'conditional_go';
           else if (rawVerdict === 'avoid' || rawVerdict === 'no_go' || rawVerdict === 'nogo') verdict = 'avoid';
 
-          // Map interval to trade type
           let tradeType: TradeType | undefined;
           if (a.interval === '5m' || a.interval === '15m') tradeType = 'scalping';
           else if (a.interval === '1h' || a.interval === '4h') tradeType = 'dayTrade';
           else if (a.interval === '1d' || a.interval === '1D') tradeType = 'swing';
 
-          // Map outcome from API to our enum
           let outcomeStatus: 'correct' | 'incorrect' | 'pending' = 'pending';
           if (a.outcome === 'tp1_hit' || a.outcome === 'tp2_hit' || a.outcome === 'tp3_hit') {
             outcomeStatus = 'correct';
@@ -595,1297 +336,474 @@ export default function DashboardPage() {
             verdict,
             score: a.totalScore || 0,
             outcome: outcomeStatus,
-            priceChange: a.unrealizedPnL,
-            createdAt: a.createdAt, // Raw ISO date
-            createdAtDisplay: new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            expiresAt: a.expiresAt,
-            tradeType,
+            unrealizedPnL: a.unrealizedPnL,
+            createdAt: a.createdAt,
             direction: a.direction,
             entryPrice: a.entryPrice,
-            currentPrice: a.currentPrice, // Live price from Binance
-            unrealizedPnL: a.unrealizedPnL, // Calculated P/L
+            currentPrice: a.currentPrice,
+            tradeType,
             stopLoss: a.stopLoss,
             takeProfit1: a.takeProfit1,
-            takeProfit2: a.takeProfit2,
-            takeProfit3: a.takeProfit3,
-            // NEW: Target progress from API
-            tpProgress: a.tpProgress,
-            distanceToTP1: a.distanceToTP1,
-            distanceToSL: a.distanceToSL,
-            outcomePrice: a.outcomePrice,
-            outcomeAt: a.outcomeAt,
           };
         });
-        setRecentOutcomes(newRecentOutcomes);
-        console.log('[Dashboard] Live analyses count:', newRecentOutcomes.length, 'Next refresh:', nextRefresh ? new Date(nextRefresh).toLocaleTimeString() : 'N/A');
-      } else {
-        console.warn('[Dashboard] Live prices failed:', livePricesRes.status);
-      }
-
-      // Process credits
-      if (creditsRes.ok) {
-        const data = await creditsRes.json();
-        newCredits = data.credits || 0;
-        setCredits(newCredits);
-        console.log('[Dashboard] Credits loaded:', newCredits);
-      } else {
-        console.warn('[Dashboard] Credits failed:', creditsRes.status);
+        setRecentAnalyses(newRecentAnalyses);
       }
 
       // Save to cache
       try {
         sessionStorage.setItem(CACHE_KEY, JSON.stringify({
           data: {
+            credits: newCredits,
             platformStats: newPlatformStats,
             userStats: newUserStats,
-            recentOutcomes: newRecentOutcomes,
-            credits: newCredits,
+            recentAnalyses: newRecentAnalyses,
           },
           timestamp: Date.now(),
         }));
-      } catch (e) {
-        // Cache write failed, ignore
-      }
+      } catch {}
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
     } finally {
       setLoading(false);
     }
-  }, [router, stepPeriod, tradeTypeFilter]);
+  }, []);
 
-  // Track if period or trade type changed to force refresh
-  const prevPeriodRef = useRef(stepPeriod);
-  const prevTradeTypeRef = useRef(tradeTypeFilter);
-
-  // Initial load - check cache first for instant display
   useEffect(() => {
     if (initialLoadDone.current) return;
     initialLoadDone.current = true;
-
-    // Try to load from cache immediately (client-side only)
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_DURATION) {
-          setPlatformStats(data.platformStats);
-          setUserStats(data.userStats);
-          setRecentOutcomes(data.recentOutcomes);
-          setCredits(data.credits);
-          setLoading(false);
-          // Still fetch fresh data in background
-          fetchDashboardData(false);
-          return;
-        }
-      }
-    } catch {
-      // Cache read failed, continue with fetch
-    }
-    fetchDashboardData(false);
-  }, [fetchDashboardData]);
+    fetchData(false);
+  }, [fetchData]);
 
   useEffect(() => {
-    // Force refresh if period or trade type changed (skip initial load)
-    const periodChanged = prevPeriodRef.current !== stepPeriod;
-    const tradeTypeChanged = prevTradeTypeRef.current !== tradeTypeFilter;
-    prevPeriodRef.current = stepPeriod;
-    prevTradeTypeRef.current = tradeTypeFilter;
-
-    // Only fetch if filters actually changed (not initial mount)
-    if (periodChanged || tradeTypeChanged) {
-      fetchDashboardData(true);
-    }
-
-    // Fallback: Auto-refresh every 5 minutes if candle close timer fails
     const refreshInterval = setInterval(() => {
-      fetchDashboardData(true); // Force refresh, bypass cache
+      fetchData(true);
     }, 5 * 60 * 1000);
-
     return () => clearInterval(refreshInterval);
-  }, [fetchDashboardData, stepPeriod, tradeTypeFilter]);
+  }, [fetchData]);
 
-  // Candle-close based refresh: Set timer to refresh at next candle close
-  useEffect(() => {
-    if (!nextCandleRefresh) return;
+  // Build chart data
+  const buildChartData = () => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
 
-    // Clear previous timer
-    if (candleRefreshTimerRef.current) {
-      clearTimeout(candleRefreshTimerRef.current);
+    const hours: number[] = [];
+    for (let h = 0; h < 24; h += 3) hours.push(h);
+
+    const days: string[] = [];
+    const dayLabels: string[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      days.push(d.toISOString().split('T')[0]);
+      dayLabels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
     }
 
-    const now = Date.now();
-    const timeUntilRefresh = nextCandleRefresh - now;
+    const hourlyPnL: Record<number, number[]> = {};
+    hours.forEach(h => { hourlyPnL[h] = []; });
 
-    // Only set timer if the next refresh is in the future and within 4 hours
-    if (timeUntilRefresh > 0 && timeUntilRefresh < 4 * 60 * 60 * 1000) {
-      console.log(`[Dashboard] Next candle refresh in ${Math.round(timeUntilRefresh / 1000)}s at ${new Date(nextCandleRefresh).toLocaleTimeString()}`);
+    const dailyPnL: Record<string, number[]> = {};
+    days.forEach(day => { dailyPnL[day] = []; });
 
-      candleRefreshTimerRef.current = setTimeout(() => {
-        console.log('[Dashboard] Candle closed! Refreshing live prices...');
-        fetchDashboardData(true); // Force refresh at candle close
-      }, timeUntilRefresh + 1000); // Add 1 second buffer to ensure candle is closed
-    }
+    recentAnalyses
+      .filter(o => o.unrealizedPnL !== undefined && o.createdAt)
+      .forEach(o => {
+        const tradeDate = new Date(o.createdAt);
+        const tradeDateStr = tradeDate.toISOString().split('T')[0];
+        const tradeHour = tradeDate.getHours();
 
-    return () => {
-      if (candleRefreshTimerRef.current) {
-        clearTimeout(candleRefreshTimerRef.current);
-      }
-    };
-  }, [nextCandleRefresh, fetchDashboardData]);
+        if (tradeDateStr === todayStr) {
+          const hourBucket = Math.floor(tradeHour / 3) * 3;
+          if (hourlyPnL[hourBucket] !== undefined) {
+            hourlyPnL[hourBucket].push(o.unrealizedPnL || 0);
+          }
+        }
+
+        if (dailyPnL[tradeDateStr]) {
+          dailyPnL[tradeDateStr].push(o.unrealizedPnL || 0);
+        }
+      });
+
+    const dailyChartData = hours.map((h) => {
+      const trades = hourlyPnL[h];
+      const avgPnl = trades.length > 0 ? trades.reduce((sum, v) => sum + v, 0) / trades.length : 0;
+      return {
+        name: `${h.toString().padStart(2, '0')}:00`,
+        hour: h,
+        pnl: avgPnl,
+        positive: Math.max(0, avgPnl),
+        negative: Math.min(0, avgPnl),
+        count: trades.length,
+      };
+    });
+
+    const weeklyChartData = days.map((day, i) => {
+      const trades = dailyPnL[day];
+      const avgPnl = trades.length > 0 ? trades.reduce((sum, v) => sum + v, 0) / trades.length : 0;
+      return {
+        name: dayLabels[i],
+        date: day,
+        pnl: avgPnl,
+        positive: Math.max(0, avgPnl),
+        negative: Math.min(0, avgPnl),
+        count: trades.length,
+      };
+    });
+
+    return pnlViewMode === 'daily' ? dailyChartData : weeklyChartData;
+  };
+
+  const chartData = buildChartData();
+  const relevantTrades = recentAnalyses.filter(o => o.unrealizedPnL !== undefined);
+  const avgPnL = relevantTrades.length > 0
+    ? relevantTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / relevantTrades.length
+    : 0;
+  const hasChartData = relevantTrades.length >= 1;
+  const activeTrades = recentAnalyses.filter(t => t.outcome === 'pending');
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <Loader2 className="w-10 h-10 animate-spin text-emerald-500 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-slate-400">Loading data...</p>
+          <p className="text-gray-500 dark:text-slate-400">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
-  const totalVerdicts = platformStats ?
-    platformStats.verdicts.go + platformStats.verdicts.conditional_go +
-    platformStats.verdicts.wait + platformStats.verdicts.avoid : 0;
-
-  // Check if we have real data (sampleSize > 0 means real analyses exist)
-  const hasRealData = (platformStats?.accuracy.sampleSize ?? 0) > 0 || totalVerdicts > 0;
-
-  // Filter outcomes by trade type
-  const filteredOutcomes = tradeTypeFilter === 'all'
-    ? recentOutcomes
-    : recentOutcomes.filter(o => o.tradeType === tradeTypeFilter);
-
   return (
-    <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-8">
-
-      {/* ===== GLOBAL TRADE TYPE FILTER ===== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2 sm:pb-0">
-          <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-slate-400 whitespace-nowrap">Filter:</span>
-          <div className="flex items-center bg-gray-100/80 dark:bg-white/5 rounded-xl p-1 border border-gray-200 dark:border-white/10">
-            <button
-              onClick={() => setTradeTypeFilter('all')}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
-                tradeTypeFilter === 'all'
-                  ? "bg-white dark:bg-slate-700 shadow-sm text-gray-900 dark:text-white"
-                  : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
-              )}
-            >
-              All
-            </button>
-            {(Object.entries(TRADE_TYPE_CONFIG) as [TradeType, typeof TRADE_TYPE_CONFIG[TradeType]][]).map(([type, config]) => {
-              const Icon = config.icon;
-              return (
-                <button
-                  key={type}
-                  onClick={() => setTradeTypeFilter(type)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5",
-                    tradeTypeFilter === type
-                      ? `bg-white dark:bg-slate-700 shadow-sm ${
-                          config.color === 'purple' ? 'text-purple-600 dark:text-purple-400' :
-                          config.color === 'blue' ? 'text-blue-600 dark:text-blue-400' :
-                          'text-amber-600 dark:text-amber-400'
-                        }`
-                      : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
-                  )}
-                >
-                  <Icon className="w-4 h-4" />
-                  {config.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        {tradeTypeFilter !== 'all' && (
-          <div className={cn(
-            "px-3 py-1 rounded-full text-xs font-medium",
-            tradeTypeFilter === 'scalping' ? "bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400" :
-            tradeTypeFilter === 'dayTrade' ? "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400" :
-            "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400"
-          )}>
-            Showing {TRADE_TYPE_CONFIG[tradeTypeFilter].label} data only
-          </div>
-        )}
-      </div>
-
-      {/* ===== SECTION 1: Compact Platform Performance ===== */}
-      <div className="relative overflow-hidden rounded-3xl">
-        {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/5 dark:from-emerald-500/10 via-transparent to-transparent" />
-
-        {/* Content */}
-        <div className="relative z-10 p-6 md:p-8">
-          {/* Header - Same style as other sections */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6">
-            <div className="flex items-center gap-3 sm:gap-4">
+    <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-6">
+      {/* ===== SECTION 1: Credits & Quick Actions ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Credit Balance */}
+        <div className="lg:col-span-1 relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-500/20 via-transparent to-transparent" />
+          <div className="relative z-10 p-5">
+            <div className="flex items-center gap-4">
               <div className="relative shrink-0">
-                <div className="absolute inset-0 bg-emerald-500/30 blur-lg rounded-full" />
-                <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                  <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                <div className="absolute inset-0 bg-amber-500/40 blur-xl rounded-full animate-pulse" />
+                <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-500 flex items-center justify-center shadow-lg">
+                  <Gem className="w-7 h-7 text-white" />
                 </div>
               </div>
               <div>
-                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Platform Performance</h2>
-                <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm">Real-time verification from {platformStats?.accuracy.sampleSize ?? 0} trades</p>
-              </div>
-            </div>
-            {platformStats?.accuracy.methodology === 'outcome-verified' && (
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Live Tracking</span>
-              </div>
-            )}
-          </div>
-
-          {/* Content - Horizontal Layout */}
-          <div className="flex flex-col lg:flex-row items-center gap-6">
-            {/* LEFT: Main Accuracy Gauge */}
-            <div className="flex-shrink-0">
-              <PremiumMetricRing
-                value={platformStats?.accuracy.overall ?? 0}
-                label="Accuracy"
-                description="GO signal success rate"
-                icon={Target}
-                size={140}
-                gradientFrom="#10b981"
-                gradientTo="#34d399"
-                glowColor="#10b981"
-                hasData={hasRealData}
-              />
-            </div>
-
-            {/* RIGHT: Stats Grid - New Layout */}
-            <div className="flex-1 w-full flex flex-col items-center lg:items-stretch">
-              <div className="flex flex-col sm:flex-row gap-3 items-center sm:items-stretch">
-                {/* LEFT COLUMN: Total/Week + Caution/Verified */}
-                <div className="flex gap-3 justify-center sm:justify-start">
-                  {/* Total & This Week */}
-                  <div className="flex flex-col gap-3">
-                    <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10 min-w-[100px]">
-                      <div className="flex items-center gap-2 mb-1">
-                        <BarChart3 className="w-4 h-4 text-purple-500" />
-                        <span className="text-xs text-gray-500 dark:text-slate-400">Total</span>
-                      </div>
-                      <div className="text-xl font-bold text-gray-900 dark:text-white">
-                        {platformStats?.platform.totalAnalyses ?? 0}
-                      </div>
-                    </div>
-                    <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Activity className="w-4 h-4 text-cyan-500" />
-                        <span className="text-xs text-gray-500 dark:text-slate-400">This Week</span>
-                      </div>
-                      <div className="text-xl font-bold text-gray-900 dark:text-white">
-                        {platformStats?.platform.weeklyAnalyses ?? 0}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Caution & Verified */}
-                  <div className="flex flex-col gap-3">
-                    <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10 min-w-[100px]">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Shield className="w-4 h-4 text-amber-500" />
-                        <span className="text-xs text-gray-500 dark:text-slate-400">Caution</span>
-                      </div>
-                      <div className="text-xl font-bold text-gray-900 dark:text-white">
-                        {(platformStats?.cautionRate?.totalVerified ?? 0) > 0 ? `${platformStats?.cautionRate?.rate ?? 0}%` : '—'}
-                      </div>
-                    </div>
-                    <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10">
-                      <div className="flex items-center gap-2 mb-1">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                        <span className="text-xs text-gray-500 dark:text-slate-400">Verified</span>
-                      </div>
-                      <div className="text-xl font-bold text-gray-900 dark:text-white">
-                        {platformStats?.accuracy.sampleSize ?? 0}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* RIGHT COLUMN: Profit Trend (full height) */}
-                <div className="flex-1 w-full sm:w-auto flex gap-3 min-h-[140px]">
-                  {/* Premium Profit Sparkline - Daily/Weekly P&L Toggle */}
-                  {(() => {
-                    // DAILY VIEW: Hours of today (00:00 - 23:00)
-                    const today = new Date();
-                    const todayStr = today.toISOString().split('T')[0];
-                    const hours: number[] = [];
-                    for (let h = 0; h < 24; h += 3) { // Every 3 hours for cleaner display
-                      hours.push(h);
-                    }
-
-                    // WEEKLY VIEW: Last 7 days
-                    const days: string[] = [];
-                    const dayLabels: string[] = [];
-                    for (let i = 6; i >= 0; i--) {
-                      const d = new Date();
-                      d.setDate(d.getDate() - i);
-                      days.push(d.toISOString().split('T')[0]);
-                      dayLabels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
-                    }
-
-                    // Group trades by hour for daily P&L (today only)
-                    const hourlyPnL: Record<number, number[]> = {};
-                    hours.forEach(h => { hourlyPnL[h] = []; });
-
-                    // Group trades by date for weekly P&L
-                    const dailyPnL: Record<string, number[]> = {};
-                    days.forEach(day => { dailyPnL[day] = []; });
-
-                    filteredOutcomes
-                      .filter(o => o.unrealizedPnL !== undefined && o.createdAt)
-                      .forEach(o => {
-                        const tradeDate = new Date(o.createdAt);
-                        const tradeDateStr = tradeDate.toISOString().split('T')[0];
-                        const tradeHour = tradeDate.getHours();
-
-                        // Hourly grouping (for today)
-                        if (tradeDateStr === todayStr) {
-                          const hourBucket = Math.floor(tradeHour / 3) * 3;
-                          if (hourlyPnL[hourBucket] !== undefined) {
-                            hourlyPnL[hourBucket].push(o.unrealizedPnL || 0);
-                          }
-                        }
-
-                        // Daily grouping (for the week)
-                        if (dailyPnL[tradeDateStr]) {
-                          dailyPnL[tradeDateStr].push(o.unrealizedPnL || 0);
-                        }
-                      });
-
-                    // Daily chart data (hourly view)
-                    const dailyChartData = hours.map((h) => {
-                      const trades = hourlyPnL[h];
-                      const avgPnl = trades.length > 0
-                        ? trades.reduce((sum, v) => sum + v, 0) / trades.length
-                        : 0;
-                      return {
-                        name: `${h.toString().padStart(2, '0')}:00`,
-                        hour: h,
-                        pnl: avgPnl,
-                        positive: Math.max(0, avgPnl),
-                        negative: Math.min(0, avgPnl),
-                        count: trades.length,
-                      };
-                    });
-
-                    // Weekly chart data (daily view)
-                    const weeklyChartData = days.map((day, i) => {
-                      const trades = dailyPnL[day];
-                      const avgPnl = trades.length > 0
-                        ? trades.reduce((sum, v) => sum + v, 0) / trades.length
-                        : 0;
-                      return {
-                        name: dayLabels[i],
-                        date: day,
-                        pnl: avgPnl,
-                        positive: Math.max(0, avgPnl),
-                        negative: Math.min(0, avgPnl),
-                        count: trades.length,
-                      };
-                    });
-
-                    const chartData = pnlViewMode === 'daily' ? dailyChartData : weeklyChartData;
-
-                    const allTrades = filteredOutcomes.filter(o => o.unrealizedPnL !== undefined && o.createdAt);
-                    const relevantTrades = pnlViewMode === 'daily'
-                      ? allTrades.filter(o => new Date(o.createdAt).toISOString().split('T')[0] === todayStr)
-                      : allTrades.filter(o => days.includes(new Date(o.createdAt).toISOString().split('T')[0]));
-
-                    const avgPnL = relevantTrades.length > 0
-                      ? relevantTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / relevantTrades.length
-                      : 0;
-                    const isPositive = avgPnL >= 0;
-                    const hasData = relevantTrades.length >= 1;
-
-                    return (
-                      <div className="flex-1 relative overflow-hidden rounded-xl p-4 flex flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100/50 dark:from-slate-800/50 dark:via-slate-800/30 dark:to-slate-900/50 border border-slate-200 dark:border-slate-700/50">
-                        {/* Dual glow */}
-                        <div className="absolute -bottom-8 right-4 w-20 h-20 rounded-full blur-2xl opacity-30 bg-emerald-400" />
-                        <div className="absolute -bottom-8 left-4 w-20 h-20 rounded-full blur-2xl opacity-30 bg-red-400" />
-
-                        <div className="flex items-center justify-between mb-2 relative z-10">
-                          <div className="flex items-center gap-2">
-                            <div className="p-1.5 rounded-lg bg-slate-200/80 dark:bg-slate-700/50">
-                              <LineChart className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-                            </div>
-                            {/* Toggle Buttons */}
-                            <div className="flex bg-slate-200/80 dark:bg-slate-700/50 rounded-lg p-0.5">
-                              <button
-                                onClick={() => setPnlViewMode('daily')}
-                                className={`px-2 py-0.5 text-xs font-medium rounded-md transition-all ${
-                                  pnlViewMode === 'daily'
-                                    ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-white shadow-sm'
-                                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
-                                }`}
-                              >
-                                Daily
-                              </button>
-                              <button
-                                onClick={() => setPnlViewMode('weekly')}
-                                className={`px-2 py-0.5 text-xs font-medium rounded-md transition-all ${
-                                  pnlViewMode === 'weekly'
-                                    ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-white shadow-sm'
-                                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
-                                }`}
-                              >
-                                Weekly
-                              </button>
-                            </div>
-                          </div>
-                          <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full ${
-                            isPositive
-                              ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                              : 'bg-red-500/20 text-red-700 dark:text-red-300'
-                          }`}>
-                            <span className="text-lg font-black">
-                              {relevantTrades.length === 0 ? '—' : `${isPositive ? '+' : ''}${avgPnL.toFixed(1)}%`}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex-1 min-h-[80px] relative z-10">
-                          {!hasData ? (
-                            <div className="h-full flex flex-col items-center justify-center">
-                              <LineChart className="w-8 h-8 text-gray-300 dark:text-slate-600 mb-2" />
-                              <span className="text-xs text-gray-400 dark:text-slate-500">Waiting for trades</span>
-                            </div>
-                          ) : (
-                            <PnLChart chartData={chartData} />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Credits</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-white">{credits}</span>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ===== SECTION 2: My Performance ===== */}
-      <div className="relative overflow-hidden rounded-3xl">
-        {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
-
-        {/* Grid Pattern */}
-        <div className="absolute inset-0 opacity-[0.03] dark:opacity-5" style={{
-          backgroundImage: `linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)`,
-          backgroundSize: '40px 40px'
-        }} />
-
-        <div className="relative z-10 p-6 md:p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-amber-500/30 blur-lg rounded-full" />
-              <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                <Award className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-            </div>
-            <div>
-              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">My Performance</h2>
-              <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm">Your personal trading statistics</p>
-            </div>
-          </div>
-
-          {userStats && userStats.totalAnalyses > 0 ? (
-            <div className="space-y-6">
-              {/* Two Performance Cards - Realized & Active */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Realized Performance */}
-                <div className="relative overflow-hidden bg-gradient-to-br from-emerald-100/80 to-green-100/80 dark:from-emerald-500/10 dark:to-green-500/10 rounded-xl p-5 text-center border border-emerald-200/50 dark:border-emerald-500/20">
-                  <div className="text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold mb-2">
-                    Realized Accuracy
-                  </div>
-                  <div className={cn(
-                    "text-4xl font-black",
-                    userStats.accuracy >= 70 ? 'text-green-600 dark:text-green-400' :
-                    userStats.accuracy >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
-                    userStats.verifiedAnalyses === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
-                  )}>
-                    {userStats.verifiedAnalyses > 0 ? `${userStats.accuracy.toFixed(1)}%` : '-'}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400 mt-2">
-                    {userStats.correctAnalyses} / {userStats.verifiedAnalyses} Closed
-                  </div>
-                </div>
-
-                {/* Active Performance */}
-                <div className="relative overflow-hidden bg-gradient-to-br from-blue-100/80 to-cyan-100/80 dark:from-blue-500/10 dark:to-cyan-500/10 rounded-xl p-5 text-center border border-blue-200/50 dark:border-blue-500/20">
-                  <div className="text-xs uppercase tracking-wider text-blue-600 dark:text-blue-400 font-semibold mb-2">
-                    Active Performance
-                  </div>
-                  <div className={cn(
-                    "text-4xl font-black",
-                    (userStats.activePerformance || 0) >= 70 ? 'text-green-600 dark:text-green-400' :
-                    (userStats.activePerformance || 0) >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
-                    (userStats.activeCount || 0) === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
-                  )}>
-                    {(userStats.activeCount || 0) > 0 ? `${(userStats.activePerformance || 0).toFixed(1)}%` : '-'}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400 mt-2">
-                    {userStats.activeProfitable || 0} / {userStats.activeCount || 0} Profitable
-                  </div>
-                </div>
-
-                {/* GO Signals */}
-                <div className="relative overflow-hidden bg-gradient-to-br from-green-100/80 to-emerald-100/80 dark:from-green-500/10 dark:to-emerald-500/10 rounded-xl p-5 text-center border border-green-200/50 dark:border-green-500/20">
-                  <div className="text-xs uppercase tracking-wider text-green-600 dark:text-green-400 font-semibold mb-2">
-                    GO Signals
-                  </div>
-                  <div className="text-4xl font-black text-green-600 dark:text-green-400">
-                    {userStats.goSignals}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400 mt-2">
-                    Trade recommendations
-                  </div>
-                </div>
-
-                {/* Avoid Signals */}
-                <div className="relative overflow-hidden bg-gradient-to-br from-red-100/80 to-rose-100/80 dark:from-red-500/10 dark:to-rose-500/10 rounded-xl p-5 text-center border border-red-200/50 dark:border-red-500/20">
-                  <div className="text-xs uppercase tracking-wider text-red-600 dark:text-red-400 font-semibold mb-2">
-                    Avoided
-                  </div>
-                  <div className="text-4xl font-black text-red-600 dark:text-red-400">
-                    {userStats.avoidSignals}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400 mt-2">
-                    Risky trades skipped
-                  </div>
-                </div>
-              </div>
-
-              {/* Stats Grid - Compact */}
-              <div className="grid grid-cols-5 gap-3">
-                <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 text-center border border-gray-200 dark:border-white/10">
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400">Total</div>
-                </div>
-                <div className="bg-blue-100/80 dark:bg-blue-500/10 rounded-xl p-4 text-center border border-blue-200/50 dark:border-blue-500/20">
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400">Active</div>
-                </div>
-                <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 text-center border border-gray-200 dark:border-white/10">
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400">Closed</div>
-                </div>
-                <div className="bg-green-100/80 dark:bg-green-500/10 rounded-xl p-4 text-center border border-green-200/50 dark:border-green-500/20">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400">TP Hit</div>
-                </div>
-                <div className="bg-red-100/80 dark:bg-red-500/10 rounded-xl p-4 text-center border border-red-200/50 dark:border-red-500/20">
-                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400">SL Hit</div>
-                </div>
-              </div>
-
-              {/* Performance Comment */}
-              <div className={cn(
-                "text-center text-sm font-medium p-4 rounded-xl border",
-                userStats.verifiedAnalyses === 0
-                  ? "bg-blue-100/80 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-500/20"
-                  : userStats.accuracy >= 70
-                  ? "bg-green-100/80 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-500/20"
-                  : userStats.accuracy >= 50
-                  ? "bg-yellow-100/80 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-200/50 dark:border-yellow-500/20"
-                  : "bg-red-100/80 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-500/20"
-              )}>
-                {userStats.verifiedAnalyses === 0
-                  ? "Trades are still active. Results will update when TP/SL is hit."
-                  : userStats.accuracy >= 70
-                  ? "Excellent performance! Your analysis accuracy is outstanding."
-                  : userStats.accuracy >= 50
-                  ? "Good progress! There's room for improvement."
-                  : "Consider reviewing your analysis approach for better results."}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="relative w-20 h-20 mx-auto mb-4">
-                <div className="absolute inset-0 bg-gray-400/20 blur-xl rounded-full" />
-                <div className="relative w-full h-full rounded-full bg-gray-100/80 dark:bg-white/5 flex items-center justify-center border border-gray-200 dark:border-white/10">
-                  <BarChart3 className="w-10 h-10 text-gray-400 dark:text-slate-500" />
-                </div>
-              </div>
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-2 text-lg">No analyses yet</h4>
-              <p className="text-sm text-gray-500 dark:text-slate-400 mb-6">
-                Start your first analysis to track your performance
-              </p>
+            <div className="flex items-center gap-3 mt-4">
               <Link
-                href="/analyze"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl font-semibold transition shadow-lg shadow-amber-500/25"
+                href="/pricing"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-sm font-medium hover:opacity-90 transition"
               >
-                Start First Analysis
-                <ArrowRight className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
+                Buy
+              </Link>
+              <Link
+                href="/rewards"
+                className="inline-flex items-center gap-1 text-xs font-medium text-amber-400 hover:text-amber-300"
+              >
+                Earn free
+                <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* ===== SECTION 4: Verdict Distribution ===== */}
-      <div className="relative overflow-hidden rounded-3xl">
-        {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-500/5 dark:from-purple-500/10 via-transparent to-transparent" />
-
-        {/* Grid Pattern */}
-        <div className="absolute inset-0 opacity-[0.03] dark:opacity-5" style={{
-          backgroundImage: `linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)`,
-          backgroundSize: '40px 40px'
-        }} />
-
-        <div className="relative z-10 p-6 md:p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-purple-500/30 blur-lg rounded-full" />
-              <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                <PieChart className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-            </div>
-            <div>
-              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Verdict Distribution</h2>
-              <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm">Platform-wide signal distribution</p>
-            </div>
           </div>
-
-          {totalVerdicts > 0 ? (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <VerdictBadge verdict="go" count={platformStats?.verdicts.go ?? 0} total={totalVerdicts} />
-                <VerdictBadge verdict="conditional_go" count={platformStats?.verdicts.conditional_go ?? 0} total={totalVerdicts} />
-                <VerdictBadge verdict="wait" count={platformStats?.verdicts.wait ?? 0} total={totalVerdicts} />
-                <VerdictBadge verdict="avoid" count={platformStats?.verdicts.avoid ?? 0} total={totalVerdicts} />
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-gray-200 dark:border-white/10">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Why It Matters?</h4>
-                  <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">
-                    A balanced verdict distribution shows the system is responsive to market conditions.
-                    Systems that only give "BUY" signals are not reliable.
-                  </p>
-                </div>
-                <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-gray-200 dark:border-white/10 flex items-center justify-between">
-                  <span className="text-gray-500 dark:text-slate-400">Total Verdicts</span>
-                  <span className="text-3xl font-bold text-gray-900 dark:text-white">{totalVerdicts}</span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-12 bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10">
-              <PieChart className="w-12 h-12 text-gray-400 dark:text-slate-600 mx-auto mb-3" />
-              <p className="text-sm text-gray-500 dark:text-slate-400">No verdicts yet</p>
-              <p className="text-xs text-gray-400 dark:text-slate-500">Complete analyses to see distribution</p>
-            </div>
-          )}
         </div>
-      </div>
 
-      {/* ===== SECTION 3.5: Signal Accuracy Details ===== */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        {/* GO Signal Accuracy */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-500/10 dark:to-green-500/10 border border-emerald-200/50 dark:border-emerald-500/20 p-5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+        {/* Quick Actions */}
+        <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Link
+            href="/analyze"
+            className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-500/10 dark:to-green-500/10 border border-emerald-200/50 dark:border-emerald-500/20 p-4 hover:border-emerald-400 dark:hover:border-emerald-400 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center mb-2 shadow-lg shadow-emerald-500/30">
               <TrendingUp className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <h4 className="font-bold text-gray-900 dark:text-white">GO Signals</h4>
-              <p className="text-xs text-gray-500 dark:text-slate-400">Trade recommendations</p>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-slate-300">Accuracy</span>
-              <span className={cn(
-                "text-xl font-bold",
-                (platformStats?.goSignalRate?.rate ?? 0) >= 60 ? "text-green-600 dark:text-green-400" :
-                (platformStats?.goSignalRate?.rate ?? 0) >= 40 ? "text-yellow-600 dark:text-yellow-400" :
-                (platformStats?.goSignalRate?.totalVerified ?? 0) === 0 ? "text-gray-400" : "text-red-600 dark:text-red-400"
-              )}>
-                {(platformStats?.goSignalRate?.totalVerified ?? 0) > 0 ? `${platformStats?.goSignalRate?.rate}%` : '—'}
-              </span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
-                <div className="text-lg font-bold text-green-600 dark:text-green-400">{platformStats?.goSignalRate?.goCorrect ?? 0}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400">TP Hit</div>
-              </div>
-              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
-                <div className="text-lg font-bold text-red-600 dark:text-red-400">{platformStats?.goSignalRate?.goIncorrect ?? 0}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400">SL Hit</div>
-              </div>
-              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
-                <div className="text-lg font-bold text-gray-600 dark:text-slate-300">{platformStats?.goSignalRate?.pending ?? 0}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400">Pending</div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t border-emerald-200/50 dark:border-emerald-500/20">
-              <span className="text-gray-500 dark:text-slate-400">Total GO Signals</span>
-              <span className="font-semibold text-gray-700 dark:text-slate-300">{platformStats?.goSignalRate?.totalSignals ?? 0}</span>
-            </div>
-          </div>
-        </div>
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">New Analysis</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400">Analyze a coin</p>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all" />
+          </Link>
 
-        {/* WAIT/AVOID Accuracy */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 border border-amber-200/50 dark:border-amber-500/20 p-5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
-              <Shield className="w-5 h-5 text-white" />
+          <Link
+            href="/reports"
+            className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-500/10 dark:to-violet-500/10 border border-purple-200/50 dark:border-purple-500/20 p-4 hover:border-purple-400 dark:hover:border-purple-400 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-400 to-violet-500 flex items-center justify-center mb-2 shadow-lg shadow-purple-500/30">
+              <FileText className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <h4 className="font-bold text-gray-900 dark:text-white">WAIT/AVOID</h4>
-              <p className="text-xs text-gray-500 dark:text-slate-400">Caution signals</p>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-slate-300">Accuracy</span>
-              <span className={cn(
-                "text-xl font-bold",
-                (platformStats?.cautionRate?.rate ?? 0) >= 60 ? "text-green-600 dark:text-green-400" :
-                (platformStats?.cautionRate?.rate ?? 0) >= 40 ? "text-yellow-600 dark:text-yellow-400" :
-                (platformStats?.cautionRate?.totalVerified ?? 0) === 0 ? "text-gray-400" : "text-red-600 dark:text-red-400"
-              )}>
-                {(platformStats?.cautionRate?.totalVerified ?? 0) > 0 ? `${platformStats?.cautionRate?.rate}%` : '—'}
-              </span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
-                <div className="text-lg font-bold text-green-600 dark:text-green-400">{platformStats?.cautionRate?.cautionCorrect ?? 0}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400">Correct</div>
-              </div>
-              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
-                <div className="text-lg font-bold text-red-600 dark:text-red-400">{platformStats?.cautionRate?.cautionIncorrect ?? 0}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400">Missed</div>
-              </div>
-              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
-                <div className="text-lg font-bold text-gray-600 dark:text-slate-300">{platformStats?.cautionRate?.pending ?? 0}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400">Pending</div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t border-amber-200/50 dark:border-amber-500/20">
-              <span className="text-gray-500 dark:text-slate-400">Total WAIT/AVOID</span>
-              <span className="font-semibold text-gray-700 dark:text-slate-300">{platformStats?.cautionRate?.totalSignals ?? 0}</span>
-            </div>
-          </div>
-        </div>
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Reports</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400">Analysis history</p>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-hover:text-purple-500 group-hover:translate-x-0.5 transition-all" />
+          </Link>
 
-        {/* Trade Plan Coverage */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 border border-blue-200/50 dark:border-blue-500/20 p-5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <Target className="w-5 h-5 text-white" />
+          <Link
+            href="/ai-expert"
+            className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-500/10 dark:to-blue-500/10 border border-cyan-200/50 dark:border-cyan-500/20 p-4 hover:border-cyan-400 dark:hover:border-cyan-400 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center mb-2 shadow-lg shadow-cyan-500/30">
+              <Brain className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <h4 className="font-bold text-gray-900 dark:text-white">Trade Plans</h4>
-              <p className="text-xs text-gray-500 dark:text-slate-400">Analysis coverage</p>
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">AI Expert</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400">Ask questions</p>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-hover:text-cyan-500 group-hover:translate-x-0.5 transition-all" />
+          </Link>
+
+          <Link
+            href="/alerts"
+            className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 border border-amber-200/50 dark:border-amber-500/20 p-4 hover:border-amber-400 dark:hover:border-amber-400 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mb-2 shadow-lg shadow-amber-500/30">
+              <Zap className="w-5 h-5 text-white" />
             </div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-slate-300">Coverage</span>
-              <span className={cn(
-                "text-xl font-bold",
-                (platformStats?.coverage?.tradePlanPercentage ?? 0) >= 80 ? "text-green-600 dark:text-green-400" :
-                (platformStats?.coverage?.tradePlanPercentage ?? 0) >= 50 ? "text-yellow-600 dark:text-yellow-400" :
-                "text-gray-400"
-              )}>
-                {(platformStats?.coverage?.totalReports ?? 0) > 0 ? `${platformStats?.coverage?.tradePlanPercentage}%` : '—'}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-center">
-              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
-                <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{platformStats?.coverage?.withTradePlan ?? 0}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400">With Plan</div>
-              </div>
-              <div className="bg-white/60 dark:bg-white/5 rounded-lg p-2">
-                <div className="text-lg font-bold text-gray-600 dark:text-slate-300">{platformStats?.coverage?.totalReports ?? 0}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400">Total</div>
-              </div>
-            </div>
-            <p className="text-[10px] text-gray-400 dark:text-slate-500 text-center mt-2">
-              Only reports with trade plans can be verified
-            </p>
-          </div>
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Alerts</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400">Price alerts</p>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all" />
+          </Link>
         </div>
       </div>
 
-      {/* ===== SECTION 4: Live Outcome Tracking ===== */}
-      <div className="relative overflow-hidden rounded-3xl">
-        {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500/5 dark:from-blue-500/10 via-transparent to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-green-500/5 dark:from-green-500/10 via-transparent to-transparent" />
+      {/* ===== SECTION 2: Statistics Grid ===== */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <StatCard
+          icon={Target}
+          label="Platform Accuracy"
+          value={platformStats?.accuracy?.overall ? `${platformStats.accuracy.overall}%` : '—'}
+          subValue={`${platformStats?.accuracy?.sampleSize || 0} verified`}
+          color="emerald"
+        />
+        <StatCard
+          icon={BarChart3}
+          label="Total Analyses"
+          value={platformStats?.platform?.totalAnalyses || 0}
+          subValue={`${platformStats?.platform?.weeklyAnalyses || 0} this week`}
+          color="purple"
+        />
+        <StatCard
+          icon={Users}
+          label="Platform Users"
+          value={platformStats?.platform?.totalUsers || 0}
+          color="blue"
+        />
+        <StatCard
+          icon={Award}
+          label="My Accuracy"
+          value={userStats?.verifiedAnalyses ? `${userStats.accuracy?.toFixed(0)}%` : '—'}
+          subValue={userStats?.verifiedAnalyses ? `${userStats.correctAnalyses}/${userStats.verifiedAnalyses}` : 'No data yet'}
+          color="amber"
+        />
+        <StatCard
+          icon={TrendingUp}
+          label="GO Signals"
+          value={userStats?.goSignals || 0}
+          subValue={`${userStats?.avoidSignals || 0} avoided`}
+          color="green"
+        />
+        <StatCard
+          icon={Activity}
+          label="Active Trades"
+          value={userStats?.activeCount || 0}
+          subValue={userStats?.activeCount ? `${userStats.activeProfitable} profitable` : 'Start analyzing'}
+          color="cyan"
+        />
+      </div>
 
-        {/* Grid Pattern */}
-        <div className="absolute inset-0 opacity-[0.03] dark:opacity-5" style={{
-          backgroundImage: `linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)`,
-          backgroundSize: '50px 50px'
-        }} />
+      {/* ===== SECTION 3: Performance Chart ===== */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/5 dark:from-emerald-500/10 via-transparent to-transparent" />
 
-        <div className="relative z-10 p-6 md:p-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="relative shrink-0">
-                <div className="absolute inset-0 bg-blue-500/30 blur-lg rounded-full" />
-                <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                  <Eye className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                </div>
+        <div className="relative z-10 p-5">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                <LineChart className="w-4.5 h-4.5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Live Accuracy Tracking</h2>
-                <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm hidden sm:block">Real-time TP/SL monitoring - trades close when targets hit</p>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Performance</h2>
+                <p className="text-xs text-gray-500 dark:text-slate-400">P/L over time</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* View Toggle */}
-              <div className="flex items-center bg-gray-100/80 dark:bg-white/5 rounded-lg p-1 border border-gray-200 dark:border-white/10">
+
+            <div className="flex items-center gap-2">
+              <div className="flex bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
                 <button
-                  onClick={() => setOutcomeViewMode('card')}
+                  onClick={() => setPnlViewMode('daily')}
                   className={cn(
-                    "p-1.5 rounded-md transition-all",
-                    outcomeViewMode === 'card'
-                      ? "bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400"
-                      : "text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
+                    "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                    pnlViewMode === 'daily'
+                      ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
+                      : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
                   )}
                 >
-                  <LayoutGrid className="w-4 h-4" />
+                  Today
                 </button>
                 <button
-                  onClick={() => setOutcomeViewMode('list')}
+                  onClick={() => setPnlViewMode('weekly')}
                   className={cn(
-                    "p-1.5 rounded-md transition-all",
-                    outcomeViewMode === 'list'
-                      ? "bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400"
-                      : "text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
+                    "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                    pnlViewMode === 'weekly'
+                      ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
+                      : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
                   )}
                 >
-                  <List className="w-4 h-4" />
+                  Week
                 </button>
               </div>
-              {/* Status Legends */}
-              <div className="hidden sm:flex items-center gap-3 text-sm">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-100/80 dark:bg-green-500/10 rounded-full border border-green-200/50 dark:border-green-500/20">
-                  <div className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400" />
-                  <span className="text-green-600 dark:text-green-400 font-medium">TP Hit</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-100/80 dark:bg-red-500/10 rounded-full border border-red-200/50 dark:border-red-500/20">
-                  <div className="w-2 h-2 rounded-full bg-red-500 dark:bg-red-400" />
-                  <span className="text-red-600 dark:text-red-400 font-medium">SL Hit</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-100/80 dark:bg-blue-500/10 rounded-full border border-blue-200/50 dark:border-blue-500/20">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400 animate-pulse" />
-                  <span className="text-blue-600 dark:text-blue-400 font-medium">Active</span>
-                </div>
+              <div className={cn(
+                "px-2.5 py-1 rounded-lg font-bold text-sm",
+                avgPnL >= 0
+                  ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                  : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+              )}>
+                {hasChartData ? `${avgPnL >= 0 ? '+' : ''}${avgPnL.toFixed(1)}%` : '—'}
               </div>
             </div>
           </div>
 
-          {filteredOutcomes.length > 0 ? (
-            <>
-              {/* Card View - Horizontal scroll, single row */}
-              {outcomeViewMode === 'card' && (
-                <div className="overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
-                  <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
-                  {filteredOutcomes.map((outcome) => (
-                    <div
-                      key={outcome.id}
-                      className={cn(
-                        "group bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border transition-all duration-300 hover:shadow-lg flex-shrink-0 w-[280px]",
-                        outcome.outcome === 'correct' && "border-green-300/50 dark:border-green-500/30 bg-green-100/80 dark:bg-green-500/5",
-                        outcome.outcome === 'incorrect' && "border-red-300/50 dark:border-red-500/30 bg-red-100/80 dark:bg-red-500/5",
-                        outcome.outcome === 'pending' && "border-gray-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/30"
-                      )}
-                    >
-                      {/* Header: Symbol & Status */}
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={getCoinIcon(outcome.symbol)}
-                            alt={outcome.symbol}
-                            className="w-8 h-8 rounded-lg shadow-lg object-contain"
-                            onError={(e) => {
-                              e.currentTarget.src = FALLBACK_COIN_ICON;
-                            }}
-                          />
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-semibold text-gray-900 dark:text-white text-sm">{outcome.symbol}</span>
-                              {outcome.direction && (
-                                <span className={cn(
-                                  "px-1 py-0.5 rounded text-[9px] font-bold",
-                                  outcome.direction === 'long' || outcome.direction === 'LONG'
-                                    ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400"
-                                    : "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                                )}>
-                                  {outcome.direction === 'long' || outcome.direction === 'LONG' ? '↑' : '↓'}
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-gray-400 dark:text-slate-500">{outcome.createdAtDisplay}</div>
-                          </div>
-                        </div>
-                        {/* Status Badge */}
-                        <div className={cn(
-                          "px-2 py-0.5 rounded-lg text-[10px] font-bold",
-                          outcome.outcome === 'correct' && "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400",
-                          outcome.outcome === 'incorrect' && "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400",
-                          outcome.outcome === 'pending' && "bg-blue-200/80 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
-                        )}>
-                          {outcome.outcome === 'correct' ? 'TP HIT' : outcome.outcome === 'incorrect' ? 'SL HIT' : 'ACTIVE'}
-                        </div>
-                      </div>
-
-                      {/* Live Price Display */}
-                      {outcome.entryPrice && outcome.currentPrice && (
-                        <div className="mb-2 p-2 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-gray-200/50 dark:border-white/5">
-                          <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-slate-400 mb-1">
-                            <span>Entry</span>
-                            <span>Current</span>
-                          </div>
-                          <div className="flex items-center justify-between font-mono text-xs">
-                            <span className="text-gray-700 dark:text-slate-300">${outcome.entryPrice.toFixed(2)}</span>
-                            <span className="text-gray-400 dark:text-slate-600">→</span>
-                            <span className="text-gray-700 dark:text-slate-300">${outcome.currentPrice.toFixed(2)}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Score, P/L, TP Progress Display - Same style as Reports page */}
-                      <div className="flex items-center justify-between gap-1.5 p-2 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-gray-200/50 dark:border-white/5">
-                        {/* Score */}
-                        <div className={cn(
-                          "text-center px-2 py-1 rounded-lg flex-1",
-                          (outcome.score || 0) >= 7 ? "bg-green-100 dark:bg-green-500/20" :
-                          (outcome.score || 0) >= 5 ? "bg-yellow-100 dark:bg-yellow-500/20" : "bg-red-100 dark:bg-red-500/20"
-                        )}>
-                          <div className="text-[9px] text-gray-500 dark:text-muted-foreground">Score</div>
-                          <div className={cn(
-                            "font-bold text-xs",
-                            (outcome.score || 0) >= 7 ? "text-green-600 dark:text-green-400" :
-                            (outcome.score || 0) >= 5 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"
-                          )}>
-                            {((outcome.score || 0) * 10).toFixed(0)}%
-                          </div>
-                        </div>
-
-                        <div className="text-gray-300 dark:text-muted-foreground/30">|</div>
-
-                        {/* P/L */}
-                        <div className={cn(
-                          "text-center px-2 py-1 rounded-lg flex-1",
-                          (outcome.unrealizedPnL || 0) >= 0
-                            ? "bg-green-100 dark:bg-green-500/20"
-                            : "bg-red-100 dark:bg-red-500/20"
-                        )}>
-                          <div className="text-[9px] text-gray-500 dark:text-muted-foreground">P/L</div>
-                          <div className={cn(
-                            "font-bold text-xs",
-                            (outcome.unrealizedPnL || 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                          )}>
-                            {(outcome.unrealizedPnL || 0) >= 0 ? '+' : ''}{(outcome.unrealizedPnL || 0).toFixed(2)}%
-                          </div>
-                        </div>
-
-                        <div className="text-gray-300 dark:text-muted-foreground/30">|</div>
-
-                        {/* TP Progress - Use API value or calculate (relative to TP3 as max target) */}
-                        {(() => {
-                          // Use tpProgress from API if available
-                          const tpProgress = outcome.tpProgress ?? (() => {
-                            if (outcome.outcome === 'correct') return 100;
-                            if (outcome.entryPrice && outcome.currentPrice && outcome.takeProfit1) {
-                              const isLong = outcome.direction === 'long' || outcome.direction === 'LONG';
-                              // Use TP3 as max target, fall back to TP2, then TP1
-                              const maxTarget = outcome.takeProfit3 || outcome.takeProfit2 || outcome.takeProfit1;
-                              const totalDistance = isLong
-                                ? (maxTarget - outcome.entryPrice)
-                                : (outcome.entryPrice - maxTarget);
-                              const coveredDistance = isLong
-                                ? (outcome.currentPrice - outcome.entryPrice)
-                                : (outcome.entryPrice - outcome.currentPrice);
-                              return totalDistance !== 0
-                                ? Math.min(100, Math.max(0, (coveredDistance / totalDistance) * 100))
-                                : 0;
-                            }
-                            return 0;
-                          })();
-
-                          // Check if TP was hit
-                          const isTPHit = outcome.outcome === 'correct';
-                          const isSLHit = outcome.outcome === 'incorrect';
-
-                          return (
-                            <div className={cn(
-                              "text-center px-2 py-1 rounded-lg flex-1",
-                              isTPHit ? "bg-green-200 dark:bg-green-500/30 ring-2 ring-green-500" :
-                              isSLHit ? "bg-red-200 dark:bg-red-500/30 ring-2 ring-red-500" :
-                              tpProgress >= 80 ? "bg-green-100 dark:bg-green-500/20" :
-                              tpProgress >= 50 ? "bg-yellow-100 dark:bg-yellow-500/20" : "bg-blue-100 dark:bg-blue-500/20"
-                            )}>
-                              <div className="text-[9px] text-gray-500 dark:text-muted-foreground flex items-center justify-center gap-0.5">
-                                <Target className="w-2.5 h-2.5" />
-                                {isTPHit ? 'TP HIT!' : isSLHit ? 'SL HIT' : 'TP'}
-                              </div>
-                              <div className={cn(
-                                "font-bold text-xs",
-                                isTPHit ? "text-green-600 dark:text-green-300" :
-                                isSLHit ? "text-red-600 dark:text-red-300" :
-                                tpProgress >= 80 ? "text-green-600 dark:text-green-400" :
-                                tpProgress >= 50 ? "text-yellow-600 dark:text-yellow-400" : "text-blue-600 dark:text-blue-400"
-                              )}>
-                                {tpProgress.toFixed(0)}%
-                              </div>
-                            </div>
-                          );
-                        })()}
-
-                        {/* Distance to Target */}
-                        {outcome.distanceToTP1 !== undefined && outcome.distanceToTP1 !== null && (
-                          <>
-                            <div className="text-gray-300 dark:text-muted-foreground/30">|</div>
-                            <div className="text-center px-2 py-1 rounded-lg bg-purple-100 dark:bg-purple-500/20 flex-1">
-                              <div className="text-[9px] text-gray-500 dark:text-muted-foreground">Hedefe</div>
-                              <div className="font-bold text-xs text-purple-600 dark:text-purple-400">
-                                {outcome.distanceToTP1 > 0 ? '+' : ''}{outcome.distanceToTP1.toFixed(1)}%
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  </div>
-                </div>
-              )}
-
-              {/* List View - 5 rows with vertical scroll */}
-              {outcomeViewMode === 'list' && (
-                <div className="bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-                  {/* Scrollable Table Container */}
-                  <div className="overflow-x-auto">
-                    {/* Table Header */}
-                    <div className="min-w-[900px] grid grid-cols-[120px_70px_60px_90px_90px_80px_80px_70px_70px_70px_90px] gap-2 px-4 py-3 bg-gray-200/50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10 text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider sticky top-0 z-10">
-                      <div>Asset</div>
-                      <div className="text-center">Direction</div>
-                      <div className="text-center">Score</div>
-                      <div className="text-right">Entry</div>
-                      <div className="text-right">Current</div>
-                      <div className="text-right">SL</div>
-                      <div className="text-right">TP</div>
-                      <div className="text-center">P/L</div>
-                      <div className="text-center">TP Prog</div>
-                      <div className="text-center">Status</div>
-                      <div className="text-right">Date</div>
-                    </div>
-
-                    {/* Table Body - Max 5 rows visible, vertical scroll */}
-                    <div className="divide-y divide-gray-200 dark:divide-white/5 max-h-[220px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
-                      {filteredOutcomes.map((outcome) => {
-                        // Use tpProgress from API if available, otherwise calculate (relative to TP3 as max target)
-                        const tpProgress = outcome.tpProgress ?? (() => {
-                          if (outcome.outcome === 'correct') return 100;
-                          if (outcome.entryPrice && outcome.currentPrice && outcome.takeProfit1) {
-                            const isLong = outcome.direction === 'long' || outcome.direction === 'LONG';
-                            // Use TP3 as max target, fall back to TP2, then TP1
-                            const maxTarget = outcome.takeProfit3 || outcome.takeProfit2 || outcome.takeProfit1;
-                            const totalDistance = isLong
-                              ? (maxTarget - outcome.entryPrice)
-                              : (outcome.entryPrice - maxTarget);
-                            const coveredDistance = isLong
-                              ? (outcome.currentPrice - outcome.entryPrice)
-                              : (outcome.entryPrice - outcome.currentPrice);
-                            return totalDistance !== 0
-                              ? Math.min(100, Math.max(0, (coveredDistance / totalDistance) * 100))
-                              : 0;
-                          }
-                          return 0;
-                        })();
-
-                        const isTPHit = outcome.outcome === 'correct';
-                        const isSLHit = outcome.outcome === 'incorrect';
-
-                        return (
-                          <div
-                            key={outcome.id}
-                            className={cn(
-                              "min-w-[900px] grid grid-cols-[120px_70px_60px_90px_90px_80px_80px_70px_70px_70px_90px] gap-2 px-4 py-2.5 hover:bg-gray-200/50 dark:hover:bg-white/5 transition-colors items-center",
-                              outcome.outcome === 'correct' && "bg-green-50/50 dark:bg-green-500/5",
-                              outcome.outcome === 'incorrect' && "bg-red-50/50 dark:bg-red-500/5"
-                            )}
-                          >
-                            {/* Asset */}
-                            <div className="flex items-center gap-2">
-                              <img
-                                src={getCoinIcon(outcome.symbol)}
-                                alt={outcome.symbol}
-                                className="w-6 h-6 rounded-lg shadow object-contain"
-                                onError={(e) => {
-                                  e.currentTarget.src = FALLBACK_COIN_ICON;
-                                }}
-                              />
-                              <span className="font-semibold text-gray-900 dark:text-white text-sm">{outcome.symbol}</span>
-                            </div>
-
-                            {/* Direction */}
-                            <div className="flex items-center justify-center">
-                              {outcome.direction ? (
-                                <span className={cn(
-                                  "px-1.5 py-0.5 rounded text-[10px] font-bold",
-                                  outcome.direction === 'long' || outcome.direction === 'LONG'
-                                    ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400"
-                                    : "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                                )}>
-                                  {outcome.direction === 'long' || outcome.direction === 'LONG' ? 'LONG' : 'SHORT'}
-                                </span>
-                              ) : (
-                                <span className="text-gray-400 dark:text-slate-500 text-xs">—</span>
-                              )}
-                            </div>
-
-                            {/* Score */}
-                            <div className="flex items-center justify-center">
-                              <span className={cn(
-                                "px-1.5 py-0.5 rounded text-[10px] font-bold",
-                                (outcome.score || 0) >= 7 ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400" :
-                                (outcome.score || 0) >= 5 ? "bg-yellow-200/80 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400" :
-                                "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                              )}>
-                                {((outcome.score || 0) * 10).toFixed(0)}%
-                              </span>
-                            </div>
-
-                            {/* Entry Price */}
-                            <div className="text-right font-mono text-xs text-gray-700 dark:text-slate-300">
-                              {outcome.entryPrice ? `$${outcome.entryPrice.toFixed(2)}` : '—'}
-                            </div>
-
-                            {/* Current Price */}
-                            <div className="text-right font-mono text-xs text-gray-700 dark:text-slate-300">
-                              {outcome.currentPrice ? `$${outcome.currentPrice.toFixed(2)}` : '—'}
-                            </div>
-
-                            {/* Stop Loss */}
-                            <div className="text-right font-mono text-xs text-red-600 dark:text-red-400">
-                              {outcome.stopLoss ? `$${outcome.stopLoss.toFixed(2)}` : '—'}
-                            </div>
-
-                            {/* Take Profit */}
-                            <div className="text-right font-mono text-xs text-green-600 dark:text-green-400">
-                              {outcome.takeProfit1 ? `$${outcome.takeProfit1.toFixed(2)}` : '—'}
-                            </div>
-
-                            {/* P/L */}
-                            <div className="flex items-center justify-center">
-                              {outcome.unrealizedPnL !== undefined ? (
-                                <span className={cn(
-                                  "px-1.5 py-0.5 rounded text-[10px] font-bold",
-                                  outcome.unrealizedPnL >= 0
-                                    ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400"
-                                    : "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                                )}>
-                                  {outcome.unrealizedPnL >= 0 ? '+' : ''}{outcome.unrealizedPnL.toFixed(1)}%
-                                </span>
-                              ) : (
-                                <span className="text-gray-400 dark:text-slate-500 text-xs">—</span>
-                              )}
-                            </div>
-
-                            {/* TP Progress */}
-                            <div className="flex items-center justify-center">
-                              <span className={cn(
-                                "px-1.5 py-0.5 rounded text-[10px] font-bold",
-                                isTPHit ? "bg-green-300/80 dark:bg-green-500/30 text-green-700 dark:text-green-300 ring-1 ring-green-500" :
-                                isSLHit ? "bg-red-300/80 dark:bg-red-500/30 text-red-700 dark:text-red-300 ring-1 ring-red-500" :
-                                tpProgress >= 80 ? "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400" :
-                                tpProgress >= 50 ? "bg-yellow-200/80 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400" :
-                                "bg-blue-200/80 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
-                              )}>
-                                {tpProgress.toFixed(0)}%
-                              </span>
-                            </div>
-
-                            {/* Status */}
-                            <div className="flex items-center justify-center">
-                              <span className={cn(
-                                "px-1.5 py-0.5 rounded text-[10px] font-bold",
-                                outcome.outcome === 'correct' && "bg-green-200/80 dark:bg-green-500/20 text-green-600 dark:text-green-400",
-                                outcome.outcome === 'incorrect' && "bg-red-200/80 dark:bg-red-500/20 text-red-600 dark:text-red-400",
-                                outcome.outcome === 'pending' && "bg-blue-200/80 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
-                              )}>
-                                {outcome.outcome === 'correct' ? 'TP HIT' : outcome.outcome === 'incorrect' ? 'SL HIT' : 'LIVE'}
-                              </span>
-                            </div>
-
-                            {/* Date */}
-                            <div className="text-right text-[10px] text-gray-500 dark:text-slate-400">
-                              {outcome.createdAtDisplay}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-12 bg-gray-100/80 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10">
-              <div className="relative w-16 h-16 mx-auto mb-4">
-                <div className="absolute inset-0 bg-blue-400/20 blur-xl rounded-full" />
-                <div className="relative w-full h-full rounded-full bg-blue-100/80 dark:bg-blue-500/10 flex items-center justify-center border border-blue-200 dark:border-blue-500/20">
-                  <Activity className="w-8 h-8 text-blue-500 dark:text-blue-400" />
-                </div>
+          {/* Chart */}
+          <div className="h-48 sm:h-56">
+            {!hasChartData ? (
+              <div className="h-full flex flex-col items-center justify-center">
+                <LineChart className="w-10 h-10 text-gray-300 dark:text-slate-600 mb-2" />
+                <p className="text-sm text-gray-500 dark:text-slate-400">No trading data yet</p>
+                <Link
+                  href="/analyze"
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  Start your first analysis
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
               </div>
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">No tracked outcomes yet</h4>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
-                Create an analysis to start tracking live outcomes
-              </p>
-            </div>
-          )}
+            ) : (
+              <PnLChart chartData={chartData} />
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ===== Quick Actions (Mobile Friendly) ===== */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Link
-          href="/analyze"
-          className="flex flex-col items-center gap-2 p-4 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 rounded-xl border border-emerald-200 dark:border-emerald-500/30 transition group"
-        >
-          <Zap className="w-6 h-6 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition" />
-          <span className="font-medium text-gray-900 dark:text-white">New Analysis</span>
-        </Link>
-        <Link
-          href="/reports"
-          className="flex flex-col items-center gap-2 p-4 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-xl border border-blue-200 dark:border-blue-500/30 transition group"
-        >
-          <BarChart3 className="w-6 h-6 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition" />
-          <span className="font-medium text-gray-900 dark:text-white">My Reports</span>
-        </Link>
-        <Link
-          href="/ai-expert"
-          className="flex flex-col items-center gap-2 p-4 bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 rounded-xl border border-purple-200 dark:border-purple-500/30 transition group"
-        >
-          <Brain className="w-6 h-6 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition" />
-          <span className="font-medium text-gray-900 dark:text-white">AI Experts</span>
-        </Link>
-        <Link
-          href="/pricing"
-          className="flex flex-col items-center gap-2 p-4 bg-yellow-50 dark:bg-yellow-500/10 hover:bg-yellow-100 dark:hover:bg-yellow-500/20 rounded-xl border border-yellow-200 dark:border-yellow-500/30 transition group"
-        >
-          <Sparkles className="w-6 h-6 text-yellow-600 dark:text-yellow-400 group-hover:scale-110 transition" />
-          <span className="font-medium text-gray-900 dark:text-white">Buy Credits</span>
-        </Link>
-      </div>
+      {/* ===== SECTION 4: Active Trades ===== */}
+      {activeTrades.length > 0 && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-blue-500/5 dark:from-blue-500/10 via-transparent to-transparent" />
+
+          <div className="relative z-10 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                  <Eye className="w-4.5 h-4.5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">Active Trades</h2>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{activeTrades.length} positions being tracked</p>
+                </div>
+              </div>
+              <Link
+                href="/reports"
+                className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              >
+                View all
+                <ChevronRight className="w-3 h-3" />
+              </Link>
+            </div>
+
+            {/* Horizontal Scroll */}
+            <div className="overflow-x-auto pb-2 -mx-1 px-1">
+              <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
+                {activeTrades.slice(0, 10).map((trade) => (
+                  <ActiveTradeCard key={trade.id} trade={trade} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== SECTION 5: My Performance Summary ===== */}
+      {userStats && userStats.totalAnalyses > 0 && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
+
+          <div className="relative z-10 p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                <Award className="w-4.5 h-4.5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">My Performance</h2>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Your trading statistics</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-200 dark:border-white/10">
+                <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Total</div>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-3 text-center border border-blue-200/50 dark:border-blue-500/20">
+                <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Active</div>
+              </div>
+              <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-200 dark:border-white/10">
+                <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Closed</div>
+              </div>
+              <div className="bg-green-50 dark:bg-green-500/10 rounded-xl p-3 text-center border border-green-200/50 dark:border-green-500/20">
+                <div className="text-xl font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">TP Hit</div>
+              </div>
+              <div className="bg-red-50 dark:bg-red-500/10 rounded-xl p-3 text-center border border-red-200/50 dark:border-red-500/20">
+                <div className="text-xl font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">SL Hit</div>
+              </div>
+            </div>
+
+            {/* Performance Message */}
+            <div className={cn(
+              "mt-4 text-center text-xs font-medium p-3 rounded-xl border",
+              userStats.verifiedAnalyses === 0
+                ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-500/20"
+                : userStats.accuracy >= 70
+                ? "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-500/20"
+                : userStats.accuracy >= 50
+                ? "bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-200/50 dark:border-yellow-500/20"
+                : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-500/20"
+            )}>
+              {userStats.verifiedAnalyses === 0
+                ? "Trades are still active. Results will update when TP/SL is hit."
+                : userStats.accuracy >= 70
+                ? "Excellent performance! Your analysis accuracy is outstanding."
+                : userStats.accuracy >= 50
+                ? "Good progress! Keep improving your analysis skills."
+                : "Consider reviewing your analysis approach for better results."}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Empty State for New Users */}
+      {(!userStats || userStats.totalAnalyses === 0) && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700 p-8 text-center">
+          <div className="relative w-16 h-16 mx-auto mb-4">
+            <div className="absolute inset-0 bg-emerald-400/20 blur-xl rounded-full" />
+            <div className="relative w-full h-full rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+              <TrendingUp className="w-8 h-8 text-white" />
+            </div>
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Start Your Trading Journey</h3>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mb-4 max-w-md mx-auto">
+            Analyze coins using our 7-step methodology and track your performance with real-time accuracy metrics.
+          </p>
+          <Link
+            href="/analyze"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-semibold transition shadow-lg shadow-emerald-500/25"
+          >
+            Start First Analysis
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

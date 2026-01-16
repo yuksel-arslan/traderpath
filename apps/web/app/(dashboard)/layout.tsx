@@ -21,7 +21,6 @@ import {
   Server,
   Brain,
   TrendingDown,
-  BarChart3,
   BookOpen,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
@@ -37,8 +36,7 @@ const PriceTicker = dynamic(
 
 // Main navigation items
 const mainNav = [
-  { name: 'Overview', href: '/overview', icon: LayoutDashboard },
-  { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'AI Experts', href: '/ai-expert', icon: Brain },
