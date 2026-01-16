@@ -65,7 +65,7 @@ export default function AuthLayout({
           <div className="flex-1 flex flex-col justify-center">
             {/* Brand Name - Aligned with "Welcome back!" */}
             <div className="mb-6">
-              <h2 className="text-4xl font-bold gradient-text-brand">TraderPath</h2>
+              <h2 className="text-4xl font-extrabold gradient-text-brand">TraderPath</h2>
               <p className="text-base text-slate-400 mt-2">From Charts to Clarity</p>
             </div>
 
