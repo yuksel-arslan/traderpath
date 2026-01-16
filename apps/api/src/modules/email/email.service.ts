@@ -1006,6 +1006,185 @@ TraderPath - Professional Trading Analysis
   }
 
   /**
+   * Send analysis completion summary notification
+   */
+  async sendAnalysisSummary(
+    email: string,
+    userName: string,
+    data: {
+      symbol: string;
+      verdict: string;
+      score: number;
+      direction: string;
+      entryPrice: string;
+      stopLoss: string;
+      takeProfit1: string;
+      tradeType: string;
+    }
+  ): Promise<{ success: boolean; error?: string }> {
+    const verdictColor = data.verdict === 'GO' ? '#22c55e' : data.verdict === 'WAIT' ? '#f59e0b' : '#ef4444';
+    const verdictEmoji = data.verdict === 'GO' ? '🟢' : data.verdict === 'WAIT' ? '🟡' : '🔴';
+    const isLong = data.direction?.toLowerCase() === 'long';
+    const directionEmoji = isLong ? '📈' : '📉';
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analysis Complete - TraderPath</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); padding: 30px; text-align: center;">
+              <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">TraderPath</h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">Analysis Complete!</p>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <p style="color: #475569; font-size: 16px; margin: 0 0 25px;">
+                Hello <strong style="color: #1e293b;">${userName}</strong>,
+              </p>
+
+              <p style="color: #64748b; font-size: 15px; margin: 0 0 20px; line-height: 1.6;">
+                Your analysis for <strong>${data.symbol}/USDT</strong> is complete! Here's a quick summary:
+              </p>
+
+              <!-- Analysis Summary -->
+              <div style="background: #f8fafc; border-radius: 12px; padding: 25px; margin: 25px 0; border: 1px solid #e2e8f0;">
+                <table width="100%" style="font-size: 14px;">
+                  <tr>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                      <strong style="color: #64748b;">Symbol</strong>
+                    </td>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; text-align: right; font-size: 18px; font-weight: bold; color: #1e293b;">
+                      ${data.symbol}/USDT
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                      <strong style="color: #64748b;">Verdict</strong>
+                    </td>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; text-align: right;">
+                      <span style="background: ${verdictColor}20; color: ${verdictColor}; padding: 4px 12px; border-radius: 12px; font-weight: bold;">
+                        ${verdictEmoji} ${data.verdict}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                      <strong style="color: #64748b;">Score</strong>
+                    </td>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #1e293b;">
+                      ${data.score}/100
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                      <strong style="color: #64748b;">Direction</strong>
+                    </td>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: ${isLong ? '#22c55e' : '#ef4444'};">
+                      ${directionEmoji} ${data.direction.toUpperCase()}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0;">
+                      <strong style="color: #64748b;">Trade Type</strong>
+                    </td>
+                    <td style="padding: 12px 0; text-align: right; color: #1e293b;">
+                      ${data.tradeType}
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- Quick Trade Plan -->
+              <div style="background: #f0fdf4; border-radius: 12px; padding: 20px; margin: 25px 0; border-left: 4px solid #22c55e;">
+                <p style="margin: 0 0 15px; font-weight: bold; color: #166534;">Quick Trade Plan:</p>
+                <table width="100%" style="font-size: 13px; color: #15803d;">
+                  <tr><td>Entry:</td><td style="text-align: right; font-weight: bold;">${data.entryPrice}</td></tr>
+                  <tr><td>TP1:</td><td style="text-align: right; font-weight: bold; color: #22c55e;">${data.takeProfit1}</td></tr>
+                  <tr><td>Stop Loss:</td><td style="text-align: right; font-weight: bold; color: #ef4444;">${data.stopLoss}</td></tr>
+                </table>
+              </div>
+
+              <!-- CTA Button -->
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://traderpath.io/dashboard" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; text-decoration: none; padding: 16px 50px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                  View Full Report
+                </a>
+              </div>
+
+              <p style="color: #94a3b8; font-size: 12px; text-align: center;">
+                Log in to see detailed analysis, charts, and AI expert commentary.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #64748b; font-size: 13px; margin: 0;">TraderPath - Professional Trading Analysis</p>
+              <p style="color: #cbd5e1; font-size: 10px; margin: 15px 0 0;">
+                ⚠️ This is not investment advice. Do your own research before trading.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+
+    const text = `
+TraderPath - Analysis Complete!
+==============================
+
+Hello ${userName},
+
+Your analysis for ${data.symbol}/USDT is complete!
+
+SUMMARY:
+- Symbol: ${data.symbol}/USDT
+- Verdict: ${data.verdict}
+- Score: ${data.score}/100
+- Direction: ${data.direction.toUpperCase()}
+- Trade Type: ${data.tradeType}
+
+QUICK TRADE PLAN:
+- Entry: ${data.entryPrice}
+- TP1: ${data.takeProfit1}
+- Stop Loss: ${data.stopLoss}
+
+View full report at: https://traderpath.io/dashboard
+
+---
+TraderPath - Professional Trading Analysis
+⚠️ This is not investment advice.
+    `.trim();
+
+    const result = await this.sendEmail({
+      to: email,
+      subject: `${verdictEmoji} ${data.symbol}/USDT Analysis: ${data.verdict} (${data.score}/100) - TraderPath`,
+      html,
+      text,
+    });
+
+    return { success: result.success, error: result.error };
+  }
+
+  /**
    * Send credit grant notification
    */
   async sendCreditGrantNotification(

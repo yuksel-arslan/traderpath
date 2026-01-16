@@ -693,7 +693,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     // Check if user exists
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, name: true },
+      select: { id: true, email: true, name: true, telegramChatId: true, discordWebhookUrl: true },
     });
 
     if (!user) {
@@ -757,6 +757,14 @@ export default async function adminRoutes(app: FastifyInstance) {
       }
     );
 
+    // Send social notifications (Telegram, Discord)
+    const { socialNotificationService } = await import('../notifications/social-notification.service');
+    const socialResult = await socialNotificationService.sendCreditGrantNotifications(user, {
+      amount,
+      reason: reason || 'Admin credit grant',
+      newBalance: updated.balance,
+    });
+
     return reply.send({
       success: true,
       data: {
@@ -764,7 +772,11 @@ export default async function adminRoutes(app: FastifyInstance) {
         creditsAdded: amount,
         newBalance: updated.balance,
         reason: reason || 'Admin credit grant',
-        emailSent: emailResult.success,
+        notifications: {
+          email: emailResult.success,
+          social: socialResult.sent,
+          channels: socialResult.results.map(r => ({ channel: r.channel, success: r.success })),
+        },
       },
     });
   });

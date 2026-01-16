@@ -290,8 +290,16 @@ export default function AdminPage() {
 
       if (response.ok) {
         const data = await response.json();
-        const emailStatus = data.data.emailSent ? ' (Email sent)' : ' (Email not sent)';
-        setCleanupResult(`Granted ${amount} credits to ${selectedUser.name || selectedUser.email}. New balance: ${data.data.newBalance}${emailStatus}`);
+        const notifications = data.data.notifications;
+        const channels: string[] = [];
+        if (notifications?.email) channels.push('Email');
+        if (notifications?.social > 0) {
+          notifications.channels?.forEach((c: { channel: string; success: boolean }) => {
+            if (c.success) channels.push(c.channel.charAt(0).toUpperCase() + c.channel.slice(1));
+          });
+        }
+        const notifStatus = channels.length > 0 ? ` (Sent: ${channels.join(', ')})` : ' (No notifications sent)';
+        setCleanupResult(`Granted ${amount} credits to ${selectedUser.name || selectedUser.email}. New balance: ${data.data.newBalance}${notifStatus}`);
         setTimeout(() => setCleanupResult(null), 5000);
         setGrantModalOpen(false);
         setSelectedUser(null);
