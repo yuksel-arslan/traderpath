@@ -16,6 +16,10 @@ import {
   ShoppingBag,
   Package,
   Cpu,
+  Bell,
+  Mail,
+  MessageCircle,
+  FileText,
 } from 'lucide-react';
 import Link from 'next/link';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Area, ComposedChart } from 'recharts';
@@ -36,6 +40,17 @@ interface SimulationConfig {
   // AI Costs (per analysis)
   aiModel: AIModel;
   aiCostPerAnalysis: number; // USD per analysis
+
+  // Notification Costs (per notification)
+  emailCostPerNotification: number; // e.g., SendGrid, SES
+  telegramCostPerNotification: number; // usually free, but can add for API costs
+  discordCostPerNotification: number; // usually free via webhooks
+  twitterDmCostPerNotification: number; // Twitter API costs
+  reportGenerationCost: number; // PDF/report generation cost
+
+  // Notification Settings
+  notificationsPerAnalysis: number; // how many notifications per analysis (email + social)
+  reportGenerationRate: number; // percentage of analyses that generate reports
 
   // Revenue Settings
   creditPriceUsd: number;
@@ -84,6 +99,8 @@ interface WeeklyData {
   revenue: number;
   fixedCost: number;
   aiCost: number;
+  notificationCost: number;
+  reportCost: number;
   cost: number;
   profit: number;
   cumProfit: number;
@@ -109,6 +126,17 @@ const defaultConfig: SimulationConfig = {
   // AI Costs
   aiModel: 'gemini-2.5-flash',
   aiCostPerAnalysis: AI_MODEL_COSTS['gemini-2.5-flash'],
+
+  // Notification Costs (per notification)
+  emailCostPerNotification: 0.0001, // ~$0.10 per 1000 emails (SendGrid/SES)
+  telegramCostPerNotification: 0, // Free (Telegram Bot API is free)
+  discordCostPerNotification: 0, // Free (Discord webhooks are free)
+  twitterDmCostPerNotification: 0.001, // Twitter API has costs
+  reportGenerationCost: 0.005, // PDF generation with puppeteer/wkhtmltopdf
+
+  // Notification Settings
+  notificationsPerAnalysis: 2, // avg notifications sent per analysis
+  reportGenerationRate: 30, // 30% of analyses generate PDF reports
 
   // Revenue
   creditPriceUsd: 0.10,
@@ -213,9 +241,23 @@ export default function SimulationPage() {
       // AI cost: only new analyses require AI processing
       const aiCost = newAnalyses * config.aiCostPerAnalysis;
 
+      // Notification costs: per analysis notifications (email, telegram, discord, twitter)
+      const totalNotifications = newAnalyses * config.notificationsPerAnalysis;
+      const avgNotificationCost = (
+        config.emailCostPerNotification +
+        config.telegramCostPerNotification +
+        config.discordCostPerNotification +
+        config.twitterDmCostPerNotification
+      ) / 4; // Average across channels
+      const notificationCost = totalNotifications * avgNotificationCost;
+
+      // Report generation costs
+      const reportsGenerated = Math.round(newAnalyses * (config.reportGenerationRate / 100));
+      const reportCost = reportsGenerated * config.reportGenerationCost;
+
       // Cost and profit
       const fixedCost = weeklyFixedCost;
-      const cost = fixedCost + aiCost;
+      const cost = fixedCost + aiCost + notificationCost + reportCost;
       const profit = revenue - cost;
       cumProfit += profit;
 
@@ -231,6 +273,8 @@ export default function SimulationPage() {
         revenue: Number(revenue.toFixed(2)),
         fixedCost: Number(fixedCost.toFixed(2)),
         aiCost: Number(aiCost.toFixed(2)),
+        notificationCost: Number(notificationCost.toFixed(4)),
+        reportCost: Number(reportCost.toFixed(4)),
         cost: Number(cost.toFixed(2)),
         profit: Number(profit.toFixed(2)),
         cumProfit: Number(cumProfit.toFixed(2)),
@@ -440,6 +484,148 @@ export default function SimulationPage() {
                   <div className="w-2 h-2 rounded-full bg-purple-500" />
                   Pro: Yüksek kalite (~$0.02/analiz)
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Notification & Report Costs */}
+          <div className="bg-card border rounded-lg p-4">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <Bell className="w-4 h-4" />
+              Bildirim & Rapor Maliyetleri
+            </h3>
+            <div className="space-y-4">
+              {/* Email */}
+              <div>
+                <div className="flex justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-3 h-3 text-blue-400" />
+                    <span className="text-sm">E-posta</span>
+                  </div>
+                  <span className="text-sm font-mono">${config.emailCostPerNotification.toFixed(4)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="0.001"
+                  step="0.00001"
+                  value={config.emailCostPerNotification}
+                  onChange={(e) => updateConfig('emailCostPerNotification', Number(e.target.value))}
+                  className="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+              {/* Telegram */}
+              <div>
+                <div className="flex justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="w-3 h-3 text-sky-400" />
+                    <span className="text-sm">Telegram</span>
+                  </div>
+                  <span className="text-sm font-mono">${config.telegramCostPerNotification.toFixed(4)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="0.001"
+                  step="0.00001"
+                  value={config.telegramCostPerNotification}
+                  onChange={(e) => updateConfig('telegramCostPerNotification', Number(e.target.value))}
+                  className="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+              {/* Discord */}
+              <div>
+                <div className="flex justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="w-3 h-3 text-indigo-400" />
+                    <span className="text-sm">Discord</span>
+                  </div>
+                  <span className="text-sm font-mono">${config.discordCostPerNotification.toFixed(4)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="0.001"
+                  step="0.00001"
+                  value={config.discordCostPerNotification}
+                  onChange={(e) => updateConfig('discordCostPerNotification', Number(e.target.value))}
+                  className="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+              {/* Twitter DM */}
+              <div>
+                <div className="flex justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="w-3 h-3 text-gray-400" />
+                    <span className="text-sm">Twitter DM</span>
+                  </div>
+                  <span className="text-sm font-mono">${config.twitterDmCostPerNotification.toFixed(4)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="0.01"
+                  step="0.0001"
+                  value={config.twitterDmCostPerNotification}
+                  onChange={(e) => updateConfig('twitterDmCostPerNotification', Number(e.target.value))}
+                  className="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+              {/* Report Generation */}
+              <div>
+                <div className="flex justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-3 h-3 text-amber-400" />
+                    <span className="text-sm">Rapor Oluşturma</span>
+                  </div>
+                  <span className="text-sm font-mono">${config.reportGenerationCost.toFixed(4)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="0.02"
+                  step="0.001"
+                  value={config.reportGenerationCost}
+                  onChange={(e) => updateConfig('reportGenerationCost', Number(e.target.value))}
+                  className="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+              <div className="pt-2 border-t">
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-sm">Analiz Başına Bildirim</span>
+                    <span className="text-sm font-mono">{config.notificationsPerAnalysis}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="5"
+                    step="1"
+                    value={config.notificationsPerAnalysis}
+                    onChange={(e) => updateConfig('notificationsPerAnalysis', Number(e.target.value))}
+                    className="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+                <div className="mt-3">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-sm">Rapor Oluşturma Oranı</span>
+                    <span className="text-sm font-mono">{config.reportGenerationRate}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={config.reportGenerationRate}
+                    onChange={(e) => updateConfig('reportGenerationRate', Number(e.target.value))}
+                    className="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+              </div>
+              <div className="pt-2 border-t text-xs text-muted-foreground">
+                <div>Telegram & Discord: Ücretsiz API</div>
+                <div>E-posta: ~$0.10/1000 (SendGrid/SES)</div>
+                <div>Twitter: API maliyetli</div>
               </div>
             </div>
           </div>
@@ -985,10 +1171,12 @@ export default function SimulationPage() {
                     <th className="text-right p-2">Analyses</th>
                     <th className="text-right p-2">Revenue</th>
                     <th className="text-right p-2">Fixed</th>
-                    <th className="text-right p-2">AI Cost</th>
-                    <th className="text-right p-2">Total Cost</th>
+                    <th className="text-right p-2">AI</th>
+                    <th className="text-right p-2">Notif.</th>
+                    <th className="text-right p-2">Report</th>
+                    <th className="text-right p-2">Total</th>
                     <th className="text-right p-2">Profit</th>
-                    <th className="text-right p-2">Cum. Profit</th>
+                    <th className="text-right p-2">Cum.</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -1000,6 +1188,8 @@ export default function SimulationPage() {
                       <td className="p-2 text-right font-mono text-green-500">${w.revenue}</td>
                       <td className="p-2 text-right font-mono text-orange-400">${w.fixedCost}</td>
                       <td className="p-2 text-right font-mono text-cyan-400">${w.aiCost}</td>
+                      <td className="p-2 text-right font-mono text-sky-400">${w.notificationCost}</td>
+                      <td className="p-2 text-right font-mono text-amber-400">${w.reportCost}</td>
                       <td className="p-2 text-right font-mono text-red-500">${w.cost}</td>
                       <td className={`p-2 text-right font-mono ${w.profit >= 0 ? 'text-blue-500' : 'text-red-500'}`}>
                         ${w.profit}
