@@ -9,6 +9,13 @@ import { authenticate } from '../../core/auth/middleware';
 import { calculateExpiredOutcomes, getRealAccuracy, calculateReportOutcome } from './outcome.service';
 import { notificationService } from '../notifications/notification.service';
 import { emailService } from '../email/email.service';
+import { creditService } from '../credits/credit.service';
+
+// Constants for free usage limits per analysis
+const FREE_PDF_DOWNLOADS_PER_ANALYSIS = 2;
+const FREE_EMAILS_PER_ANALYSIS = 2;
+const PDF_DOWNLOAD_CREDIT_COST = 5;
+const EMAIL_SEND_CREDIT_COST = 5;
 
 // Admin emails - their reports are public and visible to all users
 const ADMIN_EMAILS = ['contact@yukselarslan.com'];
@@ -34,6 +41,7 @@ interface SendEmailBody {
   generatedAt: string;
   pdfBase64: string;
   fileName: string;
+  analysisId?: string; // For tracking free email usage
 }
 
 interface SendHtmlEmailBody {
@@ -546,6 +554,107 @@ export async function reportRoutes(fastify: FastifyInstance) {
         fastify.log.error(error);
         return reply.code(500).send({
           error: { code: 'SERVER_ERROR', message: 'Failed to fetch report' },
+        });
+      }
+    }
+  );
+
+  // ===========================================
+  // POST /api/reports/:id/track-download - Track PDF download with free usage limits
+  // ===========================================
+  fastify.post<{ Params: { id: string } }>(
+    '/api/reports/:id/track-download',
+    { preHandler: authenticate },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const userId = getUser(request)?.id;
+        if (!userId) {
+          return reply.code(401).send({
+            error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+          });
+        }
+
+        const { id } = request.params as { id: string };
+
+        // Get report with analysis info
+        const report = await prisma.report.findFirst({
+          where: { id, userId },
+          select: { id: true, analysisId: true },
+        });
+
+        if (!report) {
+          return reply.code(404).send({
+            error: { code: 'NOT_FOUND', message: 'Report not found' },
+          });
+        }
+
+        // Check free download usage if analysisId exists
+        let isFreeDownload = false;
+        let analysis = null;
+        let freeDownloadsRemaining = 0;
+
+        if (report.analysisId) {
+          analysis = await prisma.analysis.findFirst({
+            where: { id: report.analysisId, userId },
+            select: { id: true, pdfDownloadsUsed: true },
+          });
+
+          if (analysis) {
+            freeDownloadsRemaining = FREE_PDF_DOWNLOADS_PER_ANALYSIS - analysis.pdfDownloadsUsed;
+            isFreeDownload = freeDownloadsRemaining > 0;
+          }
+        }
+
+        // Charge credits if not free
+        if (!isFreeDownload) {
+          const chargeResult = await creditService.charge(
+            userId,
+            PDF_DOWNLOAD_CREDIT_COST,
+            'pdf_download',
+            { reportId: id, analysisId: report.analysisId }
+          );
+
+          if (!chargeResult.success) {
+            return reply.code(402).send({
+              error: {
+                code: 'INSUFFICIENT_CREDITS',
+                message: `PDF download requires ${PDF_DOWNLOAD_CREDIT_COST} credits (free downloads exhausted for this analysis).`,
+                required: PDF_DOWNLOAD_CREDIT_COST,
+              },
+            });
+          }
+        }
+
+        // Update download counter if tied to analysis
+        if (analysis && report.analysisId) {
+          await prisma.analysis.update({
+            where: { id: report.analysisId },
+            data: { pdfDownloadsUsed: { increment: 1 } },
+          });
+        }
+
+        // Also update report download count
+        await prisma.report.update({
+          where: { id },
+          data: { downloadCount: { increment: 1 } },
+        });
+
+        return reply.send({
+          success: true,
+          data: {
+            canDownload: true,
+            wasFree: isFreeDownload,
+            freeDownloads: analysis ? {
+              used: analysis.pdfDownloadsUsed + 1,
+              total: FREE_PDF_DOWNLOADS_PER_ANALYSIS,
+              remaining: Math.max(0, FREE_PDF_DOWNLOADS_PER_ANALYSIS - analysis.pdfDownloadsUsed - 1),
+            } : null,
+          },
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to track download' },
         });
       }
     }
@@ -1110,12 +1219,57 @@ export async function reportRoutes(fastify: FastifyInstance) {
           });
         }
 
-        const { symbol, verdict, score, direction, generatedAt, pdfBase64, fileName } = request.body as SendEmailBody;
+        const { symbol, verdict, score, direction, generatedAt, pdfBase64, fileName, analysisId } = request.body as SendEmailBody;
 
         // Validate required fields
         if (!symbol || !pdfBase64 || !fileName) {
           return reply.code(400).send({
             error: { code: 'INVALID_INPUT', message: 'Missing required fields: symbol, pdfBase64, fileName' },
+          });
+        }
+
+        // Check free email usage if analysisId is provided
+        let isFreeEmail = false;
+        let analysis = null;
+        let freeEmailsRemaining = 0;
+
+        if (analysisId) {
+          analysis = await prisma.analysis.findFirst({
+            where: { id: analysisId, userId },
+            select: { id: true, emailsSentUsed: true },
+          });
+
+          if (analysis) {
+            freeEmailsRemaining = FREE_EMAILS_PER_ANALYSIS - analysis.emailsSentUsed;
+            isFreeEmail = freeEmailsRemaining > 0;
+          }
+        }
+
+        // Charge credits if not free
+        if (!isFreeEmail) {
+          const chargeResult = await creditService.charge(
+            userId,
+            EMAIL_SEND_CREDIT_COST,
+            'email_send_report',
+            { symbol, analysisId }
+          );
+
+          if (!chargeResult.success) {
+            return reply.code(402).send({
+              error: {
+                code: 'INSUFFICIENT_CREDITS',
+                message: `Sending email requires ${EMAIL_SEND_CREDIT_COST} credits (free emails exhausted for this analysis).`,
+                required: EMAIL_SEND_CREDIT_COST,
+              },
+            });
+          }
+        }
+
+        // Update email counter if tied to analysis
+        if (analysis) {
+          await prisma.analysis.update({
+            where: { id: analysisId },
+            data: { emailsSentUsed: { increment: 1 } },
           });
         }
 
@@ -1153,7 +1307,15 @@ export async function reportRoutes(fastify: FastifyInstance) {
         return reply.send({
           success: true,
           message: 'Report sent successfully to ' + user.email,
-          data: { email: user.email },
+          data: {
+            email: user.email,
+            wasFree: isFreeEmail,
+            freeEmails: analysis ? {
+              used: analysis.emailsSentUsed + 1,
+              total: FREE_EMAILS_PER_ANALYSIS,
+              remaining: Math.max(0, FREE_EMAILS_PER_ANALYSIS - analysis.emailsSentUsed - 1),
+            } : null,
+          },
         });
       } catch (error) {
         fastify.log.error(error);
@@ -1167,7 +1329,6 @@ export async function reportRoutes(fastify: FastifyInstance) {
   // ===========================================
   // POST /api/reports/send-html-email - Send HTML report via email (5 credits)
   // ===========================================
-  const HTML_EMAIL_CREDIT_COST = 5;
 
   fastify.post<{ Body: SendHtmlEmailBody }>(
     '/api/reports/send-html-email',

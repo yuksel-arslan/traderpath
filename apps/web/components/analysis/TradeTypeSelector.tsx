@@ -295,10 +295,10 @@ export function TradeTypeSelector({
     );
   }
 
-  // Tabs variant - horizontal tabs
+  // Tabs variant - horizontal tabs (responsive)
   if (variant === 'tabs') {
     return (
-      <div className={cn('flex gap-1 p-1 bg-gray-100 dark:bg-slate-800 rounded-lg', className)}>
+      <div className={cn('grid grid-cols-3 gap-1 p-1 bg-gray-100 dark:bg-slate-800 rounded-lg', className)}>
         {TRADE_TYPES.map((type) => {
           const Icon = type.icon;
           const isSelected = selected === type.id;
@@ -308,18 +308,18 @@ export function TradeTypeSelector({
               key={type.id}
               onClick={() => handleSelect(type.id)}
               className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all',
+                'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:py-2.5 rounded-md text-xs sm:text-sm font-medium transition-all',
                 isSelected
                   ? 'bg-white dark:bg-slate-700 shadow-sm text-gray-900 dark:text-white'
                   : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
               )}
             >
-              <Icon className={cn('w-4 h-4', isSelected ? type.color : '')} />
-              <span>{type.name}</span>
+              <Icon className={cn('w-4 h-4 sm:w-4 sm:h-4 shrink-0', isSelected ? type.color : '')} />
+              <span className="text-[10px] sm:text-sm leading-tight">{type.name}</span>
               {showCreditCost && (
                 <span
                   className={cn(
-                    'text-xs px-1.5 py-0.5 rounded',
+                    'text-[9px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded shrink-0',
                     isSelected
                       ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'
                       : 'bg-gray-200 dark:bg-slate-600 text-gray-500 dark:text-slate-400'

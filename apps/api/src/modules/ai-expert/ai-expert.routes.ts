@@ -27,7 +27,13 @@ const chatSchema = z.object({
   symbol: z.string().optional(),
   // Explicitly request stage 2 analysis
   stage: z.enum(['education', 'analysis']).optional().default('education'),
+  // If analysisId is provided, user gets 3 free questions for that analysis
+  analysisId: z.string().uuid().optional(),
 });
+
+// Constants for AI Expert pricing
+const FREE_QUESTIONS_PER_ANALYSIS = 3;
+const AI_EXPERT_QUESTION_COST = 5;
 
 export async function aiExpertRoutes(fastify: FastifyInstance) {
   // ===========================================
@@ -220,13 +226,41 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
 
       // Check if user is admin (free access) - isAdmin is set by authenticate middleware
       const isAdmin = (request as any).user?.isAdmin === true;
-      const aiExpertCost = await creditCostsService.getCreditCost('AI_EXPERT_QUESTION');
-      const cost = isAdmin ? 0 : aiExpertCost;
+
+      // Determine if this question is free (when tied to an analysis)
+      let isFreeQuestion = false;
+      let analysis = null;
+      let freeQuestionsRemaining = 0;
+
+      if (body.analysisId) {
+        // Check if analysis exists and belongs to user (or user has purchased it)
+        analysis = await prisma.analysis.findFirst({
+          where: {
+            id: body.analysisId,
+            OR: [
+              { userId }, // User owns it
+              // Or check if user has purchased it
+            ],
+          },
+          select: {
+            id: true,
+            userId: true,
+            aiExpertQuestionsUsed: true,
+          },
+        });
+
+        if (analysis) {
+          freeQuestionsRemaining = FREE_QUESTIONS_PER_ANALYSIS - analysis.aiExpertQuestionsUsed;
+          isFreeQuestion = freeQuestionsRemaining > 0;
+        }
+      }
+
+      const cost = isAdmin ? 0 : (isFreeQuestion ? 0 : AI_EXPERT_QUESTION_COST);
 
       let chargeResult = { success: true, newBalance: 0 };
 
-      // Only charge non-admin users
-      if (!isAdmin) {
+      // Only charge if not admin and not free question
+      if (!isAdmin && !isFreeQuestion) {
         chargeResult = await creditService.charge(
           userId,
           cost,
@@ -234,6 +268,7 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
           {
             expertId: body.expertId,
             expertName: expert.name,
+            analysisId: body.analysisId,
           }
         );
 
@@ -242,12 +277,20 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
             success: false,
             error: {
               code: 'INSUFFICIENT_CREDITS',
-              message: `Insufficient credits. AI Expert requires ${aiExpertCost} credits per message.`,
+              message: `Insufficient credits. AI Expert requires ${AI_EXPERT_QUESTION_COST} credits per message (free questions exhausted for this analysis).`,
               required: cost,
               current: chargeResult.newBalance,
             },
           });
         }
+      }
+
+      // Update question counter if tied to an analysis
+      if (analysis) {
+        await prisma.analysis.update({
+          where: { id: body.analysisId },
+          data: { aiExpertQuestionsUsed: { increment: 1 } },
+        });
       }
 
       try {
@@ -271,6 +314,13 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
             },
             creditsUsed: cost,
             newBalance: chargeResult.newBalance,
+            // Free question tracking (if tied to analysis)
+            freeQuestions: analysis ? {
+              used: analysis.aiExpertQuestionsUsed + 1, // +1 because we just used one
+              total: FREE_QUESTIONS_PER_ANALYSIS,
+              remaining: Math.max(0, FREE_QUESTIONS_PER_ANALYSIS - analysis.aiExpertQuestionsUsed - 1),
+              wasFree: isFreeQuestion,
+            } : null,
           },
         });
       } catch (error) {

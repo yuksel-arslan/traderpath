@@ -238,7 +238,7 @@ export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'long' | 'short'>('all');
-  const [tradeTypeFilter, setTradeTypeFilter] = useState<'all' | TradeType>('all');
+  const [tradeTypeFilter, setTradeTypeFilter] = useState<TradeType>('swing');
   const [sortBy, setSortBy] = useState<'date' | 'score' | 'pnl' | 'tp'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [pagination, setPagination] = useState({ total: 0, limit: 20, offset: 0 });
@@ -416,7 +416,7 @@ Could you share your risk assessment and recommendations based on this analysis?
     .filter(r =>
       r.symbol.toLowerCase().includes(searchQuery.toLowerCase()) &&
       (filter === 'all' || r.direction === filter) &&
-      (tradeTypeFilter === 'all' || r.tradeType === tradeTypeFilter)
+      r.tradeType === tradeTypeFilter
     )
     .sort((a, b) => {
       let comparison = 0;
@@ -440,16 +440,6 @@ Could you share your risk assessment and recommendations based on this analysis?
       return sortOrder === 'desc' ? -comparison : comparison;
     });
 
-  // Use stats from API (accurate counts from database, not just current page)
-  const totalReports = stats.total;
-  const activeReports = stats.active;
-  const closedReports = stats.closed;
-  const tpHits = stats.tpHits;
-  const slHits = stats.slHits;
-  const longReports = reports.filter(r => r.direction === 'long').length;
-  const shortReports = reports.filter(r => r.direction === 'short').length;
-  const accuracy = closedReports > 0 ? ((tpHits / closedReports) * 100).toFixed(1) : '0';
-
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
       {/* Header */}
@@ -466,72 +456,6 @@ Could you share your risk assessment and recommendations based on this analysis?
           <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
           Refresh
         </button>
-      </div>
-
-      {/* ===== Statistics Header ===== */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3">
-        {/* Total Reports */}
-        <div className="bg-white dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50 text-center">
-          <FileText className="w-5 h-5 text-gray-500 dark:text-slate-400 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalReports}</div>
-          <div className="text-xs text-gray-500 dark:text-slate-400">Total</div>
-        </div>
-
-        {/* Active */}
-        <div className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-4 border border-blue-200 dark:border-blue-500/30 text-center">
-          <Timer className="w-5 h-5 text-blue-500 dark:text-blue-400 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{activeReports}</div>
-          <div className="text-xs text-gray-500 dark:text-slate-400">Active</div>
-        </div>
-
-        {/* Closed */}
-        <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50 text-center">
-          <BarChart3 className="w-5 h-5 text-gray-500 dark:text-slate-400 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{closedReports}</div>
-          <div className="text-xs text-gray-500 dark:text-slate-400">Closed</div>
-        </div>
-
-        {/* TP Hits */}
-        <div className="bg-green-50 dark:bg-green-500/10 rounded-xl p-4 border border-green-200 dark:border-green-500/30 text-center">
-          <CheckCircle2 className="w-5 h-5 text-green-500 dark:text-green-400 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">{tpHits}</div>
-          <div className="text-xs text-gray-500 dark:text-slate-400">TP Hits</div>
-        </div>
-
-        {/* SL Hits */}
-        <div className="bg-red-50 dark:bg-red-500/10 rounded-xl p-4 border border-red-200 dark:border-red-500/30 text-center">
-          <XCircle className="w-5 h-5 text-red-500 dark:text-red-400 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-red-600 dark:text-red-400">{slHits}</div>
-          <div className="text-xs text-gray-500 dark:text-slate-400">SL Hits</div>
-        </div>
-
-        {/* Long */}
-        <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-xl p-4 border border-emerald-200 dark:border-emerald-500/30 text-center">
-          <TrendingUp className="w-5 h-5 text-emerald-500 dark:text-emerald-400 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{longReports}</div>
-          <div className="text-xs text-gray-500 dark:text-slate-400">Long</div>
-        </div>
-
-        {/* Short */}
-        <div className="bg-orange-50 dark:bg-orange-500/10 rounded-xl p-4 border border-orange-200 dark:border-orange-500/30 text-center">
-          <TrendingDown className="w-5 h-5 text-orange-500 dark:text-orange-400 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{shortReports}</div>
-          <div className="text-xs text-gray-500 dark:text-slate-400">Short</div>
-        </div>
-
-        {/* Accuracy */}
-        <div className="bg-purple-50 dark:bg-purple-500/10 rounded-xl p-4 border border-purple-200 dark:border-purple-500/30 text-center">
-          <Percent className="w-5 h-5 text-purple-500 dark:text-purple-400 mx-auto mb-2" />
-          <div className={cn(
-            "text-2xl font-bold",
-            Number(accuracy) >= 70 ? 'text-green-600 dark:text-green-400' :
-            Number(accuracy) >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
-            closedReports === 0 ? 'text-gray-400 dark:text-slate-500' : 'text-red-600 dark:text-red-400'
-          )}>
-            {closedReports > 0 ? `${accuracy}%` : '-'}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-slate-400">Accuracy</div>
-        </div>
       </div>
 
       {/* Search, Filters, and Sorting */}
@@ -571,17 +495,6 @@ Could you share your risk assessment and recommendations based on this analysis?
 
           {/* Trade Type Filter */}
           <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => setTradeTypeFilter('all')}
-              className={cn(
-                "px-3 py-2 rounded-lg font-medium transition text-sm",
-                tradeTypeFilter === 'all'
-                  ? "bg-slate-700 text-white"
-                  : "bg-card border hover:bg-accent"
-              )}
-            >
-              All Types
-            </button>
             {(Object.keys(TRADE_TYPE_CONFIG) as TradeType[]).map((type) => {
               const config = TRADE_TYPE_CONFIG[type];
               const Icon = config.icon;

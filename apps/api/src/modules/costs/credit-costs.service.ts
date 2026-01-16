@@ -31,6 +31,9 @@ const DEFAULT_CREDIT_COSTS = {
   PRICE_ALERT: 1,
   WATCHLIST_SLOT: 3,
   AUTO_REFRESH_HOUR: 5,
+
+  // Credit Economy (Marketplace)
+  ANALYSIS_PURCHASE: 15, // Second-hand analysis purchase
 };
 
 export type CreditCostKey = keyof typeof DEFAULT_CREDIT_COSTS;
@@ -73,6 +76,9 @@ function mapDbToCosts(dbSettings: any): typeof DEFAULT_CREDIT_COSTS {
     PRICE_ALERT: dbSettings.creditCostPriceAlert ?? DEFAULT_CREDIT_COSTS.PRICE_ALERT,
     WATCHLIST_SLOT: dbSettings.creditCostWatchlistSlot ?? DEFAULT_CREDIT_COSTS.WATCHLIST_SLOT,
     AUTO_REFRESH_HOUR: DEFAULT_CREDIT_COSTS.AUTO_REFRESH_HOUR, // Not in DB yet
+
+    // Credit Economy (Marketplace)
+    ANALYSIS_PURCHASE: dbSettings.creditCostAnalysisPurchase ?? DEFAULT_CREDIT_COSTS.ANALYSIS_PURCHASE,
   };
 }
 

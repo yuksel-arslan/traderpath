@@ -423,6 +423,13 @@ model Analysis {
   totalScore     Decimal? @map("total_score") @db.Decimal(3, 1)
   creditsSpent   Int      @default(0) @map("credits_spent")
 
+  // AI Expert question tracking (3 free per analysis, then 5 credits each)
+  aiExpertQuestionsUsed Int @default(0) @map("ai_expert_questions_used")
+
+  // Download/Email tracking (2 free each per analysis)
+  pdfDownloadsUsed Int @default(0) @map("pdf_downloads_used")
+  emailsSentUsed   Int @default(0) @map("emails_sent_used")
+
   // Outcome tracking for TP/SL hit detection
   outcome            String?   @db.VarChar(20) // 'tp1_hit', 'tp2_hit', 'tp3_hit', 'sl_hit', 'pending'
   outcomePrice       Decimal?  @map("outcome_price") @db.Decimal(20, 8) // Price when TP/SL was hit
@@ -717,6 +724,9 @@ model CostSettings {
   creditCostAddToReport    Int @default(2) @map("credit_cost_add_to_report")
   creditCostPriceAlert     Int @default(1) @map("credit_cost_price_alert")
   creditCostWatchlistSlot  Int @default(3) @map("credit_cost_watchlist_slot")
+
+  // Credit Economy (Marketplace)
+  creditCostAnalysisPurchase Int @default(15) @map("credit_cost_analysis_purchase") // Second-hand analysis purchase cost
 
   // Auto-pricing settings
   autoPricingEnabled    Boolean  @default(false) @map("auto_pricing_enabled")

@@ -32,6 +32,7 @@ import {
   Award,
   FileText,
   Brain,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
@@ -490,9 +491,34 @@ export default function DashboardPage() {
                 <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Credits</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-black text-white">{credits}</span>
+                  {credits < 10 && credits > 0 && (
+                    <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-full animate-pulse">
+                      Low
+                    </span>
+                  )}
+                  {credits === 0 && (
+                    <span className="text-xs px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full animate-pulse">
+                      Empty
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
+            {/* Low credit warning */}
+            {credits < 10 && (
+              <div className={cn(
+                "mt-3 p-2 rounded-lg text-xs font-medium flex items-center gap-2",
+                credits === 0
+                  ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                  : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+              )}>
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                {credits === 0
+                  ? "No credits left! Buy or earn credits to continue."
+                  : `Running low on credits (${credits} remaining)`
+                }
+              </div>
+            )}
             <div className="flex items-center gap-3 mt-4">
               <Link
                 href="/pricing"
