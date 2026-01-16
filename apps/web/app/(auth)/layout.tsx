@@ -53,7 +53,7 @@ export default function AuthLayout({
         <div className="absolute bottom-20 right-20 w-96 h-96 bg-coral-500/20 rounded-full blur-3xl" />
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-16 py-12">
+        <div className="relative z-10 flex flex-col justify-center h-full px-12 xl:px-16 py-12">
           {/* Logo Icon */}
           <div className="mb-4">
             <Link href="/">
