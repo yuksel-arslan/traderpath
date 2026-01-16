@@ -383,18 +383,17 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
-    <div class="header">
-      <div class="brand">
+    <!-- Centered Brand Header for Executive Summary -->
+    <div style="text-align: center; padding: 15px 0 20px 0; border-bottom: 2px solid #1a1a1a; margin-bottom: 15px;">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px;">
         <div class="logo">${logoSvg}</div>
-        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+        <div class="brand-name" style="font-size: 28px;"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
       </div>
-      <div class="header-center">
-        <div class="report-title">Executive Summary</div>
-        <div class="report-subtitle">${tradeTypes[data.tradeType || ''] || 'Analysis'} | ${data.generatedAt}</div>
-      </div>
-      <div class="header-right">
-        <span class="symbol">${data.symbol}/USDT</span>
-        <span class="direction-tag ${isLong ? 'tag-long' : 'tag-short'}">${isLong ? 'LONG' : 'SHORT'}</span>
+      <div style="font-size: 11px; font-weight: 600; color: #1a1a1a; text-transform: uppercase; letter-spacing: 1px;">Executive Summary</div>
+      <div style="font-size: 9px; color: #666; margin-top: 3px;">${tradeTypes[data.tradeType || ''] || 'Analysis'} | ${data.generatedAt}</div>
+      <div style="margin-top: 8px;">
+        <span class="symbol" style="font-size: 18px;">${data.symbol}/USDT</span>
+        <span class="direction-tag ${isLong ? 'tag-long' : 'tag-short'}" style="font-size: 14px; margin-left: 10px;">${isLong ? 'LONG' : 'SHORT'}</span>
       </div>
     </div>
 
