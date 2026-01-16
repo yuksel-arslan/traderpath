@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { ArrowLeft, Shield, Lock, Eye, Database, Bell, UserCheck, Globe, Mail } from 'lucide-react';
-import { TraderPathLogo } from '@/components/ui/TraderPathLogo';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
+import { ThemeToggle } from '../../../components/common/ThemeToggle';
 
 export default function PrivacyPolicyPage() {
   const lastUpdated = 'January 16, 2025';
