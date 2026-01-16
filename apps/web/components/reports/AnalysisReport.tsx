@@ -1072,16 +1072,12 @@ function generatePage3(data: AnalysisReportData, totalPages: number = 5): string
 }
 
 // ===========================================
-// PAGE 4: Technical Indicators - Trend & Momentum
+// PAGE 4: Technical Indicators - All Categories Combined
 // ===========================================
 
-function generatePage4(data: AnalysisReportData, totalPages: number = 5): string {
+function generatePage4(data: AnalysisReportData, totalPages: number = 4): string {
   const ind = data.indicatorDetails;
   const tradeTypeLabels: Record<string, string> = { scalping: 'Scalping', dayTrade: 'Day Trade', swing: 'Swing Trade' };
-
-  // Count indicators
-  const trendCount = ind?.trend ? Object.values(ind.trend).filter(Boolean).length : 0;
-  const momentumCount = ind?.momentum ? Object.values(ind.momentum).filter(Boolean).length : 0;
   const totalIndicators = ind?.summary?.totalIndicatorsUsed || 0;
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
@@ -1093,20 +1089,16 @@ function generatePage4(data: AnalysisReportData, totalPages: number = 5): string
       </div>
       <div class="header-center">
         <div class="report-title">Technical Indicator Analysis</div>
-        <div class="report-subtitle">${tradeTypeLabels[data.tradeType || ''] || ''} | Trend & Momentum</div>
+        <div class="report-subtitle">${tradeTypeLabels[data.tradeType || ''] || ''} | ${totalIndicators} Indicators</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
-        <div style="font-size: 8px; color: #666; margin-top: 2px;">${totalIndicators} Indicators Analyzed</div>
       </div>
     </div>
 
     <!-- Indicator Summary -->
     ${ind?.summary ? `
-    <div class="section">
-      <div class="section-header">
-        <span class="section-title">Indicator Summary</span>
-      </div>
+    <div class="section" style="margin-bottom: 6px;">
       <div class="row">
         <div class="col metric metric-sm">
           <div class="metric-label">Bullish</div>
@@ -1123,10 +1115,9 @@ function generatePage4(data: AnalysisReportData, totalPages: number = 5): string
         <div class="col metric metric-sm">
           <div class="metric-label">Overall Signal</div>
           <div class="metric-value ${ind.summary.overallSignal === 'bullish' ? 'text-green' : ind.summary.overallSignal === 'bearish' ? 'text-red' : ''}">${formatDirection(ind.summary.overallSignal)}</div>
-          <div class="metric-note">${formatPercent(ind.summary.signalConfidence)} confidence</div>
         </div>
         <div class="col metric metric-sm">
-          <div class="metric-label">Leading Indicators</div>
+          <div class="metric-label">Leading</div>
           <div class="metric-value ${ind.summary.leadingIndicatorsSignal === 'bullish' ? 'text-green' : ind.summary.leadingIndicatorsSignal === 'bearish' ? 'text-red' : ''}">${formatDirection(ind.summary.leadingIndicatorsSignal)}</div>
         </div>
       </div>
@@ -1139,39 +1130,6 @@ function generatePage4(data: AnalysisReportData, totalPages: number = 5): string
     <!-- Momentum Indicators -->
     ${renderIndicatorTable(ind?.momentum, 'Momentum')}
 
-    <div style="margin-top: 8px; padding: 6px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 3px; font-size: 7px; color: #0369a1;">
-      <strong>* Leading Indicators:</strong> These indicators typically signal changes before they occur in price. They are weighted more heavily in the analysis.
-    </div>
-
-    ${generateFooter(data, 4, totalPages)}
-  </div>
-</body></html>`;
-}
-
-// ===========================================
-// PAGE 5: Technical Indicators - Volatility, Volume & Advanced
-// ===========================================
-
-function generatePage5(data: AnalysisReportData, totalPages: number = 5): string {
-  const ind = data.indicatorDetails;
-  const tradeTypeLabels: Record<string, string> = { scalping: 'Scalping', dayTrade: 'Day Trade', swing: 'Swing Trade' };
-
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
-  <div class="page">
-    <div class="header">
-      <div class="brand">
-        <div class="logo">${logoSvg}</div>
-        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
-      </div>
-      <div class="header-center">
-        <div class="report-title">Technical Indicator Analysis</div>
-        <div class="report-subtitle">${tradeTypeLabels[data.tradeType || ''] || ''} | Volatility, Volume & Advanced</div>
-      </div>
-      <div class="header-right">
-        <span class="symbol">${data.symbol}/USDT</span>
-      </div>
-    </div>
-
     <!-- Volatility Indicators -->
     ${renderIndicatorTable(ind?.volatility, 'Volatility')}
 
@@ -1183,50 +1141,32 @@ function generatePage5(data: AnalysisReportData, totalPages: number = 5): string
 
     <!-- Divergences Section -->
     ${ind?.divergences && ind.divergences.length > 0 ? `
-    <div class="section">
-      <div class="section-header">
-        <span class="section-title">Detected Divergences</span>
-      </div>
-      <table class="table">
+    <div class="section" style="margin-bottom: 6px;">
+      <div style="font-size: 8px; font-weight: 600; margin-bottom: 4px; color: #333;">Detected Divergences</div>
+      <table class="table indicator-table">
         <tr>
           <th style="width: 15%;">Type</th>
           <th style="width: 20%;">Indicator</th>
           <th style="width: 15%;">Reliability</th>
           <th style="width: 50%;">Description</th>
         </tr>
-        ${ind.divergences.map(div => `
+        ${ind.divergences.slice(0, 4).map(div => `
           <tr>
-            <td class="${div.type === 'bullish' ? 'text-green' : div.type === 'bearish' ? 'text-red' : ''}" style="font-weight: 600;">${div.type.toUpperCase()}${div.isEarlySignal ? ' (Early)' : ''}</td>
+            <td class="${div.type === 'bullish' ? 'text-green' : div.type === 'bearish' ? 'text-red' : ''}" style="font-weight: 600;">${div.type.toUpperCase()}</td>
             <td>${div.indicator}</td>
             <td>${div.reliability}</td>
-            <td style="font-size: 6.5px;">${div.description}</td>
+            <td style="font-size: 6px;">${div.description.slice(0, 60)}${div.description.length > 60 ? '...' : ''}</td>
           </tr>
         `).join('')}
       </table>
     </div>
-    ` : `
-    <div class="section">
-      <div class="section-header">
-        <span class="section-title">Detected Divergences</span>
-      </div>
-      <div style="padding: 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 3px; font-size: 8px; color: #6b7280; text-align: center;">
-        No significant divergences detected in current analysis
-      </div>
-    </div>
-    `}
+    ` : ''}
 
-    <!-- Trade Type Specific Notes -->
-    <div class="summary-box" style="margin-top: auto;">
-      <div style="font-size: 8px; font-weight: 600; margin-bottom: 4px;">Trade Type: ${tradeTypeLabels[data.tradeType || ''] || 'Standard'}</div>
-      <div class="summary-text">
-        ${data.tradeType === 'scalping' ? 'Scalping analysis focuses on short-term momentum and volatility indicators. Quick entries/exits are prioritized. Volume confirmation is critical.' :
-          data.tradeType === 'dayTrade' ? 'Day trade analysis balances trend and momentum indicators. Intraday levels and volume patterns are weighted heavily. Risk management is key.' :
-          data.tradeType === 'swing' ? 'Swing trade analysis emphasizes trend indicators and support/resistance levels. Longer timeframes are prioritized. Patience is rewarded.' :
-          'Analysis includes comprehensive indicator coverage across all categories.'}
-      </div>
+    <div style="margin-top: 4px; padding: 4px 6px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 3px; font-size: 6px; color: #0369a1;">
+      <strong>* Leading Indicators</strong> signal changes before price. <strong>Trade Type: ${tradeTypeLabels[data.tradeType || ''] || 'Standard'}</strong>
     </div>
 
-    ${generateFooter(data, 5, totalPages)}
+    ${generateFooter(data, 4, totalPages)}
   </div>
 </body></html>`;
 }
@@ -1310,7 +1250,7 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
     (data.indicatorDetails.volume && Object.keys(data.indicatorDetails.volume).length > 0) ||
     (data.indicatorDetails.advanced && Object.keys(data.indicatorDetails.advanced).length > 0)
   );
-  const totalPages = hasIndicatorDetails ? 5 : 3;
+  const totalPages = hasIndicatorDetails ? 4 : 3;
 
   // Page 1
   const canvas1 = await renderPageToCanvas(generatePage1(data, totalPages));
@@ -1326,15 +1266,11 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
   const canvas3 = await renderPageToCanvas(generatePage3(data, totalPages));
   pdf.addImage(canvas3.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-  // Page 4 & 5: Technical Indicators - only if indicator details exist
+  // Page 4: Technical Indicators (all categories combined) - only if indicator details exist
   if (hasIndicatorDetails) {
     pdf.addPage();
     const canvas4 = await renderPageToCanvas(generatePage4(data, totalPages));
     pdf.addImage(canvas4.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
-
-    pdf.addPage();
-    const canvas5 = await renderPageToCanvas(generatePage5(data, totalPages));
-    pdf.addImage(canvas5.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
   }
 
   const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'DayTrade', swing: 'Swing' };
@@ -1345,7 +1281,7 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
   pdf.save(fileName);
 
   // Log detailed report availability
-  console.log(`[TraderPath] Detailed report generated: ${data.indicatorDetails ? '5 pages with full indicator analysis' : '3 pages summary'}`);
+  console.log(`[TraderPath] Detailed report generated: ${hasIndicatorDetails ? '4 pages with full indicator analysis' : '3 pages summary'}`);
 
   return { base64: pdfBase64, fileName };
 }
