@@ -714,6 +714,7 @@ Explain the key risks and what conditions would need to change before trading th
   /**
    * GET /api/analysis/:id
    * Get a specific analysis by ID
+   * User can access if they own it OR have purchased it
    */
   app.get('/:id', {
     preHandler: authenticate,
@@ -722,8 +723,9 @@ Explain the key risks and what conditions would need to change before trading th
       const userId = getUser(request).id;
       const { id } = request.params;
 
-      const analysis = await prisma.analysis.findFirst({
-        where: { id, userId },
+      // First, find the analysis (without user filter)
+      const analysis = await prisma.analysis.findUnique({
+        where: { id },
       });
 
       if (!analysis) {
@@ -733,9 +735,43 @@ Explain the key risks and what conditions would need to change before trading th
         });
       }
 
+      // Check if user owns this analysis
+      const isOwner = analysis.userId === userId;
+
+      // If not owner, check if they've purchased access
+      let hasPurchased = false;
+      if (!isOwner) {
+        const existingPurchase = await prisma.creditTransaction.findFirst({
+          where: {
+            userId,
+            source: 'analysis_purchase',
+            metadata: {
+              path: ['analysisId'],
+              equals: id,
+            },
+          },
+        });
+        hasPurchased = !!existingPurchase;
+      }
+
+      // If user doesn't own it and hasn't purchased it, deny access
+      if (!isOwner && !hasPurchased) {
+        return reply.status(403).send({
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'You need to purchase this analysis to view it',
+            purchaseCost: 20,
+          },
+        });
+      }
+
       return reply.send({
         success: true,
-        data: analysis,
+        data: {
+          ...analysis,
+          accessType: isOwner ? 'owner' : 'purchased',
+        },
       });
     } catch (error) {
       console.error('Get analysis error:', error);
@@ -4341,6 +4377,264 @@ Explain the key risks and what conditions would need to change before trading th
       return reply.status(500).send({
         success: false,
         error: { code: 'CHART_ERROR', message: 'Failed to generate indicator charts' }
+      });
+    }
+  });
+
+  // ===========================================
+  // ANALYSIS MARKETPLACE
+  // ===========================================
+
+  /**
+   * GET /api/analysis/available
+   * Check if there's a recent analysis available for purchase
+   * This checks ALL analyses (not just the user's own) that are still valid
+   */
+  app.get('/available', {
+    preHandler: authenticate,
+  }, async (request: FastifyRequest<{ Querystring: { symbol: string; interval?: string; tradeType?: string } }>, reply: FastifyReply) => {
+    try {
+      const userId = getUser(request).id;
+      const { symbol, interval, tradeType } = request.query;
+
+      if (!symbol) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: 'MISSING_SYMBOL', message: 'Symbol is required' },
+        });
+      }
+
+      // Determine intervals to check based on trade type
+      let intervalsToCheck: string[] = [];
+      if (tradeType === 'scalping') {
+        intervalsToCheck = ['5m', '15m'];
+      } else if (tradeType === 'dayTrade') {
+        intervalsToCheck = ['1h', '4h'];
+      } else if (tradeType === 'swing') {
+        intervalsToCheck = ['1d', '1D'];
+      } else if (interval) {
+        intervalsToCheck = [interval];
+      } else {
+        intervalsToCheck = ['4h']; // Default
+      }
+
+      // Calculate validity period based on trade type (1 candle duration)
+      let validityHours = 4; // Default (day trade)
+      if (tradeType === 'scalping') {
+        validityHours = 0.25; // 15 minutes
+      } else if (tradeType === 'swing') {
+        validityHours = 24; // 1 day
+      }
+
+      const validSince = new Date(Date.now() - validityHours * 60 * 60 * 1000);
+
+      // Find recent analysis (from any user) for this symbol and interval
+      const recentAnalysis = await prisma.analysis.findFirst({
+        where: {
+          symbol: { equals: symbol.toUpperCase(), mode: 'insensitive' },
+          interval: { in: intervalsToCheck },
+          createdAt: { gte: validSince },
+          expiresAt: { gt: new Date() },
+          // Must have completed the analysis (has step 7 result)
+          step7Result: { not: null },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          userId: true,
+          symbol: true,
+          interval: true,
+          totalScore: true,
+          step5Result: true,
+          step7Result: true,
+          createdAt: true,
+          expiresAt: true,
+        },
+      });
+
+      if (!recentAnalysis) {
+        return reply.send({
+          success: true,
+          data: { available: false },
+        });
+      }
+
+      // Check if user already owns this analysis
+      const isOwner = recentAnalysis.userId === userId;
+
+      // Check if user has already purchased this analysis
+      const existingPurchase = await prisma.creditTransaction.findFirst({
+        where: {
+          userId,
+          source: 'analysis_purchase',
+          metadata: {
+            path: ['analysisId'],
+            equals: recentAnalysis.id,
+          },
+        },
+      });
+
+      const hasPurchased = !!existingPurchase;
+
+      // Extract data from analysis
+      const verdictData = recentAnalysis.step7Result as Record<string, unknown> | null;
+      const tradePlan = recentAnalysis.step5Result as Record<string, unknown> | null;
+
+      const generatedAt = recentAnalysis.createdAt;
+      const now = new Date();
+      const hoursAgo = (now.getTime() - generatedAt.getTime()) / (1000 * 60 * 60);
+      const remainingHours = validityHours - hoursAgo;
+
+      return reply.send({
+        success: true,
+        data: {
+          available: true,
+          isOwner,
+          hasPurchased,
+          canAccess: isOwner || hasPurchased,
+          analysis: {
+            id: recentAnalysis.id,
+            symbol: recentAnalysis.symbol,
+            interval: recentAnalysis.interval,
+            totalScore: recentAnalysis.totalScore,
+            direction: tradePlan?.direction || null,
+            verdict: verdictData?.verdict || null,
+            createdAt: recentAnalysis.createdAt,
+            expiresAt: recentAnalysis.expiresAt,
+            hoursAgo: Math.round(hoursAgo * 100) / 100,
+            remainingHours: Math.max(0, Math.round(remainingHours * 100) / 100),
+            validityHours,
+          },
+          pricing: {
+            newAnalysisCost: 35,
+            purchaseCost: 20,
+            savings: 15,
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Check available analysis error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'CHECK_ERROR', message: 'Failed to check available analysis' },
+      });
+    }
+  });
+
+  /**
+   * POST /api/analysis/:id/purchase
+   * Purchase access to an existing analysis (20 credits)
+   * Includes: view, PDF download, email
+   */
+  app.post('/:id/purchase', {
+    preHandler: authenticate,
+  }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    try {
+      const userId = getUser(request).id;
+      const { id: analysisId } = request.params;
+
+      // Find the analysis
+      const analysis = await prisma.analysis.findUnique({
+        where: { id: analysisId },
+        select: {
+          id: true,
+          userId: true,
+          symbol: true,
+          interval: true,
+          expiresAt: true,
+          step7Result: true,
+        },
+      });
+
+      if (!analysis) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'Analysis not found' },
+        });
+      }
+
+      // Check if analysis is still valid
+      if (analysis.expiresAt < new Date()) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: 'EXPIRED', message: 'Analysis has expired' },
+        });
+      }
+
+      // Check if user already owns this analysis
+      if (analysis.userId === userId) {
+        return reply.send({
+          success: true,
+          data: {
+            purchased: false,
+            message: 'You already own this analysis',
+            isOwner: true,
+            analysisId: analysis.id,
+          },
+        });
+      }
+
+      // Check if user has already purchased this analysis
+      const existingPurchase = await prisma.creditTransaction.findFirst({
+        where: {
+          userId,
+          source: 'analysis_purchase',
+          metadata: {
+            path: ['analysisId'],
+            equals: analysisId,
+          },
+        },
+      });
+
+      if (existingPurchase) {
+        return reply.send({
+          success: true,
+          data: {
+            purchased: false,
+            message: 'You have already purchased this analysis',
+            alreadyPurchased: true,
+            analysisId: analysis.id,
+          },
+        });
+      }
+
+      // Charge 20 credits for purchase
+      const PURCHASE_COST = 20;
+
+      const chargeResult = await creditService.charge(userId, PURCHASE_COST, 'analysis_purchase', {
+        analysisId,
+        symbol: analysis.symbol,
+        interval: analysis.interval,
+        originalOwnerId: analysis.userId,
+      });
+
+      if (!chargeResult.success) {
+        return reply.status(402).send({
+          success: false,
+          error: {
+            code: 'INSUFFICIENT_CREDITS',
+            message: `You need ${PURCHASE_COST} credits to purchase this analysis`,
+            required: PURCHASE_COST,
+            available: chargeResult.newBalance,
+          },
+        });
+      }
+
+      return reply.send({
+        success: true,
+        data: {
+          purchased: true,
+          analysisId: analysis.id,
+          creditsSpent: PURCHASE_COST,
+          newBalance: chargeResult.newBalance,
+          message: 'Analysis purchased successfully',
+        },
+      });
+    } catch (error) {
+      console.error('Purchase analysis error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'PURCHASE_ERROR', message: 'Failed to purchase analysis' },
       });
     }
   });

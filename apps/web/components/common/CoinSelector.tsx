@@ -8,7 +8,7 @@ import { getAuthToken } from '../../lib/api';
 import { CoinIcon } from './CoinIcon';
 import { AnalysisDialog } from '../analysis/AnalysisDialog';
 
-// Recent analysis info for duplicate warning
+// Recent analysis info for marketplace
 interface RecentAnalysis {
   id: string;
   symbol: string;
@@ -19,6 +19,7 @@ interface RecentAnalysis {
   interval?: string;
   tradeType?: string;
   validityHours: number;
+  canAccess?: boolean; // User already owns or has purchased
 }
 
 // Coin data
@@ -105,10 +106,12 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Duplicate analysis warning state
+  // Marketplace analysis warning state
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [recentAnalysis, setRecentAnalysis] = useState<RecentAnalysis | null>(null);
   const [isCheckingRecent, setIsCheckingRecent] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   // Analysis dialog state
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
@@ -121,60 +124,39 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
     }
   }, []);
 
-  // Check for recent analysis of selected coin with same timeframe
+  // Check for available analysis (from any user) for the selected coin
   const checkRecentAnalysis = async (symbol: string): Promise<RecentAnalysis | null> => {
     try {
       const token = await getAuthToken();
       if (!token) return null;
 
-      // Fetch from analysis history instead of reports
-      const response = await fetch(`/api/analysis/history?limit=50`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      // Use the new marketplace API to check for available analyses
+      const response = await fetch(
+        `/api/analysis/available?symbol=${encodeURIComponent(symbol)}&tradeType=${tradeType}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
 
       if (!response.ok) return null;
 
       const data = await response.json();
-      if (!data.success || !data.data?.analyses) return null;
+      if (!data.success || !data.data?.available) return null;
 
-      // Get intervals for current trade type
-      const currentIntervals = TRADE_TYPE_INTERVALS[tradeType];
-      const validityHours = ANALYSIS_VALIDITY_HOURS[tradeType];
-
-      // Find the most recent analysis for this symbol with the same timeframe
-      const recentAnalysis = data.data.analyses.find(
-        (a: { symbol: string; interval: string; createdAt: string }) => {
-          if (a.symbol.toUpperCase() !== symbol.toUpperCase()) return false;
-          if (!currentIntervals.includes(a.interval)) return false;
-
-          // Check if analysis is still valid (within 3 candles)
-          const generatedAt = new Date(a.createdAt);
-          const now = new Date();
-          const hoursAgo = (now.getTime() - generatedAt.getTime()) / (1000 * 60 * 60);
-
-          return hoursAgo < validityHours;
-        }
-      );
-
-      if (!recentAnalysis) return null;
-
-      const generatedAt = new Date(recentAnalysis.createdAt);
-      const now = new Date();
-      const hoursAgo = (now.getTime() - generatedAt.getTime()) / (1000 * 60 * 60);
+      const { analysis, canAccess } = data.data;
 
       // Get the trade type from interval
-      const analysisTradeType = getTradeTypeFromInterval(recentAnalysis.interval);
+      const analysisTradeType = getTradeTypeFromInterval(analysis.interval);
 
       return {
-        id: recentAnalysis.id,
-        symbol: recentAnalysis.symbol,
-        generatedAt: recentAnalysis.createdAt,
-        hoursAgo,
-        direction: recentAnalysis.direction,
-        score: recentAnalysis.totalScore,
-        interval: recentAnalysis.interval,
+        id: analysis.id,
+        symbol: analysis.symbol,
+        generatedAt: analysis.createdAt,
+        hoursAgo: analysis.hoursAgo,
+        direction: analysis.direction,
+        score: analysis.totalScore,
+        interval: analysis.interval,
         tradeType: analysisTradeType || undefined,
-        validityHours,
+        validityHours: analysis.validityHours,
+        canAccess, // User already owns or has purchased
       };
     } catch (error) {
       console.error('Failed to check recent analysis:', error);
@@ -258,6 +240,58 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
   const handleCancelAnalysis = () => {
     setShowDuplicateWarning(false);
     setRecentAnalysis(null);
+    setPurchaseError(null);
+  };
+
+  // Purchase an existing analysis from the marketplace
+  const handlePurchaseAnalysis = async () => {
+    if (!recentAnalysis) return;
+
+    // If user already has access, just navigate
+    if (recentAnalysis.canAccess) {
+      setShowDuplicateWarning(false);
+      router.push(`/analysis/${recentAnalysis.id}`);
+      return;
+    }
+
+    setIsPurchasing(true);
+    setPurchaseError(null);
+
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setPurchaseError('Please log in to purchase analysis');
+        return;
+      }
+
+      const response = await fetch(`/api/analysis/${recentAnalysis.id}/purchase`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        if (data.error?.code === 'INSUFFICIENT_CREDITS') {
+          setPurchaseError(`Insufficient credits. You need ${data.error.required} credits (you have ${data.error.available}).`);
+        } else {
+          setPurchaseError(data.error?.message || 'Failed to purchase analysis');
+        }
+        return;
+      }
+
+      // Purchase successful, navigate to analysis
+      setShowDuplicateWarning(false);
+      router.push(`/analysis/${recentAnalysis.id}`);
+    } catch (error) {
+      console.error('Purchase error:', error);
+      setPurchaseError('Failed to purchase analysis. Please try again.');
+    } finally {
+      setIsPurchasing(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -532,20 +566,42 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
               {/* Action Buttons */}
               <div className="space-y-2">
                 {/* Primary: View Existing Analysis */}
+                {/* Error message */}
+                {purchaseError && (
+                  <div className="mb-3 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg">
+                    <p className="text-sm text-red-600 dark:text-red-400">{purchaseError}</p>
+                  </div>
+                )}
+
+                {/* Primary: Use Existing Analysis (purchase if needed) */}
                 <button
-                  onClick={() => {
-                    setShowDuplicateWarning(false);
-                    router.push(`/analysis/${recentAnalysis.id}`);
-                  }}
+                  onClick={handlePurchaseAnalysis}
+                  disabled={isPurchasing}
                   className={cn(
                     "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition",
                     "bg-gradient-to-r from-emerald-500 to-green-500 text-white",
-                    "hover:from-emerald-600 hover:to-green-600 shadow-lg shadow-emerald-500/25"
+                    "hover:from-emerald-600 hover:to-green-600 shadow-lg shadow-emerald-500/25",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
                   )}
                 >
-                  <TrendingUp className="w-5 h-5" />
-                  Use Existing Analysis
-                  <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">20 credits</span>
+                  {isPurchasing ? (
+                    <>
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                      Purchasing...
+                    </>
+                  ) : recentAnalysis.canAccess ? (
+                    <>
+                      <TrendingUp className="w-5 h-5" />
+                      View Analysis
+                      <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Free</span>
+                    </>
+                  ) : (
+                    <>
+                      <TrendingUp className="w-5 h-5" />
+                      Use Existing Analysis
+                      <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">20 credits</span>
+                    </>
+                  )}
                 </button>
 
                 {/* Secondary: Analyze Anyway */}
