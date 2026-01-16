@@ -23,7 +23,6 @@ import {
   Search,
   Crosshair,
   FileText,
-  Download,
   Camera,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -198,21 +197,6 @@ export default function AnalysisDetailsPage() {
       alert(err instanceof Error ? err.message : 'Failed to generate report');
     } finally {
       setGeneratingReport(false);
-    }
-  };
-
-  // Download PDF
-  const handleDownload = async () => {
-    if (!analysis) return;
-
-    try {
-      // Build report data from analysis
-      const reportData = buildReportData(analysis);
-      const { generateAnalysisReport } = await import('../../../../../components/reports/AnalysisReport');
-      await generateAnalysisReport(reportData);
-    } catch (err) {
-      console.error('Failed to download:', err);
-      alert('Failed to download PDF');
     }
   };
 
@@ -700,7 +684,7 @@ export default function AnalysisDetailsPage() {
           )}
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Generate Report Button */}
             <button
               onClick={handleGenerateReport}
@@ -718,15 +702,6 @@ export default function AnalysisDetailsPage() {
                   Create Report
                 </>
               )}
-            </button>
-
-            {/* Download PDF Button */}
-            <button
-              onClick={handleDownload}
-              className="flex items-center justify-center gap-2 py-3 font-semibold rounded-xl bg-blue-500 hover:bg-blue-600 text-white transition"
-            >
-              <Download className="w-5 h-5" />
-              Download PDF
             </button>
 
             {/* Send Email Button */}
