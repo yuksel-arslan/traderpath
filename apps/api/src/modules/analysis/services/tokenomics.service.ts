@@ -103,6 +103,7 @@ const COINGECKO_PRO_URL = 'https://pro-api.coingecko.com/api/v3';
 
 // Symbol to CoinGecko ID mapping for common coins
 const SYMBOL_TO_ID: Record<string, string> = {
+  // Top coins
   BTC: 'bitcoin',
   ETH: 'ethereum',
   SOL: 'solana',
@@ -113,6 +114,7 @@ const SYMBOL_TO_ID: Record<string, string> = {
   AVAX: 'avalanche-2',
   DOT: 'polkadot',
   MATIC: 'matic-network',
+  POL: 'matic-network',
   LINK: 'chainlink',
   UNI: 'uniswap',
   ATOM: 'cosmos',
@@ -126,12 +128,141 @@ const SYMBOL_TO_ID: Record<string, string> = {
   SUI: 'sui',
   SEI: 'sei-network',
   TIA: 'celestia',
+  // Meme coins
   PEPE: 'pepe',
   SHIB: 'shiba-inu',
   WIF: 'dogwifcoin',
   BONK: 'bonk',
   FLOKI: 'floki',
+  MEME: 'memecoin',
+  BRETT: 'brett',
+  POPCAT: 'popcat',
+  MOG: 'mog-coin',
+  NEIRO: 'neiro-on-eth',
+  // Layer 2 & DeFi
+  MKR: 'maker',
+  AAVE: 'aave',
+  CRV: 'curve-dao-token',
+  LDO: 'lido-dao',
+  SNX: 'havven',
+  COMP: 'compound-governance-token',
+  SUSHI: 'sushi',
+  YFI: 'yearn-finance',
+  BAL: 'balancer',
+  CAKE: 'pancakeswap-token',
+  GMX: 'gmx',
+  DYDX: 'dydx-chain',
+  // Gaming & Metaverse
+  AXS: 'axie-infinity',
+  SAND: 'the-sandbox',
+  MANA: 'decentraland',
+  ENJ: 'enjincoin',
+  GALA: 'gala',
+  IMX: 'immutable-x',
+  BEAM: 'beam-2',
+  // AI coins
+  FET: 'fetch-ai',
+  RENDER: 'render-token',
+  RNDR: 'render-token',
+  AGIX: 'singularitynet',
+  TAO: 'bittensor',
+  WLD: 'worldcoin-wld',
+  ARKM: 'arkham',
+  // Infrastructure
+  QNT: 'quant-network',
+  HBAR: 'hedera-hashgraph',
+  VET: 'vechain',
+  ALGO: 'algorand',
+  FTM: 'fantom',
+  EGLD: 'elrond-erd-2',
+  ICP: 'internet-computer',
+  THETA: 'theta-token',
+  XTZ: 'tezos',
+  EOS: 'eos',
+  FLOW: 'flow',
+  MINA: 'mina-protocol',
+  STX: 'blockstack',
+  KAS: 'kaspa',
+  TON: 'the-open-network',
+  TRX: 'tron',
+  XLM: 'stellar',
+  // Others
+  CRO: 'crypto-com-chain',
+  ROSE: 'oasis-network',
+  ZIL: 'zilliqa',
+  ONE: 'harmony',
+  KAVA: 'kava',
+  CELO: 'celo',
+  RSR: 'reserve-rights-token',
+  CHZ: 'chiliz',
+  ENS: 'ethereum-name-service',
+  RPL: 'rocket-pool',
+  SSV: 'ssv-network',
+  BLUR: 'blur',
+  JTO: 'jito-governance-token',
+  JUP: 'jupiter-exchange-solana',
+  PYTH: 'pyth-network',
+  W: 'wormhole',
+  STRK: 'starknet',
+  ZK: 'zksync',
+  ENA: 'ethena',
+  PENDLE: 'pendle',
+  EIGEN: 'eigenlayer',
+  ONDO: 'ondo-finance',
 };
+
+// Cache for dynamic CoinGecko ID lookups
+const dynamicIdCache: Record<string, string | null> = {};
+
+// Dynamic lookup for unknown symbols
+async function searchCoinGeckoId(symbol: string): Promise<string | null> {
+  // Check cache first
+  if (symbol in dynamicIdCache) {
+    return dynamicIdCache[symbol];
+  }
+
+  const apiKey = process.env.COINGECKO_API_KEY;
+  const baseUrl = apiKey ? COINGECKO_PRO_URL : COINGECKO_BASE_URL;
+
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (apiKey) headers['x-cg-pro-api-key'] = apiKey;
+
+    // Search for the coin by symbol
+    const response = await fetch(
+      `${baseUrl}/search?query=${symbol.toLowerCase()}`,
+      { headers }
+    );
+
+    if (!response.ok) {
+      console.warn(`CoinGecko search failed for ${symbol}: ${response.status}`);
+      dynamicIdCache[symbol] = null;
+      return null;
+    }
+
+    const data = await response.json();
+    const coins = data.coins || [];
+
+    // Find exact symbol match (case-insensitive)
+    const exactMatch = coins.find((c: { symbol: string }) =>
+      c.symbol.toUpperCase() === symbol.toUpperCase()
+    );
+
+    if (exactMatch) {
+      dynamicIdCache[symbol] = exactMatch.id;
+      console.log(`Found CoinGecko ID for ${symbol}: ${exactMatch.id}`);
+      return exactMatch.id;
+    }
+
+    // No match found
+    dynamicIdCache[symbol] = null;
+    return null;
+  } catch (error) {
+    console.error(`Failed to search CoinGecko for ${symbol}:`, error);
+    dynamicIdCache[symbol] = null;
+    return null;
+  }
+}
 
 async function fetchCoinGeckoData(coinId: string): Promise<{
   market_data: {
@@ -476,11 +607,16 @@ function calculateOverallAssessment(
 // ============================================================================
 
 export async function analyzeTokenomics(symbol: string): Promise<TokenomicsData | null> {
-  // Get CoinGecko ID
-  const coinId = SYMBOL_TO_ID[symbol.toUpperCase()];
+  // Get CoinGecko ID - first check static mapping, then try dynamic search
+  let coinId = SYMBOL_TO_ID[symbol.toUpperCase()];
+
   if (!coinId) {
-    console.warn(`Unknown symbol for tokenomics analysis: ${symbol}`);
-    // Return minimal data for unknown symbols
+    console.log(`Symbol ${symbol} not in static mapping, trying dynamic search...`);
+    coinId = await searchCoinGeckoId(symbol) || '';
+  }
+
+  if (!coinId) {
+    console.warn(`Could not find CoinGecko ID for ${symbol}`);
     return createMinimalTokenomicsData(symbol);
   }
 
