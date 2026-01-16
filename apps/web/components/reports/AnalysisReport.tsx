@@ -97,7 +97,8 @@ export interface AnalysisReportData {
   };
 
   verdict: {
-    action: string;
+    action?: string;
+    verdict?: string; // API returns 'verdict', some places use 'action'
     overallScore: number;
     aiSummary?: string;
     componentScores?: Record<string, number>;
@@ -152,9 +153,18 @@ function formatVolume(vol: number | undefined): string {
 
 function formatPercent(val: number | undefined): string {
   if (val === undefined || isNaN(val)) return '-';
-  // Normalize: if > 1, assume it's already percentage, if <= 1, multiply by 100
-  const pct = val > 1 ? val : val * 100;
-  // Cap at reasonable values
+  // Normalize: handle different scales
+  // 0-1 range (0.75) -> multiply by 100 = 75%
+  // 0-10 range (7.5) -> multiply by 10 = 75%
+  // 0-100 range (75) -> keep as is = 75%
+  let pct: number;
+  if (val <= 1) {
+    pct = val * 100;
+  } else if (val <= 10) {
+    pct = val * 10;
+  } else {
+    pct = val;
+  }
   const capped = Math.min(Math.max(pct, 0), 100);
   return `${capped.toFixed(0)}%`;
 }
@@ -196,19 +206,26 @@ function getGateStatus(gate: { canProceed: boolean; confidence: number } | undef
 }
 
 // Format action text (conditional_go → Conditionally GO)
-function formatAction(action: string | undefined): string {
-  if (!action) return 'ANALYSIS COMPLETE';
+// Accepts either verdict.action or verdict.verdict field
+function formatAction(actionOrVerdict: string | undefined): string {
+  if (!actionOrVerdict) return 'ANALYSIS COMPLETE';
   const map: Record<string, string> = {
     'go': 'GO',
     'conditional_go': 'Conditionally GO',
     'conditionally_go': 'Conditionally GO',
     'wait': 'WAIT',
     'no_go': 'NO GO',
+    'avoid': 'AVOID',
     'stop': 'STOP',
     'hold': 'HOLD',
   };
-  const lower = action.toLowerCase().replace(/-/g, '_');
-  return map[lower] || action.toUpperCase().replace(/_/g, ' ');
+  const lower = actionOrVerdict.toLowerCase().replace(/-/g, '_');
+  return map[lower] || actionOrVerdict.toUpperCase().replace(/_/g, ' ');
+}
+
+// Get action from verdict object (supports both action and verdict fields)
+function getVerdictAction(v: { action?: string; verdict?: string } | undefined): string {
+  return v?.action || v?.verdict || '';
 }
 
 // Logo SVG inline
@@ -366,13 +383,9 @@ function generatePage1(data: AnalysisReportData): string {
     <!-- Executive Summary -->
     <div class="verdict-box">
       <div class="verdict-row">
-        <div>
-          <div class="verdict-action">${formatAction(v?.action)}</div>
-          <div style="font-size: 8px; color: #666; margin-top: 4px; max-width: 360px;">${v?.aiSummary?.slice(0, 200) || 'Review the detailed analysis sections below.'}${(v?.aiSummary?.length || 0) > 200 ? '...' : ''}</div>
-        </div>
-        <div class="verdict-score">
-          <div class="verdict-score-value ${isLong ? 'text-green' : 'text-red'}">${score}</div>
-          <div class="verdict-score-label">Overall Score</div>
+        <div style="flex: 1;">
+          <div class="verdict-action">${formatAction(getVerdictAction(v))}</div>
+          <div style="font-size: 8px; color: #666; margin-top: 4px;">${v?.aiSummary?.slice(0, 300) || 'Review the detailed analysis sections below.'}${(v?.aiSummary?.length || 0) > 300 ? '...' : ''}</div>
         </div>
       </div>
     </div>
@@ -763,13 +776,9 @@ function generatePage3(data: AnalysisReportData): string {
 
       <div class="verdict-box">
         <div class="verdict-row">
-          <div>
-            <div class="verdict-action">${formatAction(v.action)}</div>
+          <div style="flex: 1;">
+            <div class="verdict-action">${formatAction(getVerdictAction(v))}</div>
             <div style="font-size: 9px; color: #666; margin-top: 4px;">${isLong ? 'Bullish setup - Long position recommended' : 'Bearish setup - Short position recommended'}</div>
-          </div>
-          <div class="verdict-score">
-            <div class="verdict-score-value ${isLong ? 'text-green' : 'text-red'}">${score}</div>
-            <div class="verdict-score-label">Overall Confidence</div>
           </div>
         </div>
       </div>
