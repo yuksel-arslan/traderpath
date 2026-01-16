@@ -690,6 +690,54 @@ export default function FinancePage() {
                         Lower cost per analysis = better efficiency (more analyses with same fixed cost)
                       </p>
                     </div>
+
+                    {/* Weekly Analysis Count Chart */}
+                    <div className="mt-4 p-4 bg-card border rounded-lg">
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-blue-500" />
+                        Weekly Analysis Count
+                      </h4>
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={weeklyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                            <XAxis
+                              dataKey="week"
+                              tick={{ fontSize: 12, fill: '#9ca3af' }}
+                              axisLine={{ stroke: '#374151' }}
+                              tickLine={{ stroke: '#374151' }}
+                            />
+                            <YAxis
+                              tick={{ fontSize: 12, fill: '#9ca3af' }}
+                              axisLine={{ stroke: '#374151' }}
+                              tickLine={{ stroke: '#374151' }}
+                              allowDecimals={false}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                border: '1px solid #374151',
+                                borderRadius: '8px',
+                                padding: '8px 12px',
+                              }}
+                              formatter={(value: number) => [value, 'Analyses']}
+                              labelStyle={{ color: '#9ca3af', marginBottom: '4px' }}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="analyses"
+                              stroke="#3b82f6"
+                              strokeWidth={2}
+                              dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                              activeDot={{ r: 6, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <p className="text-xs text-muted-foreground text-center mt-2">
+                        Total this month: {analysisCount} analyses
+                      </p>
+                    </div>
                   </>
                 );
               })()}
