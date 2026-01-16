@@ -1077,72 +1077,99 @@ interface AIAnalysisSummaryInput {
 }
 
 async function generateAIAnalysisSummary(input: AIAnalysisSummaryInput): Promise<{ aiSummary: string; tokenomicsInsight: string }> {
-  const GEMINI_API_KEY = config.gemini?.apiKey;
+  // Safe defaults with null checks
+  const symbol = input.symbol || 'UNKNOWN';
+  const verdict = input.verdict || 'wait';
+  const overallScore = input.overallScore ?? 0;
+  const direction = input.direction || 'neutral';
+  const currentPrice = input.currentPrice || 0;
+  const riskReward = input.riskReward || 'N/A';
+  const tradeType = input.tradeType || 'dayTrade';
 
-  if (!GEMINI_API_KEY) {
-    console.warn('[AI Summary] Gemini API key not configured');
-    return {
-      aiSummary: `${input.symbol} analysis complete with score ${input.overallScore}/10. Verdict: ${input.verdict.toUpperCase()}.`,
-      tokenomicsInsight: input.tokenomics ? 'Tokenomics data available but AI interpretation unavailable.' : 'Tokenomics data not available.',
-    };
-  }
+  // Default fallback response
+  const fallbackResponse = {
+    aiSummary: `${symbol} analysis complete with score ${overallScore.toFixed(1)}/10. Verdict: ${verdict.toUpperCase()}.`,
+    tokenomicsInsight: input.tokenomics ? 'Tokenomics data available.' : 'Tokenomics data not available.',
+  };
 
-  const tradeTypeLabel = {
-    scalping: 'Scalping (1-15min)',
-    dayTrade: 'Day Trade (15min-4h)',
-    swing: 'Swing Trade (4h-1d)',
-  }[input.tradeType || 'dayTrade'];
+  try {
+    const GEMINI_API_KEY = config.gemini?.apiKey;
 
-  const verdictLabel = {
-    go: 'GO - Strong setup',
-    conditional_go: 'CONDITIONAL GO - Proceed with caution',
-    wait: 'WAIT - Not ideal conditions',
-    avoid: 'AVOID - High risk detected',
-  }[input.verdict];
+    if (!GEMINI_API_KEY) {
+      console.warn('[AI Summary] Gemini API key not configured');
+      return fallbackResponse;
+    }
 
-  // Build tokenomics context
-  let tokenomicsContext = '';
-  if (input.tokenomics) {
-    const tk = input.tokenomics;
-    tokenomicsContext = `
+    const tradeTypeLabel = {
+      scalping: 'Scalping (1-15min)',
+      dayTrade: 'Day Trade (15min-4h)',
+      swing: 'Swing Trade (4h-1d)',
+    }[tradeType] || 'Day Trade';
+
+    const verdictLabel = {
+      go: 'GO - Strong setup',
+      conditional_go: 'CONDITIONAL GO - Proceed with caution',
+      wait: 'WAIT - Not ideal conditions',
+      avoid: 'AVOID - High risk detected',
+    }[verdict] || 'Analysis pending';
+
+    // Build tokenomics context with null safety
+    let tokenomicsContext = '';
+    if (input.tokenomics) {
+      const tk = input.tokenomics;
+      const marketCap = tk.market?.marketCap ? (tk.market.marketCap / 1e9).toFixed(2) : 'N/A';
+      const circPercent = tk.supply?.circulatingPercent?.toFixed(1) || 'N/A';
+      const mcapFdv = tk.market?.mcapFdvRatio?.toFixed(2) || 'N/A';
+      const tkScore = tk.assessment?.overallScore || 'N/A';
+
+      tokenomicsContext = `
 TOKENOMICS DATA:
-- Market Cap: $${(tk.market.marketCap / 1e9).toFixed(2)}B
-- Circulating Supply: ${tk.supply.circulatingPercent.toFixed(1)}% of total
-- Inflation Risk: ${tk.supply.inflationRisk}
-- Dilution Risk: ${tk.market.dilutionRisk}
-- FDV/MCap Ratio: ${tk.market.mcapFdvRatio.toFixed(2)}
-- Liquidity Health: ${tk.market.liquidityHealth}
-- Whale Concentration Risk: ${tk.whaleConcentration.concentrationRisk}
-- Tokenomics Score: ${tk.assessment.overallScore}/100 (${tk.assessment.riskLevel} risk)
-- Assessment: ${tk.assessment.recommendation}`;
-  }
+- Market Cap: $${marketCap}B
+- Circulating Supply: ${circPercent}% of total
+- Inflation Risk: ${tk.supply?.inflationRisk || 'unknown'}
+- Dilution Risk: ${tk.market?.dilutionRisk || 'unknown'}
+- FDV/MCap Ratio: ${mcapFdv}
+- Liquidity Health: ${tk.market?.liquidityHealth || 'unknown'}
+- Whale Concentration Risk: ${tk.whaleConcentration?.concentrationRisk || 'unknown'}
+- Tokenomics Score: ${tkScore}/100 (${tk.assessment?.riskLevel || 'unknown'} risk)
+- Assessment: ${tk.assessment?.recommendation || 'No assessment available'}`;
+    }
 
-  const prompt = `You are a professional crypto analyst. Generate TWO separate analyses:
+    // Safe metric extraction with full null checks
+    const keyMetrics = input.keyMetrics || {};
+    const rsi = keyMetrics.rsi?.toFixed(1) || '50';
+    const macdHist = keyMetrics.macdHistogram?.toFixed(4) || '0';
+    const fearGreed = keyMetrics.fearGreedIndex || 50;
+    const btcDom = keyMetrics.btcDominance?.toFixed(1) || '50';
+    const riskLevel = keyMetrics.riskLevel || 'moderate';
+    const whaleActivity = keyMetrics.whaleActivity || 'normal';
 
-ANALYSIS REQUEST FOR ${input.symbol}:
+    const prompt = `You are a professional crypto analyst. Generate TWO separate analyses:
+
+ANALYSIS REQUEST FOR ${symbol}:
 - Trade Type: ${tradeTypeLabel}
 - Verdict: ${verdictLabel}
-- Score: ${input.overallScore}/10
-- Direction: ${input.direction || 'neutral'}
-- Current Price: $${input.currentPrice}
-- R:R Ratio: ${input.riskReward || 'N/A'}
+- Score: ${overallScore}/10
+- Direction: ${direction}
+- Current Price: $${currentPrice}
+- R:R Ratio: ${riskReward}
 
 KEY METRICS:
-- RSI: ${input.keyMetrics.rsi.toFixed(1)}
-- MACD Histogram: ${input.keyMetrics.macdHistogram.toFixed(4)}
-- Fear & Greed: ${input.keyMetrics.fearGreedIndex}
-- BTC Dominance: ${input.keyMetrics.btcDominance.toFixed(1)}%
-- Risk Level: ${input.keyMetrics.riskLevel}
-- Whale Activity: ${input.keyMetrics.whaleActivity}
+- RSI: ${rsi}
+- MACD Histogram: ${macdHist}
+- Fear & Greed: ${fearGreed}
+- BTC Dominance: ${btcDom}%
+- Risk Level: ${riskLevel}
+- Whale Activity: ${whaleActivity}
 ${tokenomicsContext}
 
 GENERATE:
 
 1. AI_SUMMARY (2-3 sentences):
-A concise professional summary explaining the verdict for ${input.symbol}. Include key reasons for the decision. Be specific about what traders should consider.
+A concise professional summary explaining the verdict for ${symbol}. Include key reasons for the decision. Be specific about what traders should consider.
 
 2. TOKENOMICS_INSIGHT (2-3 sentences):
-${input.tokenomics ? `Interpret the tokenomics data for ${input.symbol}. Explain the supply dynamics, dilution risk, and how tokenomics affects the trade setup. Be specific with percentages.` : `State that tokenomics data is not available for ${input.symbol} and recommend checking supply metrics before large positions.`}
+${input.tokenomics ? `Interpret the tokenomics data for ${symbol}. Explain the supply dynamics, dilution risk, and how tokenomics affects the trade setup. Be specific with percentages.` : `State that tokenomics data is not available for ${symbol} and recommend checking supply metrics before large positions.`}
 
 FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
 AI_SUMMARY: [your summary here]
@@ -1155,7 +1182,6 @@ RULES:
 - No questions at the end
 - Keep each section to 2-3 sentences max`;
 
-  try {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
@@ -1172,7 +1198,8 @@ RULES:
     );
 
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+      console.error(`[AI Summary] Gemini API error: ${response.status}`);
+      return fallbackResponse;
     }
 
     const data = await response.json();
@@ -1182,22 +1209,17 @@ RULES:
     const aiSummaryMatch = text.match(/AI_SUMMARY:\s*(.+?)(?=TOKENOMICS_INSIGHT:|$)/s);
     const tokenomicsMatch = text.match(/TOKENOMICS_INSIGHT:\s*(.+?)$/s);
 
-    const aiSummary = aiSummaryMatch?.[1]?.trim() || `${input.symbol} ${input.verdict.toUpperCase()} recommendation with ${input.overallScore}/10 score.`;
+    const aiSummary = aiSummaryMatch?.[1]?.trim() || `${symbol} ${verdict.toUpperCase()} recommendation with ${overallScore}/10 score.`;
     const tokenomicsInsight = tokenomicsMatch?.[1]?.trim() || (input.tokenomics
-      ? `${input.symbol} has ${input.tokenomics.supply.circulatingPercent.toFixed(0)}% circulating supply with ${input.tokenomics.market.dilutionRisk} dilution risk.`
+      ? `${symbol} has ${input.tokenomics.supply?.circulatingPercent?.toFixed(0) || 'unknown'}% circulating supply with ${input.tokenomics.market?.dilutionRisk || 'unknown'} dilution risk.`
       : 'Tokenomics data not available for this asset.');
 
-    console.log(`[AI Summary] Generated for ${input.symbol}: ${aiSummary.slice(0, 50)}...`);
+    console.log(`[AI Summary] Generated for ${symbol}: ${aiSummary.slice(0, 50)}...`);
 
     return { aiSummary, tokenomicsInsight };
   } catch (error) {
     console.error('[AI Summary] Generation failed:', error);
-    return {
-      aiSummary: `${input.symbol} analysis: ${input.verdict.toUpperCase()} with score ${input.overallScore}/10. Direction: ${input.direction || 'neutral'}.`,
-      tokenomicsInsight: input.tokenomics
-        ? `Tokenomics score: ${input.tokenomics.assessment.overallScore}/100. ${input.tokenomics.assessment.recommendation}`
-        : 'Tokenomics data not available.',
-    };
+    return fallbackResponse;
   }
 }
 
