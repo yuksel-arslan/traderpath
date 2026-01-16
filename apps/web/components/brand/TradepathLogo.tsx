@@ -74,7 +74,7 @@ export function TradepathLogo({
       <span
         className={cn(
           s.text,
-          'font-semibold tracking-wide'
+          'font-bold tracking-wide'
         )}
       >
         <span className="text-teal-400">Trader</span>
@@ -120,7 +120,7 @@ export function TradepathLogo({
 // Alternative: Simple inline logo for headers
 export function TradepathLogoInline({ className }: { className?: string }) {
   return (
-    <span className={cn('font-semibold', className)}>
+    <span className={cn('font-bold', className)}>
       <span className="text-teal-400">Trader</span>
       <span style={{ color: '#F87171' }}>Path</span>
     </span>
