@@ -435,7 +435,6 @@ const styles = `
 function generatePage1(data: AnalysisReportData, totalPages: number = 5): string {
   const mp = data.marketPulse;
   const as = data.assetScan;
-  const sc = data.safetyCheck;
   const tp = data.tradePlan;
   const v = data.verdict;
   const tk = data.tokenomics;
@@ -446,21 +445,16 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
 
   const mpGate = getGateStatus(mp.gate);
   const asGate = getGateStatus(as.gate);
-  const scGate = getGateStatus(sc.gate);
 
   // Generate step summaries from gate reasons
   const mpSummary = mp.gate?.reason ? `Market conditions: ${mp.gate.reason}` : '';
   const asSummary = as.gate?.reason ? `Asset analysis: ${as.gate.reason}` : '';
-  const scSummary = sc.gate?.reason ? `Safety assessment: ${sc.gate.reason}` : '';
 
   // STEP 1: Market Pulse → TREND indicators (ADX, ICHIMOKU, EMA, BOLLINGER)
   const mpIndicators = ind?.trend ? Object.values(ind.trend).filter(Boolean).slice(0, 4) : [];
 
   // STEP 2: Asset Scanner → VOLUME indicators (VWAP, OBV, CMF, AD, LIQUIDITY_SCORE)
   const asIndicators = ind?.volume ? Object.values(ind.volume).filter(Boolean).slice(0, 4) : [];
-
-  // STEP 3: Safety Check → ADVANCED indicators (SPOOFING, ORDER_FLOW, WHALE_ACTIVITY, SQUEEZE)
-  const scIndicators = ind?.advanced ? Object.values(ind.advanced).filter(Boolean).slice(0, 4) : [];
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
@@ -639,6 +633,66 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
       ${asSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${asSummary}</div>` : ''}
     </div>
 
+    <div class="footer">
+      <span><span class="brand-trade">Trader</span><span class="brand-path">Path</span> | ID: ${data.analysisId?.slice(-10) || '-'}</span>
+      <span>Page 1 of ${totalPages}</span>
+    </div>
+  </div>
+</body></html>`;
+}
+
+// ===========================================
+// PAGE 2: Execution & Analysis
+// ===========================================
+
+function generatePage2(data: AnalysisReportData, totalPages: number = 5): string {
+  const sc = data.safetyCheck;
+  const tm = data.timing;
+  const tp = data.tradePlan;
+  const tc = data.trapCheck;
+  const isLong = tp.direction === 'long';
+
+  const scGate = getGateStatus(sc.gate);
+  const tmGate = getGateStatus(tm.gate);
+  const tpGate = getGateStatus(tp.gate);
+  const tcGate = tc?.gate ? getGateStatus(tc.gate) : { text: '', color: '#666' };
+
+  // Get relevant indicators for timing decision
+  const ind = data.indicatorDetails;
+
+  // Step summaries from gate reasons
+  const scSummary = sc.gate?.reason ? `Safety assessment: ${sc.gate.reason}` : '';
+  const tmSummary = tm.gate?.reason ? `Timing analysis: ${tm.gate.reason}` : '';
+  const tpSummary = tp.gate?.reason ? `Trade plan: ${tp.gate.reason}` : '';
+  const tcSummary = tc?.gate?.reason ? `Trap check: ${tc.gate.reason}` : '';
+
+  // STEP 3: Safety Check → ADVANCED indicators (SPOOFING, ORDER_FLOW, WHALE_ACTIVITY, SQUEEZE)
+  const scIndicators = ind?.advanced ? Object.values(ind.advanced).filter(Boolean).slice(0, 4) : [];
+
+  // STEP 4: Timing → MOMENTUM indicators (RSI, STOCHASTIC, STOCH_RSI, MACD, SUPERTREND)
+  const tmIndicators = ind?.momentum ? Object.values(ind.momentum).filter(Boolean).slice(0, 4) : [];
+
+  // STEP 5: Trade Plan → VOLATILITY indicators (ATR, PSAR, KELTNER, DONCHIAN)
+  const tpIndicators = ind?.volatility ? Object.values(ind.volatility).filter(Boolean).slice(0, 4) : [];
+
+  // STEP 6: Trap Check → Divergence indicators from volume (OBV, AD, FORCE_INDEX) + momentum (RSI, MACD)
+  const tcDivergences = ind?.divergences || [];
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
+  <div class="page">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">${logoSvg}</div>
+        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+      </div>
+      <div class="header-center">
+        <div class="report-title">Execution Analysis</div>
+      </div>
+      <div class="header-right">
+        <span class="symbol">${data.symbol}/USDT</span>
+      </div>
+    </div>
+
     <!-- Step 03: Safety Check -->
     <div class="step-box">
       <div class="step-box-header">
@@ -682,60 +736,6 @@ function generatePage1(data: AnalysisReportData, totalPages: number = 5): string
       </div>
       ` : ''}
       ${scSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${scSummary}</div>` : ''}
-    </div>
-
-    <div class="footer">
-      <span><span class="brand-trade">Trader</span><span class="brand-path">Path</span> | ID: ${data.analysisId?.slice(-10) || '-'}</span>
-      <span>Page 1 of ${totalPages}</span>
-    </div>
-  </div>
-</body></html>`;
-}
-
-// ===========================================
-// PAGE 2: Execution & Analysis
-// ===========================================
-
-function generatePage2(data: AnalysisReportData, totalPages: number = 5): string {
-  const tm = data.timing;
-  const tp = data.tradePlan;
-  const tc = data.trapCheck;
-  const isLong = tp.direction === 'long';
-
-  const tmGate = getGateStatus(tm.gate);
-  const tpGate = getGateStatus(tp.gate);
-  const tcGate = tc?.gate ? getGateStatus(tc.gate) : { text: '', color: '#666' };
-
-  // Get relevant indicators for timing decision
-  const ind = data.indicatorDetails;
-
-  // Step summaries from gate reasons
-  const tmSummary = tm.gate?.reason ? `Timing analysis: ${tm.gate.reason}` : '';
-  const tpSummary = tp.gate?.reason ? `Trade plan: ${tp.gate.reason}` : '';
-  const tcSummary = tc?.gate?.reason ? `Trap check: ${tc.gate.reason}` : '';
-
-  // STEP 4: Timing → MOMENTUM indicators (RSI, STOCHASTIC, STOCH_RSI, MACD, SUPERTREND)
-  const tmIndicators = ind?.momentum ? Object.values(ind.momentum).filter(Boolean).slice(0, 4) : [];
-
-  // STEP 5: Trade Plan → VOLATILITY indicators (ATR, PSAR, KELTNER, DONCHIAN)
-  const tpIndicators = ind?.volatility ? Object.values(ind.volatility).filter(Boolean).slice(0, 4) : [];
-
-  // STEP 6: Trap Check → Divergence indicators from volume (OBV, AD, FORCE_INDEX) + momentum (RSI, MACD)
-  const tcDivergences = ind?.divergences || [];
-
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
-  <div class="page">
-    <div class="header">
-      <div class="brand">
-        <div class="logo">${logoSvg}</div>
-        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
-      </div>
-      <div class="header-center">
-        <div class="report-title">Execution Analysis</div>
-      </div>
-      <div class="header-right">
-        <span class="symbol">${data.symbol}/USDT</span>
-      </div>
     </div>
 
     <!-- Step 04: Timing Analysis -->
@@ -870,6 +870,54 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
       ${tpSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tpSummary}</div>` : ''}
     </div>
 
+    <div class="footer">
+      <span><span class="brand-trade">Trader</span><span class="brand-path">Path</span> | ID: ${data.analysisId?.slice(-10) || '-'}</span>
+      <span>Page 2 of ${totalPages}</span>
+    </div>
+  </div>
+</body></html>`;
+}
+
+// ===========================================
+// PAGE 3: Verdict & Expert Analysis
+// ===========================================
+
+function generatePage3(data: AnalysisReportData, totalPages: number = 5): string {
+  const tc = data.trapCheck;
+  const ind = data.indicatorDetails;
+  const v = data.verdict;
+  const isLong = data.tradePlan?.direction === 'long';
+  const score = formatPercent(v.overallScore);
+
+  const tcGate = tc?.gate ? getGateStatus(tc.gate) : { text: '', color: '#666' };
+  const tcSummary = tc?.gate?.reason ? `Trap check: ${tc.gate.reason}` : '';
+  const tcDivergences = ind?.divergences || [];
+
+  // Get step scores from gates
+  const stepScores = [
+    { name: 'Market Pulse', score: data.marketPulse.gate?.confidence },
+    { name: 'Asset Scanner', score: data.assetScan.gate?.confidence },
+    { name: 'Safety Check', score: data.safetyCheck.gate?.confidence },
+    { name: 'Timing', score: data.timing.gate?.confidence },
+    { name: 'Trade Plan', score: data.tradePlan.gate?.confidence },
+    { name: 'Trap Check', score: data.trapCheck?.gate?.confidence },
+  ].filter(s => s.score !== undefined);
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
+  <div class="page">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">${logoSvg}</div>
+        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+      </div>
+      <div class="header-center">
+        <div class="report-title">Final Verdict</div>
+      </div>
+      <div class="header-right">
+        <span class="symbol">${data.symbol}/USDT</span>
+      </div>
+    </div>
+
     <!-- Step 06: Trap Check -->
     ${tc ? `
     <div class="step-box">
@@ -942,48 +990,6 @@ function generatePage2(data: AnalysisReportData, totalPages: number = 5): string
       </div>
     </div>
     ` : ''}
-
-    <div class="footer">
-      <span><span class="brand-trade">Trader</span><span class="brand-path">Path</span> | ID: ${data.analysisId?.slice(-10) || '-'}</span>
-      <span>Page 2 of ${totalPages}</span>
-    </div>
-  </div>
-</body></html>`;
-}
-
-// ===========================================
-// PAGE 3: Verdict & Expert Analysis
-// ===========================================
-
-function generatePage3(data: AnalysisReportData, totalPages: number = 5): string {
-  const v = data.verdict;
-  const isLong = data.tradePlan?.direction === 'long';
-  const score = formatPercent(v.overallScore);
-
-  // Get step scores from gates
-  const stepScores = [
-    { name: 'Market Pulse', score: data.marketPulse.gate?.confidence },
-    { name: 'Asset Scanner', score: data.assetScan.gate?.confidence },
-    { name: 'Safety Check', score: data.safetyCheck.gate?.confidence },
-    { name: 'Timing', score: data.timing.gate?.confidence },
-    { name: 'Trade Plan', score: data.tradePlan.gate?.confidence },
-    { name: 'Trap Check', score: data.trapCheck?.gate?.confidence },
-  ].filter(s => s.score !== undefined);
-
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
-  <div class="page">
-    <div class="header">
-      <div class="brand">
-        <div class="logo">${logoSvg}</div>
-        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
-      </div>
-      <div class="header-center">
-        <div class="report-title">Final Verdict</div>
-      </div>
-      <div class="header-right">
-        <span class="symbol">${data.symbol}/USDT</span>
-      </div>
-    </div>
 
     <!-- Final Verdict -->
     <div class="section">
