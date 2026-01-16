@@ -53,7 +53,7 @@ export default function AuthLayout({
         <div className="absolute bottom-20 right-20 w-96 h-96 bg-coral-500/20 rounded-full blur-3xl" />
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col px-12 xl:px-16 py-12">
+        <div className="relative z-10 flex flex-col items-center text-center px-12 xl:px-16 py-12">
           {/* Logo Icon */}
           <div className="mb-4">
             <Link href="/">
@@ -78,7 +78,7 @@ export default function AuthLayout({
           {/* Features */}
           <div className="space-y-6">
             {FEATURES.map((feature, index) => (
-              <div key={index} className="flex items-start gap-4 group">
+              <div key={index} className="flex flex-col items-center gap-3 group">
                 <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
                   <feature.icon className="w-6 h-6 text-teal-400" />
                 </div>
