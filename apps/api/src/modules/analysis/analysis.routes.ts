@@ -982,7 +982,7 @@ Explain the key risks and what conditions would need to change before trading th
           id: a.id,
           symbol: a.symbol,
           interval: a.interval,
-          totalScore: a.totalScore,
+          totalScore: a.totalScore ? Number(a.totalScore) : null,
           direction,
           entryPrice,
           currentPrice,
