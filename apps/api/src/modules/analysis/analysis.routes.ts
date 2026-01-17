@@ -1447,7 +1447,7 @@ Explain the key risks and what conditions would need to change before trading th
   /**
    * GET /api/analysis/statistics
    * User's analysis statistics for dashboard
-   * All data calculated from real database records
+   * All data calculated from ANALYSIS table (not reports)
    */
   app.get('/statistics', {
     preHandler: authenticate,
@@ -1457,93 +1457,77 @@ Explain the key risks and what conditions would need to change before trading th
     try {
       const db = prisma;
 
-      // Get user's reports for real verdict distribution and scores
-      const userReports = await db.report.findMany({
-        where: { userId },
-        select: {
-          id: true,
-          symbol: true,
-          verdict: true,
-          score: true,
-          direction: true,
-          generatedAt: true,
-          expiresAt: true,
-          outcome: true,
-          entryPrice: true,
-          reportData: true
-        },
-        orderBy: { generatedAt: 'desc' }
-      });
-
-      // Also get analyses for totalScore (in case user has analyses but no reports)
+      // Get user's analyses for statistics
       const userAnalyses = await db.analysis.findMany({
         where: { userId },
         select: {
           id: true,
+          symbol: true,
           totalScore: true,
+          step5Result: true, // tradePlan
+          step7Result: true, // verdict
           outcome: true,
           expiresAt: true,
+          createdAt: true,
         },
         orderBy: { createdAt: 'desc' }
       });
 
-      // Calculate real statistics - use analyses count if no reports
-      const totalAnalyses = userReports.length > 0 ? userReports.length : userAnalyses.length;
+      // Calculate statistics from analyses
+      const totalAnalyses = userAnalyses.length;
       const completedAnalyses = totalAnalyses;
 
-      // Count verdicts by type
+      // Count verdicts by type from step7Result
       let goSignals = 0;
       let avoidSignals = 0;
 
-      userReports.forEach(report => {
-        const verdict = report.verdict.toLowerCase();
+      userAnalyses.forEach(analysis => {
+        const step7 = analysis.step7Result as Record<string, unknown> | null;
+        const verdict = ((step7?.verdict || step7?.action || '') as string).toLowerCase();
         if (verdict === 'go' || verdict === 'go!') {
           goSignals++;
-        } else if (verdict === 'conditional_go' || verdict === 'conditional go' || verdict === 'conditional') {
+        } else if (verdict === 'conditional_go' || verdict === 'conditionalgo') {
           goSignals++; // Count conditional_go as positive signal
-        } else if (verdict === 'avoid') {
+        } else if (verdict === 'avoid' || verdict === 'no_go') {
           avoidSignals++;
         }
       });
 
-      // Calculate average score from reports AND analyses
-      const reportScores = userReports
-        .filter(r => r.score !== null)
-        .map(r => Number(r.score));
-
-      const analysisScores = userAnalyses
+      // Calculate average score from totalScore
+      const scores = userAnalyses
         .filter(a => a.totalScore !== null)
         .map(a => Number(a.totalScore));
 
-      // Combine scores (prefer analysis scores as they're more comprehensive)
-      const allScores = analysisScores.length > 0 ? analysisScores : reportScores;
-
-      const avgScore = allScores.length > 0
-        ? Number((allScores.reduce((a, b) => a + b, 0) / allScores.length).toFixed(1))
+      const avgScore = scores.length > 0
+        ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1))
         : 0;
 
-      // Get CLOSED trades only (correct or incorrect, not neutral/pending)
-      const closedTrades = userReports.filter(r => r.outcome === 'correct' || r.outcome === 'incorrect');
-      const closedCount = closedTrades.length;
-      const correctCount = closedTrades.filter(r => r.outcome === 'correct').length;
+      // Get CLOSED analyses only (tp_hit or sl_hit)
+      const closedAnalyses = userAnalyses.filter(a =>
+        a.outcome === 'tp1_hit' || a.outcome === 'tp2_hit' || a.outcome === 'tp3_hit' || a.outcome === 'sl_hit'
+      );
+      const closedCount = closedAnalyses.length;
+      const correctCount = closedAnalyses.filter(a =>
+        a.outcome === 'tp1_hit' || a.outcome === 'tp2_hit' || a.outcome === 'tp3_hit'
+      ).length;
 
       // Accuracy = correct / closed * 100
       const accuracy = closedCount > 0
         ? Number(((correctCount / closedCount) * 100).toFixed(1))
         : 0;
 
-      // Get ACTIVE trades (outcome is null or 'pending') AND not expired
+      // Get ACTIVE analyses (no outcome yet) AND not expired
       const now = new Date();
-      const activeTrades = userReports.filter(r =>
-        (!r.outcome || r.outcome === 'pending') &&
-        (!r.expiresAt || new Date(r.expiresAt) > now)
+      const activeAnalyses = userAnalyses.filter(a =>
+        !a.outcome &&
+        a.expiresAt && new Date(a.expiresAt) > now
       );
-      const activeCount = activeTrades.length;
+      const activeCount = activeAnalyses.length;
 
-      // Fetch current prices for active trades to calculate active performance
+      // Fetch current prices for active analyses to calculate active performance
       let activeProfitable = 0;
       if (activeCount > 0) {
-        const activeSymbols = [...new Set(activeTrades.map(r => r.symbol as string))];
+        const activeSymbols = [...new Set(activeAnalyses.map(a => a.symbol as string))];
         const prices: Record<string, number> = {};
 
         try {
@@ -1562,24 +1546,17 @@ Explain the key risks and what conditions would need to change before trading th
           console.error('Failed to fetch prices for active performance:', err);
         }
 
-        // Calculate how many active trades are profitable
-        activeTrades.forEach(report => {
-          const reportData = report.reportData as Record<string, unknown> | null;
-          const tradePlan = reportData?.tradePlan as Record<string, unknown> | undefined;
-          const assetScan = reportData?.assetScan as Record<string, unknown> | undefined;
-          const timing = reportData?.timing as Record<string, unknown> | undefined;
+        // Calculate how many active analyses are profitable
+        activeAnalyses.forEach(analysis => {
+          const tradePlan = analysis.step5Result as Record<string, unknown> | null;
 
-          // Try multiple sources for entry price
           const entryPrice = Number(
             tradePlan?.averageEntry ||
-            tradePlan?.entryPrice ||
-            report.entryPrice ||
-            assetScan?.currentPrice ||
-            timing?.currentPrice
+            tradePlan?.entryPrice
           ) || 0;
 
-          const currentPrice = prices[report.symbol] || 0;
-          const direction = (tradePlan?.direction as string || report.direction || 'long').toLowerCase();
+          const currentPrice = prices[analysis.symbol] || 0;
+          const direction = ((tradePlan?.direction as string) || 'long').toLowerCase();
 
           if (entryPrice > 0 && currentPrice > 0) {
             const pnl = direction === 'short'
@@ -1598,9 +1575,9 @@ Explain the key risks and what conditions would need to change before trading th
         : 0;
 
       // Get last analysis date
-      const lastReport = userReports[0];
-      const lastAnalysisDate = lastReport
-        ? new Date(lastReport.generatedAt).toLocaleDateString('en-US', {
+      const lastAnalysis = userAnalyses[0];
+      const lastAnalysisDate = lastAnalysis
+        ? new Date(lastAnalysis.createdAt).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
