@@ -262,6 +262,26 @@
     -webkit-text-fill-color: transparent;
   }
 
+  /* TraderPath Logo Colors Animation - Teal to Coral */
+  .gradient-text-logo-animate {
+    background: linear-gradient(
+      90deg,
+      #5EEDC3 0%,
+      #2DD4A8 15%,
+      #14B8A6 30%,
+      #F87171 50%,
+      #EF5A6F 70%,
+      #FF8A9B 85%,
+      #5EEDC3 100%
+    );
+    background-size: 200% 100%;
+    animation: gradient-logo-flow 4s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+  }
+
   /* TraderPath Brand Gradient - Teal to Coral animated */
   .gradient-text-brand {
     background: linear-gradient(
@@ -454,6 +474,19 @@
 
 /* TraderPath Brand gradient animation - smooth flow between teal and coral */
 @keyframes gradient-brand-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* TraderPath Logo colors flow animation */
+@keyframes gradient-logo-flow {
   0% {
     background-position: 0% 50%;
   }

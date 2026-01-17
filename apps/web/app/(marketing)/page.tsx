@@ -49,7 +49,7 @@ import {
   Coins,
   Gift
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../lib/coin-icons';
@@ -186,6 +186,63 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+// CountUp Animation Component
+function CountUp({ end, suffix = '', duration = 2000 }: { end: number; suffix?: string; duration?: number }) {
+  const [count, setCount] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !hasAnimated) {
+          setHasAnimated(true);
+          const startTime = Date.now();
+          const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            // Easing function for smooth deceleration
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            setCount(Math.floor(easeOut * end));
+            if (progress < 1) {
+              requestAnimationFrame(animate);
+            } else {
+              setCount(end);
+            }
+          };
+          requestAnimationFrame(animate);
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => observer.disconnect();
+  }, [end, duration, hasAnimated]);
+
+  // Format number with K suffix
+  const formatDisplay = (): string => {
+    if (end >= 1000) {
+      const kValue = count / 1000;
+      // Show clean integer when complete, otherwise show one decimal
+      if (count >= end) {
+        return Math.round(kValue) + 'K';
+      }
+      return kValue.toFixed(1).replace(/\.0$/, '') + 'K';
+    }
+    return count.toString();
+  };
+
+  return (
+    <span ref={ref}>
+      {formatDisplay()}{suffix}
+    </span>
   );
 }
 
@@ -1275,9 +1332,9 @@ export default function LandingPage() {
         <div className="absolute bottom-10 sm:bottom-20 right-1/4 w-48 sm:w-96 h-48 sm:h-96 bg-green-500/10 rounded-full blur-3xl"></div>
 
         <div className="container mx-auto px-4 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-500 text-xs sm:text-sm mb-4 sm:mb-6 shimmer">
-            <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
-            AI-Powered Trading Analysis
+          <div className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-teal-500/20 via-cyan-500/15 to-coral-500/20 dark:from-teal-500/30 dark:via-cyan-500/20 dark:to-rose-500/30 border-2 border-teal-500/40 dark:border-teal-400/50 rounded-full text-sm sm:text-base font-semibold mb-4 sm:mb-6 shadow-lg shadow-teal-500/20 dark:shadow-teal-400/30">
+            <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-teal-500 dark:text-teal-400" />
+            <span className="bg-gradient-to-r from-teal-600 via-cyan-600 to-teal-600 dark:from-teal-300 dark:via-cyan-300 dark:to-teal-300 bg-clip-text text-transparent">AI-Powered Trading Analysis</span>
           </div>
           <div className="flex justify-center mb-6 sm:mb-8">
             <div className="float">
@@ -1287,7 +1344,7 @@ export default function LandingPage() {
           </div>
           <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2">
             From Analysis to Action{' '}
-            <span className="gradient-text-animate">
+            <span className="gradient-text-logo-animate">
               in 60 Seconds
             </span>
           </h1>
@@ -1321,19 +1378,30 @@ export default function LandingPage() {
       <section className="py-16 bg-accent/50">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {[
-              { value: '50K+', label: 'Analyses Completed' },
-              { value: '12K+', label: 'Active Traders' },
-              { value: '87%', label: 'Accuracy Rate' },
-              { value: '24/7', label: 'Market Monitoring' },
-            ].map((stat, index) => (
-              <div key={index} className="text-center">
-                <p className="text-3xl md:text-4xl font-bold gradient-text">
-                  {stat.value}
-                </p>
-                <p className="text-muted-foreground">{stat.label}</p>
-              </div>
-            ))}
+            <div className="text-center">
+              <p className="text-3xl md:text-4xl font-bold gradient-text">
+                <CountUp end={50000} suffix="+" duration={2500} />
+              </p>
+              <p className="text-muted-foreground">Analyses Completed</p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl md:text-4xl font-bold gradient-text">
+                <CountUp end={12000} suffix="+" duration={2500} />
+              </p>
+              <p className="text-muted-foreground">Active Traders</p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl md:text-4xl font-bold gradient-text">
+                <CountUp end={87} suffix="%" duration={2000} />
+              </p>
+              <p className="text-muted-foreground">Accuracy Rate</p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl md:text-4xl font-bold gradient-text">
+                24/7
+              </p>
+              <p className="text-muted-foreground">Market Monitoring</p>
+            </div>
           </div>
         </div>
       </section>
