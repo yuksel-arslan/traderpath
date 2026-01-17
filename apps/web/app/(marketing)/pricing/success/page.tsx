@@ -1,46 +1,48 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle, Loader2, XCircle, ArrowRight, Gem } from 'lucide-react';
+import { CheckCircle, Loader2, XCircle, ArrowRight, Gem, Clock } from 'lucide-react';
 import { authFetch } from '../../../../lib/api';
 
-interface SessionStatus {
-  status: string;
-  paymentStatus: string;
-  customerEmail: string;
-  amountTotal: number;
+interface VerificationStatus {
+  status: 'completed' | 'pending';
+  creditsAdded?: number;
+  message: string;
 }
 
 export default function PaymentSuccessPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get('session_id');
+  const checkoutId = searchParams.get('checkout_id');
 
   const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState<SessionStatus | null>(null);
+  const [verification, setVerification] = useState<VerificationStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    if (sessionId) {
-      verifyPayment();
-    } else {
-      setError('No session ID provided');
-      setLoading(false);
-    }
-  }, [sessionId]);
+    verifyPayment();
+  }, [checkoutId, retryCount]);
 
   const verifyPayment = async () => {
     try {
-      const response = await authFetch(`/api/payments/session/${sessionId}`);
+      // Call verify endpoint - it checks for recent purchase transactions
+      const response = await authFetch(`/api/payments/verify/${checkoutId || 'check'}`);
 
       if (!response.ok) {
         throw new Error('Failed to verify payment');
       }
 
       const data = await response.json();
-      setSession(data.data);
+      setVerification(data.data);
+
+      // If pending and we haven't retried too many times, retry after a delay
+      if (data.data?.status === 'pending' && retryCount < 5) {
+        setTimeout(() => {
+          setRetryCount((prev) => prev + 1);
+        }, 3000); // Retry every 3 seconds
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to verify payment');
     } finally {
@@ -59,7 +61,7 @@ export default function PaymentSuccessPage() {
     );
   }
 
-  if (error || session?.paymentStatus !== 'paid') {
+  if (error) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-8">
@@ -89,6 +91,36 @@ export default function PaymentSuccessPage() {
     );
   }
 
+  // Payment still processing
+  if (verification?.status === 'pending') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="w-20 h-20 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-6">
+            <Clock className="w-10 h-10 text-amber-500 animate-pulse" />
+          </div>
+          <h1 className="text-2xl font-bold mb-2">Processing Payment...</h1>
+          <p className="text-muted-foreground mb-6">
+            {verification.message}
+          </p>
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Checking status...
+          </div>
+          <div className="mt-8">
+            <Link
+              href="/dashboard"
+              className="text-primary hover:underline"
+            >
+              Go to Dashboard and check your balance
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Payment successful
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center max-w-md mx-auto p-8">
@@ -96,23 +128,22 @@ export default function PaymentSuccessPage() {
           <CheckCircle className="w-10 h-10 text-emerald-500" />
         </div>
         <h1 className="text-2xl font-bold mb-2">Payment Successful!</h1>
-        <p className="text-muted-foreground mb-2">
-          Thank you for your purchase. Your credits have been added to your account.
-        </p>
-        <p className="text-sm text-muted-foreground/70 mb-6">
-          Confirmation sent to {session?.customerEmail}
+        <p className="text-muted-foreground mb-6">
+          {verification?.message || 'Thank you for your purchase. Your credits have been added to your account.'}
         </p>
 
-        {/* Amount Paid */}
-        <div className="bg-accent rounded-xl p-4 mb-6 inline-flex items-center gap-3">
-          <Gem className="w-6 h-6 text-amber-500" />
-          <div className="text-left">
-            <p className="text-sm text-muted-foreground">Amount Paid</p>
-            <p className="text-xl font-bold">
-              ${((session?.amountTotal || 0) / 100).toFixed(2)}
-            </p>
+        {/* Credits Added */}
+        {verification?.creditsAdded && (
+          <div className="bg-accent rounded-xl p-4 mb-6 inline-flex items-center gap-3">
+            <Gem className="w-6 h-6 text-amber-500" />
+            <div className="text-left">
+              <p className="text-sm text-muted-foreground">Credits Added</p>
+              <p className="text-xl font-bold text-emerald-500">
+                +{verification.creditsAdded}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex gap-4 justify-center">
           <Link

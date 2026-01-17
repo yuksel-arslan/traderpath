@@ -333,7 +333,7 @@ export default function PricingPage() {
           )}
           {isLoggedIn && (
             <p className="text-center text-xs text-muted-foreground mt-4">
-              Secure payment powered by Stripe
+              Secure payment powered by Lemon Squeezy
             </p>
           )}
         </div>
