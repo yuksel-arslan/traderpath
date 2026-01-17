@@ -57,6 +57,7 @@
 | 2026-01-17 | Active Trades 0% gösteriyor (Trade plan olmayanlar) | null/undefined kontrolü ekle, "N/A" göster | `apps/web/app/(dashboard)/dashboard/page.tsx:200-246` |
 | 2026-01-17 | Active Trades direction hep "short" görünüyor | lowercase karşılaştırma düzelt | `apps/web/app/(dashboard)/dashboard/page.tsx:234` |
 | 2026-01-17 | Analysis detay sayfası ID'yi sembol olarak gösteriyor | `/analysis/` → `/analyze/details/` route düzelt | `dashboard/page.tsx`, `CoinSelector.tsx` |
+| 2026-01-17 | Recent Analyses (/analyze) 0% gösteriyor | 1) null score için "—" göster, 2) step7Result.overallScore fallback ekle | `RecentAnalyses.tsx`, `analysis.routes.ts:981-990` |
 
 ---
 
@@ -89,6 +90,7 @@
 - Active Trades: Trade plan olmayan analizlerde "N/A" gösterilecek şekilde düzeltildi
 - Active Trades: Direction gösterimi düzeltildi (lowercase karşılaştırma)
 - Analysis detay route düzeltildi (`/analysis/` → `/analyze/details/`)
+- Recent Analyses (/analyze): null score için "—" gösteriliyor, step7Result.overallScore fallback eklendi
 
 ---
 
