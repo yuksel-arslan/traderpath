@@ -98,6 +98,8 @@
 - CoinSelector dropdown görünmezlik sorunu düzeltildi (overflow-hidden kaldırıldı)
 - Landing page: Feature isimleri gradient animasyon eklendi (teal/coral kurumsal renkler)
 - Landing page: Tüm bölüm başlıkları (h1, h2) gradient animasyon eklendi
+- Pricing tek sayfa olarak birleştirildi: Landing page'de CTA, /pricing asıl sayfa
+- /pricing sayfasına API fallback eklendi (Vercel preview uyumu)
 
 ---
 
