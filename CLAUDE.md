@@ -54,6 +54,8 @@
 | 2026-01-17 | My Accuracy "No data yet" | Statistics API'yi analysis tablosundan veri alacak şekilde yeniden yaz | `apps/api/src/modules/analysis/analysis.routes.ts` |
 | 2026-01-17 | Credits kartı light mode'da koyu | Dark/light mode gradient'leri ayır | `apps/web/app/(dashboard)/dashboard/page.tsx` |
 | 2026-01-17 | Admin kullanıcı "Beginner" badge gösteriyor | isAdmin kontrolü ekle, Admin badge göster | `apps/web/app/(dashboard)/layout.tsx:361` |
+| 2026-01-17 | Active Trades 0% gösteriyor (Trade plan olmayanlar) | null/undefined kontrolü ekle, "N/A" göster | `apps/web/app/(dashboard)/dashboard/page.tsx:200-246` |
+| 2026-01-17 | Active Trades direction hep "short" görünüyor | lowercase karşılaştırma düzelt | `apps/web/app/(dashboard)/dashboard/page.tsx:234` |
 
 ---
 
@@ -83,6 +85,8 @@
 - Landing page: "AI-Powered Trading Analysis" badge daha belirgin ve okunaklı yapıldı
 - Landing page: "in 60 Seconds" animasyonu logo renklerine güncellendi (teal/coral)
 - Landing page: Stats section'a sayaç animasyonu eklendi (CountUp component)
+- Active Trades: Trade plan olmayan analizlerde "N/A" gösterilecek şekilde düzeltildi
+- Active Trades: Direction gösterimi düzeltildi (lowercase karşılaştırma)
 
 ---
 
