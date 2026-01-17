@@ -978,11 +978,16 @@ Explain the key risks and what conditions would need to change before trading th
           }
         }
 
+        // Get totalScore from database field, or fall back to step7Result.overallScore
+        const scoreFromDb = a.totalScore ? Number(a.totalScore) : null;
+        const scoreFromVerdict = typeof verdictData?.overallScore === 'number' ? verdictData.overallScore : null;
+        const finalScore = scoreFromDb ?? scoreFromVerdict;
+
         return {
           id: a.id,
           symbol: a.symbol,
           interval: a.interval,
-          totalScore: a.totalScore ? Number(a.totalScore) : null,
+          totalScore: finalScore,
           direction,
           entryPrice,
           currentPrice,

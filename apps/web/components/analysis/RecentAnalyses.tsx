@@ -37,7 +37,7 @@ interface RecentAnalysis {
   id: string;
   symbol: string;
   verdict: 'go' | 'conditional_go' | 'wait' | 'avoid';
-  score: number;
+  score: number | null;
   direction: string | null;
   tradeType?: TradeType;
   createdAt: string;
@@ -145,7 +145,7 @@ export function RecentAnalyses() {
             id: a.id,
             symbol: a.symbol,
             verdict,
-            score: a.totalScore || 0,
+            score: a.totalScore !== null && a.totalScore !== undefined ? a.totalScore : null,
             direction: a.direction,
             tradeType,
             createdAt: new Date(a.createdAt).toLocaleDateString('en-US', {
@@ -727,10 +727,11 @@ function ListView({ analyses, actionLoading, onCreateReport, onDownload, onEmail
               {/* Score */}
               <div className={cn(
                 "text-xs font-bold px-1.5 py-0.5 rounded",
-                analysis.score >= 7 ? "text-green-600 dark:text-green-400" :
-                analysis.score >= 5 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"
+                analysis.score !== null && analysis.score >= 7 ? "text-green-600 dark:text-green-400" :
+                analysis.score !== null && analysis.score >= 5 ? "text-yellow-600 dark:text-yellow-400" :
+                analysis.score !== null ? "text-red-600 dark:text-red-400" : "text-gray-500 dark:text-slate-400"
               )}>
-                {((analysis.score ?? 0) * 10).toFixed(0)}%
+                {analysis.score !== null ? `${(analysis.score * 10).toFixed(0)}%` : '—'}
               </div>
 
               {/* Verdict Badge */}
@@ -879,16 +880,18 @@ function CardView({ analyses, actionLoading, onCreateReport, onDownload, onEmail
                 {/* Score */}
                 <div className={cn(
                   "px-2 py-1 rounded",
-                  analysis.score >= 7 ? "bg-green-100 dark:bg-green-500/20" :
-                  analysis.score >= 5 ? "bg-yellow-100 dark:bg-yellow-500/20" : "bg-red-100 dark:bg-red-500/20"
+                  analysis.score !== null && analysis.score >= 7 ? "bg-green-100 dark:bg-green-500/20" :
+                  analysis.score !== null && analysis.score >= 5 ? "bg-yellow-100 dark:bg-yellow-500/20" :
+                  analysis.score !== null ? "bg-red-100 dark:bg-red-500/20" : "bg-gray-100 dark:bg-slate-700/50"
                 )}>
                   <span className="text-[9px] text-gray-500 dark:text-slate-400 block">Score</span>
                   <span className={cn(
                     "font-bold",
-                    analysis.score >= 7 ? "text-green-600 dark:text-green-400" :
-                    analysis.score >= 5 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"
+                    analysis.score !== null && analysis.score >= 7 ? "text-green-600 dark:text-green-400" :
+                    analysis.score !== null && analysis.score >= 5 ? "text-yellow-600 dark:text-yellow-400" :
+                    analysis.score !== null ? "text-red-600 dark:text-red-400" : "text-gray-500 dark:text-slate-400"
                   )}>
-                    {((analysis.score ?? 0) * 10).toFixed(0)}%
+                    {analysis.score !== null ? `${(analysis.score * 10).toFixed(0)}%` : '—'}
                   </span>
                 </div>
 
