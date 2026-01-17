@@ -64,6 +64,9 @@
 | 2026-01-17 | TraderPath marka yazısı font-bold | Marka vurgusu için daha güçlü görünüm |
 | 2026-01-17 | Büyük sayılar formatlanacak (1M, 10K, 1,000) | Okunabilirlik |
 | 2026-01-17 | Credits kartı light mode'da amber gradient | Tema uyumu |
+| 2026-01-17 | "AI-Powered Trading Analysis" badge büyük ve gradient | Daha belirgin ve okunaklı |
+| 2026-01-17 | "in 60 Seconds" animasyonu logo renkleri (teal/coral) | Marka renkleriyle tutarlılık |
+| 2026-01-17 | Stats section sayaç animasyonu (CountUp) | Dinamik ve ilgi çekici görünüm |
 
 ---
 
@@ -77,6 +80,9 @@
 - My Accuracy kartı avgScore gösterecek şekilde güncellendi
 - Active Trades kartına win rate % eklendi
 - Admin kullanıcılar için "Admin" badge eklendi
+- Landing page: "AI-Powered Trading Analysis" badge daha belirgin ve okunaklı yapıldı
+- Landing page: "in 60 Seconds" animasyonu logo renklerine güncellendi (teal/coral)
+- Landing page: Stats section'a sayaç animasyonu eklendi (CountUp component)
 
 ---
 
