@@ -635,8 +635,10 @@ export default function DashboardPage() {
         <StatCard
           icon={Award}
           label="My Accuracy"
-          value={userStats?.verifiedAnalyses ? `${userStats.accuracy?.toFixed(0)}%` : '—'}
-          subValue={userStats?.verifiedAnalyses ? `${userStats.correctAnalyses}/${userStats.verifiedAnalyses}` : 'No data yet'}
+          value={userStats?.verifiedAnalyses ? `${userStats.accuracy?.toFixed(0)}%` : (userStats?.avgScore ? `${(userStats.avgScore * 10).toFixed(0)}%` : '—')}
+          subValue={userStats?.verifiedAnalyses
+            ? `${userStats.correctAnalyses}/${userStats.verifiedAnalyses} closed`
+            : (userStats?.avgScore ? 'Avg analysis score' : 'No data yet')}
           color="amber"
         />
         <StatCard
@@ -650,7 +652,9 @@ export default function DashboardPage() {
           icon={Activity}
           label="Active Trades"
           value={formatNumber(userStats?.activeCount || 0)}
-          subValue={userStats?.activeCount ? `${formatNumber(userStats.activeProfitable || 0)} profitable` : 'Start analyzing'}
+          subValue={userStats?.activeCount
+            ? `${formatNumber(userStats.activeProfitable || 0)} profitable (${userStats.activePerformance?.toFixed(0) || 0}%)`
+            : 'Start analyzing'}
           color="cyan"
         />
       </div>
