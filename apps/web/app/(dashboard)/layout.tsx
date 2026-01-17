@@ -358,7 +358,7 @@ export default function DashboardLayout({
                             <p className="text-sm font-medium truncate">{user.name || 'User'}</p>
                             <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                             <p className="text-xs text-primary font-medium mt-0.5">
-                              {user.level && user.level >= 10 ? 'Pro Trader' : user.level && user.level >= 5 ? 'Trader' : 'Beginner'}
+                              {user.isAdmin ? 'Admin' : user.level && user.level >= 10 ? 'Pro Trader' : user.level && user.level >= 5 ? 'Trader' : 'Beginner'}
                             </p>
                           </div>
                         </div>
