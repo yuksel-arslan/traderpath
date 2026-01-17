@@ -1475,8 +1475,20 @@ Explain the key risks and what conditions would need to change before trading th
         orderBy: { generatedAt: 'desc' }
       });
 
-      // Calculate real statistics from reports (not credit transactions)
-      const totalAnalyses = userReports.length;
+      // Also get analyses for totalScore (in case user has analyses but no reports)
+      const userAnalyses = await db.analysis.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          totalScore: true,
+          outcome: true,
+          expiresAt: true,
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      // Calculate real statistics - use analyses count if no reports
+      const totalAnalyses = userReports.length > 0 ? userReports.length : userAnalyses.length;
       const completedAnalyses = totalAnalyses;
 
       // Count verdicts by type
@@ -1494,13 +1506,20 @@ Explain the key risks and what conditions would need to change before trading th
         }
       });
 
-      // Calculate average score from actual report scores
-      const scores = userReports
+      // Calculate average score from reports AND analyses
+      const reportScores = userReports
         .filter(r => r.score !== null)
         .map(r => Number(r.score));
 
-      const avgScore = scores.length > 0
-        ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1))
+      const analysisScores = userAnalyses
+        .filter(a => a.totalScore !== null)
+        .map(a => Number(a.totalScore));
+
+      // Combine scores (prefer analysis scores as they're more comprehensive)
+      const allScores = analysisScores.length > 0 ? analysisScores : reportScores;
+
+      const avgScore = allScores.length > 0
+        ? Number((allScores.reduce((a, b) => a + b, 0) / allScores.length).toFixed(1))
         : 0;
 
       // Get CLOSED trades only (correct or incorrect, not neutral/pending)
