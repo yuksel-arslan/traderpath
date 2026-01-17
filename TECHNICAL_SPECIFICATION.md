@@ -1,6 +1,6 @@
 # TraderPath - Technical Specification Document
 
-## Version 1.0.0 | December 2024
+## Version 1.1.0 | January 2026
 
 ---
 
@@ -17,6 +17,12 @@
 9. [Security](#9-security)
 10. [Deployment](#10-deployment)
 11. [Performance Requirements](#11-performance-requirements)
+
+**Appendices**
+- [Appendix A: Error Codes](#appendix-a-error-codes)
+- [Appendix B: Supported Symbols](#appendix-b-supported-symbols-mvp)
+- [Appendix C: Implementation Notes](#appendix-c-important-implementation-notes)
+- [Appendix D: Changelog](#appendix-d-changelog)
 
 ---
 
@@ -1635,6 +1641,69 @@ jobs:
 
 ---
 
-*Document Version: 1.0.0*
-*Last Updated: December 2024*
+*Document Version: 1.1.0*
+*Last Updated: January 2026*
 *Author: TraderPath Team*
+
+---
+
+## Appendix C: Important Implementation Notes
+
+### C.1 Prisma & Database
+
+| Issue | Solution | File Reference |
+|-------|----------|----------------|
+| Prisma Decimal serialization fails | Always use `Number()` to convert before JSON response | `analysis.routes.ts` |
+| Analysis vs Report confusion | Analysis table = user analyses (totalScore, outcome). Report table = generated reports. Never mix! | All analysis endpoints |
+
+### C.2 Data Architecture Rules
+
+```
+┌─────────────────────┐     ┌─────────────────────┐
+│   Analysis Table    │     │    Report Table     │
+├─────────────────────┤     ├─────────────────────┤
+│ - User's analyses   │────▶│ - Generated from    │
+│ - totalScore        │     │   analyses          │
+│ - outcome           │     │ - PDF reports       │
+│ - step results      │     │ - Export data       │
+│                     │     │                     │
+│ Statistics API:     │     │ Report API:         │
+│ GET /statistics ────┤     │ GET /reports ───────┤
+└─────────────────────┘     └─────────────────────┘
+```
+
+**Rule**: Analysis statistics (avgScore, win rate, total count) → ALWAYS from `analysis` table
+
+### C.3 Brand Colors
+
+| Name | Hex Codes | Usage |
+|------|-----------|-------|
+| Teal (Logo) | `#5EEDC3`, `#2DD4A8`, `#14B8A6` | Primary brand, positive actions |
+| Coral (Logo) | `#EF5A6F`, `#F87171`, `#FF8A9B` | Accent, alerts, animations |
+| Trading Gradient | Red → Amber → Green | Score indicators |
+
+### C.4 Animation Classes
+
+| Class | Purpose | Colors |
+|-------|---------|--------|
+| `gradient-text-animate` | Trading colors animation | Red/Amber/Green |
+| `gradient-text-logo-animate` | Logo colors animation | Teal/Coral |
+| `gradient-text-brand` | Brand gradient | Teal to Coral |
+
+---
+
+## Appendix D: Changelog
+
+### 2026-01-17
+- Added Statistics API using analysis table (not reports)
+- Fixed Prisma Decimal serialization issue
+- Added CountUp animation component for landing page stats
+- Implemented logo color animation class (`gradient-text-logo-animate`)
+- Admin badge logic for user profiles
+- Dashboard number formatting (formatNumber, formatCredits)
+
+### 2024-12 (Initial)
+- Initial technical specification document
+- Core architecture design
+- 7-step analysis engine specification
+- Credit & rewards system design
