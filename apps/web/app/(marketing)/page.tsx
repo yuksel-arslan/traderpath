@@ -563,7 +563,7 @@ function FeaturesSection() {
               <BarChart3 className="w-4 h-4" />
               Feature 1
             </span>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
               7-Step Analysis Suite
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -587,7 +587,7 @@ function FeaturesSection() {
                       </div>
                       <span className={`text-xs font-medium ${step.color}`}>Step {index + 1}</span>
                     </div>
-                    <h3 className="font-semibold mb-1">{step.name}</h3>
+                    <h3 className="font-semibold mb-1 gradient-text-logo-animate">{step.name}</h3>
                     <p className="text-sm text-muted-foreground line-clamp-2">{step.subtitle}</p>
                   </div>
                 );
@@ -610,7 +610,7 @@ function FeaturesSection() {
                       </div>
                       <span className={`text-xs font-medium ${step.color}`}>Step {stepNumber}</span>
                     </div>
-                    <h3 className="font-semibold mb-1">{step.name}</h3>
+                    <h3 className="font-semibold mb-1 gradient-text-logo-animate">{step.name}</h3>
                     <p className="text-sm text-muted-foreground line-clamp-2">{step.subtitle}</p>
                   </div>
                 );
@@ -632,7 +632,7 @@ function FeaturesSection() {
                       </div>
                       <div className="text-center">
                         <span className="text-xs text-green-500 font-medium">Step 7</span>
-                        <h3 className="font-semibold text-lg">{step.name}</h3>
+                        <h3 className="font-semibold text-lg gradient-text-logo-animate">{step.name}</h3>
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground text-center max-w-lg mx-auto">{step.subtitle}</p>
@@ -653,7 +653,7 @@ function FeaturesSection() {
               Feature 2
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
-              4 AI Experts Council
+              <span className="gradient-text-logo-animate">4 AI Experts Council</span>
               <Sparkles className="w-8 h-8 text-yellow-500" />
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -674,7 +674,7 @@ function FeaturesSection() {
                       <ExpertIcon className={`w-8 h-8 ${expert.color}`} />
                     </div>
                     <div className="text-center">
-                      <h3 className="font-bold text-lg mb-1">{expert.name}</h3>
+                      <h3 className="font-bold text-lg mb-1 gradient-text-logo-animate">{expert.name}</h3>
                       <p className={`text-sm ${expert.color} font-medium mb-2`}>{expert.title}</p>
                       <p className="text-xs text-muted-foreground line-clamp-2">{expert.description.split('.')[0]}.</p>
                     </div>
@@ -715,7 +715,7 @@ function FeaturesSection() {
               Feature 3
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
-              Advanced Reporting
+              <span className="gradient-text-logo-animate">Advanced Reporting</span>
               <Download className="w-8 h-8 text-cyan-500" />
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -735,7 +735,7 @@ function FeaturesSection() {
                     <div className={`w-14 h-14 ${feature.bg} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition`}>
                       <FeatureIcon className={`w-7 h-7 ${feature.color}`} />
                     </div>
-                    <h3 className="font-bold text-lg mb-2">{feature.name}</h3>
+                    <h3 className="font-bold text-lg mb-2 gradient-text-logo-animate">{feature.name}</h3>
                     <p className="text-sm text-muted-foreground line-clamp-2">{feature.description.split('.')[0]}.</p>
                   </div>
                 );
@@ -761,7 +761,7 @@ function FeaturesSection() {
               Feature 4
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
-              Smart Alerts
+              <span className="gradient-text-logo-animate">Smart Alerts</span>
               <Send className="w-8 h-8 text-blue-400" />
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -781,7 +781,7 @@ function FeaturesSection() {
                     <div className={`w-14 h-14 ${feature.bg} rounded-xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition`}>
                       <FeatureIcon className={`w-7 h-7 ${feature.color}`} />
                     </div>
-                    <h3 className="font-bold text-lg mb-2 text-center">{feature.name}</h3>
+                    <h3 className="font-bold text-lg mb-2 text-center gradient-text-logo-animate">{feature.name}</h3>
                     <p className="text-sm text-muted-foreground text-center line-clamp-2">{feature.description.split('.')[0]}.</p>
                   </div>
                 );
@@ -820,7 +820,7 @@ function FeaturesSection() {
               Feature 5
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
-              TFT Model Prediction
+              <span className="gradient-text-logo-animate">TFT Model Prediction</span>
               <span className="text-sm bg-amber-500 text-white px-3 py-1 rounded-full font-medium">COMING SOON</span>
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -1342,11 +1342,8 @@ export default function LandingPage() {
               <TraderPathLogo size="xl" showText={false} className="hidden sm:flex" />
             </div>
           </div>
-          <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2">
-            From Analysis to Action{' '}
-            <span className="gradient-text-logo-animate">
-              in 60 Seconds
-            </span>
+          <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2 gradient-text-logo-animate">
+            From Analysis to Action in 60 Seconds
           </h1>
           <p className="text-base sm:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto px-2">
             Stop drowning in charts. Our AI-powered 7-step analysis gives you clear
@@ -1413,7 +1410,7 @@ export default function LandingPage() {
       <section className="py-20 bg-accent/50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
               Why Choose TraderPath?
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -1496,7 +1493,7 @@ export default function LandingPage() {
       <section id="how-it-works" className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">How TraderPath Works</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">How TraderPath Works</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Professional-grade analysis tools for informed trading decisions. We analyze, you decide.
             </p>
@@ -1732,7 +1729,7 @@ export default function LandingPage() {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
               Trusted by Traders Worldwide
             </h2>
             <p className="text-muted-foreground">
@@ -1762,7 +1759,7 @@ export default function LandingPage() {
       <section id="pricing" className="py-20 bg-accent/50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
               Credit-Based Pricing
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -1843,7 +1840,7 @@ export default function LandingPage() {
       <section id="faq" className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
               Frequently Asked Questions
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -1887,9 +1884,8 @@ export default function LandingPage() {
               <Zap className="w-4 h-4" />
               Limited Time: 25 Free Credits
             </div>
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">
-              Ready to Trade{' '}
-              <span className="gradient-text-animate">Smarter?</span>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 gradient-text-logo-animate">
+              Ready to Trade Smarter?
             </h2>
             <p className="text-xl text-muted-foreground mb-8">
               Join 12,000+ traders who already use TraderPath to make informed decisions.
