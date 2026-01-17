@@ -1153,10 +1153,32 @@ export default function LandingPage() {
         const data = await res.json();
         if (data.success && data.data?.packages) {
           setPackages(data.data.packages);
+          return;
         }
       }
+      // API failed or no data - use static fallback
+      const fallbackPackages: ApiPackage[] = CREDIT_PACKAGES.map(pkg => ({
+        id: pkg.id,
+        name: pkg.name,
+        credits: pkg.credits,
+        bonus: pkg.bonus,
+        price: pkg.priceDisplay,
+        perCredit: getPerCreditCost(pkg),
+        popular: pkg.popular || false,
+      }));
+      setPackages(fallbackPackages);
     } catch {
-      // Will show empty state
+      // Use static fallback on error
+      const fallbackPackages: ApiPackage[] = CREDIT_PACKAGES.map(pkg => ({
+        id: pkg.id,
+        name: pkg.name,
+        credits: pkg.credits,
+        bonus: pkg.bonus,
+        price: pkg.priceDisplay,
+        perCredit: getPerCreditCost(pkg),
+        popular: pkg.popular || false,
+      }));
+      setPackages(fallbackPackages);
     } finally {
       setPackagesLoading(false);
     }
