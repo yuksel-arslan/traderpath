@@ -88,6 +88,7 @@
 - Landing page: Stats section'a sayaç animasyonu eklendi (CountUp component)
 - Active Trades: Trade plan olmayan analizlerde "N/A" gösterilecek şekilde düzeltildi
 - Active Trades: Direction gösterimi düzeltildi (lowercase karşılaştırma)
+- Analysis detay route düzeltildi (`/analysis/` → `/analyze/details/`)
 
 ---
 
@@ -100,3 +101,4 @@
 5. **Session sonunda** → "Son Güncellemeler"e tarihle özet yaz
 6. **Commit öncesi** → Bu dosya güncellendi mi kontrol et
 7. **Microservice değişikliğinde** ilgili SERVICE.md'yi güncelle
+8. **Önemli değişiklikler için** → PR hazırla ve kullanıcıya link ver
