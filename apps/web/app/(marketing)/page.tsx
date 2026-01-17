@@ -53,19 +53,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../lib/coin-icons';
-import { apiBaseUrl } from '../../lib/api';
-import { CREDIT_PACKAGES, ANALYSIS_BUNDLES, FREE_SIGNUP_CREDITS, getPerCreditCost } from '../../lib/pricing-config';
-
-// Package type from API
-interface ApiPackage {
-  id: string;
-  name: string;
-  credits: number;
-  bonus: number;
-  price: string;
-  perCredit: string;
-  popular: boolean;
-}
+import { ANALYSIS_BUNDLES } from '../../lib/pricing-config';
 
 // Coins to display in the ticker
 const TICKER_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX'];
@@ -1142,47 +1130,7 @@ function FeaturesSection() {
 export default function LandingPage() {
   const [livePrices, setLivePrices] = useState<LivePrice[]>([]);
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
-  const [packages, setPackages] = useState<ApiPackage[]>([]);
-  const [packagesLoading, setPackagesLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const fetchPackages = useCallback(async () => {
-    try {
-      const res = await fetch(`${apiBaseUrl}/api/payments/packages`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.data?.packages) {
-          setPackages(data.data.packages);
-          return;
-        }
-      }
-      // API failed or no data - use static fallback
-      const fallbackPackages: ApiPackage[] = CREDIT_PACKAGES.map(pkg => ({
-        id: pkg.id,
-        name: pkg.name,
-        credits: pkg.credits,
-        bonus: pkg.bonus,
-        price: pkg.priceDisplay,
-        perCredit: getPerCreditCost(pkg),
-        popular: pkg.popular || false,
-      }));
-      setPackages(fallbackPackages);
-    } catch {
-      // Use static fallback on error
-      const fallbackPackages: ApiPackage[] = CREDIT_PACKAGES.map(pkg => ({
-        id: pkg.id,
-        name: pkg.name,
-        credits: pkg.credits,
-        bonus: pkg.bonus,
-        price: pkg.priceDisplay,
-        perCredit: getPerCreditCost(pkg),
-        popular: pkg.popular || false,
-      }));
-      setPackages(fallbackPackages);
-    } finally {
-      setPackagesLoading(false);
-    }
-  }, []);
 
   const fetchPrices = useCallback(async () => {
     try {
@@ -1218,10 +1166,9 @@ export default function LandingPage() {
 
   useEffect(() => {
     fetchPrices();
-    fetchPackages();
     const interval = setInterval(fetchPrices, 30000); // Update every 30 seconds
     return () => clearInterval(interval);
-  }, [fetchPrices, fetchPackages]);
+  }, [fetchPrices]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -1777,84 +1724,24 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing */}
+      {/* Pricing CTA */}
       <section id="pricing" className="py-20 bg-accent/50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
+          <div className="text-center max-w-2xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
               Credit-Based Pricing
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-muted-foreground mb-8">
               Pay only for what you use. No subscriptions, no hidden fees.
             </p>
+            <Link
+              href="/pricing"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition"
+            >
+              View Pricing Plans
+              <ArrowRight className="w-5 h-5" />
+            </Link>
           </div>
-          {packagesLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : packages.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Link href="/pricing" className="text-primary hover:underline">
-                View our pricing options
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
-              {packages.map((plan) => {
-                const IconMap: Record<string, any> = {
-                  starter: Zap,
-                  trader: Star,
-                  pro: TrendingUp,
-                };
-                // Map package name to icon key
-                const nameKey = plan.name.toLowerCase().split(' ')[0];
-                const Icon = IconMap[nameKey] || IconMap[plan.id] || Zap;
-
-                return (
-                  <div
-                    key={plan.id}
-                    className={`p-6 bg-card border-2 rounded-xl relative text-center transition hover:shadow-lg ${
-                      plan.popular ? 'border-amber-500 ring-2 ring-amber-500 ring-offset-2 ring-offset-background' : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    {plan.popular && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">
-                        MOST POPULAR
-                      </div>
-                    )}
-
-                    <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-accent flex items-center justify-center">
-                      <Icon className="w-7 h-7 text-muted-foreground" />
-                    </div>
-
-                    <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-
-                    <div className="text-3xl font-bold text-primary mb-1">
-                      {plan.credits}
-                      {plan.bonus > 0 && (
-                        <span className="text-lg text-amber-500 ml-1">+{plan.bonus}</span>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">credits</p>
-
-                    <div className="text-2xl font-bold mb-1">{plan.price}</div>
-                    <p className="text-sm text-muted-foreground mb-6">{plan.perCredit}/credit</p>
-
-                    <Link
-                      href="/register"
-                      className={`block w-full py-3 rounded-lg font-semibold text-center transition ${
-                        plan.popular
-                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                          : 'border hover:bg-accent'
-                      }`}
-                    >
-                      Get Started
-                    </Link>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       </section>
 
