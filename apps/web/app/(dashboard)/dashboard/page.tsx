@@ -114,6 +114,26 @@ interface RecentAnalysis {
 }
 
 // ===========================================
+// Helper Functions
+// ===========================================
+
+// Format large numbers with separators (1000079 → 1,000,079)
+function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  }
+  if (num >= 10000) {
+    return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  }
+  return num.toLocaleString('en-US');
+}
+
+// Format credits with full number display
+function formatCredits(num: number): string {
+  return num.toLocaleString('en-US');
+}
+
+// ===========================================
 // Helper Components
 // ===========================================
 function StatCard({
@@ -490,7 +510,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Credits</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-white">{credits}</span>
+                  <span className="text-3xl font-black text-white">{formatCredits(credits)}</span>
                   {credits < 10 && credits > 0 && (
                     <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-full animate-pulse">
                       Low
@@ -515,7 +535,7 @@ export default function DashboardPage() {
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                 {credits === 0
                   ? "No credits left! Buy or earn credits to continue."
-                  : `Running low on credits (${credits} remaining)`
+                  : `Running low on credits (${formatCredits(credits)} remaining)`
                 }
               </div>
             )}
@@ -596,20 +616,20 @@ export default function DashboardPage() {
           icon={Target}
           label="Platform Accuracy"
           value={platformStats?.accuracy?.overall ? `${platformStats.accuracy.overall}%` : '—'}
-          subValue={`${platformStats?.accuracy?.sampleSize || 0} verified`}
+          subValue={`${formatNumber(platformStats?.accuracy?.sampleSize || 0)} verified`}
           color="emerald"
         />
         <StatCard
           icon={BarChart3}
           label="Total Analyses"
-          value={platformStats?.platform?.totalAnalyses || 0}
-          subValue={`${platformStats?.platform?.weeklyAnalyses || 0} this week`}
+          value={formatNumber(platformStats?.platform?.totalAnalyses || 0)}
+          subValue={`${formatNumber(platformStats?.platform?.weeklyAnalyses || 0)} this week`}
           color="purple"
         />
         <StatCard
           icon={Users}
           label="Platform Users"
-          value={platformStats?.platform?.totalUsers || 0}
+          value={formatNumber(platformStats?.platform?.totalUsers || 0)}
           color="blue"
         />
         <StatCard
@@ -622,15 +642,15 @@ export default function DashboardPage() {
         <StatCard
           icon={TrendingUp}
           label="GO Signals"
-          value={userStats?.goSignals || 0}
-          subValue={`${userStats?.avoidSignals || 0} avoided`}
+          value={formatNumber(userStats?.goSignals || 0)}
+          subValue={`${formatNumber(userStats?.avoidSignals || 0)} avoided`}
           color="green"
         />
         <StatCard
           icon={Activity}
           label="Active Trades"
-          value={userStats?.activeCount || 0}
-          subValue={userStats?.activeCount ? `${userStats.activeProfitable} profitable` : 'Start analyzing'}
+          value={formatNumber(userStats?.activeCount || 0)}
+          subValue={userStats?.activeCount ? `${formatNumber(userStats.activeProfitable || 0)} profitable` : 'Start analyzing'}
           color="cyan"
         />
       </div>
