@@ -1402,26 +1402,13 @@ export default function LandingPage() {
                   </p>
                   <p className="text-sm text-muted-foreground mt-2">All 7 steps included. No hidden fees.</p>
                 </div>
-                <div className="bg-card rounded-xl border p-4 w-full md:w-auto">
-                  <p className="text-xs text-muted-foreground mb-3 text-center">Cost per analysis by package</p>
-                  <div className="grid grid-cols-3 gap-3 text-center">
-                    {CREDIT_PACKAGES.map((pkg) => {
-                      const perCreditCost = pkg.price / (pkg.credits + pkg.bonus);
-                      const analysisCredits = ANALYSIS_BUNDLES[0].credits;
-                      const perAnalysisCost = (perCreditCost * analysisCredits).toFixed(2);
-                      const colorClass = pkg.color === 'blue' ? 'text-blue-500' :
-                                        pkg.color === 'purple' ? 'text-purple-500' :
-                                        pkg.color === 'amber' ? 'text-amber-500' : 'text-green-500';
-                      return (
-                        <div key={pkg.id}>
-                          <p className="text-xs text-muted-foreground">{pkg.name.replace(' Pack', '')}</p>
-                          <p className={`font-bold ${colorClass}`}>{getPerCreditCost(pkg)}</p>
-                          <p className="text-[10px] text-muted-foreground">≈${perAnalysisCost}/analysis</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                <Link
+                  href="/pricing"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition whitespace-nowrap"
+                >
+                  View Pricing
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
             </div>
           </div>
