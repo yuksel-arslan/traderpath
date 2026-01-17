@@ -250,7 +250,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
     // If user already has access, just navigate
     if (recentAnalysis.canAccess) {
       setShowDuplicateWarning(false);
-      router.push(`/analysis/${recentAnalysis.id}`);
+      router.push(`/analyze/details/${recentAnalysis.id}`);
       return;
     }
 
@@ -285,7 +285,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
 
       // Purchase successful, navigate to analysis
       setShowDuplicateWarning(false);
-      router.push(`/analysis/${recentAnalysis.id}`);
+      router.push(`/analyze/details/${recentAnalysis.id}`);
     } catch (error) {
       console.error('Purchase error:', error);
       setPurchaseError('Failed to purchase analysis. Please try again.');

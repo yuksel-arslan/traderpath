@@ -208,7 +208,7 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
 
   return (
     <Link
-      href={`/analysis/${trade.id}`}
+      href={`/analyze/details/${trade.id}`}
       className="flex-shrink-0 w-[200px] bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-3 hover:border-primary/50 transition-colors"
     >
       <div className="flex items-center justify-between mb-2">
