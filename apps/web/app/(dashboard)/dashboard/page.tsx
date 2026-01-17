@@ -497,20 +497,20 @@ export default function DashboardPage() {
       {/* ===== SECTION 1: Credits & Quick Actions ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Credit Balance */}
-        <div className="lg:col-span-1 relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-500/20 via-transparent to-transparent" />
+        <div className="lg:col-span-1 relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-amber-200/50 dark:border-transparent">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-500/10 dark:from-amber-500/20 via-transparent to-transparent" />
           <div className="relative z-10 p-5">
             <div className="flex items-center gap-4">
               <div className="relative shrink-0">
-                <div className="absolute inset-0 bg-amber-500/40 blur-xl rounded-full animate-pulse" />
+                <div className="absolute inset-0 bg-amber-500/30 dark:bg-amber-500/40 blur-xl rounded-full animate-pulse" />
                 <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-500 flex items-center justify-center shadow-lg">
                   <Gem className="w-7 h-7 text-white" />
                 </div>
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Credits</p>
+                <p className="text-xs font-medium text-amber-600 dark:text-slate-400 uppercase tracking-wider">Credits</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-white">{formatCredits(credits)}</span>
+                  <span className="text-3xl font-black text-gray-900 dark:text-white">{formatCredits(credits)}</span>
                   {credits < 10 && credits > 0 && (
                     <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-full animate-pulse">
                       Low
@@ -549,7 +549,7 @@ export default function DashboardPage() {
               </Link>
               <Link
                 href="/rewards"
-                className="inline-flex items-center gap-1 text-xs font-medium text-amber-400 hover:text-amber-300"
+                className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
               >
                 Earn free
                 <ChevronRight className="w-3.5 h-3.5" />
