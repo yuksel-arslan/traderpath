@@ -448,7 +448,7 @@ export function RecentAnalyses() {
         },
         verdict: {
           action: step7.action || step7.verdict || analysis.verdict,
-          overallScore: analysis.score,
+          overallScore: analysis.score ?? 0,
           aiSummary: step7.aiSummary || step7.summary,
         },
         marketPulse: analysisData.step1Result || {},
@@ -534,7 +534,7 @@ export function RecentAnalyses() {
         },
         verdict: {
           action: step7.action || step7.verdict || analysis.verdict,
-          overallScore: analysis.score,
+          overallScore: analysis.score ?? 0,
           aiSummary: step7.aiSummary || step7.summary,
         },
         // Full 40+ Indicator Details
