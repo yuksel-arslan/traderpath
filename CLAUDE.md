@@ -1,6 +1,19 @@
 # CLAUDE.md - TraderPath.io Project Intelligence
 
-> ⚠️ **META KURAL:** Her önemli düzeltme, karar veya bug fix sonrası bu dosyayı güncelle. Bu dosya projenin "hafızası" - güncellenmezse aynı hatalar tekrarlanır.
+## ⛔ ZORUNLU KURALLAR (ATLANAMAZ)
+
+### Her Commit Öncesi:
+1. Bu dosyayı kontrol et
+2. Yaptığın değişiklik bir fix ise → "Çözülen Bug'lar" tablosuna HEMEN ekle
+3. Eklemeden commit YAPMA
+
+### Her Session Sonunda:
+1. "Son Güncellemeler"e bugünün tarihiyle özet yaz
+2. Yazmadan session'ı KAPATMA
+
+> ⚠️ Bu kuralları asla atlama.
+
+---
 
 ## 🔴 Kritik Kurallar (Asla İhlal Etme)
 
@@ -40,6 +53,7 @@
 | 2026-01-17 | Recent Analyses 0% gösteriyor | Prisma Decimal → Number() dönüşümü | `apps/api/src/modules/analysis/analysis.routes.ts:985` |
 | 2026-01-17 | My Accuracy "No data yet" | Statistics API'yi analysis tablosundan veri alacak şekilde yeniden yaz | `apps/api/src/modules/analysis/analysis.routes.ts` |
 | 2026-01-17 | Credits kartı light mode'da koyu | Dark/light mode gradient'leri ayır | `apps/web/app/(dashboard)/dashboard/page.tsx` |
+| 2026-01-17 | Admin kullanıcı "Beginner" badge gösteriyor | isAdmin kontrolü ekle, Admin badge göster | `apps/web/app/(dashboard)/layout.tsx:361` |
 
 ---
 
@@ -62,6 +76,7 @@
 - Statistics API tamamen analysis tablosundan veri alacak şekilde yeniden yazıldı
 - My Accuracy kartı avgScore gösterecek şekilde güncellendi
 - Active Trades kartına win rate % eklendi
+- Admin kullanıcılar için "Admin" badge eklendi
 
 ---
 
@@ -69,7 +84,8 @@
 
 1. **Session başında** bu dosyayı oku
 2. **Kod yazarken** yukarıdaki kurallara uy
-3. **Bug fix sonrası** "Çözülen Bug'lar" tablosuna ekle
-4. **UI kararı sonrası** "UI Kararları" tablosuna ekle
-5. **Session sonunda** "Son Güncellemeler"e tarihle birlikte özet yaz
-6. **Microservice değişikliğinde** ilgili SERVICE.md'yi güncelle
+3. **Bug fix sonrası** → HEMEN "Çözülen Bug'lar" tablosuna ekle
+4. **UI kararı sonrası** → HEMEN "UI Kararları" tablosuna ekle
+5. **Session sonunda** → "Son Güncellemeler"e tarihle özet yaz
+6. **Commit öncesi** → Bu dosya güncellendi mi kontrol et
+7. **Microservice değişikliğinde** ilgili SERVICE.md'yi güncelle
