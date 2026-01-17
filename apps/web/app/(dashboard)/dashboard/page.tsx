@@ -197,7 +197,9 @@ function StatCard({
 }
 
 function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
-  const isProfit = (trade.unrealizedPnL || 0) >= 0;
+  const pnlValue = trade.unrealizedPnL;
+  const hasValidPnL = pnlValue !== null && pnlValue !== undefined;
+  const isProfit = hasValidPnL && pnlValue >= 0;
   const verdictConfig = {
     go: { bg: 'bg-green-500', text: 'GO' },
     conditional_go: { bg: 'bg-yellow-500', text: 'C-GO' },
@@ -207,7 +209,7 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
 
   return (
     <Link
-      href={`/analysis/${trade.id}`}
+      href={`/analyze/details/${trade.id}`}
       className="flex-shrink-0 w-[200px] bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-3 hover:border-primary/50 transition-colors"
     >
       <div className="flex items-center justify-between mb-2">
@@ -230,18 +232,19 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-slate-400">
-          {trade.direction === 'LONG' ? (
+          {trade.direction?.toLowerCase() === 'long' ? (
             <TrendingUp className="w-3 h-3 text-green-500" />
           ) : (
             <TrendingDown className="w-3 h-3 text-red-500" />
           )}
-          {trade.direction}
+          {trade.direction?.toLowerCase() || 'long'}
         </div>
         <span className={cn(
           "font-bold text-sm",
+          !hasValidPnL ? "text-gray-400 dark:text-slate-500" :
           isProfit ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
         )}>
-          {isProfit ? '+' : ''}{trade.unrealizedPnL?.toFixed(1) || 0}%
+          {hasValidPnL ? `${isProfit ? '+' : ''}${pnlValue!.toFixed(1)}%` : 'N/A'}
         </span>
       </div>
 
