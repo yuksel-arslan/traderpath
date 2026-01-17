@@ -72,6 +72,7 @@
 | 2026-01-17 | "AI-Powered Trading Analysis" badge büyük ve gradient | Daha belirgin ve okunaklı |
 | 2026-01-17 | "in 60 Seconds" animasyonu logo renkleri (teal/coral) | Marka renkleriyle tutarlılık |
 | 2026-01-17 | Stats section sayaç animasyonu (CountUp) | Dinamik ve ilgi çekici görünüm |
+| 2026-01-17 | Feature isimleri gradient animasyon (teal/coral) | Marka tutarlılığı ve dikkat çekici görünüm |
 
 ---
 
@@ -93,6 +94,7 @@
 - Analysis detay route düzeltildi (`/analysis/` → `/analyze/details/`)
 - Recent Analyses (/analyze): null score için "—" gösteriliyor, step7Result.overallScore fallback eklendi
 - CoinSelector dropdown görünmezlik sorunu düzeltildi (overflow-hidden kaldırıldı)
+- Landing page: Feature isimleri gradient animasyon eklendi (teal/coral kurumsal renkler)
 
 ---
 

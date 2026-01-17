@@ -587,7 +587,7 @@ function FeaturesSection() {
                       </div>
                       <span className={`text-xs font-medium ${step.color}`}>Step {index + 1}</span>
                     </div>
-                    <h3 className="font-semibold mb-1">{step.name}</h3>
+                    <h3 className="font-semibold mb-1 gradient-text-logo-animate">{step.name}</h3>
                     <p className="text-sm text-muted-foreground line-clamp-2">{step.subtitle}</p>
                   </div>
                 );
@@ -610,7 +610,7 @@ function FeaturesSection() {
                       </div>
                       <span className={`text-xs font-medium ${step.color}`}>Step {stepNumber}</span>
                     </div>
-                    <h3 className="font-semibold mb-1">{step.name}</h3>
+                    <h3 className="font-semibold mb-1 gradient-text-logo-animate">{step.name}</h3>
                     <p className="text-sm text-muted-foreground line-clamp-2">{step.subtitle}</p>
                   </div>
                 );
@@ -632,7 +632,7 @@ function FeaturesSection() {
                       </div>
                       <div className="text-center">
                         <span className="text-xs text-green-500 font-medium">Step 7</span>
-                        <h3 className="font-semibold text-lg">{step.name}</h3>
+                        <h3 className="font-semibold text-lg gradient-text-logo-animate">{step.name}</h3>
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground text-center max-w-lg mx-auto">{step.subtitle}</p>
@@ -674,7 +674,7 @@ function FeaturesSection() {
                       <ExpertIcon className={`w-8 h-8 ${expert.color}`} />
                     </div>
                     <div className="text-center">
-                      <h3 className="font-bold text-lg mb-1">{expert.name}</h3>
+                      <h3 className="font-bold text-lg mb-1 gradient-text-logo-animate">{expert.name}</h3>
                       <p className={`text-sm ${expert.color} font-medium mb-2`}>{expert.title}</p>
                       <p className="text-xs text-muted-foreground line-clamp-2">{expert.description.split('.')[0]}.</p>
                     </div>
@@ -735,7 +735,7 @@ function FeaturesSection() {
                     <div className={`w-14 h-14 ${feature.bg} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition`}>
                       <FeatureIcon className={`w-7 h-7 ${feature.color}`} />
                     </div>
-                    <h3 className="font-bold text-lg mb-2">{feature.name}</h3>
+                    <h3 className="font-bold text-lg mb-2 gradient-text-logo-animate">{feature.name}</h3>
                     <p className="text-sm text-muted-foreground line-clamp-2">{feature.description.split('.')[0]}.</p>
                   </div>
                 );
@@ -781,7 +781,7 @@ function FeaturesSection() {
                     <div className={`w-14 h-14 ${feature.bg} rounded-xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition`}>
                       <FeatureIcon className={`w-7 h-7 ${feature.color}`} />
                     </div>
-                    <h3 className="font-bold text-lg mb-2 text-center">{feature.name}</h3>
+                    <h3 className="font-bold text-lg mb-2 text-center gradient-text-logo-animate">{feature.name}</h3>
                     <p className="text-sm text-muted-foreground text-center line-clamp-2">{feature.description.split('.')[0]}.</p>
                   </div>
                 );
