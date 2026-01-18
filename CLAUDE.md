@@ -87,6 +87,7 @@
 | 2026-01-18 | Bento Grid Layout - Asimetrik kart düzeni | Modern, organize, esnek |
 | 2026-01-18 | Scroll Animations - IntersectionObserver ile görünürlük | Akıcı, profesyonel geçişler |
 | 2026-01-18 | Hover Animations - Scale, shadow, border efektleri | Etkileşimli, responsive |
+| 2026-01-18 | Timeframe Seçimi (15m, 1h, 4h, 1d) | Trade type yerine timeframe seçimi - daha sezgisel ve anlaşılır |
 
 ---
 
@@ -128,6 +129,10 @@
 - TradeTypeSelector tabs variant: Glassmorphism style, ring highlight, compact info bar
 - Historical Outcome Checker: Binance Klines API ile tarihsel fiyat kontrolü
 - SL/TP hit tespiti createdAt tarihinden itibaren High/Low değerleri kontrol edilerek yapılıyor
+- Timeframe Seçimi: Trade type yerine timeframe seçimi (15m, 1h, 4h, 1d)
+- Otomatik Strateji Mapping: 15m→Scalping, 1h→Day Trade, 4h→Swing, 1d→Position
+- Backend position trade type eklendi (1d timeframe için)
+- API interval parametresi kabul ediyor, tradeType otomatik türetiliyor
 
 ---
 
