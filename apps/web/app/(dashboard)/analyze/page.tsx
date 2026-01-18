@@ -15,20 +15,16 @@ import {
   Timer,
   LineChart,
   ChevronDown,
-  ChevronUp,
   Sparkles,
   Zap,
   TrendingUp,
-  TrendingDown,
   Activity,
   BarChart3,
-  Flame,
   Shield,
   Brain,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
-import { CreditBalance } from '../../../components/credits/CreditBalance';
 import type { TradeType } from '../../../components/analysis/TradeTypeSelector';
 
 // Lazy load components
@@ -379,51 +375,23 @@ export default function AnalyzePage() {
             </div>
           </div>
 
-          {/* Main Analysis Card - Large Bento Item */}
+          {/* Main Analysis Card - Clean & Simple */}
           <div className="col-span-12 lg:col-span-7">
-            <GlassCard className="h-full">
-              <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-transparent to-emerald-500/5" />
-              <div className="relative p-6 space-y-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/30 animate-float">
-                      <Activity className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-slate-900 dark:text-white">New Analysis</h2>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Start your AI-powered analysis</p>
-                    </div>
-                  </div>
-                  <CreditBalance compact />
-                </div>
-
-                {/* Trade Type Selector */}
-                <div className="space-y-4">
-                  <TradeTypeSelector
-                    value={tradeType}
-                    onChange={setTradeType}
-                    variant="tabs"
-                    showCreditCost
-                  />
-
-                  {/* Coin Selector */}
-                  <CoinSelector tradeType={tradeType} />
-                </div>
-
-                {/* Quick Tips */}
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                    <Flame className="w-3.5 h-3.5 text-amber-500" />
-                    <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Hot: SOL, PEPE</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                    <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                    <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Bullish: BTC, ETH</span>
-                  </div>
-                </div>
+            <div className="space-y-4">
+              {/* Trade Type - Inline with Credit */}
+              <div className="flex items-center justify-between">
+                <TradeTypeSelector
+                  value={tradeType}
+                  onChange={setTradeType}
+                  variant="tabs"
+                  showCreditCost
+                  className="flex-1"
+                />
               </div>
-            </GlassCard>
+
+              {/* Coin Selector - Main Focus */}
+              <CoinSelector tradeType={tradeType} />
+            </div>
           </div>
 
           {/* Side Cards - Stacked */}
