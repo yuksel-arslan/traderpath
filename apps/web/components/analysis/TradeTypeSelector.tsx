@@ -11,8 +11,8 @@
  * Timeframe → Strategy Mapping:
  * - 15m → Scalping (High frequency, tight stops)
  * - 1h  → Day Trade (Intraday positions)
- * - 4h  → Swing Trade (Multi-day positions)
- * - 1d  → Position Trade (Longer term holds)
+ * - 4h  → Day Trade (Intraday positions, longer timeframe)
+ * - 1d  → Swing Trade (Multi-day positions)
  */
 
 import { useState, useEffect } from 'react';
@@ -33,8 +33,8 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-// Keep TradeType for backwards compatibility with backend
-export type TradeType = 'scalping' | 'dayTrade' | 'swing' | 'position';
+// Trade types - matches backend
+export type TradeType = 'scalping' | 'dayTrade' | 'swing';
 export type Timeframe = '15m' | '1h' | '4h' | '1d';
 
 interface TimeframeConfig {
@@ -103,32 +103,32 @@ const TIMEFRAMES: TimeframeConfig[] = [
   {
     id: '4h',
     label: '4 Hours',
-    description: 'Swing positions for larger price moves',
-    tradeType: 'swing',
-    tradeTypeName: 'Swing Trade',
-    holdingPeriod: '1-5 days',
-    creditCost: 1,
+    description: 'Day trading with extended timeframe analysis',
+    tradeType: 'dayTrade',
+    tradeTypeName: 'Day Trade',
+    holdingPeriod: '4-24 hours',
+    creditCost: 2,
     icon: Moon,
     color: 'text-purple-500',
     bgLight: 'bg-purple-50',
     bgDark: 'dark:bg-purple-500/10',
     borderLight: 'border-purple-200',
     borderDark: 'dark:border-purple-500/30',
-    riskLevel: 'low',
+    riskLevel: 'medium',
     features: [
-      'Deep trend analysis',
-      'Wider stops (2-4%)',
-      'Smart money tracking',
-      'Multiple take-profits',
+      'Extended analysis',
+      'Moderate stops (1-3%)',
+      'Ichimoku & ADX focus',
+      'Multiple confirmations',
     ],
   },
   {
     id: '1d',
     label: '1 Day',
-    description: 'Position trading for major trend moves',
-    tradeType: 'position',
-    tradeTypeName: 'Position Trade',
-    holdingPeriod: '1-4 weeks',
+    description: 'Swing trading for multi-day positions',
+    tradeType: 'swing',
+    tradeTypeName: 'Swing Trade',
+    holdingPeriod: '1-14 days',
     creditCost: 1,
     icon: Star,
     color: 'text-emerald-500',
@@ -138,10 +138,10 @@ const TIMEFRAMES: TimeframeConfig[] = [
     borderDark: 'dark:border-emerald-500/30',
     riskLevel: 'low',
     features: [
-      'Macro trend focus',
-      'Wide stops (3-5%)',
-      'Fundamental factors',
-      'Long-term targets',
+      'Deep trend analysis',
+      'Wider stops (2-5%)',
+      'Smart money tracking',
+      'Multiple take-profits',
     ],
   },
 ];
@@ -160,11 +160,9 @@ export function getTimeframeFromTradeType(tradeType: TradeType): Timeframe {
     case 'dayTrade':
       return '1h';
     case 'swing':
-      return '4h';
-    case 'position':
       return '1d';
     default:
-      return '4h';
+      return '1h';
   }
 }
 

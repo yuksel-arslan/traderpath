@@ -16,6 +16,7 @@ const FREE_PDF_DOWNLOADS_PER_ANALYSIS = 2;
 const FREE_EMAILS_PER_ANALYSIS = 2;
 const PDF_DOWNLOAD_CREDIT_COST = 5;
 const EMAIL_SEND_CREDIT_COST = 5;
+const HTML_EMAIL_CREDIT_COST = 5;
 
 // Admin emails - their reports are public and visible to all users
 const ADMIN_EMAILS = ['contact@yukselarslan.com'];

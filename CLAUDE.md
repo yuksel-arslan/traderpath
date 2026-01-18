@@ -31,10 +31,11 @@
 
 ### Veri Mimarisi
 - **Analysis tablosu**: Kullanıcının yaptığı analizler (totalScore, outcome, step results)
-- **Report tablosu**: Analizlerden oluşturulan raporlar
-- Analiz istatistikleri → Analysis tablosundan
-- Rapor istatistikleri → Report tablosundan
-- **Asla karıştırma!** Report, Analysis'in sonucudur, tersi değil
+- **Report tablosu**: Kullanıcı raporları (PDF export vb. için)
+- **TÜM ANALİZ İSTATİSTİKLERİ → Analysis tablosundan** (platform-stats, statistics vb.)
+- Report tablosu analiz istatistikleri için KULLANILMAZ
+- Platform accuracy = TP hits / (TP hits + SL hits) from Analysis.outcome
+- **Asla karıştırma!** Report, Analysis'in sonucudur, istatistik kaynağı değil
 
 ### Yapılmaması Gerekenler ❌
 - `!important` kullanma
@@ -63,6 +64,7 @@
 | 2026-01-18 | Production 500 error - missing columns (P2022) | Migration eklendi: cost_settings.credit_cost_analysis_purchase, analyses.ai_expert_questions_used | `apps/api/prisma/migrations/add_missing_columns_production.sql` |
 | 2026-01-18 | Analyze sayfası modal arkasında içerik görünüyor | z-index z-[100]'e yükseltildi, isolate eklendi, backdrop opacity %70'e çıkarıldı | `AnalysisDialog.tsx`, `CoinSelector.tsx`, `analyze/page.tsx` |
 | 2026-01-18 | Analysis outcome %100 TP gösteriyor (SL hit tespit edilmiyor) | Binance Klines API ile tarihsel fiyat kontrolü eklendi (createdAt'ten itibaren High/Low değerleri kontrol ediliyor) | `apps/api/src/modules/reports/live-tracking.service.ts` |
+| 2026-01-18 | Timeframe mapping yanlış (4h→swing, 1d→position olmamalı) | Düzeltildi: 4h→dayTrade, 1d→swing. Position trade type kaldırıldı | `trade-config.ts`, `TradeTypeSelector.tsx`, `CoinSelector.tsx`, `AnalysisDialog.tsx` |
 
 ---
 
@@ -130,9 +132,9 @@
 - Historical Outcome Checker: Binance Klines API ile tarihsel fiyat kontrolü
 - SL/TP hit tespiti createdAt tarihinden itibaren High/Low değerleri kontrol edilerek yapılıyor
 - Timeframe Seçimi: Trade type yerine timeframe seçimi (15m, 1h, 4h, 1d)
-- Otomatik Strateji Mapping: 15m→Scalping, 1h→Day Trade, 4h→Swing, 1d→Position
-- Backend position trade type eklendi (1d timeframe için)
+- Otomatik Strateji Mapping (GÜNCEL): 15m→Scalping, 1h→Day Trade, 4h→Day Trade, 1d→Swing Trade
 - API interval parametresi kabul ediyor, tradeType otomatik türetiliyor
+- Position trade type kaldırıldı - 1d artık Swing Trade olarak işleniyor
 
 ---
 

@@ -43,16 +43,19 @@ import { FinalVerdict } from './FinalVerdict';
 import { AnalysisProgressBar } from './AnalysisProgressBar';
 
 type Timeframe = '15m' | '1h' | '4h' | '1d';
-type TradeType = 'scalping' | 'dayTrade' | 'swing' | 'position';
+type TradeType = 'scalping' | 'dayTrade' | 'swing';
 type AnalysisMode = 'educational' | 'quick';
 type DialogStep = 'mode-select' | 'analyzing' | 'results';
 
 // Timeframe to trade type mapping
+// - Scalping: 5m, 15m
+// - Day Trade: 1h, 4h
+// - Swing Trade: 1d, 1W
 const TIMEFRAME_TO_TRADE_TYPE: Record<Timeframe, TradeType> = {
   '15m': 'scalping',
   '1h': 'dayTrade',
-  '4h': 'swing',
-  '1d': 'position',
+  '4h': 'dayTrade',
+  '1d': 'swing',
 };
 
 interface AnalysisDialogProps {
@@ -67,8 +70,7 @@ interface AnalysisDialogProps {
 const TRADE_TYPE_LABELS: Record<TradeType, string> = {
   scalping: 'Scalping',
   dayTrade: 'Day Trade',
-  swing: 'Swing',
-  position: 'Position',
+  swing: 'Swing Trade',
 };
 
 // Step definitions

@@ -15,11 +15,16 @@
 // TYPE DEFINITIONS
 // ============================================================================
 
-export type TradeType = 'scalping' | 'dayTrade' | 'swing' | 'position';
+export type TradeType = 'scalping' | 'dayTrade' | 'swing';
 
 /**
  * Map timeframe interval to appropriate trade type
  * Used when frontend sends interval instead of tradeType
+ *
+ * Mapping:
+ * - Scalping: 5m, 15m
+ * - Day Trade: 1h, 4h
+ * - Swing Trade: 1d, 1W
  */
 export function getTradeTypeFromInterval(interval: string): TradeType {
   switch (interval) {
@@ -29,14 +34,13 @@ export function getTradeTypeFromInterval(interval: string): TradeType {
       return 'scalping';
     case '30m':
     case '1h':
-      return 'dayTrade';
     case '4h':
-      return 'swing';
+      return 'dayTrade';
     case '1d':
     case '1D':
     case '1w':
     case '1W':
-      return 'position'; // Position uses swing config but saves 1d interval
+      return 'swing';
     default:
       return 'swing'; // Default to swing for unknown intervals
   }
@@ -818,32 +822,10 @@ const SWING_CONFIG: TradeTypeConfig = {
 // MAIN CONFIGURATION EXPORT
 // ============================================================================
 
-// Position config - uses swing strategy with longer timeframes
-const POSITION_CONFIG: TradeTypeConfig = {
-  ...SWING_CONFIG,
-  type: 'position' as TradeType,
-  name: 'Position Trade',
-  description: 'Long-term trades, typically 1-4 weeks holding period',
-  holdingPeriod: '1-4 weeks',
-  riskTolerance: 'low',
-  creditCost: 1,
-  steps: SWING_CONFIG.steps.map(step => ({
-    ...step,
-    timeframes: step.timeframes.map(tf => ({
-      ...tf,
-      // Shift to longer timeframes for position trading
-      timeframe: tf.timeframe === '4h' ? '1d' as Timeframe :
-                 tf.timeframe === '1d' ? '1w' as Timeframe :
-                 tf.timeframe as Timeframe,
-    })),
-  })),
-};
-
 export const TRADE_CONFIG: Record<TradeType, TradeTypeConfig> = {
   scalping: SCALPING_CONFIG,
   dayTrade: DAY_TRADE_CONFIG,
   swing: SWING_CONFIG,
-  position: POSITION_CONFIG,
 };
 
 // ============================================================================
