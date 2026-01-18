@@ -151,6 +151,72 @@ module.exports = {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-5px)' },
         },
+        // 2026 Trend Animations
+        'marquee': {
+          '0%': { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+        'marquee-reverse': {
+          '0%': { transform: 'translateX(-50%)' },
+          '100%': { transform: 'translateX(0%)' },
+        },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+          '33%': { transform: 'translateY(-10px) rotate(1deg)' },
+          '66%': { transform: 'translateY(5px) rotate(-1deg)' },
+        },
+        'float-slow': {
+          '0%, 100%': { transform: 'translateY(0) scale(1)' },
+          '50%': { transform: 'translateY(-20px) scale(1.05)' },
+        },
+        'glow-pulse': {
+          '0%, 100%': { opacity: '0.4', transform: 'scale(1)' },
+          '50%': { opacity: '0.8', transform: 'scale(1.1)' },
+        },
+        'text-shimmer': {
+          '0%': { backgroundPosition: '0% 50%' },
+          '100%': { backgroundPosition: '200% 50%' },
+        },
+        'text-wave': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '25%': { transform: 'translateY(-3px)' },
+          '75%': { transform: 'translateY(3px)' },
+        },
+        'orb-move': {
+          '0%': { transform: 'translate(0, 0) rotate(0deg)' },
+          '25%': { transform: 'translate(50px, -30px) rotate(90deg)' },
+          '50%': { transform: 'translate(0, -50px) rotate(180deg)' },
+          '75%': { transform: 'translate(-50px, -30px) rotate(270deg)' },
+          '100%': { transform: 'translate(0, 0) rotate(360deg)' },
+        },
+        'grain': {
+          '0%, 100%': { transform: 'translate(0, 0)' },
+          '10%': { transform: 'translate(-5%, -10%)' },
+          '20%': { transform: 'translate(-15%, 5%)' },
+          '30%': { transform: 'translate(7%, -25%)' },
+          '40%': { transform: 'translate(-5%, 25%)' },
+          '50%': { transform: 'translate(-15%, 10%)' },
+          '60%': { transform: 'translate(15%, 0%)' },
+          '70%': { transform: 'translate(0%, 15%)' },
+          '80%': { transform: 'translate(3%, 35%)' },
+          '90%': { transform: 'translate(-10%, 10%)' },
+        },
+        'slide-up': {
+          '0%': { transform: 'translateY(100%)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        'slide-down': {
+          '0%': { transform: 'translateY(-100%)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        'blur-in': {
+          '0%': { filter: 'blur(12px)', opacity: '0' },
+          '100%': { filter: 'blur(0px)', opacity: '1' },
+        },
+        'count-up': {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -163,6 +229,22 @@ module.exports = {
         'spin-slow': 'spin-slow 3s linear infinite',
         'pulse-subtle': 'pulse-subtle 2s ease-in-out infinite',
         'bounce-subtle': 'bounce-subtle 2s ease-in-out infinite',
+        // 2026 Trend Animations
+        'marquee': 'marquee 25s linear infinite',
+        'marquee-slow': 'marquee 40s linear infinite',
+        'marquee-reverse': 'marquee-reverse 25s linear infinite',
+        'float': 'float 6s ease-in-out infinite',
+        'float-slow': 'float-slow 8s ease-in-out infinite',
+        'float-delayed': 'float 6s ease-in-out infinite 2s',
+        'glow-pulse': 'glow-pulse 4s ease-in-out infinite',
+        'text-shimmer': 'text-shimmer 3s ease-in-out infinite',
+        'orb-move': 'orb-move 20s ease-in-out infinite',
+        'orb-move-delayed': 'orb-move 20s ease-in-out infinite 5s',
+        'grain': 'grain 8s steps(10) infinite',
+        'slide-up': 'slide-up 0.6s ease-out',
+        'slide-down': 'slide-down 0.6s ease-out',
+        'blur-in': 'blur-in 0.8s ease-out',
+        'count-up': 'count-up 0.5s ease-out forwards',
       },
       boxShadow: {
         'glow-teal': '0 0 30px rgba(45, 212, 168, 0.4), 0 0 60px rgba(20, 184, 166, 0.2)',

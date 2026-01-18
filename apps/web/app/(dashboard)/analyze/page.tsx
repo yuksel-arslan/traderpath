@@ -1,11 +1,11 @@
 'use client';
 
 // ===========================================
-// Analyze Landing Page - Compact Design
-// With Statistics, Trade Type Selector & Coin Selector
+// Analyze Page - 2026 Design Trends
+// Kinetic Typography, Marquee, Grain, Glassmorphism, Bento Grid
 // ===========================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import {
   Target,
@@ -16,19 +16,27 @@ import {
   LineChart,
   ChevronDown,
   ChevronUp,
+  Sparkles,
+  Zap,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  BarChart3,
+  Flame,
+  Shield,
+  Brain,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
 import { CreditBalance } from '../../../components/credits/CreditBalance';
 import type { TradeType } from '../../../components/analysis/TradeTypeSelector';
 
-// Lazy load TradingView widget
+// Lazy load components
 const TradingViewWidget = dynamic(
   () => import('../../../components/charts/TradingViewWidget').then(mod => ({ default: mod.TradingViewWidget })),
   { ssr: false, loading: () => <div className="h-[300px] bg-muted/30 rounded-lg animate-pulse" /> }
 );
 
-// Lazy load heavy components for better performance
 const CoinSelector = dynamic(
   () => import('../../../components/common/CoinSelector').then(mod => ({ default: mod.CoinSelector })),
   { ssr: false, loading: () => <div className="h-20 bg-muted/30 rounded-lg animate-pulse" /> }
@@ -53,8 +61,214 @@ interface AnalysisStats {
   accuracy: number;
 }
 
-// Popular coins for quick selection
+// Marquee ticker data
+const MARQUEE_ITEMS = [
+  { symbol: 'BTC', name: 'Bitcoin', change: '+2.45%', positive: true },
+  { symbol: 'ETH', name: 'Ethereum', change: '+1.82%', positive: true },
+  { symbol: 'SOL', name: 'Solana', change: '+5.21%', positive: true },
+  { symbol: 'BNB', name: 'BNB', change: '-0.34%', positive: false },
+  { symbol: 'XRP', name: 'XRP', change: '+3.15%', positive: true },
+  { symbol: 'DOGE', name: 'Dogecoin', change: '+8.92%', positive: true },
+  { symbol: 'ADA', name: 'Cardano', change: '-1.23%', positive: false },
+  { symbol: 'AVAX', name: 'Avalanche', change: '+4.56%', positive: true },
+];
+
 const POPULAR_COINS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'DOGE'];
+
+// Kinetic Typography - Character by character animation
+function KineticText({ text, className }: { text: string; className?: string }) {
+  return (
+    <span className={cn("inline-flex", className)}>
+      {text.split('').map((char, i) => (
+        <span
+          key={i}
+          className="inline-block animate-[text-wave_2s_ease-in-out_infinite]"
+          style={{ animationDelay: `${i * 0.05}s` }}
+        >
+          {char === ' ' ? '\u00A0' : char}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+// Grain Texture Overlay
+function GrainOverlay() {
+  return (
+    <div
+      className="pointer-events-none fixed inset-0 z-50 opacity-[0.015] dark:opacity-[0.03]"
+      style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+        backgroundRepeat: 'repeat',
+      }}
+    />
+  );
+}
+
+// Gradient Orbs - Floating background elements
+function GradientOrbs() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {/* Teal Orb */}
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-teal-400/20 to-emerald-500/10 rounded-full blur-3xl animate-float-slow" />
+      {/* Coral Orb */}
+      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-coral-400/15 to-rose-500/10 rounded-full blur-3xl animate-float-slow" style={{ animationDelay: '-3s' }} />
+      {/* Purple Orb */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-purple-500/5 to-blue-500/5 rounded-full blur-3xl animate-orb-move" />
+    </div>
+  );
+}
+
+// Marquee Banner Component
+function MarqueeBanner() {
+  return (
+    <div className="relative w-full overflow-hidden bg-gradient-to-r from-slate-900/80 via-slate-800/80 to-slate-900/80 dark:from-slate-950/90 dark:via-slate-900/90 dark:to-slate-950/90 backdrop-blur-xl border-b border-white/5">
+      <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 via-transparent to-coral-500/5" />
+      <div className="flex animate-marquee">
+        {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-3 px-6 py-3 border-r border-white/5"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white">{item.symbol}</span>
+              <span className="text-xs text-slate-400">{item.name}</span>
+            </div>
+            <span className={cn(
+              "text-sm font-semibold",
+              item.positive ? "text-emerald-400" : "text-rose-400"
+            )}>
+              {item.change}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Glass Card Component
+function GlassCard({
+  children,
+  className,
+  hover = true,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  hover?: boolean;
+}) {
+  return (
+    <div className={cn(
+      "relative overflow-hidden rounded-2xl",
+      "bg-white/70 dark:bg-slate-900/50",
+      "backdrop-blur-xl backdrop-saturate-150",
+      "border border-white/20 dark:border-white/10",
+      "shadow-xl shadow-black/5 dark:shadow-black/20",
+      hover && "transition-all duration-500 hover:shadow-2xl hover:shadow-teal-500/10 hover:-translate-y-1 hover:border-teal-500/20",
+      className
+    )}>
+      {children}
+    </div>
+  );
+}
+
+// Stat Card with animation
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  color,
+  delay = 0,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string | number;
+  color: string;
+  delay?: number;
+}) {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => setIsVisible(true), delay);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [delay]);
+
+  const colorClasses: Record<string, { bg: string; text: string; icon: string; glow: string }> = {
+    gray: {
+      bg: 'bg-slate-100/80 dark:bg-slate-800/50',
+      text: 'text-slate-700 dark:text-slate-200',
+      icon: 'text-slate-500',
+      glow: '',
+    },
+    blue: {
+      bg: 'bg-blue-50/80 dark:bg-blue-500/10',
+      text: 'text-blue-600 dark:text-blue-400',
+      icon: 'text-blue-500',
+      glow: 'shadow-blue-500/20',
+    },
+    green: {
+      bg: 'bg-emerald-50/80 dark:bg-emerald-500/10',
+      text: 'text-emerald-600 dark:text-emerald-400',
+      icon: 'text-emerald-500',
+      glow: 'shadow-emerald-500/20',
+    },
+    red: {
+      bg: 'bg-rose-50/80 dark:bg-rose-500/10',
+      text: 'text-rose-600 dark:text-rose-400',
+      icon: 'text-rose-500',
+      glow: 'shadow-rose-500/20',
+    },
+    teal: {
+      bg: 'bg-teal-50/80 dark:bg-teal-500/10',
+      text: 'text-teal-600 dark:text-teal-400',
+      icon: 'text-teal-500',
+      glow: 'shadow-teal-500/20',
+    },
+  };
+
+  const colors = colorClasses[color] || colorClasses.gray;
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "relative overflow-hidden rounded-xl p-4 transition-all duration-700",
+        "backdrop-blur-sm border border-white/10",
+        colors.bg,
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
+        "hover:scale-105 hover:shadow-lg",
+        colors.glow
+      )}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className={cn("w-4 h-4", colors.icon)} />
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</span>
+      </div>
+      <p className={cn("text-2xl font-bold tabular-nums", colors.text)}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+// Feature Badge
+function FeatureBadge({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/50 dark:bg-white/5 backdrop-blur-sm border border-white/20 dark:border-white/10">
+      <Icon className="w-3.5 h-3.5 text-teal-500" />
+      <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{text}</span>
+    </div>
+  );
+}
 
 export default function AnalyzePage() {
   const [stats, setStats] = useState<AnalysisStats | null>(null);
@@ -98,152 +312,233 @@ export default function AnalyzePage() {
     fetchStats();
   }, [fetchStats]);
 
-  const getAccuracyColor = (value: number) => {
-    if (value >= 70) return 'text-green-500 dark:text-green-400';
-    if (value >= 50) return 'text-yellow-500 dark:text-yellow-400';
-    if (value > 0) return 'text-red-500 dark:text-red-400';
-    return 'text-gray-400 dark:text-slate-500';
+  const getAccuracyDisplay = (value: number) => {
+    if (value > 0) return `${value.toFixed(0)}%`;
+    return '—';
   };
 
   return (
-    <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-6">
-      {/* ===== SECTION 1: Statistics Grid ===== */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {/* Total Analyses */}
-        <div className="relative overflow-hidden rounded-xl p-4 border bg-gray-100/80 dark:bg-white/5 border-gray-200 dark:border-white/10">
-          <div className="flex items-center gap-2 mb-1">
-            <FileText className="w-4 h-4 text-gray-500" />
-            <span className="text-xs text-gray-500 dark:text-slate-400">Total Analyses</span>
-          </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.totalAnalyses || 0}</p>
-        </div>
+    <div className="relative min-h-screen">
+      {/* Grain Texture Overlay */}
+      <GrainOverlay />
 
-        {/* Active */}
-        <div className="relative overflow-hidden rounded-xl p-4 border bg-blue-50 dark:bg-blue-500/10 border-blue-200/50 dark:border-blue-500/20">
-          <div className="flex items-center gap-2 mb-1">
-            <Timer className="w-4 h-4 text-blue-500" />
-            <span className="text-xs text-gray-500 dark:text-slate-400">Active</span>
-          </div>
-          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats?.activeCount || 0}</p>
-        </div>
+      {/* Gradient Orbs Background */}
+      <GradientOrbs />
 
-        {/* Closed */}
-        <div className="relative overflow-hidden rounded-xl p-4 border bg-gray-100/80 dark:bg-white/5 border-gray-200 dark:border-white/10">
-          <div className="flex items-center gap-2 mb-1">
-            <FileText className="w-4 h-4 text-gray-500" />
-            <span className="text-xs text-gray-500 dark:text-slate-400">Closed</span>
-          </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.closedCount || 0}</p>
-        </div>
+      {/* Marquee Banner */}
+      <MarqueeBanner />
 
-        {/* TP Hit */}
-        <div className="relative overflow-hidden rounded-xl p-4 border bg-green-50 dark:bg-green-500/10 border-green-200/50 dark:border-green-500/20">
-          <div className="flex items-center gap-2 mb-1">
-            <CheckCircle2 className="w-4 h-4 text-green-500" />
-            <span className="text-xs text-gray-500 dark:text-slate-400">TP Hit</span>
+      {/* Main Content */}
+      <div className="relative w-full px-4 md:px-8 lg:px-12 py-8 space-y-8">
+        {/* ===== HERO SECTION with Kinetic Typography ===== */}
+        <div className="text-center space-y-4 py-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-emerald-500/10 border border-teal-500/20 backdrop-blur-sm animate-blur-in">
+            <Sparkles className="w-4 h-4 text-teal-500 animate-pulse" />
+            <span className="text-sm font-medium bg-gradient-to-r from-teal-500 to-emerald-500 bg-clip-text text-transparent">
+              AI-Powered Analysis Engine
+            </span>
           </div>
-          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats?.tpHits || 0}</p>
-        </div>
 
-        {/* SL Hit */}
-        <div className="relative overflow-hidden rounded-xl p-4 border bg-red-50 dark:bg-red-500/10 border-red-200/50 dark:border-red-500/20">
-          <div className="flex items-center gap-2 mb-1">
-            <XCircle className="w-4 h-4 text-red-500" />
-            <span className="text-xs text-gray-500 dark:text-slate-400">SL Hit</span>
-          </div>
-          <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats?.slHits || 0}</p>
-        </div>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold">
+            <span className="bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-white dark:via-slate-200 dark:to-white bg-clip-text text-transparent">
+              Trade Smarter with
+            </span>
+            <br />
+            <span className="relative inline-block">
+              <span className="bg-gradient-to-r from-teal-500 via-emerald-500 to-teal-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">
+                <KineticText text="TraderPath" />
+              </span>
+              <span className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full opacity-50" />
+            </span>
+          </h1>
 
-        {/* Accuracy */}
-        <div className="relative overflow-hidden rounded-xl p-4 border bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-500/20">
-          <div className="flex items-center gap-2 mb-1">
-            <Target className="w-4 h-4 text-emerald-500" />
-            <span className="text-xs text-gray-500 dark:text-slate-400">Accuracy</span>
-          </div>
-          <p className={cn("text-2xl font-bold", getAccuracyColor(stats?.accuracy || 0))}>
-            {(stats?.accuracy || 0) > 0 ? `${stats?.accuracy.toFixed(0)}%` : '—'}
+          <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto animate-slide-up">
+            Professional-grade analysis powered by 40+ technical indicators
           </p>
-        </div>
-      </div>
 
-      {/* ===== SECTION 2: New Analysis (Trade Type + Coin + Credit) ===== */}
-      <div className="relative rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700 overflow-visible isolate">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/5 dark:from-emerald-500/10 via-transparent to-transparent rounded-2xl overflow-hidden pointer-events-none" />
-
-        <div className="relative p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">New Analysis</h2>
-            <CreditBalance compact />
-          </div>
-
-          <div className="space-y-4">
-            {/* Trade Type - Tabs variant */}
-            <TradeTypeSelector
-              value={tradeType}
-              onChange={setTradeType}
-              variant="tabs"
-              showCreditCost
-            />
-
-            {/* Coin Selector */}
-            <CoinSelector tradeType={tradeType} />
+          {/* Feature Badges */}
+          <div className="flex flex-wrap justify-center gap-3 pt-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <FeatureBadge icon={Brain} text="AI Analysis" />
+            <FeatureBadge icon={Shield} text="Risk Assessment" />
+            <FeatureBadge icon={BarChart3} text="40+ Indicators" />
+            <FeatureBadge icon={Zap} text="Real-time Data" />
           </div>
         </div>
-      </div>
 
-      {/* ===== SECTION 3: TradingView Chart (Collapsible) ===== */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
-        <button
-          onClick={() => setShowChart(!showChart)}
-          className="w-full flex items-center justify-between p-4 hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/30">
-              <LineChart className="w-4.5 h-4.5 text-white" />
-            </div>
-            <div className="text-left">
-              <span className="text-sm font-bold text-gray-900 dark:text-white">Live Chart</span>
-              <p className="text-xs text-gray-500 dark:text-slate-400">{chartSymbol.split(':')[1]}</p>
+        {/* ===== BENTO GRID LAYOUT ===== */}
+        <div className="grid grid-cols-12 gap-4 lg:gap-6">
+          {/* Stats Row - Spans full width */}
+          <div className="col-span-12">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <StatCard icon={FileText} label="Total Analyses" value={stats?.totalAnalyses || 0} color="gray" delay={0} />
+              <StatCard icon={Timer} label="Active" value={stats?.activeCount || 0} color="blue" delay={100} />
+              <StatCard icon={FileText} label="Closed" value={stats?.closedCount || 0} color="gray" delay={200} />
+              <StatCard icon={CheckCircle2} label="TP Hit" value={stats?.tpHits || 0} color="green" delay={300} />
+              <StatCard icon={XCircle} label="SL Hit" value={stats?.slHits || 0} color="red" delay={400} />
+              <StatCard icon={Target} label="Accuracy" value={getAccuracyDisplay(stats?.accuracy || 0)} color="teal" delay={500} />
             </div>
           </div>
-          {showChart ? (
-            <ChevronUp className="w-5 h-5 text-gray-500" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-gray-500" />
-          )}
-        </button>
 
-        {showChart && (
-          <div className="border-t border-gray-200 dark:border-slate-700">
-            <div className="flex flex-wrap gap-2 p-3 bg-gray-50 dark:bg-slate-900/30">
-              {POPULAR_COINS.map((coin) => (
-                <button
-                  key={coin}
-                  onClick={() => setChartSymbol(`BINANCE:${coin}USDT`)}
-                  className={cn(
-                    'px-3 py-1.5 text-xs font-medium rounded-lg transition-all',
-                    chartSymbol === `BINANCE:${coin}USDT`
-                      ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30'
-                      : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600'
-                  )}
-                >
-                  {coin}
-                </button>
-              ))}
-            </div>
-            <TradingViewWidget
-              symbol={chartSymbol}
-              theme={isDarkMode ? 'dark' : 'light'}
-              height={300}
-            />
+          {/* Main Analysis Card - Large Bento Item */}
+          <div className="col-span-12 lg:col-span-7">
+            <GlassCard className="h-full">
+              <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-transparent to-emerald-500/5" />
+              <div className="relative p-6 space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/30 animate-float">
+                      <Activity className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900 dark:text-white">New Analysis</h2>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Start your AI-powered analysis</p>
+                    </div>
+                  </div>
+                  <CreditBalance compact />
+                </div>
+
+                {/* Trade Type Selector */}
+                <div className="space-y-4">
+                  <TradeTypeSelector
+                    value={tradeType}
+                    onChange={setTradeType}
+                    variant="tabs"
+                    showCreditCost
+                  />
+
+                  {/* Coin Selector */}
+                  <CoinSelector tradeType={tradeType} />
+                </div>
+
+                {/* Quick Tips */}
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <Flame className="w-3.5 h-3.5 text-amber-500" />
+                    <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Hot: SOL, PEPE</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Bullish: BTC, ETH</span>
+                  </div>
+                </div>
+              </div>
+            </GlassCard>
           </div>
-        )}
-      </div>
 
-      {/* ===== SECTION 4: Recent Analyses ===== */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
-        <div className="relative p-5">
-          <RecentAnalyses />
+          {/* Side Cards - Stacked */}
+          <div className="col-span-12 lg:col-span-5 space-y-4 lg:space-y-6">
+            {/* Live Chart Card */}
+            <GlassCard>
+              <button
+                onClick={() => setShowChart(!showChart)}
+                className="w-full flex items-center justify-between p-4 hover:bg-white/50 dark:hover:bg-white/5 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+                    <LineChart className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">Live Chart</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{chartSymbol.split(':')[1]}</p>
+                  </div>
+                </div>
+                <div className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300",
+                  showChart ? "bg-violet-500/20 rotate-180" : "bg-slate-100 dark:bg-slate-800"
+                )}>
+                  <ChevronDown className="w-5 h-5 text-slate-500" />
+                </div>
+              </button>
+
+              {showChart && (
+                <div className="border-t border-white/10">
+                  <div className="flex flex-wrap gap-2 p-3 bg-slate-50/50 dark:bg-slate-900/30">
+                    {POPULAR_COINS.map((coin) => (
+                      <button
+                        key={coin}
+                        onClick={() => setChartSymbol(`BINANCE:${coin}USDT`)}
+                        className={cn(
+                          'px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300',
+                          chartSymbol === `BINANCE:${coin}USDT`
+                            ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30 scale-105'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:scale-105 border border-white/20 dark:border-slate-700'
+                        )}
+                      >
+                        {coin}
+                      </button>
+                    ))}
+                  </div>
+                  <TradingViewWidget
+                    symbol={chartSymbol}
+                    theme={isDarkMode ? 'dark' : 'light'}
+                    height={250}
+                  />
+                </div>
+              )}
+            </GlassCard>
+
+            {/* Quick Stats Mini Card */}
+            <GlassCard className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-500" />
+                  Quick Insights
+                </h3>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">Win Rate</span>
+                  </div>
+                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                    {stats?.accuracy ? `${stats.accuracy.toFixed(0)}%` : '—'}
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Activity className="w-3.5 h-3.5 text-blue-500" />
+                    <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400">Active</span>
+                  </div>
+                  <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                    {stats?.activeCount || 0}
+                  </p>
+                </div>
+              </div>
+            </GlassCard>
+          </div>
+
+          {/* Recent Analyses - Full Width */}
+          <div className="col-span-12">
+            <GlassCard className="p-6">
+              <RecentAnalyses />
+            </GlassCard>
+          </div>
+        </div>
+
+        {/* Bottom Marquee - Reverse Direction */}
+        <div className="relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-slate-100/80 via-white/80 to-slate-100/80 dark:from-slate-900/80 dark:via-slate-800/80 dark:to-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-white/10 mt-8">
+          <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 via-transparent to-coral-500/5" />
+          <div className="flex animate-marquee-reverse py-3">
+            {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
+              <div key={i} className="flex items-center gap-4 px-8">
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    "w-2 h-2 rounded-full",
+                    item.positive ? "bg-emerald-500" : "bg-rose-500"
+                  )} />
+                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{item.symbol}</span>
+                </div>
+                <span className={cn(
+                  "text-sm font-medium",
+                  item.positive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                )}>
+                  {item.change}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
