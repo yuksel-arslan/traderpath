@@ -124,6 +124,7 @@
 - Hover Animations: Scale, shadow, border renk geçişleri
 - Tailwind config'e 15+ yeni animasyon keyframe eklendi
 - Feature Badges: AI Analysis, Risk Assessment, 40+ Indicators, Real-time Data
+- TradeTypeSelector tabs variant: Glassmorphism style, ring highlight, compact info bar
 
 ---
 
