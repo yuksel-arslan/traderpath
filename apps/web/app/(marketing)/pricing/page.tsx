@@ -27,7 +27,7 @@ import {
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
 import { cn } from '../../../lib/utils';
-import { FREE_SIGNUP_CREDITS } from '../../../lib/pricing-config';
+import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost } from '../../../lib/pricing-config';
 import { authFetch, getAuthToken, apiBaseUrl } from '../../../lib/api';
 
 // Package type from API
@@ -94,10 +94,32 @@ export default function PricingPage() {
         const data = await res.json();
         if (data.success && data.data?.packages) {
           setPackages(data.data.packages);
+          return;
         }
       }
+      // API failed - use static fallback
+      const fallbackPackages: ApiPackage[] = CREDIT_PACKAGES.map(pkg => ({
+        id: pkg.id,
+        name: pkg.name,
+        credits: pkg.credits,
+        bonus: pkg.bonus,
+        price: pkg.priceDisplay,
+        perCredit: getPerCreditCost(pkg),
+        popular: pkg.popular || false,
+      }));
+      setPackages(fallbackPackages);
     } catch {
-      // Will show empty state or could add fallback
+      // Use static fallback on error
+      const fallbackPackages: ApiPackage[] = CREDIT_PACKAGES.map(pkg => ({
+        id: pkg.id,
+        name: pkg.name,
+        credits: pkg.credits,
+        bonus: pkg.bonus,
+        price: pkg.priceDisplay,
+        perCredit: getPerCreditCost(pkg),
+        popular: pkg.popular || false,
+      }));
+      setPackages(fallbackPackages);
     } finally {
       setPackagesLoading(false);
     }
