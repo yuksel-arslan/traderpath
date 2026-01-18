@@ -157,7 +157,7 @@ Be concise and actionable.`;
   });
 
   // Common schema with tradeType and interval support
-  const tradeTypeSchema = z.enum(['scalping', 'dayTrade', 'swing', 'position']).default('swing');
+  const tradeTypeSchema = z.enum(['scalping', 'dayTrade', 'swing']).default('swing');
   const intervalSchema = z.enum(['15m', '1h', '4h', '1d']).optional();
 
   // Helper to resolve tradeType from interval if provided
@@ -470,7 +470,8 @@ Warn about potential traps and give protective advice.`;
     // Resolve tradeType from interval if provided
     const tradeType = resolveTradeType(body.interval, body.tradeType as TradeType);
     // Use the interval if provided, otherwise derive from tradeType
-    const interval = body.interval || (tradeType === 'scalping' ? '15m' : tradeType === 'dayTrade' ? '1h' : tradeType === 'position' ? '1d' : '4h');
+    // Mapping: scalping=15m, dayTrade=1h, swing=1d
+    const interval = body.interval || (tradeType === 'scalping' ? '15m' : tradeType === 'dayTrade' ? '1h' : '1d');
 
     const cost = await creditCostsService.getCreditCost('BUNDLE_FULL_ANALYSIS');
     const chargeResult = await creditService.charge(userId, cost, 'analysis_full', {
@@ -564,7 +565,7 @@ Warn about potential traps and give protective advice.`;
             entryPrice: tradePlan?.averageEntry ? `$${tradePlan.averageEntry}` : 'N/A',
             stopLoss: tradePlan?.stopLoss?.price ? `$${tradePlan.stopLoss.price}` : 'N/A',
             takeProfit1: tradePlan?.takeProfits?.[0]?.price ? `$${tradePlan.takeProfits[0].price}` : 'N/A',
-            tradeType: tradeType === 'scalping' ? 'Scalping' : tradeType === 'dayTrade' ? 'Day Trade' : tradeType === 'position' ? 'Position' : 'Swing Trade',
+            tradeType: tradeType === 'scalping' ? 'Scalping' : tradeType === 'dayTrade' ? 'Day Trade' : 'Swing Trade',
           };
 
           // Send email
@@ -580,7 +581,7 @@ Warn about potential traps and give protective advice.`;
       })();
 
       // Build AI prompt based on whether trade plan exists
-      const tradeTypeLabel = tradeType === 'scalping' ? 'scalping (15min-2h)' : tradeType === 'dayTrade' ? 'day trading (2-8 hours)' : tradeType === 'position' ? 'position trading (1-4 weeks)' : 'swing trading (1-5 days)';
+      const tradeTypeLabel = tradeType === 'scalping' ? 'scalping (15min-2h)' : tradeType === 'dayTrade' ? 'day trading (2-24 hours)' : 'swing trading (1-14 days)';
       let aiPrompt: string;
       if (tradePlan) {
         aiPrompt = `You are a senior crypto analyst. Give a comprehensive ${tradeTypeLabel} recommendation for ${body.symbol} in English (4-5 sentences):

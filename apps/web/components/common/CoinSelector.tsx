@@ -60,30 +60,31 @@ const POPULAR_COINS = ALL_COINS.filter(c => c.popular);
 
 // Timeframe type (matches TradeTypeSelector)
 type Timeframe = '15m' | '1h' | '4h' | '1d';
-type TradeType = 'scalping' | 'dayTrade' | 'swing' | 'position';
+type TradeType = 'scalping' | 'dayTrade' | 'swing';
 
 // Timeframe to trade type mapping
+// - Scalping: 5m, 15m
+// - Day Trade: 1h, 4h
+// - Swing Trade: 1d, 1W
 const TIMEFRAME_TO_TRADE_TYPE: Record<Timeframe, TradeType> = {
   '15m': 'scalping',
   '1h': 'dayTrade',
-  '4h': 'swing',
-  '1d': 'position',
+  '4h': 'dayTrade',
+  '1d': 'swing',
 };
 
 // Trade type labels
 const TRADE_TYPE_LABELS: Record<TradeType, string> = {
   scalping: 'Scalping',
   dayTrade: 'Day Trade',
-  swing: 'Swing',
-  position: 'Position',
+  swing: 'Swing Trade',
 };
 
 // Get trade type from interval (for existing analyses)
 function getTradeTypeFromInterval(interval: string): TradeType | null {
   if (interval === '5m' || interval === '15m') return 'scalping';
-  if (interval === '1h') return 'dayTrade';
-  if (interval === '4h') return 'swing';
-  if (interval === '1d' || interval === '1D') return 'position';
+  if (interval === '1h' || interval === '4h') return 'dayTrade';
+  if (interval === '1d' || interval === '1D' || interval === '1w' || interval === '1W') return 'swing';
   return null;
 }
 
