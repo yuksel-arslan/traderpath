@@ -473,3 +473,113 @@ export async function checkAndUpdateOutcomes(): Promise<{
     slHits,
   };
 }
+
+/**
+ * Check and update outcomes for Analysis table
+ * This is separate from Report table tracking
+ * Statistics API uses Analysis table for accuracy calculation
+ */
+export async function checkAndUpdateAnalysisOutcomes(): Promise<{
+  checked: number;
+  tpHits: number;
+  slHits: number;
+}> {
+  // Get all analyses without outcomes that have trade plans
+  // Include recently expired (within 24h) to catch late SL hits
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const analyses = await prisma.analysis.findMany({
+    where: {
+      outcome: null,
+      step5Result: { not: null },
+      OR: [
+        { expiresAt: { gt: new Date() } },
+        { expiresAt: { gte: twentyFourHoursAgo, lt: new Date() } }
+      ]
+    },
+    select: {
+      id: true,
+      symbol: true,
+      step5Result: true,
+    },
+    take: 200,
+  });
+
+  if (analyses.length === 0) {
+    return { checked: 0, tpHits: 0, slHits: 0 };
+  }
+
+  // Fetch all prices at once
+  const symbols = [...new Set(analyses.map(a => a.symbol))] as string[];
+  const prices = await fetchBulkPrices(symbols);
+
+  let tpHits = 0;
+  let slHits = 0;
+  const updates: Array<{ id: string; outcome: string; outcomePrice: number }> = [];
+
+  for (const analysis of analyses) {
+    const currentPrice = prices[analysis.symbol];
+    if (!currentPrice) continue;
+
+    const tradePlan = analysis.step5Result as Record<string, unknown> | null;
+    if (!tradePlan) continue;
+
+    const direction = ((tradePlan.direction as string) || 'long').toLowerCase();
+    const entryPrice = Number(tradePlan.averageEntry || tradePlan.entryPrice) || 0;
+    const stopLossData = tradePlan.stopLoss as { price?: number } | number | undefined;
+    const stopLoss = typeof stopLossData === 'object' ? Number(stopLossData?.price) : Number(stopLossData) || 0;
+
+    const takeProfits = tradePlan.takeProfits as Array<{ price: number }> | undefined;
+    const tp1 = Number(takeProfits?.[0]?.price || tradePlan.takeProfit1) || 0;
+    const tp2 = Number(takeProfits?.[1]?.price || tradePlan.takeProfit2) || 0;
+    const tp3 = Number(takeProfits?.[2]?.price || tradePlan.takeProfit3) || 0;
+
+    if (!entryPrice) continue;
+
+    const isLong = direction === 'long';
+    let outcome: string | null = null;
+
+    // Check TPs (highest first)
+    if (tp3 && (isLong ? currentPrice >= tp3 : currentPrice <= tp3)) {
+      outcome = 'tp3_hit';
+    } else if (tp2 && (isLong ? currentPrice >= tp2 : currentPrice <= tp2)) {
+      outcome = 'tp2_hit';
+    } else if (tp1 && (isLong ? currentPrice >= tp1 : currentPrice <= tp1)) {
+      outcome = 'tp1_hit';
+    } else if (stopLoss && (isLong ? currentPrice <= stopLoss : currentPrice >= stopLoss)) {
+      outcome = 'sl_hit';
+    }
+
+    if (outcome) {
+      updates.push({ id: analysis.id, outcome, outcomePrice: currentPrice });
+      if (outcome === 'sl_hit') {
+        slHits++;
+      } else {
+        tpHits++;
+      }
+    }
+  }
+
+  // Apply updates
+  if (updates.length > 0) {
+    await Promise.all(
+      updates.map(update =>
+        prisma.analysis.update({
+          where: { id: update.id },
+          data: {
+            outcome: update.outcome,
+            outcomePrice: update.outcomePrice,
+            outcomeAt: new Date(),
+          }
+        })
+      )
+    );
+    console.log(`[AnalysisOutcomeChecker] Updated ${updates.length} analyses (TP: ${tpHits}, SL: ${slHits})`);
+  }
+
+  return {
+    checked: analyses.length,
+    tpHits,
+    slHits,
+  };
+}

@@ -344,16 +344,18 @@ app.setErrorHandler(errorHandler);
 let outcomeTrackerInterval: NodeJS.Timeout | null = null;
 
 async function startOutcomeTracker() {
-  const { checkAndUpdateOutcomes } = await import('./modules/reports/live-tracking.service');
+  const { checkAndUpdateOutcomes, checkAndUpdateAnalysisOutcomes } = await import('./modules/reports/live-tracking.service');
   const { calculateExpiredOutcomes, calculateCautionOutcomes } = await import('./modules/reports/outcome.service');
 
   // Run immediately on startup
   try {
     const liveResult = await checkAndUpdateOutcomes();
+    const analysisResult = await checkAndUpdateAnalysisOutcomes();
     const expiredResult = await calculateExpiredOutcomes();
     const cautionResult = await calculateCautionOutcomes();
     logger.info({
       live: liveResult,
+      analysis: analysisResult,
       expired: expiredResult,
       caution: cautionResult
     }, '✓ Initial outcome check completed');
@@ -365,8 +367,12 @@ async function startOutcomeTracker() {
   outcomeTrackerInterval = setInterval(async () => {
     try {
       const liveResult = await checkAndUpdateOutcomes();
+      const analysisResult = await checkAndUpdateAnalysisOutcomes();
       if (liveResult.tpHits > 0 || liveResult.slHits > 0) {
-        logger.info(liveResult, 'Outcome tracker: TP/SL hits detected');
+        logger.info(liveResult, 'Report outcome tracker: TP/SL hits detected');
+      }
+      if (analysisResult.tpHits > 0 || analysisResult.slHits > 0) {
+        logger.info(analysisResult, 'Analysis outcome tracker: TP/SL hits detected');
       }
     } catch (error) {
       logger.error(error, 'Outcome tracker error');
