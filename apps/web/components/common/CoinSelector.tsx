@@ -58,24 +58,16 @@ const ALL_COINS = [
 
 const POPULAR_COINS = ALL_COINS.filter(c => c.popular);
 
-// Validity period for each trade type (in hours) - based on 1 candle (max interval)
-// Scalping (5m/15m): 1 candle = 15 min = 0.25 hours
-// Day Trade (1h/4h): 1 candle = 4 hours
-// Swing (1d): 1 candle = 1 day = 24 hours
-const ANALYSIS_VALIDITY_HOURS: Record<TradeType, number> = {
-  scalping: 0.25, // 15 minutes
-  dayTrade: 4,    // 4 hours
-  swing: 24,      // 1 day
-};
+// Timeframe type (matches TradeTypeSelector)
+type Timeframe = '15m' | '1h' | '4h' | '1d';
+type TradeType = 'scalping' | 'dayTrade' | 'swing' | 'position';
 
-// Trade type definition
-type TradeType = 'scalping' | 'dayTrade' | 'swing';
-
-// Trade type to interval mapping
-const TRADE_TYPE_INTERVALS: Record<TradeType, string[]> = {
-  scalping: ['5m', '15m'],
-  dayTrade: ['1h', '4h'],
-  swing: ['1d', '1D'],
+// Timeframe to trade type mapping
+const TIMEFRAME_TO_TRADE_TYPE: Record<Timeframe, TradeType> = {
+  '15m': 'scalping',
+  '1h': 'dayTrade',
+  '4h': 'swing',
+  '1d': 'position',
 };
 
 // Trade type labels
@@ -83,21 +75,25 @@ const TRADE_TYPE_LABELS: Record<TradeType, string> = {
   scalping: 'Scalping',
   dayTrade: 'Day Trade',
   swing: 'Swing',
+  position: 'Position',
 };
 
-// Get trade type from interval
+// Get trade type from interval (for existing analyses)
 function getTradeTypeFromInterval(interval: string): TradeType | null {
   if (interval === '5m' || interval === '15m') return 'scalping';
-  if (interval === '1h' || interval === '4h') return 'dayTrade';
-  if (interval === '1d' || interval === '1D') return 'swing';
+  if (interval === '1h') return 'dayTrade';
+  if (interval === '4h') return 'swing';
+  if (interval === '1d' || interval === '1D') return 'position';
   return null;
 }
 
 interface CoinSelectorProps {
-  tradeType?: TradeType;
+  timeframe?: Timeframe;
 }
 
-export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
+export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
+  // Derive trade type from timeframe
+  const tradeType = TIMEFRAME_TO_TRADE_TYPE[timeframe];
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -132,7 +128,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
 
       // Use the new marketplace API to check for available analyses
       const response = await fetch(
-        `/api/analysis/available?symbol=${encodeURIComponent(symbol)}&tradeType=${tradeType}`,
+        `/api/analysis/available?symbol=${encodeURIComponent(symbol)}&interval=${timeframe}`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
 
@@ -635,7 +631,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
           onClose={handleDialogClose}
           symbol={selectedCoin.symbol}
           coinName={selectedCoin.name}
-          tradeType={tradeType}
+          timeframe={timeframe}
           onComplete={handleAnalysisComplete}
         />
       )}

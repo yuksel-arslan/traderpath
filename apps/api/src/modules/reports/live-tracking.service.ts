@@ -749,6 +749,7 @@ export async function checkAllHistoricalOutcomes(): Promise<{
     select: {
       id: true,
       symbol: true,
+      interval: true, // Trader type's timeframe (15m, 1h, 4h, 1d, etc.)
       step5Result: true,
       createdAt: true,
     },
@@ -793,9 +794,15 @@ export async function checkAllHistoricalOutcomes(): Promise<{
       continue;
     }
 
-    // Fetch historical klines from analysis creation date to now
+    // Use the analysis's timeframe (trader type determines this)
+    // Scalp: 15m, Swing: 4h, Position: 1d, etc.
+    const timeframe = analysis.interval || '4h';
+
+    // Fetch historical klines from analysis creation date to now using the correct timeframe
     const startTime = analysis.createdAt.getTime();
-    const klines = await fetchKlines(analysis.symbol, startTime);
+    const klines = await fetchKlines(analysis.symbol, startTime, undefined, timeframe);
+
+    console.log(`[HistoricalOutcomeChecker] ${analysis.symbol} (${timeframe}): Fetched ${klines.length} klines from ${new Date(startTime).toISOString()}`);
 
     if (klines.length === 0) {
       skipped++;
