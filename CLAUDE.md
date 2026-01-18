@@ -31,10 +31,11 @@
 
 ### Veri Mimarisi
 - **Analysis tablosu**: Kullanıcının yaptığı analizler (totalScore, outcome, step results)
-- **Report tablosu**: Analizlerden oluşturulan raporlar
-- Analiz istatistikleri → Analysis tablosundan
-- Rapor istatistikleri → Report tablosundan
-- **Asla karıştırma!** Report, Analysis'in sonucudur, tersi değil
+- **Report tablosu**: Kullanıcı raporları (PDF export vb. için)
+- **TÜM ANALİZ İSTATİSTİKLERİ → Analysis tablosundan** (platform-stats, statistics vb.)
+- Report tablosu analiz istatistikleri için KULLANILMAZ
+- Platform accuracy = TP hits / (TP hits + SL hits) from Analysis.outcome
+- **Asla karıştırma!** Report, Analysis'in sonucudur, istatistik kaynağı değil
 
 ### Yapılmaması Gerekenler ❌
 - `!important` kullanma

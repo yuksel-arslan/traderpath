@@ -1063,78 +1063,34 @@ Explain the key risks and what conditions would need to change before trading th
   /**
    * GET /api/analysis/platform-stats
    * Platform-wide statistics for trust building (public)
-   * All data is calculated from real database records (Report table)
-   * Query params:
-   *   - period: 'D' (24h), 'W' (7 days), 'M' (30 days), 'all' (no filter)
-   *   - tradeType: 'scalping', 'dayTrade', 'swing', or 'all' (no filter)
+   * All data is calculated from ANALYSIS table only
    */
-  app.get('/platform-stats', async (request: FastifyRequest<{ Querystring: { period?: string; tradeType?: string } }>, reply: FastifyReply) => {
+  app.get('/platform-stats', async (request: FastifyRequest<{ Querystring: { period?: string } }>, reply: FastifyReply) => {
     try {
       const db = prisma;
-
-      // Parse period filter
-      const period = (request.query.period || 'all').toUpperCase();
-
-      // Parse trade type filter
-      const tradeType = request.query.tradeType || 'all';
-      const validTradeTypes = ['scalping', 'dayTrade', 'swing'];
-      const tradeTypeFilter = validTradeTypes.includes(tradeType) ? tradeType : null;
       const now = Date.now();
-      let periodFilterDate: Date | null = null;
-
-      if (period === 'D') {
-        periodFilterDate = new Date(now - 24 * 60 * 60 * 1000); // 24 hours
-      } else if (period === 'W') {
-        periodFilterDate = new Date(now - 7 * 24 * 60 * 60 * 1000); // 7 days
-      } else if (period === 'M') {
-        periodFilterDate = new Date(now - 30 * 24 * 60 * 60 * 1000); // 30 days
-      }
-
-      // Get platform-wide statistics
-      const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
       const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
 
-      // Base where clause for trade type filter
-      const tradeTypeWhere = tradeTypeFilter ? { tradeType: tradeTypeFilter } : {};
-
-      const [
-        totalUsers,
-        totalAnalyses, // Count from Analysis table
-        totalReports,
-        weeklyAnalyses,
-        weeklyReports,
-        monthlyReports
-      ] = await Promise.all([
-        db.user.count(),
-        db.analysis.count(), // Total analyses from Analysis table
-        db.report.count({ where: tradeTypeWhere }),
-        db.analysis.count({
-          where: {
-            createdAt: { gte: sevenDaysAgo }
-          }
-        }),
-        db.report.count({
-          where: {
-            ...tradeTypeWhere,
-            generatedAt: { gte: sevenDaysAgo }
-          }
-        }),
-        db.report.count({
-          where: {
-            ...tradeTypeWhere,
-            generatedAt: { gte: thirtyDaysAgo }
-          }
-        })
-      ]);
-
-      // Get real verdict distribution from Report table
-      const verdictCounts = await db.report.groupBy({
-        by: ['verdict'],
-        where: tradeTypeWhere,
-        _count: { verdict: true }
+      // Get all analyses with their data
+      const analyses = await db.analysis.findMany({
+        select: {
+          id: true,
+          totalScore: true,
+          outcome: true,
+          step5Result: true, // tradePlan
+          step7Result: true, // verdict
+          createdAt: true,
+        },
       });
 
-      // Convert verdict counts to distribution object
+      // Basic counts
+      const totalUsers = await db.user.count();
+      const totalAnalyses = analyses.length;
+      const weeklyAnalyses = analyses.filter(a => a.createdAt >= sevenDaysAgo).length;
+      const monthlyAnalyses = analyses.filter(a => a.createdAt >= thirtyDaysAgo).length;
+
+      // Verdict distribution from step7Result
       const verdictDistribution: Record<string, number> = {
         go: 0,
         conditional_go: 0,
@@ -1142,253 +1098,67 @@ Explain the key risks and what conditions would need to change before trading th
         avoid: 0
       };
 
-      verdictCounts.forEach((v) => {
-        const key = v.verdict.toLowerCase().replace(' ', '_').replace('!', '');
-        if (key === 'go') {
-          verdictDistribution['go'] += v._count.verdict;
-        } else if (key === 'conditional_go' || key === 'conditional') {
-          verdictDistribution['conditional_go'] += v._count.verdict;
-        } else if (key === 'wait') {
-          verdictDistribution['wait'] += v._count.verdict;
-        } else if (key === 'avoid') {
-          verdictDistribution['avoid'] += v._count.verdict;
+      analyses.forEach(a => {
+        const step7 = a.step7Result as Record<string, unknown> | null;
+        const verdict = ((step7?.verdict || step7?.action || '') as string).toLowerCase();
+        if (verdict === 'go' || verdict === 'go!') {
+          verdictDistribution['go']++;
+        } else if (verdict === 'conditional_go' || verdict === 'conditionalgo' || verdict === 'conditional') {
+          verdictDistribution['conditional_go']++;
+        } else if (verdict === 'wait') {
+          verdictDistribution['wait']++;
+        } else if (verdict === 'avoid' || verdict === 'no_go') {
+          verdictDistribution['avoid']++;
         }
       });
 
-      // Get reports with full reportData to extract step scores
-      // Only get reports that have analysis data (not expert_analysis type)
-      // Filter by period and trade type if specified
-      const reportWhereClause: { verdict: { not: string }; generatedAt?: { gte: Date }; tradeType?: string } = {
-        verdict: { not: 'expert_analysis' }
-      };
-      if (periodFilterDate) {
-        reportWhereClause.generatedAt = { gte: periodFilterDate };
-      }
-      if (tradeTypeFilter) {
-        reportWhereClause.tradeType = tradeTypeFilter;
-      }
+      // Closed analyses (have outcome: tp1_hit, tp2_hit, tp3_hit, sl_hit)
+      const closedAnalyses = analyses.filter(a =>
+        a.outcome === 'tp1_hit' || a.outcome === 'tp2_hit' || a.outcome === 'tp3_hit' || a.outcome === 'sl_hit'
+      );
+      const closedCount = closedAnalyses.length;
 
-      const reports = await db.report.findMany({
-        where: reportWhereClause,
-        select: {
-          reportData: true,
-          score: true
-        },
-        take: 1000,
-        orderBy: { generatedAt: 'desc' }
+      // TP hits (correct predictions)
+      const tpHits = closedAnalyses.filter(a =>
+        a.outcome === 'tp1_hit' || a.outcome === 'tp2_hit' || a.outcome === 'tp3_hit'
+      ).length;
+
+      // SL hits (incorrect predictions)
+      const slHits = closedAnalyses.filter(a => a.outcome === 'sl_hit').length;
+
+      // Platform accuracy = TP hits / closed * 100
+      const platformAccuracy = closedCount > 0
+        ? Number(((tpHits / closedCount) * 100).toFixed(1))
+        : 0;
+
+      // Average score from totalScore
+      const scores = analyses
+        .filter(a => a.totalScore !== null)
+        .map(a => Number(a.totalScore));
+      const avgScore = scores.length > 0
+        ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1))
+        : 0;
+
+      // GO Signal statistics (analyses with trade plans = GO/CONDITIONAL_GO)
+      const goSignalAnalyses = analyses.filter(a => {
+        const step7 = a.step7Result as Record<string, unknown> | null;
+        const verdict = ((step7?.verdict || step7?.action || '') as string).toLowerCase();
+        return (verdict.includes('go') || verdict.includes('conditional')) && !verdict.includes('wait') && !verdict.includes('avoid');
       });
 
-      // Helper to extract score from step data in reportData JSON
-      const extractStepScore = (reportData: unknown, stepName: string): number | null => {
-        if (!reportData || typeof reportData !== 'object') return null;
-        const data = reportData as Record<string, unknown>;
-        const stepData = data[stepName] as Record<string, unknown> | undefined;
-        if (!stepData) return null;
-
-        // Try different score field names used in different steps
-        if (typeof stepData.score === 'number') return stepData.score;
-        if (typeof stepData.overallScore === 'number') return stepData.overallScore;
-        if (typeof stepData.safetyScore === 'number') return stepData.safetyScore;
-        if (typeof stepData.riskScore === 'number') return 10 - (stepData.riskScore as number);
-        if (typeof stepData.confidence === 'number') return stepData.confidence;
-        if (typeof stepData.tradingScore === 'number') return stepData.tradingScore;
-
-        // For timing, check tradeNow boolean
-        if (stepName === 'timing' && typeof stepData.tradeNow === 'boolean') {
-          return stepData.tradeNow ? 8 : 5;
-        }
-
-        // For tradePlan, use riskReward as score indicator
-        if (stepName === 'tradePlan' && typeof stepData.riskReward === 'number') {
-          return Math.min(10, stepData.riskReward * 2);
-        }
-
-        // For assetScan, try gate.confidence or calculate from timeframes
-        if (stepName === 'assetScan') {
-          const gate = stepData.gate as Record<string, unknown> | undefined;
-          if (gate && typeof gate.confidence === 'number') {
-            return Math.min(10, gate.confidence / 10);
-          }
-          // Calculate from timeframe alignment
-          const timeframes = stepData.timeframes as Array<{ trend: string; strength: number }> | undefined;
-          if (timeframes && timeframes.length > 0) {
-            const avgStrength = timeframes.reduce((sum, tf) => sum + (tf.strength || 50), 0) / timeframes.length;
-            return Math.min(10, avgStrength / 10);
-          }
-        }
-
-        return null;
-      };
-
-      // Calculate average scores per step from reportData
-      const stepScores = {
-        marketPulse: [] as number[],
-        assetScanner: [] as number[],
-        safetyCheck: [] as number[],
-        timing: [] as number[],
-        tradePlan: [] as number[],
-        trapCheck: [] as number[],
-        finalVerdict: [] as number[]
-      };
-
-      const allScores: number[] = [];
-
-      reports.forEach((report) => {
-        const rd = report.reportData;
-
-        const s1 = extractStepScore(rd, 'marketPulse');
-        const s2 = extractStepScore(rd, 'assetScan');
-        const s3 = extractStepScore(rd, 'safetyCheck');
-        const s4 = extractStepScore(rd, 'timing');
-        const s5 = extractStepScore(rd, 'tradePlan');
-        const s6 = extractStepScore(rd, 'trapCheck');
-
-        // Final verdict score is the report's overall score
-        // Use typeof check instead of truthy check to handle score = 0
-        // Also try to extract from reportData.verdict as fallback
-        let s7: number | null = null;
-        if (report.score !== null && report.score !== undefined) {
-          s7 = Number(report.score);
-        } else {
-          // Try to extract from reportData.verdict
-          const verdictData = (rd as Record<string, unknown>)?.verdict as Record<string, unknown> | undefined;
-          if (verdictData) {
-            if (typeof verdictData.overallScore === 'number') s7 = verdictData.overallScore;
-            else if (typeof verdictData.score === 'number') s7 = verdictData.score;
-          }
-        }
-
-        if (s1 !== null) stepScores.marketPulse.push(s1);
-        if (s2 !== null) stepScores.assetScanner.push(s2);
-        if (s3 !== null) stepScores.safetyCheck.push(s3);
-        if (s4 !== null) stepScores.timing.push(s4);
-        if (s5 !== null) stepScores.tradePlan.push(s5);
-        if (s6 !== null) stepScores.trapCheck.push(s6);
-        if (s7 !== null) {
-          stepScores.finalVerdict.push(s7);
-          allScores.push(s7);
-        }
-      });
-
-      const calcAvg = (arr: number[]): number => {
-        if (arr.length === 0) return 0;
-        const sum = arr.reduce((a, b) => a + b, 0);
-        return Number((sum / arr.length).toFixed(1));
-      };
-
-      // Convert step scores to accuracy rates (score out of 10 -> percentage, capped at 100)
-      const stepAccuracyRates = {
-        marketPulse: Math.min(100, calcAvg(stepScores.marketPulse) * 10),
-        assetScanner: Math.min(100, calcAvg(stepScores.assetScanner) * 10),
-        safetyCheck: Math.min(100, calcAvg(stepScores.safetyCheck) * 10),
-        timing: Math.min(100, calcAvg(stepScores.timing) * 10),
-        tradePlan: Math.min(100, calcAvg(stepScores.tradePlan) * 10),
-        trapCheck: Math.min(100, calcAvg(stepScores.trapCheck) * 10),
-        finalVerdict: Math.min(100, calcAvg(stepScores.finalVerdict) * 10)
-      };
-
-      // Get real accuracy from CLOSED trades only (correct or incorrect, not neutral)
-      // Accuracy = TP hits / (TP hits + SL hits) * 100
-      const reportsWithOutcomes = await db.report.findMany({
-        where: {
-          ...tradeTypeWhere,
-          outcome: { in: ['correct', 'incorrect'] } // Only closed trades
-        },
-        select: { outcome: true, stepOutcomes: true }
-      });
-
-      let realAccuracy = 0;
-      let realSampleSize = 0;
-      const realStepAccuracy: Record<string, { correct: number; total: number }> = {};
-
-      if (reportsWithOutcomes.length > 0) {
-        // Count correct predictions (TP hit)
-        const correctCount = reportsWithOutcomes.filter(r => r.outcome === 'correct').length;
-        // Total closed trades (TP hit + SL hit)
-        const closedCount = reportsWithOutcomes.length;
-
-        // Accuracy = correct / closed * 100
-        realAccuracy = Number(((correctCount / closedCount) * 100).toFixed(1));
-        realSampleSize = closedCount;
-
-        // Aggregate step-level accuracy
-        reportsWithOutcomes.forEach(r => {
-          const stepOutcomes = r.stepOutcomes as Record<string, { correct: boolean }> | null;
-          if (stepOutcomes) {
-            Object.entries(stepOutcomes).forEach(([step, data]) => {
-              if (!realStepAccuracy[step]) {
-                realStepAccuracy[step] = { correct: 0, total: 0 };
-              }
-              realStepAccuracy[step].total++;
-              if (data.correct) realStepAccuracy[step].correct++;
-            });
-          }
-        });
-      }
-
-      // Overall platform accuracy - prefer real outcome data, fallback to score-based
-      const platformAccuracy = realSampleSize > 0
-        ? realAccuracy
-        : (allScores.length > 0
-          ? Number((allScores.reduce((a, b) => a + b, 0) / allScores.length * 10).toFixed(1))
-          : 0);
-
-      // Average confidence is the average report score
-      const avgConfidence = calcAvg(allScores);
-
-      // Get all reports with their outcomes and verdicts for signal accuracy calculation
-      const allReportsForSignals = await db.report.findMany({
-        where: tradeTypeWhere,
-        select: { outcome: true, verdict: true }
-      });
-
-      // Helper to check if verdict is a GO signal
-      const isGoSignal = (verdict: string) => {
-        const v = verdict.toLowerCase();
-        return (v.includes('go') || v.includes('conditional')) && !v.includes('wait') && !v.includes('avoid');
-      };
-
-      // Helper to check if verdict is a WAIT/AVOID signal
-      const isCautionSignal = (verdict: string) => {
-        const v = verdict.toLowerCase();
-        return v.includes('wait') || v.includes('avoid');
-      };
-
-      // GO Signal statistics (GO + CONDITIONAL_GO)
-      const goSignalReports = allReportsForSignals.filter(r => isGoSignal(r.verdict));
-      const goCorrect = goSignalReports.filter(r => r.outcome === 'correct').length;
-      const goIncorrect = goSignalReports.filter(r => r.outcome === 'incorrect').length;
-      const goPending = goSignalReports.filter(r => !r.outcome || r.outcome === 'pending').length;
+      const goSignalsClosed = goSignalAnalyses.filter(a =>
+        a.outcome === 'tp1_hit' || a.outcome === 'tp2_hit' || a.outcome === 'tp3_hit' || a.outcome === 'sl_hit'
+      );
+      const goCorrect = goSignalsClosed.filter(a =>
+        a.outcome === 'tp1_hit' || a.outcome === 'tp2_hit' || a.outcome === 'tp3_hit'
+      ).length;
+      const goIncorrect = goSignalsClosed.filter(a => a.outcome === 'sl_hit').length;
+      const goPending = goSignalAnalyses.length - goSignalsClosed.length;
       const goTotal = goCorrect + goIncorrect;
       const goAccuracy = goTotal > 0 ? Number(((goCorrect / goTotal) * 100).toFixed(1)) : 0;
 
-      // WAIT/AVOID Signal statistics
-      const cautionSignalReports = allReportsForSignals.filter(r => isCautionSignal(r.verdict));
-      const cautionCorrect = cautionSignalReports.filter(r => r.outcome === 'caution_correct').length;
-      const cautionIncorrect = cautionSignalReports.filter(r => r.outcome === 'caution_incorrect').length;
-      const cautionPending = cautionSignalReports.filter(r => !r.outcome || r.outcome === 'pending').length;
-      const cautionTotal = cautionCorrect + cautionIncorrect;
-      const cautionAccuracy = cautionTotal > 0 ? Number(((cautionCorrect / cautionTotal) * 100).toFixed(1)) : 0;
-
-      // "With Plan" = GO signals only (analyses with actionable trade plans)
-      // WAIT/AVOID don't count as "with plan" since they recommend NOT trading
-      const reportsWithTradePlan = goSignalReports.length;
-      const totalAllReports = allReportsForSignals.length;
-
-      // Trigger background outcome calculations (don't await)
-      calculateExpiredOutcomes().catch(err => console.error('Background outcome calculation failed:', err));
-      calculateCautionOutcomes().catch(err => console.error('Background caution calculation failed:', err));
-
-      // Calculate step accuracy from real outcomes if available
-      if (realSampleSize > 0) {
-        Object.entries(realStepAccuracy).forEach(([step, data]) => {
-          const mappedStep = step === 'assetScanner' ? 'assetScanner' : step;
-          if (stepAccuracyRates[mappedStep as keyof typeof stepAccuracyRates] !== undefined) {
-            stepAccuracyRates[mappedStep as keyof typeof stepAccuracyRates] =
-              data.total > 0 ? Number(((data.correct / data.total) * 100).toFixed(1)) : 0;
-          }
-        });
-      }
+      // Analyses with trade plan (step5Result not null)
+      const analysesWithPlan = analyses.filter(a => a.step5Result !== null).length;
 
       // Get platform creation date from first user
       const firstUser = await db.user.findFirst({
@@ -1400,58 +1170,41 @@ Explain the key risks and what conditions would need to change before trading th
         ? firstUser.createdAt.toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0];
 
-      // Sample size is the number of reports with valid scores
-      const sampleSize = allScores.length;
-
       return reply.send({
         success: true,
         data: {
           platform: {
             totalUsers,
-            totalAnalyses, // Actual count from Analysis table
-            totalReports,
-            weeklyAnalyses, // Actual count from Analysis table
-            monthlyAnalyses: monthlyReports, // Still using reports for monthly
+            totalAnalyses,
+            weeklyAnalyses,
+            monthlyAnalyses,
             platformSince,
           },
           accuracy: {
             overall: platformAccuracy,
-            avgConfidence,
-            stepRates: stepAccuracyRates,
+            avgScore,
+            closedCount,
+            tpHits,
+            slHits,
             lastUpdated: new Date().toISOString(),
-            methodology: realSampleSize > 0 ? 'outcome-verified' : 'score-based',
-            sampleSize: realSampleSize > 0 ? realSampleSize : sampleSize,
-            outcomeVerifiedCount: realSampleSize,
-            period: period === 'ALL' ? 'all' : period, // D, W, M, or all
-            tradeType: tradeTypeFilter || 'all' // scalping, dayTrade, swing, or all
+            methodology: closedCount > 0 ? 'outcome-verified' : 'score-based',
+            sampleSize: closedCount > 0 ? closedCount : scores.length,
           },
-          // GO Signal Rate: How often GO/CONDITIONAL_GO recommendations were correct
           goSignalRate: {
             rate: goAccuracy,
             goCorrect,
             goIncorrect,
             pending: goPending,
             totalVerified: goTotal,
-            totalSignals: goSignalReports.length, // Should match verdicts.go + verdicts.conditional_go
+            totalSignals: goSignalAnalyses.length,
             description: 'Success rate of GO/CONDITIONAL_GO signals (TP hit vs SL hit)'
           },
-          // Caution Rate: How often WAIT/AVOID recommendations were correct
-          cautionRate: {
-            rate: cautionAccuracy,
-            cautionCorrect,
-            cautionIncorrect,
-            pending: cautionPending,
-            totalVerified: cautionTotal,
-            totalSignals: cautionSignalReports.length, // Should match verdicts.wait + verdicts.avoid
-            description: 'Success rate of WAIT/AVOID recommendations'
-          },
           verdicts: verdictDistribution,
-          // Analysis coverage (uses all reports, not period-filtered)
           coverage: {
-            totalReports: totalAllReports,
-            withTradePlan: reportsWithTradePlan,
-            tradePlanPercentage: totalAllReports > 0
-              ? Number(((reportsWithTradePlan / totalAllReports) * 100).toFixed(1))
+            totalAnalyses,
+            withTradePlan: analysesWithPlan,
+            tradePlanPercentage: totalAnalyses > 0
+              ? Number(((analysesWithPlan / totalAnalyses) * 100).toFixed(1))
               : 0
           },
           dataQuality: {
