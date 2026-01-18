@@ -167,10 +167,10 @@ export default function AnalyzePage() {
       </div>
 
       {/* ===== SECTION 2: New Analysis (Trade Type + Coin + Credit) ===== */}
-      <div className="relative rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700 overflow-visible">
+      <div className="relative rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700 overflow-visible isolate">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/5 dark:from-emerald-500/10 via-transparent to-transparent rounded-2xl overflow-hidden pointer-events-none" />
 
-        <div className="relative z-10 p-5">
+        <div className="relative p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">New Analysis</h2>
             <CreditBalance compact />
@@ -242,7 +242,7 @@ export default function AnalyzePage() {
 
       {/* ===== SECTION 4: Recent Analyses ===== */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
-        <div className="relative z-10 p-5">
+        <div className="relative p-5">
           <RecentAnalyses />
         </div>
       </div>

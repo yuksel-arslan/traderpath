@@ -335,8 +335,8 @@ export function AnalysisDialog({
   const isGo = verdictAction.toLowerCase().includes('go') && !verdictAction.toLowerCase().includes('wait') && !verdictAction.toLowerCase().includes('avoid');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm isolate">
+      <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col relative z-[101]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b bg-muted/30">
           <div className="flex items-center gap-3">
