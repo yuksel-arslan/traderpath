@@ -323,10 +323,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <Search className="w-5 h-5" />
-              <span>Search coin...</span>
-            </div>
+            <span className="text-muted-foreground">Select a coin</span>
           )}
           <ChevronDown className={cn("w-5 h-5 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
         </button>
