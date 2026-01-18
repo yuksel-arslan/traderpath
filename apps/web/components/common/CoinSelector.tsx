@@ -175,13 +175,18 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filter coins based on search
+  // Filter coins based on search (handles both "BTC" and "BTCUSDT" format)
   const filteredCoins = search
-    ? ALL_COINS.filter(
-        (coin) =>
-          coin.symbol.toLowerCase().includes(search.toLowerCase()) ||
-          coin.name.toLowerCase().includes(search.toLowerCase())
-      )
+    ? ALL_COINS.filter((coin) => {
+        const searchLower = search.toLowerCase().replace('usdt', '');
+        const symbolLower = coin.symbol.toLowerCase();
+        const nameLower = coin.name.toLowerCase();
+        return (
+          symbolLower.includes(searchLower) ||
+          searchLower.includes(symbolLower) ||
+          nameLower.includes(searchLower)
+        );
+      })
     : ALL_COINS;
 
   // Get recent coin objects
