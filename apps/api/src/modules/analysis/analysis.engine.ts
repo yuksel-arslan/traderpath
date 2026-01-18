@@ -1280,6 +1280,12 @@ const TRADE_TYPE_TIMEFRAMES: Record<TradeType, TradeTypeTimeframes> = {
     confirmation: '1w',
     candleCounts: { primary: 90, secondary: 60, confirmation: 12 },
   },
+  position: {
+    primary: '1d',
+    secondary: '1w',
+    confirmation: '1M',
+    candleCounts: { primary: 90, secondary: 30, confirmation: 12 },
+  },
 };
 
 function getTimeframesForTradeType(tradeType: TradeType = 'dayTrade'): TradeTypeTimeframes {
