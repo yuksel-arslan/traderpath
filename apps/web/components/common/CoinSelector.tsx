@@ -175,13 +175,18 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filter coins based on search
+  // Filter coins based on search (handles both "BTC" and "BTCUSDT" format)
   const filteredCoins = search
-    ? ALL_COINS.filter(
-        (coin) =>
-          coin.symbol.toLowerCase().includes(search.toLowerCase()) ||
-          coin.name.toLowerCase().includes(search.toLowerCase())
-      )
+    ? ALL_COINS.filter((coin) => {
+        const searchLower = search.toLowerCase().replace('usdt', '');
+        const symbolLower = coin.symbol.toLowerCase();
+        const nameLower = coin.name.toLowerCase();
+        return (
+          symbolLower.includes(searchLower) ||
+          searchLower.includes(symbolLower) ||
+          nameLower.includes(searchLower)
+        );
+      })
     : ALL_COINS;
 
   // Get recent coin objects
@@ -330,7 +335,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
 
         {/* Dropdown Panel */}
         {isOpen && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-card border rounded-lg shadow-xl z-50 overflow-hidden">
+          <div className="absolute top-full left-0 right-0 mt-2 bg-card border rounded-lg shadow-xl z-50">
             {/* Search Input */}
             <div className="p-3 border-b">
               <div className="relative">
@@ -356,7 +361,7 @@ export function CoinSelector({ tradeType = 'dayTrade' }: CoinSelectorProps) {
               </div>
             </div>
 
-            <div className="max-h-80 overflow-y-auto">
+            <div className="max-h-[320px] overflow-y-auto">
               {/* Recent Searches */}
               {!search && recentCoinObjects.length > 0 && (
                 <div className="p-3 border-b">
