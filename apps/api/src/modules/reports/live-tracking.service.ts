@@ -583,3 +583,275 @@ export async function checkAndUpdateAnalysisOutcomes(): Promise<{
     slHits,
   };
 }
+
+// ===========================================
+// Binance Klines API - Historical OHLC Data
+// ===========================================
+
+interface Kline {
+  openTime: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  closeTime: number;
+}
+
+/**
+ * Fetch historical klines (OHLC) data from Binance
+ * @param symbol - Crypto symbol (e.g., BTC)
+ * @param startTime - Start timestamp in ms
+ * @param endTime - End timestamp in ms (default: now)
+ * @param interval - Kline interval (default: 1h)
+ */
+async function fetchKlines(
+  symbol: string,
+  startTime: number,
+  endTime?: number,
+  interval: string = '1h'
+): Promise<Kline[]> {
+  const allKlines: Kline[] = [];
+  const maxLimit = 1000; // Binance API limit
+  let currentStartTime = startTime;
+  const finalEndTime = endTime || Date.now();
+
+  try {
+    while (currentStartTime < finalEndTime) {
+      const url = `https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}USDT&interval=${interval}&startTime=${currentStartTime}&endTime=${finalEndTime}&limit=${maxLimit}`;
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        console.error(`[Klines] Failed to fetch for ${symbol}: ${response.status}`);
+        break;
+      }
+
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') break;
+
+      let data: Array<Array<string | number>>;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        console.error(`[Klines] Invalid JSON for ${symbol}`);
+        break;
+      }
+
+      if (data.length === 0) break;
+
+      for (const kline of data) {
+        allKlines.push({
+          openTime: Number(kline[0]),
+          open: parseFloat(String(kline[1])),
+          high: parseFloat(String(kline[2])),
+          low: parseFloat(String(kline[3])),
+          close: parseFloat(String(kline[4])),
+          closeTime: Number(kline[6]),
+        });
+      }
+
+      // Move to next batch
+      const lastKline = data[data.length - 1];
+      currentStartTime = Number(lastKline[6]) + 1; // closeTime + 1ms
+
+      // If we got less than max, we've reached the end
+      if (data.length < maxLimit) break;
+
+      // Rate limit protection
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  } catch (error) {
+    console.error(`[Klines] Error fetching for ${symbol}:`, error);
+  }
+
+  return allKlines;
+}
+
+/**
+ * Check historical klines to determine if TP or SL was hit first
+ * @returns outcome: 'tp1_hit', 'tp2_hit', 'tp3_hit', 'sl_hit', or null if still active
+ */
+function checkKlinesForOutcome(
+  klines: Kline[],
+  direction: 'long' | 'short',
+  stopLoss: number,
+  tp1: number,
+  tp2: number,
+  tp3: number
+): { outcome: string | null; outcomePrice: number; outcomeTime: number } | null {
+  const isLong = direction === 'long';
+
+  for (const kline of klines) {
+    // For LONG:
+    //   - TP hit when High >= TP price
+    //   - SL hit when Low <= SL price
+    // For SHORT:
+    //   - TP hit when Low <= TP price
+    //   - SL hit when High >= SL price
+
+    // Check SL first (SL hit = trade closed, even if TP was also hit in same candle)
+    const slHit = isLong
+      ? (stopLoss > 0 && kline.low <= stopLoss)
+      : (stopLoss > 0 && kline.high >= stopLoss);
+
+    if (slHit) {
+      return {
+        outcome: 'sl_hit',
+        outcomePrice: stopLoss,
+        outcomeTime: kline.openTime,
+      };
+    }
+
+    // Check TPs in order (TP1 first, then TP2, then TP3)
+    if (tp1 > 0) {
+      const tp1Hit = isLong ? kline.high >= tp1 : kline.low <= tp1;
+      if (tp1Hit) {
+        // Check if higher TPs were also hit in this candle
+        if (tp3 > 0) {
+          const tp3Hit = isLong ? kline.high >= tp3 : kline.low <= tp3;
+          if (tp3Hit) {
+            return { outcome: 'tp3_hit', outcomePrice: tp3, outcomeTime: kline.openTime };
+          }
+        }
+        if (tp2 > 0) {
+          const tp2Hit = isLong ? kline.high >= tp2 : kline.low <= tp2;
+          if (tp2Hit) {
+            return { outcome: 'tp2_hit', outcomePrice: tp2, outcomeTime: kline.openTime };
+          }
+        }
+        return { outcome: 'tp1_hit', outcomePrice: tp1, outcomeTime: kline.openTime };
+      }
+    }
+  }
+
+  return null; // Still active - no TP or SL hit
+}
+
+/**
+ * HISTORICAL OUTCOME CHECKER using Binance Klines API
+ * Scans all analyses from createdAt to now using historical OHLC data
+ * to accurately determine if TP or SL was hit
+ */
+export async function checkAllHistoricalOutcomes(): Promise<{
+  checked: number;
+  tpHits: number;
+  slHits: number;
+  skipped: number;
+  stillActive: number;
+}> {
+  console.log('[HistoricalOutcomeChecker] Starting full historical check with Klines API...');
+
+  // Get ALL analyses without outcomes that have trade plans
+  const analyses = await prisma.analysis.findMany({
+    where: {
+      outcome: null,
+      step5Result: { not: null },
+    },
+    select: {
+      id: true,
+      symbol: true,
+      step5Result: true,
+      createdAt: true,
+    },
+  });
+
+  if (analyses.length === 0) {
+    console.log('[HistoricalOutcomeChecker] No analyses to check');
+    return { checked: 0, tpHits: 0, slHits: 0, skipped: 0, stillActive: 0 };
+  }
+
+  console.log(`[HistoricalOutcomeChecker] Found ${analyses.length} analyses to check`);
+
+  let tpHits = 0;
+  let slHits = 0;
+  let skipped = 0;
+  let stillActive = 0;
+  const updates: Array<{ id: string; outcome: string; outcomePrice: number; outcomeAt: Date }> = [];
+
+  // Process one at a time to avoid rate limiting
+  for (let i = 0; i < analyses.length; i++) {
+    const analysis = analyses[i];
+    console.log(`[HistoricalOutcomeChecker] Processing ${i + 1}/${analyses.length}: ${analysis.symbol}`);
+
+    const tradePlan = analysis.step5Result as Record<string, unknown> | null;
+    if (!tradePlan) {
+      skipped++;
+      continue;
+    }
+
+    const direction = ((tradePlan.direction as string) || 'long').toLowerCase() as 'long' | 'short';
+    const stopLossData = tradePlan.stopLoss as { price?: number } | number | undefined;
+    const stopLoss = typeof stopLossData === 'object' ? Number(stopLossData?.price) : Number(stopLossData) || 0;
+
+    const takeProfits = tradePlan.takeProfits as Array<{ price: number }> | undefined;
+    const tp1 = Number(takeProfits?.[0]?.price || tradePlan.takeProfit1) || 0;
+    const tp2 = Number(takeProfits?.[1]?.price || tradePlan.takeProfit2) || 0;
+    const tp3 = Number(takeProfits?.[2]?.price || tradePlan.takeProfit3) || 0;
+
+    // Need at least SL or one TP to check outcome
+    if (!stopLoss && !tp1) {
+      skipped++;
+      continue;
+    }
+
+    // Fetch historical klines from analysis creation date to now
+    const startTime = analysis.createdAt.getTime();
+    const klines = await fetchKlines(analysis.symbol, startTime);
+
+    if (klines.length === 0) {
+      skipped++;
+      continue;
+    }
+
+    // Check for outcome in historical data
+    const result = checkKlinesForOutcome(klines, direction, stopLoss, tp1, tp2, tp3);
+
+    if (result) {
+      updates.push({
+        id: analysis.id,
+        outcome: result.outcome!,
+        outcomePrice: result.outcomePrice,
+        outcomeAt: new Date(result.outcomeTime),
+      });
+
+      if (result.outcome === 'sl_hit') {
+        slHits++;
+      } else {
+        tpHits++;
+      }
+    } else {
+      stillActive++;
+    }
+
+    // Small delay between requests to avoid rate limiting
+    if (i < analyses.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+  }
+
+  // Apply updates
+  if (updates.length > 0) {
+    console.log(`[HistoricalOutcomeChecker] Applying ${updates.length} updates...`);
+    await Promise.all(
+      updates.map(update =>
+        prisma.analysis.update({
+          where: { id: update.id },
+          data: {
+            outcome: update.outcome,
+            outcomePrice: update.outcomePrice,
+            outcomeAt: update.outcomeAt,
+          }
+        })
+      )
+    );
+  }
+
+  console.log(`[HistoricalOutcomeChecker] Completed - Checked: ${analyses.length}, TP Hits: ${tpHits}, SL Hits: ${slHits}, Still Active: ${stillActive}, Skipped: ${skipped}`);
+
+  return {
+    checked: analyses.length,
+    tpHits,
+    slHits,
+    skipped,
+    stillActive,
+  };
+}

@@ -344,8 +344,18 @@ app.setErrorHandler(errorHandler);
 let outcomeTrackerInterval: NodeJS.Timeout | null = null;
 
 async function startOutcomeTracker() {
-  const { checkAndUpdateOutcomes, checkAndUpdateAnalysisOutcomes } = await import('./modules/reports/live-tracking.service');
+  const { checkAndUpdateOutcomes, checkAndUpdateAnalysisOutcomes, checkAllHistoricalOutcomes } = await import('./modules/reports/live-tracking.service');
   const { calculateExpiredOutcomes, calculateCautionOutcomes } = await import('./modules/reports/outcome.service');
+
+  // ONE-TIME: Fix all historical analyses that never had outcomes recorded
+  try {
+    const historicalResult = await checkAllHistoricalOutcomes();
+    if (historicalResult.checked > 0) {
+      logger.info(historicalResult, '✓ Historical outcome check completed (one-time fix)');
+    }
+  } catch (error) {
+    logger.error(error, 'Historical outcome check failed');
+  }
 
   // Run immediately on startup
   try {
