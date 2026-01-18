@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
-import type { TradeType } from '../../../components/analysis/TradeTypeSelector';
+import type { TradeType, Timeframe } from '../../../components/analysis/TradeTypeSelector';
 
 // Lazy load components
 const TradingViewWidget = dynamic(
@@ -268,7 +268,7 @@ function FeatureBadge({ icon: Icon, text }: { icon: React.ElementType; text: str
 
 export default function AnalyzePage() {
   const [stats, setStats] = useState<AnalysisStats | null>(null);
-  const [tradeType, setTradeType] = useState<TradeType>('dayTrade');
+  const [timeframe, setTimeframe] = useState<Timeframe>('4h');
   const [chartSymbol, setChartSymbol] = useState('BINANCE:BTCUSDT');
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [showChart, setShowChart] = useState(false);
@@ -378,11 +378,11 @@ export default function AnalyzePage() {
           {/* Main Analysis Card - Clean & Simple */}
           <div className="col-span-12 lg:col-span-7">
             <div className="space-y-4">
-              {/* Trade Type - Inline with Credit */}
+              {/* Timeframe Selection - Auto-selects strategy */}
               <div className="flex items-center justify-between">
                 <TradeTypeSelector
-                  value={tradeType}
-                  onChange={setTradeType}
+                  value={timeframe}
+                  onChange={(tf) => setTimeframe(tf)}
                   variant="tabs"
                   showCreditCost
                   className="flex-1"
@@ -390,7 +390,7 @@ export default function AnalyzePage() {
               </div>
 
               {/* Coin Selector - Main Focus */}
-              <CoinSelector tradeType={tradeType} />
+              <CoinSelector timeframe={timeframe} />
             </div>
           </div>
 

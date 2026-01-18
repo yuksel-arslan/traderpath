@@ -10,7 +10,7 @@ import { costService } from '../costs/cost.service';
 import { creditCostsService } from '../costs/credit-costs.service';
 import { analysisEngine } from './analysis.engine';
 import { config } from '../../core/config';
-import { TradeType, getTradeConfig, getStepConfig } from './config/trade-config';
+import { TradeType, getTradeConfig, getStepConfig, getTradeTypeFromInterval } from './config/trade-config';
 import { getCautionRate, calculateCautionOutcomes, calculateExpiredOutcomes } from '../reports/outcome.service';
 import { prisma } from '../../core/database';
 
@@ -156,8 +156,17 @@ Be concise and actionable.`;
     }
   });
 
-  // Common schema with tradeType support
-  const tradeTypeSchema = z.enum(['scalping', 'dayTrade', 'swing']).default('dayTrade');
+  // Common schema with tradeType and interval support
+  const tradeTypeSchema = z.enum(['scalping', 'dayTrade', 'swing', 'position']).default('swing');
+  const intervalSchema = z.enum(['15m', '1h', '4h', '1d']).optional();
+
+  // Helper to resolve tradeType from interval if provided
+  function resolveTradeType(interval?: string, tradeType?: TradeType): TradeType {
+    if (interval) {
+      return getTradeTypeFromInterval(interval);
+    }
+    return tradeType || 'swing';
+  }
 
   /**
    * POST /api/analysis/asset-scan
@@ -449,7 +458,8 @@ Warn about potential traps and give protective advice.`;
   const fullAnalysisSchema = z.object({
     symbol: z.string().toUpperCase(),
     accountSize: z.number().optional().default(10000),
-    tradeType: tradeTypeSchema,
+    interval: intervalSchema,
+    tradeType: tradeTypeSchema.optional(),
   });
 
   app.post('/full', {
@@ -457,6 +467,10 @@ Warn about potential traps and give protective advice.`;
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = getUser(request).id;
     const body = fullAnalysisSchema.parse(request.body);
+    // Resolve tradeType from interval if provided
+    const tradeType = resolveTradeType(body.interval, body.tradeType as TradeType);
+    // Use the interval if provided, otherwise derive from tradeType
+    const interval = body.interval || (tradeType === 'scalping' ? '15m' : tradeType === 'dayTrade' ? '1h' : tradeType === 'position' ? '1d' : '4h');
 
     const cost = await creditCostsService.getCreditCost('BUNDLE_FULL_ANALYSIS');
     const chargeResult = await creditService.charge(userId, cost, 'analysis_full', {
@@ -475,10 +489,10 @@ Warn about potential traps and give protective advice.`;
       // All steps use trade type specific timeframes and indicators
       const [marketPulse, assetScan, safetyCheck, timing, trapCheck] = await Promise.all([
         analysisEngine.getMarketPulse(),
-        analysisEngine.scanAsset(body.symbol, body.tradeType),
-        analysisEngine.safetyCheck(body.symbol, body.tradeType),
-        analysisEngine.timingAnalysis(body.symbol, body.tradeType),
-        analysisEngine.trapCheck(body.symbol, body.tradeType),
+        analysisEngine.scanAsset(body.symbol, tradeType),
+        analysisEngine.safetyCheck(body.symbol, tradeType),
+        analysisEngine.timingAnalysis(body.symbol, tradeType),
+        analysisEngine.trapCheck(body.symbol, tradeType),
       ]);
 
       // Step 6: Preliminary Verdict - decides GO/WAIT/AVOID BEFORE trade plan
@@ -505,17 +519,16 @@ Warn about potential traps and give protective advice.`;
         preliminaryVerdict,
         { marketPulse, assetScan, safetyCheck, timing, trapCheck },
         tradePlan,
-        body.tradeType
+        tradeType
       );
 
       // Save analysis to database (regardless of verdict)
-      const tradeConfig = getTradeConfig(body.tradeType);
-      const primaryTimeframe = tradeConfig.steps[0]?.timeframes.find(tf => tf.priority === 'primary')?.timeframe || '4h';
+      // Use the interval from request, not derived from tradeConfig
       const savedAnalysis = await prisma.analysis.create({
         data: {
           userId,
           symbol: body.symbol,
-          interval: primaryTimeframe,
+          interval: interval, // Use the selected timeframe
           stepsCompleted: [1, 2, 3, 4, 5, 6, 7],
           step1Result: marketPulse as object,
           step2Result: assetScan as object,
@@ -551,7 +564,7 @@ Warn about potential traps and give protective advice.`;
             entryPrice: tradePlan?.averageEntry ? `$${tradePlan.averageEntry}` : 'N/A',
             stopLoss: tradePlan?.stopLoss?.price ? `$${tradePlan.stopLoss.price}` : 'N/A',
             takeProfit1: tradePlan?.takeProfits?.[0]?.price ? `$${tradePlan.takeProfits[0].price}` : 'N/A',
-            tradeType: body.tradeType === 'scalping' ? 'Scalping' : body.tradeType === 'dayTrade' ? 'Day Trade' : 'Swing Trade',
+            tradeType: tradeType === 'scalping' ? 'Scalping' : tradeType === 'dayTrade' ? 'Day Trade' : tradeType === 'position' ? 'Position' : 'Swing Trade',
           };
 
           // Send email
@@ -567,7 +580,7 @@ Warn about potential traps and give protective advice.`;
       })();
 
       // Build AI prompt based on whether trade plan exists
-      const tradeTypeLabel = body.tradeType === 'scalping' ? 'scalping (1-15 min)' : body.tradeType === 'dayTrade' ? 'day trading (1-8 hours)' : 'swing trading (2-14 days)';
+      const tradeTypeLabel = tradeType === 'scalping' ? 'scalping (15min-2h)' : tradeType === 'dayTrade' ? 'day trading (2-8 hours)' : tradeType === 'position' ? 'position trading (1-4 weeks)' : 'swing trading (1-5 days)';
       let aiPrompt: string;
       if (tradePlan) {
         aiPrompt = `You are a senior crypto analyst. Give a comprehensive ${tradeTypeLabel} recommendation for ${body.symbol} in English (4-5 sentences):
@@ -642,7 +655,8 @@ Explain the key risks and what conditions would need to change before trading th
         data: {
           analysisId: savedAnalysis.id, // Use saved analysis ID from database
           symbol: body.symbol,
-          tradeType: body.tradeType, // Include trade type in response
+          interval, // Include selected timeframe
+          tradeType, // Include derived trade type
           timestamp: verdict.createdAt,
           expiresAt: verdict.expiresAt,
           overallScore: verdict.overallScore,

@@ -42,16 +42,25 @@ import { TrapCheck } from './TrapCheck';
 import { FinalVerdict } from './FinalVerdict';
 import { AnalysisProgressBar } from './AnalysisProgressBar';
 
-type TradeType = 'scalping' | 'dayTrade' | 'swing';
+type Timeframe = '15m' | '1h' | '4h' | '1d';
+type TradeType = 'scalping' | 'dayTrade' | 'swing' | 'position';
 type AnalysisMode = 'educational' | 'quick';
 type DialogStep = 'mode-select' | 'analyzing' | 'results';
+
+// Timeframe to trade type mapping
+const TIMEFRAME_TO_TRADE_TYPE: Record<Timeframe, TradeType> = {
+  '15m': 'scalping',
+  '1h': 'dayTrade',
+  '4h': 'swing',
+  '1d': 'position',
+};
 
 interface AnalysisDialogProps {
   isOpen: boolean;
   onClose: () => void;
   symbol: string;
   coinName: string;
-  tradeType: TradeType;
+  timeframe: Timeframe;
   onComplete?: () => void;
 }
 
@@ -59,6 +68,7 @@ const TRADE_TYPE_LABELS: Record<TradeType, string> = {
   scalping: 'Scalping',
   dayTrade: 'Day Trade',
   swing: 'Swing',
+  position: 'Position',
 };
 
 // Step definitions
@@ -93,9 +103,11 @@ export function AnalysisDialog({
   onClose,
   symbol,
   coinName,
-  tradeType,
+  timeframe,
   onComplete,
 }: AnalysisDialogProps) {
+  // Derive trade type from timeframe
+  const tradeType = TIMEFRAME_TO_TRADE_TYPE[timeframe];
   // Dialog state
   const [dialogStep, setDialogStep] = useState<DialogStep>('mode-select');
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('educational');
@@ -205,7 +217,7 @@ export function AnalysisDialog({
           verdict: verdict?.action || verdict?.verdict || 'N/A',
           score: verdict?.overallScore || 0,
           direction: tradePlan?.direction || null,
-          interval: '1h',
+          interval: timeframe,
           tradeType,
         }),
       });
@@ -217,7 +229,7 @@ export function AnalysisDialog({
     } catch (error) {
       console.error('Failed to auto-save report:', error);
     }
-  }, [completedSteps.length, results, symbol, reportSaved, tradeType]);
+  }, [completedSteps.length, results, symbol, reportSaved, tradeType, timeframe]);
 
   // Auto-save when complete
   useEffect(() => {
@@ -238,7 +250,7 @@ export function AnalysisDialog({
       const response = await fetch(getApiUrl('/api/analysis/full'), {
         method: 'POST',
         headers,
-        body: JSON.stringify({ symbol, accountSize: 10000, tradeType }),
+        body: JSON.stringify({ symbol, accountSize: 10000, interval: timeframe, tradeType }),
       });
 
       const responseText = await response.text();
