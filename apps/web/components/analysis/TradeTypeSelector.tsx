@@ -295,42 +295,90 @@ export function TradeTypeSelector({
     );
   }
 
-  // Tabs variant - horizontal tabs (responsive)
+  // Tabs variant - horizontal tabs (responsive) - 2026 Glassmorphism style
   if (variant === 'tabs') {
     return (
-      <div className={cn('grid grid-cols-3 gap-1 p-1 bg-gray-100 dark:bg-slate-800 rounded-lg', className)}>
-        {TRADE_TYPES.map((type) => {
-          const Icon = type.icon;
-          const isSelected = selected === type.id;
+      <div className={cn('space-y-2', className)}>
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            Choose Mode
+          </span>
+          <div className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500">
+            <Clock className="w-3 h-3" />
+            <span>Affects timeframes & risk</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-white/10">
+          {TRADE_TYPES.map((type) => {
+            const Icon = type.icon;
+            const isSelected = selected === type.id;
 
-          return (
-            <button
-              key={type.id}
-              onClick={() => handleSelect(type.id)}
-              className={cn(
-                'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:py-2.5 rounded-md text-xs sm:text-sm font-medium transition-all',
-                isSelected
-                  ? 'bg-white dark:bg-slate-700 shadow-sm text-gray-900 dark:text-white'
-                  : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
-              )}
-            >
-              <Icon className={cn('w-4 h-4 sm:w-4 sm:h-4 shrink-0', isSelected ? type.color : '')} />
-              <span className="text-[10px] sm:text-sm leading-tight">{type.name}</span>
-              {showCreditCost && (
-                <span
-                  className={cn(
-                    'text-[9px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded shrink-0',
-                    isSelected
-                      ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'
-                      : 'bg-gray-200 dark:bg-slate-600 text-gray-500 dark:text-slate-400'
-                  )}
-                >
-                  {type.creditCost}
+            return (
+              <button
+                key={type.id}
+                onClick={() => handleSelect(type.id)}
+                className={cn(
+                  'relative flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300',
+                  isSelected
+                    ? cn(
+                        'bg-white dark:bg-slate-700 shadow-lg',
+                        'ring-2 ring-offset-1 ring-offset-transparent',
+                        type.id === 'scalping' && 'ring-orange-500/50',
+                        type.id === 'dayTrade' && 'ring-blue-500/50',
+                        type.id === 'swing' && 'ring-purple-500/50'
+                      )
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700/50'
+                )}
+              >
+                <Icon className={cn(
+                  'w-4 h-4 shrink-0 transition-colors',
+                  isSelected ? type.color : 'text-slate-400'
+                )} />
+                <span className={cn(
+                  'transition-colors',
+                  isSelected ? 'text-slate-900 dark:text-white' : ''
+                )}>
+                  {type.name}
                 </span>
-              )}
-            </button>
-          );
-        })}
+                {showCreditCost && (
+                  <span
+                    className={cn(
+                      'flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 transition-all',
+                      isSelected
+                        ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                        : 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-400'
+                    )}
+                  >
+                    <Gem className="w-2.5 h-2.5" />
+                    {type.creditCost}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {/* Selected type info - compact */}
+        <div className="flex items-center justify-between px-1 text-[10px] text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" />
+              {selectedConfig.timeframes}
+            </span>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
+            <span className="flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {selectedConfig.holdingPeriod}
+            </span>
+          </div>
+          <span className={cn(
+            'px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase',
+            selectedConfig.riskLevel === 'high' && 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400',
+            selectedConfig.riskLevel === 'medium' && 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400',
+            selectedConfig.riskLevel === 'low' && 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+          )}>
+            {selectedConfig.riskLevel} risk
+          </span>
+        </div>
       </div>
     );
   }
