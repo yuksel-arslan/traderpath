@@ -1099,12 +1099,20 @@ Explain the key risks and what conditions would need to change before trading th
 
       const [
         totalUsers,
+        totalAnalyses, // Count from Analysis table
         totalReports,
+        weeklyAnalyses,
         weeklyReports,
         monthlyReports
       ] = await Promise.all([
         db.user.count(),
+        db.analysis.count(), // Total analyses from Analysis table
         db.report.count({ where: tradeTypeWhere }),
+        db.analysis.count({
+          where: {
+            createdAt: { gte: sevenDaysAgo }
+          }
+        }),
         db.report.count({
           where: {
             ...tradeTypeWhere,
@@ -1400,10 +1408,10 @@ Explain the key risks and what conditions would need to change before trading th
         data: {
           platform: {
             totalUsers,
-            totalAnalyses: totalReports,
+            totalAnalyses, // Actual count from Analysis table
             totalReports,
-            weeklyAnalyses: weeklyReports,
-            monthlyAnalyses: monthlyReports,
+            weeklyAnalyses, // Actual count from Analysis table
+            monthlyAnalyses: monthlyReports, // Still using reports for monthly
             platformSince,
           },
           accuracy: {
