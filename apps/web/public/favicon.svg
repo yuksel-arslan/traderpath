@@ -1,0 +1,34 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Teal gradient for top and right points -->
+    <linearGradient id="tealGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5EEDC3"/>
+      <stop offset="50%" stop-color="#2DD4A8"/>
+      <stop offset="100%" stop-color="#14B8A6"/>
+    </linearGradient>
+
+    <!-- Coral gradient for left and bottom points -->
+    <linearGradient id="coralGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF8A9B"/>
+      <stop offset="50%" stop-color="#F87171"/>
+      <stop offset="100%" stop-color="#EF5A6F"/>
+    </linearGradient>
+
+    <!-- Subtle shadow for depth -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- Top point (teal) -->
+  <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealGradient)"/>
+
+  <!-- Right point (teal) -->
+  <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealGradient)"/>
+
+  <!-- Bottom point (coral) -->
+  <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralGradient)"/>
+
+  <!-- Left point (coral) -->
+  <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralGradient)"/>
+</svg>
