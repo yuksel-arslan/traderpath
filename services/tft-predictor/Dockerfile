@@ -24,6 +24,8 @@ RUN mkdir -p models
 # Environment variables
 ENV PYTHONUNBUFFERED=1
 ENV TFT_MODEL_PATH=/app/models/tft_crypto.pt
+# Force CPU mode (GPU support will be added later)
+ENV CUDA_VISIBLE_DEVICES=""
 
 # Expose port
 EXPOSE 8000
