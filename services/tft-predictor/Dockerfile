@@ -1,7 +1,4 @@
-# ===========================================
 # TFT Predictor Service
-# Optimized for Railway deployment (CPU-only)
-# ===========================================
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -15,10 +12,6 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements first for better caching
 COPY requirements.txt .
-
-# Install Python dependencies with CPU-only PyTorch
-# Using --extra-index-url ensures we get CPU wheels (no CUDA)
-# This significantly reduces image size from ~5GB to ~1GB
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
@@ -31,8 +24,6 @@ RUN mkdir -p models
 # Environment variables
 ENV PYTHONUNBUFFERED=1
 ENV TFT_MODEL_PATH=/app/models/tft_crypto.pt
-# Force CPU-only mode for PyTorch
-ENV CUDA_VISIBLE_DEVICES=""
 
 # Expose port
 EXPOSE 8000

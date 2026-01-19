@@ -1,12 +1,5 @@
 # TFT Predictor Service - Dependencies
-# ===========================================
-# PyTorch CPU-only (no CUDA) - MUCH smaller image size
-# Railway doesn't have GPUs, so CUDA deps are unnecessary
-# This reduces image from ~5GB to ~1GB
-# ===========================================
-
-# PyTorch and Forecasting (CPU-only)
---extra-index-url https://download.pytorch.org/whl/cpu
+# PyTorch and Forecasting
 torch>=2.0.0
 pytorch-forecasting>=1.0.0
 pytorch-lightning>=2.0.0
