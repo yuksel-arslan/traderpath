@@ -271,10 +271,18 @@ Kullanıcı Hakları Aktif:
 - GPU desteği ileride eklenecek (Google Cloud)
 - Gemini API rate limit (429) hatası düzeltildi
 - Yeni `callGeminiWithRetry` helper fonksiyonu eklendi (`apps/api/src/core/gemini.ts`)
-- Exponential backoff ile max 3 retry, API'den gelen retryDelay parse edilip kullanılıyor
+- Exponential backoff ile max 5 retry, API'den gelen retryDelay parse edilip kullanılıyor
 - AI Expert service ve Translation service güncellendi
+- Expert Panel: paralel → sıralı çağrı (500ms delay) - rate limit önleme
 - **Analiz Orchestration dokümantasyonu eklendi**: Her analiz için 3 AI Expert, 2 Download, 2 Email hakkı + otomatik özet email
 - **Trade Type Completion Bonus eklendi**: Scalping +3, Day Trade +2, Swing Trade +1 kredi otomatik bonus
+- **Google Translate API entegrasyonu eklendi**:
+  - Primary: Google Translate (hızlı, ucuz - $20/1M karakter)
+  - Fallback: Gemini AI (karmaşık çeviriler için)
+  - Yeni dosyalar: `apps/api/src/core/google-translate.ts`
+  - 18 dil desteği: EN, TR, ES, DE, FR, PT, RU, ZH, JA, KO, AR, IT, NL, PL, VI, TH, ID, HI
+  - Yeni endpoint: `POST /api/translation/quick` (ücretsiz, 500 karakter limit)
+  - Config'e eklendi: `GOOGLE_TRANSLATE_API_KEY`, `GOOGLE_CLOUD_PROJECT_ID`
 
 ---
 
