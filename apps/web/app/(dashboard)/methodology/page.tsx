@@ -27,7 +27,7 @@ export default function MethodologyPage() {
               <Lock className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Data Sources & Methodology</h1>
+              <h1 className="text-xl font-bold gradient-text-logo-animate">Data Sources & Methodology</h1>
               <p className="text-xs text-gray-500 dark:text-slate-400">The reliable infrastructure behind our analyses</p>
             </div>
           </div>
@@ -42,7 +42,7 @@ export default function MethodologyPage() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
               <Database className="w-4 h-4 text-white" />
             </div>
-            <h3 className="font-bold text-gray-900 dark:text-white">Data Sources</h3>
+            <h3 className="font-bold gradient-text-logo-animate">Data Sources</h3>
           </div>
           <ul className="text-xs text-gray-600 dark:text-slate-300 space-y-1.5">
             <li className="flex items-center gap-1.5">
@@ -70,7 +70,7 @@ export default function MethodologyPage() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
               <LineChart className="w-4 h-4 text-white" />
             </div>
-            <h3 className="font-bold text-gray-900 dark:text-white">Indicators</h3>
+            <h3 className="font-bold gradient-text-logo-animate">Indicators</h3>
             <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 text-[10px] font-bold rounded">40+</span>
           </div>
           <ul className="text-xs text-gray-600 dark:text-slate-300 space-y-1.5">
@@ -99,7 +99,7 @@ export default function MethodologyPage() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
               <Bot className="w-4 h-4 text-white" />
             </div>
-            <h3 className="font-bold text-gray-900 dark:text-white">AI Experts</h3>
+            <h3 className="font-bold gradient-text-logo-animate">AI Experts</h3>
           </div>
           <ul className="text-xs text-gray-600 dark:text-slate-300 space-y-1.5">
             <li className="flex items-center gap-1.5">
@@ -133,7 +133,7 @@ export default function MethodologyPage() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
               <TrendingUp className="w-4 h-4 text-white" />
             </div>
-            <h3 className="font-bold text-gray-900 dark:text-white">TFT Model</h3>
+            <h3 className="font-bold gradient-text-logo-animate">TFT Model</h3>
           </div>
           <ul className="text-xs text-gray-600 dark:text-slate-300 space-y-1.5">
             <li className="flex items-center gap-1.5">
@@ -160,7 +160,7 @@ export default function MethodologyPage() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center">
               <Shield className="w-4 h-4 text-white" />
             </div>
-            <h3 className="font-bold text-gray-900 dark:text-white">Security & Safety</h3>
+            <h3 className="font-bold gradient-text-logo-animate">Security & Safety</h3>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="p-2.5 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
@@ -188,7 +188,7 @@ export default function MethodologyPage() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
               <Brain className="w-4 h-4 text-white" />
             </div>
-            <h3 className="font-bold text-gray-900 dark:text-white">AI-Powered Analysis</h3>
+            <h3 className="font-bold gradient-text-logo-animate">AI-Powered Analysis</h3>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="p-2.5 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
@@ -213,7 +213,7 @@ export default function MethodologyPage() {
 
       {/* 7-Step Methodology */}
       <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
-        <h3 className="font-bold text-gray-900 dark:text-white mb-3">7-Step Analysis Methodology</h3>
+        <h3 className="font-bold gradient-text-logo-animate mb-3">7-Step Analysis Methodology</h3>
         <div className="grid grid-cols-7 gap-2">
           {[
             { step: 1, name: 'Market Pulse', color: 'blue' },

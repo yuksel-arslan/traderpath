@@ -156,7 +156,7 @@ export default function RewardsPage() {
               <Trophy className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Rewards & Achievements</h1>
+              <h1 className="text-xl font-bold gradient-text-logo-animate">Rewards & Achievements</h1>
               <p className="text-xs text-gray-500 dark:text-slate-400">Track your progress and earn rewards</p>
             </div>
           </div>
@@ -369,7 +369,7 @@ export default function RewardsPage() {
 
               {/* Weekly Progress */}
               <div className="bg-card border rounded-lg p-4 sm:p-6 sm:col-span-2">
-                <h3 className="font-semibold mb-4">Weekly Login Rewards</h3>
+                <h3 className="font-semibold mb-4 gradient-text-logo-animate">Weekly Login Rewards</h3>
                 <div className="grid grid-cols-7 gap-1 sm:gap-2">
                   {DAILY_REWARD_SCHEDULE.map((reward, index) => {
                     const streakDay = dailyState.streak.days % 7;
@@ -565,7 +565,7 @@ export default function RewardsPage() {
       <div className="mt-8 p-6 bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-lg">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Flame className="w-5 h-5 text-orange-500" />
-          Streak Milestones
+          <span className="gradient-text-logo-animate">Streak Milestones</span>
         </h3>
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
           {STREAK_MILESTONES.map((milestone) => {
@@ -596,7 +596,7 @@ export default function RewardsPage() {
       <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold mb-1">Invite Friends, Earn Rewards</h3>
+            <h3 className="text-lg font-semibold mb-1 gradient-text-logo-animate">Invite Friends, Earn Rewards</h3>
             <p className="text-sm text-muted-foreground">
               Get 20 credits for each friend who signs up with your referral code
             </p>
