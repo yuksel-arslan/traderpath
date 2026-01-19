@@ -142,7 +142,7 @@ export interface AnalysisReportData {
     volume?: Record<string, IndicatorDetailItem | undefined>;
     advanced?: Record<string, IndicatorDetailItem | undefined>;
     divergences?: Array<{ type: 'bullish' | 'bearish' | 'none'; indicator: string; description: string; reliability: 'high' | 'medium' | 'low'; isEarlySignal: boolean }>;
-    summary?: { bullishIndicators: number; bearishIndicators: number; neutralIndicators: number; totalIndicatorsUsed: number; overallSignal: 'bullish' | 'bearish' | 'neutral'; signalConfidence: number; leadingIndicatorsSignal: 'bullish' | 'bearish' | 'neutral' | 'mixed' };
+    summary?: { bullishIndicators: number; bearishIndicators: number; neutralIndicators: number; totalIndicatorsUsed: number; overallSignal: 'bullish' | 'bearish' | 'neutral'; signalConfidence: number; leadingIndicatorsSignal: 'bullish' | 'bearish' | 'neutral' | 'mixed'; leadingIndicatorsCount?: number; laggingIndicatorsCount?: number };
   };
 }
 
@@ -245,23 +245,39 @@ function formatIndicatorValue(value: number | string | null | undefined): string
   return value.toFixed(4);
 }
 
-function renderIndicatorTable(indicators: Record<string, IndicatorDetailItem | undefined> | undefined, title: string): string {
+function renderIndicatorTable(indicators: Record<string, IndicatorDetailItem | undefined> | undefined, title: string, maxItems: number = 8): string {
   if (!indicators) return '';
   const items = Object.values(indicators).filter((i): i is IndicatorDetailItem => i !== undefined);
   if (items.length === 0) return '';
+
+  // Sort by signal strength - leading indicators first, then by signal strength
+  const sortedItems = items.sort((a, b) => {
+    if (a.isLeadingIndicator && !b.isLeadingIndicator) return -1;
+    if (!a.isLeadingIndicator && b.isLeadingIndicator) return 1;
+    const strengthOrder = { strong: 0, moderate: 1, weak: 2 };
+    return (strengthOrder[a.signalStrength] || 2) - (strengthOrder[b.signalStrength] || 2);
+  });
+
   return `
     <div class="section" style="margin-bottom: 6px;">
-      <div style="font-size: 7px; font-weight: 600; margin-bottom: 3px; color: #333;">${title} (${items.length})</div>
+      <div style="font-size: 7px; font-weight: 600; margin-bottom: 3px; color: #333;">${title} (${items.length} indicators analyzed)</div>
       <table class="table indicator-table">
-        <tr><th style="width: 25%;">Indicator</th><th style="width: 15%;">Value</th><th style="width: 12%;">Signal</th><th style="width: 48%;">Interpretation</th></tr>
-        ${items.slice(0, 6).map(ind => `
+        <tr><th style="width: 22%;">Indicator</th><th style="width: 13%;">Value</th><th style="width: 13%;">Signal</th><th style="width: 52%;">Interpretation</th></tr>
+        ${sortedItems.slice(0, maxItems).map(ind => `
           <tr>
-            <td style="font-weight: 500;">${ind.name}${ind.isLeadingIndicator ? ' *' : ''}</td>
+            <td style="font-weight: 500;">${ind.name}${ind.isLeadingIndicator ? ' ★' : ''}</td>
             <td>${formatIndicatorValue(ind.value)}</td>
             <td class="${ind.signal === 'bullish' ? 'text-green' : ind.signal === 'bearish' ? 'text-red' : ''}" style="font-weight: 600;">${ind.signal.toUpperCase()}</td>
-            <td style="font-size: 6px;">${ind.interpretation?.slice(0, 60) || '-'}${(ind.interpretation?.length || 0) > 60 ? '...' : ''}</td>
+            <td style="font-size: 6px;">${ind.interpretation?.slice(0, 55) || '-'}${(ind.interpretation?.length || 0) > 55 ? '...' : ''}</td>
           </tr>
         `).join('')}
+        ${items.length > maxItems ? `
+        <tr style="background: #f0f9ff;">
+          <td colspan="4" style="text-align: center; font-size: 6px; color: #0369a1; font-style: italic;">
+            + ${items.length - maxItems} more ${title.toLowerCase()} analyzed...
+          </td>
+        </tr>
+        ` : ''}
       </table>
     </div>
   `;
@@ -291,9 +307,9 @@ const styles = `
   body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 9px; color: #1a1a1a; background: #fff; line-height: 1.35; }
   .page { width: 595px; height: 842px; padding: 20px 24px; position: relative; }
   .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid #1a1a1a; margin-bottom: 12px; }
-  .brand { display: flex; align-items: center; gap: 8px; }
-  .logo { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
-  .brand-name { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+  .brand { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .logo { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+  .brand-name { font-size: 14px; font-weight: 700; letter-spacing: -0.5px; }
   .brand-trade { color: #dc2626; }
   .brand-path { color: #16a34a; }
   .header-center { text-align: center; }
@@ -384,10 +400,10 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
-    <!-- Centered Brand Header for Executive Summary -->
+    <!-- Centered Brand Header for Executive Summary - Logo on top, Brand below -->
     <div style="text-align: center; padding: 15px 0 20px 0; border-bottom: 2px solid #1a1a1a; margin-bottom: 15px;">
-      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px;">
-        <div class="logo">${logoSvg}</div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 8px;">
+        <div class="logo" style="width: 48px; height: 48px;">${logoSvg.replace('width="32" height="32"', 'width="48" height="48"')}</div>
         <div class="brand-name" style="font-size: 28px;"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
       </div>
       <div style="font-size: 11px; font-weight: 600; color: #1a1a1a; text-transform: uppercase; letter-spacing: 1px;">Executive Summary</div>
@@ -398,11 +414,22 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
       </div>
     </div>
 
-    <!-- Main Verdict Box -->
-    <div class="verdict-box" style="background: ${isLong ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fef2f2, #fee2e2)'}; border-color: ${isLong ? '#16a34a' : '#dc2626'};">
-      <div class="verdict-action ${isLong ? 'text-green' : 'text-red'}">${formatAction(getVerdictAction(v))}</div>
-      <div style="font-size: 36px; font-weight: 800; margin: 10px 0; color: ${isLong ? '#16a34a' : '#dc2626'};">${score}</div>
-      <div style="font-size: 10px; color: #666;">Confidence Score</div>
+    <!-- Direction & Quick Stats Box (No verdict here - verdict is on final page) -->
+    <div class="step-box" style="background: ${isLong ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fef2f2, #fee2e2)'}; border: 1px solid ${isLong ? '#16a34a' : '#dc2626'}; padding: 10px 15px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 8px; color: #666; margin-bottom: 2px;">POSITION TYPE</div>
+          <div style="font-size: 18px; font-weight: 700; ${isLong ? 'color: #16a34a' : 'color: #dc2626'}">${isLong ? 'LONG' : 'SHORT'}</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 8px; color: #666; margin-bottom: 2px;">CONFIDENCE</div>
+          <div style="font-size: 20px; font-weight: 800; color: #1a1a1a;">${score}</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 8px; color: #666; margin-bottom: 2px;">RISK:REWARD</div>
+          <div style="font-size: 18px; font-weight: 700; color: #1a1a1a;">${formatRiskReward(tp?.riskReward)}</div>
+        </div>
+      </div>
     </div>
 
     <!-- Key Metrics Row -->
@@ -530,16 +557,20 @@ function generatePageTradePlan(data: AnalysisReportData, totalPages: number): st
       `).join('')}
     </table>
 
-    <!-- Full Page Chart -->
+    <!-- Full Page Chart with Dark Background -->
     ${data.chartImage ? `
-    <div class="chart-container" style="height: 480px; display: flex; align-items: center; justify-content: center;">
-      <img src="${data.chartImage}" style="max-height: 100%; width: auto; max-width: 100%;" alt="Trade Plan Chart" />
+    <div class="chart-container" style="height: 480px; display: flex; align-items: center; justify-content: center; background: #1a1a2e; border-radius: 8px;">
+      <img src="${data.chartImage}" style="max-height: 100%; width: auto; max-width: 100%; border-radius: 6px;" alt="Trade Plan Chart" />
     </div>
     ` : `
-    <div class="chart-container" style="height: 480px; display: flex; align-items: center; justify-content: center; background: #f9fafb;">
-      <div style="text-align: center; color: #666;">
-        <div style="font-size: 14px; margin-bottom: 5px;">📈</div>
-        <div style="font-size: 10px;">Chart not available</div>
+    <div class="chart-container" style="height: 480px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 8px;">
+      <div style="text-align: center; color: #9ca3af;">
+        <div style="font-size: 48px; margin-bottom: 10px;">📈</div>
+        <div style="font-size: 12px; font-weight: 600; color: #fff;">Trade Plan Chart</div>
+        <div style="font-size: 9px; margin-top: 5px; color: #9ca3af;">Chart visualization will appear here when generated</div>
+        <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+          <div style="font-size: 8px; color: #6b7280;">Entry: ${formatPrice(tp?.averageEntry)} | SL: ${formatPrice(tp?.stopLoss?.price)} | TP1: ${formatPrice(tp?.takeProfits?.[0]?.price)}</div>
+        </div>
       </div>
     </div>
     `}
@@ -690,11 +721,44 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
     </div>
     ` : ''}
     ` : `
-    <!-- No Tokenomics Data -->
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 500px; text-align: center;">
-      <div style="font-size: 48px; margin-bottom: 15px;">📊</div>
-      <div style="font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px;">Tokenomics Data Not Available</div>
-      <div style="font-size: 10px; color: #666; max-width: 300px;">Detailed tokenomics analysis is not available for this asset. This may be due to limited data availability or the asset type.</div>
+    <!-- No Tokenomics Data - Enhanced Display -->
+    <div style="padding: 20px;">
+      <div class="verdict-box" style="padding: 20px; margin-bottom: 20px; background: linear-gradient(135deg, #fef3c7, #fde68a); border-color: #d97706;">
+        <div style="font-size: 36px; margin-bottom: 10px;">⚠️</div>
+        <div style="font-size: 16px; font-weight: 700; color: #92400e; margin-bottom: 5px;">Tokenomics Data Unavailable</div>
+        <div style="font-size: 10px; color: #78350f;">Data could not be retrieved from CoinGecko API</div>
+      </div>
+
+      <div class="step-box" style="margin-bottom: 15px;">
+        <div class="step-box-header">
+          <span class="step-box-title">Why This Happens</span>
+        </div>
+        <div style="font-size: 8px; line-height: 1.6; color: #444;">
+          <p style="margin-bottom: 8px;"><strong>1. New or Low-Cap Token:</strong> The token may be too new or have insufficient market data in CoinGecko's database.</p>
+          <p style="margin-bottom: 8px;"><strong>2. API Rate Limits:</strong> CoinGecko API has rate limits that may temporarily restrict data access.</p>
+          <p style="margin-bottom: 8px;"><strong>3. Symbol Mismatch:</strong> The trading symbol may not directly map to CoinGecko's identifier.</p>
+        </div>
+      </div>
+
+      <div class="step-box" style="margin-bottom: 15px;">
+        <div class="step-box-header">
+          <span class="step-box-title">What You Should Do</span>
+        </div>
+        <div style="font-size: 8px; line-height: 1.6; color: #444;">
+          <p style="margin-bottom: 8px;">✓ <strong>Manual Research:</strong> Visit <a href="https://www.coingecko.com" style="color: #0369a1;">CoinGecko</a> or <a href="https://coinmarketcap.com" style="color: #0369a1;">CoinMarketCap</a> directly to verify tokenomics.</p>
+          <p style="margin-bottom: 8px;">✓ <strong>Check Token Contract:</strong> Review the token's smart contract for supply information.</p>
+          <p style="margin-bottom: 8px;">✓ <strong>Assess Liquidity Risk:</strong> Without tokenomics data, be extra cautious about position sizing.</p>
+        </div>
+      </div>
+
+      <div class="step-box" style="background: #fef2f2; border-color: #fca5a5;">
+        <div class="step-box-header" style="border-color: #fca5a5;">
+          <span class="step-box-title" style="color: #dc2626;">⚠️ Risk Warning</span>
+        </div>
+        <div style="font-size: 8px; line-height: 1.6; color: #b91c1c;">
+          Trading without tokenomics data increases risk. Unknown supply dynamics, whale concentration, and dilution risks could significantly impact your trade. Proceed with caution and use smaller position sizes.
+        </div>
+      </div>
     </div>
     `}
 
@@ -1164,28 +1228,75 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
     </div>
     ` : ''}
 
-    <!-- Technical Indicator Summary -->
+    <!-- Technical Indicator Summary - 40+ Indicators -->
     ${ind?.summary ? `
     <div class="step-box">
       <div class="step-box-header">
-        <span class="step-box-title">Technical Indicator Summary (${ind.summary.totalIndicatorsUsed} indicators)</span>
+        <span class="step-box-title">Technical Indicator Analysis (40+ Indicators)</span>
       </div>
-      <div class="row">
-        <div class="col metric metric-sm" style="text-align: center;">
-          <div class="metric-value text-green" style="font-size: 16px;">${ind.summary.bullishIndicators}</div>
+
+      <!-- Main Stats -->
+      <div class="row" style="margin-bottom: 8px;">
+        <div class="col metric metric-sm" style="text-align: center; background: linear-gradient(135deg, #f0fdf4, #dcfce7);">
+          <div class="metric-value text-green" style="font-size: 18px;">${ind.summary.bullishIndicators}</div>
           <div class="metric-label">Bullish</div>
         </div>
-        <div class="col metric metric-sm" style="text-align: center;">
-          <div class="metric-value text-red" style="font-size: 16px;">${ind.summary.bearishIndicators}</div>
+        <div class="col metric metric-sm" style="text-align: center; background: linear-gradient(135deg, #fef2f2, #fee2e2);">
+          <div class="metric-value text-red" style="font-size: 18px;">${ind.summary.bearishIndicators}</div>
           <div class="metric-label">Bearish</div>
         </div>
         <div class="col metric metric-sm" style="text-align: center;">
-          <div class="metric-value" style="font-size: 16px;">${ind.summary.neutralIndicators}</div>
+          <div class="metric-value" style="font-size: 18px;">${ind.summary.neutralIndicators}</div>
           <div class="metric-label">Neutral</div>
         </div>
-        <div class="col metric metric-sm" style="text-align: center;">
-          <div class="metric-value ${ind.summary.overallSignal === 'bullish' ? 'text-green' : ind.summary.overallSignal === 'bearish' ? 'text-red' : ''}">${formatDirection(ind.summary.overallSignal)}</div>
+        <div class="col metric metric-sm" style="text-align: center; background: ${ind.summary.overallSignal === 'bullish' ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : ind.summary.overallSignal === 'bearish' ? 'linear-gradient(135deg, #fef2f2, #fee2e2)' : '#fafafa'};">
+          <div class="metric-value ${ind.summary.overallSignal === 'bullish' ? 'text-green' : ind.summary.overallSignal === 'bearish' ? 'text-red' : ''}" style="font-size: 14px;">${formatDirection(ind.summary.overallSignal).toUpperCase()}</div>
           <div class="metric-label">Overall Signal</div>
+        </div>
+      </div>
+
+      <!-- Indicator Categories Breakdown -->
+      <div style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+        <div style="font-size: 7px; font-weight: 600; color: #666; margin-bottom: 6px;">INDICATOR CATEGORIES ANALYZED:</div>
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; font-size: 7px;">
+          <div style="text-align: center;">
+            <div style="font-weight: 600; color: #333;">Trend</div>
+            <div style="color: #666; font-size: 6px;">EMA, SMA, MACD, ADX, Ichimoku, Supertrend, PSAR, Aroon, VWMA</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-weight: 600; color: #333;">Momentum</div>
+            <div style="color: #666; font-size: 6px;">RSI, Stoch, StochRSI, CCI, Williams %R, ROC, MFI, Ultimate, TSI</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-weight: 600; color: #333;">Volatility</div>
+            <div style="color: #666; font-size: 6px;">BB, ATR, Keltner, Donchian, Hist Vol, Squeeze</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-weight: 600; color: #333;">Volume</div>
+            <div style="color: #666; font-size: 6px;">OBV, VWAP, A/D, CMF, Force, EOM, PVT, Rel Vol</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-weight: 600; color: #333;">Advanced</div>
+            <div style="color: #666; font-size: 6px;">Order Flow, Whale, Liquidity, Spoofing, Market Impact</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Signal Confidence -->
+      <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 7px;">
+        <div>
+          <span style="color: #666;">Leading Indicators Signal: </span>
+          <span class="${(ind.summary as unknown as { leadingIndicatorsSignal?: string }).leadingIndicatorsSignal === 'bullish' ? 'text-green' : (ind.summary as unknown as { leadingIndicatorsSignal?: string }).leadingIndicatorsSignal === 'bearish' ? 'text-red' : ''}" style="font-weight: 600;">
+            ${formatDirection((ind.summary as unknown as { leadingIndicatorsSignal?: string }).leadingIndicatorsSignal || 'neutral')}
+          </span>
+        </div>
+        <div>
+          <span style="color: #666;">Confidence: </span>
+          <span style="font-weight: 600; color: #333;">${ind.summary.signalConfidence}%</span>
+        </div>
+        <div>
+          <span style="color: #666;">Total Analyzed: </span>
+          <span style="font-weight: 600; color: #333;">${ind.summary.totalIndicatorsUsed}+</span>
         </div>
       </div>
     </div>
@@ -1219,8 +1330,8 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
 
 export async function captureChartAsImage(): Promise<string | null> {
   try {
-    // Try multiple possible chart IDs
-    const chartIds = ['trade-plan-chart-visible', 'trade-plan-chart', 'tradingview-chart'];
+    // Try multiple possible chart IDs - look for the chart container
+    const chartIds = ['trade-plan-chart-visible', 'trade-plan-chart', 'tradingview-chart', 'analysis-chart'];
     let element: HTMLElement | null = null;
 
     for (const id of chartIds) {
@@ -1231,14 +1342,30 @@ export async function captureChartAsImage(): Promise<string | null> {
       }
     }
 
+    // Also try to find by class name if ID search fails
     if (!element) {
-      console.warn('[Chart Capture] No chart element found with IDs:', chartIds);
+      element = document.querySelector('.trade-plan-chart-container') as HTMLElement;
+      if (element) console.log('[Chart Capture] Found chart by class name');
+    }
+
+    if (!element) {
+      console.warn('[Chart Capture] No chart element found');
       return null;
     }
 
-    await new Promise(resolve => setTimeout(resolve, 800));
-    const canvas = await html2canvas(element, { backgroundColor: '#ffffff', scale: 2, logging: false, useCORS: true, allowTaint: true });
-    console.log('[Chart Capture] Chart captured successfully');
+    // Wait for chart to fully render
+    await new Promise(resolve => setTimeout(resolve, 1200));
+
+    // Capture with dark background for better visibility
+    const canvas = await html2canvas(element, {
+      backgroundColor: '#1a1a2e',  // Dark background
+      scale: 2,
+      logging: false,
+      useCORS: true,
+      allowTaint: true,
+      removeContainer: false
+    });
+    console.log('[Chart Capture] Chart captured successfully with dark background');
     return canvas.toDataURL('image/png');
   } catch (error) {
     console.error('[Chart Capture] Failed:', error);

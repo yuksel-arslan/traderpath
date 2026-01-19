@@ -218,6 +218,11 @@ Kullanıcı Hakları Aktif:
 | 2026-01-18 | Scroll Animations - IntersectionObserver ile görünürlük | Akıcı, profesyonel geçişler |
 | 2026-01-18 | Hover Animations - Scale, shadow, border efektleri | Etkileşimli, responsive |
 | 2026-01-18 | Timeframe Seçimi (15m, 1h, 4h, 1d) | Trade type yerine timeframe seçimi - daha sezgisel ve anlaşılır |
+| 2026-01-19 | PDF Rapor: Logo dikey düzen | Logo tek başına üstte, altında TraderPath markası - profesyonel görünüm |
+| 2026-01-19 | PDF Rapor: Dark grafik arka plan | #1a1a2e koyu arka plan - grafik görünürlüğü artırıldı |
+| 2026-01-19 | PDF Rapor: Tokenomics uyarı sayfası | Veri yoksa detaylı açıklama ve risk uyarısı gösteriliyor |
+| 2026-01-19 | PDF Rapor: 40+ indikatör özeti | Tüm kategoriler ve indikatörler detaylı gösteriliyor |
+| 2026-01-19 | PDF Rapor: Verdict tek sayfa | Analiz kararı sadece final sayfada - tekrar önlendi |
 
 ---
 
@@ -283,6 +288,13 @@ Kullanıcı Hakları Aktif:
   - 18 dil desteği: EN, TR, ES, DE, FR, PT, RU, ZH, JA, KO, AR, IT, NL, PL, VI, TH, ID, HI
   - Yeni endpoint: `POST /api/translation/quick` (ücretsiz, 500 karakter limit)
   - Config'e eklendi: `GOOGLE_TRANSLATE_API_KEY`, `GOOGLE_CLOUD_PROJECT_ID`
+- **PDF Rapor tasarımı iyileştirildi**:
+  - Logo dikey düzende (logo üstte, marka altında)
+  - Grafik dark arka plan (#1a1a2e) ile görünürlük artırıldı
+  - Tokenomics veri yoksa detaylı uyarı sayfası gösteriliyor
+  - Analiz kararı tekrarı kaldırıldı (sadece sayfa sonunda)
+  - Technical Indicator Summary 40+ indikatör gösteriyor (kategoriler ve detaylar)
+  - Indikatör tabloları leading indicators'a göre sıralanıyor
 
 ---
 
