@@ -195,6 +195,8 @@ Kullanıcı Hakları Aktif:
 | 2026-01-19 | Gemini API rate limit (429) hatası - AI Expert failed | 1) Fetch timeout (30s) eklendi, 2) Max wait 20s'ye düşürüldü, 3) Retry 3'e indirildi, 4) lastError düzgün set ediliyor. Expert Panel: paralel → sıralı çağrı (500ms delay) | `apps/api/src/core/gemini.ts`, `ai-expert.service.ts`, `translation.service.ts` |
 | 2026-01-19 | Platform accuracy farklı sayı gösteriyor | `getRealAccuracy()` Report tablosu yerine Analysis tablosundan veri çekiyor. Tutarlılık sağlandı | `apps/api/src/modules/reports/outcome.service.ts` |
 | 2026-01-20 | AI Expert "Failed to generate PDF" hatası | 1) Daha iyi hata işleme eklendi, 2) Hata durumunda otomatik kredi iadesi, 3) PDF fonksiyonuna validasyon ve logging eklendi | `ai-expert/[expertId]/page.tsx`, `AnalysisReport.tsx` |
+| 2026-01-20 | Tokenomics "Data could not be retrieved" hatası | CoinMarketCap ve Binance fallback eklendi. Fallback zinciri: CoinGecko → CoinMarketCap → Binance | `apps/api/src/modules/analysis/services/tokenomics.service.ts` |
+| 2026-01-20 | Trade Plan Chart PDF'de görünmüyor | 1) Chart ID'leri düzeltildi, 2) Canvas arama fallback eklendi, 3) Scroll into view eklendi, 4) Bekleme süresi 2s'ye çıkarıldı | `AnalysisReport.tsx`, `analyze/details/[id]/page.tsx` |
 
 ---
 
@@ -303,6 +305,21 @@ Kullanıcı Hakları Aktif:
   - Technical Indicator Summary 40+ indikatör gösteriyor (kategoriler ve detaylar)
   - Indikatör tabloları leading indicators'a göre sıralanıyor
 - **Analyze sayfası layout düzeltmesi**: Live Chart 2/3 (8 kolon), TIMEFRAME/CoinSelector 1/3 (4 kolon) olarak yeniden düzenlendi
+
+### 2026-01-20
+- **Tokenomics veri kaynağı fallback zinciri**:
+  - Primary: CoinGecko API
+  - Fallback 1: CoinMarketCap API (COINMARKETCAP_API_KEY gerekli)
+  - Fallback 2: Binance API (temel market verisi)
+  - Tüm kaynaklar için 10 saniyelik timeout eklendi
+  - 70+ coin için CoinMarketCap ID mapping eklendi
+  - Binance için bilinen circulating supply değerleri eklendi
+- **Trade Plan Chart PDF capture iyileştirildi**:
+  - Chart wrapper'a `id="trade-plan-chart-visible"` ve `class="trade-plan-chart-container"` eklendi
+  - Canvas element fallback araması eklendi
+  - Scroll into view özelliği eklendi
+  - Bekleme süresi 1.2s → 2s'ye çıkarıldı
+  - onclone callback ile overflow düzeltmesi eklendi
 
 ---
 

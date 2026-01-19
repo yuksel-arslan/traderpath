@@ -3,7 +3,10 @@
  * ======================================
  *
  * Analyzes the financial structure and token economics of cryptocurrencies.
- * Data sourced from CoinGecko API.
+ * Data sourced from multiple providers with fallback chain:
+ * 1. CoinGecko (primary)
+ * 2. CoinMarketCap (fallback)
+ * 3. Binance (basic market data fallback)
  *
  * Key Metrics:
  * - Supply metrics (total, circulating, max)
@@ -16,6 +19,7 @@
 
 // Note: CoinGecko API can be used without an API key for basic access
 // If you have a Pro API key, set COINGECKO_API_KEY in environment variables
+// CoinMarketCap requires API key: COINMARKETCAP_API_KEY
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -264,7 +268,8 @@ async function searchCoinGeckoId(symbol: string): Promise<string | null> {
   }
 }
 
-async function fetchCoinGeckoData(coinId: string): Promise<{
+// Unified market data interface for all providers
+interface MarketDataResponse {
   market_data: {
     current_price: { usd: number };
     market_cap: { usd: number };
@@ -276,7 +281,9 @@ async function fetchCoinGeckoData(coinId: string): Promise<{
   };
   name: string;
   symbol: string;
-} | null> {
+}
+
+async function fetchCoinGeckoData(coinId: string): Promise<MarketDataResponse | null> {
   // Use environment variable for API key (optional - public API works without key)
   const apiKey = process.env.COINGECKO_API_KEY;
   const baseUrl = apiKey ? COINGECKO_PRO_URL : COINGECKO_BASE_URL;
@@ -290,10 +297,15 @@ async function fetchCoinGeckoData(coinId: string): Promise<{
       headers['x-cg-pro-api-key'] = apiKey;
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
     const response = await fetch(
       `${baseUrl}/coins/${coinId}?localization=false&tickers=false&community_data=false&developer_data=false`,
-      { headers }
+      { headers, signal: controller.signal }
     );
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.warn(`CoinGecko API error for ${coinId}: ${response.status}`);
@@ -305,6 +317,206 @@ async function fetchCoinGeckoData(coinId: string): Promise<{
     console.error(`Failed to fetch CoinGecko data for ${coinId}:`, error);
     return null;
   }
+}
+
+// ============================================================================
+// COINMARKETCAP API FALLBACK
+// ============================================================================
+
+const COINMARKETCAP_BASE_URL = 'https://pro-api.coinmarketcap.com/v1';
+
+// Symbol to CoinMarketCap ID mapping for common coins
+const SYMBOL_TO_CMC_ID: Record<string, number> = {
+  BTC: 1, ETH: 1027, SOL: 5426, BNB: 1839, XRP: 52, ADA: 2010, DOGE: 74,
+  AVAX: 5805, DOT: 6636, MATIC: 3890, LINK: 1975, UNI: 7083, ATOM: 3794,
+  LTC: 2, FIL: 2280, APT: 21794, ARB: 11841, OP: 11840, NEAR: 6535,
+  INJ: 7226, SUI: 20947, SEI: 23149, TIA: 22861, PEPE: 24478, SHIB: 5994,
+  WIF: 28752, BONK: 23095, FLOKI: 10804, MKR: 1518, AAVE: 7278, CRV: 6538,
+  LDO: 8000, SNX: 2586, SUSHI: 6758, YFI: 5864, GMX: 11857, DYDX: 28324,
+  AXS: 6783, SAND: 6210, MANA: 1966, ENJ: 2130, GALA: 7080, IMX: 10603,
+  FET: 3773, RENDER: 5690, TAO: 22974, WLD: 13502, ARKM: 27565,
+  QNT: 3155, HBAR: 4642, VET: 3077, ALGO: 4030, FTM: 3513, ICP: 8916,
+  THETA: 2416, XTZ: 2011, EOS: 1765, FLOW: 4558, MINA: 8646, STX: 4847,
+  KAS: 20396, TON: 11419, TRX: 1958, XLM: 512, CRO: 3635, ROSE: 7653,
+  ZIL: 2469, ONE: 3945, KAVA: 4846, CELO: 5567, RSR: 3964, CHZ: 4066,
+  ENS: 13855, RPL: 2943, BLUR: 23121, JTO: 28541, JUP: 29210, PYTH: 28177,
+  W: 29587, STRK: 22691, ZK: 24091, ENA: 30171, PENDLE: 9481, ONDO: 21159,
+};
+
+async function fetchCoinMarketCapData(symbol: string): Promise<MarketDataResponse | null> {
+  const apiKey = process.env.COINMARKETCAP_API_KEY;
+  if (!apiKey) {
+    console.log('[CoinMarketCap] No API key configured');
+    return null;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    // Use /quotes/latest endpoint for market data
+    const response = await fetch(
+      `${COINMARKETCAP_BASE_URL}/cryptocurrency/quotes/latest?symbol=${symbol.toUpperCase()}&convert=USD`,
+      {
+        headers: {
+          'X-CMC_PRO_API_KEY': apiKey,
+          'Accept': 'application/json',
+        },
+        signal: controller.signal,
+      }
+    );
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.warn(`CoinMarketCap API error for ${symbol}: ${response.status}`);
+      return null;
+    }
+
+    const result = await response.json();
+    const data = result.data?.[symbol.toUpperCase()];
+
+    if (!data) {
+      console.warn(`CoinMarketCap: No data for ${symbol}`);
+      return null;
+    }
+
+    const quote = data.quote?.USD;
+    if (!quote) {
+      console.warn(`CoinMarketCap: No USD quote for ${symbol}`);
+      return null;
+    }
+
+    // Convert CMC response to unified format
+    return {
+      market_data: {
+        current_price: { usd: quote.price || 0 },
+        market_cap: { usd: quote.market_cap || 0 },
+        fully_diluted_valuation: quote.fully_diluted_market_cap ? { usd: quote.fully_diluted_market_cap } : null,
+        total_volume: { usd: quote.volume_24h || 0 },
+        circulating_supply: data.circulating_supply || 0,
+        total_supply: data.total_supply || null,
+        max_supply: data.max_supply || null,
+      },
+      name: data.name || symbol,
+      symbol: data.symbol || symbol.toUpperCase(),
+    };
+  } catch (error) {
+    console.error(`Failed to fetch CoinMarketCap data for ${symbol}:`, error);
+    return null;
+  }
+}
+
+// ============================================================================
+// BINANCE API FALLBACK (Basic Market Data Only)
+// ============================================================================
+
+const BINANCE_API_URL = 'https://api.binance.com/api/v3';
+
+async function fetchBinanceData(symbol: string): Promise<MarketDataResponse | null> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    // Fetch 24h ticker data
+    const response = await fetch(
+      `${BINANCE_API_URL}/ticker/24hr?symbol=${symbol.toUpperCase()}USDT`,
+      { signal: controller.signal }
+    );
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      // Try without USDT suffix for stablecoins
+      const altResponse = await fetch(
+        `${BINANCE_API_URL}/ticker/24hr?symbol=${symbol.toUpperCase()}BUSD`
+      );
+      if (!altResponse.ok) {
+        console.warn(`Binance API error for ${symbol}: ${response.status}`);
+        return null;
+      }
+      const altData = await altResponse.json();
+      return formatBinanceData(symbol, altData);
+    }
+
+    const data = await response.json();
+    return formatBinanceData(symbol, data);
+  } catch (error) {
+    console.error(`Failed to fetch Binance data for ${symbol}:`, error);
+    return null;
+  }
+}
+
+function formatBinanceData(symbol: string, data: {
+  lastPrice: string;
+  quoteVolume: string;
+  priceChangePercent: string;
+}): MarketDataResponse {
+  const price = parseFloat(data.lastPrice) || 0;
+  const volume = parseFloat(data.quoteVolume) || 0;
+
+  // Binance doesn't provide supply data, so we estimate market cap from known supplies
+  const knownCirculatingSupply: Record<string, number> = {
+    BTC: 19_600_000, ETH: 120_000_000, SOL: 440_000_000, BNB: 145_000_000,
+    XRP: 55_000_000_000, ADA: 35_000_000_000, DOGE: 143_000_000_000,
+    AVAX: 400_000_000, DOT: 1_400_000_000, MATIC: 9_300_000_000,
+  };
+
+  const circulatingSupply = knownCirculatingSupply[symbol.toUpperCase()] || 0;
+  const marketCap = circulatingSupply > 0 ? price * circulatingSupply : volume * 20; // Rough estimate
+
+  return {
+    market_data: {
+      current_price: { usd: price },
+      market_cap: { usd: marketCap },
+      fully_diluted_valuation: null,
+      total_volume: { usd: volume },
+      circulating_supply: circulatingSupply,
+      total_supply: null,
+      max_supply: null,
+    },
+    name: symbol.toUpperCase(),
+    symbol: symbol.toUpperCase(),
+  };
+}
+
+// ============================================================================
+// UNIFIED DATA FETCHER WITH FALLBACK CHAIN
+// ============================================================================
+
+async function fetchMarketDataWithFallback(symbol: string, coinGeckoId?: string): Promise<{
+  data: MarketDataResponse | null;
+  source: string;
+}> {
+  // 1. Try CoinGecko first (primary)
+  if (coinGeckoId) {
+    console.log(`[Tokenomics] Trying CoinGecko for ${symbol} (id: ${coinGeckoId})...`);
+    const geckoData = await fetchCoinGeckoData(coinGeckoId);
+    if (geckoData) {
+      console.log(`[Tokenomics] CoinGecko success for ${symbol}`);
+      return { data: geckoData, source: 'CoinGecko' };
+    }
+    console.log(`[Tokenomics] CoinGecko failed for ${symbol}, trying fallbacks...`);
+  }
+
+  // 2. Try CoinMarketCap (fallback)
+  console.log(`[Tokenomics] Trying CoinMarketCap for ${symbol}...`);
+  const cmcData = await fetchCoinMarketCapData(symbol);
+  if (cmcData) {
+    console.log(`[Tokenomics] CoinMarketCap success for ${symbol}`);
+    return { data: cmcData, source: 'CoinMarketCap' };
+  }
+
+  // 3. Try Binance (basic fallback)
+  console.log(`[Tokenomics] Trying Binance for ${symbol}...`);
+  const binanceData = await fetchBinanceData(symbol);
+  if (binanceData) {
+    console.log(`[Tokenomics] Binance success for ${symbol} (basic data only)`);
+    return { data: binanceData, source: 'Binance (Limited)' };
+  }
+
+  console.warn(`[Tokenomics] All data sources failed for ${symbol}`);
+  return { data: null, source: 'None' };
 }
 
 // ============================================================================
@@ -607,22 +819,21 @@ function calculateOverallAssessment(
 // ============================================================================
 
 export async function analyzeTokenomics(symbol: string): Promise<TokenomicsData | null> {
+  console.log(`[Tokenomics] Starting analysis for ${symbol}...`);
+
   // Get CoinGecko ID - first check static mapping, then try dynamic search
   let coinId = SYMBOL_TO_ID[symbol.toUpperCase()];
 
   if (!coinId) {
-    console.log(`Symbol ${symbol} not in static mapping, trying dynamic search...`);
+    console.log(`[Tokenomics] Symbol ${symbol} not in static mapping, trying dynamic search...`);
     coinId = await searchCoinGeckoId(symbol) || '';
   }
 
-  if (!coinId) {
-    console.warn(`Could not find CoinGecko ID for ${symbol}`);
-    return createMinimalTokenomicsData(symbol);
-  }
+  // Use fallback chain: CoinGecko → CoinMarketCap → Binance
+  const { data, source } = await fetchMarketDataWithFallback(symbol, coinId || undefined);
 
-  // Fetch data from CoinGecko
-  const data = await fetchCoinGeckoData(coinId);
   if (!data) {
+    console.warn(`[Tokenomics] All data sources failed for ${symbol}, returning minimal data`);
     return createMinimalTokenomicsData(symbol);
   }
 
@@ -662,6 +873,8 @@ export async function analyzeTokenomics(symbol: string): Promise<TokenomicsData 
   // Overall assessment
   const assessment = calculateOverallAssessment(supply, market, whaleConcentration, distribution);
 
+  console.log(`[Tokenomics] Analysis complete for ${symbol} (source: ${source})`);
+
   return {
     symbol: symbol.toUpperCase(),
     name: data.name,
@@ -672,7 +885,7 @@ export async function analyzeTokenomics(symbol: string): Promise<TokenomicsData 
     unlocks,
     assessment,
     lastUpdated: new Date().toISOString(),
-    dataSource: 'CoinGecko',
+    dataSource: source,
   };
 }
 

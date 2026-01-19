@@ -663,7 +663,7 @@ export default function AnalysisDetailsPage() {
                   <span className="hidden sm:inline">Screenshot</span>
                 </button>
               </div>
-              <div ref={chartRef} className="bg-white dark:bg-slate-800 rounded-xl p-2">
+              <div ref={chartRef} id="trade-plan-chart-visible" className="trade-plan-chart-container bg-white dark:bg-slate-800 rounded-xl p-2">
                 <TradePlanChart
                   symbol={analysis.symbol}
                   direction={direction as 'long' | 'short'}
@@ -678,6 +678,7 @@ export default function AnalysisDetailsPage() {
                   support={step2.levels?.support}
                   resistance={step2.levels?.resistance}
                   tradeType={getTradeType(analysis.interval)}
+                  chartId="trade-plan-chart"
                 />
               </div>
             </div>
