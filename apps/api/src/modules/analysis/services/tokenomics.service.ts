@@ -19,6 +19,7 @@
 
 // Note: CoinGecko API can be used without an API key for basic access
 // If you have a Pro API key, set COINGECKO_API_KEY in environment variables
+// For Demo API, set COINGECKO_API_TYPE=demo (uses different header: x-cg-demo-api-key)
 // CoinMarketCap requires API key: COINMARKETCAP_API_KEY
 
 // ============================================================================
@@ -218,6 +219,32 @@ const SYMBOL_TO_ID: Record<string, string> = {
 // Cache for dynamic CoinGecko ID lookups
 const dynamicIdCache: Record<string, string | null> = {};
 
+// Helper to get CoinGecko API configuration
+function getCoinGeckoConfig(): { baseUrl: string; headers: Record<string, string>; apiType: string } {
+  const apiKey = process.env.COINGECKO_API_KEY;
+  const apiType = process.env.COINGECKO_API_TYPE?.toLowerCase(); // 'demo' or 'pro'
+
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+  if (apiKey) {
+    if (apiType === 'demo') {
+      // Demo API uses public URL with demo header
+      headers['x-cg-demo-api-key'] = apiKey;
+      console.log('[CoinGecko] Using Demo API with key');
+      return { baseUrl: COINGECKO_BASE_URL, headers, apiType: 'demo' };
+    } else {
+      // Pro API uses pro URL with pro header
+      headers['x-cg-pro-api-key'] = apiKey;
+      console.log('[CoinGecko] Using Pro API with key');
+      return { baseUrl: COINGECKO_PRO_URL, headers, apiType: 'pro' };
+    }
+  }
+
+  // No API key - use public API (rate limited)
+  console.log('[CoinGecko] Using Public API (no key - rate limited)');
+  return { baseUrl: COINGECKO_BASE_URL, headers, apiType: 'public' };
+}
+
 // Dynamic lookup for unknown symbols
 async function searchCoinGeckoId(symbol: string): Promise<string | null> {
   // Check cache first
@@ -225,18 +252,19 @@ async function searchCoinGeckoId(symbol: string): Promise<string | null> {
     return dynamicIdCache[symbol];
   }
 
-  const apiKey = process.env.COINGECKO_API_KEY;
-  const baseUrl = apiKey ? COINGECKO_PRO_URL : COINGECKO_BASE_URL;
+  const { baseUrl, headers } = getCoinGeckoConfig();
 
   try {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (apiKey) headers['x-cg-pro-api-key'] = apiKey;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     // Search for the coin by symbol
     const response = await fetch(
       `${baseUrl}/search?query=${symbol.toLowerCase()}`,
-      { headers }
+      { headers, signal: controller.signal }
     );
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.warn(`CoinGecko search failed for ${symbol}: ${response.status}`);
@@ -284,19 +312,10 @@ interface MarketDataResponse {
 }
 
 async function fetchCoinGeckoData(coinId: string): Promise<MarketDataResponse | null> {
-  // Use environment variable for API key (optional - public API works without key)
-  const apiKey = process.env.COINGECKO_API_KEY;
-  const baseUrl = apiKey ? COINGECKO_PRO_URL : COINGECKO_BASE_URL;
+  // Use getCoinGeckoConfig for proper API type handling (demo vs pro)
+  const { baseUrl, headers } = getCoinGeckoConfig();
 
   try {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    if (apiKey) {
-      headers['x-cg-pro-api-key'] = apiKey;
-    }
-
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 

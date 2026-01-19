@@ -197,6 +197,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-20 | AI Expert "Failed to generate PDF" hatası | 1) Daha iyi hata işleme eklendi, 2) Hata durumunda otomatik kredi iadesi, 3) PDF fonksiyonuna validasyon ve logging eklendi | `ai-expert/[expertId]/page.tsx`, `AnalysisReport.tsx` |
 | 2026-01-20 | Tokenomics "Data could not be retrieved" hatası | CoinMarketCap ve Binance fallback eklendi. Fallback zinciri: CoinGecko → CoinMarketCap → Binance | `apps/api/src/modules/analysis/services/tokenomics.service.ts` |
 | 2026-01-20 | Trade Plan Chart PDF'de görünmüyor | 1) Chart ID'leri düzeltildi, 2) Canvas arama fallback eklendi, 3) Scroll into view eklendi, 4) Bekleme süresi 2s'ye çıkarıldı | `AnalysisReport.tsx`, `analyze/details/[id]/page.tsx` |
+| 2026-01-20 | CoinGecko Demo API yanlış header kullanıyordu | Demo API için `x-cg-demo-api-key` header ve public URL kullanılıyor. `COINGECKO_API_TYPE=demo` env var eklendi | `tokenomics.service.ts` |
 
 ---
 
@@ -320,6 +321,11 @@ Kullanıcı Hakları Aktif:
   - Scroll into view özelliği eklendi
   - Bekleme süresi 1.2s → 2s'ye çıkarıldı
   - onclone callback ile overflow düzeltmesi eklendi
+- **CoinGecko Demo API desteği eklendi**:
+  - Demo API için `x-cg-demo-api-key` header kullanılıyor (Pro API: `x-cg-pro-api-key`)
+  - Demo API public URL kullanıyor (api.coingecko.com), Pro API ise pro-api.coingecko.com
+  - Yeni env var: `COINGECKO_API_TYPE=demo` veya `pro`
+  - Railway'e eklenecek: `COINGECKO_API_KEY` ve `COINGECKO_API_TYPE=demo`
 
 ---
 
