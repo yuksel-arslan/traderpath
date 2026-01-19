@@ -375,27 +375,8 @@ export default function AnalyzePage() {
             </div>
           </div>
 
-          {/* Main Analysis Card - Clean & Simple */}
-          <div className="col-span-12 lg:col-span-7">
-            <div className="space-y-4">
-              {/* Timeframe Selection - Auto-selects strategy */}
-              <div className="flex items-center justify-between">
-                <TradeTypeSelector
-                  value={timeframe}
-                  onChange={(tf) => setTimeframe(tf)}
-                  variant="tabs"
-                  showCreditCost
-                  className="flex-1"
-                />
-              </div>
-
-              {/* Coin Selector - Main Focus */}
-              <CoinSelector timeframe={timeframe} />
-            </div>
-          </div>
-
-          {/* Side Cards - Stacked */}
-          <div className="col-span-12 lg:col-span-5 space-y-4 lg:space-y-6">
+          {/* Live Chart Card - 2/3 Width */}
+          <div className="col-span-12 lg:col-span-8 space-y-4 lg:space-y-6">
             {/* Live Chart Card */}
             <GlassCard>
               <button
@@ -440,7 +421,7 @@ export default function AnalyzePage() {
                   <TradingViewWidget
                     symbol={chartSymbol}
                     theme={isDarkMode ? 'dark' : 'light'}
-                    height={250}
+                    height={350}
                   />
                 </div>
               )}
@@ -475,6 +456,25 @@ export default function AnalyzePage() {
                 </div>
               </div>
             </GlassCard>
+          </div>
+
+          {/* Analysis Controls - 1/3 Width */}
+          <div className="col-span-12 lg:col-span-4">
+            <div className="space-y-4">
+              {/* Timeframe Selection - Auto-selects strategy */}
+              <div className="flex items-center justify-between">
+                <TradeTypeSelector
+                  value={timeframe}
+                  onChange={(tf) => setTimeframe(tf)}
+                  variant="tabs"
+                  showCreditCost
+                  className="flex-1"
+                />
+              </div>
+
+              {/* Coin Selector - Main Focus */}
+              <CoinSelector timeframe={timeframe} />
+            </div>
           </div>
 
           {/* Recent Analyses - Full Width */}
