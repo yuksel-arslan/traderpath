@@ -66,6 +66,27 @@ export default async function adminRoutes(app: FastifyInstance) {
       checks.binance = { status: 'down', details: String(error) };
     }
 
+    // TFT Predictor Service check
+    const tftStart = Date.now();
+    const TFT_URL = process.env.TFT_SERVICE_URL || 'http://localhost:8001';
+    try {
+      const response = await fetch(`${TFT_URL}/health`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        checks.tft = {
+          status: 'healthy',
+          latency: Date.now() - tftStart,
+          details: data.model_loaded ? 'Model loaded' : 'Model not loaded',
+        };
+      } else {
+        checks.tft = { status: 'degraded', details: `HTTP ${response.status}` };
+      }
+    } catch (error) {
+      checks.tft = { status: 'down', details: 'Service unavailable' };
+    }
+
     // Overall status
     const allHealthy = Object.values(checks).every(c => c.status === 'healthy');
     const anyDown = Object.values(checks).some(c => c.status === 'down');

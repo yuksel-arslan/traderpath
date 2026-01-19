@@ -43,6 +43,7 @@ interface SystemHealth {
     database: HealthCheck;
     redis: HealthCheck;
     binance: HealthCheck;
+    tft: HealthCheck;
   };
 }
 
@@ -369,7 +370,7 @@ export default function AdminPage() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <Server className="w-8 h-8 text-primary" />
-            System Administration
+            <span className="gradient-text-logo-animate">System Administration</span>
           </h1>
           <p className="text-muted-foreground mt-1">Monitor and manage your application</p>
         </div>
@@ -429,7 +430,7 @@ export default function AdminPage() {
       {activeTab === 'overview' && (
         <>
           {/* System Health */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
             <div className={`p-4 rounded-lg border ${getStatusColor(health?.status || 'unknown')}`}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Overall Status</span>
@@ -441,12 +442,15 @@ export default function AdminPage() {
             {health?.checks && Object.entries(health.checks).map(([name, check]) => (
               <div key={name} className={`p-4 rounded-lg border ${getStatusColor(check.status)}`}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium capitalize">{name}</span>
+                  <span className="text-sm font-medium capitalize">{name === 'tft' ? 'TFT Predictor' : name}</span>
                   {getStatusIcon(check.status)}
                 </div>
                 <p className="text-2xl font-bold capitalize">{check.status}</p>
                 {check.latency && (
                   <p className="text-sm opacity-75">{check.latency}ms</p>
+                )}
+                {check.details && (
+                  <p className="text-xs opacity-60 truncate" title={check.details}>{check.details}</p>
                 )}
               </div>
             ))}
