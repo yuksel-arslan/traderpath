@@ -216,10 +216,12 @@ function formatDirection(dir: string | null | undefined): string {
   return dir.charAt(0).toUpperCase() + dir.slice(1);
 }
 
-function getGateStatus(gate: { canProceed: boolean; confidence: number } | undefined): { text: string; color: string } {
+function getGateStatus(gate: { canProceed?: boolean; passed?: boolean; confidence: number } | undefined): { text: string; color: string } {
   if (!gate) return { text: '', color: '#666' };
   const conf = formatPercent(gate.confidence);
-  return gate.canProceed ? { text: `Passed ${conf}`, color: '#16a34a' } : { text: `Review ${conf}`, color: '#d97706' };
+  // Support both canProceed and passed properties
+  const isPassed = gate.canProceed ?? gate.passed ?? false;
+  return isPassed ? { text: `Passed ${conf}`, color: '#16a34a' } : { text: `Review ${conf}`, color: '#d97706' };
 }
 
 function formatAction(actionOrVerdict: string | undefined): string {
@@ -777,7 +779,7 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
 
 function generatePageSteps123(data: AnalysisReportData, totalPages: number): string {
   // Default values to prevent null access errors
-  const defaultGate = { passed: false, reason: '', confidence: 0 };
+  const defaultGate = { canProceed: false, passed: false, reason: '', confidence: 0 };
   const defaultTrend = { direction: 'neutral', strength: 0 };
   const defaultLevels = { support: [], resistance: [] };
   const defaultIndicators = { rsi: 50, macd: { histogram: 0 }, bb: { percentB: 50 } };
@@ -983,8 +985,7 @@ function generatePageSteps123(data: AnalysisReportData, totalPages: number): str
 
 function generatePageSteps456(data: AnalysisReportData, totalPages: number): string {
   // Default values to prevent null access errors
-  const defaultGate = { passed: false, reason: '', confidence: 0 };
-  const defaultPattern = { name: 'None', reliability: 0, type: 'neutral' };
+  const defaultGate = { canProceed: false, passed: false, reason: '', confidence: 0 };
 
   const tm = data.timing || { optimalEntryWindow: 'N/A', entryUrgency: 'wait', patterns: [], timeframeAlignment: 0, tradeNow: false, reason: 'Data unavailable', conditions: [], entryZones: [], gate: defaultGate };
   const tp = data.tradePlan || { direction: 'neutral', entry: 0, stopLoss: 0, takeProfit1: 0, takeProfit2: 0, takeProfit3: 0, riskReward: 0, positionSize: 0, leverage: 1, riskPercent: 0, potentialProfit: 0, potentialLoss: 0, gate: defaultGate };
