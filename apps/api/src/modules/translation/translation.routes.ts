@@ -1,6 +1,8 @@
 // ===========================================
 // Translation Routes
 // API endpoints for report translation
+// Primary: Google Translate (fast, cheap)
+// Fallback: Gemini AI (complex translations)
 // ===========================================
 
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
@@ -13,23 +15,74 @@ import { creditCostsService } from '../costs/credit-costs.service';
 const translateSchema = z.object({
   texts: z.record(z.string()),
   targetLanguage: z.string().min(2).max(5),
+  useGemini: z.boolean().optional(), // Force Gemini for complex translations
+});
+
+const quickTranslateSchema = z.object({
+  text: z.string().max(500), // Limit for free translations
+  targetLanguage: z.string().min(2).max(5),
 });
 
 export async function translationRoutes(fastify: FastifyInstance) {
   // ===========================================
   // GET /api/translation/languages
-  // Get supported languages
+  // Get supported languages and provider info
   // ===========================================
   fastify.get('/api/translation/languages', async (_request, reply: FastifyReply) => {
     const cost = await creditCostsService.getCreditCost('REPORT_TRANSLATION');
+    const provider = translationService.getAvailableProvider();
+
     return reply.send({
       success: true,
       data: {
         languages: SUPPORTED_LANGUAGES,
         defaultLanguage: 'en',
         cost,
+        provider, // 'google' | 'gemini' | null
       },
     });
+  });
+
+  // ===========================================
+  // POST /api/translation/quick
+  // Quick translate single text (free, rate limited)
+  // For UI elements and short texts
+  // ===========================================
+  fastify.post('/api/translation/quick', async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const body = quickTranslateSchema.parse(request.body);
+
+      // Skip if target is English
+      if (body.targetLanguage === 'en') {
+        return reply.send({
+          success: true,
+          data: {
+            translation: body.text,
+            language: 'en',
+          },
+        });
+      }
+
+      const translation = await translationService.translate(
+        body.text,
+        body.targetLanguage
+      );
+
+      return reply.send({
+        success: true,
+        data: {
+          translation,
+          language: body.targetLanguage,
+          languageName: SUPPORTED_LANGUAGES[body.targetLanguage as keyof typeof SUPPORTED_LANGUAGES] || body.targetLanguage,
+        },
+      });
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.code(500).send({
+        success: false,
+        error: { code: 'TRANSLATION_ERROR', message: 'Failed to translate' },
+      });
+    }
   });
 
   // ===========================================
@@ -71,6 +124,7 @@ export async function translationRoutes(fastify: FastifyInstance) {
         texts: body.texts,
         targetLanguage: body.targetLanguage,
         userId,
+        useGemini: body.useGemini,
       });
 
       return reply.send({
@@ -79,6 +133,7 @@ export async function translationRoutes(fastify: FastifyInstance) {
           translations: result.translations,
           language: body.targetLanguage,
           languageName: SUPPORTED_LANGUAGES[body.targetLanguage as keyof typeof SUPPORTED_LANGUAGES] || body.targetLanguage,
+          provider: result.provider, // 'google' | 'gemini'
         },
         creditsSpent: cost,
         remainingCredits: chargeResult.newBalance,
@@ -104,12 +159,14 @@ export async function translationRoutes(fastify: FastifyInstance) {
 
     const estimatedCostUsd = translationService.estimateTranslationCost(textLength || 1000);
     const creditCost = await creditCostsService.getCreditCost('REPORT_TRANSLATION');
+    const provider = translationService.getAvailableProvider();
 
     return reply.send({
       success: true,
       data: {
         creditCost,
         estimatedApiCostUsd: estimatedCostUsd.toFixed(6),
+        provider, // 'google' | 'gemini' | null
       },
     });
   });

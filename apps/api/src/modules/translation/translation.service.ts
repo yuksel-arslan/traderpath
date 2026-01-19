@@ -1,16 +1,23 @@
 // ===========================================
 // Translation Service
-// Translates report content using Gemini AI
+// Primary: Google Translate API (fast, cheap)
+// Fallback: Gemini AI (for complex translations)
 // ===========================================
 
 import { config } from '../../core/config';
 import { costService } from '../costs/cost.service';
 import { callGeminiWithRetry } from '../../core/gemini';
+import {
+  translateRecord,
+  isGoogleTranslateAvailable,
+  GOOGLE_TRANSLATE_LANGUAGES,
+} from '../../core/google-translate';
 
 export interface TranslationRequest {
   texts: Record<string, string>;
   targetLanguage: string;
   userId?: string;
+  useGemini?: boolean; // Force Gemini for complex translations
 }
 
 export interface TranslationResult {
@@ -18,6 +25,7 @@ export interface TranslationResult {
   inputTokens: number;
   outputTokens: number;
   costUsd: number;
+  provider: 'google' | 'gemini';
 }
 
 // Supported languages
@@ -33,13 +41,95 @@ export const SUPPORTED_LANGUAGES = {
   ja: '日本語',
   ko: '한국어',
   ar: 'العربية',
+  it: 'Italiano',
+  nl: 'Nederlands',
+  pl: 'Polski',
+  vi: 'Tiếng Việt',
+  th: 'ไทย',
+  id: 'Bahasa Indonesia',
+  hi: 'हिन्दी',
 } as const;
 
 export type LanguageCode = keyof typeof SUPPORTED_LANGUAGES;
 
 class TranslationService {
-  // Translate multiple texts at once for efficiency
+  /**
+   * Translate multiple texts at once
+   * Uses Google Translate by default, falls back to Gemini if needed
+   */
   async translateTexts(request: TranslationRequest): Promise<TranslationResult> {
+    const { texts, targetLanguage, userId, useGemini } = request;
+
+    // If explicitly requesting Gemini or Google Translate is not available
+    if (useGemini || !isGoogleTranslateAvailable()) {
+      return this.translateWithGemini(request);
+    }
+
+    // Try Google Translate first (faster, cheaper)
+    try {
+      return await this.translateWithGoogleApi(request);
+    } catch (error) {
+      console.warn('Google Translate failed, falling back to Gemini:', error);
+      return this.translateWithGemini(request);
+    }
+  }
+
+  /**
+   * Translate using Google Cloud Translation API
+   */
+  private async translateWithGoogleApi(request: TranslationRequest): Promise<TranslationResult> {
+    const startTime = Date.now();
+    const { texts, targetLanguage, userId } = request;
+
+    // Skip translation if target is English (source language)
+    if (targetLanguage === 'en') {
+      return {
+        translations: texts,
+        inputTokens: 0,
+        outputTokens: 0,
+        costUsd: 0,
+        provider: 'google',
+      };
+    }
+
+    const translations = await translateRecord(texts, targetLanguage, 'en');
+    const durationMs = Date.now() - startTime;
+
+    // Estimate character count for cost calculation
+    const charCount = Object.values(texts).join('').length;
+    // Google Translate pricing: $20 per 1M characters
+    const costUsd = (charCount / 1_000_000) * 20;
+
+    // Log the cost
+    costService.logCost({
+      service: 'google_translate',
+      operation: 'translation',
+      inputTokens: 0,
+      outputTokens: 0,
+      costUsd,
+      userId,
+      durationMs,
+      metadata: {
+        targetLanguage,
+        textCount: Object.keys(texts).length,
+        charCount,
+        provider: 'google',
+      },
+    }).catch(err => console.error('Failed to log translation cost:', err));
+
+    return {
+      translations,
+      inputTokens: 0,
+      outputTokens: 0,
+      costUsd,
+      provider: 'google',
+    };
+  }
+
+  /**
+   * Translate using Gemini AI (for complex translations or fallback)
+   */
+  private async translateWithGemini(request: TranslationRequest): Promise<TranslationResult> {
     const apiKey = config.gemini.apiKey;
 
     if (!apiKey) {
@@ -49,6 +139,7 @@ class TranslationService {
         inputTokens: 0,
         outputTokens: 0,
         costUsd: 0,
+        provider: 'gemini',
       };
     }
 
@@ -83,7 +174,7 @@ ${textsToTranslate}`;
             maxOutputTokens: 4000,
           },
         },
-        5, // maxRetries - increased for rate limit resilience
+        3, // maxRetries - balanced for speed vs reliability
         'translation'
       );
 
@@ -91,7 +182,6 @@ ${textsToTranslate}`;
 
       // Parse translations
       const translations: Record<string, string> = {};
-      const lines = translatedText.split('\n').filter((line: string) => line.trim());
 
       textEntries.forEach(([key], index) => {
         // Find the line starting with [index]
@@ -121,7 +211,11 @@ ${textsToTranslate}`;
         costUsd,
         userId: request.userId,
         durationMs,
-        metadata: { targetLanguage: request.targetLanguage, textCount: textEntries.length },
+        metadata: {
+          targetLanguage: request.targetLanguage,
+          textCount: textEntries.length,
+          provider: 'gemini',
+        },
       }).catch(err => console.error('Failed to log translation cost:', err));
 
       return {
@@ -129,24 +223,64 @@ ${textsToTranslate}`;
         inputTokens,
         outputTokens,
         costUsd,
+        provider: 'gemini',
       };
     } catch (error) {
-      console.error('Translation error:', error);
+      console.error('Gemini translation error:', error);
       return {
         translations: request.texts,
         inputTokens: 0,
         outputTokens: 0,
         costUsd: 0,
+        provider: 'gemini',
       };
     }
   }
 
-  // Get estimated cost for translation
+  /**
+   * Simple single text translation
+   */
+  async translate(
+    text: string,
+    targetLanguage: string,
+    userId?: string
+  ): Promise<string> {
+    const result = await this.translateTexts({
+      texts: { text },
+      targetLanguage,
+      userId,
+    });
+    return result.translations.text || text;
+  }
+
+  /**
+   * Get estimated cost for translation
+   */
   estimateTranslationCost(textLength: number): number {
-    // Rough estimate: input + output tokens
-    const estimatedInputTokens = Math.ceil(textLength / 4) + 200; // +200 for prompt
+    // Google Translate is much cheaper
+    if (isGoogleTranslateAvailable()) {
+      return (textLength / 1_000_000) * 20; // $20 per 1M chars
+    }
+    // Gemini fallback
+    const estimatedInputTokens = Math.ceil(textLength / 4) + 200;
     const estimatedOutputTokens = Math.ceil(textLength / 4);
     return costService.calculateGeminiCost(estimatedInputTokens, estimatedOutputTokens);
+  }
+
+  /**
+   * Check which provider is available
+   */
+  getAvailableProvider(): 'google' | 'gemini' | null {
+    if (isGoogleTranslateAvailable()) return 'google';
+    if (config.gemini.apiKey) return 'gemini';
+    return null;
+  }
+
+  /**
+   * Get supported languages
+   */
+  getSupportedLanguages(): typeof SUPPORTED_LANGUAGES {
+    return SUPPORTED_LANGUAGES;
   }
 }
 

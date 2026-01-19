@@ -56,6 +56,10 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
 
+  // Google Cloud
+  GOOGLE_TRANSLATE_API_KEY: z.string().optional(),
+  GOOGLE_CLOUD_PROJECT_ID: z.string().optional(),
+
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default('60000'),
   RATE_LIMIT_MAX_REQUESTS: z.string().transform(Number).default('100'),
@@ -128,6 +132,12 @@ export const config = {
   },
   gemini: {
     apiKey: env.GEMINI_API_KEY,
+  },
+
+  // Google Cloud
+  googleCloud: {
+    translateApiKey: env.GOOGLE_TRANSLATE_API_KEY,
+    projectId: env.GOOGLE_CLOUD_PROJECT_ID,
   },
 
   // Rate Limiting

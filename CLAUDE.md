@@ -192,7 +192,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-18 | Analysis outcome %100 TP gösteriyor (SL hit tespit edilmiyor) | Binance Klines API ile tarihsel fiyat kontrolü eklendi (createdAt'ten itibaren High/Low değerleri kontrol ediliyor) | `apps/api/src/modules/reports/live-tracking.service.ts` |
 | 2026-01-18 | Timeframe mapping yanlış (4h→swing, 1d→position olmamalı) | Düzeltildi: 4h→dayTrade, 1d→swing. Position trade type kaldırıldı | `trade-config.ts`, `TradeTypeSelector.tsx`, `CoinSelector.tsx`, `AnalysisDialog.tsx` |
 | 2026-01-19 | TFT Predictor build timeout (europe-west4) | CPU-only PyTorch kullan (~5GB→~1GB). GPU ileride eklenecek | `services/tft-predictor/requirements.txt`, `Dockerfile` |
-| 2026-01-19 | Gemini API rate limit (429) hatası - AI Expert failed | Exponential backoff ile retry logic eklendi. API'den gelen retryDelay parse edilip kullanılıyor. Max 5 retry, 60s cap. Expert Panel: paralel → sıralı çağrı (500ms delay) | `apps/api/src/core/gemini.ts`, `ai-expert.service.ts`, `translation.service.ts` |
+| 2026-01-19 | Gemini API rate limit (429) hatası - AI Expert failed | 1) Fetch timeout (30s) eklendi, 2) Max wait 20s'ye düşürüldü, 3) Retry 3'e indirildi, 4) lastError düzgün set ediliyor. Expert Panel: paralel → sıralı çağrı (500ms delay) | `apps/api/src/core/gemini.ts`, `ai-expert.service.ts`, `translation.service.ts` |
 
 ---
 
@@ -271,10 +271,18 @@ Kullanıcı Hakları Aktif:
 - GPU desteği ileride eklenecek (Google Cloud)
 - Gemini API rate limit (429) hatası düzeltildi
 - Yeni `callGeminiWithRetry` helper fonksiyonu eklendi (`apps/api/src/core/gemini.ts`)
-- Exponential backoff ile max 3 retry, API'den gelen retryDelay parse edilip kullanılıyor
+- Exponential backoff ile max 5 retry, API'den gelen retryDelay parse edilip kullanılıyor
 - AI Expert service ve Translation service güncellendi
+- Expert Panel: paralel → sıralı çağrı (500ms delay) - rate limit önleme
 - **Analiz Orchestration dokümantasyonu eklendi**: Her analiz için 3 AI Expert, 2 Download, 2 Email hakkı + otomatik özet email
 - **Trade Type Completion Bonus eklendi**: Scalping +3, Day Trade +2, Swing Trade +1 kredi otomatik bonus
+- **Google Translate API entegrasyonu eklendi**:
+  - Primary: Google Translate (hızlı, ucuz - $20/1M karakter)
+  - Fallback: Gemini AI (karmaşık çeviriler için)
+  - Yeni dosyalar: `apps/api/src/core/google-translate.ts`
+  - 18 dil desteği: EN, TR, ES, DE, FR, PT, RU, ZH, JA, KO, AR, IT, NL, PL, VI, TH, ID, HI
+  - Yeni endpoint: `POST /api/translation/quick` (ücretsiz, 500 karakter limit)
+  - Config'e eklendi: `GOOGLE_TRANSLATE_API_KEY`, `GOOGLE_CLOUD_PROJECT_ID`
 
 ---
 

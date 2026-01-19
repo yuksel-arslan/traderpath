@@ -1136,7 +1136,7 @@ export class AIExpertService {
             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
           ],
         },
-        5, // maxRetries - increased for rate limit resilience
+        3, // maxRetries - balanced for speed vs reliability
         `ai_expert_chat_${request.expertId}`
       );
 
@@ -1595,7 +1595,7 @@ FORMAT: Just your professional ${tradeCtx.label} insight about ${symbol}. Start 
             maxOutputTokens: 200,
           },
         },
-        5, // maxRetries - increased for rate limit resilience
+        3, // maxRetries - balanced for speed vs reliability
         `expert_commentary_${expertId}`
       );
 
@@ -1678,7 +1678,7 @@ FORMAT: Just your professional ${tradeCtx.label} synthesis about ${symbol}. Star
             maxOutputTokens: 300,
           },
         },
-        5, // maxRetries - increased for rate limit resilience
+        3, // maxRetries - balanced for speed vs reliability
         'voltran_synthesis'
       );
 
