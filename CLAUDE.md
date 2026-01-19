@@ -115,6 +115,7 @@
 | 2026-01-18 | Analyze sayfası modal arkasında içerik görünüyor | z-index z-[100]'e yükseltildi, isolate eklendi, backdrop opacity %70'e çıkarıldı | `AnalysisDialog.tsx`, `CoinSelector.tsx`, `analyze/page.tsx` |
 | 2026-01-18 | Analysis outcome %100 TP gösteriyor (SL hit tespit edilmiyor) | Binance Klines API ile tarihsel fiyat kontrolü eklendi (createdAt'ten itibaren High/Low değerleri kontrol ediliyor) | `apps/api/src/modules/reports/live-tracking.service.ts` |
 | 2026-01-18 | Timeframe mapping yanlış (4h→swing, 1d→position olmamalı) | Düzeltildi: 4h→dayTrade, 1d→swing. Position trade type kaldırıldı | `trade-config.ts`, `TradeTypeSelector.tsx`, `CoinSelector.tsx`, `AnalysisDialog.tsx` |
+| 2026-01-19 | TFT Predictor build timeout (europe-west4) | CPU-only PyTorch kullan (~5GB→~1GB). GPU ileride eklenecek | `services/tft-predictor/requirements.txt`, `Dockerfile` |
 
 ---
 
@@ -185,6 +186,12 @@
 - Otomatik Strateji Mapping (GÜNCEL): 15m→Scalping, 1h→Day Trade, 4h→Day Trade, 1d→Swing Trade
 - API interval parametresi kabul ediyor, tradeType otomatik türetiliyor
 - Position trade type kaldırıldı - 1d artık Swing Trade olarak işleniyor
+
+### 2026-01-19
+- TFT Predictor europe-west4 build timeout düzeltildi
+- CPU-only PyTorch kullanıldı (--extra-index-url https://download.pytorch.org/whl/cpu)
+- Docker image boyutu ~5GB'dan ~1GB'a düşürüldü
+- GPU desteği ileride eklenecek (Google Cloud)
 
 ---
 
