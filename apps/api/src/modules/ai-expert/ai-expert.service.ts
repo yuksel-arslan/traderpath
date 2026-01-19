@@ -11,10 +11,10 @@ import { analysisEngine } from '../analysis/analysis.engine';
 import { creditService } from '../credits/credit.service';
 import { creditCostsService } from '../costs/credit-costs.service';
 import { getTradingKnowledgeForAI } from './trading-knowledge-base';
+import { callGeminiWithRetry } from '../../core/gemini';
 
-// Gemini API configuration
+// Gemini API configuration (for API key check)
 const GEMINI_API_KEY = config.gemini.apiKey;
-const GEMINI_MODEL = 'gemini-2.0-flash';
 
 // Sanitize AI response - remove forbidden content
 function sanitizeAIResponse(text: string): string {
@@ -1119,35 +1119,27 @@ export class AIExpertService {
     });
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      // Use retry-enabled Gemini API call
+      const data = await callGeminiWithRetry(
         {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: messages,
-            generationConfig: {
-              temperature: 0.8,
-              topP: 0.92,
-              topK: 40,
-              maxOutputTokens: 800,
-            },
-            safetySettings: [
-              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-            ],
-          }),
-        }
+          contents: messages,
+          generationConfig: {
+            temperature: 0.8,
+            topP: 0.92,
+            topK: 40,
+            maxOutputTokens: 800,
+          },
+          safetySettings: [
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+          ],
+        },
+        3, // maxRetries
+        `ai_expert_chat_${request.expertId}`
       );
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Gemini API error: ${error}`);
-      }
-
-      const data = await response.json();
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not generate response.';
       // Programmatically sanitize forbidden content
       const responseText = sanitizeAIResponse(rawText);
@@ -1594,26 +1586,19 @@ RULES:
 FORMAT: Just your professional ${tradeCtx.label} insight about ${symbol}. Start directly with your analysis.`;
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      // Use retry-enabled Gemini API call
+      const data = await callGeminiWithRetry(
         {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 200,
-            },
-          }),
-        }
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 200,
+          },
+        },
+        3, // maxRetries
+        `expert_commentary_${expertId}`
       );
 
-      if (!response.ok) {
-        throw new Error('Gemini API error');
-      }
-
-      const data = await response.json();
       const comment = sanitizeAIResponse(
         data.candidates?.[0]?.content?.parts?.[0]?.text || 'Analysis unavailable.'
       );
@@ -1684,26 +1669,19 @@ ONLY discuss ${symbol}, never mention other coins.
 FORMAT: Just your professional ${tradeCtx.label} synthesis about ${symbol}. Start directly with your unified recommendation.`;
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      // Use retry-enabled Gemini API call
+      const data = await callGeminiWithRetry(
         {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 300,
-            },
-          }),
-        }
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 300,
+          },
+        },
+        3, // maxRetries
+        'voltran_synthesis'
       );
 
-      if (!response.ok) {
-        throw new Error('Gemini API error');
-      }
-
-      const data = await response.json();
       return sanitizeAIResponse(
         data.candidates?.[0]?.content?.parts?.[0]?.text || 'Panel synthesis unavailable.'
       );

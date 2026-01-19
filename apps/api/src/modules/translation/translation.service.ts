@@ -5,6 +5,7 @@
 
 import { config } from '../../core/config';
 import { costService } from '../costs/cost.service';
+import { callGeminiWithRetry } from '../../core/gemini';
 
 export interface TranslationRequest {
   texts: Record<string, string>;
@@ -73,32 +74,19 @@ TEXTS TO TRANSLATE:
 ${textsToTranslate}`;
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      // Use retry-enabled Gemini API call
+      const data = await callGeminiWithRetry(
         {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.3, // Lower temperature for more consistent translations
-              maxOutputTokens: 4000,
-            },
-          }),
-        }
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.3, // Lower temperature for more consistent translations
+            maxOutputTokens: 4000,
+          },
+        },
+        3, // maxRetries
+        'translation'
       );
 
-      if (!response.ok) {
-        console.error('Gemini API error:', response.statusText);
-        return {
-          translations: request.texts,
-          inputTokens: 0,
-          outputTokens: 0,
-          costUsd: 0,
-        };
-      }
-
-      const data = await response.json();
       const translatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
       // Parse translations
