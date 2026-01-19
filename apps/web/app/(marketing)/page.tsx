@@ -1394,7 +1394,7 @@ export default function LandingPage() {
                   1
                 </div>
                 <div className="pt-4">
-                  <h3 className="text-lg font-bold mb-2">Select Coin & Trade Type</h3>
+                  <h3 className="text-lg font-bold mb-2 gradient-text-logo-animate">Select Coin & Trade Type</h3>
                   <p className="text-sm text-muted-foreground mb-4">Choose from 200+ coins and select your trading style</p>
                   <div className="flex flex-wrap gap-2">
                     <span className="px-2 py-1 bg-accent text-xs rounded">Scalping (5m-15m)</span>
@@ -1410,7 +1410,7 @@ export default function LandingPage() {
                   2
                 </div>
                 <div className="pt-4">
-                  <h3 className="text-lg font-bold mb-2">Run 7-Step Analysis</h3>
+                  <h3 className="text-lg font-bold mb-2 gradient-text-logo-animate">Run 7-Step Analysis</h3>
                   <p className="text-sm text-muted-foreground mb-4">AI analyzes market conditions across 7 key dimensions</p>
                   <div className="grid grid-cols-4 gap-1">
                     {ANALYSIS_STEPS.slice(0, 7).map((step, idx) => {
@@ -1434,7 +1434,7 @@ export default function LandingPage() {
                   3
                 </div>
                 <div className="pt-4">
-                  <h3 className="text-lg font-bold mb-2">Get Clear Verdict</h3>
+                  <h3 className="text-lg font-bold mb-2 gradient-text-logo-animate">Get Clear Verdict</h3>
                   <p className="text-sm text-muted-foreground mb-4">Receive actionable signal with entry, SL & TP levels</p>
                   <div className="flex flex-wrap gap-2">
                     <span className="px-2 py-1 bg-green-500/20 text-green-500 text-xs font-medium rounded">GO</span>
@@ -1455,7 +1455,7 @@ export default function LandingPage() {
                     <Brain className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h4 className="font-semibold">AI Expert Chat</h4>
+                    <h4 className="font-semibold gradient-text-logo-animate">AI Expert Chat</h4>
                     <p className="text-xs text-muted-foreground">Ask questions about your analysis</p>
                   </div>
                 </div>
@@ -1478,7 +1478,7 @@ export default function LandingPage() {
                     <FileText className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h4 className="font-semibold">PDF Report</h4>
+                    <h4 className="font-semibold gradient-text-logo-animate">PDF Report</h4>
                     <p className="text-xs text-muted-foreground">Download detailed analysis report</p>
                   </div>
                 </div>
@@ -1495,7 +1495,7 @@ export default function LandingPage() {
                     <TrendingUp className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h4 className="font-semibold">TFT AI Model</h4>
+                    <h4 className="font-semibold gradient-text-logo-animate">TFT AI Model</h4>
                     <p className="text-xs text-muted-foreground">AI-powered price prediction</p>
                   </div>
                 </div>
@@ -1507,7 +1507,7 @@ export default function LandingPage() {
           {/* How We Measure Analysis Accuracy */}
           <div className="mt-16 pt-16 border-t border-border">
             <div className="text-center mb-10">
-              <h3 className="text-2xl md:text-3xl font-bold mb-3">How We Measure Analysis Accuracy</h3>
+              <h3 className="text-2xl md:text-3xl font-bold mb-3 gradient-text-logo-animate">How We Measure Analysis Accuracy</h3>
               <p className="text-muted-foreground max-w-xl mx-auto">
                 Outcome-verified methodology based on real price movements
               </p>
@@ -1519,7 +1519,7 @@ export default function LandingPage() {
                 <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center mb-3">
                   <Target className="w-5 h-5 text-green-500" />
                 </div>
-                <h4 className="font-semibold mb-2 text-sm">TP/SL Verification</h4>
+                <h4 className="font-semibold mb-2 text-sm gradient-text-logo-animate">TP/SL Verification</h4>
                 <p className="text-xs text-muted-foreground">
                   Each GO signal includes Entry, Stop Loss, and Take Profit levels. We track if price hits
                   <span className="text-green-500 font-medium"> TP</span> or
@@ -1532,7 +1532,7 @@ export default function LandingPage() {
                 <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mb-3">
                   <Eye className="w-5 h-5 text-blue-500" />
                 </div>
-                <h4 className="font-semibold mb-2 text-sm">Outcome Tracking</h4>
+                <h4 className="font-semibold mb-2 text-sm gradient-text-logo-animate">Outcome Tracking</h4>
                 <p className="text-xs text-muted-foreground">
                   We monitor each trade until price hits
                   <span className="text-green-500 font-medium"> Take Profit</span> or
@@ -1546,7 +1546,7 @@ export default function LandingPage() {
                 <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center mb-3">
                   <TrendingUp className="w-5 h-5 text-amber-500" />
                 </div>
-                <h4 className="font-semibold mb-2 text-sm">GO Signal Accuracy</h4>
+                <h4 className="font-semibold mb-2 text-sm gradient-text-logo-animate">GO Signal Accuracy</h4>
                 <p className="text-xs text-muted-foreground">
                   We specifically track GO and CONDITIONAL_GO signals. Platform accuracy shows how often these signals hit their first Take Profit target.
                 </p>
@@ -1557,7 +1557,7 @@ export default function LandingPage() {
                 <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mb-3">
                   <Shield className="w-5 h-5 text-purple-500" />
                 </div>
-                <h4 className="font-semibold mb-2 text-sm">Dashboard Transparency</h4>
+                <h4 className="font-semibold mb-2 text-sm gradient-text-logo-animate">Dashboard Transparency</h4>
                 <p className="text-xs text-muted-foreground">
                   All users see the same platform accuracy stats on their dashboard. Every outcome—correct or incorrect—is counted in real-time.
                 </p>
@@ -1566,7 +1566,7 @@ export default function LandingPage() {
 
             {/* Accuracy Formula */}
             <div className="max-w-2xl mx-auto bg-accent/50 rounded-xl p-6 border">
-              <h4 className="font-semibold text-center mb-4">Accuracy Calculation Formula</h4>
+              <h4 className="font-semibold text-center mb-4 gradient-text-logo-animate">Accuracy Calculation Formula</h4>
               <div className="flex items-center justify-center gap-2 text-sm mb-4 flex-wrap">
                 <span className="px-3 py-1.5 bg-background rounded-lg font-mono">Accuracy</span>
                 <span>=</span>
