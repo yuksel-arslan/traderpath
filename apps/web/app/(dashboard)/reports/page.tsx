@@ -35,7 +35,7 @@ type TradeType = 'scalping' | 'dayTrade' | 'swing';
 const TRADE_TYPE_CONFIG: Record<TradeType, { label: string; icon: typeof Zap; color: string }> = {
   scalping: { label: 'Scalping', icon: Zap, color: 'teal' },
   dayTrade: { label: 'Day Trade', icon: Activity, color: 'slate' },
-  swing: { label: 'Swing', icon: Calendar, color: 'orange' },
+  swing: { label: 'Swing', icon: Calendar, color: 'amber' },
 };
 
 interface Report {
@@ -422,7 +422,7 @@ Could you share your risk assessment and recommendations based on this analysis?
       <div className="relative overflow-hidden rounded-2xl border border-teal-500/20 dark:border-white/10 bg-gradient-to-br from-teal-50 via-white to-orange-50 dark:from-teal-900/30 dark:via-slate-900 dark:to-orange-900/20">
         {/* Animated Gradient Orbs - Teal/Coral */}
         <div className="absolute -top-20 -right-20 w-64 h-64 bg-teal-500/20 dark:bg-teal-500/30 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-orange-400/15 dark:bg-orange-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-red-400/15 dark:bg-red-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
 
         {/* Grain Texture Overlay */}
         <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.03]" style={{
@@ -441,7 +441,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                 </div>
               </div>
               <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-teal-600 via-orange-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer tracking-tight">My Reports</h1>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer tracking-tight">My Reports</h1>
                 <p className="text-sm text-slate-600 dark:text-slate-400">Saved analysis reports & live tracking</p>
               </div>
             </div>
@@ -486,7 +486,7 @@ Could you share your risk assessment and recommendations based on this analysis?
               className={cn(
                 "px-4 py-2 text-xs font-medium rounded-lg transition-all duration-300",
                 dateFilter === f.value
-                  ? "bg-gradient-to-r from-teal-500 to-orange-400 text-white shadow-lg shadow-teal-500/25"
+                  ? "bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-lg shadow-teal-500/25"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
               )}
             >
@@ -502,7 +502,7 @@ Could you share your risk assessment and recommendations based on this analysis?
             className={cn(
               "px-4 py-2 text-xs font-medium rounded-lg transition-all duration-300",
               tradeTypeFilter === 'all'
-                ? "bg-gradient-to-r from-teal-500 to-orange-400 text-white shadow-lg shadow-teal-500/25"
+                ? "bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-lg shadow-teal-500/25"
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
             )}
           >
@@ -518,7 +518,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                 className={cn(
                   "flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg transition-all duration-300",
                   tradeTypeFilter === type
-                    ? "bg-gradient-to-r from-teal-500 to-orange-400 text-white shadow-lg shadow-teal-500/25"
+                    ? "bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-lg shadow-teal-500/25"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
                 )}
               >
@@ -550,12 +550,12 @@ Could you share your risk assessment and recommendations based on this analysis?
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 p-12">
           {/* Background Effects - Teal/Coral */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-400/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-red-400/10 rounded-full blur-3xl" />
 
           <div className="relative z-10 text-center">
             <div className="relative inline-block mb-6">
               <div className="absolute inset-0 bg-teal-500/20 rounded-2xl blur-xl" />
-              <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-teal-500/20 to-orange-400/20 border border-teal-500/20 dark:border-white/10 flex items-center justify-center">
+              <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-teal-500/20 to-red-400/20 border border-teal-500/20 dark:border-white/10 flex items-center justify-center">
                 <FileText className="w-10 h-10 text-teal-500" />
               </div>
             </div>
@@ -565,7 +565,7 @@ Could you share your risk assessment and recommendations based on this analysis?
             </p>
             <button
               onClick={() => router.push('/analyze')}
-              className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-orange-400 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-teal-500/25 transition-all duration-300"
+              className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-red-400 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-teal-500/25 transition-all duration-300"
             >
               <Zap className="w-5 h-5" />
               Start Analysis
@@ -624,7 +624,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                 "border-2 rounded-xl p-4 hover:shadow-lg transition relative overflow-hidden bg-white dark:bg-transparent",
                 // TP Hit = Teal, SL Hit = Coral/Red, Active = Teal
                 report.outcome === 'correct' && "border-teal-500/50",
-                report.outcome === 'incorrect' && "border-orange-500/50",
+                report.outcome === 'incorrect' && "border-red-500/50",
                 isActive && "border-teal-500/30"
               )}
               style={{
@@ -652,7 +652,7 @@ Could you share your risk assessment and recommendations based on this analysis?
               )}
               {report.outcome === 'incorrect' && (
                 <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden">
-                  <div className="absolute top-3 -right-6 w-24 text-center py-0.5 bg-orange-500 text-white text-[10px] font-bold rotate-45 shadow-sm">
+                  <div className="absolute top-3 -right-6 w-24 text-center py-0.5 bg-red-500 text-white text-[10px] font-bold rotate-45 shadow-sm">
                     SL HIT ✗
                   </div>
                 </div>
@@ -669,7 +669,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                           "px-2 py-0.5 rounded text-xs font-medium",
                           report.direction === 'long'
                             ? "bg-teal-500/10 text-teal-600 dark:text-teal-400"
-                            : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                            : "bg-red-500/10 text-red-600 dark:text-red-400"
                         )}>
                           {report.direction === 'long' ? (
                             <TrendingUp className="w-3 h-3 inline mr-1" />
@@ -688,7 +688,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                             "px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1",
                             config.color === 'teal' && "bg-teal-500/10 text-teal-600 dark:text-teal-400",
                             config.color === 'slate' && "bg-slate-500/10 text-slate-600 dark:text-slate-400",
-                            config.color === 'orange' && "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                            config.color === 'amber' && "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                           )}>
                             <Icon className="w-3 h-3" />
                             {config.label}
@@ -703,7 +703,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                         </span>
                       )}
                       {report.outcome === 'incorrect' && (
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-orange-500/20 text-orange-600 dark:text-orange-400 flex items-center gap-1">
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-600 dark:text-red-400 flex items-center gap-1">
                           <XCircle className="w-3 h-3" />
                           SL HIT
                         </span>
@@ -740,13 +740,13 @@ Could you share your risk assessment and recommendations based on this analysis?
                   <div className={cn(
                     "text-center px-2 py-1 rounded-lg min-w-[50px]",
                     report.score >= 7 ? "bg-teal-100 dark:bg-teal-500/20" :
-                    report.score >= 5 ? "bg-amber-100 dark:bg-amber-500/20" : "bg-orange-100 dark:bg-orange-500/20"
+                    report.score >= 5 ? "bg-amber-100 dark:bg-amber-500/20" : "bg-red-100 dark:bg-red-500/20"
                   )}>
                     <div className="text-[10px] text-slate-500 dark:text-muted-foreground">Score</div>
                     <div className={cn(
                       "font-bold text-sm",
                       report.score >= 7 ? "text-teal-600 dark:text-teal-400" :
-                      report.score >= 5 ? "text-amber-600 dark:text-amber-400" : "text-orange-600 dark:text-orange-400"
+                      report.score >= 5 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"
                     )}>
                       {(report.score * 10).toFixed(0)}%
                     </div>
@@ -761,12 +761,12 @@ Could you share your risk assessment and recommendations based on this analysis?
                         "text-center px-2 py-1 rounded-lg min-w-[60px]",
                         (report.unrealizedPnL || 0) >= 0
                           ? "bg-teal-100 dark:bg-teal-500/20"
-                          : "bg-orange-100 dark:bg-orange-500/20"
+                          : "bg-red-100 dark:bg-red-500/20"
                       )}>
                         <div className="text-[10px] text-slate-500 dark:text-muted-foreground">P/L</div>
                         <div className={cn(
                           "font-bold text-sm",
-                          (report.unrealizedPnL || 0) >= 0 ? "text-teal-600 dark:text-teal-400" : "text-orange-600 dark:text-orange-400"
+                          (report.unrealizedPnL || 0) >= 0 ? "text-teal-600 dark:text-teal-400" : "text-red-600 dark:text-red-400"
                         )}>
                           {(report.unrealizedPnL || 0) >= 0 ? '+' : ''}{(report.unrealizedPnL || 0).toFixed(2)}%
                         </div>
@@ -852,7 +852,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                   {!report.aiExpertComment && report.analysisId && (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleAskAIExpert(report); }}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-100 dark:bg-orange-500/10 hover:bg-orange-200 dark:hover:bg-orange-500/20 text-orange-600 dark:text-orange-500 transition"
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-100 dark:bg-red-500/10 hover:bg-red-200 dark:hover:bg-red-500/20 text-red-600 dark:text-red-500 transition"
                       title="Ask AI Expert"
                     >
                       <Bot className="w-4 h-4" />
@@ -870,7 +870,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                   {/* Delete Button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDelete(report.id); }}
-                    className="p-2 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-500/10 text-orange-500 transition"
+                    className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/10 text-red-500 transition"
                     title="Delete"
                   >
                     <Trash2 className="w-5 h-5" />
@@ -929,7 +929,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                         "px-2 py-0.5 rounded text-xs font-medium",
                         chartModal.report.direction === 'long'
                           ? "bg-teal-500/20 text-teal-500"
-                          : "bg-orange-500/20 text-orange-500"
+                          : "bg-red-500/20 text-red-500"
                       )}>
                         {chartModal.report.direction === 'long' ? (
                           <TrendingUp className="w-3 h-3 inline mr-1" />
@@ -947,7 +947,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                       </span>
                     )}
                     {chartModal.report.outcome === 'incorrect' && (
-                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-orange-500/20 text-orange-500 flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-500 flex items-center gap-1">
                         <XCircle className="w-3 h-3" />
                         SL HIT
                       </span>
@@ -975,12 +975,12 @@ Could you share your risk assessment and recommendations based on this analysis?
 
                 {/* Stop Loss - Orange/Coral */}
                 {chartModal.report.stopLoss && (
-                  <div className="text-center px-3 py-1.5 bg-orange-100 dark:bg-orange-500/10 rounded-lg border border-orange-300 dark:border-orange-500/30">
-                    <div className="flex items-center gap-1 text-[10px] text-orange-600 dark:text-orange-400">
+                  <div className="text-center px-3 py-1.5 bg-red-100 dark:bg-red-500/10 rounded-lg border border-red-300 dark:border-red-500/30">
+                    <div className="flex items-center gap-1 text-[10px] text-red-600 dark:text-red-400">
                       <Shield className="w-3 h-3" />
                       SL
                     </div>
-                    <div className="font-mono font-bold text-sm text-orange-600 dark:text-orange-400">${chartModal.report.stopLoss.toFixed(4)}</div>
+                    <div className="font-mono font-bold text-sm text-red-600 dark:text-red-400">${chartModal.report.stopLoss.toFixed(4)}</div>
                   </div>
                 )}
 
@@ -1015,7 +1015,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                     "text-center px-3 py-1.5 rounded-lg font-bold",
                     chartModal.report.unrealizedPnL >= 0
                       ? "bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400"
-                      : "bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400"
+                      : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
                   )}>
                     <div className="text-[10px]">P/L</div>
                     <div className="flex items-center gap-1 text-sm">

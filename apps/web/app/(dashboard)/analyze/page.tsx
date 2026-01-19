@@ -328,23 +328,23 @@ export default function AnalyzePage() {
       <div className="relative w-full px-4 md:px-8 lg:px-12 py-8 space-y-8">
         {/* ===== HERO SECTION with Kinetic Typography ===== */}
         <div className="text-center space-y-4 py-6">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-orange-500/10 border border-teal-500/20 backdrop-blur-sm animate-blur-in">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-red-500/10 border border-teal-500/20 backdrop-blur-sm animate-blur-in">
             <Sparkles className="w-4 h-4 text-teal-500 animate-pulse" />
-            <span className="text-sm font-medium bg-gradient-to-r from-teal-500 to-orange-500 bg-clip-text text-transparent">
+            <span className="text-sm font-medium bg-gradient-to-r from-teal-500 to-red-500 bg-clip-text text-transparent">
               AI-Powered Analysis Engine
             </span>
           </div>
 
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold">
-            <span className="bg-gradient-to-r from-teal-600 via-orange-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">
+            <span className="bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">
               Trade Smarter with
             </span>
             <br />
             <span className="relative inline-block">
-              <span className="bg-gradient-to-r from-teal-500 via-orange-400 to-teal-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer" style={{ animationDelay: '0.5s' }}>
+              <span className="bg-gradient-to-r from-teal-500 via-red-400 to-teal-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer" style={{ animationDelay: '0.5s' }}>
                 <KineticText text="TraderPath" />
               </span>
-              <span className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 via-orange-400 to-teal-500 rounded-full opacity-50 animate-pulse" />
+              <span className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 via-red-400 to-teal-500 rounded-full opacity-50 animate-pulse" />
             </span>
           </h1>
 
