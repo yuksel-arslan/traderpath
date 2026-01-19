@@ -139,7 +139,7 @@ export default function AlertsPage() {
                 <Bell className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Price Alerts</h1>
+                <h1 className="text-xl font-bold gradient-text-logo-animate">Price Alerts</h1>
                 <p className="text-xs text-gray-500 dark:text-slate-400">Get notified when prices hit your targets</p>
               </div>
             </div>
@@ -318,7 +318,7 @@ export default function AlertsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-card border rounded-lg p-6 w-full max-w-md">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold">Create Price Alert</h2>
+              <h2 className="text-xl font-bold gradient-text-logo-animate">Create Price Alert</h2>
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="p-2 hover:bg-accent rounded-lg transition"

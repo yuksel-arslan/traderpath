@@ -187,7 +187,7 @@ export default function AIExpertsPage() {
                 <Bot className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Expert Team</h1>
+                <h1 className="text-xl font-bold gradient-text-logo-animate">AI Expert Team</h1>
                 <p className="text-xs text-gray-500 dark:text-slate-400">Four world-class specialists</p>
               </div>
             </div>
@@ -266,7 +266,7 @@ export default function AIExpertsPage() {
                 <div className="flex-1 min-w-0">
                   {/* Name & Title */}
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-bold text-xl text-gray-900 dark:text-white">{expert.name}</h3>
+                    <h3 className="font-bold text-xl gradient-text-logo-animate">{expert.name}</h3>
                     <Sparkles className="w-4 h-4 text-amber-500" />
                   </div>
                   <p className={cn("text-sm font-semibold mb-2", expert.color)}>
