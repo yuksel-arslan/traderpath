@@ -717,6 +717,8 @@ export async function getCautionRate(): Promise<{
 }
 
 // Get platform accuracy based on real outcomes
+// IMPORTANT: Uses ANALYSIS table (not Report table) for consistency
+// As per CLAUDE.md: "TÜM ANALİZ İSTATİSTİKLERİ → Analysis tablosundan"
 export async function getRealAccuracy(): Promise<{
   overall: number;
   correct: number;
@@ -732,19 +734,27 @@ export async function getRealAccuracy(): Promise<{
     pending: number;
   };
 }> {
-  const reports = await prisma.report.findMany({
+  // Get analyses with outcomes from ANALYSIS table (not Report table)
+  const analyses = await prisma.analysis.findMany({
     where: {
       outcome: { not: null }
     },
     select: {
       outcome: true,
-      stepOutcomes: true
+      step7Result: true, // For step accuracy
+    }
+  });
+
+  // Also count pending analyses
+  const pendingCount = await prisma.analysis.count({
+    where: {
+      outcome: null,
+      step5Result: { not: null }, // Has trade plan
     }
   });
 
   let correct = 0;
   let incorrect = 0;
-  let pending = 0;
   let tp1Hits = 0;
   let tp2Hits = 0;
   let tp3Hits = 0;
@@ -753,40 +763,41 @@ export async function getRealAccuracy(): Promise<{
   const stepCorrect: Record<string, number> = {};
   const stepTotal: Record<string, number> = {};
 
-  for (const report of reports) {
-    if (report.outcome === 'correct') correct++;
-    else if (report.outcome === 'incorrect') incorrect++;
-    else pending++;
+  for (const analysis of analyses) {
+    // Count TP/SL hits from outcome field
+    if (analysis.outcome === 'tp1_hit') {
+      tp1Hits++;
+      correct++;
+    } else if (analysis.outcome === 'tp2_hit') {
+      tp2Hits++;
+      correct++;
+    } else if (analysis.outcome === 'tp3_hit') {
+      tp3Hits++;
+      correct++;
+    } else if (analysis.outcome === 'sl_hit') {
+      slHits++;
+      incorrect++;
+    }
 
-    // Aggregate step accuracy and TP/SL stats
-    const stepOutcomes = report.stepOutcomes as Record<string, any> | null;
-    if (stepOutcomes) {
-      // Get TP/SL hit info from meta
-      const meta = stepOutcomes._meta as { hitType?: string } | undefined;
-      if (meta?.hitType) {
-        if (meta.hitType === 'tp1') tp1Hits++;
-        else if (meta.hitType === 'tp2') tp2Hits++;
-        else if (meta.hitType === 'tp3') tp3Hits++;
-        else if (meta.hitType === 'sl') slHits++;
-      }
-
-      // Aggregate step accuracy
-      for (const [step, outcome] of Object.entries(stepOutcomes)) {
-        if (step === '_meta') continue;
-        const stepData = outcome as StepOutcome;
+    // Aggregate step accuracy from step7Result (verdict)
+    const step7 = analysis.step7Result as Record<string, unknown> | null;
+    if (step7?.componentScores) {
+      const scores = step7.componentScores as Record<string, number>;
+      for (const [step, score] of Object.entries(scores)) {
         if (!stepTotal[step]) {
           stepTotal[step] = 0;
           stepCorrect[step] = 0;
         }
         stepTotal[step]++;
-        if (stepData.correct) stepCorrect[step]++;
+        // Consider score > 50 as correct
+        if (score && score > 50) stepCorrect[step]++;
       }
     }
   }
 
-  const total = correct + incorrect;
-  const overall = total > 0
-    ? Number(((correct / total) * 100).toFixed(1))
+  const closedTotal = correct + incorrect;
+  const overall = closedTotal > 0
+    ? Number(((correct / closedTotal) * 100).toFixed(1))
     : 0;
 
   // Calculate step accuracy percentages
@@ -801,15 +812,15 @@ export async function getRealAccuracy(): Promise<{
     overall,
     correct,
     incorrect,
-    pending,
-    total: reports.length,
+    pending: pendingCount,
+    total: analyses.length + pendingCount,
     stepAccuracy,
     tpSlStats: {
       tp1Hits,
       tp2Hits,
       tp3Hits,
       slHits,
-      pending
+      pending: pendingCount
     }
   };
 }
