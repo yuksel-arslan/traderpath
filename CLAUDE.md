@@ -198,6 +198,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-20 | Tokenomics "Data could not be retrieved" hatası | CoinMarketCap ve Binance fallback eklendi. Fallback zinciri: CoinGecko → CoinMarketCap → Binance | `apps/api/src/modules/analysis/services/tokenomics.service.ts` |
 | 2026-01-20 | Trade Plan Chart PDF'de görünmüyor | 1) Chart ID'leri düzeltildi, 2) Canvas arama fallback eklendi, 3) Scroll into view eklendi, 4) Bekleme süresi 2s'ye çıkarıldı | `AnalysisReport.tsx`, `analyze/details/[id]/page.tsx` |
 | 2026-01-20 | CoinGecko Demo API yanlış header kullanıyordu | Demo API için `x-cg-demo-api-key` header ve public URL kullanılıyor. `COINGECKO_API_TYPE=demo` env var eklendi | `tokenomics.service.ts` |
+| 2026-01-20 | PDF generation: Cannot read properties of null (reading 'gate') | Tüm step verilerine default değerler eklendi (mp, as, sc, tm, tp, tc). Null erişim hatası önlendi | `AnalysisReport.tsx` |
 
 ---
 
@@ -326,6 +327,10 @@ Kullanıcı Hakları Aktif:
   - Demo API public URL kullanıyor (api.coingecko.com), Pro API ise pro-api.coingecko.com
   - Yeni env var: `COINGECKO_API_TYPE=demo` veya `pro`
   - Railway'e eklenecek: `COINGECKO_API_KEY` ve `COINGECKO_API_TYPE=demo`
+- **PDF generation null hatası düzeltildi**:
+  - `generatePageSteps123` ve `generatePageSteps456` fonksiyonlarına default değerler eklendi
+  - `mp`, `as`, `sc`, `tm`, `tp`, `tc` null olduğunda hata önlendi
+  - Tüm gate erişimleri optional chaining ile güvenceye alındı
 
 ---
 

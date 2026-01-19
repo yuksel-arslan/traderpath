@@ -772,18 +772,24 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
 // ===========================================
 
 function generatePageSteps123(data: AnalysisReportData, totalPages: number): string {
-  const mp = data.marketPulse;
-  const as = data.assetScan;
-  const sc = data.safetyCheck;
+  // Default values to prevent null access errors
+  const defaultGate = { passed: false, reason: '', confidence: 0 };
+  const defaultTrend = { direction: 'neutral', strength: 0 };
+  const defaultLevels = { support: [], resistance: [] };
+  const defaultIndicators = { rsi: 50, macd: { histogram: 0 }, bb: { percentB: 50 } };
+
+  const mp = data.marketPulse || { fearGreedIndex: 50, fearGreedLabel: 'N/A', btcDominance: 0, trend: defaultTrend, marketRegime: 'ranging', gate: defaultGate };
+  const as = data.assetScan || { currentPrice: 0, priceChange24h: 0, volume24h: 0, direction: 'neutral', directionConfidence: 0, indicators: defaultIndicators, levels: defaultLevels, gate: defaultGate };
+  const sc = data.safetyCheck || { riskScore: 50, liquidityScore: 50, volatilityScore: 50, manipulationRisk: 50, overallSafety: 'moderate', gate: defaultGate };
   const tk = data.tokenomics;
-  const mpGate = getGateStatus(mp.gate);
-  const asGate = getGateStatus(as.gate);
-  const scGate = getGateStatus(sc.gate);
+  const mpGate = mp?.gate ? getGateStatus(mp.gate) : { text: 'N/A', color: '#666' };
+  const asGate = as?.gate ? getGateStatus(as.gate) : { text: 'N/A', color: '#666' };
+  const scGate = sc?.gate ? getGateStatus(sc.gate) : { text: 'N/A', color: '#666' };
 
   // Step Summaries from gate reasons
-  const mpSummary = mp.gate?.reason ? `Market Pulse: ${mp.gate.reason}` : '';
-  const asSummary = as.gate?.reason ? `Asset Scan: ${as.gate.reason}` : '';
-  const scSummary = sc.gate?.reason ? `Safety Check: ${sc.gate.reason}` : '';
+  const mpSummary = mp?.gate?.reason ? `Market Pulse: ${mp.gate.reason}` : '';
+  const asSummary = as?.gate?.reason ? `Asset Scan: ${as.gate.reason}` : '';
+  const scSummary = sc?.gate?.reason ? `Safety Check: ${sc.gate.reason}` : '';
 
   // Get indicators for each step
   const ind = data.indicatorDetails;
@@ -972,17 +978,21 @@ function generatePageSteps123(data: AnalysisReportData, totalPages: number): str
 // ===========================================
 
 function generatePageSteps456(data: AnalysisReportData, totalPages: number): string {
-  const tm = data.timing;
-  const tp = data.tradePlan;
-  const tc = data.trapCheck;
+  // Default values to prevent null access errors
+  const defaultGate = { passed: false, reason: '', confidence: 0 };
+  const defaultPattern = { name: 'None', reliability: 0, type: 'neutral' };
+
+  const tm = data.timing || { optimalEntryWindow: 'N/A', entryUrgency: 'wait', patterns: [], timeframeAlignment: 0, tradeNow: false, reason: 'Data unavailable', conditions: [], entryZones: [], gate: defaultGate };
+  const tp = data.tradePlan || { direction: 'neutral', entry: 0, stopLoss: 0, takeProfit1: 0, takeProfit2: 0, takeProfit3: 0, riskReward: 0, positionSize: 0, leverage: 1, riskPercent: 0, potentialProfit: 0, potentialLoss: 0, gate: defaultGate };
+  const tc = data.trapCheck || { bullTrapRisk: 0, bearTrapRisk: 0, fakeoutProbability: 0, washTradingDetected: false, liquidityGrabRisk: 0, overallTrapRisk: 'low', warnings: [], gate: defaultGate };
   const isLong = tp?.direction === 'long';
-  const tmGate = getGateStatus(tm.gate);
-  const tpGate = getGateStatus(tp.gate);
-  const tcGate = tc?.gate ? getGateStatus(tc.gate) : { text: '', color: '#666' };
+  const tmGate = tm?.gate ? getGateStatus(tm.gate) : { text: 'N/A', color: '#666' };
+  const tpGate = tp?.gate ? getGateStatus(tp.gate) : { text: 'N/A', color: '#666' };
+  const tcGate = tc?.gate ? getGateStatus(tc.gate) : { text: 'N/A', color: '#666' };
 
   // Step Summaries from gate reasons
-  const tmSummary = tm.gate?.reason ? `Timing: ${tm.gate.reason}` : '';
-  const tpSummary = tp.gate?.reason ? `Trade Plan: ${tp.gate.reason}` : '';
+  const tmSummary = tm?.gate?.reason ? `Timing: ${tm.gate.reason}` : '';
+  const tpSummary = tp?.gate?.reason ? `Trade Plan: ${tp.gate.reason}` : '';
   const tcSummary = tc?.gate?.reason ? `Trap Check: ${tc.gate.reason}` : '';
 
   // Get indicators
