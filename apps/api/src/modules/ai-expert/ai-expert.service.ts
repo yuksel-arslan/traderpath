@@ -1136,7 +1136,7 @@ export class AIExpertService {
             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
           ],
         },
-        3, // maxRetries
+        5, // maxRetries - increased for rate limit resilience
         `ai_expert_chat_${request.expertId}`
       );
 
@@ -1595,7 +1595,7 @@ FORMAT: Just your professional ${tradeCtx.label} insight about ${symbol}. Start 
             maxOutputTokens: 200,
           },
         },
-        3, // maxRetries
+        5, // maxRetries - increased for rate limit resilience
         `expert_commentary_${expertId}`
       );
 
@@ -1678,7 +1678,7 @@ FORMAT: Just your professional ${tradeCtx.label} synthesis about ${symbol}. Star
             maxOutputTokens: 300,
           },
         },
-        3, // maxRetries
+        5, // maxRetries - increased for rate limit resilience
         'voltran_synthesis'
       );
 
@@ -1763,13 +1763,21 @@ FORMAT: Just your professional ${tradeCtx.label} synthesis about ${symbol}. Star
       const sentinelData = { ...safetyCheck, ...trapCheck, advancedMetrics: safetyCheck.advancedMetrics, tradeType, tradeTypeLabel };
       const nexusData = { ...tradePlan, tradeType, tradeTypeLabel };
 
-      // Get all 4 expert comments in parallel
-      const [ariaComment, oracleComment, sentinelComment, nexusComment] = await Promise.all([
-        this.generateExpertCommentary('aria', upperSymbol, ariaData, language, tradeType),
-        this.generateExpertCommentary('oracle', upperSymbol, oracleData, language, tradeType),
-        this.generateExpertCommentary('sentinel', upperSymbol, sentinelData, language, tradeType),
-        this.generateExpertCommentary('nexus', upperSymbol, nexusData, language, tradeType),
-      ]);
+      // Get all 4 expert comments sequentially to avoid rate limits
+      // Small delay between calls to prevent API throttling
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+      const ariaComment = await this.generateExpertCommentary('aria', upperSymbol, ariaData, language, tradeType);
+      await delay(500); // 500ms between calls
+
+      const oracleComment = await this.generateExpertCommentary('oracle', upperSymbol, oracleData, language, tradeType);
+      await delay(500);
+
+      const sentinelComment = await this.generateExpertCommentary('sentinel', upperSymbol, sentinelData, language, tradeType);
+      await delay(500);
+
+      const nexusComment = await this.generateExpertCommentary('nexus', upperSymbol, nexusData, language, tradeType);
+      await delay(500); // Delay before Voltran synthesis
 
       const expertComments = [ariaComment, oracleComment, sentinelComment, nexusComment];
 

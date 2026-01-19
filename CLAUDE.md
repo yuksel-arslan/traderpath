@@ -192,7 +192,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-18 | Analysis outcome %100 TP gösteriyor (SL hit tespit edilmiyor) | Binance Klines API ile tarihsel fiyat kontrolü eklendi (createdAt'ten itibaren High/Low değerleri kontrol ediliyor) | `apps/api/src/modules/reports/live-tracking.service.ts` |
 | 2026-01-18 | Timeframe mapping yanlış (4h→swing, 1d→position olmamalı) | Düzeltildi: 4h→dayTrade, 1d→swing. Position trade type kaldırıldı | `trade-config.ts`, `TradeTypeSelector.tsx`, `CoinSelector.tsx`, `AnalysisDialog.tsx` |
 | 2026-01-19 | TFT Predictor build timeout (europe-west4) | CPU-only PyTorch kullan (~5GB→~1GB). GPU ileride eklenecek | `services/tft-predictor/requirements.txt`, `Dockerfile` |
-| 2026-01-19 | Gemini API rate limit (429) hatası - AI Expert failed | Exponential backoff ile retry logic eklendi. API'den gelen retryDelay parse edilip kullanılıyor. Max 3 retry, 60s cap | `apps/api/src/core/gemini.ts`, `ai-expert.service.ts`, `translation.service.ts` |
+| 2026-01-19 | Gemini API rate limit (429) hatası - AI Expert failed | Exponential backoff ile retry logic eklendi. API'den gelen retryDelay parse edilip kullanılıyor. Max 5 retry, 60s cap. Expert Panel: paralel → sıralı çağrı (500ms delay) | `apps/api/src/core/gemini.ts`, `ai-expert.service.ts`, `translation.service.ts` |
 
 ---
 
