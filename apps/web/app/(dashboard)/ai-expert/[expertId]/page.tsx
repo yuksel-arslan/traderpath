@@ -281,6 +281,8 @@ function AnswerFooter({
     setDownloading(true);
     setDownloadError(null);
 
+    let creditsDeducted = false;
+
     try {
       // Deduct 10 credits for full report
       const creditRes = await authFetch('/api/credits/deduct', {
@@ -302,30 +304,83 @@ function AnswerFooter({
         return;
       }
 
+      creditsDeducted = true;
+
       // Fetch report data
       const reportRes = await authFetch(`/api/reports/by-analysis/${analysisId}`);
 
       if (!reportRes.ok) {
-        setDownloadError('Report not found');
+        // Refund credits if report not found
+        await authFetch('/api/credits/add', {
+          method: 'POST',
+          body: JSON.stringify({
+            amount: 10,
+            reason: 'Refund: Report not found',
+            type: 'REFUND'
+          }),
+        });
+        setDownloadError('Report not found - credits refunded');
         return;
       }
 
       const reportData = await reportRes.json();
       if (!reportData.data?.reportData) {
-        setDownloadError('Report data not found');
+        // Refund credits if report data missing
+        await authFetch('/api/credits/add', {
+          method: 'POST',
+          body: JSON.stringify({
+            amount: 10,
+            reason: 'Refund: Report data missing',
+            type: 'REFUND'
+          }),
+        });
+        setDownloadError('Report data missing - credits refunded');
         return;
       }
 
-      // Generate PDF
-      const { generateAnalysisReport } = await import('../../../../components/reports/AnalysisReport');
-      await generateAnalysisReport({
-        ...reportData.data.reportData,
-        aiExpertComment: reportData.data.aiExpertComment || content,
-      });
+      // Generate PDF with better error handling
+      try {
+        const { generateAnalysisReport } = await import('../../../../components/reports/AnalysisReport');
+        await generateAnalysisReport({
+          ...reportData.data.reportData,
+          aiExpertComment: reportData.data.aiExpertComment || content,
+        });
+      } catch (pdfError) {
+        console.error('PDF generation error:', pdfError);
+        // Refund credits if PDF generation fails
+        await authFetch('/api/credits/add', {
+          method: 'POST',
+          body: JSON.stringify({
+            amount: 10,
+            reason: 'Refund: PDF generation failed',
+            type: 'REFUND'
+          }),
+        });
+        const errorMsg = pdfError instanceof Error ? pdfError.message : 'Unknown PDF error';
+        setDownloadError(`PDF generation failed: ${errorMsg} - credits refunded`);
+        return;
+      }
 
     } catch (err) {
       console.error('Failed to download report:', err);
-      setDownloadError('Failed to generate PDF');
+      // Try to refund credits if they were deducted
+      if (creditsDeducted) {
+        try {
+          await authFetch('/api/credits/add', {
+            method: 'POST',
+            body: JSON.stringify({
+              amount: 10,
+              reason: 'Refund: Download error',
+              type: 'REFUND'
+            }),
+          });
+          setDownloadError('Download failed - credits refunded');
+        } catch {
+          setDownloadError('Download failed - please contact support for refund');
+        }
+      } else {
+        setDownloadError('Failed to generate PDF');
+      }
     } finally {
       setDownloading(false);
     }
