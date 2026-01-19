@@ -37,6 +37,18 @@
 - Platform accuracy = TP hits / (TP hits + SL hits) from Analysis.outcome
 - **Asla karıştırma!** Report, Analysis'in sonucudur, istatistik kaynağı değil
 
+### Analiz ve Rapor Kuralları (ZORUNLU)
+- **Analiz çok detaylı yapılacak**: Tüm 40+ enstrüman/indikatör kullanılacak
+- **Sadece 2 rapor tipi var** (başka tip ekleme!):
+
+| Rapor Tipi | İçerik | Sayfa |
+|------------|--------|-------|
+| **Executive Summary** | 7 aşama sonucu + işlem planı (kısa, öz) | 6 sayfa |
+| **Detailed Analysis Report** | Her türlü detay, tüm indikatör grafikleri | 10+ sayfa |
+
+- Executive Summary: Hızlı karar için özet
+- Detailed Analysis Report: Derinlemesine inceleme için tam detay
+
 ### Yapılmaması Gerekenler ❌
 - `!important` kullanma
 - Inline style kullanma (Tailwind varken)
