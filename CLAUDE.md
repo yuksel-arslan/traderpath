@@ -97,6 +97,82 @@
 
 ---
 
+## 🎯 Analiz Orchestration (ZORUNLU)
+
+### Her Analiz Tamamlandığında Kullanıcı Hakları
+
+| Hak | Miktar | Ücretsiz Limit | Sonrası Maliyet | Takip Alanı |
+|-----|--------|----------------|-----------------|-------------|
+| AI Expert Sohbet | 3 | 3 soru/analiz | 5 kredi/soru | `Analysis.aiExpertQuestionsUsed` |
+| PDF İndirme | 2 | 2 indirme/analiz | 5 kredi/indirme | `Analysis.pdfDownloadsUsed` |
+| Email Gönderme | 2 | 2 email/analiz | 5 kredi/email | `Analysis.emailsSentUsed` |
+| Otomatik Özet Email | ∞ | Ücretsiz | - | Otomatik gönderilir |
+
+### Trade Type Completion Bonus (Otomatik)
+
+| Trade Type | Bonus Kredi | Açıklama |
+|------------|-------------|----------|
+| Scalping | +3 kredi | Yüksek risk, hızlı trade - ekstra ödül |
+| Day Trade | +2 kredi | Orta vadeli trade bonusu |
+| Swing Trade | +1 kredi | Standart bonus |
+
+> **Not:** Bonus, analiz tamamlandığında otomatik olarak eklenir. `creditService.add()` ile `BONUS` tipinde kaydedilir.
+
+### Otomatik Bildirimler (Analiz Tamamlandığında)
+
+1. **Email Özeti** - `emailService.sendAnalysisSummary()` ile kullanıcının email'ine gönderilir
+2. **Telegram Bildirimi** - Bağlıysa `telegramChatId` üzerinden gönderilir
+3. **Discord Webhook** - Bağlıysa `discordWebhookUrl` üzerinden gönderilir
+
+### Orchestration Akışı
+
+```
+Analiz Başlatılır (15 kredi)
+    ↓
+7 Adımlık Analiz Çalışır
+    ↓
+Database'e Kaydedilir (Analysis tablosu)
+    ↓
+Daily Analysis Bonus Kontrolü (her 10 analiz = 1 kredi)
+    ↓
+Trade Type Bonus Eklenir:
+    ├── Scalping → +3 kredi
+    ├── Day Trade → +2 kredi
+    └── Swing Trade → +1 kredi
+    ↓
+Otomatik Bildirimler Gönderilir (fire & forget)
+    ├── Email Özeti → Kullanıcı email'i
+    ├── Telegram → telegramChatId (varsa)
+    └── Discord → discordWebhookUrl (varsa)
+    ↓
+Kullanıcı Hakları Aktif:
+    ├── 3x AI Expert sohbet (ücretsiz)
+    ├── 2x PDF indirme (ücretsiz)
+    └── 2x Email gönderme (ücretsiz)
+```
+
+### Kod Lokasyonları
+
+| Fonksiyon | Dosya | Satır |
+|-----------|-------|-------|
+| Analiz oluşturma | `analysis.routes.ts` | 528-544 |
+| Trade type bonus | `analysis.routes.ts` | 549-562 |
+| Otomatik email | `analysis.routes.ts` | 564-596 |
+| AI Expert hak kontrolü | `ai-expert.routes.ts` | 186-358 |
+| PDF indirme hak kontrolü | `report.routes.ts` | 564-662 |
+| Email gönderme hak kontrolü | `report.routes.ts` | 1209-1328 |
+
+### Önemli Kurallar
+
+- **Admin kullanıcılar** tüm haklara ücretsiz sahiptir
+- Haklar **analiz bazlı** takip edilir, global değil
+- Ücretsiz haklar bitince **otomatik kredi düşürülür**
+- Yetersiz kredi durumunda `INSUFFICIENT_CREDITS` hatası döner
+- Hata durumunda **krediler otomatik iade edilir**
+- **Trade type bonus** her analiz sonunda otomatik eklenir
+
+---
+
 ## 🐛 Çözülen Bug'lar (Tekrarlama Riski Var)
 
 | Tarih | Bug | Çözüm | Dosya |
@@ -116,6 +192,7 @@
 | 2026-01-18 | Analysis outcome %100 TP gösteriyor (SL hit tespit edilmiyor) | Binance Klines API ile tarihsel fiyat kontrolü eklendi (createdAt'ten itibaren High/Low değerleri kontrol ediliyor) | `apps/api/src/modules/reports/live-tracking.service.ts` |
 | 2026-01-18 | Timeframe mapping yanlış (4h→swing, 1d→position olmamalı) | Düzeltildi: 4h→dayTrade, 1d→swing. Position trade type kaldırıldı | `trade-config.ts`, `TradeTypeSelector.tsx`, `CoinSelector.tsx`, `AnalysisDialog.tsx` |
 | 2026-01-19 | TFT Predictor build timeout (europe-west4) | CPU-only PyTorch kullan (~5GB→~1GB). GPU ileride eklenecek | `services/tft-predictor/requirements.txt`, `Dockerfile` |
+| 2026-01-19 | Gemini API rate limit (429) hatası - AI Expert failed | Exponential backoff ile retry logic eklendi. API'den gelen retryDelay parse edilip kullanılıyor. Max 3 retry, 60s cap | `apps/api/src/core/gemini.ts`, `ai-expert.service.ts`, `translation.service.ts` |
 
 ---
 
@@ -192,6 +269,12 @@
 - CPU-only PyTorch kullanıldı (--extra-index-url https://download.pytorch.org/whl/cpu)
 - Docker image boyutu ~5GB'dan ~1GB'a düşürüldü
 - GPU desteği ileride eklenecek (Google Cloud)
+- Gemini API rate limit (429) hatası düzeltildi
+- Yeni `callGeminiWithRetry` helper fonksiyonu eklendi (`apps/api/src/core/gemini.ts`)
+- Exponential backoff ile max 3 retry, API'den gelen retryDelay parse edilip kullanılıyor
+- AI Expert service ve Translation service güncellendi
+- **Analiz Orchestration dokümantasyonu eklendi**: Her analiz için 3 AI Expert, 2 Download, 2 Email hakkı + otomatik özet email
+- **Trade Type Completion Bonus eklendi**: Scalping +3, Day Trade +2, Swing Trade +1 kredi otomatik bonus
 
 ---
 
