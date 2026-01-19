@@ -35,7 +35,7 @@ import { cn } from '../../lib/utils';
 
 // Trade types - matches backend
 export type TradeType = 'scalping' | 'dayTrade' | 'swing';
-export type Timeframe = '15m' | '1h' | '4h' | '1d';
+export type Timeframe = '5m' | '15m' | '30m' | '1h' | '2h' | '4h' | '1d' | '1W';
 
 interface TimeframeConfig {
   id: Timeframe;
@@ -56,10 +56,28 @@ interface TimeframeConfig {
 }
 
 const TIMEFRAMES: TimeframeConfig[] = [
+  // SCALPING (1000 candles)
+  {
+    id: '5m',
+    label: '5 Min',
+    description: 'Ultra-fast scalping with 1000 candles analysis',
+    tradeType: 'scalping',
+    tradeTypeName: 'Scalping',
+    holdingPeriod: '5-30 min',
+    creditCost: 3,
+    icon: Zap,
+    color: 'text-red-500',
+    bgLight: 'bg-red-50',
+    bgDark: 'dark:bg-red-500/10',
+    borderLight: 'border-red-200',
+    borderDark: 'dark:border-red-500/30',
+    riskLevel: 'high',
+    features: ['1000 candles', 'Ultra-fast signals', 'Tight stops (0.3-0.5%)', 'High frequency'],
+  },
   {
     id: '15m',
-    label: '15 Minutes',
-    description: 'Quick scalping trades with tight risk management',
+    label: '15 Min',
+    description: 'Quick scalping trades with 1000 candles analysis',
     tradeType: 'scalping',
     tradeTypeName: 'Scalping',
     holdingPeriod: '15min - 2h',
@@ -71,12 +89,25 @@ const TIMEFRAMES: TimeframeConfig[] = [
     borderLight: 'border-orange-200',
     borderDark: 'dark:border-orange-500/30',
     riskLevel: 'high',
-    features: [
-      'Fastest signals',
-      'Tight stop-loss (0.5-1%)',
-      'High volume focus',
-      'Quick entries/exits',
-    ],
+    features: ['1000 candles', 'Fast signals', 'Tight stops (0.5-1%)', 'Quick entries'],
+  },
+  // DAY TRADE (500 candles)
+  {
+    id: '30m',
+    label: '30 Min',
+    description: 'Intraday trading with 500 candles analysis',
+    tradeType: 'dayTrade',
+    tradeTypeName: 'Day Trade',
+    holdingPeriod: '1-4 hours',
+    creditCost: 2,
+    icon: Sun,
+    color: 'text-amber-500',
+    bgLight: 'bg-amber-50',
+    bgDark: 'dark:bg-amber-500/10',
+    borderLight: 'border-amber-200',
+    borderDark: 'dark:border-amber-500/30',
+    riskLevel: 'medium',
+    features: ['500 candles', 'Balanced analysis', 'Moderate stops (1-2%)', 'Trend following'],
   },
   {
     id: '1h',
@@ -93,20 +124,32 @@ const TIMEFRAMES: TimeframeConfig[] = [
     borderLight: 'border-blue-200',
     borderDark: 'dark:border-blue-500/30',
     riskLevel: 'medium',
-    features: [
-      'Balanced analysis',
-      'Moderate stops (1-2%)',
-      'Trend confirmation',
-      'Ichimoku & ADX focus',
-    ],
+    features: ['500 candles', 'Ichimoku & ADX', 'Moderate stops (1-2%)', 'Trend confirmation'],
+  },
+  {
+    id: '2h',
+    label: '2 Hour',
+    description: 'Extended intraday with 500 candles analysis',
+    tradeType: 'dayTrade',
+    tradeTypeName: 'Day Trade',
+    holdingPeriod: '4-12 hours',
+    creditCost: 2,
+    icon: Sun,
+    color: 'text-cyan-500',
+    bgLight: 'bg-cyan-50',
+    bgDark: 'dark:bg-cyan-500/10',
+    borderLight: 'border-cyan-200',
+    borderDark: 'dark:border-cyan-500/30',
+    riskLevel: 'medium',
+    features: ['500 candles', 'Extended analysis', 'Moderate stops (1-2%)', 'Multiple TPs'],
   },
   {
     id: '4h',
-    label: '4 Hours',
+    label: '4 Hour',
     description: 'Day trading with extended timeframe analysis',
     tradeType: 'dayTrade',
     tradeTypeName: 'Day Trade',
-    holdingPeriod: '4-24 hours',
+    holdingPeriod: '8-24 hours',
     creditCost: 2,
     icon: Moon,
     color: 'text-purple-500',
@@ -115,17 +158,13 @@ const TIMEFRAMES: TimeframeConfig[] = [
     borderLight: 'border-purple-200',
     borderDark: 'dark:border-purple-500/30',
     riskLevel: 'medium',
-    features: [
-      'Extended analysis',
-      'Moderate stops (1-3%)',
-      'Ichimoku & ADX focus',
-      'Multiple confirmations',
-    ],
+    features: ['500 candles', 'Deep analysis', 'Moderate stops (1-3%)', 'Strong confirmations'],
   },
+  // SWING TRADE (250 candles)
   {
     id: '1d',
     label: '1 Day',
-    description: 'Swing trading for multi-day positions',
+    description: 'Swing trading with 250 candles analysis',
     tradeType: 'swing',
     tradeTypeName: 'Swing Trade',
     holdingPeriod: '1-14 days',
@@ -137,12 +176,24 @@ const TIMEFRAMES: TimeframeConfig[] = [
     borderLight: 'border-emerald-200',
     borderDark: 'dark:border-emerald-500/30',
     riskLevel: 'low',
-    features: [
-      'Deep trend analysis',
-      'Wider stops (2-5%)',
-      'Smart money tracking',
-      'Multiple take-profits',
-    ],
+    features: ['250 candles', 'Deep trend analysis', 'Wider stops (2-5%)', 'Smart money tracking'],
+  },
+  {
+    id: '1W',
+    label: '1 Week',
+    description: 'Long-term swing with 250 candles analysis',
+    tradeType: 'swing',
+    tradeTypeName: 'Swing Trade',
+    holdingPeriod: '1-8 weeks',
+    creditCost: 1,
+    icon: Star,
+    color: 'text-teal-500',
+    bgLight: 'bg-teal-50',
+    bgDark: 'dark:bg-teal-500/10',
+    borderLight: 'border-teal-200',
+    borderDark: 'dark:border-teal-500/30',
+    riskLevel: 'low',
+    features: ['250 candles', 'Macro analysis', 'Wide stops (3-7%)', 'Position sizing'],
   },
 ];
 
@@ -215,7 +266,7 @@ export function TradeTypeSelector({
           </button>
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
           {TIMEFRAMES.map((tf) => {
             const Icon = tf.icon;
             const isSelected = selected === tf.id;
@@ -349,9 +400,8 @@ export function TradeTypeSelector({
             <span>Auto-selects strategy</span>
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-1.5 p-1.5 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-white/10">
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-1 p-1.5 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-white/10">
           {TIMEFRAMES.map((tf) => {
-            const Icon = tf.icon;
             const isSelected = selected === tf.id;
 
             return (
@@ -359,34 +409,31 @@ export function TradeTypeSelector({
                 key={tf.id}
                 onClick={() => handleSelect(tf.id)}
                 className={cn(
-                  'relative flex flex-col items-center justify-center gap-0.5 px-2 py-2 rounded-lg text-sm font-medium transition-all duration-300',
+                  'relative flex flex-col items-center justify-center gap-0 px-1 py-1.5 rounded-lg text-xs font-medium transition-all duration-300',
                   isSelected
                     ? cn(
                         'bg-white dark:bg-slate-700 shadow-lg',
                         'ring-2 ring-offset-1 ring-offset-transparent',
-                        tf.id === '15m' && 'ring-orange-500/50',
-                        tf.id === '1h' && 'ring-blue-500/50',
-                        tf.id === '4h' && 'ring-purple-500/50',
-                        tf.id === '1d' && 'ring-emerald-500/50'
+                        tf.borderLight.replace('border-', 'ring-').replace('-200', '-500/50')
                       )
                     : 'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700/50'
                 )}
               >
                 <span className={cn(
-                  'font-bold text-base transition-colors',
+                  'font-bold text-xs sm:text-sm transition-colors',
                   isSelected ? tf.color : ''
                 )}>
                   {tf.id}
                 </span>
                 <span className={cn(
-                  'text-[9px] transition-colors',
+                  'text-[8px] sm:text-[9px] transition-colors hidden sm:block',
                   isSelected ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400'
                 )}>
-                  {tf.tradeTypeName}
+                  {tf.tradeTypeName.split(' ')[0]}
                 </span>
                 {showCreditCost && isSelected && (
                   <span
-                    className="absolute -top-1 -right-1 flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded-full font-semibold bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400"
+                    className="absolute -top-1 -right-1 flex items-center gap-0.5 text-[8px] px-1 py-0.5 rounded-full font-semibold bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400"
                   >
                     <Gem className="w-2 h-2" />
                     {tf.creditCost}

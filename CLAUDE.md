@@ -47,6 +47,56 @@
 
 ---
 
+## 📊 Analiz Veri Gereksinimleri (ZORUNLU)
+
+### Timeframe Seçenekleri
+```
+5m, 15m, 30m, 1h, 2h, 4h, 1d, 1W
+```
+
+### Timeframe → Trade Type Mapping
+| Timeframe | Trade Type | Mum Sayısı |
+|-----------|------------|------------|
+| 5m        | Scalping   | 1000       |
+| 15m       | Scalping   | 1000       |
+| 30m       | Day Trade  | 500        |
+| 1h        | Day Trade  | 500        |
+| 2h        | Day Trade  | 500        |
+| 4h        | Day Trade  | 500        |
+| 1d        | Swing Trade| 250        |
+| 1W        | Swing Trade| 250        |
+
+### Analiz İçin Çekilecek Veriler
+
+1. **OHLCV Verileri** (Binance Klines API)
+   - Scalping: 1000 mum
+   - Day Trade: 500 mum
+   - Swing Trade: 250 mum
+
+2. **Order Book Verileri** (Binance Depth API)
+   - Derinlik: 40 seviye (bids + asks)
+   - Endpoint: `GET /api/v3/depth?symbol={symbol}&limit=40`
+
+3. **Tokenomics Verileri** (CoinGecko/CoinMarketCap API)
+   - Market Cap
+   - Circulating Supply
+   - Total Supply
+   - Max Supply
+   - FDV (Fully Diluted Valuation)
+
+4. **Haber Verileri** (CryptoPanic/NewsAPI)
+   - Son 24 saat haberleri
+   - Sentiment analizi
+   - Önemli gelişmeler
+
+### Veri Kullanım Kuralları
+- Her analiz için OHLCV + Order Book + Tokenomics + News verileri çekilmeli
+- Order Book analizi: Alım/satım baskısı, büyük duvarlar, likidite
+- Tokenomics analizi: Supply metrikleri, inflation risk, unlock schedule
+- News analizi: Sentiment score, önemli gelişmeler, piyasa etkisi
+
+---
+
 ## 🐛 Çözülen Bug'lar (Tekrarlama Riski Var)
 
 | Tarih | Bug | Çözüm | Dosya |

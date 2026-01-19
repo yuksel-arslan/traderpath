@@ -157,8 +157,8 @@ Be concise and actionable.`;
   });
 
   // Common schema with tradeType and interval support
-  const tradeTypeSchema = z.enum(['scalping', 'dayTrade', 'swing']).default('swing');
-  const intervalSchema = z.enum(['15m', '1h', '4h', '1d']).optional();
+  const tradeTypeSchema = z.enum(['scalping', 'dayTrade', 'swing']).default('dayTrade');
+  const intervalSchema = z.enum(['5m', '15m', '30m', '1h', '2h', '4h', '1d', '1W']).optional();
 
   // Helper to resolve tradeType from interval if provided
   function resolveTradeType(interval?: string, tradeType?: TradeType): TradeType {

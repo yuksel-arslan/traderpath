@@ -22,9 +22,9 @@ export type TradeType = 'scalping' | 'dayTrade' | 'swing';
  * Used when frontend sends interval instead of tradeType
  *
  * Mapping:
- * - Scalping: 5m, 15m
- * - Day Trade: 1h, 4h
- * - Swing Trade: 1d, 1W
+ * - Scalping (1000 candles): 5m, 15m
+ * - Day Trade (500 candles): 30m, 1h, 2h, 4h
+ * - Swing Trade (250 candles): 1d, 1W
  */
 export function getTradeTypeFromInterval(interval: string): TradeType {
   switch (interval) {
@@ -34,6 +34,7 @@ export function getTradeTypeFromInterval(interval: string): TradeType {
       return 'scalping';
     case '30m':
     case '1h':
+    case '2h':
     case '4h':
       return 'dayTrade';
     case '1d':
@@ -42,8 +43,35 @@ export function getTradeTypeFromInterval(interval: string): TradeType {
     case '1W':
       return 'swing';
     default:
-      return 'swing'; // Default to swing for unknown intervals
+      return 'dayTrade'; // Default to dayTrade for unknown intervals
   }
+}
+
+/**
+ * Get candle count for trade type
+ * - Scalping: 1000 candles
+ * - Day Trade: 500 candles
+ * - Swing Trade: 250 candles
+ */
+export function getCandleCountForTradeType(tradeType: TradeType): number {
+  switch (tradeType) {
+    case 'scalping':
+      return 1000;
+    case 'dayTrade':
+      return 500;
+    case 'swing':
+      return 250;
+    default:
+      return 500;
+  }
+}
+
+/**
+ * Get candle count from interval
+ */
+export function getCandleCountFromInterval(interval: string): number {
+  const tradeType = getTradeTypeFromInterval(interval);
+  return getCandleCountForTradeType(tradeType);
 }
 
 export type AnalysisStep =
