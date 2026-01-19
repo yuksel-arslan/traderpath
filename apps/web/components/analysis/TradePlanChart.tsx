@@ -16,6 +16,7 @@ import {
   CandlestickData,
   Time,
   IPriceLine,
+  SeriesMarker,
 } from 'lightweight-charts';
 import { Loader2, TrendingUp, TrendingDown, Target, AlertTriangle } from 'lucide-react';
 
@@ -74,6 +75,7 @@ export function TradePlanChart({
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
   const isDisposedRef = useRef(false);
+  const lastCandleTimeRef = useRef<Time | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -215,19 +217,52 @@ export function TradePlanChart({
       title: 'Current',
     });
 
-    // Entry levels (cyan/blue)
+    // Calculate average entry for prominent marker
+    const avgEntryPrice = entries?.length > 0
+      ? entries.reduce((sum, e) => sum + (e?.price ?? 0), 0) / entries.length
+      : 0;
+
+    // PROMINENT AVERAGE ENTRY LINE (Yellow/Gold - Most visible)
+    if (avgEntryPrice > 0) {
+      addPriceLine({
+        price: avgEntryPrice,
+        color: '#fbbf24', // Yellow/Amber - stands out
+        lineWidth: 3,
+        lineStyle: LineStyle.Solid,
+        axisLabelVisible: true,
+        title: '▶ ENTRY',
+      });
+    }
+
+    // Entry levels (cyan/blue) - DCA levels
     entries?.filter(e => e != null).forEach((entry, index) => {
       if (entry?.price) {
         addPriceLine({
           price: entry.price,
           color: '#06b6d4',
-          lineWidth: 2,
+          lineWidth: 1,
           lineStyle: LineStyle.Dashed,
           axisLabelVisible: true,
-          title: `Entry ${index + 1} (${entry.percentage ?? 0}%)`,
+          title: `E${index + 1} (${entry.percentage ?? 0}%)`,
         });
       }
     });
+
+    // Add entry marker (arrow) on the last candle
+    if (avgEntryPrice > 0 && lastCandleTimeRef.current && !isDisposedRef.current) {
+      try {
+        const marker: SeriesMarker<Time> = {
+          time: lastCandleTimeRef.current,
+          position: direction === 'long' ? 'belowBar' : 'aboveBar',
+          color: '#fbbf24',
+          shape: direction === 'long' ? 'arrowUp' : 'arrowDown',
+          text: `ENTRY @ $${avgEntryPrice.toLocaleString()}`,
+        };
+        series.setMarkers([marker]);
+      } catch {
+        // Marker may fail if chart is disposed
+      }
+    }
 
     // Stop Loss (red)
     if (stopLoss?.price) {
@@ -324,6 +359,11 @@ export function TradePlanChart({
         low: parseFloat(k[3] as unknown as string),
         close: parseFloat(k[4] as unknown as string),
       }));
+
+      // Store last candle time for entry marker
+      if (candleData.length > 0) {
+        lastCandleTimeRef.current = candleData[candleData.length - 1].time;
+      }
 
       // Guard chart operations with try-catch in case of disposal
       try {
@@ -428,8 +468,12 @@ export function TradePlanChart({
       <div className="p-4 border-t bg-muted/20">
         <div className="flex flex-wrap gap-4 text-xs">
           <div className="flex items-center gap-2">
+            <div className="w-4 h-1 bg-yellow-400 rounded"></div>
+            <span className="font-semibold text-yellow-400">▶ Entry Point</span>
+          </div>
+          <div className="flex items-center gap-2">
             <div className="w-4 h-0.5 bg-cyan-500"></div>
-            <span>Entry Zones</span>
+            <span>DCA Levels</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-0.5 bg-red-500"></div>
@@ -456,11 +500,15 @@ export function TradePlanChart({
 
       {/* Price Levels Summary */}
       <div className="p-4 border-t grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Entries */}
+        {/* Average Entry - Highlighted */}
         <div className="space-y-1">
-          <div className="text-xs text-muted-foreground uppercase tracking-wide">Entry Levels</div>
+          <div className="text-xs text-muted-foreground uppercase tracking-wide">Entry Point</div>
+          <div className="flex justify-between text-sm">
+            <span className="text-yellow-400 font-bold">▶ AVG</span>
+            <span className="font-mono font-bold text-yellow-400">${avgEntry.toLocaleString()}</span>
+          </div>
           {entries?.filter(e => e != null).map((entry, i) => (
-            <div key={i} className="flex justify-between text-sm">
+            <div key={i} className="flex justify-between text-xs text-muted-foreground">
               <span className="text-cyan-500">E{i + 1}</span>
               <span className="font-mono">${(entry.price ?? 0).toLocaleString()}</span>
             </div>
