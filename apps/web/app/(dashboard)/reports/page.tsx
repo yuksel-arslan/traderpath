@@ -418,9 +418,9 @@ Could you share your risk assessment and recommendations based on this analysis?
 
   return (
     <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-6">
-      {/* ===== 2026 Style Header with Glassmorphism (Teal/Coral Corporate Colors) ===== */}
+      {/* ===== 2026 Style Header with Glassmorphism (Teal/Red Corporate Colors) ===== */}
       <div className="relative overflow-hidden rounded-2xl border border-teal-500/20 dark:border-white/10 bg-gradient-to-br from-teal-50 via-white to-orange-50 dark:from-teal-900/30 dark:via-slate-900 dark:to-orange-900/20">
-        {/* Animated Gradient Orbs - Teal/Coral */}
+        {/* Animated Gradient Orbs - Teal/Red */}
         <div className="absolute -top-20 -right-20 w-64 h-64 bg-teal-500/20 dark:bg-teal-500/30 rounded-full blur-3xl animate-pulse" />
         <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-red-400/15 dark:bg-red-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
 
@@ -548,7 +548,7 @@ Could you share your risk assessment and recommendations based on this analysis?
         </div>
       ) : filteredReports.length === 0 ? (
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 p-12">
-          {/* Background Effects - Teal/Coral */}
+          {/* Background Effects - Teal/Red */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-red-400/10 rounded-full blur-3xl" />
 
@@ -635,7 +635,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                   : `linear-gradient(to right, rgba(20, 184, 166, 0.02), rgba(20, 184, 166, 0.08))`
               }}
             >
-              {/* Status Corner Ribbon - Teal/Coral */}
+              {/* Status Corner Ribbon - Teal/Red */}
               {isActive && (
                 <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden">
                   <div className="absolute top-3 -right-6 w-24 text-center py-0.5 bg-teal-500 text-white text-[10px] font-bold rotate-45 shadow-sm">
@@ -695,7 +695,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                           </span>
                         );
                       })()}
-                      {/* Outcome Status Badge - Teal/Coral */}
+                      {/* Outcome Status Badge - Teal/Red */}
                       {report.outcome === 'correct' && (
                         <span className="px-2 py-0.5 rounded text-xs font-medium bg-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3" />
@@ -736,7 +736,7 @@ Could you share your risk assessment and recommendations based on this analysis?
 
                 {/* Score + Price + P/L + Distance Display */}
                 <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-slate-100 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-transparent flex-wrap justify-center sm:justify-start">
-                  {/* Score as percentage - Teal/Coral */}
+                  {/* Score as percentage - Teal/Red */}
                   <div className={cn(
                     "text-center px-2 py-1 rounded-lg min-w-[50px]",
                     report.score >= 7 ? "bg-teal-100 dark:bg-teal-500/20" :
@@ -756,7 +756,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                     <>
                       <div className="text-slate-300 dark:text-muted-foreground/30">|</div>
 
-                      {/* P/L Percentage - Teal/Coral */}
+                      {/* P/L Percentage - Teal/Red */}
                       <div className={cn(
                         "text-center px-2 py-1 rounded-lg min-w-[60px]",
                         (report.unrealizedPnL || 0) >= 0
@@ -828,7 +828,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                   )}
                 </div>
 
-                {/* Actions - Teal/Coral Theme */}
+                {/* Actions - Teal/Red Theme */}
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-center sm:justify-end">
                   {/* Chart Button */}
                   <button
@@ -939,7 +939,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                         {chartModal.report.direction.toUpperCase()}
                       </span>
                     )}
-                    {/* Status Badge - Teal/Coral */}
+                    {/* Status Badge - Teal/Red */}
                     {chartModal.report.outcome === 'correct' && (
                       <span className="px-2 py-0.5 rounded text-xs font-medium bg-teal-500/20 text-teal-500 flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" />
@@ -963,7 +963,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                 </div>
               </div>
 
-              {/* Trade Plan Summary - Hidden on mobile, shown on larger screens - Teal/Coral */}
+              {/* Trade Plan Summary - Hidden on mobile, shown on larger screens - Teal/Red */}
               <div className="hidden md:flex items-center gap-2 lg:gap-4 flex-wrap">
                 {/* Entry Price */}
                 {chartModal.report.entryPrice && (
@@ -1009,7 +1009,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                   </div>
                 )}
 
-                {/* P/L - Teal/Coral */}
+                {/* P/L - Teal/Red */}
                 {chartModal.report.unrealizedPnL !== undefined && (
                   <div className={cn(
                     "text-center px-3 py-1.5 rounded-lg font-bold",
