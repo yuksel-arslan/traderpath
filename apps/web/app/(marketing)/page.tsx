@@ -821,21 +821,21 @@ function FeaturesSection() {
                 <div className="w-14 h-14 bg-pink-500/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
                   <TrendingUp className="w-7 h-7 text-pink-500" />
                 </div>
-                <h3 className="font-bold text-lg mb-2">Price Forecasting</h3>
+                <h3 className="font-bold text-lg mb-2 gradient-text-logo-animate">Price Forecasting</h3>
                 <p className="text-sm text-muted-foreground">AI-generated price predictions for multiple timeframes based on historical patterns and market dynamics.</p>
               </div>
               <div className="p-6 bg-card border-2 border-dashed border-purple-500/30 rounded-xl text-center">
                 <div className="w-14 h-14 bg-purple-500/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
                   <Target className="w-7 h-7 text-purple-500" />
                 </div>
-                <h3 className="font-bold text-lg mb-2">Target Zones</h3>
+                <h3 className="font-bold text-lg mb-2 gradient-text-logo-animate">Target Zones</h3>
                 <p className="text-sm text-muted-foreground">Machine learning-identified support and resistance zones with probability scores.</p>
               </div>
               <div className="p-6 bg-card border-2 border-dashed border-cyan-500/30 rounded-xl text-center">
                 <div className="w-14 h-14 bg-cyan-500/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
                   <BarChart3 className="w-7 h-7 text-cyan-500" />
                 </div>
-                <h3 className="font-bold text-lg mb-2">Confidence Scores</h3>
+                <h3 className="font-bold text-lg mb-2 gradient-text-logo-animate">Confidence Scores</h3>
                 <p className="text-sm text-muted-foreground">Transparent confidence intervals showing prediction reliability for informed decision-making.</p>
               </div>
             </div>
