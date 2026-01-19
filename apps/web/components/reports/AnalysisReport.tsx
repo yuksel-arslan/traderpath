@@ -1348,13 +1348,36 @@ export async function captureChartAsImage(): Promise<string | null> {
       if (element) console.log('[Chart Capture] Found chart by class name');
     }
 
+    // Try to find any canvas element as last resort (Lightweight Charts renders to canvas)
     if (!element) {
-      console.warn('[Chart Capture] No chart element found');
+      const canvasElements = document.querySelectorAll('canvas');
+      console.log(`[Chart Capture] Found ${canvasElements.length} canvas elements`);
+      for (const canvas of canvasElements) {
+        const parent = canvas.parentElement;
+        if (parent && (parent.offsetWidth > 400 || parent.clientHeight > 300)) {
+          element = parent as HTMLElement;
+          console.log('[Chart Capture] Found chart via canvas parent');
+          break;
+        }
+      }
+    }
+
+    if (!element) {
+      console.warn('[Chart Capture] No chart element found on page');
       return null;
     }
 
-    // Wait for chart to fully render
-    await new Promise(resolve => setTimeout(resolve, 1200));
+    // Scroll element into view to ensure it's rendered
+    element.scrollIntoView({ behavior: 'instant', block: 'center' });
+
+    // Wait for chart to fully render (Lightweight Charts needs time)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Check if element has a canvas child (required for Lightweight Charts)
+    const chartCanvas = element.querySelector('canvas');
+    if (!chartCanvas) {
+      console.warn('[Chart Capture] No canvas found inside chart element - chart may not be fully rendered');
+    }
 
     // Capture with dark background for better visibility
     const canvas = await html2canvas(element, {
@@ -1363,7 +1386,15 @@ export async function captureChartAsImage(): Promise<string | null> {
       logging: false,
       useCORS: true,
       allowTaint: true,
-      removeContainer: false
+      removeContainer: false,
+      onclone: (clonedDoc) => {
+        // Ensure canvas elements are properly cloned
+        const clonedElement = clonedDoc.body.querySelector(`#${element?.id}`) ||
+                              clonedDoc.body.querySelector('.trade-plan-chart-container');
+        if (clonedElement) {
+          (clonedElement as HTMLElement).style.overflow = 'visible';
+        }
+      }
     });
     console.log('[Chart Capture] Chart captured successfully with dark background');
     return canvas.toDataURL('image/png');
