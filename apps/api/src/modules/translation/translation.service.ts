@@ -174,7 +174,7 @@ ${textsToTranslate}`;
             maxOutputTokens: 4000,
           },
         },
-        5, // maxRetries - increased for rate limit resilience
+        3, // maxRetries - balanced for speed vs reliability
         'translation'
       );
 
