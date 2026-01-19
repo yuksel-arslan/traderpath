@@ -546,6 +546,23 @@ Warn about potential traps and give protective advice.`;
       // Check for daily analysis bonus (1 credit per 10 analyses)
       await creditService.checkDailyAnalysisBonus(userId);
 
+      // Trade type completion bonus
+      // Scalping: +3 credits (higher risk, faster trades)
+      // Day Trade: +2 credits
+      // Swing Trade: +1 credit
+      const tradeTypeBonus = tradeType === 'scalping' ? 3 : tradeType === 'dayTrade' ? 2 : 1;
+      await creditService.add(
+        userId,
+        tradeTypeBonus,
+        'BONUS',
+        'trade_type_completion_bonus',
+        {
+          tradeType,
+          symbol: body.symbol,
+          analysisId: savedAnalysis.id,
+        }
+      );
+
       // Send analysis completion notifications (email + social) - fire and forget
       (async () => {
         try {

@@ -108,6 +108,16 @@
 | Email Gönderme | 2 | 2 email/analiz | 5 kredi/email | `Analysis.emailsSentUsed` |
 | Otomatik Özet Email | ∞ | Ücretsiz | - | Otomatik gönderilir |
 
+### Trade Type Completion Bonus (Otomatik)
+
+| Trade Type | Bonus Kredi | Açıklama |
+|------------|-------------|----------|
+| Scalping | +3 kredi | Yüksek risk, hızlı trade - ekstra ödül |
+| Day Trade | +2 kredi | Orta vadeli trade bonusu |
+| Swing Trade | +1 kredi | Standart bonus |
+
+> **Not:** Bonus, analiz tamamlandığında otomatik olarak eklenir. `creditService.add()` ile `BONUS` tipinde kaydedilir.
+
 ### Otomatik Bildirimler (Analiz Tamamlandığında)
 
 1. **Email Özeti** - `emailService.sendAnalysisSummary()` ile kullanıcının email'ine gönderilir
@@ -122,6 +132,13 @@ Analiz Başlatılır (15 kredi)
 7 Adımlık Analiz Çalışır
     ↓
 Database'e Kaydedilir (Analysis tablosu)
+    ↓
+Daily Analysis Bonus Kontrolü (her 10 analiz = 1 kredi)
+    ↓
+Trade Type Bonus Eklenir:
+    ├── Scalping → +3 kredi
+    ├── Day Trade → +2 kredi
+    └── Swing Trade → +1 kredi
     ↓
 Otomatik Bildirimler Gönderilir (fire & forget)
     ├── Email Özeti → Kullanıcı email'i
@@ -139,7 +156,8 @@ Kullanıcı Hakları Aktif:
 | Fonksiyon | Dosya | Satır |
 |-----------|-------|-------|
 | Analiz oluşturma | `analysis.routes.ts` | 528-544 |
-| Otomatik email | `analysis.routes.ts` | 549-581 |
+| Trade type bonus | `analysis.routes.ts` | 549-562 |
+| Otomatik email | `analysis.routes.ts` | 564-596 |
 | AI Expert hak kontrolü | `ai-expert.routes.ts` | 186-358 |
 | PDF indirme hak kontrolü | `report.routes.ts` | 564-662 |
 | Email gönderme hak kontrolü | `report.routes.ts` | 1209-1328 |
@@ -151,6 +169,7 @@ Kullanıcı Hakları Aktif:
 - Ücretsiz haklar bitince **otomatik kredi düşürülür**
 - Yetersiz kredi durumunda `INSUFFICIENT_CREDITS` hatası döner
 - Hata durumunda **krediler otomatik iade edilir**
+- **Trade type bonus** her analiz sonunda otomatik eklenir
 
 ---
 
@@ -255,6 +274,7 @@ Kullanıcı Hakları Aktif:
 - Exponential backoff ile max 3 retry, API'den gelen retryDelay parse edilip kullanılıyor
 - AI Expert service ve Translation service güncellendi
 - **Analiz Orchestration dokümantasyonu eklendi**: Her analiz için 3 AI Expert, 2 Download, 2 Email hakkı + otomatik özet email
+- **Trade Type Completion Bonus eklendi**: Scalping +3, Day Trade +2, Swing Trade +1 kredi otomatik bonus
 
 ---
 
