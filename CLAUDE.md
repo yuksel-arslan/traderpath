@@ -97,6 +97,63 @@
 
 ---
 
+## 🎯 Analiz Orchestration (ZORUNLU)
+
+### Her Analiz Tamamlandığında Kullanıcı Hakları
+
+| Hak | Miktar | Ücretsiz Limit | Sonrası Maliyet | Takip Alanı |
+|-----|--------|----------------|-----------------|-------------|
+| AI Expert Sohbet | 3 | 3 soru/analiz | 5 kredi/soru | `Analysis.aiExpertQuestionsUsed` |
+| PDF İndirme | 2 | 2 indirme/analiz | 5 kredi/indirme | `Analysis.pdfDownloadsUsed` |
+| Email Gönderme | 2 | 2 email/analiz | 5 kredi/email | `Analysis.emailsSentUsed` |
+| Otomatik Özet Email | ∞ | Ücretsiz | - | Otomatik gönderilir |
+
+### Otomatik Bildirimler (Analiz Tamamlandığında)
+
+1. **Email Özeti** - `emailService.sendAnalysisSummary()` ile kullanıcının email'ine gönderilir
+2. **Telegram Bildirimi** - Bağlıysa `telegramChatId` üzerinden gönderilir
+3. **Discord Webhook** - Bağlıysa `discordWebhookUrl` üzerinden gönderilir
+
+### Orchestration Akışı
+
+```
+Analiz Başlatılır (15 kredi)
+    ↓
+7 Adımlık Analiz Çalışır
+    ↓
+Database'e Kaydedilir (Analysis tablosu)
+    ↓
+Otomatik Bildirimler Gönderilir (fire & forget)
+    ├── Email Özeti → Kullanıcı email'i
+    ├── Telegram → telegramChatId (varsa)
+    └── Discord → discordWebhookUrl (varsa)
+    ↓
+Kullanıcı Hakları Aktif:
+    ├── 3x AI Expert sohbet (ücretsiz)
+    ├── 2x PDF indirme (ücretsiz)
+    └── 2x Email gönderme (ücretsiz)
+```
+
+### Kod Lokasyonları
+
+| Fonksiyon | Dosya | Satır |
+|-----------|-------|-------|
+| Analiz oluşturma | `analysis.routes.ts` | 528-544 |
+| Otomatik email | `analysis.routes.ts` | 549-581 |
+| AI Expert hak kontrolü | `ai-expert.routes.ts` | 186-358 |
+| PDF indirme hak kontrolü | `report.routes.ts` | 564-662 |
+| Email gönderme hak kontrolü | `report.routes.ts` | 1209-1328 |
+
+### Önemli Kurallar
+
+- **Admin kullanıcılar** tüm haklara ücretsiz sahiptir
+- Haklar **analiz bazlı** takip edilir, global değil
+- Ücretsiz haklar bitince **otomatik kredi düşürülür**
+- Yetersiz kredi durumunda `INSUFFICIENT_CREDITS` hatası döner
+- Hata durumunda **krediler otomatik iade edilir**
+
+---
+
 ## 🐛 Çözülen Bug'lar (Tekrarlama Riski Var)
 
 | Tarih | Bug | Çözüm | Dosya |
@@ -197,6 +254,7 @@
 - Yeni `callGeminiWithRetry` helper fonksiyonu eklendi (`apps/api/src/core/gemini.ts`)
 - Exponential backoff ile max 3 retry, API'den gelen retryDelay parse edilip kullanılıyor
 - AI Expert service ve Translation service güncellendi
+- **Analiz Orchestration dokümantasyonu eklendi**: Her analiz için 3 AI Expert, 2 Download, 2 Email hakkı + otomatik özet email
 
 ---
 
