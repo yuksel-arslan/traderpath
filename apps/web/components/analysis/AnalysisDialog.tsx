@@ -42,20 +42,24 @@ import { TrapCheck } from './TrapCheck';
 import { FinalVerdict } from './FinalVerdict';
 import { AnalysisProgressBar } from './AnalysisProgressBar';
 
-type Timeframe = '15m' | '1h' | '4h' | '1d';
+type Timeframe = '5m' | '15m' | '30m' | '1h' | '2h' | '4h' | '1d' | '1W';
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
 type AnalysisMode = 'educational' | 'quick';
 type DialogStep = 'mode-select' | 'analyzing' | 'results';
 
 // Timeframe to trade type mapping
-// - Scalping: 5m, 15m
-// - Day Trade: 1h, 4h
-// - Swing Trade: 1d, 1W
+// - Scalping (1000 candles): 5m, 15m
+// - Day Trade (500 candles): 30m, 1h, 2h, 4h
+// - Swing Trade (250 candles): 1d, 1W
 const TIMEFRAME_TO_TRADE_TYPE: Record<Timeframe, TradeType> = {
+  '5m': 'scalping',
   '15m': 'scalping',
+  '30m': 'dayTrade',
   '1h': 'dayTrade',
+  '2h': 'dayTrade',
   '4h': 'dayTrade',
   '1d': 'swing',
+  '1W': 'swing',
 };
 
 interface AnalysisDialogProps {
