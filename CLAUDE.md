@@ -229,6 +229,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-19 | Reports sayfası: 2026 trend tasarımı | Glassmorphism, gradient orbs, grain texture, modern filtreler |
 | 2026-01-19 | Reports sayfası: Teal/Coral kurumsal renkler | Tüm renkler kurumsal palette uygun (purple→teal, red→orange/coral) |
 | 2026-01-19 | Reports sayfası: Light mode kontrast düzeltmesi | bg-white/5→bg-slate-100, text-white→text-slate-900 dark:text-white |
+| 2026-01-19 | Analyze sayfası: Live Chart 2/3 genişlik | Live Chart sol tarafta 8 kolon, kontroller sağda 4 kolon - daha dengeli layout |
 
 ---
 
@@ -301,6 +302,7 @@ Kullanıcı Hakları Aktif:
   - Analiz kararı tekrarı kaldırıldı (sadece sayfa sonunda)
   - Technical Indicator Summary 40+ indikatör gösteriyor (kategoriler ve detaylar)
   - Indikatör tabloları leading indicators'a göre sıralanıyor
+- **Analyze sayfası layout düzeltmesi**: Live Chart 2/3 (8 kolon), TIMEFRAME/CoinSelector 1/3 (4 kolon) olarak yeniden düzenlendi
 
 ---
 
