@@ -1418,57 +1418,76 @@ interface PdfResult {
 }
 
 export async function generateAnalysisReport(data: AnalysisReportData, captureChart: boolean = true): Promise<PdfResult | void> {
-  if (captureChart && !data.chartImage) {
-    const chartImage = await captureChartAsImage();
-    if (chartImage) data.chartImage = chartImage;
+  // Validate required data
+  if (!data) {
+    throw new Error('Report data is required');
+  }
+  if (!data.symbol) {
+    throw new Error('Symbol is required');
   }
 
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = pdf.internal.pageSize.getHeight();
+  try {
+    if (captureChart && !data.chartImage) {
+      const chartImage = await captureChartAsImage();
+      if (chartImage) data.chartImage = chartImage;
+    }
 
-  // Total pages: 6 (Executive Summary, Trade Plan, Tokenomics, Steps 1-3, Steps 4-6, Verdict)
-  const totalPages = 6;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
 
-  // Page 1: Executive Summary
-  const canvas1 = await renderPageToCanvas(generatePageExecutiveSummary(data, totalPages));
-  pdf.addImage(canvas1.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Total pages: 6 (Executive Summary, Trade Plan, Tokenomics, Steps 1-3, Steps 4-6, Verdict)
+    const totalPages = 6;
 
-  // Page 2: Trade Plan (Full Chart)
-  pdf.addPage();
-  const canvas2 = await renderPageToCanvas(generatePageTradePlan(data, totalPages));
-  pdf.addImage(canvas2.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Page 1: Executive Summary
+    console.log('[PDF] Generating page 1: Executive Summary');
+    const canvas1 = await renderPageToCanvas(generatePageExecutiveSummary(data, totalPages));
+    pdf.addImage(canvas1.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-  // Page 3: Tokenomics
-  pdf.addPage();
-  const canvas3 = await renderPageToCanvas(generatePageTokenomics(data, totalPages));
-  pdf.addImage(canvas3.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Page 2: Trade Plan (Full Chart)
+    console.log('[PDF] Generating page 2: Trade Plan');
+    pdf.addPage();
+    const canvas2 = await renderPageToCanvas(generatePageTradePlan(data, totalPages));
+    pdf.addImage(canvas2.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-  // Page 4: Steps 1-3
-  pdf.addPage();
-  const canvas4 = await renderPageToCanvas(generatePageSteps123(data, totalPages));
-  pdf.addImage(canvas4.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Page 3: Tokenomics
+    console.log('[PDF] Generating page 3: Tokenomics');
+    pdf.addPage();
+    const canvas3 = await renderPageToCanvas(generatePageTokenomics(data, totalPages));
+    pdf.addImage(canvas3.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-  // Page 5: Steps 4-6
-  pdf.addPage();
-  const canvas5 = await renderPageToCanvas(generatePageSteps456(data, totalPages));
-  pdf.addImage(canvas5.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Page 4: Steps 1-3
+    console.log('[PDF] Generating page 4: Steps 1-3');
+    pdf.addPage();
+    const canvas4 = await renderPageToCanvas(generatePageSteps123(data, totalPages));
+    pdf.addImage(canvas4.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-  // Page 6: Final Verdict
-  pdf.addPage();
-  const canvas6 = await renderPageToCanvas(generatePageVerdict(data, totalPages));
-  pdf.addImage(canvas6.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Page 5: Steps 4-6
+    console.log('[PDF] Generating page 5: Steps 4-6');
+    pdf.addPage();
+    const canvas5 = await renderPageToCanvas(generatePageSteps456(data, totalPages));
+    pdf.addImage(canvas5.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-  const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'DayTrade', swing: 'Swing' };
-  const tradeType = data.tradeType ? tradeTypes[data.tradeType] || '' : '';
-  const fileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_${new Date().toISOString().split('T')[0]}.pdf`;
+    // Page 6: Final Verdict
+    console.log('[PDF] Generating page 6: Final Verdict');
+    pdf.addPage();
+    const canvas6 = await renderPageToCanvas(generatePageVerdict(data, totalPages));
+    pdf.addImage(canvas6.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-  const pdfBase64 = pdf.output('datauristring').split(',')[1];
-  pdf.save(fileName);
+    const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'DayTrade', swing: 'Swing' };
+    const tradeType = data.tradeType ? tradeTypes[data.tradeType] || '' : '';
+    const fileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_${new Date().toISOString().split('T')[0]}.pdf`;
 
-  console.log(`[TraderPath] Report generated: 6 pages`);
+    const pdfBase64 = pdf.output('datauristring').split(',')[1];
+    pdf.save(fileName);
 
-  return { base64: pdfBase64, fileName };
+    console.log(`[TraderPath] Report generated successfully: 6 pages`);
+
+    return { base64: pdfBase64, fileName };
+  } catch (error) {
+    console.error('[PDF] Generation failed:', error);
+    throw new Error(`PDF generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 export type { AnalysisReportData as ReportData };
