@@ -50,7 +50,7 @@ export default function AuthLayout({
 
         {/* Gradient Orbs */}
         <div className="absolute top-10 left-10 w-48 h-48 bg-teal-500/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-64 h-64 bg-coral-500/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-10 right-10 w-64 h-64 bg-red-500/20 rounded-full blur-3xl" />
 
         {/* Content - Centered */}
         <div className="relative z-10 flex flex-col items-center justify-center w-full px-8 py-8">

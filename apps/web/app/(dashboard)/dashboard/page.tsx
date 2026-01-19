@@ -674,7 +674,7 @@ export default function DashboardPage() {
                 <LineChart className="w-4.5 h-4.5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-bold bg-gradient-to-r from-teal-600 via-orange-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Performance</h2>
+                <h2 className="text-lg font-bold bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Performance</h2>
                 <p className="text-xs text-gray-500 dark:text-slate-400">P/L over time</p>
               </div>
             </div>
@@ -748,7 +748,7 @@ export default function DashboardPage() {
                   <Eye className="w-4.5 h-4.5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold bg-gradient-to-r from-teal-600 via-orange-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Active Trades</h2>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Active Trades</h2>
                   <p className="text-xs text-gray-500 dark:text-slate-400">{activeTrades.length} positions being tracked</p>
                 </div>
               </div>
@@ -784,7 +784,7 @@ export default function DashboardPage() {
                 <Award className="w-4.5 h-4.5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-bold bg-gradient-to-r from-teal-600 via-orange-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">My Performance</h2>
+                <h2 className="text-lg font-bold bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">My Performance</h2>
                 <p className="text-xs text-gray-500 dark:text-slate-400">Your trading statistics</p>
               </div>
             </div>

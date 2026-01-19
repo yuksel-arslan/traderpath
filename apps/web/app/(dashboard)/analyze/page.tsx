@@ -107,8 +107,8 @@ function GradientOrbs() {
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       {/* Teal Orb */}
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-teal-400/20 to-emerald-500/10 rounded-full blur-3xl animate-float-slow" />
-      {/* Coral Orb */}
-      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-coral-400/15 to-rose-500/10 rounded-full blur-3xl animate-float-slow" style={{ animationDelay: '-3s' }} />
+      {/* Red Orb */}
+      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-red-400/15 to-rose-500/10 rounded-full blur-3xl animate-float-slow" style={{ animationDelay: '-3s' }} />
       {/* Purple Orb */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-purple-500/5 to-blue-500/5 rounded-full blur-3xl animate-orb-move" />
     </div>
@@ -119,7 +119,7 @@ function GradientOrbs() {
 function MarqueeBanner() {
   return (
     <div className="relative w-full overflow-hidden bg-gradient-to-r from-slate-900/80 via-slate-800/80 to-slate-900/80 dark:from-slate-950/90 dark:via-slate-900/90 dark:to-slate-950/90 backdrop-blur-xl border-b border-white/5">
-      <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 via-transparent to-coral-500/5" />
+      <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 via-transparent to-red-500/5" />
       <div className="flex animate-marquee">
         {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
           <div
@@ -328,23 +328,23 @@ export default function AnalyzePage() {
       <div className="relative w-full px-4 md:px-8 lg:px-12 py-8 space-y-8">
         {/* ===== HERO SECTION with Kinetic Typography ===== */}
         <div className="text-center space-y-4 py-6">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-orange-500/10 border border-teal-500/20 backdrop-blur-sm animate-blur-in">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-red-500/10 border border-teal-500/20 backdrop-blur-sm animate-blur-in">
             <Sparkles className="w-4 h-4 text-teal-500 animate-pulse" />
-            <span className="text-sm font-medium bg-gradient-to-r from-teal-500 to-orange-500 bg-clip-text text-transparent">
+            <span className="text-sm font-medium bg-gradient-to-r from-teal-500 to-red-500 bg-clip-text text-transparent">
               AI-Powered Analysis Engine
             </span>
           </div>
 
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold">
-            <span className="bg-gradient-to-r from-teal-600 via-orange-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">
+            <span className="bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">
               Trade Smarter with
             </span>
             <br />
             <span className="relative inline-block">
-              <span className="bg-gradient-to-r from-teal-500 via-orange-400 to-teal-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer" style={{ animationDelay: '0.5s' }}>
+              <span className="bg-gradient-to-r from-teal-500 via-red-400 to-teal-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer" style={{ animationDelay: '0.5s' }}>
                 <KineticText text="TraderPath" />
               </span>
-              <span className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 via-orange-400 to-teal-500 rounded-full opacity-50 animate-pulse" />
+              <span className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 via-red-400 to-teal-500 rounded-full opacity-50 animate-pulse" />
             </span>
           </h1>
 
@@ -487,7 +487,7 @@ export default function AnalyzePage() {
 
         {/* Bottom Marquee - Reverse Direction */}
         <div className="relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-slate-100/80 via-white/80 to-slate-100/80 dark:from-slate-900/80 dark:via-slate-800/80 dark:to-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-white/10 mt-8">
-          <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 via-transparent to-coral-500/5" />
+          <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 via-transparent to-red-500/5" />
           <div className="flex animate-marquee-reverse py-3">
             {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
               <div key={i} className="flex items-center gap-4 px-8">
