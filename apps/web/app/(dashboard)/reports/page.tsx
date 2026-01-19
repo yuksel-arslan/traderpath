@@ -441,7 +441,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                 </div>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">My Reports</h1>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-teal-600 via-orange-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer tracking-tight">My Reports</h1>
                 <p className="text-sm text-slate-600 dark:text-slate-400">Saved analysis reports & live tracking</p>
               </div>
             </div>
