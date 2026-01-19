@@ -106,7 +106,7 @@ export default function RegisterPage() {
   return (
     <>
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold">Create your account</h1>
+        <h1 className="text-2xl font-bold gradient-text-logo-animate">Create your account</h1>
         <p className="text-muted-foreground mt-2">Start your trading journey today</p>
       </div>
 

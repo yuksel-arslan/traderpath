@@ -234,7 +234,7 @@ export default function PricingPage() {
       {/* Hero */}
       <section className="py-16 text-center">
         <div className="container mx-auto px-4">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Transparent Pricing</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 gradient-text-logo-animate">Transparent Pricing</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Pay only for what you use. No subscriptions, no hidden fees.
             {!isLoggedIn && ` Start with ${FREE_SIGNUP_CREDITS} free credits.`}
@@ -277,7 +277,7 @@ export default function PricingPage() {
       {/* Credit Packages */}
       <section className="py-12 bg-accent/50">
         <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold text-center mb-2">Credit Packages</h2>
+          <h2 className="text-2xl font-bold text-center mb-2 gradient-text-logo-animate">Credit Packages</h2>
           <p className="text-muted-foreground text-center mb-8">Choose the package that fits your trading style</p>
           {packagesLoading ? (
             <div className="flex justify-center py-12">
@@ -315,7 +315,7 @@ export default function PricingPage() {
                     <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-accent flex items-center justify-center">
                       <Icon className="w-7 h-7 text-muted-foreground" />
                     </div>
-                    <h3 className="text-xl font-bold mb-2">{pkg.name}</h3>
+                    <h3 className="text-xl font-bold mb-2 gradient-text-logo-animate">{pkg.name}</h3>
                     <div className="text-3xl font-bold text-primary mb-1">
                       {pkg.credits}
                       {pkg.bonus > 0 && <span className="text-lg text-amber-500 ml-1">+{pkg.bonus}</span>}
@@ -364,7 +364,7 @@ export default function PricingPage() {
       {/* What's Included */}
       <section className="py-12">
         <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold text-center mb-8">All Packages Include</h2>
+          <h2 className="text-2xl font-bold text-center mb-8 gradient-text-logo-animate">All Packages Include</h2>
           <div className="max-w-3xl mx-auto">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {[
@@ -379,7 +379,7 @@ export default function PricingPage() {
                   <div className="flex justify-center mb-2">
                     <item.Icon className={cn('w-8 h-8', item.color)} />
                   </div>
-                  <p className="font-semibold text-sm">{item.title}</p>
+                  <p className="font-semibold text-sm gradient-text-logo-animate">{item.title}</p>
                   <p className="text-xs text-muted-foreground">{item.desc}</p>
                 </div>
               ))}
@@ -391,7 +391,7 @@ export default function PricingPage() {
                 <div className="flex justify-center mb-2">
                   <Brain className="w-8 h-8 text-pink-500" />
                 </div>
-                <p className="font-semibold text-sm">AI Price Prediction</p>
+                <p className="font-semibold text-sm gradient-text-logo-animate">AI Price Prediction</p>
                 <p className="text-xs text-muted-foreground">TFT deep learning model</p>
                 <p className="text-[10px] text-amber-600 mt-1">+credits per analysis</p>
               </div>
@@ -403,7 +403,7 @@ export default function PricingPage() {
       {/* FAQs */}
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+          <h2 className="text-2xl font-bold text-center mb-8 gradient-text-logo-animate">Frequently Asked Questions</h2>
           <div className="max-w-2xl mx-auto space-y-4">
             {FAQS.map((faq, index) => (
               <div key={index} className="bg-card rounded-lg border p-4">
@@ -423,7 +423,7 @@ export default function PricingPage() {
         <section className="py-16 bg-accent/50">
           <div className="container mx-auto px-4">
             <div className="max-w-2xl mx-auto text-center p-8 bg-gradient-to-r from-red-500/10 via-amber-500/10 to-green-500/10 border border-green-500/20 rounded-2xl">
-              <h2 className="text-2xl font-bold mb-4">Ready to Start Trading Smarter?</h2>
+              <h2 className="text-2xl font-bold mb-4 gradient-text-logo-animate">Ready to Start Trading Smarter?</h2>
               <p className="text-muted-foreground mb-6">
                 Create your free account and get {FREE_SIGNUP_CREDITS} credits to start analyzing.
               </p>
