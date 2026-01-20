@@ -265,6 +265,8 @@ Kullanıcı Hakları Aktif:
 | 2026-01-19 | Reports sayfası: Light mode kontrast düzeltmesi | bg-white/5→bg-slate-100, text-white→text-slate-900 dark:text-white |
 | 2026-01-19 | Analyze sayfası: Live Chart 2/3 genişlik | Live Chart sol tarafta 8 kolon, kontroller sağda 4 kolon - daha dengeli layout |
 | 2026-01-20 | Recent Analyses: Verdict filtresi | All/GO/COND/WAIT/AVOID filtre butonları - hızlı analiz filtreleme |
+| 2026-01-20 | Mobile App Icon: Dark mode versiyonları | 512x512, dark bg (#0D1421), scale 2.0, rounded corners (96px), glow efekti |
+| 2026-01-20 | Mobile App Icon: Alternatif renk düzeni | Yeşil-kırmızı-yeşil-kırmızı (çapraz) vs orijinal (2 yeşil + 2 kırmızı) |
 
 ---
 
@@ -387,6 +389,18 @@ Kullanıcı Hakları Aktif:
   - Market Pulse'a entegre edildi (`economicCalendar` field)
   - Yeni endpoint: `GET /api/analysis/economic-calendar` (ücretsiz)
   - Verdict otomatik "AVOID" olur, score max 2'ye düşer
+- **Mobile App Icon'lar eklendi**:
+  - `app-icon-dark.svg`: Orijinal renk düzeni (üst-yeşil, sağ-yeşil, alt-kırmızı, sol-kırmızı)
+  - `app-icon-dark-alt.svg`: Alternatif (üst-yeşil, sağ-kırmızı, alt-yeşil, sol-kırmızı)
+  - 512x512 boyut, dark arka plan (#0D1421), rounded corners (96px)
+  - Logo scale 2.0, minimal padding, glow efekti
+- **Push Notification sistemi eklendi**:
+  - Service Worker: `apps/web/public/sw.js`
+  - Push utilities: `apps/web/lib/push-notifications.ts`
+  - Price Checker job: `apps/api/src/modules/notifications/price-checker.job.ts`
+  - VAPID key endpoint: `GET /api/alerts/vapid-public-key`
+  - Railway env vars: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
+- **Alerts sayfası gerçek API'ye bağlandı**: Mock data kaldırıldı, CRUD işlemleri çalışıyor
 
 ---
 
