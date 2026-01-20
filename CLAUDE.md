@@ -212,6 +212,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-20 | CoinGecko Demo API yanlış header kullanıyordu | Demo API için `x-cg-demo-api-key` header ve public URL kullanılıyor. `COINGECKO_API_TYPE=demo` env var eklendi | `tokenomics.service.ts` |
 | 2026-01-20 | PDF generation: Cannot read properties of null (reading 'gate') | Tüm step verilerine default değerler eklendi (mp, as, sc, tm, tp, tc). Null erişim hatası önlendi | `AnalysisReport.tsx` |
 | 2026-01-20 | Final Verdict "N/A Recommended" anlamsız gösteriliyor | 1) Default verdict değerleri eklendi (action: WAIT), 2) Direction yoksa WAIT gösterilir, 3) hasDirection kontrolü ile doğru renk/metin | `AnalysisReport.tsx` |
+| 2026-01-20 | PDF raporda tokenomics ve grafik eksik | handleDownload fonksiyonunda tokenomics dahil edilmemişti. Tüm step verileri (1-7) tam olarak eklendi | `RecentAnalyses.tsx` |
 
 ---
 
