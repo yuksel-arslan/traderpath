@@ -269,6 +269,5 @@ export async function sendTestNotification(): Promise<void> {
     icon: '/logo.svg',
     badge: '/logo.svg',
     tag: 'test-notification',
-    vibrate: [100, 50, 100],
   });
 }
