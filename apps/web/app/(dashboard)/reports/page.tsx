@@ -232,6 +232,9 @@ interface ReportsResponse {
 // Date filter options
 type DateFilter = 'all' | 'today' | 'week' | 'month';
 
+// Verdict filter options
+type VerdictFilter = 'all' | 'go' | 'conditional_go' | 'wait' | 'avoid';
+
 export default function ReportsPage() {
   const router = useRouter();
   const [reports, setReports] = useState<Report[]>([]);
@@ -239,6 +242,7 @@ export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [tradeTypeFilter, setTradeTypeFilter] = useState<TradeType | 'all'>('all');
+  const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>('all');
   const [pagination, setPagination] = useState({ total: 0, limit: 20, offset: 0 });
   const [chartModal, setChartModal] = useState<{ isOpen: boolean; report: Report | null }>({ isOpen: false, report: null });
 
@@ -406,30 +410,47 @@ Could you share your risk assessment and recommendations based on this analysis?
       : 0;
   };
 
-  // Date filter helper
-  const isInDateRange = (dateStr: string) => {
+  // Date filter helper - fixed block scoping for const declarations
+  const isInDateRange = (dateStr: string): boolean => {
+    if (dateFilter === 'all') return true;
+
     const date = new Date(dateStr);
     const now = new Date();
 
+    // Reset time to start of day for accurate comparison
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
     switch (dateFilter) {
-      case 'today':
-        return date.toDateString() === now.toDateString();
-      case 'week':
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      case 'today': {
+        const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        return startOfDate.getTime() === startOfToday.getTime();
+      }
+      case 'week': {
+        const weekAgo = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
         return date >= weekAgo;
-      case 'month':
-        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      }
+      case 'month': {
+        const monthAgo = new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000);
         return date >= monthAgo;
+      }
       default:
         return true;
     }
+  };
+
+  // Verdict filter helper
+  const matchesVerdictFilter = (reportVerdict: string): boolean => {
+    if (verdictFilter === 'all') return true;
+    const normalized = normalizeVerdict(reportVerdict);
+    return normalized === verdictFilter;
   };
 
   const filteredReports = reports
     .filter(r =>
       r.symbol.toLowerCase().includes(searchQuery.toLowerCase()) &&
       isInDateRange(r.generatedAt) &&
-      (tradeTypeFilter === 'all' || r.tradeType === tradeTypeFilter)
+      (tradeTypeFilter === 'all' || r.tradeType === tradeTypeFilter) &&
+      matchesVerdictFilter(r.verdict)
     )
     .sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime());
 
@@ -544,6 +565,38 @@ Could you share your risk assessment and recommendations based on this analysis?
               </button>
             );
           })}
+        </div>
+
+        {/* Verdict Filter - Pill Style */}
+        <div className="flex bg-white dark:bg-slate-900/50 rounded-xl p-1 border border-slate-200 dark:border-white/10">
+          {[
+            { value: 'all', label: 'All', color: '' },
+            { value: 'go', label: 'GO', color: 'text-green-500' },
+            { value: 'conditional_go', label: 'COND', color: 'text-yellow-500' },
+            { value: 'wait', label: 'WAIT', color: 'text-orange-500' },
+            { value: 'avoid', label: 'AVOID', color: 'text-red-500' },
+          ].map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setVerdictFilter(f.value as VerdictFilter)}
+              className={cn(
+                "px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300",
+                verdictFilter === f.value
+                  ? f.value === 'all'
+                    ? "bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-lg shadow-teal-500/25"
+                    : cn(
+                        "shadow-lg",
+                        f.value === 'go' && "bg-green-500/20 text-green-600 dark:text-green-400 ring-1 ring-green-500/50",
+                        f.value === 'conditional_go' && "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 ring-1 ring-yellow-500/50",
+                        f.value === 'wait' && "bg-orange-500/20 text-orange-600 dark:text-orange-400 ring-1 ring-orange-500/50",
+                        f.value === 'avoid' && "bg-red-500/20 text-red-600 dark:text-red-400 ring-1 ring-red-500/50"
+                      )
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
 
         {/* Results Count Badge */}
