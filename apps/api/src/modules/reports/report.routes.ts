@@ -1427,11 +1427,26 @@ export async function reportRoutes(fastify: FastifyInstance) {
   );
 }
 
-// Get coin icon URL for email
-function getCoinIconUrl(symbol: string): string {
-  const coinId = symbol.toLowerCase();
-  // Use CoinGecko API for coin icons (more reliable for email)
-  return `https://cryptoicons.org/api/icon/${coinId}/64`;
+// Generate coin icon as base64 SVG (reliable for all email clients)
+function getCoinIconDataUrl(symbol: string): string {
+  // Create a simple SVG icon with the first letter of the symbol
+  const letter = symbol.charAt(0).toUpperCase();
+  const colors: Record<string, string> = {
+    'B': '#F7931A', // BTC orange
+    'E': '#627EEA', // ETH blue
+    'S': '#14F195', // SOL green
+    'A': '#2775CA', // ADA blue
+    'D': '#C2A633', // DOGE gold
+    'X': '#23292F', // XRP dark
+    'L': '#345D9D', // LINK blue
+    'P': '#E6007A', // DOT pink
+    'U': '#26A17B', // USDT green
+    'M': '#F0B90B', // MATIC yellow
+  };
+  const bgColor = colors[letter] || '#6366f1'; // default indigo
+
+  const svg = `<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="24" fill="${bgColor}"/><text x="24" y="24" text-anchor="middle" dy="0.35em" fill="white" font-family="Arial, sans-serif" font-size="20" font-weight="bold">${letter}</text></svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 }
 
 // Generate SVG trade plan chart for email
@@ -1582,7 +1597,7 @@ function generateReportHtmlEmail(
   const btcDominance = marketPulse?.btcDominance as number | undefined;
   const riskLevel = safetyCheck?.riskLevel as string | undefined;
   const tradeNow = timing?.tradeNow as boolean | undefined;
-  const coinIconUrl = getCoinIconUrl(symbol);
+  const coinIconUrl = getCoinIconDataUrl(symbol);
 
   // Generate SVG chart if no chartImage provided
   // Convert to base64 data URL because email clients don't support inline SVG
@@ -1602,18 +1617,12 @@ function generateReportHtmlEmail(
     }
   }
 
-  // TraderPath logo as inline SVG (works better in email than external images)
+  // TraderPath logo as base64 data URL (Gmail strips inline SVG)
+  const logoSvg = `<svg width="48" height="48" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><rect width="512" height="512" rx="96" fill="#0D1421"/><g transform="translate(96, 96) scale(0.625)"><rect x="32" y="256" width="80" height="200" rx="8" fill="#22C55E"/><rect x="144" y="180" width="80" height="276" rx="8" fill="#EF4444"/><rect x="256" y="100" width="80" height="356" rx="8" fill="#22C55E"/><rect x="368" y="56" width="80" height="400" rx="8" fill="#EF4444"/></g></svg>`;
+  const logoBase64 = Buffer.from(logoSvg).toString('base64');
   const traderPathLogo = `
     <div style="text-align: center; margin-bottom: 10px;">
-      <svg width="48" height="48" viewBox="0 0 512 512" style="display: inline-block;">
-        <rect width="512" height="512" rx="96" fill="#0D1421"/>
-        <g transform="translate(96, 96) scale(0.625)">
-          <rect x="32" y="256" width="80" height="200" rx="8" fill="#22C55E"/>
-          <rect x="144" y="180" width="80" height="276" rx="8" fill="#EF4444"/>
-          <rect x="256" y="100" width="80" height="356" rx="8" fill="#22C55E"/>
-          <rect x="368" y="56" width="80" height="400" rx="8" fill="#EF4444"/>
-        </g>
-      </svg>
+      <img src="data:image/svg+xml;base64,${logoBase64}" width="48" height="48" alt="TraderPath" style="display: inline-block;"/>
     </div>
   `;
 
@@ -1650,7 +1659,7 @@ function generateReportHtmlEmail(
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td align="center">
-                    <img src="${coinIconUrl}" alt="${symbol}" width="48" height="48" style="border-radius: 50%; background: #ffffff; padding: 4px; display: inline-block; vertical-align: middle;" onerror="this.style.display='none'"/>
+                    <img src="${coinIconUrl}" alt="${symbol}" width="48" height="48" style="border-radius: 50%; background: #ffffff; padding: 4px; display: inline-block; vertical-align: middle;"/>
                     <h2 style="margin: 10px 0 0; color: #ffffff; font-size: 24px; font-weight: bold;">
                       ${symbol}/USDT Analysis
                     </h2>
