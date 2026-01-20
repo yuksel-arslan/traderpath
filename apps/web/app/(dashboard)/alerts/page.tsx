@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Bell,
   Plus,
@@ -11,119 +11,163 @@ import {
   X,
   ChevronDown,
   Clock,
-  Search
+  Search,
+  Loader2,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
 import { cn } from '../../../lib/utils';
+import { getApiUrl, authFetch } from '../../../lib/api';
 
 interface PriceAlert {
   id: string;
   symbol: string;
-  type: 'above' | 'below';
-  price: number;
-  currentPrice: number;
-  active: boolean;
-  triggered: boolean;
+  direction: 'ABOVE' | 'BELOW';
+  targetPrice: number;
+  currentPrice?: number;
+  isActive: boolean;
+  isTriggered: boolean;
+  triggeredAt?: string;
   createdAt: string;
+  alertType?: string;
 }
 
-const MOCK_ALERTS: PriceAlert[] = [
-  {
-    id: '1',
-    symbol: 'BTC',
-    type: 'above',
-    price: 100000,
-    currentPrice: 95432,
-    active: true,
-    triggered: false,
-    createdAt: '2024-01-15',
-  },
-  {
-    id: '2',
-    symbol: 'ETH',
-    type: 'below',
-    price: 3000,
-    currentPrice: 3245,
-    active: true,
-    triggered: false,
-    createdAt: '2024-01-14',
-  },
-  {
-    id: '3',
-    symbol: 'SOL',
-    type: 'above',
-    price: 150,
-    currentPrice: 178,
-    active: false,
-    triggered: true,
-    createdAt: '2024-01-10',
-  },
-  {
-    id: '4',
-    symbol: 'DOGE',
-    type: 'above',
-    price: 0.15,
-    currentPrice: 0.12,
-    active: true,
-    triggered: false,
-    createdAt: '2024-01-12',
-  },
-];
-
-const SUPPORTED_COINS = ['BTC', 'ETH', 'SOL', 'DOGE', 'XRP', 'ADA', 'AVAX', 'DOT', 'LINK', 'MATIC'];
+const SUPPORTED_COINS = ['BTC', 'ETH', 'SOL', 'DOGE', 'XRP', 'ADA', 'AVAX', 'DOT', 'LINK', 'MATIC', 'BNB', 'ARB', 'OP', 'SUI', 'APT'];
 
 export default function AlertsPage() {
-  const [alerts, setAlerts] = useState<PriceAlert[]>(MOCK_ALERTS);
+  const [alerts, setAlerts] = useState<PriceAlert[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'active' | 'triggered'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [createLoading, setCreateLoading] = useState(false);
 
   // New alert form state
   const [newSymbol, setNewSymbol] = useState('BTC');
-  const [newType, setNewType] = useState<'above' | 'below'>('above');
+  const [newType, setNewType] = useState<'ABOVE' | 'BELOW'>('ABOVE');
   const [newPrice, setNewPrice] = useState('');
+
+  // Fetch alerts from API
+  const fetchAlerts = useCallback(async () => {
+    try {
+      setError(null);
+      const response = await authFetch(`${getApiUrl()}/alerts`);
+      const data = await response.json();
+
+      if (data.success) {
+        setAlerts(data.data.alerts || []);
+      } else {
+        setError(data.error?.message || 'Failed to fetch alerts');
+      }
+    } catch (err) {
+      console.error('Error fetching alerts:', err);
+      setError('Failed to load alerts. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch triggered alerts history
+  const fetchHistory = useCallback(async () => {
+    try {
+      const response = await authFetch(`${getApiUrl()}/alerts/history`);
+      const data = await response.json();
+
+      if (data.success && data.data.alerts) {
+        // Merge with active alerts, avoiding duplicates
+        setAlerts(prev => {
+          const activeIds = new Set(prev.map(a => a.id));
+          const newTriggered = data.data.alerts.filter((a: PriceAlert) => !activeIds.has(a.id));
+          return [...prev, ...newTriggered];
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching history:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAlerts();
+    fetchHistory();
+  }, [fetchAlerts, fetchHistory]);
 
   const filteredAlerts = alerts.filter((alert) => {
     const matchesSearch = alert.symbol.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = filter === 'all' ||
-      (filter === 'active' && alert.active && !alert.triggered) ||
-      (filter === 'triggered' && alert.triggered);
+      (filter === 'active' && alert.isActive && !alert.isTriggered) ||
+      (filter === 'triggered' && alert.isTriggered);
     return matchesSearch && matchesFilter;
   });
 
-  const handleCreateAlert = () => {
+  const handleCreateAlert = async () => {
     if (!newPrice) return;
 
-    const newAlert: PriceAlert = {
-      id: Date.now().toString(),
-      symbol: newSymbol,
-      type: newType,
-      price: parseFloat(newPrice),
-      currentPrice: 0, // Would come from API
-      active: true,
-      triggered: false,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
+    setCreateLoading(true);
+    try {
+      const response = await authFetch(`${getApiUrl()}/alerts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: newSymbol,
+          targetPrice: parseFloat(newPrice),
+          direction: newType,
+        }),
+      });
 
-    setAlerts([newAlert, ...alerts]);
-    setShowCreateModal(false);
-    setNewPrice('');
+      const data = await response.json();
+
+      if (data.success) {
+        // Add the new alert to the list
+        setAlerts(prev => [data.data.alert, ...prev]);
+        setShowCreateModal(false);
+        setNewPrice('');
+      } else {
+        alert(data.error?.message || 'Failed to create alert');
+      }
+    } catch (err) {
+      console.error('Error creating alert:', err);
+      alert('Failed to create alert. Please try again.');
+    } finally {
+      setCreateLoading(false);
+    }
   };
 
-  const handleDeleteAlert = (id: string) => {
-    setAlerts(alerts.filter((a) => a.id !== id));
+  const handleDeleteAlert = async (id: string) => {
+    setActionLoading(id);
+    try {
+      const response = await authFetch(`${getApiUrl()}/alerts/${id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Remove the alert from the list
+        setAlerts(prev => prev.filter(a => a.id !== id));
+      } else {
+        alert(data.error?.message || 'Failed to delete alert');
+      }
+    } catch (err) {
+      console.error('Error deleting alert:', err);
+      alert('Failed to delete alert. Please try again.');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const handleToggleAlert = (id: string) => {
-    setAlerts(
-      alerts.map((a) =>
-        a.id === id ? { ...a, active: !a.active } : a
-      )
+  const activeCount = alerts.filter((a) => a.isActive && !a.isTriggered).length;
+  const triggeredCount = alerts.filter((a) => a.isTriggered).length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
     );
-  };
-
-  const activeCount = alerts.filter((a) => a.active && !a.triggered).length;
-  const triggeredCount = alerts.filter((a) => a.triggered).length;
+  }
 
   return (
     <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-6">
@@ -143,13 +187,22 @@ export default function AlertsPage() {
                 <p className="text-xs text-gray-500 dark:text-slate-400">Get notified when prices hit your targets</p>
               </div>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg transition"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              New Alert
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setLoading(true); fetchAlerts(); fetchHistory(); }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition"
+                title="Refresh alerts"
+              >
+                <RefreshCw className="w-4 h-4 text-gray-500" />
+              </button>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg transition"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                New Alert
+              </button>
+            </div>
           </div>
 
           {/* Stats Row */}
@@ -169,6 +222,14 @@ export default function AlertsPage() {
           </div>
         </div>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg text-red-600 dark:text-red-400">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* ===== Compact Filters ===== */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
@@ -232,8 +293,8 @@ export default function AlertsPage() {
             <div
               key={alert.id}
               className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-card border rounded-lg gap-3 sm:gap-0 ${
-                alert.triggered ? 'border-amber-500/50 bg-amber-500/5' : ''
-              } ${!alert.active && !alert.triggered ? 'opacity-60' : ''}`}
+                alert.isTriggered ? 'border-amber-500/50 bg-amber-500/5' : ''
+              } ${!alert.isActive && !alert.isTriggered ? 'opacity-60' : ''}`}
             >
               <div className="flex items-center gap-3 sm:gap-4">
                 {/* Coin Icon */}
@@ -252,60 +313,68 @@ export default function AlertsPage() {
                     <span className="font-bold">{alert.symbol}/USDT</span>
                     <span
                       className={`flex items-center gap-1 text-sm px-2 py-0.5 rounded-full ${
-                        alert.type === 'above'
+                        alert.direction === 'ABOVE'
                           ? 'bg-green-500/10 text-green-500'
                           : 'bg-red-500/10 text-red-500'
                       }`}
                     >
-                      {alert.type === 'above' ? (
+                      {alert.direction === 'ABOVE' ? (
                         <TrendingUp className="w-3 h-3" />
                       ) : (
                         <TrendingDown className="w-3 h-3" />
                       )}
-                      {alert.type === 'above' ? 'Above' : 'Below'}
+                      {alert.direction === 'ABOVE' ? 'Above' : 'Below'}
                     </span>
-                    {alert.triggered && (
+                    {alert.alertType && alert.alertType !== 'CUSTOM' && (
+                      <span className="bg-blue-500/10 text-blue-500 text-xs px-2 py-0.5 rounded-full">
+                        {alert.alertType}
+                      </span>
+                    )}
+                    {alert.isTriggered && (
                       <span className="bg-amber-500/10 text-amber-500 text-xs px-2 py-0.5 rounded-full">
                         TRIGGERED
                       </span>
                     )}
                   </div>
                   <p className="text-lg font-semibold mt-1">
-                    ${alert.price.toLocaleString()}
+                    ${Number(alert.targetPrice).toLocaleString(undefined, { maximumFractionDigits: 8 })}
                   </p>
                   <p className="text-sm text-muted-foreground flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    Created {alert.createdAt}
+                    {alert.isTriggered && alert.triggeredAt
+                      ? `Triggered ${new Date(alert.triggeredAt).toLocaleDateString()}`
+                      : `Created ${new Date(alert.createdAt).toLocaleDateString()}`}
                   </p>
                 </div>
               </div>
 
               {/* Actions */}
               <div className="flex items-center gap-2 justify-end">
-                {/* Toggle */}
-                <button
-                  onClick={() => handleToggleAlert(alert.id)}
-                  className={`p-2 rounded-lg transition ${
-                    alert.active
-                      ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
-                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                {/* Status Badge */}
+                <span
+                  className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                    alert.isActive && !alert.isTriggered
+                      ? 'bg-green-500/10 text-green-500'
+                      : alert.isTriggered
+                      ? 'bg-amber-500/10 text-amber-500'
+                      : 'bg-gray-100 text-gray-500 dark:bg-slate-800'
                   }`}
-                  title={alert.active ? 'Disable alert' : 'Enable alert'}
                 >
-                  {alert.active ? (
-                    <Check className="w-5 h-5" />
-                  ) : (
-                    <X className="w-5 h-5" />
-                  )}
-                </button>
+                  {alert.isTriggered ? 'Triggered' : alert.isActive ? 'Active' : 'Inactive'}
+                </span>
 
                 {/* Delete */}
                 <button
                   onClick={() => handleDeleteAlert(alert.id)}
-                  className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition"
+                  disabled={actionLoading === alert.id}
+                  className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition disabled:opacity-50"
                   title="Delete alert"
                 >
-                  <Trash2 className="w-5 h-5" />
+                  {actionLoading === alert.id ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -352,9 +421,9 @@ export default function AlertsPage() {
                 <label className="block text-sm font-medium mb-2">Alert When Price Goes</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={() => setNewType('above')}
+                    onClick={() => setNewType('ABOVE')}
                     className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition ${
-                      newType === 'above'
+                      newType === 'ABOVE'
                         ? 'border-green-500 bg-green-500/10 text-green-500'
                         : 'border-border hover:border-green-500/50'
                     }`}
@@ -363,9 +432,9 @@ export default function AlertsPage() {
                     Above
                   </button>
                   <button
-                    onClick={() => setNewType('below')}
+                    onClick={() => setNewType('BELOW')}
                     className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition ${
-                      newType === 'below'
+                      newType === 'BELOW'
                         ? 'border-red-500 bg-red-500/10 text-red-500'
                         : 'border-border hover:border-red-500/50'
                     }`}
@@ -390,7 +459,7 @@ export default function AlertsPage() {
 
               {/* Credit Cost Notice */}
               <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                <p className="text-sm text-amber-600">
+                <p className="text-sm text-amber-600 dark:text-amber-400">
                   Creating this alert will cost <strong>1 credit</strong>
                 </p>
               </div>
@@ -398,10 +467,17 @@ export default function AlertsPage() {
               {/* Submit Button */}
               <button
                 onClick={handleCreateAlert}
-                disabled={!newPrice}
-                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!newPrice || createLoading}
+                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Create Alert
+                {createLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Alert'
+                )}
               </button>
             </div>
           </div>
