@@ -21,6 +21,8 @@ import {
   Zap,
   Activity,
   Calendar,
+  Mail,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
@@ -104,6 +106,7 @@ export default function ReportsPage() {
   const [tradeTypeFilter, setTradeTypeFilter] = useState<TradeType | 'all'>('all');
   const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>('all');
   const [pagination, setPagination] = useState({ total: 0, limit: 20, offset: 0 });
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
 
   const fetchReports = async () => {
     setIsLoading(true);
@@ -160,6 +163,49 @@ export default function ReportsPage() {
     } catch (error) {
       console.error('Failed to download report:', error);
       alert('Failed to download report');
+    }
+  };
+
+  // Send report via email
+  const handleSendEmail = async (report: Report) => {
+    setSendingEmail(report.id);
+    try {
+      // Fetch full report data
+      const response = await authFetch(`/api/reports/${report.id}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch report');
+      }
+
+      const data = await response.json();
+      if (!data.success || !data.data.reportData) {
+        throw new Error('Report data not found');
+      }
+
+      // Send email
+      const emailResponse = await authFetch('/api/reports/send-html-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportId: report.id,
+          reportData: {
+            ...data.data.reportData,
+            aiExpertComment: data.data.aiExpertComment,
+          },
+        }),
+      });
+
+      if (!emailResponse.ok) {
+        const errData = await emailResponse.json();
+        throw new Error(errData.error?.message || 'Failed to send email');
+      }
+
+      alert('Report sent to your email successfully!');
+    } catch (error) {
+      console.error('Failed to send email:', error);
+      alert(error instanceof Error ? error.message : 'Failed to send email');
+    } finally {
+      setSendingEmail(null);
     }
   };
 
@@ -791,6 +837,19 @@ Could you share your risk assessment and recommendations based on this analysis?
                     title="Download PDF"
                   >
                     <Download className="w-5 h-5" />
+                  </button>
+                  {/* Email Button */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleSendEmail(report); }}
+                    disabled={sendingEmail === report.id}
+                    className="p-2 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition disabled:opacity-50"
+                    title="Send Email"
+                  >
+                    {sendingEmail === report.id ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Mail className="w-5 h-5" />
+                    )}
                   </button>
                   {/* Delete Button */}
                   <button

@@ -14,8 +14,6 @@ import {
   List,
   LayoutGrid,
   ChevronRight,
-  FileText,
-  Download,
   Mail,
   Loader2,
   Filter,
@@ -192,378 +190,6 @@ export function RecentAnalyses() {
       setError('Failed to load analyses');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Create report from analysis with AI Expert comment
-  const handleCreateReport = async (e: React.MouseEvent, analysisId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setActionLoading({ id: analysisId, action: 'report' });
-
-    try {
-      // Fetch full analysis data
-      const analysisResponse = await authFetch(`/api/analysis/${analysisId}`);
-      if (!analysisResponse.ok) throw new Error('Failed to fetch analysis');
-
-      const analysisResult = await analysisResponse.json();
-      if (!analysisResult.success || !analysisResult.data) throw new Error('Analysis not found');
-
-      const analysis = analysisResult.data;
-      const step1 = analysis.step1Result || {};
-      const step2 = analysis.step2Result || {};
-      const step3 = analysis.step3Result || {};
-      const step4 = analysis.step4Result || {};
-      const step5 = analysis.step5Result || {};
-      const step6 = analysis.step6Result || {};
-      const step7 = analysis.step7Result || {};
-
-      // Build full reportData
-      const direction = step5.direction || step7.direction || 'long';
-      const entryPrice = step5.averageEntry || step5.entryPrice;
-      const stopLoss = step5.stopLoss?.price || step5.stopLoss;
-      const tp1 = step5.takeProfits?.[0]?.price || step5.takeProfit1;
-      const tp2 = step5.takeProfits?.[1]?.price || step5.takeProfit2;
-      const tp3 = step5.takeProfits?.[2]?.price || step5.takeProfit3;
-
-      // Build comprehensive reportData with all analysis data
-      const reportData = {
-        symbol: analysis.symbol,
-        generatedAt: new Date(analysis.createdAt).toLocaleDateString('en-US', {
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-        analysisId: analysis.id,
-        tradeType: analysis.interval === '5m' || analysis.interval === '15m' ? 'scalping' :
-                   analysis.interval === '1h' || analysis.interval === '4h' ? 'dayTrade' : 'swing',
-
-        // Step 1: Market Pulse - Full data
-        marketPulse: {
-          btcDominance: step1.btcDominance,
-          fearGreedIndex: step1.fearGreedIndex,
-          fearGreedLabel: step1.fearGreedLabel,
-          marketRegime: step1.marketRegime,
-          trend: step1.trend || { direction: 'neutral', strength: 0 },
-          btcPrice: step1.btcPrice,
-          totalMarketCap: step1.totalMarketCap,
-          altcoinSeasonIndex: step1.altcoinSeasonIndex,
-          gate: step1.gate,
-        },
-
-        // Step 2: Asset Scan - Full indicators
-        assetScan: {
-          currentPrice: step2.currentPrice,
-          priceChange24h: step2.priceChange24h,
-          volume24h: step2.volume24h,
-          timeframes: step2.timeframes,
-          forecast: step2.forecast,
-          levels: step2.levels,
-          indicators: {
-            rsi: step2.indicators?.rsi || 50,
-            macd: step2.indicators?.macd || { histogram: 0 },
-            movingAverages: step2.indicators?.movingAverages,
-            bollingerBands: step2.indicators?.bollingerBands,
-            atr: step2.indicators?.atr,
-          },
-          direction: step2.direction,
-          directionConfidence: step2.directionConfidence,
-          gate: step2.gate,
-        },
-
-        // Step 3: Safety Check - Full risk data
-        safetyCheck: {
-          riskLevel: step3.riskLevel,
-          warnings: step3.warnings,
-          manipulation: step3.manipulation || { pumpDumpRisk: 'low' },
-          whaleActivity: step3.whaleActivity || { bias: 'neutral' },
-          advancedMetrics: step3.advancedMetrics,
-          smartMoney: step3.smartMoney,
-          newsSentiment: step3.newsSentiment,
-          gate: step3.gate,
-        },
-
-        // Step 4: Timing - Full conditions
-        timing: {
-          tradeNow: step4.tradeNow,
-          reason: step4.reason,
-          conditions: step4.conditions,
-          entryZones: step4.entryZones,
-          optimalEntry: step4.optimalEntry,
-          waitFor: step4.waitFor,
-          gate: step4.gate,
-        },
-
-        // Step 5: Trade Plan - Full execution strategy
-        tradePlan: {
-          direction,
-          type: step5.type,
-          entries: step5.entries,
-          averageEntry: entryPrice,
-          stopLoss: {
-            price: stopLoss,
-            percentage: step5.stopLoss?.percentage,
-            reason: step5.stopLoss?.reason,
-            safetyAdjusted: step5.stopLoss?.safetyAdjusted,
-          },
-          takeProfits: (step5.takeProfits || []).map((tp: { price: number; percentage?: number; reason?: string; source?: string }) => ({
-            price: tp.price,
-            percentage: tp.percentage,
-            reason: tp.reason,
-            source: tp.source,
-          })),
-          riskReward: step5.riskReward || 2,
-          winRateEstimate: step5.winRateEstimate,
-          positionSizePercent: step5.positionSizePercent,
-          riskAmount: step5.riskAmount,
-          trailingStop: step5.trailingStop,
-          sources: step5.sources,
-          confidence: step5.confidence,
-          gate: step5.gate,
-        },
-
-        // Step 6: Trap Check - Full trap analysis
-        trapCheck: {
-          traps: step6.traps || { bullTrap: false, bearTrap: false, fakeoutRisk: 'low' },
-          liquidationLevels: step6.liquidationLevels,
-          counterStrategy: step6.counterStrategy,
-          proTip: step6.proTip,
-          riskLevel: step6.riskLevel,
-          gate: step6.gate,
-        },
-
-        // Step 7: Verdict - Full decision data
-        verdict: {
-          action: step7.action || step7.verdict,
-          overallScore: analysis.totalScore,
-          aiSummary: step7.aiSummary || step7.summary,
-          componentScores: step7.componentScores,
-          confidenceFactors: step7.confidenceFactors,
-          recommendation: step7.recommendation,
-        },
-
-        // Full 40+ Indicator Details (from step2 Asset Scan or step3 Safety Check)
-        indicatorDetails: step2.indicatorDetails || step3.indicatorDetails,
-      };
-
-      // Generate AI Expert comment
-      const isLong = direction === 'long';
-      const score = (analysis.totalScore || 0) * 10;
-      const riskLevel = step3.riskLevel || 'medium';
-      const fearGreed = step1.fearGreedIndex || 50;
-      const rsi = step2.indicators?.rsi || 50;
-
-      const aiExpertComment = `📊 AI Risk Assessment for ${analysis.symbol}/USDT
-
-**Overall Score: ${score}/100** - ${score >= 70 ? 'Strong' : score >= 50 ? 'Moderate' : 'Weak'} ${isLong ? 'Bullish' : 'Bearish'} Setup
-
-**Market Context:**
-• Fear & Greed Index: ${fearGreed} (${step1.fearGreedLabel || 'Neutral'})
-• BTC Dominance: ${step1.btcDominance?.toFixed(1) || 'N/A'}%
-• Market Regime: ${step1.marketRegime || 'Neutral'}
-
-**Technical Analysis:**
-• RSI: ${rsi?.toFixed(0) || 'N/A'} - ${rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral'}
-• 24h Change: ${step2.priceChange24h?.toFixed(2) || '0'}%
-
-**Risk Assessment:**
-• Risk Level: ${riskLevel.toUpperCase()}
-• Manipulation Risk: ${step3.manipulation?.pumpDumpRisk || 'Low'}
-• Whale Activity: ${step3.whaleActivity?.bias || 'Neutral'}
-
-**Trade Plan:**
-• Direction: ${direction.toUpperCase()}
-• Entry: $${entryPrice?.toFixed(entryPrice > 100 ? 2 : 4) || 'N/A'}
-• Stop Loss: $${stopLoss?.toFixed(stopLoss > 100 ? 2 : 4) || 'N/A'}
-• Take Profit: $${tp1?.toFixed(tp1 > 100 ? 2 : 4) || 'N/A'}
-• Risk/Reward: ${step5.riskReward?.toFixed(1) || '2.0'}:1
-
-**Recommendation:** ${step7.aiSummary || step7.summary || `${score >= 60 ? 'Conditions favor entry with proper risk management.' : 'Exercise caution and wait for better setup.'}`}`;
-
-      // Create report
-      const verdict = step7.action || step7.verdict || (isLong ? 'GO' : 'GO');
-      const response = await authFetch('/api/reports', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          symbol: analysis.symbol,
-          analysisId: analysis.id,
-          reportData,
-          verdict,
-          score: analysis.totalScore,
-          direction,
-          interval: analysis.interval,
-          entryPrice,
-          tradeType: reportData.tradeType,
-          aiExpertComment,
-        }),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error?.message || 'Failed to create report');
-      }
-
-      const data = await response.json();
-      if (data.success && data.data?.id) {
-        alert(`✅ Report created successfully for ${analysis.symbol}!`);
-      }
-    } catch (err) {
-      console.error('Failed to create report:', err);
-      alert(err instanceof Error ? err.message : 'Failed to create report');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  // Download PDF
-  const handleDownload = async (e: React.MouseEvent, analysis: RecentAnalysis) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setActionLoading({ id: analysis.id, action: 'download' });
-
-    try {
-      // Fetch full analysis data
-      const response = await authFetch(`/api/analysis/${analysis.id}`);
-      if (!response.ok) throw new Error('Failed to fetch analysis');
-
-      const data = await response.json();
-      if (!data.success || !data.data) throw new Error('Analysis not found');
-
-      const analysisData = data.data;
-      const step1 = analysisData.step1Result || {};
-      const step2 = analysisData.step2Result || {};
-      const step3 = analysisData.step3Result || {};
-      const step4 = analysisData.step4Result || {};
-      const step5 = analysisData.step5Result || {};
-      const step6 = analysisData.step6Result || {};
-      const step7 = analysisData.step7Result || {};
-
-      // Determine trade type from interval
-      let tradeType: 'scalping' | 'dayTrade' | 'swing' | undefined;
-      if (analysisData.interval === '5m' || analysisData.interval === '15m') tradeType = 'scalping';
-      else if (analysisData.interval === '1h' || analysisData.interval === '4h') tradeType = 'dayTrade';
-      else if (analysisData.interval === '1d' || analysisData.interval === '1D') tradeType = 'swing';
-
-      // Build COMPLETE report data with ALL fields
-      const reportData = {
-        symbol: analysis.symbol,
-        generatedAt: analysis.createdAt,
-        analysisId: analysis.id,
-        tradeType,
-
-        // Step 1: Market Pulse
-        marketPulse: {
-          btcDominance: step1.btcDominance,
-          fearGreedIndex: step1.fearGreedIndex,
-          fearGreedLabel: step1.fearGreedLabel,
-          marketRegime: step1.marketRegime,
-          trend: step1.trend || { direction: 'neutral', strength: 0 },
-          btcPrice: step1.btcPrice,
-          totalMarketCap: step1.totalMarketCap,
-          altcoinSeasonIndex: step1.altcoinSeasonIndex,
-          gate: step1.gate,
-        },
-
-        // Step 2: Asset Scan - FULL data
-        assetScan: {
-          symbol: analysis.symbol,
-          currentPrice: step2.currentPrice || analysis.currentPrice,
-          priceChange24h: step2.priceChange24h || 0,
-          volume24h: step2.volume24h,
-          timeframes: step2.timeframes,
-          forecast: step2.forecast,
-          levels: step2.levels,
-          indicators: step2.indicators || { rsi: 50, macd: { histogram: 0 } },
-          direction: step2.direction,
-          directionConfidence: step2.directionConfidence,
-          gate: step2.gate,
-          // Chart candle data for PDF generation
-          chartCandles: step2.chartCandles,
-        },
-
-        // Tokenomics - CRITICAL: Include tokenomics data!
-        tokenomics: step2.tokenomics || analysisData.tokenomics,
-
-        // Step 3: Safety Check
-        safetyCheck: {
-          riskLevel: step3.riskLevel,
-          warnings: step3.warnings,
-          manipulation: step3.manipulation || { pumpDumpRisk: 'low' },
-          whaleActivity: step3.whaleActivity || { bias: 'neutral' },
-          advancedMetrics: step3.advancedMetrics,
-          smartMoney: step3.smartMoney,
-          newsSentiment: step3.newsSentiment,
-          gate: step3.gate,
-        },
-
-        // Step 4: Timing
-        timing: {
-          tradeNow: step4.tradeNow,
-          reason: step4.reason,
-          conditions: step4.conditions,
-          entryZones: step4.entryZones,
-          optimalEntry: step4.optimalEntry,
-          waitFor: step4.waitFor,
-          gate: step4.gate,
-        },
-
-        // Step 5: Trade Plan
-        tradePlan: {
-          direction: step5.direction || analysis.direction,
-          type: step5.type,
-          entries: step5.entries,
-          averageEntry: step5.averageEntry || step5.entryPrice || analysis.entryPrice,
-          stopLoss: {
-            price: step5.stopLoss?.price || step5.stopLoss || analysis.stopLoss,
-            percentage: step5.stopLoss?.percentage,
-            reason: step5.stopLoss?.reason,
-          },
-          takeProfits: (step5.takeProfits || [
-            { price: step5.takeProfit1 || analysis.takeProfit1 },
-            { price: step5.takeProfit2 || analysis.takeProfit2 },
-            { price: step5.takeProfit3 || analysis.takeProfit3 },
-          ]).filter((tp: any) => tp?.price),
-          riskReward: step5.riskReward || 2,
-          winRateEstimate: step5.winRateEstimate,
-          positionSizePercent: step5.positionSizePercent,
-          confidence: step5.confidence,
-          gate: step5.gate,
-        },
-
-        // Step 6: Trap Check
-        trapCheck: {
-          traps: step6.traps || { bullTrap: false, bearTrap: false, fakeoutRisk: 'low' },
-          liquidationLevels: step6.liquidationLevels,
-          counterStrategy: step6.counterStrategy,
-          proTip: step6.proTip,
-          riskLevel: step6.riskLevel,
-          gate: step6.gate,
-        },
-
-        // Step 7: Verdict
-        verdict: {
-          action: step7.action || step7.verdict || analysis.verdict,
-          overallScore: analysis.score ?? 0,
-          aiSummary: step7.aiSummary || step7.summary,
-          componentScores: step7.componentScores,
-          confidenceFactors: step7.confidenceFactors,
-          recommendation: step7.recommendation,
-        },
-
-        // Full 40+ Indicator Details
-        indicatorDetails: step2.indicatorDetails || step3.indicatorDetails,
-      };
-
-      const { generateAnalysisReport } = await import('../reports/AnalysisReport');
-      await generateAnalysisReport(reportData);
-    } catch (err) {
-      console.error('Failed to download:', err);
-      alert('Failed to download PDF');
-    } finally {
-      setActionLoading(null);
     }
   };
 
@@ -779,16 +405,12 @@ export function RecentAnalyses() {
         <ListView
           analyses={filteredAnalyses}
           actionLoading={actionLoading}
-          onCreateReport={handleCreateReport}
-          onDownload={handleDownload}
           onEmail={handleEmail}
         />
       ) : (
         <CardView
           analyses={filteredAnalyses}
           actionLoading={actionLoading}
-          onCreateReport={handleCreateReport}
-          onDownload={handleDownload}
           onEmail={handleEmail}
         />
       )}
@@ -799,13 +421,11 @@ export function RecentAnalyses() {
 interface ViewProps {
   analyses: RecentAnalysis[];
   actionLoading: { id: string; action: string } | null;
-  onCreateReport: (e: React.MouseEvent, id: string) => void;
-  onDownload: (e: React.MouseEvent, analysis: RecentAnalysis) => void;
   onEmail: (e: React.MouseEvent, analysis: RecentAnalysis) => void;
 }
 
 // Compact List View
-function ListView({ analyses, actionLoading, onCreateReport, onDownload, onEmail }: ViewProps) {
+function ListView({ analyses, actionLoading, onEmail }: ViewProps) {
   return (
     <div className="space-y-1 max-h-[400px] overflow-y-auto">
       {analyses.map((analysis) => {
@@ -885,50 +505,19 @@ function ListView({ analyses, actionLoading, onCreateReport, onDownload, onEmail
               <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-slate-300 shrink-0" />
             </Link>
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-0.5 shrink-0">
-              {/* Create Report */}
-              <button
-                onClick={(e) => onCreateReport(e, analysis.id)}
-                disabled={isLoading}
-                className="p-1.5 rounded hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition"
-                title="Create Report"
-              >
-                {isLoading && actionLoading?.action === 'report' ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <FileText className="w-3.5 h-3.5" />
-                )}
-              </button>
-
-              {/* Download PDF */}
-              <button
-                onClick={(e) => onDownload(e, analysis)}
-                disabled={isLoading}
-                className="p-1.5 rounded hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 transition"
-                title="Download PDF"
-              >
-                {isLoading && actionLoading?.action === 'download' ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Download className="w-3.5 h-3.5" />
-                )}
-              </button>
-
-              {/* Email */}
-              <button
-                onClick={(e) => onEmail(e, analysis)}
-                disabled={isLoading}
-                className="p-1.5 rounded hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition"
-                title="Send Email"
-              >
-                {isLoading && actionLoading?.action === 'email' ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Mail className="w-3.5 h-3.5" />
-                )}
-              </button>
-            </div>
+            {/* Email button only */}
+            <button
+              onClick={(e) => onEmail(e, analysis)}
+              disabled={isLoading}
+              className="p-1.5 rounded hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition shrink-0"
+              title="Send Email"
+            >
+              {isLoading && actionLoading?.action === 'email' ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Mail className="w-3.5 h-3.5" />
+              )}
+            </button>
           </div>
         );
       })}
@@ -937,7 +526,7 @@ function ListView({ analyses, actionLoading, onCreateReport, onDownload, onEmail
 }
 
 // Card View
-function CardView({ analyses, actionLoading, onCreateReport, onDownload, onEmail }: ViewProps) {
+function CardView({ analyses, actionLoading, onEmail }: ViewProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto">
       {analyses.map((analysis) => {
@@ -1088,43 +677,19 @@ function CardView({ analyses, actionLoading, onCreateReport, onDownload, onEmail
               </div>
             </Link>
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-1 pt-2 border-t border-gray-200 dark:border-slate-700">
-              <button
-                onClick={(e) => onCreateReport(e, analysis.id)}
-                disabled={isLoading}
-                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-[10px] font-medium bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition"
-              >
-                {isLoading && actionLoading?.action === 'report' ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <FileText className="w-3 h-3" />
-                )}
-                Report
-              </button>
-              <button
-                onClick={(e) => onDownload(e, analysis)}
-                disabled={isLoading}
-                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-[10px] font-medium bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition"
-              >
-                {isLoading && actionLoading?.action === 'download' ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Download className="w-3 h-3" />
-                )}
-                PDF
-              </button>
+            {/* Email button only */}
+            <div className="flex items-center justify-center pt-2 border-t border-gray-200 dark:border-slate-700">
               <button
                 onClick={(e) => onEmail(e, analysis)}
                 disabled={isLoading}
-                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-[10px] font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 transition"
+                className="flex items-center justify-center gap-1.5 py-1.5 px-4 rounded text-[11px] font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 transition"
               >
                 {isLoading && actionLoading?.action === 'email' ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
-                  <Mail className="w-3 h-3" />
+                  <Mail className="w-3.5 h-3.5" />
                 )}
-                Email
+                Send Email
               </button>
             </div>
           </div>

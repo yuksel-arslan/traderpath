@@ -47,6 +47,7 @@ interface SendEmailBody {
 
 interface SendHtmlEmailBody {
   reportId: string;
+  chartImage?: string; // Base64 encoded chart image
   reportData: {
     symbol: string;
     generatedAt: string;
@@ -1343,7 +1344,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
           });
         }
 
-        const { reportId, reportData } = request.body as SendHtmlEmailBody;
+        const { reportId, reportData, chartImage } = request.body as SendHtmlEmailBody;
 
         if (!reportId || !reportData) {
           return reply.code(400).send({
@@ -1380,14 +1381,14 @@ export async function reportRoutes(fastify: FastifyInstance) {
         }
 
         // Generate HTML email content
-        const htmlContent = generateReportHtmlEmail(reportData, user.name || 'Trader');
+        const htmlContent = generateReportHtmlEmail(reportData, user.name || 'Trader', chartImage);
 
         // Send the email
         const result = await emailService.sendEmail({
           to: user.email,
-          subject: `📊 ${reportData.symbol}/USDT Analysis Report - TradePath`,
+          subject: `${reportData.symbol}/USDT Analysis Report - TraderPath`,
           html: htmlContent,
-          text: `Your ${reportData.symbol}/USDT analysis report from TradePath. View this email in HTML format for best experience.`,
+          text: `Your ${reportData.symbol}/USDT analysis report from TraderPath. View this email in HTML format for best experience.`,
         });
 
         if (!result.success) {
@@ -1426,10 +1427,127 @@ export async function reportRoutes(fastify: FastifyInstance) {
   );
 }
 
+// Get coin icon URL for email
+function getCoinIconUrl(symbol: string): string {
+  const coinId = symbol.toLowerCase();
+  // Use CoinGecko API for coin icons (more reliable for email)
+  return `https://cryptoicons.org/api/icon/${coinId}/64`;
+}
+
+// Generate SVG trade plan chart for email
+function generateTradePlanChartSvg(
+  direction: string,
+  entryPrice: number | undefined,
+  stopLoss: number | undefined,
+  takeProfits: Array<{ price: number }> | undefined,
+  currentPrice: number | undefined
+): string {
+  if (!entryPrice || !stopLoss) return '';
+
+  const isLong = direction === 'long';
+  const tp1 = takeProfits?.[0]?.price;
+  const tp2 = takeProfits?.[1]?.price;
+  const tp3 = takeProfits?.[2]?.price;
+
+  // Calculate price range
+  const prices = [entryPrice, stopLoss, tp1, tp2, tp3, currentPrice].filter(Boolean) as number[];
+  const minPrice = Math.min(...prices) * 0.995;
+  const maxPrice = Math.max(...prices) * 1.005;
+  const priceRange = maxPrice - minPrice;
+
+  const width = 540;
+  const height = 200;
+  const padding = 40;
+  const chartWidth = width - padding * 2;
+  const chartHeight = height - padding * 2;
+
+  // Convert price to Y coordinate
+  const priceToY = (price: number) => {
+    const ratio = (price - minPrice) / priceRange;
+    return height - padding - ratio * chartHeight;
+  };
+
+  // Format price for display
+  const formatPrice = (price: number) => {
+    if (price >= 1000) return price.toFixed(0);
+    if (price >= 1) return price.toFixed(2);
+    if (price >= 0.01) return price.toFixed(4);
+    return price.toFixed(6);
+  };
+
+  const entryY = priceToY(entryPrice);
+  const slY = priceToY(stopLoss);
+  const tp1Y = tp1 ? priceToY(tp1) : null;
+  const tp2Y = tp2 ? priceToY(tp2) : null;
+  const tp3Y = tp3 ? priceToY(tp3) : null;
+  const currentY = currentPrice ? priceToY(currentPrice) : null;
+
+  let svg = `
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#1a1a2e"/>
+          <stop offset="100%" style="stop-color:#0f172a"/>
+        </linearGradient>
+      </defs>
+      <rect width="${width}" height="${height}" fill="url(#bgGradient)" rx="8"/>
+
+      <!-- Price range area -->
+      <rect x="${padding}" y="${padding}" width="${chartWidth}" height="${chartHeight}" fill="#334155" rx="4" opacity="0.5"/>
+
+      <!-- Entry line (cyan) -->
+      <line x1="${padding}" y1="${entryY}" x2="${width - padding}" y2="${entryY}" stroke="#22d3ee" stroke-width="2" stroke-dasharray="5,5"/>
+      <text x="${padding + 5}" y="${entryY - 5}" fill="#22d3ee" font-size="11" font-family="Arial">Entry: $${formatPrice(entryPrice)}</text>
+
+      <!-- Stop Loss line (red) -->
+      <line x1="${padding}" y1="${slY}" x2="${width - padding}" y2="${slY}" stroke="#ef4444" stroke-width="2"/>
+      <text x="${padding + 5}" y="${slY + 15}" fill="#ef4444" font-size="11" font-family="Arial">SL: $${formatPrice(stopLoss)}</text>`;
+
+  // Take Profit lines (green)
+  if (tp1Y !== null && tp1) {
+    svg += `
+      <line x1="${padding}" y1="${tp1Y}" x2="${width - padding}" y2="${tp1Y}" stroke="#10b981" stroke-width="2"/>
+      <text x="${width - padding - 80}" y="${tp1Y - 5}" fill="#10b981" font-size="11" font-family="Arial">TP1: $${formatPrice(tp1)}</text>`;
+  }
+  if (tp2Y !== null && tp2) {
+    svg += `
+      <line x1="${padding}" y1="${tp2Y}" x2="${width - padding}" y2="${tp2Y}" stroke="#10b981" stroke-width="2" stroke-dasharray="3,3"/>
+      <text x="${width - padding - 80}" y="${tp2Y - 5}" fill="#10b981" font-size="10" font-family="Arial">TP2: $${formatPrice(tp2)}</text>`;
+  }
+  if (tp3Y !== null && tp3) {
+    svg += `
+      <line x1="${padding}" y1="${tp3Y}" x2="${width - padding}" y2="${tp3Y}" stroke="#10b981" stroke-width="2" stroke-dasharray="2,4"/>
+      <text x="${width - padding - 80}" y="${tp3Y - 5}" fill="#10b981" font-size="10" font-family="Arial">TP3: $${formatPrice(tp3)}</text>`;
+  }
+
+  // Current price marker
+  if (currentY !== null && currentPrice) {
+    svg += `
+      <circle cx="${width / 2}" cy="${currentY}" r="6" fill="#f59e0b"/>
+      <text x="${width / 2 + 10}" y="${currentY + 4}" fill="#f59e0b" font-size="11" font-family="Arial">Current: $${formatPrice(currentPrice)}</text>`;
+  }
+
+  // Direction arrow
+  const arrowY = padding + 15;
+  if (isLong) {
+    svg += `
+      <polygon points="${width - padding - 30},${arrowY + 10} ${width - padding - 20},${arrowY} ${width - padding - 10},${arrowY + 10}" fill="#10b981"/>
+      <text x="${width - padding - 55}" y="${arrowY + 12}" fill="#10b981" font-size="12" font-family="Arial" font-weight="bold">LONG</text>`;
+  } else {
+    svg += `
+      <polygon points="${width - padding - 30},${arrowY} ${width - padding - 20},${arrowY + 10} ${width - padding - 10},${arrowY}" fill="#ef4444"/>
+      <text x="${width - padding - 55}" y="${arrowY + 12}" fill="#ef4444" font-size="12" font-family="Arial" font-weight="bold">SHORT</text>`;
+  }
+
+  svg += '</svg>';
+  return svg;
+}
+
 // Generate HTML email content for report
 function generateReportHtmlEmail(
   data: SendHtmlEmailBody['reportData'],
-  userName: string
+  userName: string,
+  chartImage?: string
 ): string {
   const symbol = data.symbol || 'N/A';
   const generatedAt = data.generatedAt || new Date().toLocaleString('tr-TR');
@@ -1439,7 +1557,6 @@ function generateReportHtmlEmail(
   const marketPulse = data.marketPulse as Record<string, unknown> | undefined;
   const safetyCheck = data.safetyCheck as Record<string, unknown> | undefined;
   const timing = data.timing as Record<string, unknown> | undefined;
-  const trapCheck = data.trapCheck as Record<string, unknown> | undefined;
 
   const direction = (tradePlan?.direction as string) || 'long';
   const isLong = direction === 'long';
@@ -1465,7 +1582,31 @@ function generateReportHtmlEmail(
   const btcDominance = marketPulse?.btcDominance as number | undefined;
   const riskLevel = safetyCheck?.riskLevel as string | undefined;
   const tradeNow = timing?.tradeNow as boolean | undefined;
-  const traps = trapCheck?.traps as Record<string, unknown> | undefined;
+  const coinIconUrl = getCoinIconUrl(symbol);
+
+  // Generate SVG chart if no chartImage provided
+  const svgChart = chartImage ? '' : generateTradePlanChartSvg(
+    direction,
+    entryPrice,
+    stopLoss,
+    takeProfits,
+    currentPrice
+  );
+
+  // TraderPath logo as inline SVG (works better in email than external images)
+  const traderPathLogo = `
+    <div style="text-align: center; margin-bottom: 10px;">
+      <svg width="48" height="48" viewBox="0 0 512 512" style="display: inline-block;">
+        <rect width="512" height="512" rx="96" fill="#0D1421"/>
+        <g transform="translate(96, 96) scale(0.625)">
+          <rect x="32" y="256" width="80" height="200" rx="8" fill="#22C55E"/>
+          <rect x="144" y="180" width="80" height="276" rx="8" fill="#EF4444"/>
+          <rect x="256" y="100" width="80" height="356" rx="8" fill="#22C55E"/>
+          <rect x="368" y="56" width="80" height="400" rx="8" fill="#EF4444"/>
+        </g>
+      </svg>
+    </div>
+  `;
 
   return `
 <!DOCTYPE html>
@@ -1481,21 +1622,41 @@ function generateReportHtmlEmail(
       <td align="center">
         <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
 
-          <!-- Header -->
+          <!-- Header with Logo -->
           <tr>
-            <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">
-                📊 ${symbol}/USDT Analysis
+            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 30px; text-align: center;">
+              ${traderPathLogo}
+              <h1 style="margin: 0; font-size: 24px; font-weight: bold;">
+                <span style="color: #10b981;">Trader</span><span style="color: #ef4444;">Path</span>
               </h1>
-              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">
-                Generated: ${generatedAt}
+              <p style="margin: 5px 0 0; color: #64748b; font-size: 12px;">
+                AI-Powered Trading Analysis
               </p>
+            </td>
+          </tr>
+
+          <!-- Symbol Header with Coin Icon -->
+          <tr>
+            <td style="background: linear-gradient(135deg, ${isLong ? '#10b981' : '#ef4444'} 0%, ${isLong ? '#059669' : '#dc2626'} 100%); padding: 25px; text-align: center;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center">
+                    <img src="${coinIconUrl}" alt="${symbol}" width="48" height="48" style="border-radius: 50%; background: #ffffff; padding: 4px; display: inline-block; vertical-align: middle;" onerror="this.style.display='none'"/>
+                    <h2 style="margin: 10px 0 0; color: #ffffff; font-size: 24px; font-weight: bold;">
+                      ${symbol}/USDT Analysis
+                    </h2>
+                    <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 13px;">
+                      ${generatedAt}
+                    </p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
           <!-- Score & Direction -->
           <tr>
-            <td style="padding: 30px;">
+            <td style="padding: 25px;">
               <table width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td align="center">
@@ -1504,7 +1665,7 @@ function generateReportHtmlEmail(
                         ${score}/100
                       </span>
                       <span style="display: block; color: ${isLong ? '#10b981' : '#ef4444'}; font-size: 16px; font-weight: 600; margin-top: 5px;">
-                        ${isLong ? '▲ LONG' : '▼ SHORT'} • ${action}
+                        ${isLong ? 'LONG' : 'SHORT'} - ${action}
                       </span>
                     </div>
                   </td>
@@ -1513,11 +1674,28 @@ function generateReportHtmlEmail(
             </td>
           </tr>
 
+          <!-- Trade Plan Chart -->
+          ${chartImage || svgChart ? `
+          <tr>
+            <td style="padding: 0 30px 20px;">
+              <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
+                Trade Plan Chart
+              </h2>
+              <div style="background-color: #1a1a2e; border-radius: 8px; padding: 10px; text-align: center;">
+                ${chartImage
+                  ? `<img src="${chartImage}" alt="Trade Plan Chart" style="max-width: 100%; height: auto; border-radius: 8px;"/>`
+                  : svgChart
+                }
+              </div>
+            </td>
+          </tr>
+          ` : ''}
+
           <!-- Trade Plan -->
           <tr>
             <td style="padding: 0 30px 20px;">
               <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
-                💰 Trade Plan
+                Trade Plan
               </h2>
               <table width="100%" cellspacing="0" cellpadding="10" style="background-color: #334155; border-radius: 8px;">
                 <tr>
@@ -1542,7 +1720,7 @@ function generateReportHtmlEmail(
           <tr>
             <td style="padding: 0 30px 20px;">
               <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
-                📈 Analysis Summary
+                Analysis Summary
               </h2>
               <table width="100%" cellspacing="10" cellpadding="0">
                 <tr>
@@ -1590,7 +1768,7 @@ function generateReportHtmlEmail(
                   <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
                     <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Timing</span>
                     <div style="color: ${tradeNow ? '#10b981' : '#f59e0b'}; font-size: 16px; font-weight: 600; margin-top: 4px;">
-                      ${tradeNow ? '✅ Good Entry' : '⏳ Wait'}
+                      ${tradeNow ? 'Good Entry' : 'Wait'}
                     </div>
                   </td>
                 </tr>
@@ -1603,7 +1781,7 @@ function generateReportHtmlEmail(
           <tr>
             <td style="padding: 0 30px 20px;">
               <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
-                🤖 AI Expert Review
+                AI Expert Review
               </h2>
               <div style="background-color: #334155; border-radius: 8px; padding: 15px; border-left: 4px solid #f59e0b;">
                 <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">
@@ -1618,7 +1796,7 @@ function generateReportHtmlEmail(
           <tr>
             <td style="background-color: #0f172a; padding: 20px 30px; text-align: center; border-top: 1px solid #334155;">
               <p style="color: #64748b; font-size: 12px; margin: 0;">
-                This report was sent from <span style="color: #10b981;">Trade</span><span style="color: #ef4444;">Path</span>
+                This report was sent from <span style="color: #10b981;">Trader</span><span style="color: #ef4444;">Path</span>
               </p>
               <p style="color: #475569; font-size: 11px; margin: 10px 0 0;">
                 This is not financial advice. Always do your own research before trading.
