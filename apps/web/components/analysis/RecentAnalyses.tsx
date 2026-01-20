@@ -469,6 +469,7 @@ export function RecentAnalyses() {
 
         // Step 2: Asset Scan - FULL data
         assetScan: {
+          symbol: analysis.symbol,
           currentPrice: step2.currentPrice || analysis.currentPrice,
           priceChange24h: step2.priceChange24h || 0,
           volume24h: step2.volume24h,
@@ -479,6 +480,8 @@ export function RecentAnalyses() {
           direction: step2.direction,
           directionConfidence: step2.directionConfidence,
           gate: step2.gate,
+          // Chart candle data for PDF generation
+          chartCandles: step2.chartCandles,
         },
 
         // Tokenomics - CRITICAL: Include tokenomics data!
