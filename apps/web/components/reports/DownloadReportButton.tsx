@@ -1106,7 +1106,7 @@ export function DownloadReportButton({
             ) : (
               <FileText className="w-4 h-4" />
             )}
-            <span>{selectedReportType === 'detailed' ? 'Detailed' : 'Standard'}</span>
+            <span>{selectedReportType === 'detailed' ? 'Detailed Analysis' : 'Executive Summary'}</span>
             <ChevronDown className="w-3 h-3" />
           </button>
 
@@ -1122,10 +1122,10 @@ export function DownloadReportButton({
                   selectedReportType === 'standard' && 'bg-primary/10'
                 )}
               >
-                <FileText className="w-5 h-5 mt-0.5 text-muted-foreground" />
+                <FileText className="w-5 h-5 mt-0.5 text-teal-500" />
                 <div>
-                  <div className="font-medium text-sm">Standard Report</div>
-                  <div className="text-xs text-muted-foreground">3-page summary with key insights</div>
+                  <div className="font-medium text-sm">Executive Summary</div>
+                  <div className="text-xs text-muted-foreground">7 steps + trade plan (6 pages)</div>
                 </div>
               </button>
               <button
@@ -1138,13 +1138,12 @@ export function DownloadReportButton({
                   selectedReportType === 'detailed' && 'bg-primary/10'
                 )}
               >
-                <BarChart3 className="w-5 h-5 mt-0.5 text-purple-500" />
+                <BarChart3 className="w-5 h-5 mt-0.5 text-coral-500" />
                 <div>
                   <div className="font-medium text-sm flex items-center gap-2">
-                    Detailed Report
-                    <span className="px-1.5 py-0.5 text-xs bg-purple-500/20 text-purple-500 rounded">NEW</span>
+                    Detailed Analysis Report
                   </div>
-                  <div className="text-xs text-muted-foreground">Full analysis with indicator charts</div>
+                  <div className="text-xs text-muted-foreground">Full analysis with all indicator charts</div>
                 </div>
               </button>
             </div>
@@ -1209,7 +1208,7 @@ export function DownloadReportButton({
           {isGenerating ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              {needsTranslation ? 'Translating...' : selectedReportType === 'detailed' ? 'Generating Detailed...' : 'Generating...'}
+              {needsTranslation ? 'Translating...' : selectedReportType === 'detailed' ? 'Generating Detailed Report...' : 'Generating Executive Summary...'}
             </>
           ) : isSaved ? (
             <>
@@ -1219,7 +1218,7 @@ export function DownloadReportButton({
           ) : (
             <>
               {selectedReportType === 'detailed' ? <BarChart3 className="w-4 h-4" /> : <FileDown className="w-4 h-4" />}
-              {selectedReportType === 'detailed' ? 'Download Detailed PDF' : 'Download PDF'}
+              {selectedReportType === 'detailed' ? 'Download Detailed Analysis' : 'Download Executive Summary'}
             </>
           )}
         </button>

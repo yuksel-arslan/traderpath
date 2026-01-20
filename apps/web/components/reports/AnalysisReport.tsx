@@ -216,17 +216,20 @@ function formatDirection(dir: string | null | undefined): string {
   return dir.charAt(0).toUpperCase() + dir.slice(1);
 }
 
-function getGateStatus(gate: { canProceed: boolean; confidence: number } | undefined): { text: string; color: string } {
+function getGateStatus(gate: { canProceed?: boolean; passed?: boolean; confidence: number } | undefined): { text: string; color: string } {
   if (!gate) return { text: '', color: '#666' };
   const conf = formatPercent(gate.confidence);
-  return gate.canProceed ? { text: `Passed ${conf}`, color: '#16a34a' } : { text: `Review ${conf}`, color: '#d97706' };
+  // Support both canProceed and passed properties
+  const isPassed = gate.canProceed ?? gate.passed ?? false;
+  return isPassed ? { text: `Passed ${conf}`, color: '#16a34a' } : { text: `Review ${conf}`, color: '#d97706' };
 }
 
 function formatAction(actionOrVerdict: string | undefined): string {
-  if (!actionOrVerdict) return 'ANALYSIS COMPLETE';
+  if (!actionOrVerdict) return 'WAIT';
   const map: Record<string, string> = {
     'go': 'GO', 'conditional_go': 'Conditionally GO', 'conditionally_go': 'Conditionally GO',
     'wait': 'WAIT', 'no_go': 'NO GO', 'avoid': 'AVOID', 'stop': 'STOP', 'hold': 'HOLD',
+    'long': 'LONG', 'short': 'SHORT', 'neutral': 'WAIT',
   };
   const lower = actionOrVerdict.toLowerCase().replace(/-/g, '_');
   return map[lower] || actionOrVerdict.toUpperCase().replace(/_/g, ' ');
@@ -394,7 +397,10 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
   const v = data.verdict;
   const as = data.assetScan;
   const mp = data.marketPulse;
-  const isLong = tp?.direction === 'long';
+  const direction = tp?.direction;
+  const isLong = direction === 'long';
+  const isShort = direction === 'short';
+  const hasDirection = direction === 'long' || direction === 'short';
   const score = formatPercent(v?.overallScore);
   const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'Day Trade', swing: 'Swing Trade' };
 
@@ -410,16 +416,16 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
       <div style="font-size: 9px; color: #666; margin-top: 3px;">${tradeTypes[data.tradeType || ''] || 'Analysis'} | ${data.generatedAt}</div>
       <div style="margin-top: 8px;">
         <span class="symbol" style="font-size: 18px;">${data.symbol}/USDT</span>
-        <span class="direction-tag ${isLong ? 'tag-long' : 'tag-short'}" style="font-size: 14px; margin-left: 10px;">${isLong ? 'LONG' : 'SHORT'}</span>
+        <span class="direction-tag ${hasDirection ? (isLong ? 'tag-long' : 'tag-short') : ''}" style="font-size: 14px; margin-left: 10px; ${!hasDirection ? 'background: #fef3c7; color: #d97706;' : ''}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'WAIT'}</span>
       </div>
     </div>
 
     <!-- Direction & Quick Stats Box (No verdict here - verdict is on final page) -->
-    <div class="step-box" style="background: ${isLong ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fef2f2, #fee2e2)'}; border: 1px solid ${isLong ? '#16a34a' : '#dc2626'}; padding: 10px 15px;">
+    <div class="step-box" style="background: ${hasDirection ? (isLong ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fef2f2, #fee2e2)') : 'linear-gradient(135deg, #fef3c7, #fde68a)'}; border: 1px solid ${hasDirection ? (isLong ? '#16a34a' : '#dc2626') : '#d97706'}; padding: 10px 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
           <div style="font-size: 8px; color: #666; margin-bottom: 2px;">POSITION TYPE</div>
-          <div style="font-size: 18px; font-weight: 700; ${isLong ? 'color: #16a34a' : 'color: #dc2626'}">${isLong ? 'LONG' : 'SHORT'}</div>
+          <div style="font-size: 18px; font-weight: 700; ${hasDirection ? (isLong ? 'color: #16a34a' : 'color: #dc2626') : 'color: #d97706'}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'WAIT'}</div>
         </div>
         <div style="text-align: center;">
           <div style="font-size: 8px; color: #666; margin-bottom: 2px;">CONFIDENCE</div>
@@ -772,18 +778,24 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
 // ===========================================
 
 function generatePageSteps123(data: AnalysisReportData, totalPages: number): string {
-  const mp = data.marketPulse;
-  const as = data.assetScan;
-  const sc = data.safetyCheck;
+  // Default values to prevent null access errors
+  const defaultGate = { canProceed: false, passed: false, reason: '', confidence: 0 };
+  const defaultTrend = { direction: 'neutral', strength: 0 };
+  const defaultLevels = { support: [], resistance: [] };
+  const defaultIndicators = { rsi: 50, macd: { histogram: 0 }, bb: { percentB: 50 } };
+
+  const mp = data.marketPulse || { fearGreedIndex: 50, fearGreedLabel: 'N/A', btcDominance: 0, trend: defaultTrend, marketRegime: 'ranging', gate: defaultGate };
+  const as = data.assetScan || { currentPrice: 0, priceChange24h: 0, volume24h: 0, direction: 'neutral', directionConfidence: 0, indicators: defaultIndicators, levels: defaultLevels, gate: defaultGate };
+  const sc = data.safetyCheck || { riskScore: 50, liquidityScore: 50, volatilityScore: 50, manipulationRisk: 50, overallSafety: 'moderate', gate: defaultGate };
   const tk = data.tokenomics;
-  const mpGate = getGateStatus(mp.gate);
-  const asGate = getGateStatus(as.gate);
-  const scGate = getGateStatus(sc.gate);
+  const mpGate = mp?.gate ? getGateStatus(mp.gate) : { text: 'N/A', color: '#666' };
+  const asGate = as?.gate ? getGateStatus(as.gate) : { text: 'N/A', color: '#666' };
+  const scGate = sc?.gate ? getGateStatus(sc.gate) : { text: 'N/A', color: '#666' };
 
   // Step Summaries from gate reasons
-  const mpSummary = mp.gate?.reason ? `Market Pulse: ${mp.gate.reason}` : '';
-  const asSummary = as.gate?.reason ? `Asset Scan: ${as.gate.reason}` : '';
-  const scSummary = sc.gate?.reason ? `Safety Check: ${sc.gate.reason}` : '';
+  const mpSummary = mp?.gate?.reason ? `Market Pulse: ${mp.gate.reason}` : '';
+  const asSummary = as?.gate?.reason ? `Asset Scan: ${as.gate.reason}` : '';
+  const scSummary = sc?.gate?.reason ? `Safety Check: ${sc.gate.reason}` : '';
 
   // Get indicators for each step
   const ind = data.indicatorDetails;
@@ -972,17 +984,21 @@ function generatePageSteps123(data: AnalysisReportData, totalPages: number): str
 // ===========================================
 
 function generatePageSteps456(data: AnalysisReportData, totalPages: number): string {
-  const tm = data.timing;
-  const tp = data.tradePlan;
-  const tc = data.trapCheck;
+  // Default values to prevent null access errors
+  const defaultGate = { canProceed: false, passed: false, reason: '', confidence: 0 };
+  const defaultTraps = { bullTrap: false, bearTrap: false, fakeoutRisk: 'low', liquidityGrab: { detected: false, zones: [] } };
+
+  const tm = data.timing || { optimalEntryWindow: 'N/A', entryUrgency: 'wait', patterns: [], timeframeAlignment: 0, tradeNow: false, reason: 'Data unavailable', conditions: [], entryZones: [], gate: defaultGate };
+  const tp = data.tradePlan || { direction: 'neutral', entry: 0, stopLoss: 0, takeProfit1: 0, takeProfit2: 0, takeProfit3: 0, riskReward: 0, positionSize: 0, leverage: 1, riskPercent: 0, potentialProfit: 0, potentialLoss: 0, gate: defaultGate };
+  const tc = data.trapCheck || { traps: defaultTraps, washTradingDetected: false, overallTrapRisk: 'low', warnings: [], proTip: '', gate: defaultGate };
   const isLong = tp?.direction === 'long';
-  const tmGate = getGateStatus(tm.gate);
-  const tpGate = getGateStatus(tp.gate);
-  const tcGate = tc?.gate ? getGateStatus(tc.gate) : { text: '', color: '#666' };
+  const tmGate = tm?.gate ? getGateStatus(tm.gate) : { text: 'N/A', color: '#666' };
+  const tpGate = tp?.gate ? getGateStatus(tp.gate) : { text: 'N/A', color: '#666' };
+  const tcGate = tc?.gate ? getGateStatus(tc.gate) : { text: 'N/A', color: '#666' };
 
   // Step Summaries from gate reasons
-  const tmSummary = tm.gate?.reason ? `Timing: ${tm.gate.reason}` : '';
-  const tpSummary = tp.gate?.reason ? `Trade Plan: ${tp.gate.reason}` : '';
+  const tmSummary = tm?.gate?.reason ? `Timing: ${tm.gate.reason}` : '';
+  const tpSummary = tp?.gate?.reason ? `Trade Plan: ${tp.gate.reason}` : '';
   const tcSummary = tc?.gate?.reason ? `Trap Check: ${tc.gate.reason}` : '';
 
   // Get indicators
@@ -1179,9 +1195,20 @@ function generatePageSteps456(data: AnalysisReportData, totalPages: number): str
 // ===========================================
 
 function generatePageVerdict(data: AnalysisReportData, totalPages: number): string {
-  const v = data.verdict;
+  // Default verdict values
+  const defaultVerdict = {
+    action: 'WAIT',
+    verdict: 'WAIT',
+    overallScore: 50,
+    confidenceFactors: [],
+    recommendation: 'Insufficient data for analysis. Please wait for complete data.',
+  };
+  const v = data.verdict || defaultVerdict;
   const ind = data.indicatorDetails;
-  const isLong = data.tradePlan?.direction === 'long';
+  const direction = data.tradePlan?.direction;
+  const isLong = direction === 'long';
+  const isShort = direction === 'short';
+  const hasDirection = direction === 'long' || direction === 'short';
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
@@ -1199,15 +1226,15 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
     </div>
 
     <!-- Step 07: Final Verdict -->
-    <div class="step-box" style="background: ${isLong ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fef2f2, #fee2e2)'};">
+    <div class="step-box" style="background: ${hasDirection ? (isLong ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fef2f2, #fee2e2)') : 'linear-gradient(135deg, #fef3c7, #fde68a)'};">
       <div class="step-box-header">
         <span class="step-box-num">07</span>
         <span class="step-box-title">Final Verdict</span>
       </div>
       <div style="text-align: center; padding: 10px 0;">
-        <div style="font-size: 24px; font-weight: 700; ${isLong ? 'color: #16a34a' : 'color: #dc2626'}">${formatAction(getVerdictAction(v))}</div>
+        <div style="font-size: 24px; font-weight: 700; ${hasDirection ? (isLong ? 'color: #16a34a' : 'color: #dc2626') : 'color: #d97706'}">${formatAction(getVerdictAction(v))}</div>
         <div style="font-size: 28px; font-weight: 800; margin: 8px 0;">${formatPercent(v?.overallScore)}</div>
-        <div style="font-size: 9px; color: #666;">${isLong ? 'Bullish setup - Long position recommended' : 'Bearish setup - Short position recommended'}</div>
+        <div style="font-size: 9px; color: #666;">${hasDirection ? (isLong ? 'Bullish setup - Long position recommended' : 'Bearish setup - Short position recommended') : 'Market conditions unclear - Wait for better setup'}</div>
       </div>
     </div>
 
