@@ -653,9 +653,7 @@ export default async function authRoutes(app: FastifyInstance) {
             createdAt: user.createdAt,
             isAdmin,
           },
-          credits: isAdmin
-            ? { ...user.creditBalance, balance: 999999 }
-            : user.creditBalance,
+          credits: user.creditBalance,
         },
       });
     } catch (error) {
