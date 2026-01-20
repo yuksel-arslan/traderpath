@@ -1585,13 +1585,22 @@ function generateReportHtmlEmail(
   const coinIconUrl = getCoinIconUrl(symbol);
 
   // Generate SVG chart if no chartImage provided
-  const svgChart = chartImage ? '' : generateTradePlanChartSvg(
-    direction,
-    entryPrice,
-    stopLoss,
-    takeProfits,
-    currentPrice
-  );
+  // Convert to base64 data URL because email clients don't support inline SVG
+  let svgChartDataUrl = '';
+  if (!chartImage) {
+    const svgString = generateTradePlanChartSvg(
+      direction,
+      entryPrice,
+      stopLoss,
+      takeProfits,
+      currentPrice
+    );
+    if (svgString) {
+      // Encode SVG as base64 data URL for email compatibility
+      const svgBase64 = Buffer.from(svgString).toString('base64');
+      svgChartDataUrl = `data:image/svg+xml;base64,${svgBase64}`;
+    }
+  }
 
   // TraderPath logo as inline SVG (works better in email than external images)
   const traderPathLogo = `
@@ -1675,17 +1684,14 @@ function generateReportHtmlEmail(
           </tr>
 
           <!-- Trade Plan Chart -->
-          ${chartImage || svgChart ? `
+          ${chartImage || svgChartDataUrl ? `
           <tr>
             <td style="padding: 0 30px 20px;">
               <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
                 Trade Plan Chart
               </h2>
               <div style="background-color: #1a1a2e; border-radius: 8px; padding: 10px; text-align: center;">
-                ${chartImage
-                  ? `<img src="${chartImage}" alt="Trade Plan Chart" style="max-width: 100%; height: auto; border-radius: 8px;"/>`
-                  : svgChart
-                }
+                <img src="${chartImage || svgChartDataUrl}" alt="Trade Plan Chart" style="max-width: 100%; width: 540px; height: auto; border-radius: 8px;"/>
               </div>
             </td>
           </tr>
