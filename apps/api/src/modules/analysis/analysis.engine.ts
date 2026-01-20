@@ -3755,6 +3755,15 @@ export const analysisEngine = {
       // NEW: Tokenomics analysis (financial structure of the token)
       // Includes: supply metrics, market cap/FDV, whale concentration, distribution
       tokenomics: tokenomicsData || undefined,
+      // Chart data for PDF generation (last 50 candles)
+      chartCandles: candlesPrimary.slice(-50).map(c => ({
+        timestamp: c.timestamp,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+        volume: c.volume,
+      })),
       score,
       // Gate decision for sequential approach
       gate: {

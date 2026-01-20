@@ -57,6 +57,7 @@ export interface AnalysisReportData {
   };
 
   assetScan: {
+    symbol?: string;
     currentPrice: number;
     priceChange24h: number;
     volume24h?: number;
@@ -73,6 +74,15 @@ export interface AnalysisReportData {
     direction?: 'long' | 'short' | null;
     directionConfidence?: number;
     gate?: { canProceed: boolean; reason: string; confidence: number };
+    // Candlestick data for chart generation
+    chartCandles?: Array<{
+      timestamp: number;
+      open: number;
+      high: number;
+      low: number;
+      close: number;
+      volume: number;
+    }>;
   };
 
   safetyCheck: {
@@ -379,12 +389,22 @@ const DISCLAIMER_TEXT = 'RISK DISCLAIMER: This report is for educational purpose
 
 // ===========================================
 // SVG CHART GENERATOR FOR TRADE PLAN
-// Generates a visual representation when no chart image is available
+// Generates candlestick chart with entry/SL/TP levels
 // ===========================================
+
+interface ChartCandle {
+  timestamp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
 
 function generateTradePlanSvgChart(
   tp: AnalysisReportData['tradePlan'] | undefined,
-  as: AnalysisReportData['assetScan'] | undefined
+  as: AnalysisReportData['assetScan'] | undefined,
+  chartCandles?: ChartCandle[]
 ): string {
   if (!tp?.averageEntry) {
     return `<div style="text-align: center; color: #9ca3af; padding: 150px 0;">
@@ -401,25 +421,66 @@ function generateTradePlanSvgChart(
   const current = as?.currentPrice || entry;
   const isLong = tp.direction === 'long';
 
-  // Calculate price range for chart
-  const allPrices = [entry, sl, tp1, tp2, tp3, current].filter(p => p > 0);
-  const minPrice = Math.min(...allPrices) * 0.995;
-  const maxPrice = Math.max(...allPrices) * 1.005;
+  // Get candle data (use provided or empty)
+  const candles = chartCandles && chartCandles.length > 0 ? chartCandles.slice(-40) : [];
+  const hasCandles = candles.length > 0;
+
+  // Calculate price range (include candles if available)
+  const tradeLevelPrices = [entry, sl, tp1, tp2, tp3, current].filter(p => p > 0);
+  const candleHighs = candles.map(c => c.high);
+  const candleLows = candles.map(c => c.low);
+  const allPrices = [...tradeLevelPrices, ...candleHighs, ...candleLows].filter(p => p > 0);
+
+  const dataMin = Math.min(...allPrices);
+  const dataMax = Math.max(...allPrices);
+  const padding = (dataMax - dataMin) * 0.05;
+  const minPrice = dataMin - padding;
+  const maxPrice = dataMax + padding;
   const priceRange = maxPrice - minPrice;
 
   // SVG dimensions
   const width = 520;
   const height = 420;
-  const chartLeft = 80;
-  const chartRight = width - 20;
-  const chartTop = 30;
-  const chartBottom = height - 40;
+  const chartLeft = 70;
+  const chartRight = width - 15;
+  const chartTop = 35;
+  const chartBottom = height - 50;
   const chartWidth = chartRight - chartLeft;
   const chartHeight = chartBottom - chartTop;
 
   // Helper function to convert price to Y coordinate
   const priceToY = (price: number): number => {
     return chartBottom - ((price - minPrice) / priceRange) * chartHeight;
+  };
+
+  // Generate candlesticks SVG
+  const generateCandlesticks = (): string => {
+    if (!hasCandles) return '';
+
+    const candleWidth = Math.max(3, Math.floor((chartWidth - 20) / candles.length) - 2);
+    const wickWidth = 1;
+    const gap = 2;
+    const totalCandleWidth = candleWidth + gap;
+    const startX = chartLeft + 10;
+
+    return candles.map((candle, i) => {
+      const x = startX + (i * totalCandleWidth);
+      const isGreen = candle.close >= candle.open;
+      const color = isGreen ? '#22c55e' : '#ef4444';
+      const bodyTop = priceToY(Math.max(candle.open, candle.close));
+      const bodyBottom = priceToY(Math.min(candle.open, candle.close));
+      const bodyHeight = Math.max(1, bodyBottom - bodyTop);
+      const wickTop = priceToY(candle.high);
+      const wickBottom = priceToY(candle.low);
+      const candleCenterX = x + candleWidth / 2;
+
+      return `
+        <!-- Wick -->
+        <line x1="${candleCenterX}" y1="${wickTop}" x2="${candleCenterX}" y2="${wickBottom}" stroke="${color}" stroke-width="${wickWidth}"/>
+        <!-- Body -->
+        <rect x="${x}" y="${bodyTop}" width="${candleWidth}" height="${bodyHeight}" fill="${color}" rx="1"/>
+      `;
+    }).join('');
   };
 
   // Generate price axis labels (5 levels)
@@ -439,8 +500,8 @@ function generateTradePlanSvgChart(
     const y = priceToY(sl);
     levelLines.push(`
       <line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,3"/>
-      <rect x="${chartRight - 90}" y="${y - 10}" width="85" height="18" fill="#ef4444" rx="2"/>
-      <text x="${chartRight - 85}" y="${y + 3}" fill="#fff" font-size="8" font-weight="600">STOP ${formatPrice(sl)}</text>
+      <rect x="${chartRight - 85}" y="${y - 9}" width="82" height="16" fill="#ef4444" rx="2"/>
+      <text x="${chartRight - 80}" y="${y + 3}" fill="#fff" font-size="7" font-weight="600">STOP ${formatPrice(sl)}</text>
     `);
   }
 
@@ -448,34 +509,25 @@ function generateTradePlanSvgChart(
   if (entry > 0) {
     const y = priceToY(entry);
     levelLines.push(`
-      <line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#22c55e" stroke-width="2"/>
-      <rect x="${chartLeft + 5}" y="${y - 10}" width="85" height="18" fill="#22c55e" rx="2"/>
-      <text x="${chartLeft + 10}" y="${y + 3}" fill="#fff" font-size="8" font-weight="600">ENTRY ${formatPrice(entry)}</text>
+      <line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#fbbf24" stroke-width="2"/>
+      <rect x="${chartLeft + 5}" y="${y - 9}" width="82" height="16" fill="#fbbf24" rx="2"/>
+      <text x="${chartLeft + 10}" y="${y + 3}" fill="#000" font-size="7" font-weight="600">ENTRY ${formatPrice(entry)}</text>
     `);
   }
 
   // Take Profit lines
-  const tpColors = ['#3b82f6', '#8b5cf6', '#ec4899'];
+  const tpColors = ['#3b82f6', '#8b5cf6', '#a855f7'];
   const tpPrices = [tp1, tp2, tp3];
   tpPrices.forEach((price, i) => {
     if (price > 0) {
       const y = priceToY(price);
       levelLines.push(`
         <line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="${tpColors[i]}" stroke-width="2" stroke-dasharray="8,4"/>
-        <rect x="${chartRight - 90}" y="${y - 10}" width="85" height="18" fill="${tpColors[i]}" rx="2"/>
-        <text x="${chartRight - 85}" y="${y + 3}" fill="#fff" font-size="8" font-weight="600">TP${i + 1} ${formatPrice(price)}</text>
+        <rect x="${chartRight - 85}" y="${y - 9}" width="82" height="16" fill="${tpColors[i]}" rx="2"/>
+        <text x="${chartRight - 80}" y="${y + 3}" fill="#fff" font-size="7" font-weight="600">TP${i + 1} ${formatPrice(price)}</text>
       `);
     }
   });
-
-  // Current price marker
-  if (current > 0 && current !== entry) {
-    const y = priceToY(current);
-    levelLines.push(`
-      <circle cx="${chartLeft + chartWidth / 2}" cy="${y}" r="6" fill="#fbbf24" stroke="#fff" stroke-width="2"/>
-      <text x="${chartLeft + chartWidth / 2 + 15}" y="${y + 3}" fill="#fbbf24" font-size="9" font-weight="600">Current: ${formatPrice(current)}</text>
-    `);
-  }
 
   // Risk/Reward visualization
   const rrRatio = tp.riskReward || 0;
@@ -485,16 +537,16 @@ function generateTradePlanSvgChart(
     <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+          <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#16162a;stop-opacity:1" />
         </linearGradient>
         <linearGradient id="profitZone" x1="0%" y1="100%" x2="0%" y2="0%">
-          <stop offset="0%" style="stop-color:#22c55e;stop-opacity:0.1" />
-          <stop offset="100%" style="stop-color:#22c55e;stop-opacity:0.3" />
+          <stop offset="0%" style="stop-color:#22c55e;stop-opacity:0.05" />
+          <stop offset="100%" style="stop-color:#22c55e;stop-opacity:0.15" />
         </linearGradient>
         <linearGradient id="lossZone" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:#ef4444;stop-opacity:0.1" />
-          <stop offset="100%" style="stop-color:#ef4444;stop-opacity:0.3" />
+          <stop offset="0%" style="stop-color:#ef4444;stop-opacity:0.05" />
+          <stop offset="100%" style="stop-color:#ef4444;stop-opacity:0.15" />
         </linearGradient>
       </defs>
 
@@ -502,14 +554,14 @@ function generateTradePlanSvgChart(
       <rect width="${width}" height="${height}" fill="url(#bgGrad)" rx="8"/>
 
       <!-- Title -->
-      <text x="${width / 2}" y="20" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">
-        Trade Plan Visualization - ${isLong ? '📈 LONG' : '📉 SHORT'}
+      <text x="${width / 2}" y="22" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">
+        ${as?.symbol || 'Trade'} - ${isLong ? '📈 LONG' : '📉 SHORT'} Trade Plan ${hasCandles ? `(${candles.length} candles)` : ''}
       </text>
 
       <!-- Chart area border -->
       <rect x="${chartLeft}" y="${chartTop}" width="${chartWidth}" height="${chartHeight}" fill="none" stroke="#374151" stroke-width="1" rx="4"/>
 
-      <!-- Profit/Loss zones -->
+      <!-- Profit/Loss zones (behind candles) -->
       ${entry > 0 && sl > 0 && tp1 > 0 ? `
         <rect x="${chartLeft + 1}" y="${priceToY(isLong ? tp1 : entry)}" width="${chartWidth - 2}" height="${Math.abs(priceToY(entry) - priceToY(tp1))}" fill="url(#profitZone)"/>
         <rect x="${chartLeft + 1}" y="${priceToY(isLong ? entry : sl)}" width="${chartWidth - 2}" height="${Math.abs(priceToY(sl) - priceToY(entry))}" fill="url(#lossZone)"/>
@@ -518,23 +570,38 @@ function generateTradePlanSvgChart(
       <!-- Price axis labels and grid -->
       ${priceLabels.join('')}
 
-      <!-- Level lines -->
+      <!-- Candlesticks -->
+      ${generateCandlesticks()}
+
+      <!-- Level lines (on top of candles) -->
       ${levelLines.join('')}
 
       <!-- Legend -->
-      <rect x="${chartLeft}" y="${chartBottom + 10}" width="${chartWidth}" height="25" fill="#1e293b" rx="4"/>
-      <circle cx="${chartLeft + 15}" cy="${chartBottom + 22}" r="4" fill="#22c55e"/>
-      <text x="${chartLeft + 25}" y="${chartBottom + 25}" fill="#9ca3af" font-size="7">Entry</text>
-      <circle cx="${chartLeft + 70}" cy="${chartBottom + 22}" r="4" fill="#ef4444"/>
-      <text x="${chartLeft + 80}" y="${chartBottom + 25}" fill="#9ca3af" font-size="7">Stop Loss</text>
-      <circle cx="${chartLeft + 140}" cy="${chartBottom + 22}" r="4" fill="#3b82f6"/>
-      <text x="${chartLeft + 150}" y="${chartBottom + 25}" fill="#9ca3af" font-size="7">Targets</text>
+      <rect x="${chartLeft}" y="${chartBottom + 8}" width="${chartWidth}" height="35" fill="#1e293b" rx="4"/>
+      <circle cx="${chartLeft + 15}" cy="${chartBottom + 20}" r="4" fill="#fbbf24"/>
+      <text x="${chartLeft + 25}" y="${chartBottom + 23}" fill="#9ca3af" font-size="7">Entry</text>
+      <circle cx="${chartLeft + 70}" cy="${chartBottom + 20}" r="4" fill="#ef4444"/>
+      <text x="${chartLeft + 80}" y="${chartBottom + 23}" fill="#9ca3af" font-size="7">Stop Loss</text>
+      <circle cx="${chartLeft + 140}" cy="${chartBottom + 20}" r="4" fill="#3b82f6"/>
+      <text x="${chartLeft + 150}" y="${chartBottom + 23}" fill="#9ca3af" font-size="7">Targets</text>
+
+      <!-- R:R and Win Rate -->
       ${rrRatio > 0 ? `
-        <text x="${chartRight - 100}" y="${chartBottom + 25}" fill="#fbbf24" font-size="8" font-weight="600">R:R ${rrRatio.toFixed(1)}:1</text>
+        <text x="${chartRight - 100}" y="${chartBottom + 23}" fill="#fbbf24" font-size="8" font-weight="600">R:R ${rrRatio.toFixed(1)}:1</text>
       ` : ''}
       ${winRate > 0 ? `
-        <text x="${chartRight - 40}" y="${chartBottom + 25}" fill="#22c55e" font-size="8" font-weight="600">${winRate.toFixed(0)}% Win</text>
+        <text x="${chartRight - 40}" y="${chartBottom + 23}" fill="#22c55e" font-size="8" font-weight="600">${winRate.toFixed(0)}%</text>
       ` : ''}
+
+      <!-- Candle legend -->
+      ${hasCandles ? `
+        <rect x="${chartLeft + 15}" y="${chartBottom + 30}" width="8" height="8" fill="#22c55e" rx="1"/>
+        <text x="${chartLeft + 28}" y="${chartBottom + 37}" fill="#9ca3af" font-size="6">Bullish</text>
+        <rect x="${chartLeft + 70}" y="${chartBottom + 30}" width="8" height="8" fill="#ef4444" rx="1"/>
+        <text x="${chartLeft + 83}" y="${chartBottom + 37}" fill="#9ca3af" font-size="6">Bearish</text>
+      ` : `
+        <text x="${chartLeft + 15}" y="${chartBottom + 37}" fill="#6b7280" font-size="6" font-style="italic">No candlestick data available</text>
+      `}
     </svg>
   `;
 }
@@ -732,7 +799,7 @@ function generatePageTradePlan(data: AnalysisReportData, totalPages: number): st
     </div>
     ` : `
     <div class="chart-container" style="height: 480px; background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 8px; padding: 15px;">
-      ${generateTradePlanSvgChart(tp, as)}
+      ${generateTradePlanSvgChart(tp, as, as?.chartCandles)}
     </div>
     `}
 
