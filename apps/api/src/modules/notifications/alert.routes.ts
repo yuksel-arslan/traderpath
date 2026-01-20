@@ -14,6 +14,29 @@ export default async function alertRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
 
   /**
+   * GET /api/alerts/vapid-public-key
+   * Get VAPID public key for push subscription
+   */
+  app.get('/vapid-public-key', async (_request: FastifyRequest, reply: FastifyReply) => {
+    const publicKey = process.env.VAPID_PUBLIC_KEY;
+
+    if (!publicKey) {
+      return reply.status(503).send({
+        success: false,
+        error: {
+          code: 'PUSH_NOT_CONFIGURED',
+          message: 'Push notifications are not configured on this server',
+        },
+      });
+    }
+
+    return reply.send({
+      success: true,
+      data: { publicKey },
+    });
+  });
+
+  /**
    * GET /api/alerts
    * Get user's price alerts
    */
