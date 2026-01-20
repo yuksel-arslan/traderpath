@@ -1,0 +1,53 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Teal gradient -->
+    <linearGradient id="tealGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5EEDC3"/>
+      <stop offset="50%" stop-color="#2DD4A8"/>
+      <stop offset="100%" stop-color="#14B8A6"/>
+    </linearGradient>
+
+    <!-- Coral gradient -->
+    <linearGradient id="coralGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF8A9B"/>
+      <stop offset="50%" stop-color="#F87171"/>
+      <stop offset="100%" stop-color="#EF5A6F"/>
+    </linearGradient>
+
+    <!-- Subtle glow effect -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark background with rounded corners -->
+  <rect width="512" height="512" rx="96" fill="#0D1421"/>
+
+  <!-- Subtle gradient overlay for depth -->
+  <rect width="512" height="512" rx="96" fill="url(#bgGradient)" opacity="0.5"/>
+  <defs>
+    <radialGradient id="bgGradient" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#1a2438"/>
+      <stop offset="100%" stop-color="#0D1421"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Logo centered with minimal padding -->
+  <g transform="translate(256, 256) scale(2.0) translate(-100, -100)" filter="url(#glow)">
+    <!-- Top point (teal) -->
+    <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealGradient)"/>
+
+    <!-- Right point (teal) -->
+    <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealGradient)"/>
+
+    <!-- Bottom point (coral) -->
+    <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralGradient)"/>
+
+    <!-- Left point (coral) -->
+    <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralGradient)"/>
+  </g>
+</svg>
