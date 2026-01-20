@@ -68,7 +68,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
     // TFT Predictor Service check
     const tftStart = Date.now();
-    const TFT_URL = process.env.TFT_SERVICE_URL || 'http://localhost:8000';
+    const TFT_URL = (process.env.TFT_SERVICE_URL || 'http://localhost:8000').trim();
     try {
       const response = await fetch(`${TFT_URL}/health`, {
         signal: AbortSignal.timeout(5000),
