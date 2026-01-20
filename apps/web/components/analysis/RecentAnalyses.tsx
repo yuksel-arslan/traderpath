@@ -18,6 +18,7 @@ import {
   Download,
   Mail,
   Loader2,
+  Filter,
 } from 'lucide-react';
 import { CoinIcon } from '../common/CoinIcon';
 import { cn } from '../../lib/utils';
@@ -65,12 +66,23 @@ const verdictConfig = {
 
 type ViewMode = 'list' | 'card';
 
+type VerdictFilter = 'all' | 'go' | 'conditional_go' | 'wait' | 'avoid';
+
+const VERDICT_FILTERS: { value: VerdictFilter; label: string; color: string }[] = [
+  { value: 'all', label: 'All', color: 'text-gray-600 dark:text-slate-300' },
+  { value: 'go', label: 'GO', color: 'text-green-500' },
+  { value: 'conditional_go', label: 'COND', color: 'text-yellow-500' },
+  { value: 'wait', label: 'WAIT', color: 'text-orange-500' },
+  { value: 'avoid', label: 'AVOID', color: 'text-red-500' },
+];
+
 export function RecentAnalyses() {
   const router = useRouter();
   const [analyses, setAnalyses] = useState<RecentAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>('all');
   const [actionLoading, setActionLoading] = useState<{ id: string; action: string } | null>(null);
 
   useEffect(() => {
@@ -600,45 +612,93 @@ export function RecentAnalyses() {
     );
   }
 
+  // Filter analyses by verdict
+  const filteredAnalyses = verdictFilter === 'all'
+    ? analyses
+    : analyses.filter(a => a.verdict === verdictFilter);
+
   return (
     <div>
-      {/* Header with view toggle */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-          Recent Analyses
-          <span className="text-xs font-normal text-gray-500 dark:text-slate-400 ml-1">
-            ({analyses.length})
-          </span>
-        </h3>
-        <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5">
-          <button
-            onClick={() => setViewMode('list')}
-            className={cn(
-              'p-1.5 rounded transition-all',
-              viewMode === 'list'
-                ? 'bg-white dark:bg-slate-700 shadow-sm'
-                : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
-            )}
-          >
-            <List className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => setViewMode('card')}
-            className={cn(
-              'p-1.5 rounded transition-all',
-              viewMode === 'card'
-                ? 'bg-white dark:bg-slate-700 shadow-sm'
-                : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
-            )}
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-          </button>
+      {/* Header with filter and view toggle */}
+      <div className="flex flex-col gap-2 mb-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+            Recent Analyses
+            <span className="text-xs font-normal text-gray-500 dark:text-slate-400 ml-1">
+              ({filteredAnalyses.length}{verdictFilter !== 'all' ? `/${analyses.length}` : ''})
+            </span>
+          </h3>
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode('list')}
+              className={cn(
+                'p-1.5 rounded transition-all',
+                viewMode === 'list'
+                  ? 'bg-white dark:bg-slate-700 shadow-sm'
+                  : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
+              )}
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode('card')}
+              className={cn(
+                'p-1.5 rounded transition-all',
+                viewMode === 'card'
+                  ? 'bg-white dark:bg-slate-700 shadow-sm'
+                  : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
+              )}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Verdict Filter */}
+        <div className="flex items-center gap-1.5">
+          <Filter className="w-3.5 h-3.5 text-gray-400 dark:text-slate-500" />
+          <div className="flex items-center gap-1 flex-wrap">
+            {VERDICT_FILTERS.map((filter) => (
+              <button
+                key={filter.value}
+                onClick={() => setVerdictFilter(filter.value)}
+                className={cn(
+                  'px-2 py-0.5 text-[10px] font-medium rounded-full transition-all',
+                  verdictFilter === filter.value
+                    ? cn(
+                        'ring-1',
+                        filter.value === 'all' && 'bg-gray-200 dark:bg-slate-700 ring-gray-300 dark:ring-slate-600',
+                        filter.value === 'go' && 'bg-green-500/20 ring-green-500/50 text-green-600 dark:text-green-400',
+                        filter.value === 'conditional_go' && 'bg-yellow-500/20 ring-yellow-500/50 text-yellow-600 dark:text-yellow-400',
+                        filter.value === 'wait' && 'bg-orange-500/20 ring-orange-500/50 text-orange-600 dark:text-orange-400',
+                        filter.value === 'avoid' && 'bg-red-500/20 ring-red-500/50 text-red-600 dark:text-red-400'
+                      )
+                    : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800'
+                )}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {viewMode === 'list' ? (
+      {filteredAnalyses.length === 0 && verdictFilter !== 'all' ? (
+        <div className="text-center py-6">
+          <Filter className="w-6 h-6 mx-auto mb-2 text-muted-foreground opacity-50" />
+          <p className="text-xs text-muted-foreground">
+            No {verdictFilter.replace('_', ' ').toUpperCase()} analyses found
+          </p>
+          <button
+            onClick={() => setVerdictFilter('all')}
+            className="text-xs text-primary hover:underline mt-1"
+          >
+            Clear filter
+          </button>
+        </div>
+      ) : viewMode === 'list' ? (
         <ListView
-          analyses={analyses}
+          analyses={filteredAnalyses}
           actionLoading={actionLoading}
           onCreateReport={handleCreateReport}
           onDownload={handleDownload}
@@ -646,7 +706,7 @@ export function RecentAnalyses() {
         />
       ) : (
         <CardView
-          analyses={analyses}
+          analyses={filteredAnalyses}
           actionLoading={actionLoading}
           onCreateReport={handleCreateReport}
           onDownload={handleDownload}
