@@ -657,23 +657,16 @@ export function RecentAnalyses() {
         {/* Verdict Filter */}
         <div className="flex items-center gap-1.5">
           <Filter className="w-3.5 h-3.5 text-gray-400 dark:text-slate-500" />
-          <div className="flex items-center gap-1 flex-wrap">
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5">
             {VERDICT_FILTERS.map((filter) => (
               <button
                 key={filter.value}
                 onClick={() => setVerdictFilter(filter.value)}
                 className={cn(
-                  'px-2 py-0.5 text-[10px] font-medium rounded-full transition-all',
+                  'px-2.5 py-1 text-[10px] font-medium rounded-md transition-all',
                   verdictFilter === filter.value
-                    ? cn(
-                        'ring-1',
-                        filter.value === 'all' && 'bg-gray-200 dark:bg-slate-700 ring-gray-300 dark:ring-slate-600',
-                        filter.value === 'go' && 'bg-green-500/20 ring-green-500/50 text-green-600 dark:text-green-400',
-                        filter.value === 'conditional_go' && 'bg-yellow-500/20 ring-yellow-500/50 text-yellow-600 dark:text-yellow-400',
-                        filter.value === 'wait' && 'bg-orange-500/20 ring-orange-500/50 text-orange-600 dark:text-orange-400',
-                        filter.value === 'avoid' && 'bg-red-500/20 ring-red-500/50 text-red-600 dark:text-red-400'
-                      )
-                    : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800'
+                    ? 'bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-sm'
+                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
                 )}
               >
                 {filter.label}
