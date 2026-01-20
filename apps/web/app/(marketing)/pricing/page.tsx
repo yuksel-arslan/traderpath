@@ -30,6 +30,11 @@ import { cn } from '../../../lib/utils';
 import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost } from '../../../lib/pricing-config';
 import { authFetch, getAuthToken, apiBaseUrl } from '../../../lib/api';
 
+// Format credits with full number display (1000087 → 1,000,087)
+function formatCredits(num: number): string {
+  return num.toLocaleString('en-US');
+}
+
 // Package type from API
 interface ApiPackage {
   id: string;
@@ -134,7 +139,8 @@ export default function PricingPage() {
         const res = await authFetch('/api/user/credits');
         if (res.ok) {
           const data = await res.json();
-          setBalance(data.credits || 0);
+          // API returns { success: true, data: { balance: number } }
+          setBalance(data.data?.balance || data.credits || 0);
         }
       }
     } catch {
@@ -205,7 +211,7 @@ export default function PricingPage() {
               <>
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 rounded-full border border-amber-500/20">
                   <Gem className="w-4 h-4 text-amber-500" />
-                  <span className="text-sm font-semibold text-amber-600">{balance ?? 0}</span>
+                  <span className="text-sm font-semibold text-amber-600">{formatCredits(balance ?? 0)}</span>
                 </div>
                 <Link
                   href="/dashboard"
@@ -254,7 +260,7 @@ export default function PricingPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Your Balance</p>
-                    <p className="text-2xl font-bold">{balance} Credits</p>
+                    <p className="text-2xl font-bold">{formatCredits(balance ?? 0)} Credits</p>
                   </div>
                 </div>
               </div>
