@@ -570,27 +570,19 @@ Could you share your risk assessment and recommendations based on this analysis?
         {/* Verdict Filter - Pill Style */}
         <div className="flex bg-white dark:bg-slate-900/50 rounded-xl p-1 border border-slate-200 dark:border-white/10">
           {[
-            { value: 'all', label: 'All', color: '' },
-            { value: 'go', label: 'GO', color: 'text-green-500' },
-            { value: 'conditional_go', label: 'COND', color: 'text-yellow-500' },
-            { value: 'wait', label: 'WAIT', color: 'text-orange-500' },
-            { value: 'avoid', label: 'AVOID', color: 'text-red-500' },
+            { value: 'all', label: 'All' },
+            { value: 'go', label: 'GO' },
+            { value: 'conditional_go', label: 'COND' },
+            { value: 'wait', label: 'WAIT' },
+            { value: 'avoid', label: 'AVOID' },
           ].map((f) => (
             <button
               key={f.value}
               onClick={() => setVerdictFilter(f.value as VerdictFilter)}
               className={cn(
-                "px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300",
+                "px-4 py-2 text-xs font-medium rounded-lg transition-all duration-300",
                 verdictFilter === f.value
-                  ? f.value === 'all'
-                    ? "bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-lg shadow-teal-500/25"
-                    : cn(
-                        "shadow-lg",
-                        f.value === 'go' && "bg-green-500/20 text-green-600 dark:text-green-400 ring-1 ring-green-500/50",
-                        f.value === 'conditional_go' && "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 ring-1 ring-yellow-500/50",
-                        f.value === 'wait' && "bg-orange-500/20 text-orange-600 dark:text-orange-400 ring-1 ring-orange-500/50",
-                        f.value === 'avoid' && "bg-red-500/20 text-red-600 dark:text-red-400 ring-1 ring-red-500/50"
-                      )
+                  ? "bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-lg shadow-teal-500/25"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
               )}
             >
