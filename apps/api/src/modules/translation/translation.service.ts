@@ -184,8 +184,9 @@ ${textsToTranslate}`;
       const translations: Record<string, string> = {};
 
       textEntries.forEach(([key], index) => {
-        // Find the line starting with [index]
-        const pattern = new RegExp(`\\[${index}\\]\\s*(.+)`, 's');
+        // Find the text between [index] and the next [index+1] or end of string
+        // Use non-greedy match to properly handle multiline text
+        const pattern = new RegExp(`\\[${index}\\]\\s*([\\s\\S]*?)(?=\\[\\d+\\]|$)`, 'm');
         const match = translatedText.match(pattern);
         if (match) {
           translations[key] = match[1].trim();

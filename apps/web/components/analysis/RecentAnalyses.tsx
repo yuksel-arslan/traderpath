@@ -221,6 +221,7 @@ export function RecentAnalyses() {
         symbol: analysis.symbol,
         generatedAt: analysis.createdAt,
         analysisId: analysis.id,
+        interval: analysisData.interval || '4h', // e.g., '15m', '1h', '4h', '1d'
         marketPulse: {
           btcDominance: step1.btcDominance,
           fearGreedIndex: step1.fearGreedIndex,
@@ -257,8 +258,8 @@ export function RecentAnalyses() {
           traps: step6.traps || { bullTrap: false, bearTrap: false, fakeoutRisk: 'low' },
         },
         verdict: {
-          action: step7.action || step7.verdict || analysis.verdict,
-          overallScore: analysis.score ?? 0,
+          action: step7.action || step7.verdict || 'N/A',
+          overallScore: Number(analysisData.totalScore) || step7.overallScore || 0,
           aiSummary: step7.aiSummary || step7.summary,
         },
         // Full 40+ Indicator Details

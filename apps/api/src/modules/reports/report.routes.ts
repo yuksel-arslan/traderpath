@@ -52,6 +52,7 @@ interface SendHtmlEmailBody {
     symbol: string;
     generatedAt: string;
     analysisId?: string;
+    interval?: string; // e.g., '15m', '1h', '4h', '1d'
     marketPulse?: Record<string, unknown>;
     assetScan?: Record<string, unknown>;
     safetyCheck?: Record<string, unknown>;
@@ -60,6 +61,7 @@ interface SendHtmlEmailBody {
     trapCheck?: Record<string, unknown>;
     verdict?: Record<string, unknown>;
     aiExpertComment?: string;
+    aiExpertScore?: number; // AI Expert panel score (0-100)
   };
 }
 
@@ -1380,6 +1382,17 @@ export async function reportRoutes(fastify: FastifyInstance) {
           });
         }
 
+        // Fetch AI Expert comment from Report if not provided and analysisId exists
+        if (!reportData.aiExpertComment && reportData.analysisId) {
+          const report = await prisma.report.findFirst({
+            where: { analysisId: reportData.analysisId },
+            select: { aiExpertComment: true },
+          });
+          if (report?.aiExpertComment) {
+            reportData.aiExpertComment = report.aiExpertComment;
+          }
+        }
+
         // Generate HTML email content
         const htmlContent = generateReportHtmlEmail(reportData, user.name || 'Trader', chartImage);
 
@@ -1427,11 +1440,26 @@ export async function reportRoutes(fastify: FastifyInstance) {
   );
 }
 
-// Get coin icon URL for email
-function getCoinIconUrl(symbol: string): string {
-  const coinId = symbol.toLowerCase();
-  // Use CoinGecko API for coin icons (more reliable for email)
-  return `https://cryptoicons.org/api/icon/${coinId}/64`;
+// Generate coin icon as base64 SVG (reliable for all email clients)
+function getCoinIconDataUrl(symbol: string): string {
+  // Create a simple SVG icon with the first letter of the symbol
+  const letter = symbol.charAt(0).toUpperCase();
+  const colors: Record<string, string> = {
+    'B': '#F7931A', // BTC orange
+    'E': '#627EEA', // ETH blue
+    'S': '#14F195', // SOL green
+    'A': '#2775CA', // ADA blue
+    'D': '#C2A633', // DOGE gold
+    'X': '#23292F', // XRP dark
+    'L': '#345D9D', // LINK blue
+    'P': '#E6007A', // DOT pink
+    'U': '#26A17B', // USDT green
+    'M': '#F0B90B', // MATIC yellow
+  };
+  const bgColor = colors[letter] || '#6366f1'; // default indigo
+
+  const svg = `<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="24" fill="${bgColor}"/><text x="24" y="24" text-anchor="middle" dy="0.35em" fill="white" font-family="Arial, sans-serif" font-size="20" font-weight="bold">${letter}</text></svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 }
 
 // Generate SVG trade plan chart for email
@@ -1543,6 +1571,18 @@ function generateTradePlanChartSvg(
   return svg;
 }
 
+// Convert AI Expert score from /10 to /100 format in comment text
+function convertScoreTo100Scale(text: string): string {
+  // Match patterns like "7.4/10" or "(7.4/10)" and convert to "74/100"
+  return text.replace(/\((\d+(?:\.\d+)?)\s*\/\s*10\)/g, (_, score) => {
+    const scaledScore = Math.round(parseFloat(score) * 10);
+    return `(${scaledScore}/100)`;
+  }).replace(/(\d+(?:\.\d+)?)\s*\/\s*10(?!\d)/g, (_, score) => {
+    const scaledScore = Math.round(parseFloat(score) * 10);
+    return `${scaledScore}/100`;
+  });
+}
+
 // Generate HTML email content for report
 function generateReportHtmlEmail(
   data: SendHtmlEmailBody['reportData'],
@@ -1551,6 +1591,7 @@ function generateReportHtmlEmail(
 ): string {
   const symbol = data.symbol || 'N/A';
   const generatedAt = data.generatedAt || new Date().toLocaleString('tr-TR');
+  const interval = data.interval || '4h'; // Timeframe: 15m, 1h, 4h, 1d
   const verdict = data.verdict as Record<string, unknown> | undefined;
   const tradePlan = data.tradePlan as Record<string, unknown> | undefined;
   const assetScan = data.assetScan as Record<string, unknown> | undefined;
@@ -1562,6 +1603,9 @@ function generateReportHtmlEmail(
   const isLong = direction === 'long';
   const score = ((verdict?.overallScore as number) || 0) * 10;
   const action = (verdict?.action as string) || 'N/A';
+
+  // AI Expert score (0-100 scale) - passed as aiExpertScore or calculated from data
+  const aiExpertScore = data.aiExpertScore as number | undefined;
 
   const formatPrice = (price: number | undefined): string => {
     if (!price) return '$0';
@@ -1582,7 +1626,7 @@ function generateReportHtmlEmail(
   const btcDominance = marketPulse?.btcDominance as number | undefined;
   const riskLevel = safetyCheck?.riskLevel as string | undefined;
   const tradeNow = timing?.tradeNow as boolean | undefined;
-  const coinIconUrl = getCoinIconUrl(symbol);
+  const coinIconUrl = getCoinIconDataUrl(symbol);
 
   // Generate SVG chart if no chartImage provided
   // Convert to base64 data URL because email clients don't support inline SVG
@@ -1602,18 +1646,12 @@ function generateReportHtmlEmail(
     }
   }
 
-  // TraderPath logo as inline SVG (works better in email than external images)
+  // TraderPath logo as base64 data URL (Gmail strips inline SVG)
+  const logoSvg = `<svg width="48" height="48" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><rect width="512" height="512" rx="96" fill="#0D1421"/><g transform="translate(96, 96) scale(0.625)"><rect x="32" y="256" width="80" height="200" rx="8" fill="#22C55E"/><rect x="144" y="180" width="80" height="276" rx="8" fill="#EF4444"/><rect x="256" y="100" width="80" height="356" rx="8" fill="#22C55E"/><rect x="368" y="56" width="80" height="400" rx="8" fill="#EF4444"/></g></svg>`;
+  const logoBase64 = Buffer.from(logoSvg).toString('base64');
   const traderPathLogo = `
     <div style="text-align: center; margin-bottom: 10px;">
-      <svg width="48" height="48" viewBox="0 0 512 512" style="display: inline-block;">
-        <rect width="512" height="512" rx="96" fill="#0D1421"/>
-        <g transform="translate(96, 96) scale(0.625)">
-          <rect x="32" y="256" width="80" height="200" rx="8" fill="#22C55E"/>
-          <rect x="144" y="180" width="80" height="276" rx="8" fill="#EF4444"/>
-          <rect x="256" y="100" width="80" height="356" rx="8" fill="#22C55E"/>
-          <rect x="368" y="56" width="80" height="400" rx="8" fill="#EF4444"/>
-        </g>
-      </svg>
+      <img src="data:image/svg+xml;base64,${logoBase64}" width="48" height="48" alt="TraderPath" style="display: inline-block;"/>
     </div>
   `;
 
@@ -1650,11 +1688,13 @@ function generateReportHtmlEmail(
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td align="center">
-                    <img src="${coinIconUrl}" alt="${symbol}" width="48" height="48" style="border-radius: 50%; background: #ffffff; padding: 4px; display: inline-block; vertical-align: middle;" onerror="this.style.display='none'"/>
+                    <img src="${coinIconUrl}" alt="${symbol}" width="48" height="48" style="border-radius: 50%; background: #ffffff; padding: 4px; display: inline-block; vertical-align: middle;"/>
                     <h2 style="margin: 10px 0 0; color: #ffffff; font-size: 24px; font-weight: bold;">
                       ${symbol}/USDT Analysis
                     </h2>
                     <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 13px;">
+                      <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-weight: 600;">${interval.toUpperCase()}</span>
+                      &nbsp;|&nbsp;
                       ${generatedAt}
                     </p>
                   </td>
@@ -1791,7 +1831,7 @@ function generateReportHtmlEmail(
               </h2>
               <div style="background-color: #334155; border-radius: 8px; padding: 15px; border-left: 4px solid #f59e0b;">
                 <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">
-                  ${data.aiExpertComment}
+                  ${convertScoreTo100Scale(data.aiExpertComment)}
                 </p>
               </div>
             </td>

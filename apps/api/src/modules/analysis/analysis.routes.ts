@@ -601,16 +601,20 @@ Warn about potential traps and give protective advice.`;
         }
       );
 
-      // Send analysis completion notifications (email + social) - fire and forget
+      // Send analysis completion notifications (Telegram, Discord only) - fire and forget
+      // NOTE: Automatic email removed - users can send email manually from Recent Analyses
       (async () => {
         try {
           // Get user with notification settings
           const userWithNotifs = await prisma.user.findUnique({
             where: { id: userId },
-            select: { email: true, name: true, telegramChatId: true, discordWebhookUrl: true },
+            select: { name: true, telegramChatId: true, discordWebhookUrl: true },
           });
 
           if (!userWithNotifs) return;
+
+          // Only send if user has social notifications configured
+          if (!userWithNotifs.telegramChatId && !userWithNotifs.discordWebhookUrl) return;
 
           const notifData = {
             symbol: body.symbol,
@@ -622,10 +626,6 @@ Warn about potential traps and give protective advice.`;
             takeProfit1: tradePlan?.takeProfits?.[0]?.price ? `$${tradePlan.takeProfits[0].price}` : 'N/A',
             tradeType: tradeType === 'scalping' ? 'Scalping' : tradeType === 'dayTrade' ? 'Day Trade' : 'Swing Trade',
           };
-
-          // Send email
-          const { emailService } = await import('../email/email.service');
-          await emailService.sendAnalysisSummary(userWithNotifs.email, userWithNotifs.name || 'Trader', notifData);
 
           // Send social notifications (Telegram, Discord)
           const { socialNotificationService } = await import('../notifications/social-notification.service');
