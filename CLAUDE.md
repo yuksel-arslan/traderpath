@@ -229,6 +229,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-20 | PDF generation: Cannot read properties of null (reading 'gate') | Tüm step verilerine default değerler eklendi (mp, as, sc, tm, tp, tc). Null erişim hatası önlendi | `AnalysisReport.tsx` |
 | 2026-01-20 | Final Verdict "N/A Recommended" anlamsız gösteriliyor | 1) Default verdict değerleri eklendi (action: WAIT), 2) Direction yoksa WAIT gösterilir, 3) hasDirection kontrolü ile doğru renk/metin | `AnalysisReport.tsx` |
 | 2026-01-20 | PDF raporda tokenomics ve grafik eksik | handleDownload fonksiyonunda tokenomics dahil edilmemişti. Tüm step verileri (1-7) tam olarak eklendi | `RecentAnalyses.tsx` |
+| 2026-01-20 | PDF'de mum grafiği (candlestick) gösterilmiyor | 1) Backend'e chartCandles (son 50 mum) eklendi, 2) SVG generator candlestick çizecek şekilde güncellendi, 3) OHLCV verisi frontend'e aktarıldı | `analysis.engine.ts`, `AnalysisReport.tsx` |
 
 ---
 
@@ -267,6 +268,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-20 | Recent Analyses: Verdict filtresi | All/GO/COND/WAIT/AVOID filtre butonları - hızlı analiz filtreleme |
 | 2026-01-20 | Mobile App Icon: Dark mode versiyonları | 512x512, dark bg (#0D1421), scale 2.0, rounded corners (96px), glow efekti |
 | 2026-01-20 | Mobile App Icon: Alternatif renk düzeni | Yeşil-kırmızı-yeşil-kırmızı (çapraz) vs orijinal (2 yeşil + 2 kırmızı) |
+| 2026-01-20 | PDF Rapor: Gerçek candlestick grafik | Son 50 mum OHLCV verisiyle SVG candlestick chart - yeşil/kırmızı mumlar, entry/SL/TP seviyeleri |
 
 ---
 
@@ -401,6 +403,12 @@ Kullanıcı Hakları Aktif:
   - VAPID key endpoint: `GET /api/alerts/vapid-public-key`
   - Railway env vars: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
 - **Alerts sayfası gerçek API'ye bağlandı**: Mock data kaldırıldı, CRUD işlemleri çalışıyor
+- **PDF Rapor: Gerçek candlestick grafik eklendi**:
+  - Backend'e `chartCandles` field eklendi (son 50 mum OHLCV)
+  - SVG generator tamamen yeniden yazıldı (gerçek candlestick render)
+  - Yeşil/kırmızı mumlar open/close değerine göre
+  - Entry/SL/TP seviyeleri mumların üzerinde gösteriliyor
+  - `AnalysisReportData` interface güncellendi
 
 ---
 
