@@ -10,7 +10,6 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft,
-  Mail,
   Loader2,
   TrendingUp,
   TrendingDown,
@@ -57,8 +56,6 @@ function formatPrice(price: number): string {
   return `$${price.toFixed(6)}`;
 }
 
-const EMAIL_CREDIT_COST = 5;
-
 export default function AnalysisDetailsPage() {
   const params = useParams();
   const router = useRouter();
@@ -69,9 +66,6 @@ export default function AnalysisDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generatingReport, setGeneratingReport] = useState(false);
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-  const [credits, setCredits] = useState<number | null>(null);
   const [capturingScreenshot, setCapturingScreenshot] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
@@ -95,21 +89,7 @@ export default function AnalysisDetailsPage() {
       }
     };
 
-    // Fetch user credits
-    const fetchCredits = async () => {
-      try {
-        const response = await authFetch('/api/credits/balance');
-        if (response.ok) {
-          const data = await response.json();
-          setCredits(data.data?.balance || 0);
-        }
-      } catch (err) {
-        console.error('Failed to fetch credits:', err);
-      }
-    };
-
     fetchAnalysis();
-    fetchCredits();
   }, [analysisId]);
 
   // Generate report from analysis with AI Expert comment
@@ -139,32 +119,32 @@ export default function AnalysisDetailsPage() {
       const tp1 = step5.takeProfits?.[0]?.price || step5.takeProfit1;
 
       // Generate AI Expert comment
-      const aiExpertComment = `📊 AI Risk Assessment for ${analysis.symbol}/USDT
+      const aiExpertComment = `AI Risk Assessment for ${analysis.symbol}/USDT
 
-**Overall Score: ${score}/100** - ${score >= 70 ? 'Strong' : score >= 50 ? 'Moderate' : 'Weak'} ${isLong ? 'Bullish' : 'Bearish'} Setup
+Overall Score: ${score}/100 - ${score >= 70 ? 'Strong' : score >= 50 ? 'Moderate' : 'Weak'} ${isLong ? 'Bullish' : 'Bearish'} Setup
 
-**Market Context:**
-• Fear & Greed Index: ${fearGreed} (${step1.fearGreedLabel || 'Neutral'})
-• BTC Dominance: ${step1.btcDominance?.toFixed(1) || 'N/A'}%
-• Market Regime: ${step1.marketRegime || 'Neutral'}
+Market Context:
+- Fear & Greed Index: ${fearGreed} (${step1.fearGreedLabel || 'Neutral'})
+- BTC Dominance: ${step1.btcDominance?.toFixed(1) || 'N/A'}%
+- Market Regime: ${step1.marketRegime || 'Neutral'}
 
-**Technical Analysis:**
-• RSI: ${rsi?.toFixed(0) || 'N/A'} - ${rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral'}
-• 24h Change: ${step2.priceChange24h?.toFixed(2) || '0'}%
+Technical Analysis:
+- RSI: ${rsi?.toFixed(0) || 'N/A'} - ${rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral'}
+- 24h Change: ${step2.priceChange24h?.toFixed(2) || '0'}%
 
-**Risk Assessment:**
-• Risk Level: ${riskLevel.toUpperCase()}
-• Manipulation Risk: ${step3.manipulation?.pumpDumpRisk || 'Low'}
-• Whale Activity: ${step3.whaleActivity?.bias || 'Neutral'}
+Risk Assessment:
+- Risk Level: ${riskLevel.toUpperCase()}
+- Manipulation Risk: ${step3.manipulation?.pumpDumpRisk || 'Low'}
+- Whale Activity: ${step3.whaleActivity?.bias || 'Neutral'}
 
-**Trade Plan:**
-• Direction: ${direction.toUpperCase()}
-• Entry: $${entryPrice?.toFixed(entryPrice > 100 ? 2 : 4) || 'N/A'}
-• Stop Loss: $${stopLoss?.toFixed(stopLoss > 100 ? 2 : 4) || 'N/A'}
-• Take Profit: $${tp1?.toFixed(tp1 > 100 ? 2 : 4) || 'N/A'}
-• Risk/Reward: ${step5.riskReward?.toFixed(1) || '2.0'}:1
+Trade Plan:
+- Direction: ${direction.toUpperCase()}
+- Entry: $${entryPrice?.toFixed(entryPrice > 100 ? 2 : 4) || 'N/A'}
+- Stop Loss: $${stopLoss?.toFixed(stopLoss > 100 ? 2 : 4) || 'N/A'}
+- Take Profit: $${tp1?.toFixed(tp1 > 100 ? 2 : 4) || 'N/A'}
+- Risk/Reward: ${step5.riskReward?.toFixed(1) || '2.0'}:1
 
-**Recommendation:** ${step7.aiSummary || step7.summary || `${score >= 60 ? 'Conditions favor entry with proper risk management.' : 'Exercise caution and wait for better setup.'}`}`;
+Recommendation: ${step7.aiSummary || step7.summary || `${score >= 60 ? 'Conditions favor entry with proper risk management.' : 'Exercise caution and wait for better setup.'}`}`;
 
       // Create report with full data
       const verdict = step7.action || step7.verdict || 'GO';
@@ -192,50 +172,13 @@ export default function AnalysisDetailsPage() {
 
       const data = await response.json();
       if (data.success && data.data?.id) {
-        alert(`✅ Report created successfully for ${analysis.symbol}!`);
+        alert(`Report created successfully for ${analysis.symbol}!`);
       }
     } catch (err) {
       console.error('Failed to generate report:', err);
       alert(err instanceof Error ? err.message : 'Failed to generate report');
     } finally {
       setGeneratingReport(false);
-    }
-  };
-
-  // Send email
-  const handleSendEmail = async () => {
-    if (!analysis || sendingEmail) return;
-
-    if (credits !== null && credits < EMAIL_CREDIT_COST) {
-      alert(`You need ${EMAIL_CREDIT_COST} credits to send this report via email. Current balance: ${credits}`);
-      return;
-    }
-
-    setSendingEmail(true);
-    try {
-      const reportData = buildReportData(analysis);
-      const response = await authFetch('/api/reports/send-html-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reportId: analysisId,
-          reportData,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error?.message || 'Failed to send email');
-      }
-
-      setEmailSent(true);
-      setCredits((prev) => prev !== null ? prev - EMAIL_CREDIT_COST : null);
-      setTimeout(() => setEmailSent(false), 3000);
-    } catch (err) {
-      console.error('Failed to send email:', err);
-      alert(err instanceof Error ? err.message : 'Failed to send email');
-    } finally {
-      setSendingEmail(false);
     }
   };
 
@@ -748,13 +691,13 @@ export default function AnalysisDetailsPage() {
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Action Button */}
+          <div className="flex justify-center">
             {/* Generate Report Button */}
             <button
               onClick={handleGenerateReport}
               disabled={generatingReport}
-              className="flex items-center justify-center gap-2 py-3 font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white transition disabled:opacity-50"
+              className="flex items-center justify-center gap-2 py-3 px-8 font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white transition disabled:opacity-50"
             >
               {generatingReport ? (
                 <>
@@ -765,35 +708,6 @@ export default function AnalysisDetailsPage() {
                 <>
                   <FileText className="w-5 h-5" />
                   Create Report
-                </>
-              )}
-            </button>
-
-            {/* Send Email Button */}
-            <button
-              onClick={handleSendEmail}
-              disabled={sendingEmail || emailSent}
-              className={cn(
-                "flex items-center justify-center gap-2 py-3 font-semibold rounded-xl transition",
-                emailSent
-                  ? "bg-green-500 text-white"
-                  : "bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-50"
-              )}
-            >
-              {sendingEmail ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Sending...
-                </>
-              ) : emailSent ? (
-                <>
-                  <CheckCircle className="w-5 h-5" />
-                  Sent!
-                </>
-              ) : (
-                <>
-                  <Mail className="w-5 h-5" />
-                  Send Email
                 </>
               )}
             </button>

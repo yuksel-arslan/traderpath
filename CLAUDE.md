@@ -421,6 +421,18 @@ Kullanıcı Hakları Aktif:
   - `components/charts/TradePlanChart.tsx` dosyası silindi (duplicate)
   - Sadece `components/analysis/TradePlanChart.tsx` kullanılıyor
   - Reports/[id] detay sayfasına PDF indirme butonu eklendi
+- **Email raporu iyileştirildi (Recent Analyses)**:
+  - Tüm emojiler kaldırıldı (📊, 💰, 📈, 🤖, ✅, ⏳, • vb.)
+  - TraderPath logosu eklendi (inline SVG - email uyumlu)
+  - Symbol coin icon'u eklendi (cryptoicons.org API)
+  - SVG trade plan chart eklendi (server-side generation)
+  - Chart, Entry/SL/TP seviyelerini ve direction'ı gösteriyor
+  - chartImage parametresi desteği (base64 image)
+- **Analiz detay sayfasından email butonu kaldırıldı**:
+  - Send Email butonu kaldırıldı (duplicate fonksiyon)
+  - Sadece Recent Analyses üzerinden email gönderilebilir
+  - Kullanılmayan state ve fonksiyonlar temizlendi
+  - Create Report butonu ortaya alındı, padding ayarlandı
 
 ---
 

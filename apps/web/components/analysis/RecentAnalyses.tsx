@@ -355,32 +355,32 @@ export function RecentAnalyses() {
       const fearGreed = step1.fearGreedIndex || 50;
       const rsi = step2.indicators?.rsi || 50;
 
-      const aiExpertComment = `📊 AI Risk Assessment for ${analysis.symbol}/USDT
+      const aiExpertComment = `AI Risk Assessment for ${analysis.symbol}/USDT
 
-**Overall Score: ${score}/100** - ${score >= 70 ? 'Strong' : score >= 50 ? 'Moderate' : 'Weak'} ${isLong ? 'Bullish' : 'Bearish'} Setup
+Overall Score: ${score}/100 - ${score >= 70 ? 'Strong' : score >= 50 ? 'Moderate' : 'Weak'} ${isLong ? 'Bullish' : 'Bearish'} Setup
 
-**Market Context:**
-• Fear & Greed Index: ${fearGreed} (${step1.fearGreedLabel || 'Neutral'})
-• BTC Dominance: ${step1.btcDominance?.toFixed(1) || 'N/A'}%
-• Market Regime: ${step1.marketRegime || 'Neutral'}
+Market Context:
+- Fear & Greed Index: ${fearGreed} (${step1.fearGreedLabel || 'Neutral'})
+- BTC Dominance: ${step1.btcDominance?.toFixed(1) || 'N/A'}%
+- Market Regime: ${step1.marketRegime || 'Neutral'}
 
-**Technical Analysis:**
-• RSI: ${rsi?.toFixed(0) || 'N/A'} - ${rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral'}
-• 24h Change: ${step2.priceChange24h?.toFixed(2) || '0'}%
+Technical Analysis:
+- RSI: ${rsi?.toFixed(0) || 'N/A'} - ${rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral'}
+- 24h Change: ${step2.priceChange24h?.toFixed(2) || '0'}%
 
-**Risk Assessment:**
-• Risk Level: ${riskLevel.toUpperCase()}
-• Manipulation Risk: ${step3.manipulation?.pumpDumpRisk || 'Low'}
-• Whale Activity: ${step3.whaleActivity?.bias || 'Neutral'}
+Risk Assessment:
+- Risk Level: ${riskLevel.toUpperCase()}
+- Manipulation Risk: ${step3.manipulation?.pumpDumpRisk || 'Low'}
+- Whale Activity: ${step3.whaleActivity?.bias || 'Neutral'}
 
-**Trade Plan:**
-• Direction: ${direction.toUpperCase()}
-• Entry: $${entryPrice?.toFixed(entryPrice > 100 ? 2 : 4) || 'N/A'}
-• Stop Loss: $${stopLoss?.toFixed(stopLoss > 100 ? 2 : 4) || 'N/A'}
-• Take Profit: $${tp1?.toFixed(tp1 > 100 ? 2 : 4) || 'N/A'}
-• Risk/Reward: ${step5.riskReward?.toFixed(1) || '2.0'}:1
+Trade Plan:
+- Direction: ${direction.toUpperCase()}
+- Entry: $${entryPrice?.toFixed(entryPrice > 100 ? 2 : 4) || 'N/A'}
+- Stop Loss: $${stopLoss?.toFixed(stopLoss > 100 ? 2 : 4) || 'N/A'}
+- Take Profit: $${tp1?.toFixed(tp1 > 100 ? 2 : 4) || 'N/A'}
+- Risk/Reward: ${step5.riskReward?.toFixed(1) || '2.0'}:1
 
-**Recommendation:** ${step7.aiSummary || step7.summary || `${score >= 60 ? 'Conditions favor entry with proper risk management.' : 'Exercise caution and wait for better setup.'}`}`;
+Recommendation: ${step7.aiSummary || step7.summary || `${score >= 60 ? 'Conditions favor entry with proper risk management.' : 'Exercise caution and wait for better setup.'}`}`;
 
       // Create report
       const verdict = step7.action || step7.verdict || (isLong ? 'GO' : 'GO');
@@ -408,7 +408,7 @@ export function RecentAnalyses() {
 
       const data = await response.json();
       if (data.success && data.data?.id) {
-        alert(`✅ Report created successfully for ${analysis.symbol}!`);
+        alert(`Report created successfully for ${analysis.symbol}!`);
       }
     } catch (err) {
       console.error('Failed to create report:', err);
