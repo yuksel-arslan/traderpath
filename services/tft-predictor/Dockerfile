@@ -26,9 +26,10 @@ ENV PYTHONUNBUFFERED=1
 ENV TFT_MODEL_PATH=/app/models/tft_crypto.pt
 # Force CPU mode (GPU support will be added later)
 ENV CUDA_VISIBLE_DEVICES=""
+ENV PORT=8000
 
 # Expose port
 EXPOSE 8000
 
-# Run the API server
-CMD ["python", "-m", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the API server (use PORT env variable for Railway compatibility)
+CMD ["sh", "-c", "python -m uvicorn src.api:app --host 0.0.0.0 --port ${PORT:-8000}"]

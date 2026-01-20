@@ -84,7 +84,8 @@ export default async function adminRoutes(app: FastifyInstance) {
         checks.tft = { status: 'degraded', details: `HTTP ${response.status}` };
       }
     } catch (error) {
-      checks.tft = { status: 'down', details: 'Service unavailable' };
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      checks.tft = { status: 'down', details: `${TFT_URL} - ${errorMessage}` };
     }
 
     // Overall status
