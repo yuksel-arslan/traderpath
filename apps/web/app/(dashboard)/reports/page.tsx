@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CoinIcon } from '../../../components/common/CoinIcon';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
-import { TradePlanChart } from '../../../components/charts/TradePlanChart';
 import {
   FileText,
   Download,
@@ -13,14 +12,11 @@ import {
   TrendingDown,
   Search,
   RefreshCw,
-  LineChart,
   Eye,
   CheckCircle2,
   XCircle,
   Timer,
-  X,
   Target,
-  Shield,
   Bot,
   Zap,
   Activity,
@@ -81,142 +77,6 @@ interface Report {
   isSample?: boolean;
 }
 
-// Trade Plan Levels for Chart
-interface TradePlanLevels {
-  entryPrice?: number;
-  stopLoss?: number;
-  takeProfit1?: number;
-  takeProfit2?: number;
-  takeProfit3?: number;
-  direction?: string;
-  currentPrice?: number;
-}
-
-// TradingView Widget Component with Trade Plan Overlay
-// Script caching for better performance
-let tradingViewScriptLoaded = false;
-let tradingViewScriptLoading = false;
-const scriptLoadCallbacks: (() => void)[] = [];
-
-function loadTradingViewScript(callback: () => void) {
-  if (tradingViewScriptLoaded && typeof (window as any).TradingView !== 'undefined') {
-    callback();
-    return;
-  }
-
-  scriptLoadCallbacks.push(callback);
-
-  if (tradingViewScriptLoading) return;
-
-  tradingViewScriptLoading = true;
-  const script = document.createElement('script');
-  script.src = 'https://s3.tradingview.com/tv.js';
-  script.async = true;
-  script.onload = () => {
-    tradingViewScriptLoaded = true;
-    tradingViewScriptLoading = false;
-    scriptLoadCallbacks.forEach(cb => cb());
-    scriptLoadCallbacks.length = 0;
-  };
-  document.head.appendChild(script);
-}
-
-function TradingViewChart({
-  symbol,
-  interval,
-  tradePlan
-}: {
-  symbol: string;
-  interval: string;
-  tradePlan?: TradePlanLevels;
-}) {
-  const containerId = `tradingview_${symbol}_${interval}`;
-
-  useEffect(() => {
-    loadTradingViewScript(() => {
-      if (typeof (window as any).TradingView !== 'undefined') {
-        new (window as any).TradingView.widget({
-          autosize: true,
-          symbol: `BINANCE:${symbol.toUpperCase()}USDT`,
-          interval: interval,
-          timezone: 'Etc/UTC',
-          theme: 'dark',
-          style: '1',
-          locale: 'en',
-          toolbar_bg: '#1e293b',
-          enable_publishing: false,
-          hide_top_toolbar: false,
-          hide_legend: false,
-          save_image: false,
-          container_id: containerId,
-          hide_side_toolbar: true,
-          allow_symbol_change: false,
-          studies: [],
-        });
-      }
-    });
-
-    return () => {
-      const container = document.getElementById(containerId);
-      if (container) container.innerHTML = '';
-    };
-  }, [symbol, interval, containerId]);
-
-  return (
-    <div className="relative w-full h-full">
-      <div id={containerId} className="w-full h-full" />
-
-      {/* Trade Plan Overlay - Right Side */}
-      {tradePlan && (tradePlan.entryPrice || tradePlan.stopLoss || tradePlan.takeProfit1) && (
-        <div className="absolute right-2 top-12 flex flex-col gap-1 z-10">
-          {/* TP3 */}
-          {tradePlan.takeProfit3 && (
-            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/90 rounded text-[10px] font-bold text-white shadow-lg">
-              <span>TP3</span>
-              <span className="font-mono">${tradePlan.takeProfit3.toFixed(4)}</span>
-            </div>
-          )}
-          {/* TP2 */}
-          {tradePlan.takeProfit2 && (
-            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/80 rounded text-[10px] font-bold text-white shadow-lg">
-              <span>TP2</span>
-              <span className="font-mono">${tradePlan.takeProfit2.toFixed(4)}</span>
-            </div>
-          )}
-          {/* TP1 */}
-          {tradePlan.takeProfit1 && (
-            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/70 rounded text-[10px] font-bold text-white shadow-lg">
-              <span>TP1</span>
-              <span className="font-mono">${tradePlan.takeProfit1.toFixed(4)}</span>
-            </div>
-          )}
-          {/* Current Price */}
-          {tradePlan.currentPrice && (
-            <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/90 rounded text-[10px] font-bold text-white shadow-lg">
-              <span>NOW</span>
-              <span className="font-mono">${tradePlan.currentPrice.toFixed(4)}</span>
-            </div>
-          )}
-          {/* Entry */}
-          {tradePlan.entryPrice && (
-            <div className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500/90 rounded text-[10px] font-bold text-black shadow-lg">
-              <span>ENTRY</span>
-              <span className="font-mono">${tradePlan.entryPrice.toFixed(4)}</span>
-            </div>
-          )}
-          {/* Stop Loss */}
-          {tradePlan.stopLoss && (
-            <div className="flex items-center gap-1 px-2 py-0.5 bg-red-500/90 rounded text-[10px] font-bold text-white shadow-lg">
-              <span>SL</span>
-              <span className="font-mono">${tradePlan.stopLoss.toFixed(4)}</span>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 interface ReportsResponse {
   success: boolean;
   data: {
@@ -244,7 +104,6 @@ export default function ReportsPage() {
   const [tradeTypeFilter, setTradeTypeFilter] = useState<TradeType | 'all'>('all');
   const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>('all');
   const [pagination, setPagination] = useState({ total: 0, limit: 20, offset: 0 });
-  const [chartModal, setChartModal] = useState<{ isOpen: boolean; report: Report | null }>({ isOpen: false, report: null });
 
   const fetchReports = async () => {
     setIsLoading(true);
@@ -905,19 +764,10 @@ Could you share your risk assessment and recommendations based on this analysis?
 
                 {/* Actions - Teal/Red Theme */}
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-center sm:justify-end">
-                  {/* Chart Button */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setChartModal({ isOpen: true, report }); }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-teal-100 dark:bg-teal-500/10 hover:bg-teal-200 dark:hover:bg-teal-500/20 text-teal-600 dark:text-teal-500 transition"
-                    title="View Chart"
-                  >
-                    <LineChart className="w-4 h-4" />
-                    <span className="text-sm font-medium hidden sm:inline">Chart</span>
-                  </button>
                   {/* Details Button */}
                   <button
                     onClick={() => router.push(`/reports/${report.id}`)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-500/10 hover:bg-slate-200 dark:hover:bg-slate-500/20 text-slate-600 dark:text-slate-400 transition"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-teal-100 dark:bg-teal-500/10 hover:bg-teal-200 dark:hover:bg-teal-500/20 text-teal-600 dark:text-teal-500 transition"
                     title="View Details"
                   >
                     <Eye className="w-4 h-4" />
@@ -978,168 +828,6 @@ Could you share your risk assessment and recommendations based on this analysis?
           >
             Next
           </button>
-        </div>
-      )}
-
-      {/* TradingView Chart Modal - 4 Panel Multi-Timeframe */}
-      {chartModal.isOpen && chartModal.report && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4">
-          <div className="bg-card border rounded-xl w-full sm:w-[95vw] h-[95vh] sm:h-[90vh] flex flex-col overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b bg-gray-100 dark:bg-slate-900/50 gap-3 sm:gap-0">
-              <div className="flex items-center gap-4">
-                <img
-                  src={getCoinIcon(chartModal.report.symbol)}
-                  alt={chartModal.report.symbol}
-                  className="w-10 h-10 rounded-full object-contain"
-                  onError={(e) => {
-                    e.currentTarget.src = FALLBACK_COIN_ICON;
-                  }}
-                />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold">{chartModal.report.symbol}/USDT</h2>
-                    {chartModal.report.direction && (
-                      <span className={cn(
-                        "px-2 py-0.5 rounded text-xs font-medium",
-                        chartModal.report.direction === 'long'
-                          ? "bg-teal-500/20 text-teal-500"
-                          : "bg-red-500/20 text-red-500"
-                      )}>
-                        {chartModal.report.direction === 'long' ? (
-                          <TrendingUp className="w-3 h-3 inline mr-1" />
-                        ) : (
-                          <TrendingDown className="w-3 h-3 inline mr-1" />
-                        )}
-                        {chartModal.report.direction.toUpperCase()}
-                      </span>
-                    )}
-                    {/* Status Badge - Teal/Red */}
-                    {chartModal.report.outcome === 'correct' && (
-                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-teal-500/20 text-teal-500 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" />
-                        TP HIT
-                      </span>
-                    )}
-                    {chartModal.report.outcome === 'incorrect' && (
-                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-500 flex items-center gap-1">
-                        <XCircle className="w-3 h-3" />
-                        SL HIT
-                      </span>
-                    )}
-                    {!chartModal.report.outcome && (
-                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-teal-500/20 text-teal-500 flex items-center gap-1">
-                        <Timer className="w-3 h-3" />
-                        ACTIVE
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">Multi-Timeframe Analysis</p>
-                </div>
-              </div>
-
-              {/* Trade Plan Summary - Hidden on mobile, shown on larger screens - Teal/Red */}
-              <div className="hidden md:flex items-center gap-2 lg:gap-4 flex-wrap">
-                {/* Entry Price */}
-                {chartModal.report.entryPrice && (
-                  <div className="text-center px-3 py-1.5 bg-slate-200 dark:bg-slate-800/50 rounded-lg">
-                    <div className="text-[10px] text-slate-500 dark:text-muted-foreground">Entry</div>
-                    <div className="font-mono font-bold text-sm text-slate-900 dark:text-white">${chartModal.report.entryPrice.toFixed(4)}</div>
-                  </div>
-                )}
-
-                {/* Stop Loss - Orange/Coral */}
-                {chartModal.report.stopLoss && (
-                  <div className="text-center px-3 py-1.5 bg-red-100 dark:bg-red-500/10 rounded-lg border border-red-300 dark:border-red-500/30">
-                    <div className="flex items-center gap-1 text-[10px] text-red-600 dark:text-red-400">
-                      <Shield className="w-3 h-3" />
-                      SL
-                    </div>
-                    <div className="font-mono font-bold text-sm text-red-600 dark:text-red-400">${chartModal.report.stopLoss.toFixed(4)}</div>
-                  </div>
-                )}
-
-                {/* Take Profits - Teal */}
-                {chartModal.report.takeProfit1 && (
-                  <div className="flex gap-1.5">
-                    <div className="text-center px-2 py-1.5 bg-teal-100 dark:bg-teal-500/10 rounded-lg border border-teal-300 dark:border-teal-500/30">
-                      <div className="flex items-center gap-1 text-[10px] text-teal-600 dark:text-teal-400">
-                        <Target className="w-3 h-3" />
-                        TP1
-                      </div>
-                      <div className="font-mono font-bold text-sm text-teal-600 dark:text-teal-400">${chartModal.report.takeProfit1.toFixed(4)}</div>
-                    </div>
-                    {chartModal.report.takeProfit2 && (
-                      <div className="text-center px-2 py-1.5 bg-teal-100 dark:bg-teal-500/10 rounded-lg border border-teal-300 dark:border-teal-500/30">
-                        <div className="text-[10px] text-teal-600 dark:text-teal-400">TP2</div>
-                        <div className="font-mono font-bold text-sm text-teal-600 dark:text-teal-400">${chartModal.report.takeProfit2.toFixed(4)}</div>
-                      </div>
-                    )}
-                    {chartModal.report.takeProfit3 && (
-                      <div className="text-center px-2 py-1.5 bg-teal-100 dark:bg-teal-500/10 rounded-lg border border-teal-300 dark:border-teal-500/30">
-                        <div className="text-[10px] text-teal-600 dark:text-teal-400">TP3</div>
-                        <div className="font-mono font-bold text-sm text-teal-600 dark:text-teal-400">${chartModal.report.takeProfit3.toFixed(4)}</div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* P/L - Teal/Red */}
-                {chartModal.report.unrealizedPnL !== undefined && (
-                  <div className={cn(
-                    "text-center px-3 py-1.5 rounded-lg font-bold",
-                    chartModal.report.unrealizedPnL >= 0
-                      ? "bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400"
-                      : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                  )}>
-                    <div className="text-[10px]">P/L</div>
-                    <div className="flex items-center gap-1 text-sm">
-                      {chartModal.report.unrealizedPnL >= 0 ? '+' : ''}{chartModal.report.unrealizedPnL.toFixed(2)}%
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Close Button */}
-              <button
-                onClick={() => setChartModal({ isOpen: false, report: null })}
-                className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 transition ml-auto sm:ml-0"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* 2-Panel Chart Grid */}
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-2 p-2 bg-slate-900 overflow-y-auto">
-              {/* 15m Chart - Left (with Trade Plan lines) */}
-              <div className="relative bg-slate-800 rounded-lg overflow-hidden">
-                <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-slate-900/90 rounded text-sm font-medium text-purple-400">
-                  15m • Trade Plan
-                </div>
-                <TradePlanChart
-                  symbol={chartModal.report.symbol}
-                  interval="15"
-                  tradePlan={{
-                    entryPrice: chartModal.report.entryPrice,
-                    stopLoss: chartModal.report.stopLoss,
-                    takeProfit1: chartModal.report.takeProfit1,
-                    takeProfit2: chartModal.report.takeProfit2,
-                    takeProfit3: chartModal.report.takeProfit3,
-                    direction: chartModal.report.direction || undefined,
-                    currentPrice: chartModal.report.currentPrice,
-                  }}
-                />
-              </div>
-
-              {/* TradingView Chart - Right */}
-              <div className="relative bg-slate-800 rounded-lg overflow-hidden">
-                <TradingViewChart
-                  symbol={chartModal.report.symbol}
-                  interval="60"
-                />
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>
