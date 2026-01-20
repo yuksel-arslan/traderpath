@@ -37,7 +37,7 @@
   <rect width="512" height="512" rx="96" fill="url(#bgGradientAlt)" opacity="0.5"/>
 
   <!-- Logo centered with minimal padding - ALTERNATING COLORS: green-red-green-red -->
-  <g transform="translate(256, 256) scale(1.3) translate(-100, -100)" filter="url(#glowAlt)">
+  <g transform="translate(256, 256) scale(1.65) translate(-100, -100)" filter="url(#glowAlt)">
     <!-- Top point (teal/green) -->
     <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealGradientAlt)"/>
 
