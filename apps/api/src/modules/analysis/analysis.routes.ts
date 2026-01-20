@@ -11,6 +11,7 @@ import { creditCostsService } from '../costs/credit-costs.service';
 import { analysisEngine } from './analysis.engine';
 import { config } from '../../core/config';
 import { TradeType, getTradeConfig, getStepConfig, getTradeTypeFromInterval } from './config/trade-config';
+import { economicCalendarService } from './services/economic-calendar.service';
 import { getCautionRate, calculateCautionOutcomes, calculateExpiredOutcomes } from '../reports/outcome.service';
 import { prisma } from '../../core/database';
 
@@ -152,6 +153,43 @@ Be concise and actionable.`;
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: 'Failed to fetch market data' },
+      });
+    }
+  });
+
+  /**
+   * GET /api/analysis/economic-calendar
+   * Get upcoming economic events that impact crypto markets
+   * FREE endpoint - no credits required
+   */
+  app.get('/economic-calendar', {
+    preHandler: optionalAuth,
+  }, async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const calendar = await economicCalendarService.getUpcomingEvents();
+      const summary = await economicCalendarService.getAnalysisSummary();
+
+      return reply.send({
+        success: true,
+        data: {
+          ...calendar,
+          summary: {
+            riskLevel: summary.riskLevel,
+            score: summary.score,
+            todayEvents: summary.todayEvents,
+            upcomingMajor: summary.upcomingMajor,
+            tradingAdvice: summary.tradingAdvice,
+          },
+          // Helper flags for frontend
+          shouldAvoidTrading: calendar.riskLevel === 'high' || calendar.todayHighImpact.length > 0,
+          nextHighImpactEvent: calendar.next24hHighImpact[0] || null,
+        },
+      });
+    } catch (error) {
+      console.error('Economic Calendar error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'CALENDAR_ERROR', message: 'Failed to fetch economic calendar' },
       });
     }
   });

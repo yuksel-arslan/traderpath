@@ -101,8 +101,24 @@
    - Sentiment analizi
    - Önemli gelişmeler
 
+5. **Ekonomik Takvim** (Finnhub API / Hardcoded Events)
+   - FOMC toplantıları ve faiz kararları
+   - CPI (Tüketici Fiyat Endeksi)
+   - NFP (Tarım Dışı İstihdam)
+   - GDP açıklamaları
+   - ECB, BoE, BoJ merkez bankası kararları
+
+### Ekonomik Takvim Trade Bloklama Kuralları (ZORUNLU)
+- **High-impact event 4 saat içinde → TRADE ÖNERİLMEZ**
+- **FOMC günü → TRADE ÖNERİLMEZ (tüm gün)**
+- **Event sonrası 2 saat → TRADE ÖNERİLMEZ (volatilite)**
+- Market Pulse'da `shouldBlockTrade: true` döner
+- Verdict otomatik olarak "AVOID" olur
+- Score maksimum 2'ye düşer
+- Gate `canProceed: false` döner
+
 ### Veri Kullanım Kuralları
-- Her analiz için OHLCV + Order Book + Tokenomics + News verileri çekilmeli
+- Her analiz için OHLCV + Order Book + Tokenomics + News + Ekonomik Takvim verileri çekilmeli
 - Order Book analizi: Alım/satım baskısı, büyük duvarlar, likidite
 - Tokenomics analizi: Supply metrikleri, inflation risk, unlock schedule
 - News analizi: Sentiment score, önemli gelişmeler, piyasa etkisi
@@ -212,6 +228,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-20 | CoinGecko Demo API yanlış header kullanıyordu | Demo API için `x-cg-demo-api-key` header ve public URL kullanılıyor. `COINGECKO_API_TYPE=demo` env var eklendi | `tokenomics.service.ts` |
 | 2026-01-20 | PDF generation: Cannot read properties of null (reading 'gate') | Tüm step verilerine default değerler eklendi (mp, as, sc, tm, tp, tc). Null erişim hatası önlendi | `AnalysisReport.tsx` |
 | 2026-01-20 | Final Verdict "N/A Recommended" anlamsız gösteriliyor | 1) Default verdict değerleri eklendi (action: WAIT), 2) Direction yoksa WAIT gösterilir, 3) hasDirection kontrolü ile doğru renk/metin | `AnalysisReport.tsx` |
+| 2026-01-20 | PDF raporda tokenomics ve grafik eksik | handleDownload fonksiyonunda tokenomics dahil edilmemişti. Tüm step verileri (1-7) tam olarak eklendi | `RecentAnalyses.tsx` |
 
 ---
 
@@ -355,6 +372,21 @@ Kullanıcı Hakları Aktif:
   - Renk kodlu filtre butonları (yeşil, sarı, turuncu, kırmızı)
   - Filtrelenmiş sayı gösterimi (örn: "3/10")
   - Boş sonuç durumunda "Clear filter" seçeneği
+- **SVG Chart Generator eklendi**:
+  - PDF raporlarında grafik görünmeme sorunu çözüldü
+  - RecentAnalyses'tan indirilen PDF'lerde artık trade plan grafiği görünüyor
+  - Entry, Stop Loss, Take Profit seviyeleri SVG olarak çiziliyor
+- **Ekonomik Takvim Servisi eklendi**:
+  - Yeni servis: `apps/api/src/modules/analysis/services/economic-calendar.service.ts`
+  - Finnhub API entegrasyonu (FINNHUB_API_KEY env var)
+  - FOMC, CPI, NFP, GDP gibi major eventler için hardcoded fallback
+  - **Trade Bloklama Mantığı**:
+    - High-impact event 4 saat öncesinden itibaren trade önerilmez
+    - FOMC günü tüm gün trade önerilmez
+    - Event sonrası 2 saat bekleme süresi
+  - Market Pulse'a entegre edildi (`economicCalendar` field)
+  - Yeni endpoint: `GET /api/analysis/economic-calendar` (ücretsiz)
+  - Verdict otomatik "AVOID" olur, score max 2'ye düşer
 
 ---
 

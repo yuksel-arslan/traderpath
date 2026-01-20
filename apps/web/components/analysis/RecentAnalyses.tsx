@@ -433,42 +433,125 @@ export function RecentAnalyses() {
       if (!data.success || !data.data) throw new Error('Analysis not found');
 
       const analysisData = data.data;
+      const step1 = analysisData.step1Result || {};
       const step2 = analysisData.step2Result || {};
+      const step3 = analysisData.step3Result || {};
+      const step4 = analysisData.step4Result || {};
       const step5 = analysisData.step5Result || {};
+      const step6 = analysisData.step6Result || {};
       const step7 = analysisData.step7Result || {};
 
-      // Build report data
+      // Determine trade type from interval
+      let tradeType: 'scalping' | 'dayTrade' | 'swing' | undefined;
+      if (analysisData.interval === '5m' || analysisData.interval === '15m') tradeType = 'scalping';
+      else if (analysisData.interval === '1h' || analysisData.interval === '4h') tradeType = 'dayTrade';
+      else if (analysisData.interval === '1d' || analysisData.interval === '1D') tradeType = 'swing';
+
+      // Build COMPLETE report data with ALL fields
       const reportData = {
         symbol: analysis.symbol,
         generatedAt: analysis.createdAt,
         analysisId: analysis.id,
-        tradePlan: {
-          direction: step5.direction || analysis.direction,
-          averageEntry: step5.averageEntry || step5.entryPrice || analysis.entryPrice,
-          stopLoss: { price: step5.stopLoss?.price || step5.stopLoss || analysis.stopLoss },
-          takeProfits: [
-            { price: step5.takeProfit1 || analysis.takeProfit1 },
-            { price: step5.takeProfit2 || analysis.takeProfit2 },
-            { price: step5.takeProfit3 || analysis.takeProfit3 },
-          ].filter(tp => tp.price),
-          riskReward: step5.riskReward || 2,
+        tradeType,
+
+        // Step 1: Market Pulse
+        marketPulse: {
+          btcDominance: step1.btcDominance,
+          fearGreedIndex: step1.fearGreedIndex,
+          fearGreedLabel: step1.fearGreedLabel,
+          marketRegime: step1.marketRegime,
+          trend: step1.trend || { direction: 'neutral', strength: 0 },
+          btcPrice: step1.btcPrice,
+          totalMarketCap: step1.totalMarketCap,
+          altcoinSeasonIndex: step1.altcoinSeasonIndex,
+          gate: step1.gate,
         },
+
+        // Step 2: Asset Scan - FULL data
         assetScan: {
           currentPrice: step2.currentPrice || analysis.currentPrice,
           priceChange24h: step2.priceChange24h || 0,
+          volume24h: step2.volume24h,
+          timeframes: step2.timeframes,
+          forecast: step2.forecast,
+          levels: step2.levels,
           indicators: step2.indicators || { rsi: 50, macd: { histogram: 0 } },
+          direction: step2.direction,
+          directionConfidence: step2.directionConfidence,
+          gate: step2.gate,
         },
+
+        // Tokenomics - CRITICAL: Include tokenomics data!
+        tokenomics: step2.tokenomics || analysisData.tokenomics,
+
+        // Step 3: Safety Check
+        safetyCheck: {
+          riskLevel: step3.riskLevel,
+          warnings: step3.warnings,
+          manipulation: step3.manipulation || { pumpDumpRisk: 'low' },
+          whaleActivity: step3.whaleActivity || { bias: 'neutral' },
+          advancedMetrics: step3.advancedMetrics,
+          smartMoney: step3.smartMoney,
+          newsSentiment: step3.newsSentiment,
+          gate: step3.gate,
+        },
+
+        // Step 4: Timing
+        timing: {
+          tradeNow: step4.tradeNow,
+          reason: step4.reason,
+          conditions: step4.conditions,
+          entryZones: step4.entryZones,
+          optimalEntry: step4.optimalEntry,
+          waitFor: step4.waitFor,
+          gate: step4.gate,
+        },
+
+        // Step 5: Trade Plan
+        tradePlan: {
+          direction: step5.direction || analysis.direction,
+          type: step5.type,
+          entries: step5.entries,
+          averageEntry: step5.averageEntry || step5.entryPrice || analysis.entryPrice,
+          stopLoss: {
+            price: step5.stopLoss?.price || step5.stopLoss || analysis.stopLoss,
+            percentage: step5.stopLoss?.percentage,
+            reason: step5.stopLoss?.reason,
+          },
+          takeProfits: (step5.takeProfits || [
+            { price: step5.takeProfit1 || analysis.takeProfit1 },
+            { price: step5.takeProfit2 || analysis.takeProfit2 },
+            { price: step5.takeProfit3 || analysis.takeProfit3 },
+          ]).filter((tp: any) => tp?.price),
+          riskReward: step5.riskReward || 2,
+          winRateEstimate: step5.winRateEstimate,
+          positionSizePercent: step5.positionSizePercent,
+          confidence: step5.confidence,
+          gate: step5.gate,
+        },
+
+        // Step 6: Trap Check
+        trapCheck: {
+          traps: step6.traps || { bullTrap: false, bearTrap: false, fakeoutRisk: 'low' },
+          liquidationLevels: step6.liquidationLevels,
+          counterStrategy: step6.counterStrategy,
+          proTip: step6.proTip,
+          riskLevel: step6.riskLevel,
+          gate: step6.gate,
+        },
+
+        // Step 7: Verdict
         verdict: {
           action: step7.action || step7.verdict || analysis.verdict,
           overallScore: analysis.score ?? 0,
           aiSummary: step7.aiSummary || step7.summary,
+          componentScores: step7.componentScores,
+          confidenceFactors: step7.confidenceFactors,
+          recommendation: step7.recommendation,
         },
-        marketPulse: analysisData.step1Result || {},
-        safetyCheck: analysisData.step3Result || {},
-        timing: analysisData.step4Result || {},
-        trapCheck: analysisData.step6Result || {},
+
         // Full 40+ Indicator Details
-        indicatorDetails: step2.indicatorDetails || analysisData.step3Result?.indicatorDetails,
+        indicatorDetails: step2.indicatorDetails || step3.indicatorDetails,
       };
 
       const { generateAnalysisReport } = await import('../reports/AnalysisReport');

@@ -377,6 +377,168 @@ const styles = `
 
 const DISCLAIMER_TEXT = 'RISK DISCLAIMER: This report is for educational purposes only. Not financial advice. Crypto trading involves substantial risk. DYOR. Never invest more than you can afford to lose.';
 
+// ===========================================
+// SVG CHART GENERATOR FOR TRADE PLAN
+// Generates a visual representation when no chart image is available
+// ===========================================
+
+function generateTradePlanSvgChart(
+  tp: AnalysisReportData['tradePlan'] | undefined,
+  as: AnalysisReportData['assetScan'] | undefined
+): string {
+  if (!tp?.averageEntry) {
+    return `<div style="text-align: center; color: #9ca3af; padding: 150px 0;">
+      <div style="font-size: 48px; margin-bottom: 10px;">📊</div>
+      <div style="font-size: 12px; font-weight: 600; color: #fff;">Trade Plan Data Not Available</div>
+    </div>`;
+  }
+
+  const entry = tp.averageEntry || 0;
+  const sl = tp.stopLoss?.price || 0;
+  const tp1 = tp.takeProfits?.[0]?.price || 0;
+  const tp2 = tp.takeProfits?.[1]?.price || 0;
+  const tp3 = tp.takeProfits?.[2]?.price || 0;
+  const current = as?.currentPrice || entry;
+  const isLong = tp.direction === 'long';
+
+  // Calculate price range for chart
+  const allPrices = [entry, sl, tp1, tp2, tp3, current].filter(p => p > 0);
+  const minPrice = Math.min(...allPrices) * 0.995;
+  const maxPrice = Math.max(...allPrices) * 1.005;
+  const priceRange = maxPrice - minPrice;
+
+  // SVG dimensions
+  const width = 520;
+  const height = 420;
+  const chartLeft = 80;
+  const chartRight = width - 20;
+  const chartTop = 30;
+  const chartBottom = height - 40;
+  const chartWidth = chartRight - chartLeft;
+  const chartHeight = chartBottom - chartTop;
+
+  // Helper function to convert price to Y coordinate
+  const priceToY = (price: number): number => {
+    return chartBottom - ((price - minPrice) / priceRange) * chartHeight;
+  };
+
+  // Generate price axis labels (5 levels)
+  const priceLabels: string[] = [];
+  for (let i = 0; i <= 4; i++) {
+    const price = minPrice + (priceRange * i) / 4;
+    const y = priceToY(price);
+    priceLabels.push(`<text x="${chartLeft - 5}" y="${y + 3}" fill="#9ca3af" font-size="8" text-anchor="end">${formatPrice(price)}</text>`);
+    priceLabels.push(`<line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#374151" stroke-width="0.5" stroke-dasharray="3,3"/>`);
+  }
+
+  // Generate level lines and labels
+  const levelLines: string[] = [];
+
+  // Stop Loss line
+  if (sl > 0) {
+    const y = priceToY(sl);
+    levelLines.push(`
+      <line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,3"/>
+      <rect x="${chartRight - 90}" y="${y - 10}" width="85" height="18" fill="#ef4444" rx="2"/>
+      <text x="${chartRight - 85}" y="${y + 3}" fill="#fff" font-size="8" font-weight="600">STOP ${formatPrice(sl)}</text>
+    `);
+  }
+
+  // Entry line
+  if (entry > 0) {
+    const y = priceToY(entry);
+    levelLines.push(`
+      <line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#22c55e" stroke-width="2"/>
+      <rect x="${chartLeft + 5}" y="${y - 10}" width="85" height="18" fill="#22c55e" rx="2"/>
+      <text x="${chartLeft + 10}" y="${y + 3}" fill="#fff" font-size="8" font-weight="600">ENTRY ${formatPrice(entry)}</text>
+    `);
+  }
+
+  // Take Profit lines
+  const tpColors = ['#3b82f6', '#8b5cf6', '#ec4899'];
+  const tpPrices = [tp1, tp2, tp3];
+  tpPrices.forEach((price, i) => {
+    if (price > 0) {
+      const y = priceToY(price);
+      levelLines.push(`
+        <line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="${tpColors[i]}" stroke-width="2" stroke-dasharray="8,4"/>
+        <rect x="${chartRight - 90}" y="${y - 10}" width="85" height="18" fill="${tpColors[i]}" rx="2"/>
+        <text x="${chartRight - 85}" y="${y + 3}" fill="#fff" font-size="8" font-weight="600">TP${i + 1} ${formatPrice(price)}</text>
+      `);
+    }
+  });
+
+  // Current price marker
+  if (current > 0 && current !== entry) {
+    const y = priceToY(current);
+    levelLines.push(`
+      <circle cx="${chartLeft + chartWidth / 2}" cy="${y}" r="6" fill="#fbbf24" stroke="#fff" stroke-width="2"/>
+      <text x="${chartLeft + chartWidth / 2 + 15}" y="${y + 3}" fill="#fbbf24" font-size="9" font-weight="600">Current: ${formatPrice(current)}</text>
+    `);
+  }
+
+  // Risk/Reward visualization
+  const rrRatio = tp.riskReward || 0;
+  const winRate = tp.winRateEstimate || 0;
+
+  return `
+    <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="profitZone" x1="0%" y1="100%" x2="0%" y2="0%">
+          <stop offset="0%" style="stop-color:#22c55e;stop-opacity:0.1" />
+          <stop offset="100%" style="stop-color:#22c55e;stop-opacity:0.3" />
+        </linearGradient>
+        <linearGradient id="lossZone" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#ef4444;stop-opacity:0.1" />
+          <stop offset="100%" style="stop-color:#ef4444;stop-opacity:0.3" />
+        </linearGradient>
+      </defs>
+
+      <!-- Background -->
+      <rect width="${width}" height="${height}" fill="url(#bgGrad)" rx="8"/>
+
+      <!-- Title -->
+      <text x="${width / 2}" y="20" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">
+        Trade Plan Visualization - ${isLong ? '📈 LONG' : '📉 SHORT'}
+      </text>
+
+      <!-- Chart area border -->
+      <rect x="${chartLeft}" y="${chartTop}" width="${chartWidth}" height="${chartHeight}" fill="none" stroke="#374151" stroke-width="1" rx="4"/>
+
+      <!-- Profit/Loss zones -->
+      ${entry > 0 && sl > 0 && tp1 > 0 ? `
+        <rect x="${chartLeft + 1}" y="${priceToY(isLong ? tp1 : entry)}" width="${chartWidth - 2}" height="${Math.abs(priceToY(entry) - priceToY(tp1))}" fill="url(#profitZone)"/>
+        <rect x="${chartLeft + 1}" y="${priceToY(isLong ? entry : sl)}" width="${chartWidth - 2}" height="${Math.abs(priceToY(sl) - priceToY(entry))}" fill="url(#lossZone)"/>
+      ` : ''}
+
+      <!-- Price axis labels and grid -->
+      ${priceLabels.join('')}
+
+      <!-- Level lines -->
+      ${levelLines.join('')}
+
+      <!-- Legend -->
+      <rect x="${chartLeft}" y="${chartBottom + 10}" width="${chartWidth}" height="25" fill="#1e293b" rx="4"/>
+      <circle cx="${chartLeft + 15}" cy="${chartBottom + 22}" r="4" fill="#22c55e"/>
+      <text x="${chartLeft + 25}" y="${chartBottom + 25}" fill="#9ca3af" font-size="7">Entry</text>
+      <circle cx="${chartLeft + 70}" cy="${chartBottom + 22}" r="4" fill="#ef4444"/>
+      <text x="${chartLeft + 80}" y="${chartBottom + 25}" fill="#9ca3af" font-size="7">Stop Loss</text>
+      <circle cx="${chartLeft + 140}" cy="${chartBottom + 22}" r="4" fill="#3b82f6"/>
+      <text x="${chartLeft + 150}" y="${chartBottom + 25}" fill="#9ca3af" font-size="7">Targets</text>
+      ${rrRatio > 0 ? `
+        <text x="${chartRight - 100}" y="${chartBottom + 25}" fill="#fbbf24" font-size="8" font-weight="600">R:R ${rrRatio.toFixed(1)}:1</text>
+      ` : ''}
+      ${winRate > 0 ? `
+        <text x="${chartRight - 40}" y="${chartBottom + 25}" fill="#22c55e" font-size="8" font-weight="600">${winRate.toFixed(0)}% Win</text>
+      ` : ''}
+    </svg>
+  `;
+}
+
 function generateFooter(data: AnalysisReportData, pageNum: number, totalPages: number): string {
   return `
     <div class="footer">
@@ -569,15 +731,8 @@ function generatePageTradePlan(data: AnalysisReportData, totalPages: number): st
       <img src="${data.chartImage}" style="max-height: 100%; width: auto; max-width: 100%; border-radius: 6px;" alt="Trade Plan Chart" />
     </div>
     ` : `
-    <div class="chart-container" style="height: 480px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 8px;">
-      <div style="text-align: center; color: #9ca3af;">
-        <div style="font-size: 48px; margin-bottom: 10px;">📈</div>
-        <div style="font-size: 12px; font-weight: 600; color: #fff;">Trade Plan Chart</div>
-        <div style="font-size: 9px; margin-top: 5px; color: #9ca3af;">Chart visualization will appear here when generated</div>
-        <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 6px;">
-          <div style="font-size: 8px; color: #6b7280;">Entry: ${formatPrice(tp?.averageEntry)} | SL: ${formatPrice(tp?.stopLoss?.price)} | TP1: ${formatPrice(tp?.takeProfits?.[0]?.price)}</div>
-        </div>
-      </div>
+    <div class="chart-container" style="height: 480px; background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 8px; padding: 15px;">
+      ${generateTradePlanSvgChart(tp, as)}
     </div>
     `}
 
