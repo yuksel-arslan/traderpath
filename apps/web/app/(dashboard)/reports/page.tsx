@@ -38,6 +38,23 @@ const TRADE_TYPE_CONFIG: Record<TradeType, { label: string; icon: typeof Zap; co
   swing: { label: 'Swing', icon: Calendar, color: 'amber' },
 };
 
+// Verdict configuration for badges
+const VERDICT_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
+  go: { label: 'GO', bg: 'bg-green-500/20', text: 'text-green-600 dark:text-green-400' },
+  conditional_go: { label: 'COND', bg: 'bg-yellow-500/20', text: 'text-yellow-600 dark:text-yellow-400' },
+  wait: { label: 'WAIT', bg: 'bg-orange-500/20', text: 'text-orange-600 dark:text-orange-400' },
+  avoid: { label: 'AVOID', bg: 'bg-red-500/20', text: 'text-red-600 dark:text-red-400' },
+};
+
+// Helper to normalize verdict string
+function normalizeVerdict(verdict: string): string {
+  const v = (verdict || '').toLowerCase().replace(/[^a-z_]/g, '');
+  if (v === 'go' || v === 'long' || v === 'short') return 'go';
+  if (v === 'conditional_go' || v === 'conditionalgo' || v === 'cond' || v === 'conditional') return 'conditional_go';
+  if (v === 'avoid' || v === 'no_go' || v === 'nogo') return 'avoid';
+  return 'wait';
+}
+
 interface Report {
   id: string;
   symbol: string;
@@ -679,6 +696,19 @@ Could you share your risk assessment and recommendations based on this analysis?
                           {report.direction.toUpperCase()}
                         </span>
                       )}
+                      {/* Verdict Badge - GO/COND/WAIT/AVOID */}
+                      {report.verdict && (() => {
+                        const normalizedVerdict = normalizeVerdict(report.verdict);
+                        const config = VERDICT_CONFIG[normalizedVerdict] || VERDICT_CONFIG.wait;
+                        return (
+                          <span className={cn(
+                            "px-2 py-0.5 rounded text-xs font-bold",
+                            config.bg, config.text
+                          )}>
+                            {config.label}
+                          </span>
+                        );
+                      })()}
                       {/* Trade Type Badge - Teal/Slate/Orange */}
                       {report.tradeType && TRADE_TYPE_CONFIG[report.tradeType] && (() => {
                         const config = TRADE_TYPE_CONFIG[report.tradeType!];
