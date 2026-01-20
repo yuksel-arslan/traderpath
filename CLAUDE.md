@@ -247,6 +247,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-19 | Reports sayfası: Teal/Coral kurumsal renkler | Tüm renkler kurumsal palette uygun (purple→teal, red→orange/coral) |
 | 2026-01-19 | Reports sayfası: Light mode kontrast düzeltmesi | bg-white/5→bg-slate-100, text-white→text-slate-900 dark:text-white |
 | 2026-01-19 | Analyze sayfası: Live Chart 2/3 genişlik | Live Chart sol tarafta 8 kolon, kontroller sağda 4 kolon - daha dengeli layout |
+| 2026-01-20 | Recent Analyses: Verdict filtresi | All/GO/COND/WAIT/AVOID filtre butonları - hızlı analiz filtreleme |
 
 ---
 
@@ -349,6 +350,11 @@ Kullanıcı Hakları Aktif:
   - Direction yoksa "WAIT" gösterilir (sarı/amber arka plan)
   - hasDirection kontrolü ile doğru renk ve metin seçimi
   - formatAction fonksiyonu boş değer için "WAIT" döndürüyor
+- **Recent Analyses verdict filtresi eklendi**:
+  - Filtre seçenekleri: All, GO, COND (Conditional Go), WAIT, AVOID
+  - Renk kodlu filtre butonları (yeşil, sarı, turuncu, kırmızı)
+  - Filtrelenmiş sayı gösterimi (örn: "3/10")
+  - Boş sonuç durumunda "Clear filter" seçeneği
 
 ---
 
