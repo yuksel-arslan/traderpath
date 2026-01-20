@@ -37,6 +37,11 @@ import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { authFetch } from '../../../lib/api';
 import { uploadToCloudinary, isCloudinaryConfigured } from '../../../lib/cloudinary';
 
+// Format credits with thousand separators (1000087 → 1,000,087)
+function formatCredits(num: number): string {
+  return num.toLocaleString('en-US');
+}
+
 interface UserProfile {
   id: string;
   email: string;
@@ -679,7 +684,7 @@ export default function SettingsPage() {
                           <p className="text-sm text-muted-foreground">Level</p>
                         </div>
                         <div className="text-center p-3 bg-background rounded-lg">
-                          <p className="text-2xl font-bold text-primary">{user.credits}</p>
+                          <p className="text-2xl font-bold text-primary">{formatCredits(user.credits)}</p>
                           <p className="text-sm text-muted-foreground">Credits</p>
                         </div>
                         <div className="text-center p-3 bg-background rounded-lg">
@@ -1498,7 +1503,7 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-muted-foreground">Credit Balance</p>
-                        <p className="text-2xl font-bold">{user?.credits ?? 0} Credits</p>
+                        <p className="text-2xl font-bold">{formatCredits(user?.credits ?? 0)} Credits</p>
                       </div>
                       <button className="px-4 py-2 border rounded-lg hover:bg-accent transition">
                         Buy Credits
