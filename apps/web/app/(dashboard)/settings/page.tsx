@@ -36,6 +36,14 @@ import {
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { authFetch } from '../../../lib/api';
 import { uploadToCloudinary, isCloudinaryConfigured } from '../../../lib/cloudinary';
+import {
+  isPushSupported,
+  getNotificationPermission,
+  subscribeToPush,
+  unsubscribeFromPush,
+  isSubscribedToPush,
+  sendTestNotification,
+} from '../../../lib/push-notifications';
 
 // Format credits with thousand separators (1000087 → 1,000,087)
 function formatCredits(num: number): string {
@@ -99,6 +107,13 @@ export default function SettingsPage() {
   const [showDisable2FA, setShowDisable2FA] = useState(false);
   const [disablePassword, setDisablePassword] = useState('');
   const [isDisabling2FA, setIsDisabling2FA] = useState(false);
+
+  // Push Notification State
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
 
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -237,6 +252,72 @@ export default function SettingsPage() {
 
     fetchUserData();
   }, [router]);
+
+  // Check push notification status on mount
+  useEffect(() => {
+    const checkPushStatus = async () => {
+      setPushSupported(isPushSupported());
+      setPushPermission(getNotificationPermission());
+
+      if (isPushSupported()) {
+        const subscribed = await isSubscribedToPush();
+        setPushSubscribed(subscribed);
+        setNotifications(prev => ({ ...prev, push: subscribed }));
+      }
+    };
+
+    checkPushStatus();
+  }, []);
+
+  // Handle push notification toggle
+  const handlePushToggle = async () => {
+    if (!pushSupported) {
+      setPushError('Push notifications are not supported in your browser');
+      return;
+    }
+
+    setPushLoading(true);
+    setPushError(null);
+
+    try {
+      if (pushSubscribed) {
+        // Unsubscribe
+        const success = await unsubscribeFromPush();
+        if (success) {
+          setPushSubscribed(false);
+          setNotifications(prev => ({ ...prev, push: false }));
+        }
+      } else {
+        // Subscribe
+        const subscription = await subscribeToPush();
+        if (subscription) {
+          setPushSubscribed(true);
+          setPushPermission('granted');
+          setNotifications(prev => ({ ...prev, push: true }));
+        } else {
+          setPushError('Failed to enable push notifications. Please check your browser settings.');
+        }
+      }
+    } catch (err) {
+      setPushError(err instanceof Error ? err.message : 'Failed to toggle push notifications');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  // Handle test notification
+  const handleTestPush = async () => {
+    if (!pushSubscribed) {
+      setPushError('Please enable push notifications first');
+      return;
+    }
+
+    try {
+      await sendTestNotification();
+    } catch (err) {
+      setPushError('Failed to send test notification');
+    }
+  };
 
   // 2FA Functions
   const handleSetup2FA = async () => {
@@ -729,62 +810,96 @@ export default function SettingsPage() {
                 <div>
                   <h2 className="text-xl font-semibold mb-6">Notification Preferences</h2>
 
+                  {/* Push Error */}
+                  {pushError && (
+                    <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-600 dark:text-red-400 text-sm flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      {pushError}
+                    </div>
+                  )}
+
                   <div className="space-y-4">
-                    {[
-                      {
-                        id: 'push',
-                        label: 'Browser Push Notifications',
-                        description: 'Get real-time alerts in your browser',
-                        icon: Smartphone,
-                      },
-                      {
-                        id: 'priceAlerts',
-                        label: 'Price Alerts',
-                        description: 'Get notified when prices hit your targets',
-                        icon: Bell,
-                      },
-                    ].map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <div
-                          key={item.id}
-                          className="flex items-center justify-between p-4 bg-background rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-accent rounded-full">
-                              <Icon className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <p className="font-medium">{item.label}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {item.description}
-                              </p>
-                            </div>
-                          </div>
+                    {/* Browser Push Notifications */}
+                    <div className="flex items-center justify-between p-4 bg-background rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${pushSubscribed ? 'bg-green-500/10' : 'bg-accent'}`}>
+                          <Smartphone className={`w-5 h-5 ${pushSubscribed ? 'text-green-500' : ''}`} />
+                        </div>
+                        <div>
+                          <p className="font-medium">Browser Push Notifications</p>
+                          <p className="text-sm text-muted-foreground">
+                            {!pushSupported
+                              ? 'Not supported in your browser'
+                              : pushPermission === 'denied'
+                              ? 'Permission denied - check browser settings'
+                              : pushSubscribed
+                              ? 'Enabled - you will receive alerts'
+                              : 'Get real-time alerts in your browser'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {pushSubscribed && (
                           <button
-                            onClick={() =>
-                              setNotifications({
-                                ...notifications,
-                                [item.id]: !notifications[item.id as keyof typeof notifications],
-                              })
-                            }
-                            className={`w-12 h-6 rounded-full transition-colors ${
-                              notifications[item.id as keyof typeof notifications]
-                                ? 'bg-primary'
-                                : 'bg-gray-300'
-                            }`}
+                            onClick={handleTestPush}
+                            className="text-xs text-primary hover:underline"
                           >
+                            Test
+                          </button>
+                        )}
+                        <button
+                          onClick={handlePushToggle}
+                          disabled={!pushSupported || pushPermission === 'denied' || pushLoading}
+                          className={`w-12 h-6 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                            pushSubscribed ? 'bg-primary' : 'bg-gray-300'
+                          }`}
+                        >
+                          {pushLoading ? (
+                            <div className="flex items-center justify-center h-full">
+                              <Loader2 className="w-4 h-4 animate-spin text-white" />
+                            </div>
+                          ) : (
                             <div
                               className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                                notifications[item.id as keyof typeof notifications]
-                                  ? 'translate-x-6'
-                                  : 'translate-x-0.5'
+                                pushSubscribed ? 'translate-x-6' : 'translate-x-0.5'
                               }`}
                             />
-                          </button>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Price Alerts */}
+                    <div className="flex items-center justify-between p-4 bg-background rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-accent rounded-full">
+                          <Bell className="w-5 h-5" />
                         </div>
-                      );
-                    })}
+                        <div>
+                          <p className="font-medium">Price Alerts</p>
+                          <p className="text-sm text-muted-foreground">
+                            Get notified when prices hit your targets
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() =>
+                          setNotifications({
+                            ...notifications,
+                            priceAlerts: !notifications.priceAlerts,
+                          })
+                        }
+                        className={`w-12 h-6 rounded-full transition-colors ${
+                          notifications.priceAlerts ? 'bg-primary' : 'bg-gray-300'
+                        }`}
+                      >
+                        <div
+                          className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                            notifications.priceAlerts ? 'translate-x-6' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                    </div>
                   </div>
                 </div>
 

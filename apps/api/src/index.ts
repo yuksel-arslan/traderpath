@@ -28,6 +28,7 @@ import creditRoutes from './modules/credits/credit.routes';
 import rewardRoutes from './modules/rewards/reward.routes';
 import alertRoutes from './modules/notifications/alert.routes';
 import { notificationService } from './modules/notifications/notification.service';
+import { startPriceChecker, stopPriceChecker } from './modules/notifications/price-checker.job';
 import { reportRoutes } from './modules/reports/report.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import costRoutes from './modules/costs/cost.routes';
@@ -438,6 +439,10 @@ const start = async () => {
     // Start outcome tracker
     await startOutcomeTracker();
 
+    // Start price alert checker
+    startPriceChecker();
+    logger.info('✓ Price checker started');
+
     // Start server
     await app.listen({
       port: config.port,
@@ -475,6 +480,10 @@ const shutdown = async (signal: string) => {
       clearInterval(outcomeTrackerInterval);
       logger.info('✓ Outcome tracker stopped');
     }
+
+    // Stop price checker
+    stopPriceChecker();
+    logger.info('✓ Price checker stopped');
 
     // Stop accepting new connections
     await app.close();
