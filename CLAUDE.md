@@ -231,6 +231,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-20 | PDF raporda tokenomics ve grafik eksik | handleDownload fonksiyonunda tokenomics dahil edilmemişti. Tüm step verileri (1-7) tam olarak eklendi | `RecentAnalyses.tsx` |
 | 2026-01-20 | PDF'de mum grafiği (candlestick) gösterilmiyor | 1) Backend'e chartCandles (son 50 mum) eklendi, 2) SVG generator candlestick çizecek şekilde güncellendi, 3) OHLCV verisi frontend'e aktarıldı | `analysis.engine.ts`, `AnalysisReport.tsx` |
 | 2026-01-20 | Detay sayfasından PDF indirilemiyor ve grafik capture edilmiyor | 1) Detay sayfasına PDF butonu eklendi, 2) TradePlanChart html2canvas ile capture edilip chartImage olarak PDF'e ekleniyor, 3) RecentAnalyses'a chartCandles aktarıldı | `details/[id]/page.tsx`, `RecentAnalyses.tsx` |
+| 2026-01-20 | Email'de Trade Plan Chart görünmüyor (inline SVG) | Email client'lar (Gmail) güvenlik nedeniyle inline SVG'yi strip ediyor. SVG base64 data URL'e çevrilip img tag'inde kullanılıyor | `report.routes.ts` |
 
 ---
 
