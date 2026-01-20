@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
 import { cn } from '../../../lib/utils';
-import { getApiUrl, authFetch } from '../../../lib/api';
+import { authFetch } from '../../../lib/api';
 
 interface PriceAlert {
   id: string;
@@ -54,7 +54,7 @@ export default function AlertsPage() {
   const fetchAlerts = useCallback(async () => {
     try {
       setError(null);
-      const response = await authFetch(`${getApiUrl()}/alerts`);
+      const response = await authFetch('/api/alerts');
       const data = await response.json();
 
       if (data.success) {
@@ -73,7 +73,7 @@ export default function AlertsPage() {
   // Fetch triggered alerts history
   const fetchHistory = useCallback(async () => {
     try {
-      const response = await authFetch(`${getApiUrl()}/alerts/history`);
+      const response = await authFetch('/api/alerts/history');
       const data = await response.json();
 
       if (data.success && data.data.alerts) {
@@ -107,7 +107,7 @@ export default function AlertsPage() {
 
     setCreateLoading(true);
     try {
-      const response = await authFetch(`${getApiUrl()}/alerts`, {
+      const response = await authFetch('/api/alerts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -138,7 +138,7 @@ export default function AlertsPage() {
   const handleDeleteAlert = async (id: string) => {
     setActionLoading(id);
     try {
-      const response = await authFetch(`${getApiUrl()}/alerts/${id}`, {
+      const response = await authFetch(`/api/alerts/${id}`, {
         method: 'DELETE',
       });
 

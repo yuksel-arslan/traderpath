@@ -2,7 +2,7 @@
 // Push Notification Utilities
 // ===========================================
 
-import { getApiUrl, authFetch } from './api';
+import { authFetch } from './api';
 
 // VAPID public key - must match the one on the server
 // This will be fetched from the API
@@ -71,7 +71,7 @@ async function getVapidPublicKey(): Promise<string | null> {
   if (vapidPublicKey) return vapidPublicKey;
 
   try {
-    const response = await authFetch(`${getApiUrl()}/alerts/vapid-public-key`);
+    const response = await authFetch('/api/alerts/vapid-public-key');
     const data = await response.json();
 
     if (data.success && data.data?.publicKey) {
@@ -187,7 +187,7 @@ export async function unsubscribeFromPush(): Promise<boolean> {
  */
 async function saveSubscriptionToServer(subscription: PushSubscription): Promise<void> {
   try {
-    const response = await authFetch(`${getApiUrl()}/alerts/settings`, {
+    const response = await authFetch('/api/alerts/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -215,7 +215,7 @@ async function saveSubscriptionToServer(subscription: PushSubscription): Promise
  */
 async function removeSubscriptionFromServer(): Promise<void> {
   try {
-    const response = await authFetch(`${getApiUrl()}/alerts/settings`, {
+    const response = await authFetch('/api/alerts/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

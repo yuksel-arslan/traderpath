@@ -34,7 +34,7 @@ import {
   X,
 } from 'lucide-react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
-import { authFetch, getApiUrl } from '../../../lib/api';
+import { authFetch } from '../../../lib/api';
 import { uploadToCloudinary, isCloudinaryConfigured } from '../../../lib/cloudinary';
 import {
   isPushSupported,
