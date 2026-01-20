@@ -415,6 +415,12 @@ Kullanıcı Hakları Aktif:
   - html2canvas ile TradePlanChart capture edilip PDF'e ekleniyor
   - Gradient renkli buton (red→amber→green TraderPath teması)
   - RecentAnalyses ve buildReportData'ya chartCandles aktarıldı
+- **Grafik karmaşası temizlendi - tek grafik standardı**:
+  - 3 farklı grafik yerine tek TradePlanChart kullanılıyor
+  - Reports sayfasından Chart butonu ve TradingView modal kaldırıldı
+  - `components/charts/TradePlanChart.tsx` dosyası silindi (duplicate)
+  - Sadece `components/analysis/TradePlanChart.tsx` kullanılıyor
+  - Reports/[id] detay sayfasına PDF indirme butonu eklendi
 
 ---
 

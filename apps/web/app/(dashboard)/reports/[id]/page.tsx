@@ -5,9 +5,10 @@
 // All 7 analysis steps + AI Expert Review
 // ===========================================
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import html2canvas from 'html2canvas';
 import {
   ArrowLeft,
   Mail,
@@ -24,6 +25,7 @@ import {
   Crosshair,
   Bot,
   Coins,
+  FileDown,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../lib/coin-icons';
@@ -98,6 +100,8 @@ export default function ReportViewPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -170,6 +174,57 @@ export default function ReportViewPage() {
       alert(err instanceof Error ? err.message : 'Failed to send email');
     } finally {
       setSendingEmail(false);
+    }
+  };
+
+  // Download PDF with chart capture
+  const handleDownloadPdf = async () => {
+    if (!report || downloadingPdf) return;
+    setDownloadingPdf(true);
+
+    try {
+      // Build report data for PDF
+      const reportData: any = {
+        symbol: report.symbol,
+        generatedAt: report.generatedAt,
+        tradeType: report.tradeType,
+        marketPulse: report.marketPulse,
+        assetScan: report.assetScan,
+        safetyCheck: report.safetyCheck,
+        timing: report.timing,
+        tradePlan: report.tradePlan,
+        trapCheck: report.trapCheck,
+        verdict: report.verdict,
+      };
+
+      // Capture chart if visible
+      if (chartRef.current) {
+        try {
+          chartRef.current.scrollIntoView({ behavior: 'instant', block: 'center' });
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
+          const canvas = await html2canvas(chartRef.current, {
+            backgroundColor: '#1a1a2e',
+            scale: 2,
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+          });
+          reportData.chartImage = canvas.toDataURL('image/png');
+          console.log('[PDF Download] Chart captured successfully');
+        } catch (chartErr) {
+          console.warn('[PDF Download] Failed to capture chart:', chartErr);
+        }
+      }
+
+      // Generate and download PDF
+      const { generateAnalysisReport } = await import('../../../../components/reports/AnalysisReport');
+      await generateAnalysisReport(reportData, false);
+    } catch (err) {
+      console.error('Failed to download PDF:', err);
+      alert(err instanceof Error ? err.message : 'Failed to download PDF');
+    } finally {
+      setDownloadingPdf(false);
     }
   };
 
@@ -390,21 +445,39 @@ export default function ReportViewPage() {
           {/* Trade Plan Chart */}
           {report.tradePlan && (
             <div className="mb-6">
-              <TradePlanChart
-                symbol={report.symbol}
-                direction={report.tradePlan.direction as 'long' | 'short'}
-                entries={report.tradePlan.averageEntry ? [{ price: report.tradePlan.averageEntry, percentage: 100 }] : []}
-                stopLoss={{ price: report.tradePlan.stopLoss?.price || 0, percentage: 0 }}
-                takeProfits={report.tradePlan.takeProfits?.map((tp, i) => ({
-                  price: tp.price,
-                  percentage: 0,
-                  riskReward: report.tradePlan.riskReward || (i + 1),
-                })) || []}
-                currentPrice={report.assetScan?.currentPrice || report.tradePlan.averageEntry || 0}
-                support={report.assetScan?.levels?.support}
-                resistance={report.assetScan?.levels?.resistance}
-                tradeType={report.tradeType}
-              />
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-gray-900 dark:text-white">Trade Plan Chart</h3>
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={downloadingPdf}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-gradient-to-r from-red-500 via-amber-500 to-green-500 hover:opacity-90 text-white transition disabled:opacity-50"
+                  title="Download PDF report with chart"
+                >
+                  {downloadingPdf ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileDown className="w-4 h-4" />
+                  )}
+                  <span>Download PDF</span>
+                </button>
+              </div>
+              <div ref={chartRef} className="bg-white dark:bg-slate-800 rounded-xl p-2">
+                <TradePlanChart
+                  symbol={report.symbol}
+                  direction={report.tradePlan.direction as 'long' | 'short'}
+                  entries={report.tradePlan.averageEntry ? [{ price: report.tradePlan.averageEntry, percentage: 100 }] : []}
+                  stopLoss={{ price: report.tradePlan.stopLoss?.price || 0, percentage: 0 }}
+                  takeProfits={report.tradePlan.takeProfits?.map((tp, i) => ({
+                    price: tp.price,
+                    percentage: 0,
+                    riskReward: report.tradePlan.riskReward || (i + 1),
+                  })) || []}
+                  currentPrice={report.assetScan?.currentPrice || report.tradePlan.averageEntry || 0}
+                  support={report.assetScan?.levels?.support}
+                  resistance={report.assetScan?.levels?.resistance}
+                  tradeType={report.tradeType}
+                />
+              </div>
             </div>
           )}
 
