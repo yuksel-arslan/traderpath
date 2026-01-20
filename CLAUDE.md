@@ -230,6 +230,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-20 | Final Verdict "N/A Recommended" anlamsız gösteriliyor | 1) Default verdict değerleri eklendi (action: WAIT), 2) Direction yoksa WAIT gösterilir, 3) hasDirection kontrolü ile doğru renk/metin | `AnalysisReport.tsx` |
 | 2026-01-20 | PDF raporda tokenomics ve grafik eksik | handleDownload fonksiyonunda tokenomics dahil edilmemişti. Tüm step verileri (1-7) tam olarak eklendi | `RecentAnalyses.tsx` |
 | 2026-01-20 | PDF'de mum grafiği (candlestick) gösterilmiyor | 1) Backend'e chartCandles (son 50 mum) eklendi, 2) SVG generator candlestick çizecek şekilde güncellendi, 3) OHLCV verisi frontend'e aktarıldı | `analysis.engine.ts`, `AnalysisReport.tsx` |
+| 2026-01-20 | Detay sayfasından PDF indirilemiyor ve grafik capture edilmiyor | 1) Detay sayfasına PDF butonu eklendi, 2) TradePlanChart html2canvas ile capture edilip chartImage olarak PDF'e ekleniyor, 3) RecentAnalyses'a chartCandles aktarıldı | `details/[id]/page.tsx`, `RecentAnalyses.tsx` |
 
 ---
 
@@ -409,6 +410,11 @@ Kullanıcı Hakları Aktif:
   - Yeşil/kırmızı mumlar open/close değerine göre
   - Entry/SL/TP seviyeleri mumların üzerinde gösteriliyor
   - `AnalysisReportData` interface güncellendi
+- **Detay sayfasına PDF indirme butonu eklendi**:
+  - "PDF" butonu Screenshot butonunun yanına eklendi
+  - html2canvas ile TradePlanChart capture edilip PDF'e ekleniyor
+  - Gradient renkli buton (red→amber→green TraderPath teması)
+  - RecentAnalyses ve buildReportData'ya chartCandles aktarıldı
 
 ---
 

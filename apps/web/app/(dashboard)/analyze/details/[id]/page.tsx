@@ -24,6 +24,7 @@ import {
   Crosshair,
   FileText,
   Camera,
+  FileDown,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { cn } from '../../../../../lib/utils';
@@ -72,6 +73,7 @@ export default function AnalysisDetailsPage() {
   const [emailSent, setEmailSent] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
   const [capturingScreenshot, setCapturingScreenshot] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -266,6 +268,50 @@ export default function AnalysisDetailsPage() {
     }
   };
 
+  // Download PDF with chart capture
+  const handleDownloadPdf = async () => {
+    if (!analysis || downloadingPdf) return;
+    setDownloadingPdf(true);
+
+    try {
+      // Build report data
+      const reportData = buildReportData(analysis);
+
+      // Capture chart if visible
+      if (chartRef.current) {
+        try {
+          // Scroll chart into view
+          chartRef.current.scrollIntoView({ behavior: 'instant', block: 'center' });
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
+          const canvas = await html2canvas(chartRef.current, {
+            backgroundColor: '#1a1a2e',
+            scale: 2,
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+          });
+          const chartImage = canvas.toDataURL('image/png');
+          // Add chart image to report data
+          (reportData as any).chartImage = chartImage;
+          console.log('[PDF Download] Chart captured successfully');
+        } catch (chartErr) {
+          console.warn('[PDF Download] Failed to capture chart:', chartErr);
+          // Continue without chart image - SVG fallback will be used
+        }
+      }
+
+      // Generate and download PDF
+      const { generateAnalysisReport } = await import('../../../../../components/reports/AnalysisReport');
+      await generateAnalysisReport(reportData as any, false); // false = don't try to capture again
+    } catch (err) {
+      console.error('Failed to download PDF:', err);
+      alert(err instanceof Error ? err.message : 'Failed to download PDF');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   // Build comprehensive report data from analysis
   const buildReportData = (analysis: AnalysisData) => {
     const step1 = analysis.step1Result || {};
@@ -307,6 +353,7 @@ export default function AnalysisDetailsPage() {
 
       // Step 2: Asset Scan - Full indicators
       assetScan: {
+        symbol: analysis.symbol,
         currentPrice: step2.currentPrice,
         priceChange24h: step2.priceChange24h,
         volume24h: step2.volume24h,
@@ -323,6 +370,8 @@ export default function AnalysisDetailsPage() {
         direction: step2.direction,
         directionConfidence: step2.directionConfidence,
         gate: step2.gate,
+        // Chart candle data for PDF generation
+        chartCandles: step2.chartCandles,
       },
 
       // Step 3: Safety Check - Full risk data
@@ -649,19 +698,34 @@ export default function AnalysisDetailsPage() {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-gray-900 dark:text-white">Trade Plan Chart</h3>
-                <button
-                  onClick={handleScreenshot}
-                  disabled={capturingScreenshot}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 transition disabled:opacity-50"
-                  title="Save chart as image"
-                >
-                  {capturingScreenshot ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Camera className="w-4 h-4" />
-                  )}
-                  <span className="hidden sm:inline">Screenshot</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleDownloadPdf}
+                    disabled={downloadingPdf}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-gradient-to-r from-red-500 via-amber-500 to-green-500 hover:opacity-90 text-white transition disabled:opacity-50"
+                    title="Download PDF report with chart"
+                  >
+                    {downloadingPdf ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <FileDown className="w-4 h-4" />
+                    )}
+                    <span className="hidden sm:inline">PDF</span>
+                  </button>
+                  <button
+                    onClick={handleScreenshot}
+                    disabled={capturingScreenshot}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 transition disabled:opacity-50"
+                    title="Save chart as image"
+                  >
+                    {capturingScreenshot ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Camera className="w-4 h-4" />
+                    )}
+                    <span className="hidden sm:inline">Screenshot</span>
+                  </button>
+                </div>
               </div>
               <div ref={chartRef} id="trade-plan-chart-visible" className="trade-plan-chart-container bg-white dark:bg-slate-800 rounded-xl p-2">
                 <TradePlanChart
