@@ -23,6 +23,9 @@ import {
   LAGGING_INDICATORS,
 } from './config/indicator-classification';
 
+// NEW: Economic Calendar import
+import { economicCalendarService, EconomicEvent } from './services/economic-calendar.service';
+
 // ===========================================
 // RAG Gate Evaluation with Gemini
 // ===========================================
@@ -1747,6 +1750,17 @@ interface MarketPulseResult {
     impact: 'high' | 'medium' | 'low';
     description: string;
   }>;
+  // NEW: Economic Calendar data
+  economicCalendar?: {
+    riskLevel: 'high' | 'medium' | 'low';
+    riskReason: string;
+    tradingAdvice: string;
+    todayEvents: EconomicEvent[];
+    next24hEvents: EconomicEvent[];
+    weekEvents: EconomicEvent[];
+    shouldBlockTrade: boolean;
+    blockReason?: string;
+  };
   newsSentiment?: {
     overall: 'bullish' | 'bearish' | 'neutral';
     score: number;
@@ -3255,6 +3269,7 @@ export const analysisEngine = {
       btcLongShortRatio,
       btcTopTraderSentiment,
       btcTakerBuySell,
+      economicCalendar,
     ] = await Promise.all([
       fetch24hTicker('BTC'),
       fetch24hTicker('ETH'),
@@ -3266,6 +3281,10 @@ export const analysisEngine = {
       fetchLongShortRatio('BTC'),
       fetchTopTraderSentiment('BTC'),
       fetchTakerBuySellRatio('BTC'),
+      economicCalendarService.getUpcomingEvents().catch(err => {
+        console.warn('[MarketPulse] Economic calendar fetch failed:', err);
+        return null;
+      }),
     ]);
 
     // Fetch BTC candles for trend analysis
@@ -3335,6 +3354,50 @@ export const analysisEngine = {
     else if (fearGreed.value <= 74) fearGreedLabel = 'greed';
     else fearGreedLabel = 'extreme_greed';
 
+    // ===========================================
+    // ECONOMIC CALENDAR CHECK - CRITICAL FOR TRADE BLOCKING
+    // ===========================================
+    let shouldBlockTrade = false;
+    let blockReason: string | undefined;
+    let economicRiskLevel: 'high' | 'medium' | 'low' = 'low';
+    let economicTradingAdvice = 'Normal trading conditions.';
+
+    if (economicCalendar) {
+      economicRiskLevel = economicCalendar.riskLevel;
+      economicTradingAdvice = economicCalendar.tradingAdvice;
+
+      // Check if any high-impact event is within next 4 hours
+      const now = new Date();
+      const fourHoursFromNow = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+
+      for (const event of economicCalendar.todayHighImpact) {
+        const eventDateTime = new Date(`${event.date}T${event.time}:00Z`);
+        const hoursUntilEvent = (eventDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+        // Block trades 4 hours before AND 2 hours after high-impact events
+        if (hoursUntilEvent > -2 && hoursUntilEvent < 4) {
+          shouldBlockTrade = true;
+          if (hoursUntilEvent > 0) {
+            blockReason = `High-impact event "${event.title}" in ${hoursUntilEvent.toFixed(1)} hours. DO NOT TRADE.`;
+          } else {
+            blockReason = `High-impact event "${event.title}" occurred ${Math.abs(hoursUntilEvent).toFixed(1)} hours ago. Wait for market to stabilize.`;
+          }
+          break;
+        }
+      }
+
+      // Also block if FOMC is today (regardless of time)
+      if (!shouldBlockTrade) {
+        const fomcToday = economicCalendar.todayHighImpact.find(e =>
+          e.title.toLowerCase().includes('fomc')
+        );
+        if (fomcToday) {
+          shouldBlockTrade = true;
+          blockReason = 'FOMC decision day. Extreme volatility expected. DO NOT TRADE.';
+        }
+      }
+    }
+
     // RAG-based Gate Evaluation
     const gateInput: GateEvaluationInput = {
       fearGreedIndex: fearGreed.value,
@@ -3354,6 +3417,13 @@ export const analysisEngine = {
     };
 
     const gateResult = await evaluateMarketGateWithRAG(gateInput);
+
+    // OVERRIDE gate result if economic calendar blocks trade
+    if (shouldBlockTrade) {
+      gateResult.canProceed = false;
+      gateResult.reason = blockReason || 'Economic event imminent';
+      gateResult.confidence = 10; // Very low confidence during economic events
+    }
 
     // Calculate verdict based on gate result
     let verdict: 'suitable' | 'caution' | 'avoid' = 'caution';
@@ -3424,10 +3494,27 @@ export const analysisEngine = {
           sentiment: n.sentiment,
         })),
       },
-      macroEvents: [], // Would require external API for real events
-      summary,
-      verdict,
-      score,
+      macroEvents: economicCalendar?.todayHighImpact.map(e => ({
+        name: e.title,
+        date: e.date,
+        impact: e.impact,
+        description: e.tradingImplication,
+      })) || [],
+      economicCalendar: economicCalendar ? {
+        riskLevel: economicRiskLevel,
+        riskReason: economicCalendar.riskReason,
+        tradingAdvice: economicTradingAdvice,
+        todayEvents: economicCalendar.todayHighImpact,
+        next24hEvents: economicCalendar.next24hHighImpact,
+        weekEvents: economicCalendar.weekHighImpact,
+        shouldBlockTrade,
+        blockReason,
+      } : undefined,
+      summary: shouldBlockTrade
+        ? `⚠️ TRADE BLOCKED: ${blockReason} ${summary}`
+        : summary,
+      verdict: shouldBlockTrade ? 'avoid' : verdict,
+      score: shouldBlockTrade ? Math.min(score, 2) : score,
       gate: {
         canProceed: gateResult.canProceed,
         reason: gateResult.reason,
