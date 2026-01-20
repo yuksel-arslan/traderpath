@@ -11,7 +11,6 @@ import Link from 'next/link';
 import html2canvas from 'html2canvas';
 import {
   ArrowLeft,
-  Mail,
   Loader2,
   TrendingUp,
   TrendingDown,
@@ -24,7 +23,6 @@ import {
   Search,
   Crosshair,
   Bot,
-  Coins,
   FileDown,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
@@ -86,8 +84,6 @@ function formatPrice(price: number): string {
   return `$${price.toFixed(6)}`;
 }
 
-const EMAIL_CREDIT_COST = 5;
-
 export default function ReportViewPage() {
   const params = useParams();
   const router = useRouter();
@@ -97,9 +93,6 @@ export default function ReportViewPage() {
   const [aiExpertComment, setAiExpertComment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-  const [credits, setCredits] = useState<number | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
 
@@ -124,58 +117,8 @@ export default function ReportViewPage() {
       }
     };
 
-    // Fetch user credits
-    const fetchCredits = async () => {
-      try {
-        const response = await authFetch('/api/user/credits');
-        if (response.ok) {
-          const data = await response.json();
-          setCredits(data.data?.balance || 0);
-        }
-      } catch (err) {
-        console.error('Failed to fetch credits:', err);
-      }
-    };
-
     fetchReport();
-    fetchCredits();
   }, [reportId, router]);
-
-  const handleSendEmail = async () => {
-    if (!report || sendingEmail) return;
-
-    // Check credits
-    if (credits !== null && credits < EMAIL_CREDIT_COST) {
-      alert(`You need ${EMAIL_CREDIT_COST} credits to send this report via email. Current balance: ${credits}`);
-      return;
-    }
-
-    setSendingEmail(true);
-    try {
-      const response = await authFetch('/api/reports/send-html-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reportId,
-          reportData: { ...report, aiExpertComment },
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error?.message || 'Failed to send email');
-      }
-
-      setEmailSent(true);
-      setCredits((prev) => prev !== null ? prev - EMAIL_CREDIT_COST : null);
-      setTimeout(() => setEmailSent(false), 3000);
-    } catch (err) {
-      console.error('Failed to send email:', err);
-      alert(err instanceof Error ? err.message : 'Failed to send email');
-    } finally {
-      setSendingEmail(false);
-    }
-  };
 
   // Download PDF with chart capture
   const handleDownloadPdf = async () => {
@@ -502,38 +445,6 @@ export default function ReportViewPage() {
             </div>
           )}
 
-          {/* Send Email Button */}
-          <button
-            onClick={handleSendEmail}
-            disabled={sendingEmail || emailSent}
-            className={cn(
-              "w-full flex items-center justify-center gap-2 py-3 font-semibold rounded-xl transition",
-              emailSent
-                ? "bg-green-500 text-white"
-                : "bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            )}
-          >
-            {sendingEmail ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Sending...
-              </>
-            ) : emailSent ? (
-              <>
-                <CheckCircle className="w-5 h-5" />
-                Email Sent!
-              </>
-            ) : (
-              <>
-                <Mail className="w-5 h-5" />
-                Send Report via Email
-                <span className="flex items-center gap-1 ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs">
-                  <Coins className="w-3 h-3" />
-                  {EMAIL_CREDIT_COST}
-                </span>
-              </>
-            )}
-          </button>
         </div>
       </div>
     </div>
