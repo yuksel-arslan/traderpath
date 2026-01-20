@@ -143,7 +143,7 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
       // Create new subscription
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
+        applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
       });
       console.log('[Push] New subscription created');
     } else {
