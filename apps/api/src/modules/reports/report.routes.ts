@@ -52,6 +52,7 @@ interface SendHtmlEmailBody {
     symbol: string;
     generatedAt: string;
     analysisId?: string;
+    interval?: string; // e.g., '15m', '1h', '4h', '1d'
     marketPulse?: Record<string, unknown>;
     assetScan?: Record<string, unknown>;
     safetyCheck?: Record<string, unknown>;
@@ -60,6 +61,7 @@ interface SendHtmlEmailBody {
     trapCheck?: Record<string, unknown>;
     verdict?: Record<string, unknown>;
     aiExpertComment?: string;
+    aiExpertScore?: number; // AI Expert panel score (0-100)
   };
 }
 
@@ -1380,6 +1382,17 @@ export async function reportRoutes(fastify: FastifyInstance) {
           });
         }
 
+        // Fetch AI Expert comment from Report if not provided and analysisId exists
+        if (!reportData.aiExpertComment && reportData.analysisId) {
+          const report = await prisma.report.findFirst({
+            where: { analysisId: reportData.analysisId },
+            select: { aiExpertComment: true },
+          });
+          if (report?.aiExpertComment) {
+            reportData.aiExpertComment = report.aiExpertComment;
+          }
+        }
+
         // Generate HTML email content
         const htmlContent = generateReportHtmlEmail(reportData, user.name || 'Trader', chartImage);
 
@@ -1558,6 +1571,18 @@ function generateTradePlanChartSvg(
   return svg;
 }
 
+// Convert AI Expert score from /10 to /100 format in comment text
+function convertScoreTo100Scale(text: string): string {
+  // Match patterns like "7.4/10" or "(7.4/10)" and convert to "74/100"
+  return text.replace(/\((\d+(?:\.\d+)?)\s*\/\s*10\)/g, (_, score) => {
+    const scaledScore = Math.round(parseFloat(score) * 10);
+    return `(${scaledScore}/100)`;
+  }).replace(/(\d+(?:\.\d+)?)\s*\/\s*10(?!\d)/g, (_, score) => {
+    const scaledScore = Math.round(parseFloat(score) * 10);
+    return `${scaledScore}/100`;
+  });
+}
+
 // Generate HTML email content for report
 function generateReportHtmlEmail(
   data: SendHtmlEmailBody['reportData'],
@@ -1566,6 +1591,7 @@ function generateReportHtmlEmail(
 ): string {
   const symbol = data.symbol || 'N/A';
   const generatedAt = data.generatedAt || new Date().toLocaleString('tr-TR');
+  const interval = data.interval || '4h'; // Timeframe: 15m, 1h, 4h, 1d
   const verdict = data.verdict as Record<string, unknown> | undefined;
   const tradePlan = data.tradePlan as Record<string, unknown> | undefined;
   const assetScan = data.assetScan as Record<string, unknown> | undefined;
@@ -1577,6 +1603,9 @@ function generateReportHtmlEmail(
   const isLong = direction === 'long';
   const score = ((verdict?.overallScore as number) || 0) * 10;
   const action = (verdict?.action as string) || 'N/A';
+
+  // AI Expert score (0-100 scale) - passed as aiExpertScore or calculated from data
+  const aiExpertScore = data.aiExpertScore as number | undefined;
 
   const formatPrice = (price: number | undefined): string => {
     if (!price) return '$0';
@@ -1664,6 +1693,8 @@ function generateReportHtmlEmail(
                       ${symbol}/USDT Analysis
                     </h2>
                     <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 13px;">
+                      <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-weight: 600;">${interval.toUpperCase()}</span>
+                      &nbsp;|&nbsp;
                       ${generatedAt}
                     </p>
                   </td>
@@ -1800,7 +1831,7 @@ function generateReportHtmlEmail(
               </h2>
               <div style="background-color: #334155; border-radius: 8px; padding: 15px; border-left: 4px solid #f59e0b;">
                 <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">
-                  ${data.aiExpertComment}
+                  ${convertScoreTo100Scale(data.aiExpertComment)}
                 </p>
               </div>
             </td>

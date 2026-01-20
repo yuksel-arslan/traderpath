@@ -221,6 +221,7 @@ export function RecentAnalyses() {
         symbol: analysis.symbol,
         generatedAt: analysis.createdAt,
         analysisId: analysis.id,
+        interval: analysisData.interval || '4h', // e.g., '15m', '1h', '4h', '1d'
         marketPulse: {
           btcDominance: step1.btcDominance,
           fearGreedIndex: step1.fearGreedIndex,

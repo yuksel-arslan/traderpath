@@ -234,6 +234,8 @@ Kullanıcı Hakları Aktif:
 | 2026-01-20 | Email'de Trade Plan Chart görünmüyor (inline SVG) | Email client'lar (Gmail) güvenlik nedeniyle inline SVG'yi strip ediyor. SVG base64 data URL'e çevrilip img tag'inde kullanılıyor | `report.routes.ts` |
 | 2026-01-20 | Email'de verdict "N/A" gösteriliyor | RecentAnalyses'ta `analysis.verdict` yok (veritabanında böyle alan yok). `step7.verdict` kullanılacak şekilde düzeltildi | `RecentAnalyses.tsx` |
 | 2026-01-20 | Otomatik email analiz tamamlandığında gönderiliyordu | Kullanıcı isteğiyle kaldırıldı. Manuel email Recent Analyses'tan gönderilebilir. Telegram/Discord bildirimleri hala aktif | `analysis.routes.ts` |
+| 2026-01-20 | Email'de timeframe/interval gösterilmiyordu | `interval` field eklendi - symbol başlığında "4H | tarih" formatında gösteriliyor | `RecentAnalyses.tsx`, `report.routes.ts` |
+| 2026-01-20 | AI Expert score email'de /10 formatında gösteriliyordu | `convertScoreTo100Scale` fonksiyonu eklendi - tüm X/10 skorları X*10/100 formatına çevrildi (örn: 7.4/10 → 74/100) | `report.routes.ts` |
 
 ---
 
@@ -436,6 +438,11 @@ Kullanıcı Hakları Aktif:
   - Sadece Recent Analyses üzerinden email gönderilebilir
   - Kullanılmayan state ve fonksiyonlar temizlendi
   - Create Report butonu ortaya alındı, padding ayarlandı
+- **Email raporu iyileştirmeleri (devam)**:
+  - Timeframe (interval) eklendi - symbol başlığında "4H | tarih" formatında
+  - AI Expert score /10 formatından /100 formatına çevrildi (7.4/10 → 74/100)
+  - `convertScoreTo100Scale` fonksiyonu tüm X/10 skorlarını X*10/100'e çeviriyor
+  - Report tablosundan aiExpertComment otomatik fetch edilir (eğer mevcut değilse)
 
 ---
 
