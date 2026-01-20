@@ -990,7 +990,7 @@ function generatePageSteps456(data: AnalysisReportData, totalPages: number): str
 
   const tm = data.timing || { optimalEntryWindow: 'N/A', entryUrgency: 'wait', patterns: [], timeframeAlignment: 0, tradeNow: false, reason: 'Data unavailable', conditions: [], entryZones: [], gate: defaultGate };
   const tp = data.tradePlan || { direction: 'neutral', entry: 0, stopLoss: 0, takeProfit1: 0, takeProfit2: 0, takeProfit3: 0, riskReward: 0, positionSize: 0, leverage: 1, riskPercent: 0, potentialProfit: 0, potentialLoss: 0, gate: defaultGate };
-  const tc = data.trapCheck || { traps: defaultTraps, washTradingDetected: false, overallTrapRisk: 'low', warnings: [], gate: defaultGate };
+  const tc = data.trapCheck || { traps: defaultTraps, washTradingDetected: false, overallTrapRisk: 'low', warnings: [], proTip: '', gate: defaultGate };
   const isLong = tp?.direction === 'long';
   const tmGate = tm?.gate ? getGateStatus(tm.gate) : { text: 'N/A', color: '#666' };
   const tpGate = tp?.gate ? getGateStatus(tp.gate) : { text: 'N/A', color: '#666' };
