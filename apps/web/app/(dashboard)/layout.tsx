@@ -22,6 +22,7 @@ import {
   Brain,
   TrendingDown,
   BookOpen,
+  Calendar,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -39,6 +40,7 @@ const mainNav = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Reports', href: '/reports', icon: FileText },
+  { name: 'Scheduled', href: '/scheduled', icon: Calendar },
   { name: 'AI Experts', href: '/ai-expert', icon: Brain },
   { name: 'Methodology', href: '/methodology', icon: BookOpen },
   { name: 'Pricing', href: '/pricing', icon: Coins },
