@@ -1669,15 +1669,22 @@ ${synthesis}`;
 
       const expert = expertInfo[expertType] || expertInfo.aria;
 
-      // Use AI Expert for question
+      // Add language instruction to the question
+      const languageInstruction = language === 'tr'
+        ? '\n\n[IMPORTANT: Respond in Turkish (Türkçe yanıt ver)]'
+        : language !== 'en'
+          ? `\n\n[IMPORTANT: Respond in ${language}]`
+          : '';
+
+      // Use AI Expert for question with language context
       const response = await aiExpertService.chat({
         expertId: expertType,
-        message: question,
+        message: question + languageInstruction,
         userId,
       });
 
       // The chat response has 'response' field, not 'reply'
-      const aiResponse = response.response || 'I couldn\'t generate a response.';
+      const aiResponse = response.response || (language === 'tr' ? 'Yanıt oluşturulamadı.' : 'I couldn\'t generate a response.');
 
       const formattedReply = `${expert.emoji} ${expert.name}
 

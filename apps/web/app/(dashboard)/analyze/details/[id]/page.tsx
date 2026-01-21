@@ -23,7 +23,9 @@ import {
   Crosshair,
   FileText,
   Camera,
-  FileDown,
+  ExternalLink,
+  Copy,
+  Check,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { cn } from '../../../../../lib/utils';
@@ -67,7 +69,7 @@ export default function AnalysisDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [capturingScreenshot, setCapturingScreenshot] = useState(false);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [scriptCopied, setScriptCopied] = useState(false);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -211,51 +213,89 @@ Recommendation: ${step7.aiSummary || step7.summary || `${score >= 60 ? 'Conditio
     }
   };
 
-  // Download PDF with chart capture
-  const handleDownloadPdf = async () => {
-    if (!analysis || downloadingPdf) return;
-    setDownloadingPdf(true);
+  // Generate Pine Script for TradingView
+  const generatePineScript = () => {
+    if (!analysis) return '';
+
+    const step5 = analysis.step5Result || {};
+    const step7 = analysis.step7Result || {};
+
+    const direction = (step5.direction || step7.direction || 'long').toLowerCase();
+    const entryPrice = step5.averageEntry || step5.entryPrice || 0;
+    const stopLoss = step5.stopLoss?.price || step5.stopLoss || 0;
+    const tp1 = step5.takeProfits?.[0]?.price || step5.takeProfit1 || 0;
+    const tp2 = step5.takeProfits?.[1]?.price || step5.takeProfit2 || 0;
+    const tp3 = step5.takeProfits?.[2]?.price || step5.takeProfit3 || 0;
+
+    const isLong = direction === 'long';
+    const symbol = analysis.symbol;
+    const date = new Date(analysis.createdAt).toLocaleDateString();
+
+    return `//@version=5
+indicator("TraderPath - ${symbol} Trade Plan", overlay=true)
+
+// Trade Plan from TraderPath Analysis
+// Symbol: ${symbol} | Direction: ${direction.toUpperCase()} | Date: ${date}
+
+// Price Levels
+entryPrice = ${entryPrice}
+stopLoss = ${stopLoss}
+tp1 = ${tp1}
+tp2 = ${tp2}
+tp3 = ${tp3}
+
+// Draw Entry Level (Blue)
+entry_line = line.new(bar_index[100], entryPrice, bar_index, entryPrice, color=color.blue, width=2, style=line.style_solid, extend=extend.right)
+entry_label = label.new(bar_index, entryPrice, "Entry: " + str.tostring(entryPrice), color=color.blue, textcolor=color.white, style=label.style_label_left)
+
+// Draw Stop Loss (Red)
+sl_line = line.new(bar_index[100], stopLoss, bar_index, stopLoss, color=color.red, width=2, style=line.style_dashed, extend=extend.right)
+sl_label = label.new(bar_index, stopLoss, "SL: " + str.tostring(stopLoss), color=color.red, textcolor=color.white, style=label.style_label_left)
+
+// Draw Take Profit 1 (Green)
+${tp1 ? `tp1_line = line.new(bar_index[100], tp1, bar_index, tp1, color=color.green, width=2, style=line.style_solid, extend=extend.right)
+tp1_label = label.new(bar_index, tp1, "TP1: " + str.tostring(tp1), color=color.green, textcolor=color.white, style=label.style_label_left)` : '// No TP1'}
+
+// Draw Take Profit 2 (Lime)
+${tp2 ? `tp2_line = line.new(bar_index[100], tp2, bar_index, tp2, color=color.lime, width=2, style=line.style_solid, extend=extend.right)
+tp2_label = label.new(bar_index, tp2, "TP2: " + str.tostring(tp2), color=color.lime, textcolor=color.white, style=label.style_label_left)` : '// No TP2'}
+
+// Draw Take Profit 3 (Aqua)
+${tp3 ? `tp3_line = line.new(bar_index[100], tp3, bar_index, tp3, color=color.aqua, width=2, style=line.style_solid, extend=extend.right)
+tp3_label = label.new(bar_index, tp3, "TP3: " + str.tostring(tp3), color=color.aqua, textcolor=color.white, style=label.style_label_left)` : '// No TP3'}
+
+// Background fill for trade zone
+bgcolor(close >= math.min(entryPrice, stopLoss) and close <= math.max(entryPrice, stopLoss) ? ${isLong ? 'color.new(color.red, 90)' : 'color.new(color.green, 90)'} : na)
+
+// Direction Arrow
+plotshape(barstate.islast, style=${isLong ? 'shape.triangleup' : 'shape.triangledown'}, location=location.belowbar, color=${isLong ? 'color.green' : 'color.red'}, size=size.large, title="${isLong ? 'LONG' : 'SHORT'} Signal")
+`;
+  };
+
+  // Copy Pine Script to clipboard
+  const handleCopyPineScript = async () => {
+    const script = generatePineScript();
+    if (!script) return;
 
     try {
-      // Build report data
-      const reportData = buildReportData(analysis);
-
-      // Capture chart if visible
-      if (chartRef.current) {
-        try {
-          // Scroll chart into view
-          chartRef.current.scrollIntoView({ behavior: 'instant', block: 'center' });
-          await new Promise(resolve => setTimeout(resolve, 1500));
-
-          const canvas = await html2canvas(chartRef.current, {
-            backgroundColor: '#1a1a2e',
-            scale: 2,
-            logging: false,
-            useCORS: true,
-            allowTaint: true,
-          });
-          const chartImage = canvas.toDataURL('image/png');
-          // Add chart image to report data
-          (reportData as any).chartImage = chartImage;
-          console.log('[PDF Download] Chart captured successfully');
-        } catch (chartErr) {
-          console.warn('[PDF Download] Failed to capture chart:', chartErr);
-          // Continue without chart image - SVG fallback will be used
-        }
-      }
-
-      // Generate and download PDF
-      const { generateAnalysisReport } = await import('../../../../../components/reports/AnalysisReport');
-      await generateAnalysisReport(reportData as any, false); // false = don't try to capture again
+      await navigator.clipboard.writeText(script);
+      setScriptCopied(true);
+      setTimeout(() => setScriptCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to download PDF:', err);
-      alert(err instanceof Error ? err.message : 'Failed to download PDF');
-    } finally {
-      setDownloadingPdf(false);
+      console.error('Failed to copy script:', err);
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = script;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setScriptCopied(true);
+      setTimeout(() => setScriptCopied(false), 2000);
     }
   };
 
-  // Build comprehensive report data from analysis
+  // Build comprehensive report data from analysis (for email)
   const buildReportData = (analysis: AnalysisData) => {
     const step1 = analysis.step1Result || {};
     const step2 = analysis.step2Result || {};
@@ -642,18 +682,37 @@ Recommendation: ${step7.aiSummary || step7.summary || `${score >= 60 ? 'Conditio
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-gray-900 dark:text-white">Trade Plan Chart</h3>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleDownloadPdf}
-                    disabled={downloadingPdf}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-gradient-to-r from-red-500 via-amber-500 to-green-500 hover:opacity-90 text-white transition disabled:opacity-50"
-                    title="Download PDF report with chart"
+                  <a
+                    href={`https://www.tradingview.com/chart/?symbol=BINANCE:${analysis.symbol}USDT`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 hover:opacity-90 text-white transition"
+                    title="Open in TradingView"
                   >
-                    {downloadingPdf ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <FileDown className="w-4 h-4" />
+                    <ExternalLink className="w-4 h-4" />
+                    <span className="hidden sm:inline">TradingView</span>
+                  </a>
+                  <button
+                    onClick={handleCopyPineScript}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition",
+                      scriptCopied
+                        ? "bg-green-500 text-white"
+                        : "bg-purple-500 hover:bg-purple-600 text-white"
                     )}
-                    <span className="hidden sm:inline">PDF</span>
+                    title="Copy Pine Script for TradingView"
+                  >
+                    {scriptCopied ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span className="hidden sm:inline">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        <span className="hidden sm:inline">Pine Script</span>
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={handleScreenshot}

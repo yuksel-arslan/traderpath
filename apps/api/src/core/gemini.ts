@@ -4,10 +4,55 @@
 // ===========================================
 
 import { config } from './config';
+import { redis } from './cache';
 
 const GEMINI_API_KEY = config.gemini.apiKey;
-const GEMINI_MODEL = 'gemini-2.0-flash';
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+// Available models: gemini-2.5-flash-preview-05-20, gemini-2.0-flash, gemini-1.5-flash, gemini-1.5-pro
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20';
+const GEMINI_SETTINGS_KEY = 'admin:gemini:settings';
+
+// Cache for settings to avoid Redis calls on every request
+let cachedSettings: { model: string; expertModel: string; conciergeModel: string; cachedAt: number } | null = null;
+const SETTINGS_CACHE_TTL = 60000; // 1 minute cache
+
+// Get Gemini model from admin settings (with caching)
+async function getGeminiModel(type: 'default' | 'expert' | 'concierge' = 'default'): Promise<string> {
+  try {
+    // Check cache first
+    if (cachedSettings && Date.now() - cachedSettings.cachedAt < SETTINGS_CACHE_TTL) {
+      if (type === 'expert') return cachedSettings.expertModel;
+      if (type === 'concierge') return cachedSettings.conciergeModel;
+      return cachedSettings.model;
+    }
+
+    // Fetch from Redis
+    const settingsJson = await redis.get(GEMINI_SETTINGS_KEY);
+    if (settingsJson) {
+      const settings = JSON.parse(settingsJson);
+      cachedSettings = {
+        model: settings.model || DEFAULT_GEMINI_MODEL,
+        expertModel: settings.expertModel || DEFAULT_GEMINI_MODEL,
+        conciergeModel: settings.conciergeModel || DEFAULT_GEMINI_MODEL,
+        cachedAt: Date.now(),
+      };
+      if (type === 'expert') return cachedSettings.expertModel;
+      if (type === 'concierge') return cachedSettings.conciergeModel;
+      return cachedSettings.model;
+    }
+  } catch {
+    // Redis error - fall back to env/default
+  }
+  return DEFAULT_GEMINI_MODEL;
+}
+
+// Build API URL for a given model
+function buildGeminiApiUrl(model: string): string {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+}
+
+// Legacy export for backward compatibility
+const GEMINI_MODEL = DEFAULT_GEMINI_MODEL;
+const GEMINI_API_URL = buildGeminiApiUrl(DEFAULT_GEMINI_MODEL);
 
 // Timeouts and limits
 const FETCH_TIMEOUT_MS = 30000; // 30 seconds max for API call
@@ -160,11 +205,16 @@ export function extractRetryDelay(error: unknown): number {
 export async function callGeminiWithRetry(
   options: GeminiRequestOptions,
   maxRetries: number = DEFAULT_MAX_RETRIES,
-  operation: string = 'gemini_request'
+  operation: string = 'gemini_request',
+  modelType: 'default' | 'expert' | 'concierge' = 'default'
 ): Promise<GeminiResponse> {
   if (!GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not configured.');
   }
+
+  // Get model from admin settings
+  const model = await getGeminiModel(modelType);
+  const apiUrl = buildGeminiApiUrl(model);
 
   let lastError: Error = new Error(`Gemini API failed after ${maxRetries} attempts`);
   let attempt = 0;
@@ -174,7 +224,7 @@ export async function callGeminiWithRetry(
 
     try {
       const response = await fetchWithTimeout(
-        `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
+        `${apiUrl}?key=${GEMINI_API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -316,4 +366,4 @@ export async function callGemini(options: GeminiRequestOptions): Promise<GeminiR
 }
 
 // Export model and URL for reference
-export { GEMINI_MODEL, GEMINI_API_URL };
+export { GEMINI_MODEL, GEMINI_API_URL, getGeminiModel, buildGeminiApiUrl };

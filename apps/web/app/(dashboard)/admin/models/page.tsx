@@ -14,9 +14,27 @@ import {
   Cpu,
   Activity,
   AlertTriangle,
+  Sparkles,
+  Save,
+  Bot,
+  MessageSquare,
 } from 'lucide-react';
 import Link from 'next/link';
 import { authFetch } from '../../../../lib/api';
+
+interface GeminiModel {
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface GeminiSettings {
+  model: string;
+  expertModel: string;
+  conciergeModel: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
 
 interface TFTModelStatus {
   status: 'not_trained' | 'training' | 'trained' | 'error';
@@ -52,6 +70,12 @@ export default function AdminModelsPage() {
   const [tradeType, setTradeType] = useState<'scalp' | 'swing' | 'position'>('swing');
   const [trainingLogs, setTrainingLogs] = useState<string[]>([]);
 
+  // Gemini settings state
+  const [geminiSettings, setGeminiSettings] = useState<GeminiSettings | null>(null);
+  const [availableModels, setAvailableModels] = useState<GeminiModel[]>([]);
+  const [isSavingGemini, setIsSavingGemini] = useState(false);
+  const [geminiSuccess, setGeminiSuccess] = useState<string | null>(null);
+
   const availableSymbols = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC'];
 
   const tradeTypeOptions = [
@@ -59,6 +83,48 @@ export default function AdminModelsPage() {
     { value: 'swing', label: 'Swing', description: '1-7 gün, orta vadeli' },
     { value: 'position', label: 'Position', description: '1-4 hafta, uzun vadeli' },
   ];
+
+  const fetchGeminiSettings = useCallback(async () => {
+    try {
+      const response = await authFetch('/api/admin/gemini/settings');
+      if (response.ok) {
+        const data = await response.json();
+        setGeminiSettings(data.data.settings);
+        setAvailableModels(data.data.availableModels);
+      }
+    } catch (err) {
+      console.error('Failed to fetch Gemini settings:', err);
+    }
+  }, []);
+
+  const saveGeminiSettings = async () => {
+    if (!geminiSettings) return;
+
+    setIsSavingGemini(true);
+    setGeminiSuccess(null);
+
+    try {
+      const response = await authFetch('/api/admin/gemini/settings', {
+        method: 'POST',
+        body: JSON.stringify(geminiSettings),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setGeminiSettings(data.data.settings);
+        setGeminiSuccess('Settings saved successfully!');
+        setTimeout(() => setGeminiSuccess(null), 3000);
+      } else {
+        const data = await response.json();
+        alert(`Failed to save: ${data.error?.message || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Failed to save Gemini settings:', err);
+      alert('Failed to save settings');
+    } finally {
+      setIsSavingGemini(false);
+    }
+  };
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -99,9 +165,10 @@ export default function AdminModelsPage() {
 
   useEffect(() => {
     fetchStatus();
+    fetchGeminiSettings();
     const interval = setInterval(fetchStatus, 10000);
     return () => clearInterval(interval);
-  }, [fetchStatus]);
+  }, [fetchStatus, fetchGeminiSettings]);
 
   useEffect(() => {
     if (modelStatus?.status === 'training') {
@@ -235,7 +302,117 @@ export default function AdminModelsPage() {
         </Link>
       </div>
 
-      {/* Model Status Card */}
+      {/* Gemini AI Settings */}
+      <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-6 h-6 text-purple-500" />
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold">Gemini AI Settings</h2>
+              <p className="text-sm text-muted-foreground">Configure AI models for different features</p>
+            </div>
+          </div>
+          {geminiSuccess && (
+            <div className="flex items-center gap-2 text-green-500 text-sm">
+              <CheckCircle className="w-4 h-4" />
+              {geminiSuccess}
+            </div>
+          )}
+        </div>
+
+        {geminiSettings && availableModels.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {/* Default Model */}
+            <div className="p-4 bg-background/50 rounded-lg border">
+              <label className="flex items-center gap-2 text-sm font-medium mb-3">
+                <Brain className="w-4 h-4 text-primary" />
+                Default Model
+              </label>
+              <select
+                value={geminiSettings.model}
+                onChange={(e) => setGeminiSettings({ ...geminiSettings, model: e.target.value })}
+                className="w-full px-3 py-2 bg-background border rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none"
+              >
+                {availableModels.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground mt-2">Used for general AI operations</p>
+            </div>
+
+            {/* AI Expert Model */}
+            <div className="p-4 bg-background/50 rounded-lg border">
+              <label className="flex items-center gap-2 text-sm font-medium mb-3">
+                <Bot className="w-4 h-4 text-teal-500" />
+                AI Expert Model
+              </label>
+              <select
+                value={geminiSettings.expertModel}
+                onChange={(e) => setGeminiSettings({ ...geminiSettings, expertModel: e.target.value })}
+                className="w-full px-3 py-2 bg-background border rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none"
+              >
+                {availableModels.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground mt-2">ARIA, NEXUS, ORACLE, SENTINEL</p>
+            </div>
+
+            {/* AI Concierge Model */}
+            <div className="p-4 bg-background/50 rounded-lg border">
+              <label className="flex items-center gap-2 text-sm font-medium mb-3">
+                <MessageSquare className="w-4 h-4 text-emerald-500" />
+                AI Concierge Model
+              </label>
+              <select
+                value={geminiSettings.conciergeModel}
+                onChange={(e) => setGeminiSettings({ ...geminiSettings, conciergeModel: e.target.value })}
+                className="w-full px-3 py-2 bg-background border rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none"
+              >
+                {availableModels.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground mt-2">Intent detection & responses</p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="text-xs text-muted-foreground">
+            {geminiSettings?.updatedAt && (
+              <span>Last updated: {new Date(geminiSettings.updatedAt).toLocaleString()}</span>
+            )}
+            {geminiSettings?.updatedBy && (
+              <span className="ml-2">by {geminiSettings.updatedBy}</span>
+            )}
+          </div>
+          <button
+            onClick={saveGeminiSettings}
+            disabled={isSavingGemini}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition disabled:opacity-50"
+          >
+            {isSavingGemini ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            Save Changes
+          </button>
+        </div>
+      </div>
+
+      {/* TFT Model Status Card */}
+      <h2 className="text-lg sm:text-xl font-bold mb-4 flex items-center gap-2">
+        <TrendingUp className="w-5 h-5 text-primary" />
+        TFT Prediction Model
+      </h2>
       <div className={`p-4 sm:p-6 rounded-lg border mb-6 sm:mb-8 ${getStatusColor(modelStatus?.status || 'not_trained')}`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
