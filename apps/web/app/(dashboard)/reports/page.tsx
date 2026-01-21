@@ -6,7 +6,6 @@ import { CoinIcon } from '../../../components/common/CoinIcon';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
 import {
   FileText,
-  Download,
   Trash2,
   TrendingUp,
   TrendingDown,
@@ -144,25 +143,6 @@ export default function ReportsPage() {
       }
     } catch (error) {
       console.error('Failed to delete report:', error);
-    }
-  };
-
-  const handleDownload = async (report: Report) => {
-    try {
-      // Fetch full report data
-      const response = await authFetch(`/api/reports/${report.id}`);
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data.reportData) {
-          // Dynamic import PDF generator
-          const { generateAnalysisReport } = await import('../../../components/reports/AnalysisReport');
-          await generateAnalysisReport(data.data.reportData);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to download report:', error);
-      alert('Failed to download report');
     }
   };
 
@@ -830,14 +810,6 @@ Could you share your risk assessment and recommendations based on this analysis?
                       <span className="text-sm font-medium hidden sm:inline">AI Expert</span>
                     </button>
                   )}
-                  {/* Download Button */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDownload(report); }}
-                    className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-accent text-slate-600 dark:text-slate-400 transition"
-                    title="Download PDF"
-                  >
-                    <Download className="w-5 h-5" />
-                  </button>
                   {/* Email Button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); handleSendEmail(report); }}

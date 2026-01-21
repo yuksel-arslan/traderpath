@@ -31,7 +31,6 @@ import {
   Crosshair,
   Radar,
   ShieldAlert,
-  Download,
   Mail,
   History,
   Share2,
@@ -416,15 +415,6 @@ const AI_EXPERTS = [
 // Advanced Reporting Features Data
 const REPORTING_FEATURES = [
   {
-    name: 'PDF Reports',
-    icon: Download,
-    color: 'text-red-500',
-    bg: 'bg-red-500/10',
-    border: 'border-red-500/30',
-    description: 'Download professional PDF reports for each analysis. Perfect for record-keeping and sharing with your trading partners.',
-    highlights: ['Branded professional layout', 'Complete analysis data', 'Charts & visualizations', 'Offline access']
-  },
-  {
     name: 'Email Delivery',
     icon: Mail,
     color: 'text-blue-500',
@@ -706,7 +696,7 @@ function FeaturesSection() {
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
               <span className="gradient-text-logo-animate">Advanced Reporting</span>
-              <Download className="w-8 h-8 text-cyan-500" />
+              <Mail className="w-8 h-8 text-cyan-500" />
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Professional-grade reporting tools to track, share, and learn from your trading analyses. Click any feature to learn more.
@@ -734,8 +724,7 @@ function FeaturesSection() {
             <div className="mt-8 p-4 bg-card border rounded-xl text-center">
               <p className="text-sm text-muted-foreground">
                 <span className="font-semibold text-foreground">All reports included:</span> Every analysis automatically generates a comprehensive report.
-                Download as <span className="text-cyan-500 font-medium">PDF</span>, receive via <span className="text-blue-500 font-medium">email</span>,
-                or access from your <span className="text-green-500 font-medium">dashboard</span> anytime.
+                Receive via <span className="text-blue-500 font-medium">email</span> or access from your <span className="text-green-500 font-medium">dashboard</span> anytime.
               </p>
             </div>
           </div>
@@ -1582,18 +1571,18 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* PDF Report */}
+              {/* Email Report */}
               <div className="bg-card border rounded-xl p-5">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-500 rounded-lg flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-white" />
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h4 className="font-semibold gradient-text-logo-animate">PDF Report</h4>
-                    <p className="text-xs text-muted-foreground">Download detailed analysis report</p>
+                    <h4 className="font-semibold gradient-text-logo-animate">Email Report</h4>
+                    <p className="text-xs text-muted-foreground">Receive detailed analysis via email</p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Full 7-step analysis with charts, indicators, and trade plan in professional PDF format.</p>
+                <p className="text-xs text-muted-foreground">Full 7-step analysis with charts, indicators, and trade plan delivered to your inbox.</p>
               </div>
 
               {/* TFT Model - Coming Soon */}
