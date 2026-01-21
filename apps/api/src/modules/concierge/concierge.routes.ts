@@ -3,166 +3,47 @@ import { z } from 'zod';
 import { authenticate } from '../../core/auth/middleware';
 import { conciergeService } from './concierge.service';
 
-// Request schemas
+// Request schema
 const chatRequestSchema = z.object({
   message: z.string().min(1).max(500),
-  sessionId: z.string().optional(),
-  language: z.enum(['tr', 'en', 'es', 'de', 'fr', 'pt', 'ru', 'zh', 'ja', 'ko']).optional(),
+  language: z.enum(['tr', 'en']).optional().default('en'),
 });
-
-// User type from JWT
-interface JwtUser {
-  id: string;
-  email: string;
-  name: string;
-  level: number;
-  isAdmin?: boolean;
-}
-
-// Helper to get typed user from request
-function getUser(request: FastifyRequest): JwtUser {
-  return request.user as JwtUser;
-}
 
 export async function conciergeRoutes(app: FastifyInstance) {
   /**
    * POST /api/concierge/chat
-   * Main chat endpoint for AI Concierge
+   * Main chat endpoint
    */
   app.post('/chat', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = getUser(request).id;
-    const body = chatRequestSchema.parse(request.body);
-
-    const response = await conciergeService.processMessage({
-      message: body.message,
-      userId,
-      sessionId: body.sessionId,
-      language: body.language,
-    });
-
-    return reply.send(response);
-  });
-
-  /**
-   * GET /api/concierge/suggestions
-   * Get suggested commands based on user context
-   */
-  app.get('/suggestions', {
-    preHandler: authenticate,
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = getUser(request).id;
-    const language = (request.query as { language?: string }).language || 'en';
-
-    // Get user preferences for personalized suggestions
-    let preferredCoins = ['BTC', 'ETH', 'SOL'];
     try {
-      const { prisma } = await import('../../core/database');
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { preferredCoins: true },
+      const userId = request.user!.id;
+      const body = chatRequestSchema.parse(request.body);
+
+      const response = await conciergeService.processMessage({
+        message: body.message,
+        userId,
+        language: body.language,
       });
-      if (user?.preferredCoins?.length) {
-        preferredCoins = user.preferredCoins;
-      }
-    } catch {
-      // Column might not exist in database yet, use defaults
-    }
 
-    // Generate contextual suggestions
-    const suggestions = language === 'tr' ? [
-      `${preferredCoins[0]} nasıl?`,
-      'Son analizlerim',
-      'Top 5 coin analiz',
-      'RSI nedir?',
-      'Alarmlarımı göster',
-    ] : [
-      `How is ${preferredCoins[0]}?`,
-      'My recent analyses',
-      'Analyze top 5 coins',
-      'What is RSI?',
-      'Show my alerts',
-    ];
-
-    return reply.send({
-      success: true,
-      suggestions,
-    });
-  });
-
-  /**
-   * GET /api/concierge/quick-commands
-   * Get quick command buttons for the UI
-   */
-  app.get('/quick-commands', {
-    preHandler: authenticate,
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const language = (request.query as { language?: string }).language || 'en';
-
-      const commands = language === 'tr' ? [
-      {
-        id: 'top-movers',
-        label: '🔥 Top Movers',
-        command: 'Top 5 coin analiz et',
-        description: 'En hareketli coinleri analiz et',
-      },
-      {
-        id: 'favorites',
-        label: '💎 Favorilerim',
-        command: 'Favori coinlerimi analiz et',
-        description: 'Kayıtlı coinlerini hızlıca analiz et',
-      },
-      {
-        id: 'btc-quick',
-        label: '₿ BTC Analiz',
-        command: 'BTC nasıl?',
-        description: 'Bitcoin hızlı analizi',
-      },
-      {
-        id: 'status',
-        label: '📊 Durum',
-        command: 'Son analizlerim',
-        description: 'Analiz geçmişi ve bakiye',
-      },
-    ] : [
-      {
-        id: 'top-movers',
-        label: '🔥 Top Movers',
-        command: 'Analyze top 5 coins',
-        description: 'Analyze the most active coins',
-      },
-      {
-        id: 'favorites',
-        label: '💎 Favorites',
-        command: 'Analyze my favorite coins',
-        description: 'Quickly analyze your saved coins',
-      },
-      {
-        id: 'btc-quick',
-        label: '₿ BTC Analysis',
-        command: 'How is BTC?',
-        description: 'Quick Bitcoin analysis',
-      },
-      {
-        id: 'status',
-        label: '📊 Status',
-        command: 'My recent analyses',
-        description: 'Analysis history and balance',
-      },
-    ];
-
-      return reply.send({
-        success: true,
-        commands,
-      });
+      return reply.send(response);
     } catch (error) {
-      console.error('Quick commands error:', error);
+      console.error('Concierge chat error:', error);
+
+      // Handle Zod validation errors
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid request',
+          message: error.errors[0]?.message || 'Validation failed',
+        });
+      }
+
       return reply.status(500).send({
         success: false,
-        error: 'Failed to get quick commands',
-        commands: [], // Return empty array as fallback
+        error: 'Internal server error',
+        message: 'Failed to process message. Please try again.',
       });
     }
   });
