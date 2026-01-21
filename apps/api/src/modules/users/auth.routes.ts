@@ -649,6 +649,7 @@ export default async function authRoutes(app: FastifyInstance) {
             xp: user.xp,
             streakDays: user.streakDays,
             preferredCoins: user.preferredCoins,
+            preferredInterface: user.preferredInterface, // 'ui' | 'concierge' | null
             referralCode: user.referralCode,
             createdAt: user.createdAt,
             isAdmin,

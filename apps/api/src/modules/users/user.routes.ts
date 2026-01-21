@@ -176,6 +176,58 @@ export default async function userRoutes(app: FastifyInstance) {
   });
 
   /**
+   * POST /api/user/preference
+   * Save user's preferred interface (ui or concierge)
+   */
+  const preferenceSchema = z.object({
+    preferredInterface: z.enum(['ui', 'concierge']),
+  });
+
+  app.post('/preference', async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = request.user!.id;
+    const body = preferenceSchema.parse(request.body);
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { preferredInterface: body.preferredInterface },
+    });
+
+    return reply.send({
+      success: true,
+      data: {
+        preferredInterface: user.preferredInterface,
+      },
+    });
+  });
+
+  /**
+   * GET /api/user/preference
+   * Get user's preferred interface
+   */
+  app.get('/preference', async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = request.user!.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferredInterface: true },
+    });
+
+    if (!user) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: 'USER_NOT_FOUND', message: 'User not found' },
+      });
+    }
+
+    return reply.send({
+      success: true,
+      data: {
+        preferredInterface: user.preferredInterface,
+      },
+    });
+  });
+
+  /**
    * GET /api/user/referral-code
    * Get referral code and stats
    */
