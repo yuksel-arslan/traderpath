@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -23,9 +23,11 @@ import {
   TrendingDown,
   BookOpen,
   Calendar,
+  Bot,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
+import { InterfacePreferenceModal } from '../../components/common/InterfacePreferenceModal';
 import { cn } from '../../lib/utils';
 import { authFetch, clearAuthToken } from '../../lib/api';
 
@@ -38,6 +40,7 @@ const PriceTicker = dynamic(
 // Main navigation items
 const mainNav = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Concierge', href: '/concierge', icon: Bot },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'Scheduled', href: '/scheduled', icon: Calendar },
@@ -72,6 +75,7 @@ interface UserInfo {
   avatarUrl?: string;
   level?: number;
   isAdmin?: boolean;
+  preferredInterface?: 'ui' | 'concierge' | null;
 }
 
 export default function DashboardLayout({
@@ -84,6 +88,7 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
+  const [showPreferenceModal, setShowPreferenceModal] = useState(false);
 
   // Fetch user info with React Query
   const { data: user } = useQuery<UserInfo | null>({
@@ -109,6 +114,34 @@ export default function DashboardLayout({
 
   // Get admin status from user
   const isAdmin = user?.isAdmin || false;
+
+  // Show preference modal for users who haven't selected yet
+  useEffect(() => {
+    if (user && user.preferredInterface === null) {
+      setShowPreferenceModal(true);
+    }
+  }, [user]);
+
+  // Handle preference selection
+  const handlePreferenceSelect = async (preference: 'ui' | 'concierge') => {
+    try {
+      const res = await authFetch('/api/users/preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preferredInterface: preference }),
+      });
+
+      if (res.ok) {
+        setShowPreferenceModal(false);
+        // Redirect to concierge if that's what they chose
+        if (preference === 'concierge') {
+          router.push('/concierge');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to save preference:', error);
+    }
+  };
 
   // Fetch alerts only when notification menu is open (no background polling)
   const { data: alertsData } = useQuery<PriceAlert[]>({
@@ -447,6 +480,13 @@ export default function DashboardLayout({
       <main className="min-h-[calc(100vh-4rem)]">
         {children}
       </main>
+
+      {/* Interface Preference Modal - shown to new users */}
+      <InterfacePreferenceModal
+        isOpen={showPreferenceModal}
+        onClose={() => setShowPreferenceModal(false)}
+        onSelect={handlePreferenceSelect}
+      />
     </div>
   );
 }

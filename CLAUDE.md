@@ -457,6 +457,43 @@ Kullanıcı Hakları Aktif:
   - node-cron ile saatlik kontrol çalışıyor
   - Sidebar'a "Scheduled" linki eklendi (Calendar ikonu)
   - Schema'ya `interval` alanı eklendi
+- **AI Concierge özelliği eklendi** (Zero-UI deneyimi):
+  - Yeni modül: `apps/api/src/modules/concierge/`
+    - `concierge.service.ts` - Ana orchestration servisi
+    - `concierge.routes.ts` - API endpoint'leri
+    - `intent-detector.ts` - Gemini ile intent tanıma
+    - `response-synthesizer.ts` - Sonuç özetleme ve lokalizasyon
+    - `types.ts` - Intent tipleri ve veri yapıları
+  - Frontend: `apps/web/components/concierge/`
+    - `ChatInput.tsx` - Yazı/ses input (Web Speech API)
+    - `ChatMessages.tsx` - Mesaj listesi
+    - `ResultCard.tsx` - GO/COND/WAIT/AVOID sonuç kartı
+    - `QuickCommands.tsx` - Hızlı komut butonları
+    - `useConcierge.ts` - API hook
+  - Yeni sayfa: `apps/web/app/(dashboard)/concierge/page.tsx`
+  - Sidebar'a "Concierge" linki eklendi (Bot ikonu)
+  - **Intent Tipleri**:
+    - `QUICK_ANALYSIS` - "BTC nasıl?", "ETH'ye gireyim mi?"
+    - `SPECIFIC_ANALYSIS` - "BTC 4h analiz", "SOL scalp"
+    - `MULTI_ANALYSIS` - "Top 5 coin analiz et"
+    - `EXPERT_ASK` - "RSI nedir?", "MACD nasıl çalışır?"
+    - `ALERT_SET` - "BTC 70K olunca haber ver"
+    - `ALERT_LIST` - "Alarmlarım neler?"
+    - `STATUS` - "Son analizlerim", "Kredim"
+    - `HELP` - "Ne yapabilirsin?"
+  - **Kredi Politikası**:
+    - Quick/Specific Analysis: 15 kredi (mevcut fiyat)
+    - Multi Analysis: 15 × N kredi
+    - Expert soru: 0-5 kredi (3 ücretsiz/analiz)
+    - Alert: 1 kredi
+    - Status/Help: Ücretsiz
+  - **Özellikler**:
+    - Türkçe/İngilizce dil desteği
+    - Sesli input (Web Speech API)
+    - Hızlı komut butonları
+    - Analiz sonuçları kartı (Entry/SL/TP)
+    - Detay sayfasına link
+    - Hata durumunda otomatik kredi iadesi
 
 ---
 
