@@ -155,7 +155,7 @@
 ### Orchestration Akışı
 
 ```
-Analiz Başlatılır (15 kredi)
+Analiz Başlatılır (25 kredi)
     ↓
 7 Adımlık Analiz Çalışır
     ↓
@@ -456,7 +456,7 @@ Kullanıcı Hakları Aktif:
   - Kullanıcılar favori coinleri için otomatik analiz kurabilir
   - **Ayarlanabilir parametreler**: Symbol, Interval (15m/1h/4h/1d), Frekans (Günlük/Haftalık/Aylık), Saat (UTC)
   - Teslimat kanalları: Email, Telegram, Discord
-  - Her analiz 15 kredi (normal analiz ücreti)
+  - Her analiz 25 kredi (normal analiz ücreti)
   - Ücretsiz kullanıcılar max 3 aktif schedule kurabilir
   - node-cron ile saatlik kontrol çalışıyor
   - Sidebar'a "Scheduled" linki eklendi (Calendar ikonu)
@@ -486,8 +486,8 @@ Kullanıcı Hakları Aktif:
     - `STATUS` - "Son analizlerim", "Kredim"
     - `HELP` - "Ne yapabilirsin?"
   - **Kredi Politikası**:
-    - Quick/Specific Analysis: 15 kredi (mevcut fiyat)
-    - Multi Analysis: 15 × N kredi
+    - Quick/Specific Analysis: 25 kredi (mevcut fiyat)
+    - Multi Analysis: 25 × N kredi
     - Expert soru: 0-5 kredi (3 ücretsiz/analiz)
     - Alert: 1 kredi
     - Status/Help: Ücretsiz
@@ -526,6 +526,29 @@ Kullanıcı Hakları Aktif:
   - Expert routing: ARIA (teknik), NEXUS (risk), ORACLE (whale), SENTINEL (güvenlik)
   - Auto-scroll, loading animations, proper error handling
   - Link to analysis details: `/analyze/details/{analysisId}`
+- **AI Concierge landing page tanıtımı eklendi**:
+  - Feature 5 olarak ana sayfaya eklendi (TFT Feature 6 oldu)
+  - Emerald/teal renk teması
+  - 4 özellik kartı: Natural Language, Voice Commands, Instant Analysis, Expert Insights
+  - Örnek komutlar gösterimi: "Analyze BTC for me", "How is SOL doing?", vb.
+  - Bilingual support ve 50+ coin vurgusu
+- **Analiz maliyeti 25 krediye güncellendi**:
+  - Concierge servisi ANALYSIS_COST = 25
+  - Help mesajları güncellendi (TR/EN)
+  - CLAUDE.md dokümantasyonu güncellendi
+- **AI Concierge Chart View özelliği eklendi**:
+  - `CHART_VIEW` intent: "grafik", "chart", "candlestick", "mum grafiği", "tradingview"
+  - Binance API'den OHLCV verileri çekiliyor (100 mum)
+  - Trade plan (Entry/SL/TP) grafik üzerinde gösteriliyor
+  - Frontend: TradePlanChart komponenti dinamik import ile yükleniyor
+  - Quick command: "Show BTC chart" butonu eklendi
+- **AI Concierge Scheduled Analysis özelliği eklendi**:
+  - `SCHEDULE_LIST`: Kullanıcının zamanlanmış analizlerini listeler
+  - `SCHEDULE_CREATE`: Yeni zamanlama oluşturur (coin, interval, frekans)
+  - `SCHEDULE_DELETE`: Coin adına göre zamanlamayı siler
+  - Ücretsiz kullanıcılar max 3 schedule kurabilir
+  - Her otomatik analiz 25 kredi harcar
+  - Help mesajları güncellendi (TR/EN)
 
 ---
 

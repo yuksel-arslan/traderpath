@@ -1,11 +1,44 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, Send, Loader2, Coins, Trash2, Mic, MicOff, Sparkles, TrendingUp, TrendingDown, Minus, ExternalLink, AlertTriangle, HelpCircle, BarChart3 } from 'lucide-react';
+import { Bot, Send, Loader2, Coins, Trash2, Mic, MicOff, Sparkles, TrendingUp, TrendingDown, Minus, ExternalLink, AlertTriangle, HelpCircle, BarChart3, LineChart } from 'lucide-react';
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+// Dynamically import TradePlanChart to avoid SSR issues
+const TradePlanChart = dynamic(
+  () => import('@/components/analysis/TradePlanChart').then(mod => mod.TradePlanChart),
+  { ssr: false, loading: () => <div className="h-[400px] animate-pulse bg-slate-200 dark:bg-slate-800 rounded-lg" /> }
+);
 
 // Types
+interface ChartCandle {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+interface TradePlanData {
+  entry: number;
+  stopLoss: number;
+  takeProfit1: number;
+  takeProfit2?: number;
+  takeProfit3?: number;
+  direction: 'long' | 'short';
+}
+
+interface ChartData {
+  symbol: string;
+  interval: string;
+  candles: ChartCandle[];
+  tradePlan?: TradePlanData;
+  currentPrice?: number;
+}
+
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -13,6 +46,7 @@ interface ChatMessage {
   timestamp: Date;
   intent?: string;
   analysisData?: AnalysisData;
+  chartData?: ChartData;
 }
 
 interface AnalysisData {
@@ -32,14 +66,15 @@ interface ConciergeResponse {
   verdict?: string;
   score?: number;
   voltranSynthesis?: string;
+  chartData?: ChartData;
 }
 
 // Quick Commands
 const QUICK_COMMANDS = [
   { id: 'btc', label: 'BTC Analysis', command: 'How is BTC?', icon: '₿' },
   { id: 'eth', label: 'ETH Analysis', command: 'How is ETH?', icon: 'Ξ' },
+  { id: 'chart', label: 'Show Chart', command: 'Show BTC chart', icon: '📈' },
   { id: 'help', label: 'Help', command: 'help', icon: '?' },
-  { id: 'status', label: 'My Status', command: 'status', icon: '📊' },
 ];
 
 // Simple language detection based on Turkish characters and common words
@@ -147,7 +182,7 @@ export default function ConciergePage() {
 
       // Parse analysis data if present
       let analysisData: AnalysisData | undefined;
-      if (data.intent === 'ANALYSIS' && data.analysisId) {
+      if ((data.intent === 'ANALYSIS' || data.intent === 'CHART_VIEW') && data.analysisId) {
         analysisData = {
           verdict: data.verdict as AnalysisData['verdict'],
           score: data.score,
@@ -163,6 +198,7 @@ export default function ConciergePage() {
         timestamp: new Date(),
         intent: data.intent,
         analysisData,
+        chartData: data.chartData,
       };
       setMessages(prev => [...prev, assistantMsg]);
       setCredits(data.creditsRemaining);
@@ -273,6 +309,64 @@ export default function ConciergePage() {
             <span className="font-semibold">Your Status</span>
           </div>
           <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+        </div>
+      );
+    }
+
+    // Chart view intent
+    if (msg.role === 'assistant' && msg.intent === 'CHART_VIEW' && msg.chartData) {
+      const { symbol, interval, tradePlan, currentPrice } = msg.chartData;
+
+      // Convert tradePlan to TradePlanChart format
+      const entries = tradePlan ? [{ price: tradePlan.entry, percentage: 100 }] : [{ price: currentPrice || 0, percentage: 100 }];
+      const stopLossData = tradePlan
+        ? { price: tradePlan.stopLoss, percentage: Math.abs(((tradePlan.stopLoss - tradePlan.entry) / tradePlan.entry) * 100) }
+        : { price: 0, percentage: 0 };
+      const takeProfitsData = tradePlan
+        ? [
+            { price: tradePlan.takeProfit1, percentage: Math.abs(((tradePlan.takeProfit1 - tradePlan.entry) / tradePlan.entry) * 100), riskReward: 1 },
+            ...(tradePlan.takeProfit2 ? [{ price: tradePlan.takeProfit2, percentage: Math.abs(((tradePlan.takeProfit2 - tradePlan.entry) / tradePlan.entry) * 100), riskReward: 2 }] : []),
+            ...(tradePlan.takeProfit3 ? [{ price: tradePlan.takeProfit3, percentage: Math.abs(((tradePlan.takeProfit3 - tradePlan.entry) / tradePlan.entry) * 100), riskReward: 3 }] : []),
+          ]
+        : [{ price: 0, percentage: 0, riskReward: 0 }];
+
+      // Determine trade type from interval
+      const tradeType = interval === '15m' || interval === '5m' ? 'scalping' : interval === '1d' || interval === '1W' ? 'swing' : 'dayTrade';
+
+      return (
+        <div className="space-y-4">
+          {/* Chart Header */}
+          <div className="flex items-center gap-2 text-teal-500">
+            <LineChart className="w-5 h-5" />
+            <span className="font-semibold">{symbol} {interval.toUpperCase()} Chart</span>
+          </div>
+
+          {/* TradePlan Chart */}
+          <div className="h-[400px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+            <TradePlanChart
+              symbol={symbol}
+              direction={tradePlan?.direction || 'long'}
+              entries={entries}
+              stopLoss={stopLossData}
+              takeProfits={takeProfitsData}
+              currentPrice={currentPrice || 0}
+              tradeType={tradeType}
+            />
+          </div>
+
+          {/* Message text */}
+          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+
+          {/* View Details Link */}
+          {msg.analysisData?.analysisId && (
+            <Link
+              href={`/analyze/details/${msg.analysisData.analysisId}`}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 rounded-lg transition-colors text-sm font-medium"
+            >
+              <ExternalLink className="w-4 h-4" />
+              View Full Analysis
+            </Link>
+          )}
         </div>
       );
     }
