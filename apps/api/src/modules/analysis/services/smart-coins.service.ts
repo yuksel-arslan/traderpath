@@ -4,11 +4,7 @@
 // Uses CoinGecko data to identify high-potential trades
 // ===========================================
 
-import {
-  getTrendingCoins,
-  getTopMovers,
-  CoinGeckoMarketData
-} from '../../data-providers/free/coingecko';
+import { getTrendingCoins } from '../../data-providers/free/coingecko';
 
 // Cache for smart coins data
 interface SmartCoinsCache {
@@ -22,6 +18,9 @@ let smartCoinsCache: SmartCoinsCache = {
 };
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// CoinGecko API base URL
+const COINGECKO_BASE_URL = 'https://api.coingecko.com/api/v3';
 
 // Binance-supported symbols (we only analyze these)
 const BINANCE_SUPPORTED = new Set([
@@ -67,22 +66,58 @@ export interface SmartCoinsResponse {
   updatedAt: number;
 }
 
+// CoinGecko market data interface
+interface CoinGeckoMarketData {
+  id: string;
+  symbol: string;
+  name: string;
+  current_price: number;
+  market_cap: number;
+  market_cap_rank: number;
+  total_volume: number;
+  price_change_percentage_24h: number;
+}
+
 // Convert CoinGecko market data to SmartCoin format
 function toSmartCoin(data: CoinGeckoMarketData): SmartCoin {
   return {
     symbol: data.symbol.toUpperCase(),
     name: data.name,
-    price: data.current_price,
+    price: data.current_price || 0,
     priceChange24h: data.price_change_percentage_24h || 0,
-    volume24h: data.total_volume,
-    marketCap: data.market_cap,
-    marketCapRank: data.market_cap_rank,
+    volume24h: data.total_volume || 0,
+    marketCap: data.market_cap || 0,
+    marketCapRank: data.market_cap_rank || 999,
   };
 }
 
 // Filter to only Binance-supported coins
 function filterBinanceSupported(coins: SmartCoin[]): SmartCoin[] {
   return coins.filter(coin => BINANCE_SUPPORTED.has(coin.symbol));
+}
+
+// Fetch market data from CoinGecko (top 250 coins)
+async function fetchMarketData(): Promise<CoinGeckoMarketData[]> {
+  try {
+    const response = await fetch(
+      `${COINGECKO_BASE_URL}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false&price_change_percentage=24h`,
+      {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(10000), // 10 second timeout
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`[SmartCoins] CoinGecko API error: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('[SmartCoins] Failed to fetch market data:', error);
+    return [];
+  }
 }
 
 class SmartCoinsService {
@@ -101,9 +136,9 @@ class SmartCoinsService {
 
     try {
       // Fetch data in parallel
-      const [trendingRes, moversRes] = await Promise.all([
+      const [trendingRes, marketData] = await Promise.all([
         getTrendingCoins(),
-        getTopMovers(),
+        fetchMarketData(),
       ]);
 
       const response: SmartCoinsResponse = {
@@ -121,42 +156,46 @@ class SmartCoinsService {
           trendingRes.data.coins.map(coin => ({
             symbol: coin.item.symbol.toUpperCase(),
             name: coin.item.name,
-            price: 0, // Trending doesn't include price
+            price: 0,
             priceChange24h: 0,
             volume24h: 0,
             marketCap: 0,
-            marketCapRank: coin.item.market_cap_rank,
+            marketCapRank: coin.item.market_cap_rank || 999,
             score: coin.item.score,
           }))
         ).slice(0, 10);
       }
 
-      // Process gainers, losers, volume, and market cap
-      if (moversRes.success && moversRes.data) {
-        const { gainers, losers } = moversRes.data;
+      // Process market data for gainers, losers, volume, and market cap
+      if (marketData.length > 0) {
+        // Filter to Binance-supported coins first
+        const binanceCoins = marketData
+          .filter(coin => BINANCE_SUPPORTED.has(coin.symbol.toUpperCase()))
+          .map(toSmartCoin);
 
-        // Top gainers (positive price change)
-        response.gainers = filterBinanceSupported(
-          gainers.map(toSmartCoin)
-        ).slice(0, 10);
+        console.log(`[SmartCoins] Found ${binanceCoins.length} Binance-supported coins`);
 
-        // Top losers (negative price change)
-        response.losers = filterBinanceSupported(
-          losers.map(toSmartCoin)
-        ).slice(0, 10);
+        // Top gainers (sort by price change descending)
+        const sortedByGain = [...binanceCoins]
+          .filter(c => c.priceChange24h > 0)
+          .sort((a, b) => b.priceChange24h - a.priceChange24h);
+        response.gainers = sortedByGain.slice(0, 10);
 
-        // High volume (sort by volume)
-        const allCoins = [...gainers, ...losers];
-        const byVolume = [...allCoins].sort((a, b) => b.total_volume - a.total_volume);
-        response.highVolume = filterBinanceSupported(
-          byVolume.map(toSmartCoin)
-        ).slice(0, 10);
+        // Top losers (sort by price change ascending - most negative first)
+        const sortedByLoss = [...binanceCoins]
+          .filter(c => c.priceChange24h < 0)
+          .sort((a, b) => a.priceChange24h - b.priceChange24h);
+        response.losers = sortedByLoss.slice(0, 10);
 
-        // Top market cap (sort by market cap rank)
-        const byMarketCap = [...allCoins].sort((a, b) => a.market_cap_rank - b.market_cap_rank);
-        response.topMarketCap = filterBinanceSupported(
-          byMarketCap.map(toSmartCoin)
-        ).slice(0, 10);
+        // High volume (sort by volume descending)
+        const sortedByVolume = [...binanceCoins]
+          .sort((a, b) => b.volume24h - a.volume24h);
+        response.highVolume = sortedByVolume.slice(0, 10);
+
+        // Top market cap (sort by rank ascending)
+        const sortedByMarketCap = [...binanceCoins]
+          .sort((a, b) => a.marketCapRank - b.marketCapRank);
+        response.topMarketCap = sortedByMarketCap.slice(0, 10);
       }
 
       // Cache the result
@@ -166,6 +205,8 @@ class SmartCoinsService {
       };
 
       console.log('[SmartCoins] Data fetched and cached successfully');
+      console.log(`[SmartCoins] Trending: ${response.trending.length}, Gainers: ${response.gainers.length}, Losers: ${response.losers.length}`);
+
       return response;
     } catch (error) {
       console.error('[SmartCoins] Error fetching data:', error);
