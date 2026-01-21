@@ -38,6 +38,7 @@ import expertRoutes from './modules/expert/expert.routes';
 import contractSecurityRoutes from './modules/security/contract-security.routes';
 import paymentRoutes from './modules/payments/payment.routes';
 import scheduledReportsRoutes from './modules/scheduled/scheduled-reports.routes';
+import smartCoinsRoutes from './modules/analysis/smart-coins.routes';
 import { scheduledReportsService } from './modules/scheduled/scheduled-reports.service';
 
 // ===========================================
@@ -317,6 +318,9 @@ app.register(paymentRoutes, { prefix: '/api/payments' }); // Legacy
 
 // Scheduled Reports routes
 app.register(scheduledReportsRoutes);
+
+// Smart Coins routes (CoinGecko-powered suggestions)
+app.register(smartCoinsRoutes);
 
 // ===========================================
 // 404 Handler

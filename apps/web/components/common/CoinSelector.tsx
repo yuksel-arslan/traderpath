@@ -2,11 +2,43 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, ChevronDown, TrendingUp, Clock, X, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Search, ChevronDown, TrendingUp, Clock, X, AlertTriangle, RefreshCw, Flame, TrendingDown, BarChart3, Trophy } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { getAuthToken } from '../../lib/api';
+import { getAuthToken, authFetch } from '../../lib/api';
 import { CoinIcon } from './CoinIcon';
 import { AnalysisDialog } from '../analysis/AnalysisDialog';
+
+// Smart coin suggestion from CoinGecko
+interface SmartCoin {
+  symbol: string;
+  name: string;
+  price: number;
+  priceChange24h: number;
+  volume24h: number;
+  marketCap: number;
+  marketCapRank: number;
+  score?: number;
+}
+
+interface SmartCoinsData {
+  trending: SmartCoin[];
+  gainers: SmartCoin[];
+  losers: SmartCoin[];
+  highVolume: SmartCoin[];
+  topMarketCap: SmartCoin[];
+  updatedAt: number;
+}
+
+// Smart coin category configuration
+type SmartCategory = 'trending' | 'gainers' | 'losers' | 'highVolume' | 'topMarketCap' | 'all';
+
+const SMART_CATEGORIES: { id: SmartCategory; label: string; icon: React.ReactNode; color: string }[] = [
+  { id: 'trending', label: 'Trending', icon: <Flame className="w-3.5 h-3.5" />, color: 'text-orange-500' },
+  { id: 'gainers', label: 'Gainers', icon: <TrendingUp className="w-3.5 h-3.5" />, color: 'text-green-500' },
+  { id: 'losers', label: 'Losers', icon: <TrendingDown className="w-3.5 h-3.5" />, color: 'text-red-500' },
+  { id: 'highVolume', label: 'Volume', icon: <BarChart3 className="w-3.5 h-3.5" />, color: 'text-blue-500' },
+  { id: 'topMarketCap', label: 'Top Cap', icon: <Trophy className="w-3.5 h-3.5" />, color: 'text-amber-500' },
+];
 
 // Recent analysis info for marketplace
 interface RecentAnalysis {
@@ -116,6 +148,39 @@ export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
 
   // Analysis dialog state
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
+
+  // Smart coins state
+  const [smartCoins, setSmartCoins] = useState<SmartCoinsData | null>(null);
+  const [smartCategory, setSmartCategory] = useState<SmartCategory>('trending');
+  const [isLoadingSmartCoins, setIsLoadingSmartCoins] = useState(false);
+
+  // Fetch smart coins from API
+  const fetchSmartCoins = async () => {
+    if (smartCoins && Date.now() - smartCoins.updatedAt < 5 * 60 * 1000) {
+      // Use cached data if less than 5 minutes old
+      return;
+    }
+
+    setIsLoadingSmartCoins(true);
+    try {
+      const response = await fetch('/api/smart-coins');
+      const data = await response.json();
+      if (data.success && data.data) {
+        setSmartCoins(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch smart coins:', error);
+    } finally {
+      setIsLoadingSmartCoins(false);
+    }
+  };
+
+  // Fetch smart coins when dropdown opens
+  useEffect(() => {
+    if (isOpen && !smartCoins) {
+      fetchSmartCoins();
+    }
+  }, [isOpen]);
 
   // Load recent coins from localStorage
   useEffect(() => {
@@ -362,7 +427,94 @@ export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
               </div>
             </div>
 
-            <div className="max-h-[320px] overflow-y-auto">
+            <div className="max-h-[400px] overflow-y-auto">
+              {/* Smart Coins Category Tabs */}
+              {!search && (
+                <div className="p-2 border-b bg-muted/30">
+                  <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                    {SMART_CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => {
+                          setSmartCategory(cat.id);
+                          if (!smartCoins) fetchSmartCoins();
+                        }}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all",
+                          smartCategory === cat.id
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "bg-background hover:bg-muted text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <span className={smartCategory === cat.id ? 'text-primary-foreground' : cat.color}>
+                          {cat.icon}
+                        </span>
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Smart Coins List */}
+              {!search && smartCoins && smartCategory !== 'all' && (
+                <div className="p-2 border-b">
+                  {isLoadingSmartCoins ? (
+                    <div className="flex items-center justify-center py-4 text-muted-foreground">
+                      <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                      Loading...
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {(smartCoins[smartCategory] || []).slice(0, 8).map((coin) => {
+                        const coinData = ALL_COINS.find(c => c.symbol === coin.symbol) || {
+                          symbol: coin.symbol,
+                          name: coin.name,
+                          icon: '●',
+                          popular: false
+                        };
+                        return (
+                          <button
+                            key={coin.symbol}
+                            onClick={() => handleSelect(coinData)}
+                            className={cn(
+                              "w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent transition-colors",
+                              selectedCoin?.symbol === coin.symbol && "bg-primary/10"
+                            )}
+                          >
+                            <CoinIcon symbol={coin.symbol} size={24} />
+                            <div className="flex-1 text-left min-w-0">
+                              <div className="font-medium text-sm">{coin.symbol}</div>
+                              <div className="text-xs text-muted-foreground truncate">{coin.name}</div>
+                            </div>
+                            {/* Price change badge */}
+                            {coin.priceChange24h !== 0 && (
+                              <span className={cn(
+                                "text-xs font-medium px-2 py-0.5 rounded-full",
+                                coin.priceChange24h > 0
+                                  ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400"
+                                  : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                              )}>
+                                {coin.priceChange24h > 0 ? '+' : ''}{coin.priceChange24h.toFixed(1)}%
+                              </span>
+                            )}
+                            {/* Rank for top market cap */}
+                            {smartCategory === 'topMarketCap' && coin.marketCapRank && (
+                              <span className="text-xs text-muted-foreground">#{coin.marketCapRank}</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                      {(smartCoins[smartCategory] || []).length === 0 && (
+                        <div className="text-center py-4 text-sm text-muted-foreground">
+                          No coins in this category
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Recent Searches */}
               {!search && recentCoinObjects.length > 0 && (
                 <div className="p-3 border-b">
@@ -385,8 +537,8 @@ export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
                 </div>
               )}
 
-              {/* Popular Coins */}
-              {!search && (
+              {/* Popular Coins - only show if no smart coins or in search mode */}
+              {!search && !smartCoins && (
                 <div className="p-3 border-b">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                     <TrendingUp className="w-3 h-3" />
