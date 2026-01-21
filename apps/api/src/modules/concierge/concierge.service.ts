@@ -15,53 +15,167 @@ interface ConciergeResponse {
   creditsSpent: number;
   creditsRemaining: number;
   error?: string;
+  // Analysis-specific fields
+  analysisId?: string;
+  verdict?: string;
+  score?: number;
+  direction?: string;
+  entry?: number;
+  stopLoss?: number;
+  takeProfit1?: number;
+  takeProfit2?: number;
+  riskReward?: number;
+  voltranSynthesis?: string;
 }
 
-// Simple intent detection based on keywords
-function detectIntent(message: string): { intent: string; symbol?: string; interval?: string } {
-  const lower = message.toLowerCase();
+// Expanded coin list - 50+ popular coins
+const SUPPORTED_COINS = [
+  // Top 20 by market cap
+  'btc', 'eth', 'bnb', 'xrp', 'ada', 'doge', 'sol', 'trx', 'dot', 'matic',
+  'shib', 'ltc', 'avax', 'link', 'atom', 'uni', 'xlm', 'etc', 'xmr', 'bch',
+  // DeFi tokens
+  'aave', 'mkr', 'crv', 'comp', 'sushi', 'snx', 'yfi', '1inch',
+  // Layer 2 / New chains
+  'arb', 'op', 'apt', 'sui', 'sei', 'near', 'ftm', 'algo', 'egld', 'flow',
+  // Meme coins
+  'pepe', 'floki', 'wif', 'bonk',
+  // Gaming / Metaverse
+  'sand', 'mana', 'axs', 'gala', 'imx', 'enj',
+  // AI tokens
+  'fet', 'agix', 'ocean', 'rndr',
+  // Others
+  'vet', 'hbar', 'qnt', 'inj', 'ldo', 'rune', 'grt', 'fil', 'theta', 'icp'
+];
+
+// Coin name aliases for natural language
+const COIN_ALIASES: Record<string, string> = {
+  'bitcoin': 'btc',
+  'ethereum': 'eth',
+  'binance': 'bnb',
+  'ripple': 'xrp',
+  'cardano': 'ada',
+  'dogecoin': 'doge',
+  'solana': 'sol',
+  'polygon': 'matic',
+  'polkadot': 'dot',
+  'chainlink': 'link',
+  'uniswap': 'uni',
+  'avalanche': 'avax',
+  'cosmos': 'atom',
+  'litecoin': 'ltc',
+  'arbitrum': 'arb',
+  'optimism': 'op',
+  'aptos': 'apt',
+  'shiba': 'shib',
+  'pepe coin': 'pepe',
+  'render': 'rndr',
+  'fetch': 'fet',
+  'singularity': 'agix',
+};
+
+// Intent detection with advanced pattern matching
+function detectIntent(message: string): {
+  intent: string;
+  symbol?: string;
+  interval?: string;
+  expertType?: string;
+} {
+  const lower = message.toLowerCase().trim();
 
   // Help intent
-  if (lower.includes('help') || lower.includes('yardım') || lower === '?') {
+  if (lower === 'help' || lower === '?' || lower.includes('yardım') || lower === 'nasıl kullanılır') {
     return { intent: 'HELP' };
   }
 
   // Status intent
-  if (lower.includes('status') || lower.includes('credit') || lower.includes('balance') ||
-      lower.includes('durum') || lower.includes('kredi') || lower.includes('bakiye')) {
+  if (
+    lower === 'status' ||
+    lower === 'credits' ||
+    lower === 'balance' ||
+    lower.includes('my status') ||
+    lower.includes('my credits') ||
+    lower.includes('kredi') ||
+    lower.includes('bakiye') ||
+    lower.includes('durumum')
+  ) {
     return { intent: 'STATUS' };
   }
 
-  // Analysis intent - detect coin symbol
-  const coinPatterns = [
-    'btc', 'eth', 'sol', 'bnb', 'xrp', 'ada', 'doge', 'avax', 'dot', 'link',
-    'matic', 'uni', 'atom', 'ltc', 'near', 'apt', 'arb', 'op', 'sui', 'sei'
-  ];
+  // Check for coin aliases first
+  let detectedCoin: string | null = null;
 
-  for (const coin of coinPatterns) {
-    if (lower.includes(coin)) {
-      // Detect interval
-      let interval = '4h'; // default
-      if (lower.includes('1h') || lower.includes('saatlik')) interval = '1h';
-      if (lower.includes('4h') || lower.includes('4 saat')) interval = '4h';
-      if (lower.includes('1d') || lower.includes('günlük') || lower.includes('daily')) interval = '1d';
-      if (lower.includes('15m') || lower.includes('15 dakika')) interval = '15m';
-
-      return {
-        intent: 'ANALYSIS',
-        symbol: coin.toUpperCase(),
-        interval
-      };
+  for (const [alias, symbol] of Object.entries(COIN_ALIASES)) {
+    if (lower.includes(alias)) {
+      detectedCoin = symbol;
+      break;
     }
   }
 
-  // Expert question intent
-  if (lower.includes('what is') || lower.includes('nedir') || lower.includes('nasıl') ||
-      lower.includes('how') || lower.includes('explain') || lower.includes('açıkla')) {
-    return { intent: 'EXPERT_ASK' };
+  // Check for coin symbols
+  if (!detectedCoin) {
+    for (const coin of SUPPORTED_COINS) {
+      // Match coin symbol with word boundaries
+      const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
+      if (coinRegex.test(lower)) {
+        detectedCoin = coin;
+        break;
+      }
+    }
   }
 
-  // Default to help
+  // Analysis intent - coin detected
+  if (detectedCoin) {
+    // Detect interval
+    let interval = '4h'; // default
+
+    if (lower.includes('15m') || lower.includes('15 min') || lower.includes('15 dakika')) {
+      interval = '15m';
+    } else if (lower.includes('1h') || lower.includes('1 hour') || lower.includes('saatlik') || lower.includes('1 saat')) {
+      interval = '1h';
+    } else if (lower.includes('4h') || lower.includes('4 hour') || lower.includes('4 saat')) {
+      interval = '4h';
+    } else if (lower.includes('1d') || lower.includes('daily') || lower.includes('günlük') || lower.includes('gün')) {
+      interval = '1d';
+    } else if (lower.includes('1w') || lower.includes('weekly') || lower.includes('haftalık')) {
+      interval = '1W';
+    } else if (lower.includes('scalp')) {
+      interval = '15m';
+    } else if (lower.includes('swing')) {
+      interval = '1d';
+    }
+
+    return {
+      intent: 'ANALYSIS',
+      symbol: detectedCoin.toUpperCase(),
+      interval,
+    };
+  }
+
+  // Expert question intent - detect expert type
+  const technicalKeywords = ['rsi', 'macd', 'bollinger', 'ema', 'sma', 'indicator', 'indikatör', 'teknik'];
+  const riskKeywords = ['risk', 'leverage', 'margin', 'stop loss', 'position size', 'kaldıraç'];
+  const whaleKeywords = ['whale', 'balina', 'big player', 'institution', 'order book', 'emir defteri'];
+  const securityKeywords = ['security', 'güvenlik', 'hack', 'scam', 'rug pull', 'audit'];
+
+  let expertType = 'aria'; // default: technical expert
+
+  if (technicalKeywords.some(k => lower.includes(k))) {
+    expertType = 'aria';
+  } else if (riskKeywords.some(k => lower.includes(k))) {
+    expertType = 'nexus';
+  } else if (whaleKeywords.some(k => lower.includes(k))) {
+    expertType = 'oracle';
+  } else if (securityKeywords.some(k => lower.includes(k))) {
+    expertType = 'sentinel';
+  }
+
+  // Check if it's a question
+  const questionWords = ['what', 'how', 'why', 'when', 'where', 'which', 'explain', 'ne', 'nasıl', 'neden', 'açıkla', 'anlat', 'nedir'];
+  if (questionWords.some(w => lower.includes(w)) || lower.endsWith('?')) {
+    return { intent: 'EXPERT_ASK', expertType };
+  }
+
+  // Unknown intent
   return { intent: 'UNKNOWN' };
 }
 
@@ -88,7 +202,7 @@ class ConciergeService {
       const creditBalance = await creditService.getBalance(userId);
 
       // Detect intent
-      const { intent, symbol, interval } = detectIntent(message);
+      const { intent, symbol, interval, expertType } = detectIntent(message);
 
       // Handle different intents
       switch (intent) {
@@ -96,24 +210,16 @@ class ConciergeService {
           return this.handleHelp(language, creditBalance);
 
         case 'STATUS':
-          return await this.handleStatus(userId, creditBalance);
+          return await this.handleStatus(userId, creditBalance, language);
 
         case 'ANALYSIS':
           return await this.handleAnalysis(userId, symbol!, interval!, language, creditBalance);
 
         case 'EXPERT_ASK':
-          return await this.handleExpertQuestion(userId, message, language, creditBalance);
+          return await this.handleExpertQuestion(userId, message, language, creditBalance, expertType);
 
         default:
-          return {
-            success: true,
-            intent: 'UNKNOWN',
-            message: language === 'tr'
-              ? 'Anlamadım. "BTC nasıl?" veya "help" yazabilirsiniz.'
-              : 'I didn\'t understand. Try "How is BTC?" or "help".',
-            creditsSpent: 0,
-            creditsRemaining: creditBalance,
-          };
+          return this.handleUnknown(language, creditBalance);
       }
     } catch (error) {
       console.error('Concierge service error:', error);
@@ -134,24 +240,42 @@ class ConciergeService {
 
   private handleHelp(language: string, creditBalance: number): ConciergeResponse {
     const helpText = language === 'tr'
-      ? `🤖 AI Concierge'e Hoş Geldiniz!
+      ? `AI Concierge'e Hoş Geldiniz!
 
 Yapabileceklerim:
-• "BTC nasıl?" - Hızlı analiz (15 kredi)
-• "ETH 4h analiz" - Belirli timeframe analizi
-• "RSI nedir?" - Uzman sorusu (ücretsiz)
+
+HIZLI ANALİZ (15 kredi)
+• "BTC nasıl?" - Hızlı analiz
+• "ETH 4h analiz" - Belirli timeframe
+• "SOL scalp" - Scalping analizi
+
+UZMAN SORULARI (ücretsiz)
+• "RSI nedir?" - Teknik analiz
+• "Risk yönetimi nasıl yapılır?" - Risk
+• "Balina aktivitesi ne demek?" - Whale
+
+DURUM
 • "status" - Kredi bakiyeniz
 
-Desteklenen coinler: BTC, ETH, SOL, BNB, XRP, ADA, DOGE ve daha fazlası.`
-      : `🤖 Welcome to AI Concierge!
+50+ desteklenen coin: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK, ARB, OP, APT, SUI, SEI ve daha fazlası.`
+      : `Welcome to AI Concierge!
 
-I can help you with:
-• "How is BTC?" - Quick analysis (15 credits)
+What I can do:
+
+QUICK ANALYSIS (15 credits)
+• "How is BTC?" - Quick analysis
 • "ETH 4h analysis" - Specific timeframe
-• "What is RSI?" - Expert question (free)
+• "SOL scalp" - Scalping analysis
+
+EXPERT QUESTIONS (free)
+• "What is RSI?" - Technical analysis
+• "How to manage risk?" - Risk management
+• "What is whale activity?" - Whale tracking
+
+STATUS
 • "status" - Check your credits
 
-Supported coins: BTC, ETH, SOL, BNB, XRP, ADA, DOGE and more.`;
+50+ supported coins: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK, ARB, OP, APT, SUI, SEI and more.`;
 
     return {
       success: true,
@@ -162,24 +286,51 @@ Supported coins: BTC, ETH, SOL, BNB, XRP, ADA, DOGE and more.`;
     };
   }
 
-  private async handleStatus(userId: string, creditBalance: number): Promise<ConciergeResponse> {
+  private async handleStatus(userId: string, creditBalance: number, language: string): Promise<ConciergeResponse> {
     // Get recent analyses count
     const recentAnalyses = await prisma.analysis.count({
       where: {
         userId,
-        createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }, // Last 7 days
+        createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
       },
     });
+
+    // Get total analyses
+    const totalAnalyses = await prisma.analysis.count({
+      where: { userId },
+    });
+
+    // Get average score
+    const avgScoreResult = await prisma.analysis.aggregate({
+      where: { userId },
+      _avg: { totalScore: true },
+    });
+    const avgScore = avgScoreResult._avg.totalScore
+      ? Number(avgScoreResult._avg.totalScore).toFixed(1)
+      : 'N/A';
+
+    const statusText = language === 'tr'
+      ? `Hesap Durumunuz
+
+Krediler: ${creditBalance}
+Son 7 Gün Analiz: ${recentAnalyses}
+Toplam Analiz: ${totalAnalyses}
+Ortalama Skor: ${avgScore}/10
+
+Daha fazla krediye mi ihtiyacınız var? Fiyatlandırma sayfasını ziyaret edin.`
+      : `Your Account Status
+
+Credits: ${creditBalance}
+Analyses (7 days): ${recentAnalyses}
+Total Analyses: ${totalAnalyses}
+Average Score: ${avgScore}/10
+
+Need more credits? Visit the pricing page.`;
 
     return {
       success: true,
       intent: 'STATUS',
-      message: `📊 Your Status:
-
-💰 Credits: ${creditBalance}
-📈 Analyses (7 days): ${recentAnalyses}
-
-Need more credits? Visit the pricing page.`,
+      message: statusText,
       creditsSpent: 0,
       creditsRemaining: creditBalance,
     };
@@ -200,8 +351,8 @@ Need more credits? Visit the pricing page.`,
         success: false,
         intent: 'ANALYSIS',
         message: language === 'tr'
-          ? `❌ Yetersiz kredi. Analiz için ${ANALYSIS_COST} kredi gerekli, bakiyeniz: ${creditBalance}`
-          : `❌ Insufficient credits. Analysis requires ${ANALYSIS_COST} credits, you have: ${creditBalance}`,
+          ? `Yetersiz kredi. Analiz için ${ANALYSIS_COST} kredi gerekli, bakiyeniz: ${creditBalance}`
+          : `Insufficient credits. Analysis requires ${ANALYSIS_COST} credits, you have: ${creditBalance}`,
         creditsSpent: 0,
         creditsRemaining: creditBalance,
         error: 'INSUFFICIENT_CREDITS',
@@ -224,8 +375,8 @@ Need more credits? Visit the pricing page.`,
           success: false,
           intent: 'ANALYSIS',
           message: language === 'tr'
-            ? `❌ Analiz başarısız: ${panelResult.error || 'Bilinmeyen hata'}`
-            : `❌ Analysis failed: ${panelResult.error || 'Unknown error'}`,
+            ? `Analiz başarısız: ${panelResult.error || 'Bilinmeyen hata'}`
+            : `Analysis failed: ${panelResult.error || 'Unknown error'}`,
           creditsSpent: 0,
           creditsRemaining: creditBalance,
           error: panelResult.error,
@@ -237,16 +388,15 @@ Need more credits? Visit the pricing page.`,
       const score = panelResult.score || 5;
       const synthesis = panelResult.voltranSynthesis || 'Analysis completed.';
 
-      const emoji = verdict === 'GO' ? '🟢' : verdict === 'AVOID' ? '🔴' : '🟡';
+      const verdictEmoji = verdict === 'GO' ? 'GO' : verdict === 'AVOID' ? 'AVOID' : verdict === 'CONDITIONAL_GO' ? 'COND' : 'WAIT';
+      const directionText = panelResult.direction ? `(${panelResult.direction.toUpperCase()})` : '';
 
-      const analysisMessage = `${emoji} ${symbol} ${interval} Analysis
+      const analysisMessage = `${symbol} ${interval.toUpperCase()} Analysis
 
-📊 Verdict: ${verdict}
-⭐ Score: ${score}/10
+Verdict: ${verdictEmoji} ${directionText}
+Score: ${score}/10
 
-${synthesis}
-
-${panelResult.analysisId ? `📄 Details: /analyze/details/${panelResult.analysisId}` : ''}`;
+${synthesis}`;
 
       return {
         success: true,
@@ -254,6 +404,17 @@ ${panelResult.analysisId ? `📄 Details: /analyze/details/${panelResult.analysi
         message: analysisMessage,
         creditsSpent: panelResult.creditsSpent || ANALYSIS_COST,
         creditsRemaining: panelResult.creditsRemaining ?? (creditBalance - ANALYSIS_COST),
+        // Analysis-specific data
+        analysisId: panelResult.analysisId,
+        verdict: verdict,
+        score: score,
+        direction: panelResult.direction,
+        entry: panelResult.entry,
+        stopLoss: panelResult.stopLoss,
+        takeProfit1: panelResult.takeProfit1,
+        takeProfit2: panelResult.takeProfit2,
+        riskReward: panelResult.riskReward,
+        voltranSynthesis: synthesis,
       };
 
     } catch (error) {
@@ -262,8 +423,8 @@ ${panelResult.analysisId ? `📄 Details: /analyze/details/${panelResult.analysi
         success: false,
         intent: 'ANALYSIS',
         message: language === 'tr'
-          ? '❌ Analiz sırasında hata oluştu. Lütfen tekrar deneyin.'
-          : '❌ Error during analysis. Please try again.',
+          ? 'Analiz sırasında hata oluştu. Lütfen tekrar deneyin.'
+          : 'Error during analysis. Please try again.',
         creditsSpent: 0,
         creditsRemaining: creditBalance,
         error: error instanceof Error ? error.message : 'Analysis failed',
@@ -275,20 +436,35 @@ ${panelResult.analysisId ? `📄 Details: /analyze/details/${panelResult.analysi
     userId: string,
     question: string,
     language: string,
-    creditBalance: number
+    creditBalance: number,
+    expertType: string = 'aria'
   ): Promise<ConciergeResponse> {
     try {
-      // Use ARIA (technical expert) for questions
+      // Expert emojis and names
+      const expertInfo: Record<string, { emoji: string; name: string }> = {
+        aria: { emoji: 'ARIA', name: 'Technical Expert' },
+        nexus: { emoji: 'NEXUS', name: 'Risk Expert' },
+        oracle: { emoji: 'ORACLE', name: 'Whale Tracker' },
+        sentinel: { emoji: 'SENTINEL', name: 'Security Expert' },
+      };
+
+      const expert = expertInfo[expertType] || expertInfo.aria;
+
+      // Use AI Expert for question
       const response = await aiExpertService.chat({
-        expertId: 'aria',
+        expertId: expertType,
         message: question,
         userId,
       });
 
+      const formattedReply = `${expert.emoji} ${expert.name}
+
+${response.reply || 'I couldn\'t generate a response.'}`;
+
       return {
         success: true,
         intent: 'EXPERT_ASK',
-        message: response.reply || 'I couldn\'t generate a response.',
+        message: formattedReply,
         creditsSpent: response.creditsSpent || 0,
         creditsRemaining: response.creditsRemaining ?? creditBalance,
       };
@@ -298,13 +474,35 @@ ${panelResult.analysisId ? `📄 Details: /analyze/details/${panelResult.analysi
         success: false,
         intent: 'EXPERT_ASK',
         message: language === 'tr'
-          ? '❌ Sorunuz cevaplanamadı. Lütfen tekrar deneyin.'
-          : '❌ Could not answer your question. Please try again.',
+          ? 'Sorunuz cevaplanamadı. Lütfen tekrar deneyin.'
+          : 'Could not answer your question. Please try again.',
         creditsSpent: 0,
         creditsRemaining: creditBalance,
         error: error instanceof Error ? error.message : 'Question failed',
       };
     }
+  }
+
+  private handleUnknown(language: string, creditBalance: number): ConciergeResponse {
+    const unknownText = language === 'tr'
+      ? `Anlamadım. Şunları deneyebilirsiniz:
+
+• "BTC nasıl?" - Hızlı analiz
+• "RSI nedir?" - Uzman sorusu
+• "help" - Tüm komutlar`
+      : `I didn't understand. Try:
+
+• "How is BTC?" - Quick analysis
+• "What is RSI?" - Expert question
+• "help" - All commands`;
+
+    return {
+      success: true,
+      intent: 'UNKNOWN',
+      message: unknownText,
+      creditsSpent: 0,
+      creditsRemaining: creditBalance,
+    };
   }
 }
 
