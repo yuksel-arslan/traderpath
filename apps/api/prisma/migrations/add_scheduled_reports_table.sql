@@ -18,10 +18,9 @@ CREATE TABLE IF NOT EXISTS "scheduled_reports" (
     "schedule_hour" INTEGER NOT NULL DEFAULT 8,
     "schedule_day_of_week" INTEGER,
     "last_run_at" TIMESTAMP(3),
-    "next_run_at" TIMESTAMP(3),
+    "next_run_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "scheduled_reports_pkey" PRIMARY KEY ("id")
 );
