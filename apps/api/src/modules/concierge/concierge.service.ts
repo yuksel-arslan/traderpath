@@ -1555,6 +1555,7 @@ Or visit /scheduled to delete.`,
         userId,
         language: language === 'tr' ? 'tr' : 'en',
         tradeType,
+        interval,
       });
 
       if (!panelResult.success) {

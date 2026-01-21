@@ -240,6 +240,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-21 | Interface preference modal görünmüyordu (undefined check) | `null || undefined` kontrolü eklendi | `apps/web/app/(dashboard)/layout.tsx:120` |
 | 2026-01-21 | preferredCoins column DB'de yoksa hata veriyordu | try-catch eklendi, default değerler kullanılıyor | `concierge.routes.ts`, `concierge.service.ts` |
 | 2026-01-21 | InterfacePreferenceModal Türkçe'ydi | Tüm metinler İngilizce'ye çevrildi | `InterfacePreferenceModal.tsx` |
+| 2026-01-21 | AI Concierge "Analysis Not Found" hatası - timeframe olmadan analiz yapılamıyor | Analiz veritabanına kaydedilmiyordu. `analyzeWithExpertPanel` fonksiyonuna `prisma.analysis.create` eklendi, interval parametresi eklendi | `ai-expert.service.ts`, `concierge.service.ts` |
 
 ---
 
@@ -549,6 +550,12 @@ Kullanıcı Hakları Aktif:
   - Ücretsiz kullanıcılar max 3 schedule kurabilir
   - Her otomatik analiz 25 kredi harcar
   - Help mesajları güncellendi (TR/EN)
+- **AI Concierge "Analysis Not Found" hatası düzeltildi**:
+  - Sorun: Concierge üzerinden yapılan analizler veritabanına kaydedilmiyordu
+  - `analyzeWithExpertPanel` fonksiyonuna `interval` parametresi eklendi
+  - Analiz tamamlandığında `prisma.analysis.create` ile veritabanına kaydediliyor
+  - Trade type bonus da ekleniyor (normal analiz akışıyla aynı)
+  - Dosyalar: `ai-expert.service.ts`, `concierge.service.ts`
 
 ---
 
