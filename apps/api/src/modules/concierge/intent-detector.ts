@@ -252,6 +252,9 @@ function detectIntentByRules(
   const quickAnalysisPatterns = [
     /nasıl\??$/i,
     /ne durumda/i,
+    /durumu/i,
+    /özetle/i,
+    /özet/i,
     /how('s| is)/i,
     /gireyim mi/i,
     /should i (buy|enter|trade)/i,
@@ -263,6 +266,12 @@ function detectIntentByRules(
     /analysis/i,
     /analiz et/i,
     /analyze/i,
+    /incele/i,
+    /bak/i,
+    /kontrol/i,
+    /check/i,
+    /summarize/i,
+    /summary/i,
   ];
   if (symbol && intent === 'UNKNOWN') {
     if (quickAnalysisPatterns.some((p) => p.test(normalizedMessage))) {
@@ -289,26 +298,47 @@ function detectIntentByRules(
 }
 
 function extractSymbol(message: string): string | undefined {
+  // Valid coin symbols
+  const VALID_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'MATIC', 'AVAX', 'LINK', 'SUI', 'ARB', 'OP', 'APT', 'NEAR', 'ATOM', 'DOT', 'LTC', 'TRX', 'UNI', 'AAVE', 'MKR', 'INJ', 'RENDER', 'PEPE', 'SHIB', 'BONK', 'WIF', 'FLOKI', 'FET', 'RNDR', 'TAO', 'WLD', 'JASMY', 'OCEAN', 'AGIX'];
+
+  // Helper to strip trading pair suffixes (USDT, BUSD, USDC, etc.)
+  const stripPairSuffix = (s: string): string => {
+    return s.replace(/(usdt|busd|usdc|perp|usd)$/i, '');
+  };
+
   // Check direct matches first
   const words = message.split(/\s+/);
   for (const word of words) {
-    const cleanWord = word.replace(/[^a-zA-Z]/g, '').toLowerCase();
+    // Clean and strip suffixes
+    let cleanWord = word.replace(/[^a-zA-Z]/g, '').toLowerCase();
+    cleanWord = stripPairSuffix(cleanWord);
+
     if (COIN_ALIASES[cleanWord]) {
       return COIN_ALIASES[cleanWord];
     }
+
+    // Check if it's already a valid symbol (uppercase)
+    const upper = cleanWord.toUpperCase();
+    if (VALID_SYMBOLS.includes(upper)) {
+      return upper;
+    }
   }
 
-  // Check for embedded symbols (e.g., "BTC'ye", "ETH'e")
-  const symbolMatch = message.match(/\b([A-Za-z]{2,5})(?:'[a-z]+)?\b/g);
+  // Check for embedded symbols (e.g., "BTC'ye", "ETH'e", "Ethereum'um")
+  const symbolMatch = message.match(/\b([A-Za-z]{2,10})(?:'[a-zığüşöç]+)?\b/gi);
   if (symbolMatch) {
     for (const match of symbolMatch) {
-      const cleanMatch = match.replace(/[^a-zA-Z]/g, '').toLowerCase();
+      // Clean: remove apostrophe and Turkish suffixes
+      let cleanMatch = match.replace(/'[a-zığüşöç]+$/i, '').toLowerCase();
+      cleanMatch = stripPairSuffix(cleanMatch);
+
       if (COIN_ALIASES[cleanMatch]) {
         return COIN_ALIASES[cleanMatch];
       }
+
       // Check if it's already a valid symbol (uppercase)
       const upper = cleanMatch.toUpperCase();
-      if (['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'MATIC', 'AVAX', 'LINK', 'SUI', 'ARB', 'OP', 'APT', 'NEAR', 'ATOM', 'DOT', 'LTC', 'TRX', 'UNI', 'AAVE', 'MKR', 'INJ', 'RENDER', 'PEPE', 'SHIB', 'BONK', 'WIF', 'FLOKI'].includes(upper)) {
+      if (VALID_SYMBOLS.includes(upper)) {
         return upper;
       }
     }

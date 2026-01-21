@@ -114,11 +114,14 @@ export const COIN_ALIASES: Record<string, string> = {
   'bitcoin': 'BTC',
   'btc': 'BTC',
   'bc': 'BTC',
+  'bitkoin': 'BTC',
 
-  // Ethereum
+  // Ethereum (including common typos)
   'ethereum': 'ETH',
+  'etherium': 'ETH',
   'eth': 'ETH',
   'ether': 'ETH',
+  'eteryum': 'ETH',
 
   // Solana
   'solana': 'SOL',
