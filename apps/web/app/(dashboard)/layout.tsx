@@ -117,7 +117,8 @@ export default function DashboardLayout({
 
   // Show preference modal for users who haven't selected yet
   useEffect(() => {
-    if (user && (user.preferredInterface === null || user.preferredInterface === undefined)) {
+    // Check if user exists and preferredInterface is not set (null, undefined, or empty string)
+    if (user && !user.preferredInterface) {
       setShowPreferenceModal(true);
     }
   }, [user]);
