@@ -363,21 +363,8 @@ export default function AnalyzePage() {
 
         {/* ===== BENTO GRID LAYOUT ===== */}
         <div className="grid grid-cols-12 gap-4 lg:gap-6">
-          {/* Stats Row - Spans full width */}
+          {/* Live Chart Card - Full Width at Top */}
           <div className="col-span-12">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <StatCard icon={FileText} label="Total Analyses" value={stats?.totalAnalyses || 0} color="gray" delay={0} />
-              <StatCard icon={Timer} label="Active" value={stats?.activeCount || 0} color="blue" delay={100} />
-              <StatCard icon={FileText} label="Closed" value={stats?.closedCount || 0} color="gray" delay={200} />
-              <StatCard icon={CheckCircle2} label="TP Hit" value={stats?.tpHits || 0} color="green" delay={300} />
-              <StatCard icon={XCircle} label="SL Hit" value={stats?.slHits || 0} color="red" delay={400} />
-              <StatCard icon={Target} label="Accuracy" value={getAccuracyDisplay(stats?.accuracy || 0)} color="teal" delay={500} />
-            </div>
-          </div>
-
-          {/* Live Chart Card - 2/3 Width */}
-          <div className="col-span-12 lg:col-span-8 space-y-4 lg:space-y-6">
-            {/* Live Chart Card */}
             <GlassCard>
               <button
                 onClick={() => setShowChart(!showChart)}
@@ -421,60 +408,54 @@ export default function AnalyzePage() {
                   <TradingViewWidget
                     symbol={chartSymbol}
                     theme={isDarkMode ? 'dark' : 'light'}
-                    height={350}
+                    height={400}
                   />
                 </div>
               )}
             </GlassCard>
+          </div>
 
-            {/* Quick Stats Mini Card */}
-            <GlassCard className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-amber-500" />
-                  Quick Insights
-                </h3>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                    <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">Win Rate</span>
-                  </div>
-                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                    {stats?.accuracy ? `${stats.accuracy.toFixed(0)}%` : '—'}
-                  </p>
+          {/* Stats Row - Full Width */}
+          <div className="col-span-12">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <StatCard icon={FileText} label="Total Analyses" value={stats?.totalAnalyses || 0} color="gray" delay={0} />
+              <StatCard icon={Timer} label="Active" value={stats?.activeCount || 0} color="blue" delay={100} />
+              <StatCard icon={FileText} label="Closed" value={stats?.closedCount || 0} color="gray" delay={200} />
+              <StatCard icon={CheckCircle2} label="TP Hit" value={stats?.tpHits || 0} color="green" delay={300} />
+              <StatCard icon={XCircle} label="SL Hit" value={stats?.slHits || 0} color="red" delay={400} />
+              <StatCard icon={Target} label="Accuracy" value={getAccuracyDisplay(stats?.accuracy || 0)} color="teal" delay={500} />
+            </div>
+          </div>
+
+          {/* Analysis Controls - Full Width */}
+          <div className="col-span-12">
+            <GlassCard className="p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left: Timeframe Selection */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Timer className="w-4 h-4 text-teal-500" />
+                    Select Timeframe
+                  </h3>
+                  <TradeTypeSelector
+                    value={timeframe}
+                    onChange={(tf) => setTimeframe(tf)}
+                    variant="tabs"
+                    showCreditCost
+                    className="w-full"
+                  />
                 </div>
-                <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Activity className="w-3.5 h-3.5 text-blue-500" />
-                    <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400">Active</span>
-                  </div>
-                  <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                    {stats?.activeCount || 0}
-                  </p>
+
+                {/* Right: Coin Selector */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Target className="w-4 h-4 text-violet-500" />
+                    Select Coin to Analyze
+                  </h3>
+                  <CoinSelector timeframe={timeframe} />
                 </div>
               </div>
             </GlassCard>
-          </div>
-
-          {/* Analysis Controls - 1/3 Width */}
-          <div className="col-span-12 lg:col-span-4">
-            <div className="space-y-4">
-              {/* Timeframe Selection - Auto-selects strategy */}
-              <div className="flex items-center justify-between">
-                <TradeTypeSelector
-                  value={timeframe}
-                  onChange={(tf) => setTimeframe(tf)}
-                  variant="tabs"
-                  showCreditCost
-                  className="flex-1"
-                />
-              </div>
-
-              {/* Coin Selector - Main Focus */}
-              <CoinSelector timeframe={timeframe} />
-            </div>
           </div>
 
           {/* Recent Analyses - Full Width */}
