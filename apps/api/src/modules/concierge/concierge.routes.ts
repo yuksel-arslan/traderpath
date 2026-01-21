@@ -53,16 +53,22 @@ export async function conciergeRoutes(app: FastifyInstance) {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = getUser(request).id;
-    const language = (request.query as { language?: string }).language || 'tr';
+    const language = (request.query as { language?: string }).language || 'en';
 
     // Get user preferences for personalized suggestions
-    const { prisma } = await import('../../core/database');
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { preferredCoins: true },
-    });
-
-    const preferredCoins = user?.preferredCoins || ['BTC', 'ETH', 'SOL'];
+    let preferredCoins = ['BTC', 'ETH', 'SOL'];
+    try {
+      const { prisma } = await import('../../core/database');
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { preferredCoins: true },
+      });
+      if (user?.preferredCoins?.length) {
+        preferredCoins = user.preferredCoins;
+      }
+    } catch {
+      // Column might not exist in database yet, use defaults
+    }
 
     // Generate contextual suggestions
     const suggestions = language === 'tr' ? [
@@ -92,7 +98,7 @@ export async function conciergeRoutes(app: FastifyInstance) {
   app.get('/quick-commands', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const language = (request.query as { language?: string }).language || 'tr';
+    const language = (request.query as { language?: string }).language || 'en';
 
     const commands = language === 'tr' ? [
       {

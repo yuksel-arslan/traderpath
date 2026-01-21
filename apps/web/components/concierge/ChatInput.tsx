@@ -55,7 +55,7 @@ interface ChatInputProps {
 export function ChatInput({
   onSend,
   isLoading = false,
-  placeholder = 'Mesajınızı yazın...',
+  placeholder = 'Type your message...',
   disabled = false,
 }: ChatInputProps) {
   const [message, setMessage] = useState('');
@@ -74,7 +74,7 @@ export function ChatInput({
         const recognition = new SpeechRecognitionClass();
         recognition.continuous = false;
         recognition.interimResults = true;
-        recognition.lang = 'tr-TR';
+        recognition.lang = 'en-US';
 
         recognition.onresult = (event: SpeechRecognitionEvent) => {
           let transcript = '';
@@ -145,7 +145,7 @@ export function ChatInput({
                 ? 'bg-red-500 text-white animate-pulse'
                 : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600'
             }`}
-            title={isListening ? 'Dinlemeyi durdur' : 'Sesle yazın'}
+            title={isListening ? 'Stop listening' : 'Voice input'}
           >
             {isListening ? <MicOff size={18} /> : <Mic size={18} />}
           </button>
@@ -172,7 +172,7 @@ export function ChatInput({
       {/* Listening indicator */}
       {isListening && (
         <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-3 py-1 bg-red-500 text-white text-sm rounded-full animate-pulse">
-          🎤 Dinleniyor...
+          Listening...
         </div>
       )}
     </form>

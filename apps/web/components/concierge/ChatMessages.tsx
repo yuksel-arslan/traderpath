@@ -29,18 +29,18 @@ export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
             TraderPath Concierge
           </h3>
           <p className="text-slate-600 dark:text-slate-400 mb-4">
-            Kripto analizleriniz için yapay zeka asistanınız. Coin sorgulamak, alarm
-            kurmak veya analiz geçmişinizi görmek için mesaj yazın.
+            Your AI assistant for crypto analysis. Send a message to analyze coins,
+            set alerts, or view your analysis history.
           </p>
           <div className="flex flex-wrap gap-2 justify-center text-sm">
             <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-              &quot;BTC nasıl?&quot;
+              &quot;How is BTC?&quot;
             </span>
             <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-              &quot;ETH 4h analiz&quot;
+              &quot;ETH 4h analysis&quot;
             </span>
             <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-              &quot;Yardım&quot;
+              &quot;Help&quot;
             </span>
           </div>
         </div>
@@ -106,7 +106,7 @@ export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
             )}
 
             <span className="text-xs text-slate-400 dark:text-slate-500 block mt-1">
-              {msg.timestamp.toLocaleTimeString('tr-TR', {
+              {msg.timestamp.toLocaleTimeString('en-US', {
                 hour: '2-digit',
                 minute: '2-digit',
               })}

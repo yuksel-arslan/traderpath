@@ -117,7 +117,7 @@ export default function DashboardLayout({
 
   // Show preference modal for users who haven't selected yet
   useEffect(() => {
-    if (user && user.preferredInterface === null) {
+    if (user && (user.preferredInterface === null || user.preferredInterface === undefined)) {
       setShowPreferenceModal(true);
     }
   }, [user]);
@@ -125,7 +125,7 @@ export default function DashboardLayout({
   // Handle preference selection
   const handlePreferenceSelect = async (preference: 'ui' | 'concierge') => {
     try {
-      const res = await authFetch('/api/users/preference', {
+      const res = await authFetch('/api/user/preference', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ preferredInterface: preference }),

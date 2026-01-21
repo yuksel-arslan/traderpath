@@ -157,7 +157,7 @@ export function ResultCard({ data, compact = false }: ResultCardProps) {
         {/* Score bar */}
         <div className="mt-3">
           <div className="flex items-center justify-between text-sm mb-1">
-            <span className="text-slate-500">Analiz Skoru</span>
+            <span className="text-slate-500">Analysis Score</span>
             <span className={`font-bold ${styles.text}`}>{data.score}/100</span>
           </div>
           <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
@@ -202,11 +202,11 @@ export function ResultCard({ data, compact = false }: ResultCardProps) {
           >
             {expanded ? (
               <>
-                <ChevronUp className="w-4 h-4" /> Daha az göster
+                <ChevronUp className="w-4 h-4" /> Show less
               </>
             ) : (
               <>
-                <ChevronDown className="w-4 h-4" /> Tüm TP seviyelerini göster
+                <ChevronDown className="w-4 h-4" /> Show all TP levels
               </>
             )}
           </button>
@@ -238,7 +238,7 @@ export function ResultCard({ data, compact = false }: ResultCardProps) {
       {data.riskReward > 0 && (
         <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-200 dark:border-slate-700/50">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-500">Risk/Ödül Oranı</span>
+            <span className="text-slate-500">Risk/Reward Ratio</span>
             <span
               className={`font-bold ${
                 data.riskReward >= 2 ? 'text-emerald-500' : 'text-amber-500'
@@ -265,7 +265,7 @@ export function ResultCard({ data, compact = false }: ResultCardProps) {
           href={`/analyze/details/${data.analysisId}`}
           className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 transition-colors"
         >
-          <ExternalLink className="w-4 h-4" /> Detay
+          <ExternalLink className="w-4 h-4" /> Details
         </Link>
         <button className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 transition-colors">
           <FileText className="w-4 h-4" /> PDF
@@ -275,7 +275,7 @@ export function ResultCard({ data, compact = false }: ResultCardProps) {
         </button>
         {(data.verdict === 'GO' || data.verdict === 'CONDITIONAL_GO') && (
           <button className="flex items-center justify-center gap-2 px-3 py-2 bg-teal-500/10 hover:bg-teal-500/20 rounded-lg text-sm font-medium text-teal-600 dark:text-teal-400 transition-colors">
-            <Bell className="w-4 h-4" /> Alarm
+            <Bell className="w-4 h-4" /> Alert
           </button>
         )}
       </div>

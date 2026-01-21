@@ -81,15 +81,15 @@ export function InterfacePreferenceModal({
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="w-5 h-5 text-teal-500" />
               <span className="text-sm font-medium text-teal-600 dark:text-teal-400">
-                TraderPath&apos;e Hoş Geldin!
+                Welcome to TraderPath!
               </span>
             </div>
             <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-2">
-              Nasıl Analiz Yapmak İstersin?
+              How Would You Like to Analyze?
             </h2>
             <p className="text-slate-600 dark:text-slate-400 max-w-xl">
-              İki farklı deneyim sunuyoruz. Dilediğin zaman tercihini
-              ayarlardan değiştirebilirsin.
+              We offer two different experiences. You can change your preference
+              anytime in settings.
             </p>
           </div>
         </div>
@@ -116,7 +116,7 @@ export function InterfacePreferenceModal({
               {/* Badge */}
               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-teal-500 to-teal-600 text-white text-xs font-bold rounded-full mb-4">
                 <Zap className="w-3 h-3" />
-                YENİ - ÖNERİLEN
+                NEW - RECOMMENDED
               </div>
 
               {/* Icon */}
@@ -131,33 +131,33 @@ export function InterfacePreferenceModal({
 
               {/* Description */}
               <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">
-                Yapay zeka asistanınla sohbet eder gibi analiz yap. Sadece
-                &quot;BTC nasıl?&quot; yaz, gerisini biz halledelim.
+                Analyze like chatting with your AI assistant. Just type
+                &quot;How is BTC?&quot; and we&apos;ll handle the rest.
               </p>
 
               {/* Features */}
               <ul className="space-y-2">
                 <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                   <MessageSquare className="w-4 h-4 text-teal-500" />
-                  Doğal dilde soru sor
+                  Ask questions in natural language
                 </li>
                 <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                   <Zap className="w-4 h-4 text-teal-500" />
-                  Tek mesajla analiz tamamla
+                  Complete analysis with a single message
                 </li>
                 <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                   <Bot className="w-4 h-4 text-teal-500" />
-                  Sesli komut desteği
+                  Voice command support
                 </li>
               </ul>
 
               {/* Example */}
               <div className="mt-4 p-3 bg-slate-100 dark:bg-slate-800 rounded-xl">
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-                  Örnek:
+                  Example:
                 </p>
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  &quot;ETH 4 saatlik analiz yap&quot;
+                  &quot;Analyze ETH on 4h timeframe&quot;
                 </p>
               </div>
             </button>
@@ -180,7 +180,7 @@ export function InterfacePreferenceModal({
 
               {/* Badge */}
               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-full mb-4">
-                KLASİK
+                CLASSIC
               </div>
 
               {/* Icon */}
@@ -190,38 +190,38 @@ export function InterfacePreferenceModal({
 
               {/* Title */}
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                Klasik Arayüz
+                Classic Interface
               </h3>
 
               {/* Description */}
               <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">
-                Adım adım formlar ve detaylı kontrol. Her parametreyi kendin
-                ayarla, tüm verileri gör.
+                Step-by-step forms with detailed control. Set every parameter
+                yourself and see all the data.
               </p>
 
               {/* Features */}
               <ul className="space-y-2">
                 <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                   <MousePointer className="w-4 h-4 text-slate-500" />
-                  Detaylı kontrol paneli
+                  Detailed control panel
                 </li>
                 <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                   <LayoutDashboard className="w-4 h-4 text-slate-500" />
-                  Tüm grafik ve indikatörler
+                  All charts and indicators
                 </li>
                 <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                   <Check className="w-4 h-4 text-slate-500" />
-                  7 adımlı detaylı analiz
+                  7-step detailed analysis
                 </li>
               </ul>
 
               {/* Example */}
               <div className="mt-4 p-3 bg-slate-100 dark:bg-slate-800 rounded-xl">
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-                  Akış:
+                  Flow:
                 </p>
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Coin Seç → Timeframe → Analiz Et
+                  Select Coin → Timeframe → Analyze
                 </p>
               </div>
             </button>
@@ -232,7 +232,7 @@ export function InterfacePreferenceModal({
         <div className="px-8 py-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between">
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Tercihini ayarlardan her zaman değiştirebilirsin
+              You can always change your preference in settings
             </p>
             <button
               onClick={handleContinue}
@@ -246,11 +246,11 @@ export function InterfacePreferenceModal({
               {isLoading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Kaydediliyor...
+                  Saving...
                 </>
               ) : (
                 <>
-                  Devam Et
+                  Continue
                   <ChevronRight className="w-4 h-4" />
                 </>
               )}

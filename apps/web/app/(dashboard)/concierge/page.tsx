@@ -23,8 +23,8 @@ export default function ConciergePage() {
   } = useConcierge();
 
   useEffect(() => {
-    fetchSuggestions('tr');
-    fetchQuickCommands('tr');
+    fetchSuggestions('en');
+    fetchQuickCommands('en');
   }, [fetchSuggestions, fetchQuickCommands]);
 
   return (
@@ -42,7 +42,7 @@ export default function ConciergePage() {
                   AI Concierge
                 </h1>
                 <p className="text-sm text-slate-500">
-                  Kripto asistanınız her zaman yanınızda
+                  Your crypto assistant is always with you
                 </p>
               </div>
             </div>
@@ -53,7 +53,7 @@ export default function ConciergePage() {
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 rounded-lg">
                   <Coins className="w-4 h-4 text-amber-500" />
                   <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                    {creditsRemaining} kredi
+                    {creditsRemaining} credits
                   </span>
                 </div>
               )}
@@ -63,7 +63,7 @@ export default function ConciergePage() {
                 <button
                   onClick={clearMessages}
                   className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                  title="Sohbeti temizle"
+                  title="Clear chat"
                 >
                   <Trash2 className="w-5 h-5" />
                 </button>
@@ -85,7 +85,7 @@ export default function ConciergePage() {
           <QuickCommands
             commands={quickCommands}
             onCommand={sendMessage}
-            onFetch={() => fetchQuickCommands('tr')}
+            onFetch={() => fetchQuickCommands('en')}
             isLoading={isLoading}
           />
 
@@ -109,7 +109,7 @@ export default function ConciergePage() {
           <ChatInput
             onSend={sendMessage}
             isLoading={isLoading}
-            placeholder="Mesajınızı yazın... (örn: BTC nasıl?)"
+            placeholder="Type your message... (e.g. How is BTC?)"
           />
         </div>
       </div>

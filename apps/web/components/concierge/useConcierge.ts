@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { authFetch } from '@/lib/api';
 
 export type VerdictType = 'GO' | 'CONDITIONAL_GO' | 'WAIT' | 'AVOID';
 export type IntentType =
@@ -67,7 +68,7 @@ export function useConcierge() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [quickCommands, setQuickCommands] = useState<QuickCommand[]>([]);
 
-  const sendMessage = useCallback(async (message: string, language = 'tr') => {
+  const sendMessage = useCallback(async (message: string, language = 'en') => {
     setIsLoading(true);
     setError(null);
 
@@ -81,20 +82,16 @@ export function useConcierge() {
     setMessages((prev) => [...prev, userMessage]);
 
     try {
-      const response = await fetch('/api/concierge/chat', {
+      const response = await authFetch('/api/concierge/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
         body: JSON.stringify({ message, language }),
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error('Oturum süresi dolmuş. Lütfen tekrar giriş yapın.');
+          throw new Error('Session expired. Please log in again.');
         }
-        throw new Error('Bir hata oluştu');
+        throw new Error('An error occurred');
       }
 
       const data: ConciergeResponse = await response.json();
@@ -118,7 +115,7 @@ export function useConcierge() {
 
       return data;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Bir hata oluştu';
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMessage);
 
       // Add error message
@@ -136,11 +133,9 @@ export function useConcierge() {
     }
   }, []);
 
-  const fetchSuggestions = useCallback(async (language = 'tr') => {
+  const fetchSuggestions = useCallback(async (language = 'en') => {
     try {
-      const response = await fetch(`/api/concierge/suggestions?language=${language}`, {
-        credentials: 'include',
-      });
+      const response = await authFetch(`/api/concierge/suggestions?language=${language}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -151,11 +146,9 @@ export function useConcierge() {
     }
   }, []);
 
-  const fetchQuickCommands = useCallback(async (language = 'tr') => {
+  const fetchQuickCommands = useCallback(async (language = 'en') => {
     try {
-      const response = await fetch(`/api/concierge/quick-commands?language=${language}`, {
-        credentials: 'include',
-      });
+      const response = await authFetch(`/api/concierge/quick-commands?language=${language}`);
 
       if (response.ok) {
         const data = await response.json();
