@@ -40,6 +40,7 @@ import paymentRoutes from './modules/payments/payment.routes';
 import scheduledReportsRoutes from './modules/scheduled/scheduled-reports.routes';
 import smartCoinsRoutes from './modules/analysis/smart-coins.routes';
 import { scheduledReportsService } from './modules/scheduled/scheduled-reports.service';
+import { conciergeRoutes } from './modules/concierge/concierge.routes';
 
 // ===========================================
 // Server Configuration
@@ -321,6 +322,10 @@ app.register(scheduledReportsRoutes);
 
 // Smart Coins routes (CoinGecko-powered suggestions)
 app.register(smartCoinsRoutes);
+
+// AI Concierge routes (chat-based interface)
+app.register(conciergeRoutes, { prefix: '/api/v1/concierge' });
+app.register(conciergeRoutes, { prefix: '/api/concierge' }); // Legacy
 
 // ===========================================
 // 404 Handler

@@ -23,6 +23,7 @@ import {
   TrendingDown,
   BookOpen,
   Calendar,
+  Bot,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -38,6 +39,7 @@ const PriceTicker = dynamic(
 // Main navigation items
 const mainNav = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Concierge', href: '/concierge', icon: Bot },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'Scheduled', href: '/scheduled', icon: Calendar },
