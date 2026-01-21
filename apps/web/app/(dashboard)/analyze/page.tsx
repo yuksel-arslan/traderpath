@@ -450,7 +450,7 @@ export default function AnalyzePage() {
           </div>
 
           {/* Coin Selector - Full Width with dynamic height */}
-          <div className="col-span-12">
+          <div className="col-span-12 relative z-20">
             <GlassCard className="p-3 sm:p-4 md:p-6" allowOverflow>
               <div className="space-y-3 sm:space-y-4">
                 <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -463,7 +463,7 @@ export default function AnalyzePage() {
           </div>
 
           {/* Recent Analyses - Full Width */}
-          <div className="col-span-12">
+          <div className="col-span-12 relative z-10">
             <GlassCard className="p-3 sm:p-4 md:p-6">
               <RecentAnalyses />
             </GlassCard>
