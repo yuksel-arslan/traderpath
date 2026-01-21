@@ -976,6 +976,105 @@ export default async function adminRoutes(app: FastifyInstance) {
       });
     }
   });
+
+  // ===========================================
+  // Gemini AI Settings
+  // ===========================================
+
+  const GEMINI_SETTINGS_KEY = 'admin:gemini:settings';
+  const AVAILABLE_GEMINI_MODELS = [
+    { id: 'gemini-2.5-flash-preview-05-20', name: 'Gemini 2.5 Flash (Preview)', description: 'Newest, most capable flash model' },
+    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', description: 'Fast and efficient, good balance' },
+    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Previous generation flash' },
+    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: 'More capable but slower' },
+  ];
+
+  // GET /api/admin/gemini/settings - Get current Gemini settings
+  app.get('/gemini/settings', {
+    preHandler: requireAdmin,
+  }, async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const settingsJson = await redis.get(GEMINI_SETTINGS_KEY);
+      const settings = settingsJson ? JSON.parse(settingsJson) : {
+        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20',
+        expertModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20',
+        conciergeModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20',
+      };
+
+      return reply.send({
+        success: true,
+        data: {
+          settings,
+          availableModels: AVAILABLE_GEMINI_MODELS,
+          envModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20',
+        },
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'SETTINGS_ERROR', message: `Failed to get settings: ${error}` },
+      });
+    }
+  });
+
+  // POST /api/admin/gemini/settings - Update Gemini settings
+  app.post('/gemini/settings', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest<{ Body: { model?: string; expertModel?: string; conciergeModel?: string } }>, reply: FastifyReply) => {
+    try {
+      const { model, expertModel, conciergeModel } = request.body;
+
+      // Validate models
+      const validModelIds = AVAILABLE_GEMINI_MODELS.map(m => m.id);
+      if (model && !validModelIds.includes(model)) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: 'INVALID_MODEL', message: `Invalid model: ${model}` },
+        });
+      }
+      if (expertModel && !validModelIds.includes(expertModel)) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: 'INVALID_MODEL', message: `Invalid expertModel: ${expertModel}` },
+        });
+      }
+      if (conciergeModel && !validModelIds.includes(conciergeModel)) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: 'INVALID_MODEL', message: `Invalid conciergeModel: ${conciergeModel}` },
+        });
+      }
+
+      // Get existing settings
+      const existingJson = await redis.get(GEMINI_SETTINGS_KEY);
+      const existing = existingJson ? JSON.parse(existingJson) : {};
+
+      // Merge with new settings
+      const newSettings = {
+        model: model || existing.model || process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20',
+        expertModel: expertModel || existing.expertModel || process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20',
+        conciergeModel: conciergeModel || existing.conciergeModel || process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20',
+        updatedAt: new Date().toISOString(),
+        updatedBy: request.user?.email,
+      };
+
+      // Save to Redis (persistent)
+      await redis.set(GEMINI_SETTINGS_KEY, JSON.stringify(newSettings));
+
+      return reply.send({
+        success: true,
+        data: {
+          settings: newSettings,
+          message: 'Gemini settings updated successfully',
+        },
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'SETTINGS_ERROR', message: `Failed to update settings: ${error}` },
+      });
+    }
+  });
 }
 
 // Helper functions
