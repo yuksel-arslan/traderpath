@@ -536,6 +536,19 @@ Kullanıcı Hakları Aktif:
   - Concierge servisi ANALYSIS_COST = 25
   - Help mesajları güncellendi (TR/EN)
   - CLAUDE.md dokümantasyonu güncellendi
+- **AI Concierge Chart View özelliği eklendi**:
+  - `CHART_VIEW` intent: "grafik", "chart", "candlestick", "mum grafiği", "tradingview"
+  - Binance API'den OHLCV verileri çekiliyor (100 mum)
+  - Trade plan (Entry/SL/TP) grafik üzerinde gösteriliyor
+  - Frontend: TradePlanChart komponenti dinamik import ile yükleniyor
+  - Quick command: "Show BTC chart" butonu eklendi
+- **AI Concierge Scheduled Analysis özelliği eklendi**:
+  - `SCHEDULE_LIST`: Kullanıcının zamanlanmış analizlerini listeler
+  - `SCHEDULE_CREATE`: Yeni zamanlama oluşturur (coin, interval, frekans)
+  - `SCHEDULE_DELETE`: Coin adına göre zamanlamayı siler
+  - Ücretsiz kullanıcılar max 3 schedule kurabilir
+  - Her otomatik analiz 25 kredi harcar
+  - Help mesajları güncellendi (TR/EN)
 
 ---
 
