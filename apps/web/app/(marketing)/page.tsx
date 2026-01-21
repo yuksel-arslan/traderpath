@@ -47,7 +47,8 @@ import {
   Bot,
   Search,
   Coins,
-  Gift
+  Gift,
+  Mic
 } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
@@ -540,6 +541,7 @@ function FeaturesSection() {
   const [activeExpert, setActiveExpert] = useState<number | null>(null);
   const [activeReport, setActiveReport] = useState<number | null>(null);
   const [activeAlert, setActiveAlert] = useState<number | null>(null);
+  const [activeConcierge, setActiveConcierge] = useState<number | null>(null);
 
   return (
     <>
@@ -799,13 +801,122 @@ function FeaturesSection() {
         </div>
       </section>
 
-      {/* Feature 5: TFT Model Prediction (Coming Soon) */}
+      {/* Feature 5: AI Concierge */}
+      <section className="py-20 bg-gradient-to-b from-emerald-500/5 via-teal-500/5 to-transparent">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <span className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-sm font-medium mb-4">
+              <Bot className="w-4 h-4" />
+              Feature 5
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
+              <span className="gradient-text-logo-animate">AI Concierge</span>
+              <Sparkles className="w-8 h-8 text-emerald-500" />
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Your personal AI trading assistant. Just ask in plain language - analyze coins, check your stats, set alerts, and more. Voice input supported!
+            </p>
+          </div>
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                {
+                  icon: MessageCircle,
+                  name: 'Natural Language',
+                  description: 'Just type or speak your request. "Analyze BTC for me" or "How is ETH looking?"',
+                  bg: 'bg-emerald-500/10',
+                  color: 'text-emerald-500',
+                  border: 'border-emerald-500/30',
+                },
+                {
+                  icon: Mic,
+                  name: 'Voice Commands',
+                  description: 'Hands-free analysis with voice input. Perfect for busy traders on the go.',
+                  bg: 'bg-teal-500/10',
+                  color: 'text-teal-500',
+                  border: 'border-teal-500/30',
+                },
+                {
+                  icon: Zap,
+                  name: 'Instant Analysis',
+                  description: 'Get full 7-step analysis results in seconds. Entry, SL, TP levels included.',
+                  bg: 'bg-cyan-500/10',
+                  color: 'text-cyan-500',
+                  border: 'border-cyan-500/30',
+                },
+                {
+                  icon: Brain,
+                  name: 'Expert Insights',
+                  description: 'Ask trading questions and get answers from our AI Expert Panel (VOLTRAN).',
+                  bg: 'bg-purple-500/10',
+                  color: 'text-purple-500',
+                  border: 'border-purple-500/30',
+                },
+              ].map((feature, idx) => {
+                const FeatureIcon = feature.icon;
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => setActiveConcierge(idx)}
+                    className={`p-6 bg-card border-2 rounded-xl hover:shadow-xl transition cursor-pointer group ${feature.border}`}
+                  >
+                    <div className={`w-14 h-14 ${feature.bg} rounded-xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition`}>
+                      <FeatureIcon className={`w-7 h-7 ${feature.color}`} />
+                    </div>
+                    <h3 className="font-bold text-lg mb-2 text-center gradient-text-logo-animate">{feature.name}</h3>
+                    <p className="text-sm text-muted-foreground text-center line-clamp-2">{feature.description.split('.')[0]}.</p>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-8 p-4 bg-card border rounded-xl">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Globe className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">Bilingual Support:</span> Speak Turkish or English - the AI understands both and responds in your language.
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-teal-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Coins className="w-4 h-4 text-teal-500" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">50+ Coins:</span> Analyze any major cryptocurrency with natural language aliases like "Bitcoin" or "Ethereum".
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Example commands showcase */}
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              {[
+                '"Analyze BTC for me"',
+                '"How is SOL doing?"',
+                '"Check my stats"',
+                '"Set alert for ETH at 4000"',
+                '"What is RSI?"',
+              ].map((cmd, idx) => (
+                <span
+                  key={idx}
+                  className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-sm text-emerald-600 dark:text-emerald-400 font-medium"
+                >
+                  {cmd}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature 6: TFT Model Prediction (Coming Soon) */}
       <section className="py-20 bg-gradient-to-b from-pink-500/5 via-purple-500/5 to-transparent">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <span className="inline-flex items-center gap-2 px-3 py-1 bg-pink-500/10 border border-pink-500/20 rounded-full text-pink-500 text-sm font-medium mb-4">
               <Brain className="w-4 h-4" />
-              Feature 5
+              Feature 6
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
               <span className="gradient-text-logo-animate">TFT Model Prediction</span>
