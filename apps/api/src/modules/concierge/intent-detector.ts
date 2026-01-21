@@ -9,44 +9,43 @@ import {
   EXPERT_ALIASES,
 } from './types';
 
-const INTENT_DETECTION_PROMPT = `You are an intent classifier for a crypto trading analysis platform called TraderPath.
+const INTENT_DETECTION_PROMPT = `You are an intent classifier for TraderPath, a crypto trading analysis platform.
 
-Analyze the user message and extract:
-1. Intent type (one of: QUICK_ANALYSIS, SPECIFIC_ANALYSIS, MULTI_ANALYSIS, EXPERT_ASK, ALERT_SET, ALERT_LIST, STATUS, HELP, UNKNOWN)
-2. Entities (symbol, interval, tradeType, targetPrice, direction, count, expertId)
-3. Detected language (tr, en, es, de, fr, etc.)
+IMPORTANT RULES:
+1. If user mentions ANY crypto coin/token (BTC, ETH, ETHUSDT, Bitcoin, Ethereum, etc.), it's ALWAYS an analysis request
+2. Strip trading pair suffixes: ETHUSDT → ETH, BTCUSDT → BTC
+3. Turkish phrases like "durumu", "özetle", "nasıl", "ne durumda" = analysis request
+4. Educational questions WITHOUT coin mention = EXPERT_ASK
+5. Educational questions WITH coin mention = QUICK_ANALYSIS (not EXPERT_ASK)
 
-INTENT DEFINITIONS:
-- QUICK_ANALYSIS: User wants a quick analysis of a specific coin (e.g., "BTC nasıl?", "Should I buy ETH?", "BTC'ye gireyim mi?")
-- SPECIFIC_ANALYSIS: User wants analysis with specific timeframe/trade type (e.g., "BTC scalp analizi", "ETH 4h analysis")
-- MULTI_ANALYSIS: User wants to analyze multiple coins (e.g., "Top 5 coin analiz", "Favori coinlerim nasıl?")
-- EXPERT_ASK: User asking educational/technical questions (e.g., "RSI nedir?", "What is MACD?", "Destek direnç nasıl bulunur?")
-- ALERT_SET: User wants to set a price alert (e.g., "BTC 70K olunca haber ver", "Alert me when ETH hits 4000")
-- ALERT_LIST: User wants to see their alerts (e.g., "Alarmlarım neler?", "Show my alerts")
-- STATUS: User asking about their account/history (e.g., "Son analizlerim", "Kredim ne kadar?", "Portföyüm")
-- HELP: User asking what the bot can do (e.g., "Ne yapabilirsin?", "Yardım", "Help")
-- UNKNOWN: Cannot determine intent
+INTENT TYPES:
+- QUICK_ANALYSIS: Coin mentioned + wants status/analysis
+  Examples: "BTC nasıl?", "ETHUSDT durumu", "ETH'ye gireyim mi?", "Ethereum'un durumunu özetle", "SOL ne durumda?", "BTC analiz"
+- SPECIFIC_ANALYSIS: Coin + specific timeframe/trade type
+  Examples: "BTC 4h analizi", "ETH scalp", "SOL 1d swing"
+- MULTI_ANALYSIS: Multiple coins or "top X"
+  Examples: "Top 5 coin", "BTC ETH SOL analiz et", "En iyi 3 coin"
+- EXPERT_ASK: Educational question WITHOUT specific coin
+  Examples: "RSI nedir?", "Scalping nasıl yapılır?", "Destek direnç nedir?"
+- ALERT_SET: Set price alert
+  Examples: "BTC 70K olunca haber ver", "ETH 4000 üstüne çıkarsa bildir"
+- ALERT_LIST: List alerts
+  Examples: "Alarmlarım", "My alerts"
+- STATUS: Account/history info
+  Examples: "Son analizlerim", "Kredim", "Portföyüm"
+- HELP: How to use
+  Examples: "Ne yapabilirsin?", "Yardım", "Help"
+- CHART_VIEW: Show chart
+  Examples: "BTC grafiği", "Chart göster", "Mum grafiği"
+- SCHEDULE_LIST/SCHEDULE_CREATE/SCHEDULE_DELETE: Scheduled analysis management
 
 ENTITY EXTRACTION:
-- symbol: Extract crypto symbol (BTC, ETH, SOL, etc.) - normalize to uppercase
-- interval: Extract timeframe (5m, 15m, 30m, 1h, 2h, 4h, 1d, 1W)
-- tradeType: Extract trade type (scalping, dayTrade, swing)
-- targetPrice: Extract price for alerts (number only)
-- direction: For alerts - "above" or "below" the target price
-- count: For multi-analysis - how many coins to analyze
-- expertId: Which expert to ask (aria, nexus, oracle, sentinel)
+- symbol: Crypto symbol (uppercase, strip USDT/BUSD suffix)
+- interval: 5m, 15m, 30m, 1h, 2h, 4h, 1d, 1W
+- tradeType: scalping, dayTrade, swing
 
-Respond ONLY with valid JSON in this exact format:
-{
-  "intent": "INTENT_TYPE",
-  "confidence": 0.95,
-  "entities": {
-    "symbol": "BTC",
-    "interval": "4h",
-    "tradeType": "dayTrade"
-  },
-  "language": "tr"
-}
+Respond with JSON only:
+{"intent": "INTENT_TYPE", "confidence": 0.95, "entities": {"symbol": "ETH"}, "language": "tr"}
 
 User message: "{MESSAGE}"`;
 
