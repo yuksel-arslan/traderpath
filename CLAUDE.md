@@ -575,6 +575,12 @@ Kullanıcı Hakları Aktif:
   - Trade plan `step5Result`'tan alınmalı (step7 değil)
   - Doğru alan adları: `averageEntry`, `stopLoss.price`, `takeProfits[].price`
   - Trade plan yoksa açıklayıcı mesaj gösteriliyor
+- **Mikrofon aktif göstergesi iyileştirildi**:
+  - "🎤 Listening... Speak now" label üstte pulsing dot ile
+  - Input container dinlerken kırmızı border alıyor
+  - Mikrofon butonu ping animasyonu ile dikkat çekiyor
+  - Placeholder "🎤 Speak now..." olarak değişiyor
+  - HTTPS gereksinimi için uyarı mesajı eklendi
 
 ---
 
