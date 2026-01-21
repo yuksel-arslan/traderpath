@@ -192,8 +192,9 @@ class ConciergeService {
     const { message, userId, language = 'en' } = request;
 
     try {
-      // Get credit balance
-      const creditBalance = await creditService.getBalance(userId);
+      // Get credit balance (returns object with balance property)
+      const creditBalanceObj = await creditService.getBalance(userId);
+      const creditBalance = creditBalanceObj.balance;
 
       // Detect intent
       const { intent, symbol, interval, expertType } = detectIntent(message);
@@ -217,7 +218,8 @@ class ConciergeService {
       }
     } catch (error) {
       console.error('Concierge service error:', error);
-      const creditBalance = await creditService.getBalance(userId).catch(() => 0);
+      const creditBalanceObj = await creditService.getBalance(userId).catch(() => ({ balance: 0 }));
+      const creditBalance = creditBalanceObj.balance;
 
       return {
         success: false,
