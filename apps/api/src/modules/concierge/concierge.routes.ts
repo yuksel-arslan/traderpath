@@ -98,9 +98,10 @@ export async function conciergeRoutes(app: FastifyInstance) {
   app.get('/quick-commands', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const language = (request.query as { language?: string }).language || 'en';
+    try {
+      const language = (request.query as { language?: string }).language || 'en';
 
-    const commands = language === 'tr' ? [
+      const commands = language === 'tr' ? [
       {
         id: 'top-movers',
         label: '🔥 Top Movers',
@@ -152,9 +153,17 @@ export async function conciergeRoutes(app: FastifyInstance) {
       },
     ];
 
-    return reply.send({
-      success: true,
-      commands,
-    });
+      return reply.send({
+        success: true,
+        commands,
+      });
+    } catch (error) {
+      console.error('Quick commands error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to get quick commands',
+        commands: [], // Return empty array as fallback
+      });
+    }
   });
 }
