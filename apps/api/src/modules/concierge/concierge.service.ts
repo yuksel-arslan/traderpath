@@ -95,20 +95,19 @@ function detectIntent(message: string): {
     return { intent: 'STATUS' };
   }
 
-  // Profitability/Performance intent
+  // Profitability/Performance intent (user's own performance)
   if (
-    lower.includes('karlılık') ||
-    lower.includes('karlilik') ||
-    lower.includes('performans') ||
+    (lower.includes('karlılık') && !lower.includes('platform')) ||
+    (lower.includes('karlilik') && !lower.includes('platform')) ||
+    (lower.includes('performans') && (lower.includes('benim') || lower.includes('my'))) ||
     lower.includes('kazanç') ||
     lower.includes('kazanc') ||
-    lower.includes('profit') ||
+    (lower.includes('profit') && !lower.includes('platform')) ||
     lower.includes('profitability') ||
-    lower.includes('performance') ||
-    lower.includes('win rate') ||
-    lower.includes('başarı') ||
-    lower.includes('basari') ||
-    lower.includes('raporla') ||
+    (lower.includes('performance') && lower.includes('my')) ||
+    (lower.includes('win rate') && !lower.includes('platform')) ||
+    (lower.includes('başarı') && !lower.includes('platform')) ||
+    (lower.includes('basari') && !lower.includes('platform')) ||
     lower.includes('report my') ||
     lower.includes('how am i doing') ||
     lower.includes('nasıl gidiyorum') ||
@@ -116,6 +115,78 @@ function detectIntent(message: string): {
     lower.includes('trade history')
   ) {
     return { intent: 'PROFITABILITY' };
+  }
+
+  // Platform stats intent
+  if (
+    lower.includes('platform') ||
+    lower.includes('genel başarı') ||
+    lower.includes('overall') ||
+    lower.includes('toplam başarı') ||
+    lower.includes('platform accuracy') ||
+    lower.includes('site istatistik') ||
+    lower.includes('herkes') ||
+    lower.includes('everyone') ||
+    lower.includes('tüm kullanıcı') ||
+    lower.includes('all users')
+  ) {
+    return { intent: 'PLATFORM_STATS' };
+  }
+
+  // Monthly/Weekly performance intent
+  if (
+    lower.includes('aylık') ||
+    lower.includes('haftalık') ||
+    lower.includes('monthly') ||
+    lower.includes('weekly') ||
+    lower.includes('son 30') ||
+    lower.includes('son 7') ||
+    lower.includes('last 30') ||
+    lower.includes('last 7') ||
+    lower.includes('this month') ||
+    lower.includes('bu ay') ||
+    lower.includes('grafik') ||
+    lower.includes('chart') ||
+    lower.includes('trend')
+  ) {
+    return { intent: 'MONTHLY_PERFORMANCE' };
+  }
+
+  // Recent analyses intent
+  if (
+    lower.includes('son analiz') ||
+    lower.includes('recent analys') ||
+    lower.includes('last analys') ||
+    lower.includes('analizlerim') ||
+    lower.includes('my analyses') ||
+    lower.includes('geçmiş analiz') ||
+    lower.includes('past analys') ||
+    lower.includes('analiz listesi') ||
+    lower.includes('analysis list')
+  ) {
+    return { intent: 'RECENT_ANALYSES' };
+  }
+
+  // Alert set intent
+  if (
+    (lower.includes('alarm') && (lower.includes('kur') || lower.includes('set') || lower.includes('ekle') || lower.includes('add') || lower.includes('oluştur') || lower.includes('create'))) ||
+    (lower.includes('alert') && (lower.includes('set') || lower.includes('add') || lower.includes('create'))) ||
+    lower.includes('bildir') ||
+    lower.includes('notify') ||
+    lower.includes('haber ver') ||
+    (lower.includes('olunca') || lower.includes('ulaşınca') || lower.includes('when') || lower.includes('reaches'))
+  ) {
+    return { intent: 'ALERT_SET' };
+  }
+
+  // Alert list intent
+  if (
+    (lower.includes('alarm') && (lower.includes('listele') || lower.includes('göster') || lower.includes('neler') || lower.includes('list') || lower.includes('show'))) ||
+    (lower.includes('alert') && (lower.includes('list') || lower.includes('show') || lower.includes('my'))) ||
+    lower.includes('alarmlarım') ||
+    lower.includes('my alerts')
+  ) {
+    return { intent: 'ALERT_LIST' };
   }
 
   // Check for coin aliases first
@@ -233,6 +304,21 @@ class ConciergeService {
         case 'PROFITABILITY':
           return await this.handleProfitability(userId, creditBalance, language);
 
+        case 'PLATFORM_STATS':
+          return await this.handlePlatformStats(creditBalance, language);
+
+        case 'MONTHLY_PERFORMANCE':
+          return await this.handleMonthlyPerformance(userId, creditBalance, language);
+
+        case 'RECENT_ANALYSES':
+          return await this.handleRecentAnalyses(userId, creditBalance, language);
+
+        case 'ALERT_SET':
+          return await this.handleAlertSet(userId, message, creditBalance, language);
+
+        case 'ALERT_LIST':
+          return await this.handleAlertList(userId, creditBalance, language);
+
         case 'ANALYSIS':
           return await this.handleAnalysis(userId, symbol!, interval!, language, creditBalance);
 
@@ -262,44 +348,58 @@ class ConciergeService {
 
   private handleHelp(language: string, creditBalance: number): ConciergeResponse {
     const helpText = language === 'tr'
-      ? `AI Concierge'e Hoş Geldiniz!
+      ? `AI Concierge - Tam Özellikli Asistan
 
-Yapabileceklerim:
-
-HIZLI ANALİZ (15 kredi)
+ANALİZ (15 kredi)
 • "BTC nasıl?" - Hızlı analiz
 • "ETH 4h analiz" - Belirli timeframe
 • "SOL scalp" - Scalping analizi
 
 UZMAN SORULARI (ücretsiz)
 • "RSI nedir?" - Teknik analiz
-• "Risk yönetimi nasıl yapılır?" - Risk
-• "Balina aktivitesi ne demek?" - Whale
+• "Risk yönetimi nasıl yapılır?"
+• "Balina aktivitesi ne demek?"
 
-DURUM & PERFORMANS
-• "status" - Kredi bakiyeniz
-• "karlılık raporla" - Trade performansınız
+PERFORMANS & İSTATİSTİK
+• "karlılık raporla" - Senin performansın
+• "aylık performans" - Haftalık grafik
+• "platform başarı oranı" - Genel istatistik
+• "son analizlerim" - Analiz listesi
 
-50+ desteklenen coin: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK, ARB, OP, APT, SUI, SEI ve daha fazlası.`
-      : `Welcome to AI Concierge!
+ALARMLAR
+• "BTC 70000 olunca haber ver"
+• "alarmlarım" - Alarm listesi
 
-What I can do:
+HESAP
+• "status" - Kredi bakiyesi
 
-QUICK ANALYSIS (15 credits)
+50+ coin: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK, ARB, OP, APT, SUI, SEI...`
+      : `AI Concierge - Full-Featured Assistant
+
+ANALYSIS (15 credits)
 • "How is BTC?" - Quick analysis
 • "ETH 4h analysis" - Specific timeframe
 • "SOL scalp" - Scalping analysis
 
 EXPERT QUESTIONS (free)
 • "What is RSI?" - Technical analysis
-• "How to manage risk?" - Risk management
-• "What is whale activity?" - Whale tracking
+• "How to manage risk?"
+• "What is whale activity?"
 
-STATUS & PERFORMANCE
-• "status" - Check your credits
-• "report my profitability" - Your trade performance
+PERFORMANCE & STATS
+• "report my profitability" - Your stats
+• "monthly performance" - Weekly chart
+• "platform stats" - Overall stats
+• "my recent analyses" - Analysis list
 
-50+ supported coins: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK, ARB, OP, APT, SUI, SEI and more.`;
+ALERTS
+• "BTC reaches 70000 notify me"
+• "my alerts" - Alert list
+
+ACCOUNT
+• "status" - Credit balance
+
+50+ coins: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK, ARB, OP, APT, SUI, SEI...`;
 
     return {
       success: true,
@@ -463,6 +563,387 @@ ${Number(winRate) >= 60 ? 'Great job! Keep it up!' : Number(winRate) >= 40 ? 'No
       success: true,
       intent: 'PROFITABILITY',
       message: profitText,
+      creditsSpent: 0,
+      creditsRemaining: creditBalance,
+    };
+  }
+
+  private async handlePlatformStats(creditBalance: number, language: string): Promise<ConciergeResponse> {
+    // Get all platform analyses
+    const allAnalyses = await prisma.analysis.findMany({
+      select: {
+        outcome: true,
+        symbol: true,
+        totalScore: true,
+      },
+    });
+
+    const totalAnalyses = allAnalyses.length;
+    const tpHits = allAnalyses.filter(a => a.outcome === 'TP_HIT').length;
+    const slHits = allAnalyses.filter(a => a.outcome === 'SL_HIT').length;
+    const totalCompleted = tpHits + slHits;
+    const platformWinRate = totalCompleted > 0 ? ((tpHits / totalCompleted) * 100).toFixed(1) : 'N/A';
+
+    // Average score
+    const avgScore = allAnalyses.length > 0
+      ? (allAnalyses.reduce((sum, a) => sum + (Number(a.totalScore) || 0), 0) / allAnalyses.length).toFixed(1)
+      : 'N/A';
+
+    // Best performing coins platform-wide
+    const symbolStats: Record<string, { wins: number; losses: number; total: number }> = {};
+    for (const analysis of allAnalyses) {
+      if (!analysis.symbol) continue;
+      if (!symbolStats[analysis.symbol]) {
+        symbolStats[analysis.symbol] = { wins: 0, losses: 0, total: 0 };
+      }
+      symbolStats[analysis.symbol].total++;
+      if (analysis.outcome === 'TP_HIT') {
+        symbolStats[analysis.symbol].wins++;
+      } else if (analysis.outcome === 'SL_HIT') {
+        symbolStats[analysis.symbol].losses++;
+      }
+    }
+
+    // Sort by win rate (min 5 analyses)
+    const topCoins = Object.entries(symbolStats)
+      .filter(([, stats]) => stats.wins + stats.losses >= 5)
+      .map(([sym, stats]) => ({
+        symbol: sym,
+        winRate: stats.wins + stats.losses > 0 ? (stats.wins / (stats.wins + stats.losses)) * 100 : 0,
+        total: stats.total,
+      }))
+      .sort((a, b) => b.winRate - a.winRate)
+      .slice(0, 5);
+
+    const topCoinsText = topCoins.length > 0
+      ? topCoins.map((c, i) => `${i + 1}. ${c.symbol} - %${c.winRate.toFixed(0)} (${c.total} analiz)`).join('\n')
+      : 'N/A';
+
+    // User count
+    const userCount = await prisma.user.count();
+
+    const platformText = language === 'tr'
+      ? `Platform İstatistikleri
+━━━━━━━━━━━━━━━━━━━━━
+Toplam Kullanıcı: ${userCount.toLocaleString()}
+Toplam Analiz: ${totalAnalyses.toLocaleString()}
+Tamamlanan: ${totalCompleted.toLocaleString()}
+
+Platform Başarı Oranı: %${platformWinRate}
+Ortalama Skor: ${avgScore}/10
+
+En Başarılı Coinler:
+${topCoinsText}
+
+TraderPath ile akıllı trade!`
+      : `Platform Statistics
+━━━━━━━━━━━━━━━━━━━━━
+Total Users: ${userCount.toLocaleString()}
+Total Analyses: ${totalAnalyses.toLocaleString()}
+Completed: ${totalCompleted.toLocaleString()}
+
+Platform Win Rate: ${platformWinRate}%
+Average Score: ${avgScore}/10
+
+Top Performing Coins:
+${topCoinsText}
+
+Trade smart with TraderPath!`;
+
+    return {
+      success: true,
+      intent: 'PLATFORM_STATS',
+      message: platformText,
+      creditsSpent: 0,
+      creditsRemaining: creditBalance,
+    };
+  }
+
+  private async handleMonthlyPerformance(userId: string, creditBalance: number, language: string): Promise<ConciergeResponse> {
+    // Get analyses for last 30 days
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const analyses = await prisma.analysis.findMany({
+      where: {
+        userId,
+        createdAt: { gte: thirtyDaysAgo },
+      },
+      select: {
+        outcome: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (analyses.length === 0) {
+      return {
+        success: true,
+        intent: 'MONTHLY_PERFORMANCE',
+        message: language === 'tr'
+          ? 'Son 30 günde analiz bulunamadı.'
+          : 'No analyses found in the last 30 days.',
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+      };
+    }
+
+    // Group by week
+    const weeks: { wins: number; losses: number; start: Date }[] = [];
+    for (let i = 0; i < 4; i++) {
+      const weekStart = new Date(Date.now() - (i + 1) * 7 * 24 * 60 * 60 * 1000);
+      const weekEnd = new Date(Date.now() - i * 7 * 24 * 60 * 60 * 1000);
+      const weekAnalyses = analyses.filter(a => a.createdAt >= weekStart && a.createdAt < weekEnd);
+      weeks.unshift({
+        wins: weekAnalyses.filter(a => a.outcome === 'TP_HIT').length,
+        losses: weekAnalyses.filter(a => a.outcome === 'SL_HIT').length,
+        start: weekStart,
+      });
+    }
+
+    // Create visual bars
+    const createBar = (wins: number, losses: number): string => {
+      const total = wins + losses;
+      if (total === 0) return '░░░░░░░░░░';
+      const winBlocks = Math.round((wins / total) * 10);
+      return '█'.repeat(winBlocks) + '░'.repeat(10 - winBlocks);
+    };
+
+    const weekLabels = language === 'tr'
+      ? ['Hafta 1', 'Hafta 2', 'Hafta 3', 'Hafta 4']
+      : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+
+    const weekLines = weeks.map((w, i) => {
+      const total = w.wins + w.losses;
+      const rate = total > 0 ? ((w.wins / total) * 100).toFixed(0) : '0';
+      return `${weekLabels[i]}: ${createBar(w.wins, w.losses)} ${w.wins}W/${w.losses}L (%${rate})`;
+    }).join('\n');
+
+    // Calculate trend
+    const firstHalf = weeks.slice(0, 2);
+    const secondHalf = weeks.slice(2, 4);
+    const firstWinRate = firstHalf.reduce((s, w) => s + w.wins, 0) / Math.max(firstHalf.reduce((s, w) => s + w.wins + w.losses, 0), 1);
+    const secondWinRate = secondHalf.reduce((s, w) => s + w.wins, 0) / Math.max(secondHalf.reduce((s, w) => s + w.wins + w.losses, 0), 1);
+
+    let trendText: string;
+    if (secondWinRate > firstWinRate + 0.1) {
+      trendText = language === 'tr' ? 'Trend: ↑ İyileşiyor' : 'Trend: ↑ Improving';
+    } else if (secondWinRate < firstWinRate - 0.1) {
+      trendText = language === 'tr' ? 'Trend: ↓ Düşüşte' : 'Trend: ↓ Declining';
+    } else {
+      trendText = language === 'tr' ? 'Trend: → Stabil' : 'Trend: → Stable';
+    }
+
+    const monthlyText = language === 'tr'
+      ? `Son 30 Gün Performansı
+━━━━━━━━━━━━━━━━━━━━━
+${weekLines}
+
+${trendText}
+
+Toplam: ${analyses.length} analiz`
+      : `Last 30 Days Performance
+━━━━━━━━━━━━━━━━━━━━━
+${weekLines}
+
+${trendText}
+
+Total: ${analyses.length} analyses`;
+
+    return {
+      success: true,
+      intent: 'MONTHLY_PERFORMANCE',
+      message: monthlyText,
+      creditsSpent: 0,
+      creditsRemaining: creditBalance,
+    };
+  }
+
+  private async handleRecentAnalyses(userId: string, creditBalance: number, language: string): Promise<ConciergeResponse> {
+    const analyses = await prisma.analysis.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        symbol: true,
+        outcome: true,
+        totalScore: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+
+    if (analyses.length === 0) {
+      return {
+        success: true,
+        intent: 'RECENT_ANALYSES',
+        message: language === 'tr'
+          ? 'Henüz analiz yapmadınız. "BTC nasıl?" diyerek başlayın!'
+          : 'No analyses yet. Try "How is BTC?" to start!',
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+      };
+    }
+
+    const outcomeEmoji = (outcome: string | null): string => {
+      switch (outcome) {
+        case 'TP_HIT': return '✓';
+        case 'SL_HIT': return '✗';
+        case 'PENDING': return '◌';
+        default: return '·';
+      }
+    };
+
+    const analysisList = analyses.map(a => {
+      const date = new Date(a.createdAt).toLocaleDateString(language === 'tr' ? 'tr-TR' : 'en-US', { month: 'short', day: 'numeric' });
+      const score = a.totalScore ? Number(a.totalScore).toFixed(1) : '-';
+      return `${outcomeEmoji(a.outcome)} ${a.symbol} | ${score}/10 | ${date}`;
+    }).join('\n');
+
+    const recentText = language === 'tr'
+      ? `Son 10 Analiziniz
+━━━━━━━━━━━━━━━━━━━━━
+${analysisList}
+
+✓ = TP Hit, ✗ = SL Hit, ◌ = Bekliyor
+
+Detaylar için /analyze/details/{id} sayfasını ziyaret edin.`
+      : `Your Last 10 Analyses
+━━━━━━━━━━━━━━━━━━━━━
+${analysisList}
+
+✓ = TP Hit, ✗ = SL Hit, ◌ = Pending
+
+Visit /analyze/details/{id} for details.`;
+
+    return {
+      success: true,
+      intent: 'RECENT_ANALYSES',
+      message: recentText,
+      creditsSpent: 0,
+      creditsRemaining: creditBalance,
+    };
+  }
+
+  private async handleAlertSet(userId: string, message: string, creditBalance: number, language: string): Promise<ConciergeResponse> {
+    // Parse alert from message
+    // Examples: "BTC 70000 olunca haber ver", "ETH reaches 4000 notify me"
+    const lower = message.toLowerCase();
+
+    // Find coin
+    let alertCoin: string | null = null;
+    for (const coin of SUPPORTED_COINS) {
+      if (lower.includes(coin)) {
+        alertCoin = coin.toUpperCase();
+        break;
+      }
+    }
+
+    // Find price
+    const priceMatch = message.match(/\d+[\d,.]*/);
+    const alertPrice = priceMatch ? parseFloat(priceMatch[0].replace(/,/g, '')) : null;
+
+    if (!alertCoin || !alertPrice) {
+      return {
+        success: true,
+        intent: 'ALERT_SET',
+        message: language === 'tr'
+          ? `Alarm kurmak için coin ve fiyat belirtin.
+
+Örnek: "BTC 70000 olunca haber ver"
+Örnek: "ETH 4000 ulaşınca bildir"`
+          : `Please specify coin and price for alert.
+
+Example: "BTC reaches 70000 notify me"
+Example: "Alert me when ETH hits 4000"`,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+      };
+    }
+
+    // Create alert
+    try {
+      await prisma.priceAlert.create({
+        data: {
+          userId,
+          symbol: alertCoin,
+          targetPrice: alertPrice,
+          condition: 'ABOVE', // Could detect ABOVE/BELOW from message
+          isActive: true,
+        },
+      });
+
+      return {
+        success: true,
+        intent: 'ALERT_SET',
+        message: language === 'tr'
+          ? `Alarm kuruldu!
+
+Coin: ${alertCoin}
+Hedef Fiyat: $${alertPrice.toLocaleString()}
+
+${alertCoin} bu fiyata ulaştığında bildirim alacaksınız.`
+          : `Alert set!
+
+Coin: ${alertCoin}
+Target Price: $${alertPrice.toLocaleString()}
+
+You'll be notified when ${alertCoin} reaches this price.`,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+      };
+    } catch {
+      return {
+        success: false,
+        intent: 'ALERT_SET',
+        message: language === 'tr'
+          ? 'Alarm kurulurken hata oluştu. Lütfen tekrar deneyin.'
+          : 'Error setting alert. Please try again.',
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: 'Failed to create alert',
+      };
+    }
+  }
+
+  private async handleAlertList(userId: string, creditBalance: number, language: string): Promise<ConciergeResponse> {
+    const alerts = await prisma.priceAlert.findMany({
+      where: { userId, isActive: true },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+
+    if (alerts.length === 0) {
+      return {
+        success: true,
+        intent: 'ALERT_LIST',
+        message: language === 'tr'
+          ? 'Aktif alarmınız yok. "BTC 70000 olunca haber ver" diyerek alarm kurabilirsiniz.'
+          : 'No active alerts. Try "BTC reaches 70000 notify me" to set one.',
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+      };
+    }
+
+    const alertList = alerts.map(a => {
+      const condition = a.condition === 'ABOVE' ? '↑' : '↓';
+      return `${condition} ${a.symbol} @ $${Number(a.targetPrice).toLocaleString()}`;
+    }).join('\n');
+
+    const alertText = language === 'tr'
+      ? `Aktif Alarmlarınız
+━━━━━━━━━━━━━━━━━━━━━
+${alertList}
+
+Toplam: ${alerts.length} alarm aktif`
+      : `Your Active Alerts
+━━━━━━━━━━━━━━━━━━━━━
+${alertList}
+
+Total: ${alerts.length} alerts active`;
+
+    return {
+      success: true,
+      intent: 'ALERT_LIST',
+      message: alertText,
       creditsSpent: 0,
       creditsRemaining: creditBalance,
     };
