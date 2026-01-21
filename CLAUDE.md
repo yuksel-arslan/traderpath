@@ -236,6 +236,10 @@ Kullanıcı Hakları Aktif:
 | 2026-01-20 | Otomatik email analiz tamamlandığında gönderiliyordu | Kullanıcı isteğiyle kaldırıldı. Manuel email Recent Analyses'tan gönderilebilir. Telegram/Discord bildirimleri hala aktif | `analysis.routes.ts` |
 | 2026-01-20 | Email'de timeframe/interval gösterilmiyordu | `interval` field eklendi - symbol başlığında "4H | tarih" formatında gösteriliyor | `RecentAnalyses.tsx`, `report.routes.ts` |
 | 2026-01-20 | AI Expert score email'de /10 formatında gösteriliyordu | `convertScoreTo100Scale` fonksiyonu eklendi - tüm X/10 skorları X*10/100 formatına çevrildi (örn: 7.4/10 → 74/100) | `report.routes.ts` |
+| 2026-01-21 | Concierge API 404 hatası - frontend yanlış domain'e istek yapıyordu | `fetch` yerine `authFetch` kullanıldı - `api.traderpath.io`'ya yönlendirme | `useConcierge.ts` |
+| 2026-01-21 | Interface preference modal görünmüyordu (undefined check) | `null || undefined` kontrolü eklendi | `apps/web/app/(dashboard)/layout.tsx:120` |
+| 2026-01-21 | preferredCoins column DB'de yoksa hata veriyordu | try-catch eklendi, default değerler kullanılıyor | `concierge.routes.ts`, `concierge.service.ts` |
+| 2026-01-21 | InterfacePreferenceModal Türkçe'ydi | Tüm metinler İngilizce'ye çevrildi | `InterfacePreferenceModal.tsx` |
 
 ---
 
@@ -494,6 +498,17 @@ Kullanıcı Hakları Aktif:
     - Analiz sonuçları kartı (Entry/SL/TP)
     - Detay sayfasına link
     - Hata durumunda otomatik kredi iadesi
+- **AI Concierge API düzeltmeleri (Bug fixes)**:
+  - `useConcierge.ts`: `fetch` → `authFetch` değişikliği (api.traderpath.io routing)
+  - Concierge routes ve service: preferredCoins column hatası için try-catch
+  - InterfacePreferenceModal: Tüm Türkçe metinler İngilizce'ye çevrildi
+  - Layout.tsx: undefined check eklendi (preferredInterface)
+- **User Preference API**:
+  - POST `/api/user/preference` - tercih kaydetme
+  - GET `/api/user/preference` - tercih okuma
+  - `/api/auth/me` endpoint'i preferredInterface döndürüyor
+- **Neon DB SQL komutu**: `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "preferred_interface" VARCHAR(20);`
+- **Web Speech API**: Mikrofon desteği (HTTPS gerekli, tarayıcı izni gerekli)
 
 ---
 
