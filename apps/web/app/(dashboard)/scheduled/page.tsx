@@ -306,7 +306,7 @@ export default function ScheduledReportsPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-slate-900 dark:text-white">
-                {limits?.costPerAnalysis || 15}
+                {limits?.costPerAnalysis || 25}
               </span>
               <span className="text-slate-500">credits</span>
             </div>
@@ -468,7 +468,7 @@ export default function ScheduledReportsPage() {
               <p className="font-medium mb-1">How Scheduled Reports Work</p>
               <ul className="list-disc list-inside space-y-1 text-amber-600 dark:text-amber-400">
                 <li>Analyses run automatically at your chosen time (UTC timezone)</li>
-                <li>Each analysis costs {limits?.costPerAnalysis || 15} credits</li>
+                <li>Each analysis costs {limits?.costPerAnalysis || 25} credits</li>
                 <li>Results are delivered via your selected channels (Email, Telegram, Discord)</li>
                 <li>If you run low on credits, you&apos;ll receive a notification</li>
               </ul>
