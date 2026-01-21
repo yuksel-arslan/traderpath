@@ -307,13 +307,18 @@ export class ConciergeService {
     language: string
   ): Promise<ConciergeResponse> {
     // Get user's preferred coins or top coins
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { preferredCoins: true },
-    });
-
     const count = entities.count || 5;
-    let coins = user?.preferredCoins?.slice(0, count) || [];
+    let coins: string[] = [];
+
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { preferredCoins: true },
+      });
+      coins = user?.preferredCoins?.slice(0, count) || [];
+    } catch {
+      // Column might not exist in database yet
+    }
 
     // If no preferred coins, use defaults
     if (coins.length === 0) {
