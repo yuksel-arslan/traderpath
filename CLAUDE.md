@@ -586,11 +586,13 @@ Kullanıcı Hakları Aktif:
   - Bug: `response.reply` kullanılıyordu ama doğru alan `response.response`
   - "scalping nedir?", "RSI nedir?" gibi sorular artık cevaplanıyor
   - ARIA (teknik), NEXUS (risk), ORACLE (whale), SENTINEL (güvenlik) uzmanları çalışıyor
-- **PDF indirme özelliği kaldırıldı**:
-  - Tüm sayfalardan PDF butonları kaldırıldı (details, reports, marketing)
-  - Email ile rapor gönderme hala aktif
-  - Landing page'den "PDF Reports" özelliği kaldırıldı
-  - REPORTING_FEATURES'dan PDF çıkarıldı, Email Delivery öne çıkarıldı
+- **PDF indirme özelliği iyileştirildi**:
+  - Analiz detay sayfasına DownloadReportButton eklendi
+  - AI Expert yorumları PDF'e dahil edildi
+  - Tokenomics analizi PDF'de ayrı sayfa olarak gösteriliyor
+  - Executive Summary (6 sayfa) ve Detailed Analysis (10+ sayfa) seçenekleri
+  - Çoklu dil desteği (14 dil)
+  - Email gönderme entegrasyonu (PDF indirdikten sonra)
 - **TradingView Pine Script entegrasyonu eklendi**:
   - Analiz detay sayfasına "Pine Script" butonu eklendi
   - Trade plan (Entry/SL/TP) Pine Script olarak kopyalanabilir

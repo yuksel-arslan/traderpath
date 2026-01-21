@@ -21,16 +21,17 @@ import {
   CheckCircle,
   Search,
   Crosshair,
-  FileText,
   Camera,
   ExternalLink,
   Copy,
   Check,
+  FileDown,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { cn } from '../../../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../../lib/coin-icons';
 import { TradePlanChart } from '../../../../../components/analysis/TradePlanChart';
+import { DownloadReportButton } from '../../../../../components/reports/DownloadReportButton';
 import { authFetch } from '../../../../../lib/api';
 
 interface AnalysisData {
@@ -67,7 +68,6 @@ export default function AnalysisDetailsPage() {
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [generatingReport, setGeneratingReport] = useState(false);
   const [capturingScreenshot, setCapturingScreenshot] = useState(false);
   const [scriptCopied, setScriptCopied] = useState(false);
 
@@ -93,96 +93,6 @@ export default function AnalysisDetailsPage() {
 
     fetchAnalysis();
   }, [analysisId]);
-
-  // Generate report from analysis with AI Expert comment
-  const handleGenerateReport = async () => {
-    if (!analysis || generatingReport) return;
-    setGeneratingReport(true);
-
-    try {
-      // Build full reportData from analysis
-      const reportData = buildReportData(analysis);
-
-      // Extract data for AI comment
-      const step1 = analysis.step1Result || {};
-      const step2 = analysis.step2Result || {};
-      const step3 = analysis.step3Result || {};
-      const step5 = analysis.step5Result || {};
-      const step7 = analysis.step7Result || {};
-
-      const direction = step5.direction || step7.direction || 'long';
-      const isLong = direction === 'long';
-      const score = (analysis.totalScore || 0) * 10;
-      const riskLevel = step3.riskLevel || 'medium';
-      const fearGreed = step1.fearGreedIndex || 50;
-      const rsi = step2.indicators?.rsi || 50;
-      const entryPrice = step5.averageEntry || step5.entryPrice;
-      const stopLoss = step5.stopLoss?.price || step5.stopLoss;
-      const tp1 = step5.takeProfits?.[0]?.price || step5.takeProfit1;
-
-      // Generate AI Expert comment
-      const aiExpertComment = `AI Risk Assessment for ${analysis.symbol}/USDT
-
-Overall Score: ${score}/100 - ${score >= 70 ? 'Strong' : score >= 50 ? 'Moderate' : 'Weak'} ${isLong ? 'Bullish' : 'Bearish'} Setup
-
-Market Context:
-- Fear & Greed Index: ${fearGreed} (${step1.fearGreedLabel || 'Neutral'})
-- BTC Dominance: ${step1.btcDominance?.toFixed(1) || 'N/A'}%
-- Market Regime: ${step1.marketRegime || 'Neutral'}
-
-Technical Analysis:
-- RSI: ${rsi?.toFixed(0) || 'N/A'} - ${rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral'}
-- 24h Change: ${step2.priceChange24h?.toFixed(2) || '0'}%
-
-Risk Assessment:
-- Risk Level: ${riskLevel.toUpperCase()}
-- Manipulation Risk: ${step3.manipulation?.pumpDumpRisk || 'Low'}
-- Whale Activity: ${step3.whaleActivity?.bias || 'Neutral'}
-
-Trade Plan:
-- Direction: ${direction.toUpperCase()}
-- Entry: $${entryPrice?.toFixed(entryPrice > 100 ? 2 : 4) || 'N/A'}
-- Stop Loss: $${stopLoss?.toFixed(stopLoss > 100 ? 2 : 4) || 'N/A'}
-- Take Profit: $${tp1?.toFixed(tp1 > 100 ? 2 : 4) || 'N/A'}
-- Risk/Reward: ${step5.riskReward?.toFixed(1) || '2.0'}:1
-
-Recommendation: ${step7.aiSummary || step7.summary || `${score >= 60 ? 'Conditions favor entry with proper risk management.' : 'Exercise caution and wait for better setup.'}`}`;
-
-      // Create report with full data
-      const verdict = step7.action || step7.verdict || 'GO';
-      const response = await authFetch('/api/reports', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          symbol: analysis.symbol,
-          analysisId: analysis.id,
-          reportData,
-          verdict,
-          score: analysis.totalScore,
-          direction,
-          interval: analysis.interval,
-          entryPrice,
-          tradeType: reportData.tradeType,
-          aiExpertComment,
-        }),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error?.message || 'Failed to create report');
-      }
-
-      const data = await response.json();
-      if (data.success && data.data?.id) {
-        alert(`Report created successfully for ${analysis.symbol}!`);
-      }
-    } catch (err) {
-      console.error('Failed to generate report:', err);
-      alert(err instanceof Error ? err.message : 'Failed to generate report');
-    } finally {
-      setGeneratingReport(false);
-    }
-  };
 
   // Screenshot chart
   const handleScreenshot = async () => {
@@ -293,144 +203,6 @@ plotshape(barstate.islast, style=${isLong ? 'shape.triangleup' : 'shape.triangle
       setScriptCopied(true);
       setTimeout(() => setScriptCopied(false), 2000);
     }
-  };
-
-  // Build comprehensive report data from analysis (for email)
-  const buildReportData = (analysis: AnalysisData) => {
-    const step1 = analysis.step1Result || {};
-    const step2 = analysis.step2Result || {};
-    const step3 = analysis.step3Result || {};
-    const step4 = analysis.step4Result || {};
-    const step5 = analysis.step5Result || {};
-    const step6 = analysis.step6Result || {};
-    const step7 = analysis.step7Result || {};
-
-    const direction = step5.direction || step7.direction || 'long';
-    const entryPrice = step5.averageEntry || step5.entryPrice;
-    const stopLoss = step5.stopLoss?.price || step5.stopLoss;
-
-    return {
-      symbol: analysis.symbol,
-      generatedAt: new Date(analysis.createdAt).toLocaleDateString('en-US', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      analysisId: analysis.id,
-      tradeType: getTradeType(analysis.interval),
-
-      // Step 1: Market Pulse - Full data
-      marketPulse: {
-        btcDominance: step1.btcDominance,
-        fearGreedIndex: step1.fearGreedIndex,
-        fearGreedLabel: step1.fearGreedLabel,
-        marketRegime: step1.marketRegime,
-        trend: step1.trend || { direction: 'neutral', strength: 0 },
-        btcPrice: step1.btcPrice,
-        totalMarketCap: step1.totalMarketCap,
-        altcoinSeasonIndex: step1.altcoinSeasonIndex,
-        gate: step1.gate,
-      },
-
-      // Step 2: Asset Scan - Full indicators
-      assetScan: {
-        symbol: analysis.symbol,
-        currentPrice: step2.currentPrice,
-        priceChange24h: step2.priceChange24h,
-        volume24h: step2.volume24h,
-        timeframes: step2.timeframes,
-        forecast: step2.forecast,
-        levels: step2.levels,
-        indicators: {
-          rsi: step2.indicators?.rsi || 50,
-          macd: step2.indicators?.macd || { histogram: 0 },
-          movingAverages: step2.indicators?.movingAverages,
-          bollingerBands: step2.indicators?.bollingerBands,
-          atr: step2.indicators?.atr,
-        },
-        direction: step2.direction,
-        directionConfidence: step2.directionConfidence,
-        gate: step2.gate,
-        // Chart candle data for PDF generation
-        chartCandles: step2.chartCandles,
-      },
-
-      // Step 3: Safety Check - Full risk data
-      safetyCheck: {
-        riskLevel: step3.riskLevel,
-        warnings: step3.warnings,
-        manipulation: step3.manipulation || { pumpDumpRisk: 'low' },
-        whaleActivity: step3.whaleActivity || { bias: 'neutral' },
-        advancedMetrics: step3.advancedMetrics,
-        smartMoney: step3.smartMoney,
-        newsSentiment: step3.newsSentiment,
-        gate: step3.gate,
-      },
-
-      // Step 4: Timing - Full conditions
-      timing: {
-        tradeNow: step4.tradeNow,
-        reason: step4.reason,
-        conditions: step4.conditions,
-        entryZones: step4.entryZones,
-        optimalEntry: step4.optimalEntry,
-        waitFor: step4.waitFor,
-        gate: step4.gate,
-      },
-
-      // Step 5: Trade Plan - Full execution strategy
-      tradePlan: {
-        direction,
-        type: step5.type,
-        entries: step5.entries,
-        averageEntry: entryPrice,
-        stopLoss: {
-          price: stopLoss,
-          percentage: step5.stopLoss?.percentage,
-          reason: step5.stopLoss?.reason,
-          safetyAdjusted: step5.stopLoss?.safetyAdjusted,
-        },
-        takeProfits: (step5.takeProfits || []).map((tp: { price: number; percentage?: number; reason?: string; source?: string }) => ({
-          price: tp.price,
-          percentage: tp.percentage,
-          reason: tp.reason,
-          source: tp.source,
-        })),
-        riskReward: step5.riskReward || 2,
-        winRateEstimate: step5.winRateEstimate,
-        positionSizePercent: step5.positionSizePercent,
-        riskAmount: step5.riskAmount,
-        trailingStop: step5.trailingStop,
-        sources: step5.sources,
-        confidence: step5.confidence,
-        gate: step5.gate,
-      },
-
-      // Step 6: Trap Check - Full trap analysis
-      trapCheck: {
-        traps: step6.traps || { bullTrap: false, bearTrap: false, fakeoutRisk: 'low' },
-        liquidationLevels: step6.liquidationLevels,
-        counterStrategy: step6.counterStrategy,
-        proTip: step6.proTip,
-        riskLevel: step6.riskLevel,
-        gate: step6.gate,
-      },
-
-      // Step 7: Verdict - Full decision data
-      verdict: {
-        action: step7.action || step7.verdict,
-        overallScore: analysis.totalScore,
-        aiSummary: step7.aiSummary || step7.summary,
-        componentScores: step7.componentScores,
-        confidenceFactors: step7.confidenceFactors,
-        recommendation: step7.recommendation,
-      },
-
-      // Full 40+ Indicator Details (from step2 Asset Scan or step3 Safety Check)
-      indicatorDetails: step2.indicatorDetails || step3.indicatorDetails,
-    };
   };
 
   const getTradeType = (interval: string): 'scalping' | 'dayTrade' | 'swing' => {
@@ -750,26 +522,28 @@ plotshape(barstate.islast, style=${isLong ? 'shape.triangleup' : 'shape.triangle
             </div>
           )}
 
-          {/* Action Button */}
-          <div className="flex justify-center">
-            {/* Generate Report Button */}
-            <button
-              onClick={handleGenerateReport}
-              disabled={generatingReport}
-              className="flex items-center justify-center gap-2 py-3 px-8 font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white transition disabled:opacity-50"
-            >
-              {generatingReport ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <FileText className="w-5 h-5" />
-                  Create Report
-                </>
-              )}
-            </button>
+          {/* Download PDF Report */}
+          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Download Analysis Report</h3>
+              <p className="text-sm text-gray-500 dark:text-slate-400">Get a comprehensive PDF report with AI Expert insights</p>
+            </div>
+            <DownloadReportButton
+              analysisData={{
+                1: analysis.step1Result || {},
+                2: analysis.step2Result || {},
+                3: analysis.step3Result || {},
+                4: analysis.step4Result || {},
+                5: analysis.step5Result || {},
+                6: analysis.step6Result || {},
+                7: analysis.step7Result || {},
+              }}
+              symbol={analysis.symbol}
+              interval={analysis.interval}
+              analysisId={analysis.id}
+              tradeType={getTradeType(analysis.interval)}
+              className="justify-center"
+            />
           </div>
         </div>
       </div>
