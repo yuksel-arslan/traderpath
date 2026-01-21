@@ -198,6 +198,25 @@ function detectIntentByRules(
     }
   }
 
+  // CHART_VIEW patterns
+  const chartPatterns = [
+    /chart/i,
+    /grafik/i,
+    /grafiği/i,
+    /mum/i,
+    /candlestick/i,
+    /show.*chart/i,
+    /göster.*grafik/i,
+    /chart.*göster/i,
+    /grafik.*göster/i,
+    /tradingview/i,
+  ];
+  if (chartPatterns.some((p) => p.test(normalizedMessage))) {
+    intent = 'CHART_VIEW';
+    confidence = 0.95;
+    // Symbol is already extracted above
+  }
+
   // EXPERT_ASK patterns (educational questions)
   const expertPatterns = [
     /nedir\??$/i,
