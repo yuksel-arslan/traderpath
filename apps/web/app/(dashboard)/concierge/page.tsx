@@ -16,16 +16,8 @@ interface ChatMessage {
 }
 
 interface AnalysisData {
-  symbol?: string;
-  interval?: string;
   verdict?: 'GO' | 'CONDITIONAL_GO' | 'WAIT' | 'AVOID';
   score?: number;
-  direction?: 'long' | 'short';
-  entry?: number;
-  stopLoss?: number;
-  takeProfit1?: number;
-  takeProfit2?: number;
-  riskReward?: number;
   analysisId?: string;
 }
 
@@ -49,6 +41,17 @@ const QUICK_COMMANDS = [
   { id: 'help', label: 'Help', command: 'help', icon: '?' },
   { id: 'status', label: 'My Status', command: 'status', icon: '📊' },
 ];
+
+// Simple language detection based on Turkish characters and common words
+function detectLanguage(text: string): 'tr' | 'en' {
+  const turkishChars = /[çğıöşüÇĞİÖŞÜ]/;
+  const turkishWords = /\b(nasıl|nedir|ne|için|ile|var|yok|bu|şu|ve|veya|ama|fakat|çünkü|gibi|kadar|daha|en|bir|iki|üç|analiz|fiyat|al|sat|git|gel|yap|et|ol|değil|mi|mı|mu|mü)\b/i;
+
+  if (turkishChars.test(text) || turkishWords.test(text)) {
+    return 'tr';
+  }
+  return 'en';
+}
 
 // Verdict colors and icons
 function getVerdictStyle(verdict?: string) {
@@ -133,7 +136,7 @@ export default function ConciergePage() {
       const response = await authFetch('/api/concierge/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, language: 'en' }),
+        body: JSON.stringify({ message, language: detectLanguage(message) }),
       });
 
       const data: ConciergeResponse = await response.json();
