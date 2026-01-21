@@ -260,7 +260,7 @@ export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
     .map(symbol => ALL_COINS.find(c => c.symbol === symbol))
     .filter(Boolean) as typeof ALL_COINS;
 
-  const handleSelect = (coin: typeof ALL_COINS[0]) => {
+  const handleSelect = async (coin: typeof ALL_COINS[0]) => {
     setSelectedCoin(coin);
     setIsOpen(false);
     setSearch('');
@@ -269,16 +269,10 @@ export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
     const updated = [coin.symbol, ...recentCoins.filter(s => s !== coin.symbol)].slice(0, 5);
     setRecentCoins(updated);
     localStorage.setItem('recentCoins', JSON.stringify(updated));
-  };
 
-  const handleAnalyze = async () => {
-    if (!selectedCoin) return;
-
+    // Auto-trigger analysis after selection
     setIsCheckingRecent(true);
-
-    // Check for recent analysis of this coin
-    const recent = await checkRecentAnalysis(selectedCoin.symbol);
-
+    const recent = await checkRecentAnalysis(coin.symbol);
     setIsCheckingRecent(false);
 
     if (recent && recent.hoursAgo < recent.validityHours) {
@@ -596,26 +590,13 @@ export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
         )}
       </div>
 
-      {/* Analyze Button */}
-      <button
-        onClick={handleAnalyze}
-        disabled={!selectedCoin || isCheckingRecent}
-        className="w-full py-3.5 px-4 bg-slate-200 dark:bg-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:scale-[1.02] transition-all border border-slate-300 dark:border-slate-600"
-      >
-        {isCheckingRecent ? (
-          <span className="flex items-center justify-center gap-2 text-slate-600 dark:text-slate-300 font-medium">
-            <RefreshCw className="w-5 h-5 animate-spin" />
-            Checking...
-          </span>
-        ) : selectedCoin ? (
-          <span className="flex items-center justify-center gap-2 gradient-text-rg-animate font-semibold">
-            <TrendingUp className="w-5 h-5" />
-            Start {selectedCoin.symbol} Analysis
-          </span>
-        ) : (
-          <span className="text-slate-500 dark:text-slate-400 font-medium">Select a coin to analyze</span>
-        )}
-      </button>
+      {/* Loading indicator when checking for recent analysis */}
+      {isCheckingRecent && (
+        <div className="flex items-center justify-center gap-2 py-3 text-slate-600 dark:text-slate-300">
+          <RefreshCw className="w-4 h-4 animate-spin" />
+          <span className="text-sm">Checking recent analyses...</span>
+        </div>
+      )}
 
       {/* Duplicate Analysis Warning Modal */}
       {showDuplicateWarning && recentAnalysis && (
