@@ -395,7 +395,7 @@ export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
 
         {/* Dropdown Panel */}
         {isOpen && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-card border rounded-lg shadow-xl z-50">
+          <div className="absolute top-full left-0 right-0 mt-2 bg-card border rounded-lg shadow-2xl z-[200]">
             {/* Search Input */}
             <div className="p-3 border-b">
               <div className="relative">
