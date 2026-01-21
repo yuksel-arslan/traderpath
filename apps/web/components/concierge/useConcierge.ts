@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { authFetch } from '@/lib/api';
 
 export type VerdictType = 'GO' | 'CONDITIONAL_GO' | 'WAIT' | 'AVOID';
 export type IntentType =
@@ -81,12 +82,8 @@ export function useConcierge() {
     setMessages((prev) => [...prev, userMessage]);
 
     try {
-      const response = await fetch('/api/concierge/chat', {
+      const response = await authFetch('/api/concierge/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
         body: JSON.stringify({ message, language }),
       });
 
@@ -138,9 +135,7 @@ export function useConcierge() {
 
   const fetchSuggestions = useCallback(async (language = 'en') => {
     try {
-      const response = await fetch(`/api/concierge/suggestions?language=${language}`, {
-        credentials: 'include',
-      });
+      const response = await authFetch(`/api/concierge/suggestions?language=${language}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -153,9 +148,7 @@ export function useConcierge() {
 
   const fetchQuickCommands = useCallback(async (language = 'en') => {
     try {
-      const response = await fetch(`/api/concierge/quick-commands?language=${language}`, {
-        credentials: 'include',
-      });
+      const response = await authFetch(`/api/concierge/quick-commands?language=${language}`);
 
       if (response.ok) {
         const data = await response.json();
