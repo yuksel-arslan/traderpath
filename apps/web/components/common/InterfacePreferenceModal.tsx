@@ -8,9 +8,9 @@ import {
   MessageSquare,
   MousePointer,
   Zap,
-  ChevronRight,
   Sparkles,
   Check,
+  Loader2,
 } from 'lucide-react';
 import { authFetch } from '@/lib/api';
 
@@ -26,28 +26,25 @@ export function InterfacePreferenceModal({
   onSelect,
 }: InterfacePreferenceModalProps) {
   const router = useRouter();
-  const [selected, setSelected] = useState<'ui' | 'concierge' | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState<'ui' | 'concierge' | null>(null);
 
   if (!isOpen) return null;
 
-  const handleContinue = async () => {
-    if (!selected) return;
-
-    setIsLoading(true);
+  const handleSelect = async (preference: 'ui' | 'concierge') => {
+    setIsLoading(preference);
     try {
       // Save preference to backend
       const response = await authFetch('/api/user/preference', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferredInterface: selected }),
+        body: JSON.stringify({ preferredInterface: preference }),
       });
 
       if (response.ok) {
-        onSelect(selected);
+        onSelect(preference);
 
         // Navigate based on selection
-        if (selected === 'concierge') {
+        if (preference === 'concierge') {
           router.push('/concierge');
         } else {
           router.push('/analyze');
@@ -57,205 +54,192 @@ export function InterfacePreferenceModal({
       }
     } catch (error) {
       console.error('Failed to save preference:', error);
-    } finally {
-      setIsLoading(false);
+      setIsLoading(null);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-4xl mx-4 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden">
+      {/* Modal - scrollable on mobile */}
+      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl">
         {/* Header */}
-        <div className="relative px-8 pt-8 pb-6 bg-gradient-to-br from-teal-500/10 via-transparent to-coral-500/10">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-teal-500/20 to-transparent rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-coral-500/20 to-transparent rounded-full blur-3xl" />
+        <div className="relative px-4 sm:px-8 pt-6 sm:pt-8 pb-4 sm:pb-6 bg-gradient-to-br from-teal-500/10 via-transparent to-coral-500/10">
+          <div className="absolute top-0 right-0 w-32 h-32 sm:w-64 sm:h-64 bg-gradient-to-br from-teal-500/20 to-transparent rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-48 sm:h-48 bg-gradient-to-tr from-coral-500/20 to-transparent rounded-full blur-3xl" />
 
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-5 h-5 text-teal-500" />
-              <span className="text-sm font-medium text-teal-600 dark:text-teal-400">
+          <div className="relative text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-teal-500" />
+              <span className="text-xs sm:text-sm font-medium text-teal-600 dark:text-teal-400">
                 Welcome to TraderPath!
               </span>
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-2">
-              How Would You Like to Analyze?
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-2">
+              Choose Your Experience
             </h2>
-            <p className="text-slate-600 dark:text-slate-400 max-w-xl">
-              We offer two different experiences. You can change your preference
-              anytime in settings.
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+              Tap to select and continue instantly
             </p>
           </div>
         </div>
 
         {/* Options */}
-        <div className="px-8 py-6">
-          <div className="grid md:grid-cols-2 gap-4">
+        <div className="px-4 sm:px-8 py-4 sm:py-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {/* AI Concierge Option */}
             <button
-              onClick={() => setSelected('concierge')}
-              className={`relative group p-6 rounded-2xl border-2 text-left transition-all ${
-                selected === 'concierge'
-                  ? 'border-teal-500 bg-teal-500/5 ring-4 ring-teal-500/20'
-                  : 'border-slate-200 dark:border-slate-700 hover:border-teal-500/50 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-              }`}
+              onClick={() => handleSelect('concierge')}
+              disabled={isLoading !== null}
+              className={`relative group p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 text-left transition-all ${
+                isLoading === 'concierge'
+                  ? 'border-teal-500 bg-teal-500/10 ring-2 sm:ring-4 ring-teal-500/20'
+                  : 'border-slate-200 dark:border-slate-700 hover:border-teal-500 hover:bg-teal-500/5 active:scale-[0.98]'
+              } ${isLoading !== null && isLoading !== 'concierge' ? 'opacity-50' : ''}`}
             >
-              {/* Selected indicator */}
-              {selected === 'concierge' && (
-                <div className="absolute top-4 right-4 w-6 h-6 bg-teal-500 rounded-full flex items-center justify-center">
-                  <Check className="w-4 h-4 text-white" />
+              {/* Loading/Selected indicator */}
+              {isLoading === 'concierge' && (
+                <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-5 h-5 sm:w-6 sm:h-6 bg-teal-500 rounded-full flex items-center justify-center">
+                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 text-white animate-spin" />
                 </div>
               )}
 
               {/* Badge */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-teal-500 to-teal-600 text-white text-xs font-bold rounded-full mb-4">
-                <Zap className="w-3 h-3" />
-                NEW - RECOMMENDED
+              <div className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 bg-gradient-to-r from-teal-500 to-teal-600 text-white text-[10px] sm:text-xs font-bold rounded-full mb-3 sm:mb-4">
+                <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                RECOMMENDED
               </div>
 
               {/* Icon */}
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Bot className="w-7 h-7 text-white" />
+              <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
+                <Bot className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
               </div>
 
               {/* Title */}
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-1 sm:mb-2">
                 AI Concierge
               </h3>
 
               {/* Description */}
-              <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">
-                Analyze like chatting with your AI assistant. Just type
-                &quot;How is BTC?&quot; and we&apos;ll handle the rest.
+              <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm mb-3 sm:mb-4">
+                Chat with AI. Just type &quot;How is BTC?&quot;
               </p>
 
-              {/* Features */}
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                  <MessageSquare className="w-4 h-4 text-teal-500" />
-                  Ask questions in natural language
+              {/* Features - hidden on very small screens */}
+              <ul className="space-y-1.5 sm:space-y-2 hidden sm:block">
+                <li className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                  <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500 flex-shrink-0" />
+                  Natural language questions
                 </li>
-                <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                  <Zap className="w-4 h-4 text-teal-500" />
-                  Complete analysis with a single message
+                <li className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                  <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500 flex-shrink-0" />
+                  One message analysis
                 </li>
-                <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                  <Bot className="w-4 h-4 text-teal-500" />
-                  Voice command support
+                <li className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                  <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500 flex-shrink-0" />
+                  Voice commands
                 </li>
               </ul>
 
               {/* Example */}
-              <div className="mt-4 p-3 bg-slate-100 dark:bg-slate-800 rounded-xl">
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+              <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-slate-100 dark:bg-slate-800 rounded-lg sm:rounded-xl">
+                <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mb-0.5 sm:mb-1">
                   Example:
                 </p>
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  &quot;Analyze ETH on 4h timeframe&quot;
+                <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
+                  &quot;Analyze ETH on 4h&quot;
                 </p>
+              </div>
+
+              {/* Tap hint */}
+              <div className="mt-3 sm:mt-4 flex items-center justify-center gap-1 text-teal-500">
+                <Check className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="text-[10px] sm:text-xs font-medium">Tap to select</span>
               </div>
             </button>
 
             {/* Classic UI Option */}
             <button
-              onClick={() => setSelected('ui')}
-              className={`relative group p-6 rounded-2xl border-2 text-left transition-all ${
-                selected === 'ui'
-                  ? 'border-slate-500 bg-slate-500/5 ring-4 ring-slate-500/20'
-                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-500/50 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-              }`}
+              onClick={() => handleSelect('ui')}
+              disabled={isLoading !== null}
+              className={`relative group p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 text-left transition-all ${
+                isLoading === 'ui'
+                  ? 'border-slate-500 bg-slate-500/10 ring-2 sm:ring-4 ring-slate-500/20'
+                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-500 hover:bg-slate-500/5 active:scale-[0.98]'
+              } ${isLoading !== null && isLoading !== 'ui' ? 'opacity-50' : ''}`}
             >
-              {/* Selected indicator */}
-              {selected === 'ui' && (
-                <div className="absolute top-4 right-4 w-6 h-6 bg-slate-500 rounded-full flex items-center justify-center">
-                  <Check className="w-4 h-4 text-white" />
+              {/* Loading/Selected indicator */}
+              {isLoading === 'ui' && (
+                <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-5 h-5 sm:w-6 sm:h-6 bg-slate-500 rounded-full flex items-center justify-center">
+                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 text-white animate-spin" />
                 </div>
               )}
 
               {/* Badge */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-full mb-4">
+              <div className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] sm:text-xs font-bold rounded-full mb-3 sm:mb-4">
                 CLASSIC
               </div>
 
               {/* Icon */}
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <LayoutDashboard className="w-7 h-7 text-white" />
+              <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
+                <LayoutDashboard className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
               </div>
 
               {/* Title */}
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-1 sm:mb-2">
                 Classic Interface
               </h3>
 
               {/* Description */}
-              <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">
-                Step-by-step forms with detailed control. Set every parameter
-                yourself and see all the data.
+              <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm mb-3 sm:mb-4">
+                Step-by-step forms with full control.
               </p>
 
-              {/* Features */}
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                  <MousePointer className="w-4 h-4 text-slate-500" />
+              {/* Features - hidden on very small screens */}
+              <ul className="space-y-1.5 sm:space-y-2 hidden sm:block">
+                <li className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                  <MousePointer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 flex-shrink-0" />
                   Detailed control panel
                 </li>
-                <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                  <LayoutDashboard className="w-4 h-4 text-slate-500" />
+                <li className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                  <LayoutDashboard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 flex-shrink-0" />
                   All charts and indicators
                 </li>
-                <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                  <Check className="w-4 h-4 text-slate-500" />
-                  7-step detailed analysis
+                <li className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                  <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 flex-shrink-0" />
+                  7-step analysis
                 </li>
               </ul>
 
               {/* Example */}
-              <div className="mt-4 p-3 bg-slate-100 dark:bg-slate-800 rounded-xl">
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+              <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-slate-100 dark:bg-slate-800 rounded-lg sm:rounded-xl">
+                <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mb-0.5 sm:mb-1">
                   Flow:
                 </p>
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Select Coin → Timeframe → Analyze
+                <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Coin → Timeframe → Analyze
                 </p>
+              </div>
+
+              {/* Tap hint */}
+              <div className="mt-3 sm:mt-4 flex items-center justify-center gap-1 text-slate-500">
+                <Check className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="text-[10px] sm:text-xs font-medium">Tap to select</span>
               </div>
             </button>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-8 py-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              You can always change your preference in settings
-            </p>
-            <button
-              onClick={handleContinue}
-              disabled={!selected || isLoading}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
-                selected
-                  ? 'bg-gradient-to-r from-teal-500 to-teal-600 text-white hover:from-teal-600 hover:to-teal-700 shadow-lg shadow-teal-500/25'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
-              }`}
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  Continue
-                  <ChevronRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </div>
+        {/* Footer - simplified */}
+        <div className="px-4 sm:px-8 py-3 sm:py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700">
+          <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 text-center">
+            You can change your preference anytime in settings
+          </p>
         </div>
       </div>
     </div>
