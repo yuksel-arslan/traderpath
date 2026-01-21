@@ -444,6 +444,19 @@ Kullanıcı Hakları Aktif:
   - `convertScoreTo100Scale` fonksiyonu tüm X/10 skorlarını X*10/100'e çeviriyor
   - Report tablosundan aiExpertComment otomatik fetch edilir (eğer mevcut değilse)
 
+### 2026-01-21
+- **Scheduled Reports (Otomatik Analizler) özelliği eklendi**:
+  - Yeni servis: `apps/api/src/modules/scheduled/scheduled-reports.service.ts`
+  - Yeni routes: `apps/api/src/modules/scheduled/scheduled-reports.routes.ts`
+  - Yeni sayfa: `apps/web/app/(dashboard)/scheduled/page.tsx`
+  - Kullanıcılar favori coinleri için otomatik analiz kurabilir
+  - Frekans seçenekleri: Günlük, Haftalık, Aylık
+  - Teslimat kanalları: Email, Telegram, Discord
+  - Her analiz 10 kredi (normal 15 yerine - %33 indirim)
+  - Ücretsiz kullanıcılar max 3 aktif schedule kurabilir
+  - node-cron ile saatlik kontrol çalışıyor
+  - Sidebar'a "Scheduled" linki eklendi (Calendar ikonu)
+
 ---
 
 ## 🤖 Claude Code Talimatları

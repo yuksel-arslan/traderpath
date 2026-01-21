@@ -37,6 +37,8 @@ import aiExpertRoutes from './modules/ai-expert/ai-expert.routes';
 import expertRoutes from './modules/expert/expert.routes';
 import contractSecurityRoutes from './modules/security/contract-security.routes';
 import paymentRoutes from './modules/payments/payment.routes';
+import scheduledReportsRoutes from './modules/scheduled/scheduled-reports.routes';
+import { scheduledReportsService } from './modules/scheduled/scheduled-reports.service';
 
 // ===========================================
 // Server Configuration
@@ -313,6 +315,9 @@ app.register(contractSecurityRoutes, { prefix: '/api/security' }); // Legacy
 app.register(paymentRoutes, { prefix: '/api/v1/payments' });
 app.register(paymentRoutes, { prefix: '/api/payments' }); // Legacy
 
+// Scheduled Reports routes
+app.register(scheduledReportsRoutes);
+
 // ===========================================
 // 404 Handler
 // ===========================================
@@ -443,6 +448,10 @@ const start = async () => {
     startPriceChecker();
     logger.info('✓ Price checker started');
 
+    // Start scheduled reports cron job
+    scheduledReportsService.start();
+    logger.info('✓ Scheduled reports cron started');
+
     // Start server
     await app.listen({
       port: config.port,
@@ -484,6 +493,10 @@ const shutdown = async (signal: string) => {
     // Stop price checker
     stopPriceChecker();
     logger.info('✓ Price checker stopped');
+
+    // Stop scheduled reports cron
+    scheduledReportsService.stop();
+    logger.info('✓ Scheduled reports cron stopped');
 
     // Stop accepting new connections
     await app.close();
