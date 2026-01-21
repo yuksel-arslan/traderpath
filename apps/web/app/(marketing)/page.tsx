@@ -1558,7 +1558,24 @@ export default function LandingPage() {
             </div>
 
             {/* Additional Features Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* AI Concierge - NEW */}
+              <div className="bg-card border border-emerald-500/30 rounded-xl p-5 relative overflow-hidden">
+                <div className="absolute top-2 right-2">
+                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-500 text-[10px] font-bold rounded-full">NEW</span>
+                </div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
+                    <Bot className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold gradient-text-logo-animate">AI Concierge</h4>
+                    <p className="text-xs text-muted-foreground">Chat-based trading assistant</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Just say &quot;How is BTC?&quot; - instant analysis with voice support. Natural language, zero UI complexity.</p>
+              </div>
+
               {/* AI Expert */}
               <div className="bg-card border rounded-xl p-5">
                 <div className="flex items-center gap-3 mb-3">
@@ -1590,10 +1607,10 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <h4 className="font-semibold gradient-text-logo-animate">PDF Report</h4>
-                    <p className="text-xs text-muted-foreground">Download with AI Expert insights</p>
+                    <p className="text-xs text-muted-foreground">Download with AI insights</p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Full 7-step analysis with Tokenomics, 40+ indicators, and trade plan in professional PDF format.</p>
+                <p className="text-xs text-muted-foreground">Full analysis with Tokenomics, 40+ indicators in professional PDF format.</p>
               </div>
 
               {/* TFT Model - Coming Soon */}
@@ -1607,10 +1624,10 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <h4 className="font-semibold gradient-text-logo-animate">TFT AI Model</h4>
-                    <p className="text-xs text-muted-foreground">AI-powered price prediction</p>
+                    <p className="text-xs text-muted-foreground">AI price prediction</p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Temporal Fusion Transformer model for 24h/7d price predictions with confidence intervals.</p>
+                <p className="text-xs text-muted-foreground">Temporal Fusion Transformer for 24h/7d price predictions.</p>
               </div>
             </div>
           </div>
