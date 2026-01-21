@@ -562,6 +562,19 @@ Kullanıcı Hakları Aktif:
   - Kullanıcı seçim yapınca veya modal'ı kapatınca session'a kaydediliyor
   - UI seçilince `/analyze`, Concierge seçilince `/concierge` sayfasına yönlendirme
   - Logout sonrası yeni login'de tekrar gösterilir (sessionStorage temizlenir)
+- **AI Concierge ve Modal mobil uyumluluk (Fully Responsive)**:
+  - Concierge sayfası: Responsive chart yükseklikleri (`h-[250px] sm:h-[350px] md:h-[400px]`)
+  - Quick commands: Mobilde 2x2 grid (`grid grid-cols-2 sm:flex`)
+  - Compact header: Mobilde subtitle gizleniyor, font boyutları küçültüldü
+  - Tüm spacing ve padding değerleri mobil-first responsive
+  - InterfacePreferenceModal: Continue butonu kaldırıldı, seçim anında tetikleniyor
+  - Loading state seçilen option üzerinde gösteriliyor
+  - Mobilde scrollable modal (max-h-[90vh] overflow-y-auto)
+  - Tüm font boyutları ve padding değerleri sm/md breakpoint'lere uygun
+- **Chart View trade plan düzeltmesi**:
+  - Trade plan `step5Result`'tan alınmalı (step7 değil)
+  - Doğru alan adları: `averageEntry`, `stopLoss.price`, `takeProfits[].price`
+  - Trade plan yoksa açıklayıcı mesaj gösteriliyor
 
 ---
 
