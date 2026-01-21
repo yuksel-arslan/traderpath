@@ -5,53 +5,6 @@ import { Bot, Send, Loader2, Coins, Trash2, Mic, MicOff, Sparkles, TrendingUp, T
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
 
-// Web Speech API type definitions
-interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionResultList;
-  resultIndex: number;
-}
-
-interface SpeechRecognitionResultList {
-  length: number;
-  item(index: number): SpeechRecognitionResult;
-  [index: number]: SpeechRecognitionResult;
-}
-
-interface SpeechRecognitionResult {
-  length: number;
-  item(index: number): SpeechRecognitionAlternative;
-  [index: number]: SpeechRecognitionAlternative;
-  isFinal: boolean;
-}
-
-interface SpeechRecognitionAlternative {
-  transcript: string;
-  confidence: number;
-}
-
-interface SpeechRecognitionInstance extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onend: (() => void) | null;
-  onerror: ((event: Event) => void) | null;
-  start(): void;
-  stop(): void;
-  abort(): void;
-}
-
-interface SpeechRecognitionConstructor {
-  new (): SpeechRecognitionInstance;
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition?: SpeechRecognitionConstructor;
-    webkitSpeechRecognition?: SpeechRecognitionConstructor;
-  }
-}
-
 // Types
 interface ChatMessage {
   id: string;
@@ -124,7 +77,8 @@ export default function ConciergePage() {
   const [speechSupported, setSpeechSupported] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -142,7 +96,8 @@ export default function ConciergePage() {
         recognition.interimResults = true;
         recognition.lang = 'en-US';
 
-        recognition.onresult = (event: SpeechRecognitionEvent) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        recognition.onresult = (event: any) => {
           let transcript = '';
           for (let i = 0; i < event.results.length; i++) {
             transcript += event.results[i][0].transcript;
