@@ -350,7 +350,7 @@ class ConciergeService {
     const helpText = language === 'tr'
       ? `AI Concierge - Tam Özellikli Asistan
 
-ANALİZ (15 kredi)
+ANALİZ (25 kredi)
 • "BTC nasıl?" - Hızlı analiz
 • "ETH 4h analiz" - Belirli timeframe
 • "SOL scalp" - Scalping analizi
@@ -376,7 +376,7 @@ HESAP
 50+ coin: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK, ARB, OP, APT, SUI, SEI...`
       : `AI Concierge - Full-Featured Assistant
 
-ANALYSIS (15 credits)
+ANALYSIS (25 credits)
 • "How is BTC?" - Quick analysis
 • "ETH 4h analysis" - Specific timeframe
 • "SOL scalp" - Scalping analysis
@@ -956,7 +956,7 @@ Total: ${alerts.length} alerts active`;
     language: string,
     creditBalance: number
   ): Promise<ConciergeResponse> {
-    const ANALYSIS_COST = 15;
+    const ANALYSIS_COST = 25;
 
     // Check credits
     if (creditBalance < ANALYSIS_COST) {
