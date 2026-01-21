@@ -241,6 +241,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-21 | preferredCoins column DB'de yoksa hata veriyordu | try-catch eklendi, default değerler kullanılıyor | `concierge.routes.ts`, `concierge.service.ts` |
 | 2026-01-21 | InterfacePreferenceModal Türkçe'ydi | Tüm metinler İngilizce'ye çevrildi | `InterfacePreferenceModal.tsx` |
 | 2026-01-21 | AI Concierge "Analysis Not Found" hatası - timeframe olmadan analiz yapılamıyor | Analiz veritabanına kaydedilmiyordu. `analyzeWithExpertPanel` fonksiyonuna `prisma.analysis.create` eklendi, interval parametresi eklendi | `ai-expert.service.ts`, `concierge.service.ts` |
+| 2026-01-21 | Chart View trade plan göstermiyor - yanlış step ve alan adları | Trade plan `step5Result`'tan alınmalı (step7 değil), alan adları: `averageEntry`, `stopLoss.price`, `takeProfits[].price`. Trade plan yoksa açıklayıcı mesaj eklendi | `concierge.service.ts`, `concierge/page.tsx` |
 
 ---
 

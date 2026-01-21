@@ -1109,6 +1109,7 @@ Total: ${alerts.length} alerts active`;
         id: true,
         symbol: true,
         interval: true,
+        step5Result: true, // Trade plan is in step5
         step7Result: true,
         createdAt: true,
       },
@@ -1120,38 +1121,47 @@ Total: ${alerts.length} alerts active`;
         intent: 'CHART_VIEW',
         message: language === 'tr'
           ? symbol
-            ? `${symbol} için analiz bulunamadı. Önce "${symbol} nasıl?" diyerek analiz yapın.`
-            : 'Henüz analiz yapmadınız. "BTC nasıl?" diyerek ilk analizinizi yapın.'
+            ? `${symbol} için analiz bulunamadı. Grafik görmek için önce "${symbol} analiz" diyerek analiz yapmalısınız.`
+            : 'Henüz analiz yapmadınız. Grafik görmek için önce "BTC analiz" diyerek analiz yapın.'
           : symbol
-            ? `No analysis found for ${symbol}. Try "${symbol} analysis" first.`
-            : 'No analyses yet. Try "How is BTC?" to create your first analysis.',
+            ? `No analysis found for ${symbol}. To see the chart, first run an analysis by saying "${symbol} analysis".`
+            : 'No analyses yet. To see a chart, first run an analysis by saying "BTC analysis".',
         creditsSpent: 0,
         creditsRemaining: creditBalance,
       };
     }
 
-    // Parse step7Result for trade plan
+    // Parse step5Result for trade plan (correct location)
     let tradePlan: TradePlan | undefined;
     let verdict = 'WAIT';
     let score = 5;
+    let hasTradePlan = false;
 
     try {
+      // Get verdict and score from step7
       const step7 = typeof analysis.step7Result === 'string'
         ? JSON.parse(analysis.step7Result)
         : analysis.step7Result;
 
-      if (step7?.tradePlan) {
-        tradePlan = {
-          entry: Number(step7.tradePlan.entry) || 0,
-          stopLoss: Number(step7.tradePlan.stopLoss) || 0,
-          takeProfit1: Number(step7.tradePlan.takeProfit1) || 0,
-          takeProfit2: step7.tradePlan.takeProfit2 ? Number(step7.tradePlan.takeProfit2) : undefined,
-          takeProfit3: step7.tradePlan.takeProfit3 ? Number(step7.tradePlan.takeProfit3) : undefined,
-          direction: step7.tradePlan.direction || 'long',
-        };
-      }
       verdict = step7?.verdict || 'WAIT';
       score = step7?.overallScore || 5;
+
+      // Get trade plan from step5
+      const step5 = typeof analysis.step5Result === 'string'
+        ? JSON.parse(analysis.step5Result)
+        : analysis.step5Result;
+
+      if (step5 && step5.averageEntry && step5.stopLoss && step5.takeProfits) {
+        hasTradePlan = true;
+        tradePlan = {
+          entry: Number(step5.averageEntry) || 0,
+          stopLoss: Number(step5.stopLoss?.price) || 0,
+          takeProfit1: Number(step5.takeProfits?.[0]?.price) || 0,
+          takeProfit2: step5.takeProfits?.[1]?.price ? Number(step5.takeProfits[1].price) : undefined,
+          takeProfit3: step5.takeProfits?.[2]?.price ? Number(step5.takeProfits[2].price) : undefined,
+          direction: step5.direction || 'long',
+        };
+      }
     } catch {
       // Ignore parse errors, use defaults
     }
@@ -1184,39 +1194,67 @@ Total: ${alerts.length} alerts active`;
 
       const currentPrice = candles.length > 0 ? candles[candles.length - 1].close : 0;
 
-      const chartMessage = language === 'tr'
-        ? `${analysis.symbol} ${interval.toUpperCase()} Grafiği
+      // Build message - clearly indicate if no trade plan
+      let chartMessage: string;
+
+      if (hasTradePlan && tradePlan) {
+        chartMessage = language === 'tr'
+          ? `${analysis.symbol} ${interval.toUpperCase()} Grafiği
 
 Karar: ${verdict}
 Skor: ${score}/10
-${tradePlan ? `
+
 İşlem Planı:
 • Entry: $${tradePlan.entry.toLocaleString()}
 • Stop Loss: $${tradePlan.stopLoss.toLocaleString()}
 • Take Profit 1: $${tradePlan.takeProfit1.toLocaleString()}
 ${tradePlan.takeProfit2 ? `• Take Profit 2: $${tradePlan.takeProfit2.toLocaleString()}` : ''}
-• Yön: ${tradePlan.direction === 'long' ? 'LONG ↑' : 'SHORT ↓'}` : ''}
+• Yön: ${tradePlan.direction === 'long' ? 'LONG' : 'SHORT'}
 
-Güncel Fiyat: $${currentPrice.toLocaleString()}
-Tarih: ${new Date(analysis.createdAt).toLocaleDateString('tr-TR')}
-
-Detaylar için: /analyze/details/${analysis.id}`
-        : `${analysis.symbol} ${interval.toUpperCase()} Chart
+Güncel Fiyat: $${currentPrice.toLocaleString()}`
+          : `${analysis.symbol} ${interval.toUpperCase()} Chart
 
 Verdict: ${verdict}
 Score: ${score}/10
-${tradePlan ? `
+
 Trade Plan:
 • Entry: $${tradePlan.entry.toLocaleString()}
 • Stop Loss: $${tradePlan.stopLoss.toLocaleString()}
 • Take Profit 1: $${tradePlan.takeProfit1.toLocaleString()}
 ${tradePlan.takeProfit2 ? `• Take Profit 2: $${tradePlan.takeProfit2.toLocaleString()}` : ''}
-• Direction: ${tradePlan.direction === 'long' ? 'LONG ↑' : 'SHORT ↓'}` : ''}
+• Direction: ${tradePlan.direction === 'long' ? 'LONG' : 'SHORT'}
+
+Current Price: $${currentPrice.toLocaleString()}`;
+      } else {
+        // No trade plan - explain why
+        chartMessage = language === 'tr'
+          ? `${analysis.symbol} ${interval.toUpperCase()} Grafiği
+
+Karar: ${verdict}
+Skor: ${score}/10
+
+İşlem planı oluşturulmadı. Muhtemel nedenler:
+• Verdict: ${verdict} (${verdict === 'WAIT' || verdict === 'AVOID' ? 'işlem önerilmedi' : ''})
+• Piyasa koşulları uygun değil
+• Risk seviyesi yüksek
+
+Güncel Fiyat: $${currentPrice.toLocaleString()}
+
+Not: Sadece GO veya CONDITIONAL_GO verdictlerinde işlem planı oluşturulur.`
+          : `${analysis.symbol} ${interval.toUpperCase()} Chart
+
+Verdict: ${verdict}
+Score: ${score}/10
+
+No trade plan was generated. Possible reasons:
+• Verdict: ${verdict} (${verdict === 'WAIT' || verdict === 'AVOID' ? 'trade not recommended' : ''})
+• Market conditions not favorable
+• Risk level too high
 
 Current Price: $${currentPrice.toLocaleString()}
-Date: ${new Date(analysis.createdAt).toLocaleDateString('en-US')}
 
-Details at: /analyze/details/${analysis.id}`;
+Note: Trade plans are only generated for GO or CONDITIONAL_GO verdicts.`;
+      }
 
       return {
         success: true,
@@ -1231,7 +1269,7 @@ Details at: /analyze/details/${analysis.id}`;
           symbol: analysis.symbol,
           interval,
           candles,
-          tradePlan,
+          tradePlan: hasTradePlan ? tradePlan : undefined,
           currentPrice,
         },
       };

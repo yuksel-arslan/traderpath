@@ -316,13 +316,14 @@ export default function ConciergePage() {
     // Chart view intent
     if (msg.role === 'assistant' && msg.intent === 'CHART_VIEW' && msg.chartData) {
       const { symbol, interval, tradePlan, currentPrice } = msg.chartData;
+      const hasTradePlan = tradePlan && tradePlan.entry > 0 && tradePlan.stopLoss > 0;
 
       // Convert tradePlan to TradePlanChart format
-      const entries = tradePlan ? [{ price: tradePlan.entry, percentage: 100 }] : [{ price: currentPrice || 0, percentage: 100 }];
-      const stopLossData = tradePlan
+      const entries = hasTradePlan ? [{ price: tradePlan.entry, percentage: 100 }] : [{ price: currentPrice || 0, percentage: 100 }];
+      const stopLossData = hasTradePlan
         ? { price: tradePlan.stopLoss, percentage: Math.abs(((tradePlan.stopLoss - tradePlan.entry) / tradePlan.entry) * 100) }
         : { price: 0, percentage: 0 };
-      const takeProfitsData = tradePlan
+      const takeProfitsData = hasTradePlan
         ? [
             { price: tradePlan.takeProfit1, percentage: Math.abs(((tradePlan.takeProfit1 - tradePlan.entry) / tradePlan.entry) * 100), riskReward: 1 },
             ...(tradePlan.takeProfit2 ? [{ price: tradePlan.takeProfit2, percentage: Math.abs(((tradePlan.takeProfit2 - tradePlan.entry) / tradePlan.entry) * 100), riskReward: 2 }] : []),
@@ -336,12 +337,19 @@ export default function ConciergePage() {
       return (
         <div className="space-y-4">
           {/* Chart Header */}
-          <div className="flex items-center gap-2 text-teal-500">
-            <LineChart className="w-5 h-5" />
-            <span className="font-semibold">{symbol} {interval.toUpperCase()} Chart</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-teal-500">
+              <LineChart className="w-5 h-5" />
+              <span className="font-semibold">{symbol} {interval.toUpperCase()} Chart</span>
+            </div>
+            {!hasTradePlan && (
+              <span className="text-xs px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">
+                No Trade Plan
+              </span>
+            )}
           </div>
 
-          {/* TradePlan Chart */}
+          {/* TradePlan Chart - show even without trade plan for price reference */}
           <div className="h-[400px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
             <TradePlanChart
               symbol={symbol}
@@ -357,8 +365,8 @@ export default function ConciergePage() {
           {/* Message text */}
           <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
 
-          {/* View Details Link */}
-          {msg.analysisData?.analysisId && (
+          {/* View Details Link - use analysisData.analysisId if available */}
+          {(msg.analysisData?.analysisId) && (
             <Link
               href={`/analyze/details/${msg.analysisData.analysisId}`}
               className="inline-flex items-center gap-2 px-4 py-2 bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 rounded-lg transition-colors text-sm font-medium"
