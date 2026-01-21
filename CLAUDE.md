@@ -509,6 +509,12 @@ Kullanıcı Hakları Aktif:
   - `/api/auth/me` endpoint'i preferredInterface döndürüyor
 - **Neon DB SQL komutu**: `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "preferred_interface" VARCHAR(20);`
 - **Web Speech API**: Mikrofon desteği (HTTPS gerekli, tarayıcı izni gerekli)
+- **AI Concierge refactored to use AI Expert Panel (VOLTRAN)**:
+  - `concierge.service.ts`: Direct `analysisEngine` calls replaced with `aiExpertService.analyzeWithExpertPanel`
+  - Expert questions now route to appropriate expert (ARIA/NEXUS/ORACLE/SENTINEL) based on keywords
+  - `detectExpertForQuestion()` function: Technical → ARIA, Risk → NEXUS, Whale → ORACLE, Security → SENTINEL
+  - Responses include expert emojis and VOLTRAN synthesis
+  - Code deduplication: Single analysis path through Expert Panel
 
 ---
 
