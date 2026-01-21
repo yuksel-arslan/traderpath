@@ -125,7 +125,7 @@ export default function DashboardLayout({
   // Handle preference selection
   const handlePreferenceSelect = async (preference: 'ui' | 'concierge') => {
     try {
-      const res = await authFetch('/api/users/preference', {
+      const res = await authFetch('/api/user/preference', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ preferredInterface: preference }),
