@@ -11,11 +11,8 @@ import { emailService } from '../email/email.service';
 import { notificationService } from '../notifications/notification.service';
 import cron from 'node-cron';
 
-// Cost for scheduled analysis (discounted from normal 15 credits)
-const SCHEDULED_ANALYSIS_COST = 10;
-
-// Default interval for scheduled analyses
-const DEFAULT_INTERVAL = '4h';
+// Cost for scheduled analysis (same as normal analysis)
+const SCHEDULED_ANALYSIS_COST = 15;
 
 interface ScheduledReportResult {
   success: boolean;
@@ -138,9 +135,9 @@ class ScheduledReportsService {
         scheduledReportId: id,
       });
 
-      // Run analysis
-      const tradeType = getTradeTypeFromInterval(DEFAULT_INTERVAL);
-      const interval = DEFAULT_INTERVAL;
+      // Run analysis with user's selected interval
+      const interval = report.interval || '4h';
+      const tradeType = getTradeTypeFromInterval(interval);
 
       const [marketPulse, assetScan, safetyCheck, timing, trapCheck] = await Promise.all([
         analysisEngine.getMarketPulse(),
@@ -376,6 +373,7 @@ class ScheduledReportsService {
   async create(
     userId: string,
     symbol: string,
+    interval: string,
     frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY',
     scheduleHour: number,
     options: {
@@ -409,6 +407,7 @@ class ScheduledReportsService {
       data: {
         userId,
         symbol: symbol.toUpperCase(),
+        interval,
         frequency,
         scheduleHour,
         scheduleDayOfWeek,

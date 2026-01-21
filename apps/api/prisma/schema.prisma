@@ -506,6 +506,7 @@ model ScheduledReport {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   symbol       String   @db.VarChar(20)
+  interval     String   @default("4h") @db.VarChar(10) // e.g., '15m', '1h', '4h', '1d'
   frequency    ScheduleFrequency  @default(DAILY)
 
   // Delivery options
