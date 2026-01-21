@@ -242,6 +242,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-21 | InterfacePreferenceModal Türkçe'ydi | Tüm metinler İngilizce'ye çevrildi | `InterfacePreferenceModal.tsx` |
 | 2026-01-21 | AI Concierge "Analysis Not Found" hatası - timeframe olmadan analiz yapılamıyor | Analiz veritabanına kaydedilmiyordu. `analyzeWithExpertPanel` fonksiyonuna `prisma.analysis.create` eklendi, interval parametresi eklendi | `ai-expert.service.ts`, `concierge.service.ts` |
 | 2026-01-21 | Chart View trade plan göstermiyor - yanlış step ve alan adları | Trade plan `step5Result`'tan alınmalı (step7 değil), alan adları: `averageEntry`, `stopLoss.price`, `takeProfits[].price`. Trade plan yoksa açıklayıcı mesaj eklendi | `concierge.service.ts`, `concierge/page.tsx` |
+| 2026-01-21 | AI Expert soruları Concierge'de çalışmıyor - "yanıt üretemiyorum" hatası | `response.reply` yerine `response.response` kullanılmalı. ChatResponse interface'inde `reply` alanı yok | `concierge.service.ts` |
 
 ---
 
@@ -581,6 +582,10 @@ Kullanıcı Hakları Aktif:
   - Mikrofon butonu ping animasyonu ile dikkat çekiyor
   - Placeholder "🎤 Speak now..." olarak değişiyor
   - HTTPS gereksinimi için uyarı mesajı eklendi
+- **AI Expert soruları Concierge'de düzeltildi**:
+  - Bug: `response.reply` kullanılıyordu ama doğru alan `response.response`
+  - "scalping nedir?", "RSI nedir?" gibi sorular artık cevaplanıyor
+  - ARIA (teknik), NEXUS (risk), ORACLE (whale), SENTINEL (güvenlik) uzmanları çalışıyor
 
 ---
 

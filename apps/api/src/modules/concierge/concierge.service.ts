@@ -1676,16 +1676,19 @@ ${synthesis}`;
         userId,
       });
 
+      // The chat response has 'response' field, not 'reply'
+      const aiResponse = response.response || 'I couldn\'t generate a response.';
+
       const formattedReply = `${expert.emoji} ${expert.name}
 
-${response.reply || 'I couldn\'t generate a response.'}`;
+${aiResponse}`;
 
       return {
         success: true,
         intent: 'EXPERT_ASK',
         message: formattedReply,
-        creditsSpent: response.creditsSpent || 0,
-        creditsRemaining: response.creditsRemaining ?? creditBalance,
+        creditsSpent: 0, // Expert questions are free for now
+        creditsRemaining: creditBalance,
       };
     } catch (error) {
       console.error('Expert question error:', error);
