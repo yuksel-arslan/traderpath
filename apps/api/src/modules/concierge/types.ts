@@ -9,6 +9,10 @@ export type IntentType =
   | 'ALERT_LIST'          // "Alarmlarım neler?"
   | 'STATUS'              // "Son analizlerim", "Portföyüm nasıl?"
   | 'HELP'                // "Ne yapabilirsin?", "Yardım"
+  | 'CHART_VIEW'          // "BTC chart", "Grafik göster"
+  | 'SCHEDULE_LIST'       // "Zamanlamalarım", "Scheduled analyses"
+  | 'SCHEDULE_CREATE'     // "BTC günlük analiz kur"
+  | 'SCHEDULE_DELETE'     // "BTC zamanlamasını sil"
   | 'UNKNOWN';            // Tanınmayan intent
 
 export type VerdictType = 'GO' | 'CONDITIONAL_GO' | 'WAIT' | 'AVOID';
