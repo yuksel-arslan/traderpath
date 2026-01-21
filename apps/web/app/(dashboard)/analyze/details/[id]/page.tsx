@@ -25,11 +25,13 @@ import {
   ExternalLink,
   Copy,
   Check,
+  FileDown,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { cn } from '../../../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../../lib/coin-icons';
 import { TradePlanChart } from '../../../../../components/analysis/TradePlanChart';
+import { DownloadReportButton } from '../../../../../components/reports/DownloadReportButton';
 import { authFetch } from '../../../../../lib/api';
 
 interface AnalysisData {
@@ -519,6 +521,30 @@ plotshape(barstate.islast, style=${isLong ? 'shape.triangleup' : 'shape.triangle
               </div>
             </div>
           )}
+
+          {/* Download PDF Report */}
+          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Download Analysis Report</h3>
+              <p className="text-sm text-gray-500 dark:text-slate-400">Get a comprehensive PDF report with AI Expert insights</p>
+            </div>
+            <DownloadReportButton
+              analysisData={{
+                1: analysis.step1Result || {},
+                2: analysis.step2Result || {},
+                3: analysis.step3Result || {},
+                4: analysis.step4Result || {},
+                5: analysis.step5Result || {},
+                6: analysis.step6Result || {},
+                7: analysis.step7Result || {},
+              }}
+              symbol={analysis.symbol}
+              interval={analysis.interval}
+              analysisId={analysis.id}
+              tradeType={getTradeType(analysis.interval)}
+              className="justify-center"
+            />
+          </div>
         </div>
       </div>
     </div>
