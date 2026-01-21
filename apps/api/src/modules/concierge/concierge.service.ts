@@ -8,6 +8,24 @@ interface ConciergeRequest {
   language?: string;
 }
 
+interface ChartCandle {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+interface TradePlan {
+  entry: number;
+  stopLoss: number;
+  takeProfit1: number;
+  takeProfit2?: number;
+  takeProfit3?: number;
+  direction: 'long' | 'short';
+}
+
 interface ConciergeResponse {
   success: boolean;
   intent: string;
@@ -20,6 +38,14 @@ interface ConciergeResponse {
   verdict?: string;
   score?: number;
   voltranSynthesis?: string;
+  // Chart-specific fields
+  chartData?: {
+    symbol: string;
+    interval: string;
+    candles: ChartCandle[];
+    tradePlan?: TradePlan;
+    currentPrice?: number;
+  };
 }
 
 // Expanded coin list - 50+ popular coins
@@ -189,6 +215,94 @@ function detectIntent(message: string): {
     return { intent: 'ALERT_LIST' };
   }
 
+  // Scheduled analysis list intent
+  if (
+    (lower.includes('schedule') && (lower.includes('list') || lower.includes('show') || lower.includes('my'))) ||
+    (lower.includes('zamanlanmış') && (lower.includes('listele') || lower.includes('göster'))) ||
+    lower.includes('otomatik analiz') ||
+    lower.includes('scheduled report') ||
+    lower.includes('zamanlanmış raporlar') ||
+    lower.includes('my schedules')
+  ) {
+    return { intent: 'SCHEDULE_LIST' };
+  }
+
+  // Scheduled analysis create intent
+  if (
+    (lower.includes('schedule') && (lower.includes('create') || lower.includes('add') || lower.includes('set'))) ||
+    (lower.includes('zamanlan') && (lower.includes('ekle') || lower.includes('kur') || lower.includes('oluştur'))) ||
+    lower.includes('otomatik analiz kur') ||
+    lower.includes('auto analyze') ||
+    lower.includes('schedule analysis')
+  ) {
+    // Try to extract coin from message
+    let scheduleCoin: string | null = null;
+    for (const [alias, symbol] of Object.entries(COIN_ALIASES)) {
+      if (lower.includes(alias)) {
+        scheduleCoin = symbol;
+        break;
+      }
+    }
+    if (!scheduleCoin) {
+      for (const coin of SUPPORTED_COINS) {
+        const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
+        if (coinRegex.test(lower)) {
+          scheduleCoin = coin;
+          break;
+        }
+      }
+    }
+    return { intent: 'SCHEDULE_CREATE', symbol: scheduleCoin?.toUpperCase() };
+  }
+
+  // Scheduled analysis delete intent
+  if (
+    (lower.includes('schedule') && (lower.includes('delete') || lower.includes('remove') || lower.includes('cancel'))) ||
+    (lower.includes('zamanlanmış') && (lower.includes('sil') || lower.includes('iptal') || lower.includes('kaldır'))) ||
+    lower.includes('otomatik analizi kaldır')
+  ) {
+    return { intent: 'SCHEDULE_DELETE' };
+  }
+
+  // Chart view intent - show trade plan on chart
+  if (
+    lower.includes('grafik') ||
+    lower.includes('chart') ||
+    lower.includes('candlestick') ||
+    lower.includes('mum grafiği') ||
+    lower.includes('mum grafik') ||
+    lower.includes('tradingview') ||
+    lower.includes('trading view') ||
+    (lower.includes('işlem planı') && (lower.includes('göster') || lower.includes('görselleştir'))) ||
+    (lower.includes('trade plan') && lower.includes('show')) ||
+    lower.includes('görselleştir') ||
+    lower.includes('visualize') ||
+    lower.includes('show on chart') ||
+    lower.includes('grafikte göster')
+  ) {
+    // Try to detect which analysis to show (latest by default, or specific coin)
+    let chartSymbol: string | null = null;
+
+    // Check for coin in the chart request
+    for (const [alias, symbol] of Object.entries(COIN_ALIASES)) {
+      if (lower.includes(alias)) {
+        chartSymbol = symbol;
+        break;
+      }
+    }
+    if (!chartSymbol) {
+      for (const coin of SUPPORTED_COINS) {
+        const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
+        if (coinRegex.test(lower)) {
+          chartSymbol = coin;
+          break;
+        }
+      }
+    }
+
+    return { intent: 'CHART_VIEW', symbol: chartSymbol?.toUpperCase() };
+  }
+
   // Check for coin aliases first
   let detectedCoin: string | null = null;
 
@@ -319,6 +433,18 @@ class ConciergeService {
         case 'ALERT_LIST':
           return await this.handleAlertList(userId, creditBalance, language);
 
+        case 'CHART_VIEW':
+          return await this.handleChartView(userId, symbol, creditBalance, language);
+
+        case 'SCHEDULE_LIST':
+          return await this.handleScheduleList(userId, creditBalance, language);
+
+        case 'SCHEDULE_CREATE':
+          return await this.handleScheduleCreate(userId, symbol, message, creditBalance, language);
+
+        case 'SCHEDULE_DELETE':
+          return await this.handleScheduleDelete(userId, message, creditBalance, language);
+
         case 'ANALYSIS':
           return await this.handleAnalysis(userId, symbol!, interval!, language, creditBalance);
 
@@ -355,6 +481,15 @@ ANALİZ (25 kredi)
 • "ETH 4h analiz" - Belirli timeframe
 • "SOL scalp" - Scalping analizi
 
+GRAFİK
+• "BTC grafiği göster" - İşlem planı grafikte
+• "candlestick göster" - Mum grafiği
+
+OTOMATİK ANALİZ
+• "BTC günlük analiz kur" - Zamanlama oluştur
+• "zamanlanmış analizlerim" - Liste
+• "BTC schedule sil" - Silme
+
 UZMAN SORULARI (ücretsiz)
 • "RSI nedir?" - Teknik analiz
 • "Risk yönetimi nasıl yapılır?"
@@ -364,7 +499,6 @@ PERFORMANS & İSTATİSTİK
 • "karlılık raporla" - Senin performansın
 • "aylık performans" - Haftalık grafik
 • "platform başarı oranı" - Genel istatistik
-• "son analizlerim" - Analiz listesi
 
 ALARMLAR
 • "BTC 70000 olunca haber ver"
@@ -381,6 +515,15 @@ ANALYSIS (25 credits)
 • "ETH 4h analysis" - Specific timeframe
 • "SOL scalp" - Scalping analysis
 
+CHARTS
+• "Show BTC chart" - Trade plan on chart
+• "Show candlestick" - Candle chart
+
+SCHEDULED ANALYSIS
+• "Schedule daily BTC analysis" - Auto analysis
+• "My schedules" - List schedules
+• "Delete BTC schedule" - Remove
+
 EXPERT QUESTIONS (free)
 • "What is RSI?" - Technical analysis
 • "How to manage risk?"
@@ -390,7 +533,6 @@ PERFORMANCE & STATS
 • "report my profitability" - Your stats
 • "monthly performance" - Weekly chart
 • "platform stats" - Overall stats
-• "my recent analyses" - Analysis list
 
 ALERTS
 • "BTC reaches 70000 notify me"
@@ -944,6 +1086,438 @@ Total: ${alerts.length} alerts active`;
       success: true,
       intent: 'ALERT_LIST',
       message: alertText,
+      creditsSpent: 0,
+      creditsRemaining: creditBalance,
+    };
+  }
+
+  private async handleChartView(
+    userId: string,
+    symbol: string | undefined,
+    creditBalance: number,
+    language: string
+  ): Promise<ConciergeResponse> {
+    // Find the user's most recent analysis (or specific coin if provided)
+    const whereClause = symbol
+      ? { userId, symbol: symbol.toUpperCase() }
+      : { userId };
+
+    const analysis = await prisma.analysis.findFirst({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        symbol: true,
+        interval: true,
+        step7Result: true,
+        createdAt: true,
+      },
+    });
+
+    if (!analysis) {
+      return {
+        success: true,
+        intent: 'CHART_VIEW',
+        message: language === 'tr'
+          ? symbol
+            ? `${symbol} için analiz bulunamadı. Önce "${symbol} nasıl?" diyerek analiz yapın.`
+            : 'Henüz analiz yapmadınız. "BTC nasıl?" diyerek ilk analizinizi yapın.'
+          : symbol
+            ? `No analysis found for ${symbol}. Try "${symbol} analysis" first.`
+            : 'No analyses yet. Try "How is BTC?" to create your first analysis.',
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+      };
+    }
+
+    // Parse step7Result for trade plan
+    let tradePlan: TradePlan | undefined;
+    let verdict = 'WAIT';
+    let score = 5;
+
+    try {
+      const step7 = typeof analysis.step7Result === 'string'
+        ? JSON.parse(analysis.step7Result)
+        : analysis.step7Result;
+
+      if (step7?.tradePlan) {
+        tradePlan = {
+          entry: Number(step7.tradePlan.entry) || 0,
+          stopLoss: Number(step7.tradePlan.stopLoss) || 0,
+          takeProfit1: Number(step7.tradePlan.takeProfit1) || 0,
+          takeProfit2: step7.tradePlan.takeProfit2 ? Number(step7.tradePlan.takeProfit2) : undefined,
+          takeProfit3: step7.tradePlan.takeProfit3 ? Number(step7.tradePlan.takeProfit3) : undefined,
+          direction: step7.tradePlan.direction || 'long',
+        };
+      }
+      verdict = step7?.verdict || 'WAIT';
+      score = step7?.overallScore || 5;
+    } catch {
+      // Ignore parse errors, use defaults
+    }
+
+    // Fetch OHLCV candles from Binance
+    const binanceSymbol = `${analysis.symbol}USDT`;
+    const interval = analysis.interval || '4h';
+    const candleLimit = 100;
+
+    try {
+      const response = await fetch(
+        `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=${candleLimit}`,
+        { signal: AbortSignal.timeout(10000) }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch candles');
+      }
+
+      const klines = await response.json();
+
+      const candles: ChartCandle[] = klines.map((k: (string | number)[]) => ({
+        time: Number(k[0]),
+        open: parseFloat(k[1] as string),
+        high: parseFloat(k[2] as string),
+        low: parseFloat(k[3] as string),
+        close: parseFloat(k[4] as string),
+        volume: parseFloat(k[5] as string),
+      }));
+
+      const currentPrice = candles.length > 0 ? candles[candles.length - 1].close : 0;
+
+      const chartMessage = language === 'tr'
+        ? `${analysis.symbol} ${interval.toUpperCase()} Grafiği
+
+Karar: ${verdict}
+Skor: ${score}/10
+${tradePlan ? `
+İşlem Planı:
+• Entry: $${tradePlan.entry.toLocaleString()}
+• Stop Loss: $${tradePlan.stopLoss.toLocaleString()}
+• Take Profit 1: $${tradePlan.takeProfit1.toLocaleString()}
+${tradePlan.takeProfit2 ? `• Take Profit 2: $${tradePlan.takeProfit2.toLocaleString()}` : ''}
+• Yön: ${tradePlan.direction === 'long' ? 'LONG ↑' : 'SHORT ↓'}` : ''}
+
+Güncel Fiyat: $${currentPrice.toLocaleString()}
+Tarih: ${new Date(analysis.createdAt).toLocaleDateString('tr-TR')}
+
+Detaylar için: /analyze/details/${analysis.id}`
+        : `${analysis.symbol} ${interval.toUpperCase()} Chart
+
+Verdict: ${verdict}
+Score: ${score}/10
+${tradePlan ? `
+Trade Plan:
+• Entry: $${tradePlan.entry.toLocaleString()}
+• Stop Loss: $${tradePlan.stopLoss.toLocaleString()}
+• Take Profit 1: $${tradePlan.takeProfit1.toLocaleString()}
+${tradePlan.takeProfit2 ? `• Take Profit 2: $${tradePlan.takeProfit2.toLocaleString()}` : ''}
+• Direction: ${tradePlan.direction === 'long' ? 'LONG ↑' : 'SHORT ↓'}` : ''}
+
+Current Price: $${currentPrice.toLocaleString()}
+Date: ${new Date(analysis.createdAt).toLocaleDateString('en-US')}
+
+Details at: /analyze/details/${analysis.id}`;
+
+      return {
+        success: true,
+        intent: 'CHART_VIEW',
+        message: chartMessage,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        analysisId: analysis.id,
+        verdict,
+        score,
+        chartData: {
+          symbol: analysis.symbol,
+          interval,
+          candles,
+          tradePlan,
+          currentPrice,
+        },
+      };
+    } catch (error) {
+      console.error('Chart data fetch error:', error);
+      return {
+        success: false,
+        intent: 'CHART_VIEW',
+        message: language === 'tr'
+          ? 'Grafik verileri alınırken hata oluştu. Lütfen tekrar deneyin.'
+          : 'Error fetching chart data. Please try again.',
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: 'Failed to fetch chart data',
+      };
+    }
+  }
+
+  private async handleScheduleList(
+    userId: string,
+    creditBalance: number,
+    language: string
+  ): Promise<ConciergeResponse> {
+    const schedules = await prisma.scheduledReport.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+
+    if (schedules.length === 0) {
+      return {
+        success: true,
+        intent: 'SCHEDULE_LIST',
+        message: language === 'tr'
+          ? `Henüz zamanlanmış analiziniz yok.
+
+Yeni bir zamanlanmış analiz kurmak için:
+"BTC için günlük analiz kur"
+"ETH 4h haftalık otomatik analiz"
+
+Veya /scheduled sayfasını ziyaret edin.`
+          : `You don't have any scheduled analyses yet.
+
+To create a new one:
+"Schedule daily BTC analysis"
+"Auto analyze ETH 4h weekly"
+
+Or visit the /scheduled page.`,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+      };
+    }
+
+    const frequencyText = (freq: string, lang: string) => {
+      const map: Record<string, Record<string, string>> = {
+        DAILY: { tr: 'Günlük', en: 'Daily' },
+        WEEKLY: { tr: 'Haftalık', en: 'Weekly' },
+        MONTHLY: { tr: 'Aylık', en: 'Monthly' },
+      };
+      return map[freq]?.[lang] || freq;
+    };
+
+    const scheduleList = schedules.map((s, idx) => {
+      const status = s.isActive ? '✓' : '○';
+      return `${idx + 1}. ${status} ${s.symbol} ${s.interval?.toUpperCase() || '4H'} - ${frequencyText(s.frequency, language)}`;
+    }).join('\n');
+
+    const listText = language === 'tr'
+      ? `Zamanlanmış Analizleriniz
+━━━━━━━━━━━━━━━━━━━━━
+${scheduleList}
+
+✓ = Aktif, ○ = Pasif
+Toplam: ${schedules.length} zamanlanmış analiz
+
+Yönetmek için /scheduled sayfasını ziyaret edin.`
+      : `Your Scheduled Analyses
+━━━━━━━━━━━━━━━━━━━━━
+${scheduleList}
+
+✓ = Active, ○ = Inactive
+Total: ${schedules.length} scheduled analyses
+
+Visit /scheduled to manage them.`;
+
+    return {
+      success: true,
+      intent: 'SCHEDULE_LIST',
+      message: listText,
+      creditsSpent: 0,
+      creditsRemaining: creditBalance,
+    };
+  }
+
+  private async handleScheduleCreate(
+    userId: string,
+    symbol: string | undefined,
+    message: string,
+    creditBalance: number,
+    language: string
+  ): Promise<ConciergeResponse> {
+    if (!symbol) {
+      return {
+        success: true,
+        intent: 'SCHEDULE_CREATE',
+        message: language === 'tr'
+          ? `Zamanlanmış analiz kurmak için bir coin belirtin.
+
+Örnek:
+"BTC için günlük analiz kur"
+"ETH 4h haftalık otomatik analiz"
+"SOL 1h günlük schedule"
+
+Veya /scheduled sayfasından detaylı ayar yapabilirsiniz.`
+          : `Please specify a coin to schedule analysis for.
+
+Example:
+"Schedule daily BTC analysis"
+"Auto analyze ETH 4h weekly"
+"Schedule SOL 1h daily"
+
+Or visit /scheduled for detailed settings.`,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+      };
+    }
+
+    const lower = message.toLowerCase();
+
+    // Detect interval
+    let interval = '4h';
+    if (lower.includes('15m') || lower.includes('scalp')) interval = '15m';
+    else if (lower.includes('1h') || lower.includes('saatlik')) interval = '1h';
+    else if (lower.includes('1d') || lower.includes('günlük') || lower.includes('daily')) interval = '1d';
+
+    // Detect frequency
+    let frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' = 'DAILY';
+    if (lower.includes('haftalık') || lower.includes('weekly')) frequency = 'WEEKLY';
+    else if (lower.includes('aylık') || lower.includes('monthly')) frequency = 'MONTHLY';
+
+    // Check existing count
+    const existingCount = await prisma.scheduledReport.count({
+      where: { userId },
+    });
+
+    if (existingCount >= 3) {
+      return {
+        success: false,
+        intent: 'SCHEDULE_CREATE',
+        message: language === 'tr'
+          ? 'Maksimum 3 zamanlanmış analiz sınırına ulaştınız. Mevcut bir tanesini silip yenisini ekleyebilirsiniz.'
+          : 'You have reached the maximum of 3 scheduled analyses. Delete one to add a new one.',
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+      };
+    }
+
+    // Create the schedule
+    try {
+      await prisma.scheduledReport.create({
+        data: {
+          userId,
+          symbol: symbol.toUpperCase(),
+          interval,
+          frequency,
+          scheduleHour: 9, // Default to 9 AM UTC
+          deliverEmail: true,
+          isActive: true,
+        },
+      });
+
+      return {
+        success: true,
+        intent: 'SCHEDULE_CREATE',
+        message: language === 'tr'
+          ? `Zamanlanmış analiz kuruldu!
+
+Coin: ${symbol.toUpperCase()}
+Interval: ${interval.toUpperCase()}
+Frekans: ${frequency === 'DAILY' ? 'Günlük' : frequency === 'WEEKLY' ? 'Haftalık' : 'Aylık'}
+Saat: 09:00 UTC
+
+Her analiz 25 kredi harcar. /scheduled sayfasından detayları düzenleyebilirsiniz.`
+          : `Scheduled analysis created!
+
+Coin: ${symbol.toUpperCase()}
+Interval: ${interval.toUpperCase()}
+Frequency: ${frequency}
+Time: 09:00 UTC
+
+Each analysis costs 25 credits. Visit /scheduled to edit details.`,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+      };
+    } catch (error) {
+      console.error('Schedule create error:', error);
+      return {
+        success: false,
+        intent: 'SCHEDULE_CREATE',
+        message: language === 'tr'
+          ? 'Zamanlanmış analiz kurulurken hata oluştu. Lütfen /scheduled sayfasını kullanın.'
+          : 'Error creating scheduled analysis. Please use the /scheduled page.',
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: 'Failed to create schedule',
+      };
+    }
+  }
+
+  private async handleScheduleDelete(
+    userId: string,
+    message: string,
+    creditBalance: number,
+    language: string
+  ): Promise<ConciergeResponse> {
+    // Get user's schedules to help with deletion
+    const schedules = await prisma.scheduledReport.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (schedules.length === 0) {
+      return {
+        success: true,
+        intent: 'SCHEDULE_DELETE',
+        message: language === 'tr'
+          ? 'Silinecek zamanlanmış analiz bulunamadı.'
+          : 'No scheduled analyses found to delete.',
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+      };
+    }
+
+    // Try to detect which coin to delete from message
+    const lower = message.toLowerCase();
+    let targetCoin: string | null = null;
+
+    for (const coin of SUPPORTED_COINS) {
+      const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
+      if (coinRegex.test(lower)) {
+        targetCoin = coin.toUpperCase();
+        break;
+      }
+    }
+
+    if (targetCoin) {
+      // Delete schedule for this coin
+      const toDelete = schedules.find(s => s.symbol === targetCoin);
+      if (toDelete) {
+        await prisma.scheduledReport.delete({
+          where: { id: toDelete.id },
+        });
+
+        return {
+          success: true,
+          intent: 'SCHEDULE_DELETE',
+          message: language === 'tr'
+            ? `${targetCoin} için zamanlanmış analiz silindi.`
+            : `Scheduled analysis for ${targetCoin} deleted.`,
+          creditsSpent: 0,
+          creditsRemaining: creditBalance,
+        };
+      }
+    }
+
+    // No specific coin found, show list
+    const scheduleList = schedules.map((s, idx) =>
+      `${idx + 1}. ${s.symbol} ${s.interval?.toUpperCase() || '4H'}`
+    ).join('\n');
+
+    return {
+      success: true,
+      intent: 'SCHEDULE_DELETE',
+      message: language === 'tr'
+        ? `Hangi zamanlanmış analizi silmek istiyorsunuz?
+
+${scheduleList}
+
+Örnek: "BTC schedule sil"
+Veya /scheduled sayfasından silebilirsiniz.`
+        : `Which scheduled analysis do you want to delete?
+
+${scheduleList}
+
+Example: "Delete BTC schedule"
+Or visit /scheduled to delete.`,
       creditsSpent: 0,
       creditsRemaining: creditBalance,
     };
