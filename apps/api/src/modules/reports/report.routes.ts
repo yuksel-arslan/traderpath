@@ -1626,7 +1626,6 @@ function generateReportHtmlEmail(
   const btcDominance = marketPulse?.btcDominance as number | undefined;
   const riskLevel = safetyCheck?.riskLevel as string | undefined;
   const tradeNow = timing?.tradeNow as boolean | undefined;
-  const coinIconUrl = getCoinIconDataUrl(symbol);
 
   // Generate SVG chart if no chartImage provided
   // Convert to base64 data URL because email clients don't support inline SVG
@@ -1646,15 +1645,6 @@ function generateReportHtmlEmail(
     }
   }
 
-  // TraderPath logo as base64 data URL (Gmail strips inline SVG)
-  const logoSvg = `<svg width="48" height="48" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><rect width="512" height="512" rx="96" fill="#0D1421"/><g transform="translate(96, 96) scale(0.625)"><rect x="32" y="256" width="80" height="200" rx="8" fill="#22C55E"/><rect x="144" y="180" width="80" height="276" rx="8" fill="#EF4444"/><rect x="256" y="100" width="80" height="356" rx="8" fill="#22C55E"/><rect x="368" y="56" width="80" height="400" rx="8" fill="#EF4444"/></g></svg>`;
-  const logoBase64 = Buffer.from(logoSvg).toString('base64');
-  const traderPathLogo = `
-    <div style="text-align: center; margin-bottom: 10px;">
-      <img src="data:image/svg+xml;base64,${logoBase64}" width="48" height="48" alt="TraderPath" style="display: inline-block;"/>
-    </div>
-  `;
-
   return `
 <!DOCTYPE html>
 <html>
@@ -1669,10 +1659,9 @@ function generateReportHtmlEmail(
       <td align="center">
         <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
 
-          <!-- Header with Logo -->
+          <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 30px; text-align: center;">
-              ${traderPathLogo}
+            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 24px; text-align: center;">
               <h1 style="margin: 0; font-size: 24px; font-weight: bold;">
                 <span style="color: #10b981;">Trader</span><span style="color: #ef4444;">Path</span>
               </h1>
@@ -1682,24 +1671,17 @@ function generateReportHtmlEmail(
             </td>
           </tr>
 
-          <!-- Symbol Header with Coin Icon -->
+          <!-- Symbol Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, ${isLong ? '#10b981' : '#ef4444'} 0%, ${isLong ? '#059669' : '#dc2626'} 100%); padding: 25px; text-align: center;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td align="center">
-                    <img src="${coinIconUrl}" alt="${symbol}" width="48" height="48" style="border-radius: 50%; background: #ffffff; padding: 4px; display: inline-block; vertical-align: middle;"/>
-                    <h2 style="margin: 10px 0 0; color: #ffffff; font-size: 24px; font-weight: bold;">
-                      ${symbol}/USDT Analysis
-                    </h2>
-                    <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 13px;">
-                      <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-weight: 600;">${interval.toUpperCase()}</span>
-                      &nbsp;|&nbsp;
-                      ${generatedAt}
-                    </p>
-                  </td>
-                </tr>
-              </table>
+            <td style="background: linear-gradient(135deg, ${isLong ? '#10b981' : '#ef4444'} 0%, ${isLong ? '#059669' : '#dc2626'} 100%); padding: 20px; text-align: center;">
+              <h2 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: bold;">
+                ${symbol}/USDT Analysis
+              </h2>
+              <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 13px;">
+                <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-weight: 600;">${interval.toUpperCase()}</span>
+                &nbsp;|&nbsp;
+                ${generatedAt}
+              </p>
             </td>
           </tr>
 
@@ -1743,20 +1725,20 @@ function generateReportHtmlEmail(
               <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
                 Trade Plan
               </h2>
-              <table width="100%" cellspacing="0" cellpadding="10" style="background-color: #334155; border-radius: 8px;">
+              <table width="100%" cellspacing="0" cellpadding="8" style="background-color: #334155; border-radius: 8px; table-layout: fixed;">
                 <tr>
-                  <td style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">Entry</td>
-                  <td style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">Stop Loss</td>
-                  <td style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">TP1</td>
-                  <td style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">TP2</td>
-                  <td style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">TP3</td>
+                  <td width="20%" style="color: #94a3b8; font-size: 10px; text-transform: uppercase; text-align: center;">Entry</td>
+                  <td width="20%" style="color: #94a3b8; font-size: 10px; text-transform: uppercase; text-align: center;">Stop Loss</td>
+                  <td width="20%" style="color: #94a3b8; font-size: 10px; text-transform: uppercase; text-align: center;">TP1</td>
+                  <td width="20%" style="color: #94a3b8; font-size: 10px; text-transform: uppercase; text-align: center;">TP2</td>
+                  <td width="20%" style="color: #94a3b8; font-size: 10px; text-transform: uppercase; text-align: center;">TP3</td>
                 </tr>
                 <tr>
-                  <td style="color: #22d3ee; font-size: 14px; font-weight: 600;">${formatPrice(entryPrice)}</td>
-                  <td style="color: #ef4444; font-size: 14px; font-weight: 600;">${formatPrice(stopLoss)}</td>
-                  <td style="color: #10b981; font-size: 14px; font-weight: 600;">${formatPrice(takeProfits?.[0]?.price)}</td>
-                  <td style="color: #10b981; font-size: 14px; font-weight: 600;">${formatPrice(takeProfits?.[1]?.price)}</td>
-                  <td style="color: #10b981; font-size: 14px; font-weight: 600;">${formatPrice(takeProfits?.[2]?.price)}</td>
+                  <td width="20%" style="color: #22d3ee; font-size: 12px; font-weight: 600; text-align: center; word-break: break-all;">${formatPrice(entryPrice)}</td>
+                  <td width="20%" style="color: #ef4444; font-size: 12px; font-weight: 600; text-align: center; word-break: break-all;">${formatPrice(stopLoss)}</td>
+                  <td width="20%" style="color: #10b981; font-size: 12px; font-weight: 600; text-align: center; word-break: break-all;">${formatPrice(takeProfits?.[0]?.price)}</td>
+                  <td width="20%" style="color: #10b981; font-size: 12px; font-weight: 600; text-align: center; word-break: break-all;">${formatPrice(takeProfits?.[1]?.price)}</td>
+                  <td width="20%" style="color: #10b981; font-size: 12px; font-weight: 600; text-align: center; word-break: break-all;">${formatPrice(takeProfits?.[2]?.price)}</td>
                 </tr>
               </table>
             </td>
