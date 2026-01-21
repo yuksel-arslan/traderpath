@@ -391,16 +391,16 @@ export function TradeTypeSelector({
     return (
       <div className={cn('space-y-2', className)}>
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-            <BarChart3 className="w-3 h-3" />
+          <span className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1 sm:gap-1.5">
+            <BarChart3 className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
             Timeframe
           </span>
-          <div className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500">
+          <div className="hidden sm:flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500">
             <Clock className="w-3 h-3" />
             <span>Auto-selects strategy</span>
           </div>
         </div>
-        <div className="grid grid-cols-4 sm:grid-cols-8 gap-1 p-1.5 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-white/10">
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-0.5 sm:gap-1 p-1 sm:p-1.5 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/10">
           {TIMEFRAMES.map((tf) => {
             const isSelected = selected === tf.id;
 
@@ -409,7 +409,7 @@ export function TradeTypeSelector({
                 key={tf.id}
                 onClick={() => handleSelect(tf.id)}
                 className={cn(
-                  'relative flex flex-col items-center justify-center gap-0 px-1 py-1.5 rounded-lg text-xs font-medium transition-all duration-300',
+                  'relative flex flex-col items-center justify-center gap-0 px-0.5 sm:px-1 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-xs font-medium transition-all duration-300',
                   isSelected
                     ? cn(
                         'bg-white dark:bg-slate-700 shadow-lg',
@@ -420,20 +420,20 @@ export function TradeTypeSelector({
                 )}
               >
                 <span className={cn(
-                  'font-bold text-xs sm:text-sm transition-colors',
+                  'font-bold text-[10px] sm:text-sm transition-colors',
                   isSelected ? tf.color : ''
                 )}>
                   {tf.id}
                 </span>
                 <span className={cn(
-                  'text-[8px] sm:text-[9px] transition-colors hidden sm:block',
+                  'text-[7px] sm:text-[9px] transition-colors hidden sm:block',
                   isSelected ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400'
                 )}>
                   {tf.tradeTypeName.split(' ')[0]}
                 </span>
                 {showCreditCost && isSelected && (
                   <span
-                    className="absolute -top-1 -right-1 flex items-center gap-0.5 text-[8px] px-1 py-0.5 rounded-full font-semibold bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400"
+                    className="absolute -top-1 -right-1 flex items-center gap-0.5 text-[7px] sm:text-[8px] px-0.5 sm:px-1 py-0.5 rounded-full font-semibold bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400"
                   >
                     <Gem className="w-2 h-2" />
                     {tf.creditCost}
@@ -444,25 +444,26 @@ export function TradeTypeSelector({
           })}
         </div>
         {/* Selected timeframe info - compact */}
-        <div className="flex items-center justify-between px-1 text-[10px] text-slate-500 dark:text-slate-400">
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1">
-              <selectedConfig.icon className={cn('w-3 h-3', selectedConfig.color)} />
-              {selectedConfig.tradeTypeName}
+        <div className="flex items-center justify-between px-1 text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+            <span className="flex items-center gap-0.5 sm:gap-1">
+              <selectedConfig.icon className={cn('w-2.5 h-2.5 sm:w-3 sm:h-3', selectedConfig.color)} />
+              <span className="hidden xs:inline">{selectedConfig.tradeTypeName}</span>
+              <span className="xs:hidden">{selectedConfig.tradeTypeName.split(' ')[0]}</span>
             </span>
-            <span className="text-slate-300 dark:text-slate-600">•</span>
-            <span className="flex items-center gap-1">
+            <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">•</span>
+            <span className="hidden sm:flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {selectedConfig.holdingPeriod}
             </span>
           </div>
           <span className={cn(
-            'px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase',
+            'px-1 sm:px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-semibold uppercase whitespace-nowrap',
             selectedConfig.riskLevel === 'high' && 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400',
             selectedConfig.riskLevel === 'medium' && 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400',
             selectedConfig.riskLevel === 'low' && 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
           )}>
-            {selectedConfig.riskLevel} risk
+            {selectedConfig.riskLevel}
           </span>
         </div>
       </div>
