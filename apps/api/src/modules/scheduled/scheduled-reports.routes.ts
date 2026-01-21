@@ -9,6 +9,7 @@ import { scheduledReportsService } from './scheduled-reports.service';
 
 interface CreateScheduledReportBody {
   symbol: string;
+  interval: string; // '15m', '1h', '4h', '1d'
   frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY';
   scheduleHour: number; // 0-23 UTC
   scheduleDayOfWeek?: number; // 0-6 (Sunday-Saturday)
@@ -18,6 +19,7 @@ interface CreateScheduledReportBody {
 }
 
 interface UpdateScheduledReportBody {
+  interval?: string;
   frequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY';
   scheduleHour?: number;
   scheduleDayOfWeek?: number | null;
@@ -90,6 +92,15 @@ export async function scheduledReportsRoutes(fastify: FastifyInstance) {
           });
         }
 
+        // Validate interval
+        const validIntervals = ['15m', '30m', '1h', '2h', '4h', '1d', '1W'];
+        if (!body.interval || !validIntervals.includes(body.interval)) {
+          return reply.code(400).send({
+            success: false,
+            error: { code: 'INVALID_INTERVAL', message: 'Interval must be one of: 15m, 30m, 1h, 2h, 4h, 1d, 1W' },
+          });
+        }
+
         // Validate frequency
         if (!['DAILY', 'WEEKLY', 'MONTHLY'].includes(body.frequency)) {
           return reply.code(400).send({
@@ -131,6 +142,7 @@ export async function scheduledReportsRoutes(fastify: FastifyInstance) {
         const report = await scheduledReportsService.create(
           userId,
           body.symbol,
+          body.interval,
           body.frequency,
           body.scheduleHour,
           {
@@ -329,7 +341,7 @@ export async function scheduledReportsRoutes(fastify: FastifyInstance) {
             current: activeCount,
             max: maxAllowed,
             remaining: Math.max(0, maxAllowed - activeCount),
-            costPerAnalysis: 10, // Discounted from 15
+            costPerAnalysis: 15,
           },
         });
       } catch (error) {

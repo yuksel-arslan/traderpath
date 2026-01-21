@@ -12,11 +12,10 @@ import {
   Bell,
   Play,
   Pause,
-  ChevronDown,
   AlertCircle,
   Zap,
   CheckCircle2,
-  Settings,
+  Activity,
 } from 'lucide-react';
 import { CoinIcon } from '../../../components/common/CoinIcon';
 import { cn } from '../../../lib/utils';
@@ -30,6 +29,14 @@ const FREQUENCY_CONFIG: Record<Frequency, { label: string; description: string }
   WEEKLY: { label: 'Weekly', description: 'Once a week' },
   MONTHLY: { label: 'Monthly', description: 'Once a month' },
 };
+
+// Interval options
+const INTERVAL_OPTIONS = [
+  { value: '15m', label: '15m', description: 'Scalping' },
+  { value: '1h', label: '1H', description: 'Day Trade' },
+  { value: '4h', label: '4H', description: 'Day Trade' },
+  { value: '1d', label: '1D', description: 'Swing' },
+];
 
 // Days of week
 const DAYS_OF_WEEK = [
@@ -48,6 +55,7 @@ const POPULAR_COINS = ['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'ADA', 'DOGE', 'AVAX',
 interface ScheduledReport {
   id: string;
   symbol: string;
+  interval: string;
   frequency: Frequency;
   scheduleHour: number;
   scheduleDayOfWeek: number | null;
@@ -78,6 +86,7 @@ export default function ScheduledReportsPage() {
   // Create form state
   const [newReport, setNewReport] = useState({
     symbol: '',
+    interval: '4h',
     frequency: 'DAILY' as Frequency,
     scheduleHour: 8,
     scheduleDayOfWeek: 1,
@@ -144,6 +153,7 @@ export default function ScheduledReportsPage() {
       setShowCreateModal(false);
       setNewReport({
         symbol: '',
+        interval: '4h',
         frequency: 'DAILY',
         scheduleHour: 8,
         scheduleDayOfWeek: 1,
@@ -296,10 +306,9 @@ export default function ScheduledReportsPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-slate-900 dark:text-white">
-                {limits?.costPerAnalysis || 10}
+                {limits?.costPerAnalysis || 15}
               </span>
               <span className="text-slate-500">credits</span>
-              <span className="text-xs text-green-500 ml-2">33% off</span>
             </div>
           </div>
 
@@ -307,7 +316,7 @@ export default function ScheduledReportsPage() {
           <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl p-5 border border-slate-200/50 dark:border-slate-700/50">
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 rounded-xl bg-blue-500/10">
-                <Settings className="w-5 h-5 text-blue-500" />
+                <Activity className="w-5 h-5 text-blue-500" />
               </div>
               <span className="text-sm text-slate-600 dark:text-slate-400">Available Slots</span>
             </div>
@@ -369,9 +378,14 @@ export default function ScheduledReportsPage() {
                   <div className="flex items-center gap-3 flex-1">
                     <CoinIcon symbol={report.symbol} size={40} />
                     <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-white">
-                        {report.symbol}/USDT
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-slate-900 dark:text-white">
+                          {report.symbol}/USDT
+                        </h3>
+                        <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                          {report.interval?.toUpperCase() || '4H'}
+                        </span>
+                      </div>
                       <p className="text-sm text-slate-500 dark:text-slate-400">
                         {FREQUENCY_CONFIG[report.frequency].label} at {report.scheduleHour}:00 UTC
                         {report.frequency === 'WEEKLY' && report.scheduleDayOfWeek !== null && (
@@ -454,7 +468,7 @@ export default function ScheduledReportsPage() {
               <p className="font-medium mb-1">How Scheduled Reports Work</p>
               <ul className="list-disc list-inside space-y-1 text-amber-600 dark:text-amber-400">
                 <li>Analyses run automatically at your chosen time (UTC timezone)</li>
-                <li>Each analysis costs {limits?.costPerAnalysis || 10} credits (33% discount from regular 15 credits)</li>
+                <li>Each analysis costs {limits?.costPerAnalysis || 15} credits</li>
                 <li>Results are delivered via your selected channels (Email, Telegram, Discord)</li>
                 <li>If you run low on credits, you&apos;ll receive a notification</li>
               </ul>
@@ -466,7 +480,7 @@ export default function ScheduledReportsPage() {
       {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">
               Create Scheduled Report
             </h2>
@@ -497,6 +511,31 @@ export default function ScheduledReportsPage() {
                     )}
                   >
                     {coin}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Interval Selection */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Timeframe
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {INTERVAL_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setNewReport({ ...newReport, interval: opt.value })}
+                    className={cn(
+                      "px-3 py-2 rounded-xl text-center transition-colors",
+                      newReport.interval === opt.value
+                        ? "bg-teal-500 text-white"
+                        : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
+                    )}
+                  >
+                    <span className="block text-sm font-medium">{opt.label}</span>
+                    <span className="block text-xs opacity-70">{opt.description}</span>
                   </button>
                 ))}
               </div>

@@ -450,12 +450,13 @@ Kullanıcı Hakları Aktif:
   - Yeni routes: `apps/api/src/modules/scheduled/scheduled-reports.routes.ts`
   - Yeni sayfa: `apps/web/app/(dashboard)/scheduled/page.tsx`
   - Kullanıcılar favori coinleri için otomatik analiz kurabilir
-  - Frekans seçenekleri: Günlük, Haftalık, Aylık
+  - **Ayarlanabilir parametreler**: Symbol, Interval (15m/1h/4h/1d), Frekans (Günlük/Haftalık/Aylık), Saat (UTC)
   - Teslimat kanalları: Email, Telegram, Discord
-  - Her analiz 10 kredi (normal 15 yerine - %33 indirim)
+  - Her analiz 15 kredi (normal analiz ücreti)
   - Ücretsiz kullanıcılar max 3 aktif schedule kurabilir
   - node-cron ile saatlik kontrol çalışıyor
   - Sidebar'a "Scheduled" linki eklendi (Calendar ikonu)
+  - Schema'ya `interval` alanı eklendi
 
 ---
 
