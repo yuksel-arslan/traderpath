@@ -241,6 +241,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-21 | preferredCoins column DB'de yoksa hata veriyordu | try-catch eklendi, default değerler kullanılıyor | `concierge.routes.ts`, `concierge.service.ts` |
 | 2026-01-21 | InterfacePreferenceModal Türkçe'ydi | Tüm metinler İngilizce'ye çevrildi | `InterfacePreferenceModal.tsx` |
 | 2026-01-21 | AI Concierge "Analysis Not Found" hatası - timeframe olmadan analiz yapılamıyor | Analiz veritabanına kaydedilmiyordu. `analyzeWithExpertPanel` fonksiyonuna `prisma.analysis.create` eklendi, interval parametresi eklendi | `ai-expert.service.ts`, `concierge.service.ts` |
+| 2026-01-21 | Chart View trade plan göstermiyor - yanlış step ve alan adları | Trade plan `step5Result`'tan alınmalı (step7 değil), alan adları: `averageEntry`, `stopLoss.price`, `takeProfits[].price`. Trade plan yoksa açıklayıcı mesaj eklendi | `concierge.service.ts`, `concierge/page.tsx` |
 
 ---
 
@@ -556,6 +557,11 @@ Kullanıcı Hakları Aktif:
   - Analiz tamamlandığında `prisma.analysis.create` ile veritabanına kaydediliyor
   - Trade type bonus da ekleniyor (normal analiz akışıyla aynı)
   - Dosyalar: `ai-expert.service.ts`, `concierge.service.ts`
+- **Interface Preference Modal her girişte gösteriliyor**:
+  - SessionStorage kullanılarak her yeni session'da modal gösteriliyor
+  - Kullanıcı seçim yapınca veya modal'ı kapatınca session'a kaydediliyor
+  - UI seçilince `/analyze`, Concierge seçilince `/concierge` sayfasına yönlendirme
+  - Logout sonrası yeni login'de tekrar gösterilir (sessionStorage temizlenir)
 
 ---
 
