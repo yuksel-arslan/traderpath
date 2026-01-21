@@ -7,7 +7,7 @@ import { config } from './config';
 
 const GEMINI_API_KEY = config.gemini.apiKey;
 // Available models: gemini-2.5-flash-preview-05-20, gemini-2.0-flash, gemini-1.5-flash, gemini-1.5-pro
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 // Timeouts and limits
