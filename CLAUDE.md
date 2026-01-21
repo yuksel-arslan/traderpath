@@ -515,6 +515,17 @@ Kullanıcı Hakları Aktif:
   - `detectExpertForQuestion()` function: Technical → ARIA, Risk → NEXUS, Whale → ORACLE, Security → SENTINEL
   - Responses include expert emojis and VOLTRAN synthesis
   - Code deduplication: Single analysis path through Expert Panel
+- **AI Concierge Advanced UI (2026 design trends)**:
+  - Modern 2026 UI: Glassmorphism, gradient orbs, backdrop blur
+  - 50+ desteklenen coin: Top 20, DeFi, L2, meme, AI, gaming tokens
+  - Coin aliases: Natural language support (Bitcoin → BTC, Ethereum → ETH, etc.)
+  - Voice input: Web Speech API ile sesli komut desteği
+  - Quick commands: BTC Analysis, ETH Analysis, Help, Status butonları
+  - Verdict result cards: GO/COND/WAIT/AVOID gradient kartları
+  - Analysis data: verdict, score, analysisId, direction döndürüyor
+  - Expert routing: ARIA (teknik), NEXUS (risk), ORACLE (whale), SENTINEL (güvenlik)
+  - Auto-scroll, loading animations, proper error handling
+  - Link to analysis details: `/analyze/details/{analysisId}`
 
 ---
 
