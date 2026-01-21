@@ -4,7 +4,7 @@
 // ===========================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { authenticate, getUser } from '../../core/auth/middleware';
+import { authenticate } from '../../core/auth/middleware';
 import { scheduledReportsService } from './scheduled-reports.service';
 
 interface CreateScheduledReportBody {
@@ -42,7 +42,7 @@ export async function scheduledReportsRoutes(fastify: FastifyInstance) {
     { preHandler: authenticate },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = getUser(request)?.id;
+        const userId = request.user?.id;
         if (!userId) {
           return reply.code(401).send({
             success: false,
@@ -74,7 +74,7 @@ export async function scheduledReportsRoutes(fastify: FastifyInstance) {
     { preHandler: authenticate },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = getUser(request)?.id;
+        const userId = request.user?.id;
         if (!userId) {
           return reply.code(401).send({
             success: false,
@@ -183,7 +183,7 @@ export async function scheduledReportsRoutes(fastify: FastifyInstance) {
     { preHandler: authenticate },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = getUser(request)?.id;
+        const userId = request.user?.id;
         if (!userId) {
           return reply.code(401).send({
             success: false,
@@ -234,7 +234,7 @@ export async function scheduledReportsRoutes(fastify: FastifyInstance) {
     { preHandler: authenticate },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = getUser(request)?.id;
+        const userId = request.user?.id;
         if (!userId) {
           return reply.code(401).send({
             success: false,
@@ -276,7 +276,7 @@ export async function scheduledReportsRoutes(fastify: FastifyInstance) {
     { preHandler: authenticate },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = getUser(request)?.id;
+        const userId = request.user?.id;
         if (!userId) {
           return reply.code(401).send({
             success: false,
@@ -324,7 +324,7 @@ export async function scheduledReportsRoutes(fastify: FastifyInstance) {
     { preHandler: authenticate },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = getUser(request)?.id;
+        const userId = request.user?.id;
         if (!userId) {
           return reply.code(401).send({
             success: false,
