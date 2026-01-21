@@ -1700,8 +1700,9 @@ FORMAT: Just your professional ${tradeCtx.label} synthesis about ${symbol}. Star
     userId: string;
     language?: 'en' | 'tr';
     tradeType?: 'scalping' | 'dayTrade' | 'swing';
+    interval?: string;
   }): Promise<ExpertPanelResult> {
-    const { symbol, userId, language = 'en', tradeType = 'dayTrade' } = params;
+    const { symbol, userId, language = 'en', tradeType = 'dayTrade', interval = '4h' } = params;
     const upperSymbol = symbol.toUpperCase();
 
     // Check if symbol is supported
@@ -1802,16 +1803,49 @@ FORMAT: Just your professional ${tradeCtx.label} synthesis about ${symbol}. Star
         metadata: { experts: 4, synthesis: true, tradeType },
       });
 
+      // Save analysis to database (same as normal analysis flow)
+      const savedAnalysis = await prisma.analysis.create({
+        data: {
+          userId,
+          symbol: upperSymbol,
+          interval: interval,
+          stepsCompleted: [1, 2, 3, 4, 5, 6, 7],
+          step1Result: marketPulse as object,
+          step2Result: assetScan as object,
+          step3Result: safetyCheck as object,
+          step4Result: timing as object,
+          step5Result: tradePlan as object || null,
+          step6Result: trapCheck as object,
+          step7Result: { ...verdict, expertComments, voltranSynthesis } as object,
+          totalScore: verdict.overallScore,
+          creditsSpent: cost,
+        },
+      });
+
+      // Trade type completion bonus (same as normal analysis flow)
+      const tradeTypeBonus = tradeType === 'scalping' ? 3 : tradeType === 'dayTrade' ? 2 : 1;
+      await creditService.add(
+        userId,
+        tradeTypeBonus,
+        'BONUS',
+        'trade_type_completion_bonus',
+        {
+          tradeType,
+          symbol: upperSymbol,
+          analysisId: savedAnalysis.id,
+        }
+      );
+
       return {
         success: true,
         symbol: upperSymbol,
-        analysisId: verdict.analysisId,
+        analysisId: savedAnalysis.id,
         verdict: verdict.verdict,
         score: verdict.overallScore,
         expertComments,
         voltranSynthesis,
         creditsSpent: cost,
-        remainingCredits: chargeResult.newBalance,
+        remainingCredits: chargeResult.newBalance - tradeTypeBonus, // Account for bonus
       };
     } catch (error) {
       console.error('Expert Panel analysis error:', error);
