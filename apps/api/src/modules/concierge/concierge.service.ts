@@ -1,8 +1,7 @@
 import { prisma } from '../../core/database';
 import { creditService } from '../credits/credit.service';
 import { creditCostsService } from '../costs/credit-costs.service';
-import { analysisEngine } from '../analysis/analysis.engine';
-import { getTradeTypeFromInterval, TradeType } from '../analysis/config/trade-config';
+import { aiExpertService } from '../ai-expert/ai-expert.service';
 import { detectIntent } from './intent-detector';
 import { synthesizeResponse, synthesizeHelp, synthesizeError } from './response-synthesizer';
 import {
@@ -15,15 +14,9 @@ import {
   ExpertAskResult,
   VerdictType,
 } from './types';
-import { callGeminiWithRetry } from '../../core/gemini';
 
 // Default interval when user doesn't specify
 const DEFAULT_INTERVAL = '4h';
-
-// Map interval to trade type
-function resolveTradeType(interval: string): TradeType {
-  return getTradeTypeFromInterval(interval as '5m' | '15m' | '30m' | '1h' | '2h' | '4h' | '1d' | '1W');
-}
 
 // Map verdict string to VerdictType
 function mapVerdict(verdict: string): VerdictType {
@@ -32,6 +25,62 @@ function mapVerdict(verdict: string): VerdictType {
   if (upper === 'GO' || upper.includes('BUY') || upper.includes('LONG')) return 'GO';
   if (upper === 'AVOID' || upper.includes('AVOID')) return 'AVOID';
   return 'WAIT';
+}
+
+// Map interval to trade type for AI Expert Panel
+function getTradeTypeFromInterval(interval: string): 'scalping' | 'dayTrade' | 'swing' {
+  switch (interval) {
+    case '5m':
+    case '15m':
+      return 'scalping';
+    case '30m':
+    case '1h':
+    case '2h':
+    case '4h':
+      return 'dayTrade';
+    case '1d':
+    case '1W':
+      return 'swing';
+    default:
+      return 'dayTrade';
+  }
+}
+
+// Map question to appropriate expert
+function detectExpertForQuestion(question: string): 'aria' | 'nexus' | 'oracle' | 'sentinel' {
+  const lower = question.toLowerCase();
+
+  // Technical analysis keywords -> ARIA
+  if (lower.includes('rsi') || lower.includes('macd') || lower.includes('indicator') ||
+      lower.includes('chart') || lower.includes('pattern') || lower.includes('trend') ||
+      lower.includes('support') || lower.includes('resistance') || lower.includes('fibonacci') ||
+      lower.includes('bollinger') || lower.includes('ema') || lower.includes('sma')) {
+    return 'aria';
+  }
+
+  // Risk management keywords -> NEXUS
+  if (lower.includes('risk') || lower.includes('position size') || lower.includes('stop loss') ||
+      lower.includes('take profit') || lower.includes('portfolio') || lower.includes('leverage') ||
+      lower.includes('drawdown') || lower.includes('capital') || lower.includes('risk reward')) {
+    return 'nexus';
+  }
+
+  // Whale/on-chain keywords -> ORACLE
+  if (lower.includes('whale') || lower.includes('exchange flow') || lower.includes('on-chain') ||
+      lower.includes('accumulation') || lower.includes('distribution') || lower.includes('smart money') ||
+      lower.includes('institutional') || lower.includes('order flow')) {
+    return 'oracle';
+  }
+
+  // Security/scam keywords -> SENTINEL
+  if (lower.includes('scam') || lower.includes('honeypot') || lower.includes('rug pull') ||
+      lower.includes('safe') || lower.includes('security') || lower.includes('manipulation') ||
+      lower.includes('pump') || lower.includes('dump') || lower.includes('liquidity lock')) {
+    return 'sentinel';
+  }
+
+  // Default to ARIA for general questions
+  return 'aria';
 }
 
 export class ConciergeService {
@@ -89,7 +138,7 @@ export class ConciergeService {
     switch (intent) {
       case 'QUICK_ANALYSIS':
       case 'SPECIFIC_ANALYSIS':
-        return this.handleAnalysis(userId, entities, creditBalance, language);
+        return this.handleAnalysisWithExpertPanel(userId, entities, creditBalance, language);
 
       case 'MULTI_ANALYSIS':
         return this.handleMultiAnalysis(userId, entities, creditBalance, language);
@@ -113,9 +162,10 @@ export class ConciergeService {
   }
 
   /**
-   * Handle quick/specific analysis
+   * Handle analysis using AI Expert Panel (VOLTRAN)
+   * This leverages all 4 experts for comprehensive analysis
    */
-  private async handleAnalysis(
+  private async handleAnalysisWithExpertPanel(
     userId: string,
     entities: IntentDetectionResult['entities'],
     creditBalance: number,
@@ -139,42 +189,22 @@ export class ConciergeService {
       };
     }
 
-    // Get cost
-    const cost = await creditCostsService.getCreditCost('BUNDLE_FULL_ANALYSIS');
-
-    // Check credits
-    if (creditBalance < cost) {
-      const { message, suggestions } = synthesizeError(
-        language === 'tr'
-          ? `Yetersiz kredi. Mevcut: ${creditBalance}, Gerekli: ${cost}`
-          : `Insufficient credits. Available: ${creditBalance}, Required: ${cost}`,
-        language
-      );
-      return {
-        success: false,
-        intent: 'QUICK_ANALYSIS',
-        message,
-        suggestions,
-        creditsSpent: 0,
-        creditsRemaining: creditBalance,
-        error: 'INSUFFICIENT_CREDITS',
-      };
-    }
-
-    // Determine interval and trade type
+    // Determine trade type from interval
     const interval = entities.interval || DEFAULT_INTERVAL;
-    const tradeType: TradeType = (entities.tradeType as TradeType) || resolveTradeType(interval);
+    const tradeType = getTradeTypeFromInterval(interval);
 
-    // Charge credits
-    const chargeResult = await creditService.charge(userId, cost, 'concierge_analysis', {
+    // Use AI Expert Panel (VOLTRAN) for analysis
+    // This runs all 7 steps + gets all 4 expert comments + synthesis
+    const panelResult = await aiExpertService.analyzeWithExpertPanel({
       symbol,
-      interval,
+      userId,
+      language: language === 'tr' ? 'tr' : 'en',
       tradeType,
     });
 
-    if (!chargeResult.success) {
+    if (!panelResult.success) {
       const { message, suggestions } = synthesizeError(
-        language === 'tr' ? 'Kredi çekilemedi.' : 'Failed to charge credits.',
+        panelResult.error || 'Analysis failed',
         language
       );
       return {
@@ -184,121 +214,94 @@ export class ConciergeService {
         suggestions,
         creditsSpent: 0,
         creditsRemaining: creditBalance,
-        error: 'CHARGE_FAILED',
+        error: panelResult.error,
       };
     }
 
-    try {
-      // Run full analysis
-      const [marketPulse, assetScan, safetyCheck, timing, trapCheck] = await Promise.all([
-        analysisEngine.getMarketPulse(),
-        analysisEngine.scanAsset(symbol, tradeType),
-        analysisEngine.safetyCheck(symbol, tradeType),
-        analysisEngine.timingAnalysis(symbol, tradeType),
-        analysisEngine.trapCheck(symbol, tradeType),
-      ]);
+    // Get the saved analysis data for trade plan details
+    const savedAnalysis = panelResult.analysisId
+      ? await prisma.analysis.findUnique({
+          where: { id: panelResult.analysisId },
+          select: {
+            id: true,
+            symbol: true,
+            interval: true,
+            step5Result: true,
+            step2Result: true,
+          },
+        })
+      : null;
 
-      // Preliminary verdict
-      const preliminaryVerdict = analysisEngine.preliminaryVerdict(symbol, {
-        marketPulse,
-        assetScan,
-        safetyCheck,
-        timing,
-        trapCheck,
-      });
+    const tradePlan = savedAnalysis?.step5Result as Record<string, unknown> | null;
+    const assetScan = savedAnalysis?.step2Result as Record<string, unknown> | null;
 
-      // Trade plan
-      const tradePlan = await analysisEngine.integratedTradePlan(
-        symbol,
-        preliminaryVerdict,
-        { marketPulse, assetScan, safetyCheck, timing, trapCheck },
-        1000 // Default account size
-      );
+    // Build result for frontend
+    const analysisResult: QuickAnalysisResult = {
+      symbol: panelResult.symbol,
+      interval,
+      tradeType,
+      verdict: mapVerdict(panelResult.verdict || 'wait'),
+      score: (panelResult.score || 5) * 10, // Convert 0-10 to 0-100
+      direction: (tradePlan?.direction as 'long' | 'short') || 'long',
+      entry: (tradePlan?.averageEntry as number) || (assetScan?.currentPrice as number) || 0,
+      stopLoss: ((tradePlan?.stopLoss as Record<string, number>)?.price) || 0,
+      takeProfit1: ((tradePlan?.takeProfits as Array<{ price: number }>)?.[0]?.price) || 0,
+      takeProfit2: ((tradePlan?.takeProfits as Array<{ price: number }>)?.[1]?.price),
+      takeProfit3: ((tradePlan?.takeProfits as Array<{ price: number }>)?.[2]?.price),
+      riskReward: (tradePlan?.riskReward as number) || 0,
+      reasoning: panelResult.voltranSynthesis || '',
+      analysisId: panelResult.analysisId || '',
+      creditsSpent: panelResult.creditsSpent || 0,
+    };
 
-      // Final verdict
-      const verdict = await analysisEngine.getFinalVerdict(
-        symbol,
-        preliminaryVerdict,
-        { marketPulse, assetScan, safetyCheck, timing, trapCheck },
-        tradePlan,
-        tradeType
-      );
-
-      // Save to database
-      const savedAnalysis = await prisma.analysis.create({
-        data: {
-          userId,
-          symbol,
-          interval,
-          stepsCompleted: [1, 2, 3, 4, 5, 6, 7],
-          step1Result: marketPulse as object,
-          step2Result: assetScan as object,
-          step3Result: safetyCheck as object,
-          step4Result: timing as object,
-          step5Result: tradePlan as object || null,
-          step6Result: trapCheck as object,
-          step7Result: { ...verdict, preliminaryVerdict } as object,
-          totalScore: verdict.overallScore,
-          creditsSpent: cost,
-        },
-      });
-
-      // Apply trade type bonus
-      const tradeTypeBonus = tradeType === 'scalping' ? 3 : tradeType === 'dayTrade' ? 2 : 1;
-      await creditService.add(userId, tradeTypeBonus, 'BONUS', 'trade_type_completion_bonus', {
-        tradeType,
-        symbol,
-      });
-
-      // Build result
-      const analysisResult: QuickAnalysisResult = {
-        symbol,
-        interval,
-        tradeType,
-        verdict: mapVerdict(verdict.verdict || preliminaryVerdict.verdict),
-        score: verdict.overallScore,
-        direction: tradePlan?.direction || preliminaryVerdict.direction || 'long',
-        entry: tradePlan?.averageEntry || assetScan.currentPrice,
-        stopLoss: tradePlan?.stopLoss?.price || 0,
-        takeProfit1: tradePlan?.takeProfits?.[0]?.price || 0,
-        takeProfit2: tradePlan?.takeProfits?.[1]?.price,
-        takeProfit3: tradePlan?.takeProfits?.[2]?.price,
-        riskReward: tradePlan?.riskReward || 0,
-        reasoning: verdict.recommendation || verdict.aiSummary || '',
-        analysisId: savedAnalysis.id,
-        creditsSpent: cost - tradeTypeBonus,
+    // Build expert panel message
+    let expertMessage = '';
+    if (panelResult.expertComments) {
+      const expertEmojis: Record<string, string> = {
+        aria: '📊',
+        oracle: '🐋',
+        sentinel: '🛡️',
+        nexus: '⚖️',
       };
 
-      const { message, suggestions } = synthesizeResponse({
-        language,
-        intent: 'QUICK_ANALYSIS',
-        data: analysisResult,
-      });
-
-      const newBalance = await creditService.getBalance(userId);
-
-      return {
-        success: true,
-        intent: 'QUICK_ANALYSIS',
-        message,
-        data: analysisResult,
-        suggestions,
-        creditsSpent: cost - tradeTypeBonus,
-        creditsRemaining: newBalance,
-      };
-    } catch (error) {
-      // Refund on failure
-      await creditService.add(userId, cost, 'BONUS', 'concierge_analysis_refund', {
-        symbol,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-
-      throw error;
+      expertMessage = panelResult.expertComments
+        .map((e) => `${expertEmojis[e.expertId] || ''} **${e.expertName}**: ${e.comment}`)
+        .join('\n\n');
     }
+
+    const verdictEmoji = {
+      GO: '🟢',
+      CONDITIONAL_GO: '🟡',
+      WAIT: '🟠',
+      AVOID: '🔴',
+    }[analysisResult.verdict] || '⚪';
+
+    const finalMessage = `${verdictEmoji} **${panelResult.symbol} ${panelResult.verdict?.toUpperCase()}** (Score: ${analysisResult.score}/100)
+
+${expertMessage}
+
+---
+**VOLTRAN Synthesis**: ${panelResult.voltranSynthesis}`;
+
+    const newBalance = panelResult.remainingCredits ?? (await creditService.getBalance(userId));
+
+    const suggestions = language === 'tr'
+      ? ['Detayları göster', 'Başka coin analiz et', 'Alarm kur']
+      : ['Show details', 'Analyze another coin', 'Set alert'];
+
+    return {
+      success: true,
+      intent: 'QUICK_ANALYSIS',
+      message: finalMessage,
+      data: analysisResult,
+      suggestions,
+      creditsSpent: panelResult.creditsSpent || 0,
+      creditsRemaining: newBalance,
+    };
   }
 
   /**
-   * Handle multi-coin analysis
+   * Handle multi-coin analysis using Expert Panel
    */
   private async handleMultiAnalysis(
     userId: string,
@@ -306,7 +309,6 @@ export class ConciergeService {
     creditBalance: number,
     language: string
   ): Promise<ConciergeResponse> {
-    // Get user's preferred coins or top coins
     const count = entities.count || 5;
     let coins: string[] = [];
 
@@ -320,12 +322,11 @@ export class ConciergeService {
       // Column might not exist in database yet
     }
 
-    // If no preferred coins, use defaults
     if (coins.length === 0) {
       coins = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP'].slice(0, count);
     }
 
-    // Check if enough credits for all analyses
+    // Check credits
     const costPerAnalysis = await creditCostsService.getCreditCost('BUNDLE_FULL_ANALYSIS');
     const totalCost = costPerAnalysis * coins.length;
 
@@ -348,12 +349,12 @@ export class ConciergeService {
       };
     }
 
-    // Run analyses sequentially to avoid rate limits
+    // Run analyses sequentially
     const results: QuickAnalysisResult[] = [];
     let totalSpent = 0;
 
     for (const symbol of coins) {
-      const result = await this.handleAnalysis(
+      const result = await this.handleAnalysisWithExpertPanel(
         userId,
         { symbol, interval: DEFAULT_INTERVAL },
         creditBalance - totalSpent,
@@ -365,8 +366,8 @@ export class ConciergeService {
         totalSpent += result.creditsSpent;
       }
 
-      // Small delay between analyses
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Small delay between analyses to avoid rate limits
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
     if (results.length === 0) {
@@ -404,7 +405,8 @@ export class ConciergeService {
   }
 
   /**
-   * Handle expert questions
+   * Handle expert questions using AI Expert chat
+   * Routes to appropriate expert based on question topic
    */
   private async handleExpertAsk(
     userId: string,
@@ -416,7 +418,7 @@ export class ConciergeService {
     // Expert questions cost 5 credits (or free if within limit)
     const cost = 5;
 
-    // Check if user has free questions remaining (we'll check against last analysis)
+    // Check if user has free questions remaining
     const lastAnalysis = await prisma.analysis.findFirst({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -463,43 +465,39 @@ export class ConciergeService {
     }
 
     try {
-      // Use Gemini to answer the question
-      const expertPrompt = `You are ARIA, a friendly crypto trading expert assistant for TraderPath platform.
-Answer the following trading/crypto question in a helpful, educational way.
-Keep your answer concise (2-3 paragraphs max).
-If the question is in Turkish, answer in Turkish. If in English, answer in English.
-Use simple language that beginners can understand.
+      // Detect which expert should answer this question
+      const expertId = entities.expertId || detectExpertForQuestion(question);
 
-Question: ${question}`;
+      // Use AI Expert service chat
+      const chatResponse = await aiExpertService.chat({
+        expertId: expertId as 'aria' | 'nexus' | 'oracle' | 'sentinel',
+        message: question,
+        userId,
+      });
 
-      const geminiResponse = await callGeminiWithRetry(
-        {
-          contents: [{ parts: [{ text: expertPrompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 500,
-          },
-        },
-        3,
-        'concierge_expert'
-      );
-
-      const answer = geminiResponse.candidates?.[0]?.content?.parts?.[0]?.text || 'Üzgünüm, şu anda yanıt oluşturamıyorum.';
+      const expert = aiExpertService.getExpert(expertId);
 
       const result: ExpertAskResult = {
-        expertId: entities.expertId || 'aria',
-        expertName: 'ARIA',
-        answer,
+        expertId,
+        expertName: expert?.name || 'ARIA',
+        answer: chatResponse.response,
         creditsSpent: actualCost,
       };
 
-      const { message, suggestions } = synthesizeResponse({
-        language,
-        intent: 'EXPERT_ASK',
-        data: result,
-      });
+      const expertEmoji = {
+        aria: '📊',
+        nexus: '⚖️',
+        oracle: '🐋',
+        sentinel: '🛡️',
+      }[expertId] || '🤖';
+
+      const message = `${expertEmoji} **${result.expertName}**\n\n${result.answer}`;
 
       const newBalance = await creditService.getBalance(userId);
+
+      const suggestions = language === 'tr'
+        ? ['Başka soru sor', 'Analiz yap', 'Yardım']
+        : ['Ask another question', 'Run analysis', 'Help'];
 
       return {
         success: true,
