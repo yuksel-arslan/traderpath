@@ -53,7 +53,7 @@ export async function conciergeRoutes(app: FastifyInstance) {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = getUser(request).id;
-    const language = (request.query as { language?: string }).language || 'tr';
+    const language = (request.query as { language?: string }).language || 'en';
 
     // Get user preferences for personalized suggestions
     const { prisma } = await import('../../core/database');
@@ -92,7 +92,7 @@ export async function conciergeRoutes(app: FastifyInstance) {
   app.get('/quick-commands', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const language = (request.query as { language?: string }).language || 'tr';
+    const language = (request.query as { language?: string }).language || 'en';
 
     const commands = language === 'tr' ? [
       {

@@ -62,8 +62,8 @@ export class ConciergeService {
       console.error('Concierge error:', error);
 
       const { message: errorMessage, suggestions } = synthesizeError(
-        language === 'tr' ? 'Bir hata oluştu. Lütfen tekrar dene.' : 'An error occurred. Please try again.',
-        language || 'tr'
+        'An error occurred. Please try again.',
+        language || 'en'
       );
 
       return {
