@@ -148,14 +148,17 @@ function GlassCard({
   children,
   className,
   hover = true,
+  allowOverflow = false,
 }: {
   children: React.ReactNode;
   className?: string;
   hover?: boolean;
+  allowOverflow?: boolean;
 }) {
   return (
     <div className={cn(
-      "relative overflow-hidden rounded-2xl",
+      "relative rounded-2xl",
+      !allowOverflow && "overflow-hidden",
       "bg-white/70 dark:bg-slate-900/50",
       "backdrop-blur-xl backdrop-saturate-150",
       "border border-white/20 dark:border-white/10",
@@ -429,7 +432,7 @@ export default function AnalyzePage() {
 
           {/* Analysis Controls - Full Width */}
           <div className="col-span-12">
-            <GlassCard className="p-6">
+            <GlassCard className="p-6" allowOverflow>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Left: Timeframe Selection */}
                 <div className="space-y-4">
@@ -447,7 +450,7 @@ export default function AnalyzePage() {
                 </div>
 
                 {/* Right: Coin Selector */}
-                <div className="space-y-4">
+                <div className="space-y-4 min-h-[120px]">
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Target className="w-4 h-4 text-violet-500" />
                     Select Coin to Analyze
