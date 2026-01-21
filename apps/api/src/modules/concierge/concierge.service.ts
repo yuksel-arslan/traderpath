@@ -95,6 +95,29 @@ function detectIntent(message: string): {
     return { intent: 'STATUS' };
   }
 
+  // Profitability/Performance intent
+  if (
+    lower.includes('karlılık') ||
+    lower.includes('karlilik') ||
+    lower.includes('performans') ||
+    lower.includes('kazanç') ||
+    lower.includes('kazanc') ||
+    lower.includes('profit') ||
+    lower.includes('profitability') ||
+    lower.includes('performance') ||
+    lower.includes('win rate') ||
+    lower.includes('başarı') ||
+    lower.includes('basari') ||
+    lower.includes('raporla') ||
+    lower.includes('report my') ||
+    lower.includes('how am i doing') ||
+    lower.includes('nasıl gidiyorum') ||
+    lower.includes('trade geçmişi') ||
+    lower.includes('trade history')
+  ) {
+    return { intent: 'PROFITABILITY' };
+  }
+
   // Check for coin aliases first
   let detectedCoin: string | null = null;
 
@@ -207,6 +230,9 @@ class ConciergeService {
         case 'STATUS':
           return await this.handleStatus(userId, creditBalance, language);
 
+        case 'PROFITABILITY':
+          return await this.handleProfitability(userId, creditBalance, language);
+
         case 'ANALYSIS':
           return await this.handleAnalysis(userId, symbol!, interval!, language, creditBalance);
 
@@ -250,8 +276,9 @@ UZMAN SORULARI (ücretsiz)
 • "Risk yönetimi nasıl yapılır?" - Risk
 • "Balina aktivitesi ne demek?" - Whale
 
-DURUM
+DURUM & PERFORMANS
 • "status" - Kredi bakiyeniz
+• "karlılık raporla" - Trade performansınız
 
 50+ desteklenen coin: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK, ARB, OP, APT, SUI, SEI ve daha fazlası.`
       : `Welcome to AI Concierge!
@@ -268,8 +295,9 @@ EXPERT QUESTIONS (free)
 • "How to manage risk?" - Risk management
 • "What is whale activity?" - Whale tracking
 
-STATUS
+STATUS & PERFORMANCE
 • "status" - Check your credits
+• "report my profitability" - Your trade performance
 
 50+ supported coins: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK, ARB, OP, APT, SUI, SEI and more.`;
 
@@ -327,6 +355,114 @@ Need more credits? Visit the pricing page.`;
       success: true,
       intent: 'STATUS',
       message: statusText,
+      creditsSpent: 0,
+      creditsRemaining: creditBalance,
+    };
+  }
+
+  private async handleProfitability(userId: string, creditBalance: number, language: string): Promise<ConciergeResponse> {
+    // Get analyses with outcomes
+    const analyses = await prisma.analysis.findMany({
+      where: { userId },
+      select: {
+        outcome: true,
+        symbol: true,
+        totalScore: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (analyses.length === 0) {
+      return {
+        success: true,
+        intent: 'PROFITABILITY',
+        message: language === 'tr'
+          ? 'Henüz analiz yapmadınız. "BTC nasıl?" diyerek ilk analizinizi yapabilirsiniz.'
+          : 'You have no analyses yet. Try "How is BTC?" to make your first analysis.',
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+      };
+    }
+
+    // Calculate statistics
+    const tpHits = analyses.filter(a => a.outcome === 'TP_HIT').length;
+    const slHits = analyses.filter(a => a.outcome === 'SL_HIT').length;
+    const pending = analyses.filter(a => a.outcome === 'PENDING' || !a.outcome).length;
+    const expired = analyses.filter(a => a.outcome === 'EXPIRED').length;
+    const totalCompleted = tpHits + slHits;
+    const winRate = totalCompleted > 0 ? ((tpHits / totalCompleted) * 100).toFixed(1) : 'N/A';
+
+    // Get best performing symbols (by win count)
+    const symbolStats: Record<string, { wins: number; losses: number }> = {};
+    for (const analysis of analyses) {
+      if (!analysis.symbol) continue;
+      if (!symbolStats[analysis.symbol]) {
+        symbolStats[analysis.symbol] = { wins: 0, losses: 0 };
+      }
+      if (analysis.outcome === 'TP_HIT') {
+        symbolStats[analysis.symbol].wins++;
+      } else if (analysis.outcome === 'SL_HIT') {
+        symbolStats[analysis.symbol].losses++;
+      }
+    }
+
+    // Sort by wins
+    const sortedSymbols = Object.entries(symbolStats)
+      .filter(([, stats]) => stats.wins + stats.losses > 0)
+      .sort((a, b) => b[1].wins - a[1].wins)
+      .slice(0, 3);
+
+    const bestSymbols = sortedSymbols.length > 0
+      ? sortedSymbols.map(([sym, stats]) => `${sym}: ${stats.wins}W/${stats.losses}L`).join(', ')
+      : 'N/A';
+
+    // Recent performance (last 10)
+    const recent10 = analyses.slice(0, 10);
+    const recentWins = recent10.filter(a => a.outcome === 'TP_HIT').length;
+    const recentLosses = recent10.filter(a => a.outcome === 'SL_HIT').length;
+
+    // Average score
+    const avgScore = analyses.reduce((sum, a) => sum + (Number(a.totalScore) || 0), 0) / analyses.length;
+
+    const profitText = language === 'tr'
+      ? `Karlılık Raporu
+
+Toplam Analiz: ${analyses.length}
+Kazanç (TP Hit): ${tpHits}
+Kayıp (SL Hit): ${slHits}
+Bekleyen: ${pending}
+Süresi Dolan: ${expired}
+
+Başarı Oranı: %${winRate}
+Ortalama Skor: ${avgScore.toFixed(1)}/10
+
+En İyi Coinler: ${bestSymbols}
+
+Son 10 Analiz: ${recentWins}W / ${recentLosses}L
+
+${Number(winRate) >= 60 ? 'Harika gidiyorsunuz!' : Number(winRate) >= 40 ? 'Fena değil, gelişmeye devam!' : 'Risk yönetimine dikkat edin.'}`
+      : `Profitability Report
+
+Total Analyses: ${analyses.length}
+Wins (TP Hit): ${tpHits}
+Losses (SL Hit): ${slHits}
+Pending: ${pending}
+Expired: ${expired}
+
+Win Rate: ${winRate}%
+Average Score: ${avgScore.toFixed(1)}/10
+
+Best Coins: ${bestSymbols}
+
+Last 10 Analyses: ${recentWins}W / ${recentLosses}L
+
+${Number(winRate) >= 60 ? 'Great job! Keep it up!' : Number(winRate) >= 40 ? 'Not bad, keep improving!' : 'Focus on risk management.'}`;
+
+    return {
+      success: true,
+      intent: 'PROFITABILITY',
+      message: profitText,
       creditsSpent: 0,
       creditsRemaining: creditBalance,
     };
