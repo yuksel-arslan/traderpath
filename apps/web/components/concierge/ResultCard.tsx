@@ -65,7 +65,13 @@ function formatPrice(price: number): string {
 
 export function ResultCard({ data, compact = false }: ResultCardProps) {
   const [expanded, setExpanded] = useState(!compact);
-  const styles = getVerdictStyles(data.verdict);
+
+  // Guard against null/undefined data
+  if (!data) {
+    return null;
+  }
+
+  const styles = getVerdictStyles(data.verdict || 'WAIT');
 
   if (compact) {
     return (
