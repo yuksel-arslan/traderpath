@@ -160,6 +160,7 @@ function detectIntent(message: string): {
   }
 
   // Monthly/Weekly performance intent
+  // Note: 'chart' and 'grafik' removed - they should trigger CHART_VIEW instead
   if (
     lower.includes('aylık') ||
     lower.includes('haftalık') ||
@@ -171,9 +172,7 @@ function detectIntent(message: string): {
     lower.includes('last 7') ||
     lower.includes('this month') ||
     lower.includes('bu ay') ||
-    lower.includes('grafik') ||
-    lower.includes('chart') ||
-    lower.includes('trend')
+    (lower.includes('trend') && lower.includes('perform'))
   ) {
     return { intent: 'MONTHLY_PERFORMANCE' };
   }
@@ -244,9 +243,17 @@ function detectIntent(message: string): {
       }
     }
     if (!scheduleCoin) {
+      // Strip USDT/BUSD suffixes for better matching
+      const cleanedMessage = lower
+        .replace(/usdt/gi, ' ')
+        .replace(/busd/gi, ' ')
+        .replace(/perp/gi, ' ')
+        .replace(/\/usdt/gi, ' ')
+        .replace(/\/busd/gi, ' ');
+
       for (const coin of SUPPORTED_COINS) {
         const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
-        if (coinRegex.test(lower)) {
+        if (coinRegex.test(cleanedMessage) || coinRegex.test(lower)) {
           scheduleCoin = coin;
           break;
         }
@@ -291,9 +298,17 @@ function detectIntent(message: string): {
       }
     }
     if (!chartSymbol) {
+      // Strip USDT/BUSD suffixes for better matching
+      const cleanedMessage = lower
+        .replace(/usdt/gi, ' ')
+        .replace(/busd/gi, ' ')
+        .replace(/perp/gi, ' ')
+        .replace(/\/usdt/gi, ' ')
+        .replace(/\/busd/gi, ' ');
+
       for (const coin of SUPPORTED_COINS) {
         const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
-        if (coinRegex.test(lower)) {
+        if (coinRegex.test(cleanedMessage) || coinRegex.test(lower)) {
           chartSymbol = coin;
           break;
         }
@@ -313,12 +328,20 @@ function detectIntent(message: string): {
     }
   }
 
-  // Check for coin symbols
+  // Check for coin symbols (handle USDT/BUSD/PERP suffixes)
   if (!detectedCoin) {
+    // First, try to strip common trading pair suffixes
+    const cleanedMessage = lower
+      .replace(/usdt/gi, ' ')
+      .replace(/busd/gi, ' ')
+      .replace(/perp/gi, ' ')
+      .replace(/\/usdt/gi, ' ')
+      .replace(/\/busd/gi, ' ');
+
     for (const coin of SUPPORTED_COINS) {
-      // Match coin symbol with word boundaries
+      // Match coin symbol with word boundaries in cleaned message
       const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
-      if (coinRegex.test(lower)) {
+      if (coinRegex.test(cleanedMessage) || coinRegex.test(lower)) {
         detectedCoin = coin;
         break;
       }
