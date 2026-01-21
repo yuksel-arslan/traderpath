@@ -6,6 +6,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { authenticate } from '../../core/auth/middleware';
 import { scheduledReportsService } from './scheduled-reports.service';
+import { creditCostsService } from '../costs/credit-costs.service';
 
 interface CreateScheduledReportBody {
   symbol: string;
@@ -334,6 +335,7 @@ export async function scheduledReportsRoutes(fastify: FastifyInstance) {
 
         const activeCount = await scheduledReportsService.getActiveCount(userId);
         const maxAllowed = MAX_SCHEDULED_REPORTS_FREE; // TODO: Check premium status
+        const analysisCost = await creditCostsService.getCreditCost('BUNDLE_FULL_ANALYSIS');
 
         return reply.send({
           success: true,
@@ -341,7 +343,7 @@ export async function scheduledReportsRoutes(fastify: FastifyInstance) {
             current: activeCount,
             max: maxAllowed,
             remaining: Math.max(0, maxAllowed - activeCount),
-            costPerAnalysis: 15,
+            costPerAnalysis: analysisCost,
           },
         });
       } catch (error) {

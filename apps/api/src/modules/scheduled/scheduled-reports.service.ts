@@ -7,12 +7,12 @@ import { prisma } from '../../core/database';
 import { analysisEngine } from '../analysis/analysis.engine';
 import { getTradeTypeFromInterval } from '../analysis/config/trade-config';
 import { creditService } from '../credits/credit.service';
+import { creditCostsService } from '../costs/credit-costs.service';
 import { emailService } from '../email/email.service';
 import { notificationService } from '../notifications/notification.service';
 import cron from 'node-cron';
 
-// Cost for scheduled analysis (same as normal analysis)
-const SCHEDULED_ANALYSIS_COST = 15;
+// Cost for scheduled analysis - fetched dynamically from settings
 
 interface ScheduledReportResult {
   success: boolean;
@@ -101,10 +101,13 @@ class ScheduledReportsService {
 
     console.log(`[ScheduledReports] Running analysis for ${symbol} (user: ${user.email})`);
 
+    // Get cost from settings (same as normal analysis)
+    const analysisCost = await creditCostsService.getCreditCost('BUNDLE_FULL_ANALYSIS');
+
     try {
       // Check user credits
       const balance = await creditService.getBalance(userId);
-      if (balance < SCHEDULED_ANALYSIS_COST) {
+      if (balance < analysisCost) {
         console.log(`[ScheduledReports] User ${user.email} has insufficient credits (${balance})`);
 
         // Notify user about insufficient credits
@@ -115,11 +118,11 @@ class ScheduledReportsService {
             html: `
               <p>Hi ${user.name || 'Trader'},</p>
               <p>Your scheduled analysis for <strong>${symbol}/USDT</strong> was skipped due to insufficient credits.</p>
-              <p>Required: ${SCHEDULED_ANALYSIS_COST} credits<br>Available: ${balance} credits</p>
+              <p>Required: ${analysisCost} credits<br>Available: ${balance} credits</p>
               <p>Please add credits to continue receiving scheduled analyses.</p>
               <p>- TraderPath Team</p>
             `,
-            text: `Your scheduled analysis for ${symbol}/USDT was skipped due to insufficient credits. Required: ${SCHEDULED_ANALYSIS_COST}, Available: ${balance}`,
+            text: `Your scheduled analysis for ${symbol}/USDT was skipped due to insufficient credits. Required: ${analysisCost}, Available: ${balance}`,
           });
         }
 
@@ -130,7 +133,7 @@ class ScheduledReportsService {
       }
 
       // Deduct credits
-      await creditService.deduct(userId, SCHEDULED_ANALYSIS_COST, 'scheduled_analysis', {
+      await creditService.deduct(userId, analysisCost, 'scheduled_analysis', {
         symbol,
         scheduledReportId: id,
       });
@@ -185,7 +188,7 @@ class ScheduledReportsService {
           step6Result: trapCheck as object,
           step7Result: { ...verdict, preliminaryVerdict } as object,
           totalScore: verdict.overallScore,
-          creditsSpent: SCHEDULED_ANALYSIS_COST,
+          creditsSpent: analysisCost,
         },
       });
 
@@ -209,7 +212,7 @@ class ScheduledReportsService {
 
       // Refund credits on failure
       try {
-        await creditService.add(userId, SCHEDULED_ANALYSIS_COST, 'REFUND', 'scheduled_analysis_failed', {
+        await creditService.add(userId, analysisCost, 'REFUND', 'scheduled_analysis_failed', {
           symbol,
           scheduledReportId: id,
           error: String(error),
