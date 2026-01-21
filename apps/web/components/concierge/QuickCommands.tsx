@@ -1,13 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
 import { Flame, Diamond, Bitcoin, BarChart3 } from 'lucide-react';
 import { QuickCommand } from './useConcierge';
 
 interface QuickCommandsProps {
   commands: QuickCommand[];
   onCommand: (command: string) => void;
-  onFetch: () => void;
   isLoading?: boolean;
 }
 
@@ -29,13 +27,8 @@ function getIcon(id: string) {
 export function QuickCommands({
   commands,
   onCommand,
-  onFetch,
   isLoading,
 }: QuickCommandsProps) {
-  useEffect(() => {
-    onFetch();
-  }, [onFetch]);
-
   if (commands.length === 0) {
     return null;
   }
