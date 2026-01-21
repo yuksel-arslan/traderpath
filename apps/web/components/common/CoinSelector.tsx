@@ -163,7 +163,7 @@ export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
 
     setIsLoadingSmartCoins(true);
     try {
-      const response = await fetch('/api/smart-coins');
+      const response = await authFetch('/api/smart-coins');
       const data = await response.json();
       if (data.success && data.data) {
         setSmartCoins(data.data);
@@ -451,9 +451,9 @@ export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
               )}
 
               {/* Smart Coins List */}
-              {!search && smartCoins && smartCategory !== 'all' && (
+              {!search && (smartCoins || isLoadingSmartCoins) && smartCategory !== 'all' && (
                 <div className="p-2 border-b">
-                  {isLoadingSmartCoins ? (
+                  {isLoadingSmartCoins || !smartCoins ? (
                     <div className="flex items-center justify-center py-4 text-muted-foreground">
                       <RefreshCw className="w-4 h-4 animate-spin mr-2" />
                       Loading...
@@ -531,8 +531,8 @@ export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
                 </div>
               )}
 
-              {/* Popular Coins - only show if no smart coins or in search mode */}
-              {!search && !smartCoins && (
+              {/* Popular Coins - only show if no smart coins AND not loading */}
+              {!search && !smartCoins && !isLoadingSmartCoins && (
                 <div className="p-3 border-b">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                     <TrendingUp className="w-3 h-3" />
@@ -556,35 +556,37 @@ export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
                 </div>
               )}
 
-              {/* All Coins List */}
-              <div className="p-2">
-                {filteredCoins.length > 0 ? (
-                  <div className="space-y-0.5">
-                    {filteredCoins.map((coin) => (
-                      <button
-                        key={coin.symbol}
-                        onClick={() => handleSelect(coin)}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-accent transition-colors",
-                          selectedCoin?.symbol === coin.symbol && "bg-primary/10"
-                        )}
-                      >
-                        <CoinIcon symbol={coin.symbol} size={28} />
-                        <div className="flex-1 text-left">
-                          <div className="font-medium">{coin.symbol}</div>
-                          <div className="text-xs text-muted-foreground">{coin.name}</div>
-                        </div>
-                        <span className="text-xs text-muted-foreground">/USDT</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No coins found for "{search}"</p>
-                  </div>
-                )}
-              </div>
+              {/* All Coins List - Only show when searching OR when no smart coins data */}
+              {(search || !smartCoins) && (
+                <div className="p-2">
+                  {filteredCoins.length > 0 ? (
+                    <div className="space-y-0.5">
+                      {filteredCoins.map((coin) => (
+                        <button
+                          key={coin.symbol}
+                          onClick={() => handleSelect(coin)}
+                          className={cn(
+                            "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-accent transition-colors",
+                            selectedCoin?.symbol === coin.symbol && "bg-primary/10"
+                          )}
+                        >
+                          <CoinIcon symbol={coin.symbol} size={28} />
+                          <div className="flex-1 text-left">
+                            <div className="font-medium">{coin.symbol}</div>
+                            <div className="text-xs text-muted-foreground">{coin.name}</div>
+                          </div>
+                          <span className="text-xs text-muted-foreground">/USDT</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No coins found for "{search}"</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
