@@ -240,7 +240,7 @@ function StatCard({
     <div
       ref={ref}
       className={cn(
-        "relative overflow-hidden rounded-xl p-4 transition-all duration-700",
+        "relative overflow-hidden rounded-xl p-3 sm:p-4 transition-all duration-700",
         "backdrop-blur-sm border border-white/10",
         colors.bg,
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
@@ -248,11 +248,11 @@ function StatCard({
         colors.glow
       )}
     >
-      <div className="flex items-center gap-2 mb-2">
-        <Icon className={cn("w-4 h-4", colors.icon)} />
-        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</span>
+      <div className="flex items-center gap-1.5 sm:gap-2 mb-1 sm:mb-2">
+        <Icon className={cn("w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0", colors.icon)} />
+        <span className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 truncate">{label}</span>
       </div>
-      <p className={cn("text-2xl font-bold tabular-nums", colors.text)}>
+      <p className={cn("text-lg sm:text-2xl font-bold tabular-nums", colors.text)}>
         {value}
       </p>
     </div>
@@ -262,9 +262,9 @@ function StatCard({
 // Feature Badge
 function FeatureBadge({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/50 dark:bg-white/5 backdrop-blur-sm border border-white/20 dark:border-white/10">
-      <Icon className="w-3.5 h-3.5 text-teal-500" />
-      <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{text}</span>
+    <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-white/50 dark:bg-white/5 backdrop-blur-sm border border-white/20 dark:border-white/10">
+      <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-teal-500 flex-shrink-0" />
+      <span className="text-[10px] sm:text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">{text}</span>
     </div>
   );
 }
@@ -328,17 +328,17 @@ export default function AnalyzePage() {
       <MarqueeBanner />
 
       {/* Main Content */}
-      <div className="relative w-full px-4 md:px-8 lg:px-12 py-8 space-y-8">
+      <div className="relative w-full px-3 sm:px-4 md:px-8 lg:px-12 py-4 sm:py-8 space-y-4 sm:space-y-8">
         {/* ===== HERO SECTION with Kinetic Typography ===== */}
-        <div className="text-center space-y-4 py-6">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-red-500/10 border border-teal-500/20 backdrop-blur-sm animate-blur-in">
-            <Sparkles className="w-4 h-4 text-teal-500 animate-pulse" />
-            <span className="text-sm font-medium bg-gradient-to-r from-teal-500 to-red-500 bg-clip-text text-transparent">
+        <div className="text-center space-y-3 sm:space-y-4 py-4 sm:py-6">
+          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-red-500/10 border border-teal-500/20 backdrop-blur-sm animate-blur-in">
+            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-teal-500 animate-pulse" />
+            <span className="text-xs sm:text-sm font-medium bg-gradient-to-r from-teal-500 to-red-500 bg-clip-text text-transparent">
               AI-Powered Analysis Engine
             </span>
           </div>
 
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold">
             <span className="bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">
               Trade Smarter with
             </span>
@@ -347,16 +347,16 @@ export default function AnalyzePage() {
               <span className="bg-gradient-to-r from-teal-500 via-red-400 to-teal-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer" style={{ animationDelay: '0.5s' }}>
                 <KineticText text="TraderPath" />
               </span>
-              <span className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 via-red-400 to-teal-500 rounded-full opacity-50 animate-pulse" />
+              <span className="absolute -bottom-1 sm:-bottom-2 left-0 right-0 h-0.5 sm:h-1 bg-gradient-to-r from-teal-500 via-red-400 to-teal-500 rounded-full opacity-50 animate-pulse" />
             </span>
           </h1>
 
-          <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto animate-slide-up">
+          <p className="text-sm sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto animate-slide-up px-2">
             Professional-grade analysis powered by 40+ technical indicators
           </p>
 
           {/* Feature Badges */}
-          <div className="flex flex-wrap justify-center gap-3 pt-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-2 sm:pt-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
             <FeatureBadge icon={Brain} text="AI Analysis" />
             <FeatureBadge icon={Shield} text="Risk Assessment" />
             <FeatureBadge icon={BarChart3} text="40+ Indicators" />
@@ -365,40 +365,40 @@ export default function AnalyzePage() {
         </div>
 
         {/* ===== BENTO GRID LAYOUT ===== */}
-        <div className="grid grid-cols-12 gap-4 lg:gap-6">
+        <div className="grid grid-cols-12 gap-3 sm:gap-4 lg:gap-6">
           {/* Live Chart Card - Full Width at Top */}
           <div className="col-span-12">
             <GlassCard>
               <button
                 onClick={() => setShowChart(!showChart)}
-                className="w-full flex items-center justify-between p-4 hover:bg-white/50 dark:hover:bg-white/5 transition-colors"
+                className="w-full flex items-center justify-between p-3 sm:p-4 hover:bg-white/50 dark:hover:bg-white/5 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
-                    <LineChart className="w-5 h-5 text-white" />
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+                    <LineChart className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
                   <div className="text-left">
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">Live Chart</span>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{chartSymbol.split(':')[1]}</p>
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Live Chart</span>
+                    <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">{chartSymbol.split(':')[1]}</p>
                   </div>
                 </div>
                 <div className={cn(
-                  "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300",
+                  "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all duration-300",
                   showChart ? "bg-violet-500/20 rotate-180" : "bg-slate-100 dark:bg-slate-800"
                 )}>
-                  <ChevronDown className="w-5 h-5 text-slate-500" />
+                  <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />
                 </div>
               </button>
 
               {showChart && (
                 <div className="border-t border-white/10">
-                  <div className="flex flex-wrap gap-2 p-3 bg-slate-50/50 dark:bg-slate-900/30">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2 p-2 sm:p-3 bg-slate-50/50 dark:bg-slate-900/30">
                     {POPULAR_COINS.map((coin) => (
                       <button
                         key={coin}
                         onClick={() => setChartSymbol(`BINANCE:${coin}USDT`)}
                         className={cn(
-                          'px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300',
+                          'px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium rounded-lg transition-all duration-300',
                           chartSymbol === `BINANCE:${coin}USDT`
                             ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30 scale-105'
                             : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:scale-105 border border-white/20 dark:border-slate-700'
@@ -411,7 +411,7 @@ export default function AnalyzePage() {
                   <TradingViewWidget
                     symbol={chartSymbol}
                     theme={isDarkMode ? 'dark' : 'light'}
-                    height={400}
+                    height={300}
                   />
                 </div>
               )}
@@ -432,12 +432,12 @@ export default function AnalyzePage() {
 
           {/* Analysis Controls - Full Width */}
           <div className="col-span-12">
-            <GlassCard className="p-6" allowOverflow>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <GlassCard className="p-3 sm:p-4 md:p-6" allowOverflow>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Left: Timeframe Selection */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Timer className="w-4 h-4 text-teal-500" />
+                <div className="space-y-3 sm:space-y-4">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500" />
                     Select Timeframe
                   </h3>
                   <TradeTypeSelector
@@ -450,9 +450,9 @@ export default function AnalyzePage() {
                 </div>
 
                 {/* Right: Coin Selector */}
-                <div className="space-y-4 min-h-[120px]">
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Target className="w-4 h-4 text-violet-500" />
+                <div className="space-y-3 sm:space-y-4 min-h-[100px] sm:min-h-[120px]">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
                     Select Coin to Analyze
                   </h3>
                   <CoinSelector timeframe={timeframe} />
@@ -463,27 +463,27 @@ export default function AnalyzePage() {
 
           {/* Recent Analyses - Full Width */}
           <div className="col-span-12">
-            <GlassCard className="p-6">
+            <GlassCard className="p-3 sm:p-4 md:p-6">
               <RecentAnalyses />
             </GlassCard>
           </div>
         </div>
 
         {/* Bottom Marquee - Reverse Direction */}
-        <div className="relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-slate-100/80 via-white/80 to-slate-100/80 dark:from-slate-900/80 dark:via-slate-800/80 dark:to-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-white/10 mt-8">
+        <div className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r from-slate-100/80 via-white/80 to-slate-100/80 dark:from-slate-900/80 dark:via-slate-800/80 dark:to-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-white/10 mt-4 sm:mt-8">
           <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 via-transparent to-red-500/5" />
-          <div className="flex animate-marquee-reverse py-3">
+          <div className="flex animate-marquee-reverse py-2 sm:py-3">
             {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
-              <div key={i} className="flex items-center gap-4 px-8">
-                <div className="flex items-center gap-2">
+              <div key={i} className="flex items-center gap-2 sm:gap-4 px-4 sm:px-8">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <div className={cn(
-                    "w-2 h-2 rounded-full",
+                    "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full",
                     item.positive ? "bg-emerald-500" : "bg-rose-500"
                   )} />
-                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{item.symbol}</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200">{item.symbol}</span>
                 </div>
                 <span className={cn(
-                  "text-sm font-medium",
+                  "text-xs sm:text-sm font-medium",
                   item.positive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
                 )}>
                   {item.change}
