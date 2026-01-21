@@ -123,13 +123,30 @@ export function ChatInput({
 
   return (
     <form onSubmit={handleSubmit} className="relative">
-      <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/50 rounded-2xl p-2 border border-slate-200 dark:border-slate-700/50 focus-within:border-teal-500/50 focus-within:ring-2 focus-within:ring-teal-500/20 transition-all">
+      {/* Listening indicator - more prominent */}
+      {isListening && (
+        <div className="absolute -top-12 left-0 right-0 flex items-center justify-center gap-2">
+          <div className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-full shadow-lg shadow-red-500/50">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+            </span>
+            🎤 Listening... Speak now
+          </div>
+        </div>
+      )}
+
+      <div className={`flex items-center gap-2 rounded-2xl p-2 border transition-all ${
+        isListening
+          ? 'bg-red-50 dark:bg-red-900/20 border-red-500 ring-2 ring-red-500/30'
+          : 'bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/50 focus-within:border-teal-500/50 focus-within:ring-2 focus-within:ring-teal-500/20'
+      }`}>
         <input
           ref={inputRef}
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder={placeholder}
+          placeholder={isListening ? '🎤 Speak now...' : placeholder}
           disabled={disabled || isLoading}
           className="flex-1 bg-transparent border-none outline-none px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
         />
@@ -140,14 +157,17 @@ export function ChatInput({
             type="button"
             onClick={toggleListening}
             disabled={disabled || isLoading}
-            className={`p-2 rounded-xl transition-all ${
+            className={`relative p-2.5 rounded-xl transition-all ${
               isListening
-                ? 'bg-red-500 text-white animate-pulse'
+                ? 'bg-red-500 text-white shadow-lg shadow-red-500/50'
                 : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600'
             }`}
             title={isListening ? 'Stop listening' : 'Voice input'}
           >
-            {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+            {isListening && (
+              <span className="absolute inset-0 rounded-xl animate-ping bg-red-500 opacity-50"></span>
+            )}
+            {isListening ? <MicOff size={20} className="relative z-10" /> : <Mic size={20} />}
           </button>
         )}
 
@@ -155,25 +175,25 @@ export function ChatInput({
         <button
           type="submit"
           disabled={!message.trim() || isLoading || disabled}
-          className={`p-2 rounded-xl transition-all ${
+          className={`p-2.5 rounded-xl transition-all ${
             message.trim() && !isLoading && !disabled
               ? 'bg-gradient-to-r from-teal-500 to-teal-600 text-white hover:from-teal-600 hover:to-teal-700 shadow-lg shadow-teal-500/25'
               : 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
           }`}
         >
           {isLoading ? (
-            <Loader2 size={18} className="animate-spin" />
+            <Loader2 size={20} className="animate-spin" />
           ) : (
-            <Send size={18} />
+            <Send size={20} />
           )}
         </button>
       </div>
 
-      {/* Listening indicator */}
-      {isListening && (
-        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-3 py-1 bg-red-500 text-white text-sm rounded-full animate-pulse">
-          Listening...
-        </div>
+      {/* Speech not supported message */}
+      {!speechSupported && (
+        <p className="text-xs text-slate-500 mt-1 text-center">
+          Voice input requires HTTPS and a supported browser
+        </p>
       )}
     </form>
   );
