@@ -77,6 +77,7 @@ export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
                 msg.intent &&
                 ['QUICK_ANALYSIS', 'SPECIFIC_ANALYSIS'].includes(msg.intent) &&
                 !Array.isArray(msg.data) &&
+                typeof msg.data === 'object' &&
                 'verdict' in msg.data ? (
                   <ResultCard data={msg.data as import('./useConcierge').QuickAnalysisResult} />
                 ) : msg.data &&
@@ -106,7 +107,7 @@ export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
             )}
 
             <span className="text-xs text-slate-400 dark:text-slate-500 block mt-1">
-              {msg.timestamp.toLocaleTimeString('en-US', {
+              {new Date(msg.timestamp).toLocaleTimeString('en-US', {
                 hour: '2-digit',
                 minute: '2-digit',
               })}
