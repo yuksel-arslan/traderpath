@@ -430,33 +430,34 @@ export default function AnalyzePage() {
             </div>
           </div>
 
-          {/* Analysis Controls - Full Width */}
+          {/* Timeframe Selection - Full Width */}
+          <div className="col-span-12">
+            <GlassCard className="p-3 sm:p-4 md:p-6">
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500" />
+                  Select Timeframe
+                </h3>
+                <TradeTypeSelector
+                  value={timeframe}
+                  onChange={(tf) => setTimeframe(tf)}
+                  variant="tabs"
+                  showCreditCost
+                  className="w-full"
+                />
+              </div>
+            </GlassCard>
+          </div>
+
+          {/* Coin Selector - Full Width with dynamic height */}
           <div className="col-span-12">
             <GlassCard className="p-3 sm:p-4 md:p-6" allowOverflow>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                {/* Left: Timeframe Selection */}
-                <div className="space-y-3 sm:space-y-4">
-                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500" />
-                    Select Timeframe
-                  </h3>
-                  <TradeTypeSelector
-                    value={timeframe}
-                    onChange={(tf) => setTimeframe(tf)}
-                    variant="tabs"
-                    showCreditCost
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Right: Coin Selector */}
-                <div className="space-y-3 sm:space-y-4 min-h-[100px] sm:min-h-[120px]">
-                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
-                    Select Coin to Analyze
-                  </h3>
-                  <CoinSelector timeframe={timeframe} />
-                </div>
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
+                  Select Coin to Analyze
+                </h3>
+                <CoinSelector timeframe={timeframe} />
               </div>
             </GlassCard>
           </div>
