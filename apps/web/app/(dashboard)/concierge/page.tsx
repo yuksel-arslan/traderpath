@@ -85,7 +85,6 @@ export default function ConciergePage() {
           <QuickCommands
             commands={quickCommands}
             onCommand={sendMessage}
-            onFetch={() => fetchQuickCommands('en')}
             isLoading={isLoading}
           />
 
