@@ -847,7 +847,7 @@ export default function AIExpertChatPage() {
                       'text-[10px] text-muted-foreground',
                       message.role === 'user' ? 'text-right block' : ''
                     )}>
-                      {message.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(message.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                     </span>
 
                     {/* Answer Footer - show for all assistant messages */}
