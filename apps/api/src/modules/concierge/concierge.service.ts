@@ -19,12 +19,6 @@ interface ConciergeResponse {
   analysisId?: string;
   verdict?: string;
   score?: number;
-  direction?: string;
-  entry?: number;
-  stopLoss?: number;
-  takeProfit1?: number;
-  takeProfit2?: number;
-  riskReward?: number;
   voltranSynthesis?: string;
 }
 
@@ -388,12 +382,11 @@ Need more credits? Visit the pricing page.`;
       const score = panelResult.score || 5;
       const synthesis = panelResult.voltranSynthesis || 'Analysis completed.';
 
-      const verdictEmoji = verdict === 'GO' ? 'GO' : verdict === 'AVOID' ? 'AVOID' : verdict === 'CONDITIONAL_GO' ? 'COND' : 'WAIT';
-      const directionText = panelResult.direction ? `(${panelResult.direction.toUpperCase()})` : '';
+      const verdictLabel = verdict === 'GO' ? 'GO' : verdict === 'AVOID' ? 'AVOID' : verdict === 'CONDITIONAL_GO' ? 'COND' : 'WAIT';
 
       const analysisMessage = `${symbol} ${interval.toUpperCase()} Analysis
 
-Verdict: ${verdictEmoji} ${directionText}
+Verdict: ${verdictLabel}
 Score: ${score}/10
 
 ${synthesis}`;
@@ -403,17 +396,11 @@ ${synthesis}`;
         intent: 'ANALYSIS',
         message: analysisMessage,
         creditsSpent: panelResult.creditsSpent || ANALYSIS_COST,
-        creditsRemaining: panelResult.creditsRemaining ?? (creditBalance - ANALYSIS_COST),
+        creditsRemaining: panelResult.remainingCredits ?? (creditBalance - ANALYSIS_COST),
         // Analysis-specific data
         analysisId: panelResult.analysisId,
         verdict: verdict,
         score: score,
-        direction: panelResult.direction,
-        entry: panelResult.entry,
-        stopLoss: panelResult.stopLoss,
-        takeProfit1: panelResult.takeProfit1,
-        takeProfit2: panelResult.takeProfit2,
-        riskReward: panelResult.riskReward,
         voltranSynthesis: synthesis,
       };
 

@@ -16,16 +16,8 @@ interface ChatMessage {
 }
 
 interface AnalysisData {
-  symbol?: string;
-  interval?: string;
   verdict?: 'GO' | 'CONDITIONAL_GO' | 'WAIT' | 'AVOID';
   score?: number;
-  direction?: 'long' | 'short';
-  entry?: number;
-  stopLoss?: number;
-  takeProfit1?: number;
-  takeProfit2?: number;
-  riskReward?: number;
   analysisId?: string;
 }
 
