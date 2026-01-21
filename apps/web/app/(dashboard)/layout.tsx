@@ -115,10 +115,15 @@ export default function DashboardLayout({
   // Get admin status from user
   const isAdmin = user?.isAdmin || false;
 
-  // Show preference modal for users who haven't selected yet
+  // Show preference modal on every new session (login)
   useEffect(() => {
-    // Check if user exists and preferredInterface is not set (null, undefined, or empty string)
-    if (user && !user.preferredInterface) {
+    if (!user) return;
+
+    // Check if preference modal was already shown in this session
+    const preferenceShownThisSession = sessionStorage.getItem('preferenceModalShown');
+
+    if (!preferenceShownThisSession) {
+      // Show modal on new session
       setShowPreferenceModal(true);
     }
   }, [user]);
@@ -133,10 +138,15 @@ export default function DashboardLayout({
       });
 
       if (res.ok) {
+        // Mark as shown for this session
+        sessionStorage.setItem('preferenceModalShown', 'true');
         setShowPreferenceModal(false);
-        // Redirect to concierge if that's what they chose
+
+        // Redirect based on selection
         if (preference === 'concierge') {
           router.push('/concierge');
+        } else {
+          router.push('/analyze');
         }
       }
     } catch (error) {
@@ -485,7 +495,10 @@ export default function DashboardLayout({
       {/* Interface Preference Modal - shown to new users */}
       <InterfacePreferenceModal
         isOpen={showPreferenceModal}
-        onClose={() => setShowPreferenceModal(false)}
+        onClose={() => {
+          sessionStorage.setItem('preferenceModalShown', 'true');
+          setShowPreferenceModal(false);
+        }}
         onSelect={handlePreferenceSelect}
       />
     </div>

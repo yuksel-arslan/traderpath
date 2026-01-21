@@ -557,6 +557,11 @@ Kullanıcı Hakları Aktif:
   - Analiz tamamlandığında `prisma.analysis.create` ile veritabanına kaydediliyor
   - Trade type bonus da ekleniyor (normal analiz akışıyla aynı)
   - Dosyalar: `ai-expert.service.ts`, `concierge.service.ts`
+- **Interface Preference Modal her girişte gösteriliyor**:
+  - SessionStorage kullanılarak her yeni session'da modal gösteriliyor
+  - Kullanıcı seçim yapınca veya modal'ı kapatınca session'a kaydediliyor
+  - UI seçilince `/analyze`, Concierge seçilince `/concierge` sayfasına yönlendirme
+  - Logout sonrası yeni login'de tekrar gösterilir (sessionStorage temizlenir)
 
 ---
 
