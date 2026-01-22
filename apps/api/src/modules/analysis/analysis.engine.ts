@@ -5228,14 +5228,33 @@ export const analysisEngine = {
         }
       }
 
-      // Use support level if it's better positioned
+      // Use support level if it's BELOW ATR-based stop (safer for LONG)
+      // For LONG positions, SL must be BELOW key support to avoid false stops
+      const support1 = assetScan.levels.support[0];
       const support2 = assetScan.levels.support[1];
-      if (support2 !== undefined) {
-        const supportStop = support2 - (atr * 0.3);
-        if (supportStop > stopPrice && supportStop < averageEntry) {
+
+      // Find the lowest relevant support that's below entry
+      const relevantSupports = [support1, support2]
+        .filter((s): s is number => s !== undefined && s < averageEntry)
+        .sort((a, b) => a - b); // Sort ascending (lowest first)
+
+      if (relevantSupports.length > 0) {
+        // Use the lowest support - buffer
+        const lowestSupport = relevantSupports[0];
+        const supportStop = lowestSupport - (atr * 0.3);
+
+        // Always use support-based stop if it's lower (safer)
+        if (supportStop < stopPrice) {
           stopPrice = supportStop;
-          sources.stopLoss.push('Asset Scanner support level');
+          sources.stopLoss.push('Asset Scanner support level (below support)');
         }
+      }
+
+      // Ensure minimum stop distance (at least 1.5% for safety)
+      const minStopDistanceLong = averageEntry * 0.015;
+      if (averageEntry - stopPrice < minStopDistanceLong) {
+        stopPrice = averageEntry - minStopDistanceLong;
+        sources.stopLoss.push('Minimum 1.5% stop distance applied');
       }
     } else {
       // Short direction
@@ -5251,14 +5270,33 @@ export const analysisEngine = {
         }
       }
 
-      // Use resistance level if it's better positioned
+      // Use resistance level if it's ABOVE ATR-based stop (safer for SHORT)
+      // For SHORT positions, SL must be ABOVE key resistance to avoid false stops
+      const resistance1 = assetScan.levels.resistance[0];
       const resistance2 = assetScan.levels.resistance[1];
-      if (resistance2 !== undefined) {
-        const resistanceStop = resistance2 + (atr * 0.3);
-        if (resistanceStop < stopPrice && resistanceStop > averageEntry) {
+
+      // Find the highest relevant resistance that's above entry
+      const relevantResistances = [resistance1, resistance2]
+        .filter((r): r is number => r !== undefined && r > averageEntry)
+        .sort((a, b) => b - a); // Sort descending
+
+      if (relevantResistances.length > 0) {
+        // Use the highest resistance + buffer
+        const highestResistance = relevantResistances[0];
+        const resistanceStop = highestResistance + (atr * 0.3);
+
+        // Always use resistance-based stop if it's higher (safer)
+        if (resistanceStop > stopPrice) {
           stopPrice = resistanceStop;
-          sources.stopLoss.push('Asset Scanner resistance level');
+          sources.stopLoss.push('Asset Scanner resistance level (above resistance)');
         }
+      }
+
+      // Ensure minimum stop distance (at least 1.5% for safety)
+      const minStopDistance = averageEntry * 0.015;
+      if (stopPrice - averageEntry < minStopDistance) {
+        stopPrice = averageEntry + minStopDistance;
+        sources.stopLoss.push('Minimum 1.5% stop distance applied');
       }
     }
 
