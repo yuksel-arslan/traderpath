@@ -255,6 +255,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-22 | Stop Loss hesaplaması destek/direnç seviyelerini dikkate almıyordu | LONG için SL destek seviyesinin ALTINA, SHORT için SL direnç seviyesinin ÜSTÜNE yerleştiriliyor. Minimum %1.5 stop mesafesi zorunlu | `analysis.engine.ts:5231-5300` |
 | 2026-01-22 | Scheduled Analysis kredi çekilmeden iade yapıyordu | `creditService.deduct()` yerine `creditService.charge()` kullanıldı. Sadece kredi çekildiyse iade yapılıyor. `creditsCharged` flag eklendi | `scheduled-reports.service.ts:99-155` |
 | 2026-01-22 | AI Concierge platform sorularını anlamıyordu | PLATFORM_INFO ve CONVERSATIONAL intent'leri eklendi. "özetle", "anlat", "platform nedir" gibi sorular artık cevaplanıyor | `concierge.service.ts`, `system-prompt.ts` |
+| 2026-01-22 | Production crash - @google/genai require ESM hatası | `require()` yerine ES module `import` kullanıldı. ESM bundle'da dynamic require desteklenmiyor | `apps/api/src/core/gemini.ts` |
 
 ---
 
