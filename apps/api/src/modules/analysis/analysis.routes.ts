@@ -10,6 +10,7 @@ import { costService } from '../costs/cost.service';
 import { creditCostsService } from '../costs/credit-costs.service';
 import { analysisEngine } from './analysis.engine';
 import { config } from '../../core/config';
+import { callGeminiWithRetry } from '../../core/gemini';
 import { TradeType, getTradeConfig, getStepConfig, getTradeTypeFromInterval } from './config/trade-config';
 import { economicCalendarService } from './services/economic-calendar.service';
 import { getCautionRate, calculateCautionOutcomes, calculateExpiredOutcomes } from '../reports/outcome.service';
@@ -38,6 +39,7 @@ interface GeminiResult {
 }
 
 // Gemini AI for generating insights with cost tracking
+// Uses centralized callGeminiWithRetry for admin-configurable model
 async function getGeminiInsight(
   prompt: string,
   operation: string,
@@ -52,48 +54,18 @@ async function getGeminiInsight(
   const startTime = Date.now();
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 500,
-          },
-        }),
-      }
-    );
+    const response = await callGeminiWithRetry({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 500,
+      },
+    }, 3, operation);
 
-    if (!response.ok) {
-      console.error('Gemini API error:', response.statusText);
-      return { text: 'AI analysis temporarily unavailable', inputTokens: 0, outputTokens: 0, costUsd: 0 };
-    }
-
-    // Safely parse JSON response
-    const responseText = await response.text();
-    if (!responseText || responseText.trim() === '') {
-      console.error('Empty response from Gemini API');
-      return { text: 'AI analysis temporarily unavailable', inputTokens: 0, outputTokens: 0, costUsd: 0 };
-    }
-
-    let data: {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
-    };
-    try {
-      data = JSON.parse(responseText);
-    } catch {
-      console.error('Invalid JSON response from Gemini API');
-      return { text: 'AI analysis temporarily unavailable', inputTokens: 0, outputTokens: 0, costUsd: 0 };
-    }
-
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No insight generated';
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || 'No insight generated';
 
     // Extract token usage from response
-    const usageMetadata = data.usageMetadata || {};
+    const usageMetadata = response.usageMetadata || {};
     const inputTokens = usageMetadata.promptTokenCount || Math.ceil(prompt.length / 4);
     const outputTokens = usageMetadata.candidatesTokenCount || Math.ceil(text.length / 4);
 
@@ -111,7 +83,7 @@ async function getGeminiInsight(
       userId,
       symbol,
       durationMs,
-      metadata: { model: 'gemini-2.0-flash' },
+      metadata: { operation },
     }).catch(err => console.error('Failed to log cost:', err));
 
     return { text, inputTokens, outputTokens, costUsd };

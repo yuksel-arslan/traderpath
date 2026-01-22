@@ -5,6 +5,7 @@
 
 import { randomUUID } from 'crypto';
 import { config } from '../../core/config';
+import { callGeminiWithRetry } from '../../core/gemini';
 import { contractSecurityService } from '../security/contract-security.service';
 import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig } from './config/trade-config';
 import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/indicator-interpreter.service';
@@ -97,25 +98,15 @@ Respond ONLY in the following JSON format, nothing else:
   "confidence": confidence score between 0-100
 }`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 200,
-        },
-      }),
-    });
+    const response = await callGeminiWithRetry({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 200,
+      },
+    }, 3, 'market_gate');
 
-    if (!response.ok) {
-      console.warn('Gemini API error, falling back to rule-based evaluation');
-      return evaluateMarketGateRuleBased(input);
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
 
     // Parse JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -290,24 +281,15 @@ Respond ONLY in the following JSON format:
   "directionConfidence": 0-100
 }`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 250,
-        },
-      }),
-    });
+    const response = await callGeminiWithRetry({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 250,
+      },
+    }, 3, 'asset_gate');
 
-    if (!response.ok) {
-      return evaluateAssetGateRuleBased(input);
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -495,21 +477,12 @@ Respond ONLY in the following JSON format:
   "riskAdjustment": -100 to +100 (negative means reduce position size, positive means can increase)
 }`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
-      }),
-    });
+    const response = await callGeminiWithRetry({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
+    }, 3, 'safety_gate');
 
-    if (!response.ok) {
-      return evaluateSafetyGateRuleBased(input);
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -655,21 +628,12 @@ Respond ONLY in the following JSON format:
   "urgency": "immediate" or "soon" or "wait" or "avoid"
 }`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
-      }),
-    });
+    const response = await callGeminiWithRetry({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
+    }, 3, 'timing_gate');
 
-    if (!response.ok) {
-      return evaluateTimingGateRuleBased(input);
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -807,21 +771,12 @@ Respond ONLY in the following JSON format:
   "planQuality": "excellent" or "good" or "acceptable" or "poor"
 }`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
-      }),
-    });
+    const response = await callGeminiWithRetry({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
+    }, 3, 'trade_plan_gate');
 
-    if (!response.ok) {
-      return evaluateTradePlanGateRuleBased(input);
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -957,21 +912,12 @@ Respond ONLY in the following JSON format:
   "trapRisk": "minimal" or "moderate" or "elevated" or "severe"
 }`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
-      }),
-    });
+    const response = await callGeminiWithRetry({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
+    }, 3, 'trap_gate');
 
-    if (!response.ok) {
-      return evaluateTrapGateRuleBased(input);
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -1185,28 +1131,15 @@ RULES:
 - No questions at the end
 - Keep each section to 2-3 sentences max`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 400,
-          },
-        }),
-      }
-    );
+    const response = await callGeminiWithRetry({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 400,
+      },
+    }, 3, 'ai_summary');
 
-    if (!response.ok) {
-      console.error(`[AI Summary] Gemini API error: ${response.status}`);
-      return fallbackResponse;
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
 
     // Parse the response
     const aiSummaryMatch = text.match(/AI_SUMMARY:\s*(.+?)(?=TOKENOMICS_INSIGHT:|$)/s);
@@ -2737,26 +2670,12 @@ ${headlines}
 Focus on: What's driving sentiment? Any notable events? Is news aligned with price action?`;
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 200 },
-        }),
-      }
-    );
+    const response = await callGeminiWithRetry({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 200 },
+    }, 3, 'news_summary');
 
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
-    }
-
-    const data = await safeJsonParse<{
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    }>(response);
-    return data.candidates?.[0]?.content?.parts?.[0]?.text ||
+    return response.candidates?.[0]?.content?.parts?.[0]?.text || response.text ||
            `${newsItems.length} news items analyzed. Sentiment: ${newsItems.filter(n => n.sentiment === 'positive').length > newsItems.filter(n => n.sentiment === 'negative').length ? 'positive' : 'mixed'}.`;
   } catch {
     return `${newsItems.length} recent news items. ${newsItems.filter(n => n.sentiment === 'positive').length} positive, ${newsItems.filter(n => n.sentiment === 'negative').length} negative signals detected.`;

@@ -725,6 +725,20 @@ Kullanıcı Hakları Aktif:
   - Gradient renkli quick command butonları
   - Shimmer animasyonu ile voice butonu
   - Her 60 saniyede otomatik veri yenileme
+- **AI Concierge sesi daha enerjik yapıldı**:
+  - Speech rate 0.9 → 1.15 (daha hızlı konuşma)
+  - Pitch 0.95 → 1.05 (daha canlı ton)
+  - Karşılama mesajları kısaltıldı ve enerjikleştirildi
+- **Gemini API Merkezi Yönetim (Admin Configurable)**:
+  - Tüm Gemini API çağrıları `callGeminiWithRetry()` fonksiyonunu kullanıyor
+  - Admin panelinden model değiştirilebilir (Redis cache ile)
+  - 3 farklı model tipi: 'default', 'expert', 'concierge'
+  - Redis key: `admin:gemini:settings`
+  - Güncellenen dosyalar:
+    - `apps/api/src/core/gemini.ts` - Merkezi API client
+    - `apps/api/src/modules/analysis/analysis.engine.ts` - 8 Gemini çağrısı
+    - `apps/api/src/modules/analysis/analysis.routes.ts` - getGeminiInsight
+    - `apps/api/src/modules/expert/expert.service.ts` - Expert soru
 
 ---
 
