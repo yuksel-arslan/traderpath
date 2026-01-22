@@ -11,6 +11,8 @@ import {
   Sparkles,
   Check,
   Loader2,
+  Mic,
+  Volume2,
 } from 'lucide-react';
 import { authFetch } from '@/lib/api';
 
@@ -115,9 +117,30 @@ export function InterfacePreferenceModal({
                 RECOMMENDED
               </div>
 
-              {/* Icon */}
-              <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
-                <Bot className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
+              {/* Icon with Voice Animation */}
+              <div className="relative mb-3 sm:mb-4">
+                {/* Animated rings */}
+                <div className="absolute inset-0 w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-teal-500/20 animate-ping opacity-75" style={{ animationDuration: '2s' }} />
+                <div className="absolute inset-[-4px] sm:inset-[-6px] w-[52px] h-[52px] sm:w-[68px] sm:h-[68px] rounded-2xl sm:rounded-3xl border-2 border-teal-500/30 animate-pulse" />
+
+                {/* Main icon */}
+                <div className="relative w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-teal-500/30">
+                  <Bot className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
+                </div>
+
+                {/* Sound wave visualization */}
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-end gap-0.5 h-3 sm:h-4">
+                  {[...Array(5)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-0.5 sm:w-1 bg-gradient-to-t from-teal-500 to-cyan-400 rounded-full animate-soundwave"
+                      style={{
+                        animationDelay: `${i * 0.1}s`,
+                        animationDuration: `${0.4 + i * 0.1}s`,
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
 
               {/* Title */}
@@ -141,8 +164,11 @@ export function InterfacePreferenceModal({
                   One message analysis
                 </li>
                 <li className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                  <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500 flex-shrink-0" />
-                  Voice commands
+                  <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500 flex-shrink-0 animate-pulse" />
+                  <span className="flex items-center gap-1">
+                    Voice commands
+                    <Volume2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-teal-400" />
+                  </span>
                 </li>
               </ul>
 
