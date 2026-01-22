@@ -699,6 +699,15 @@ Kullanıcı Hakları Aktif:
   - Mesaj içeriğinden otomatik dil algılama
   - Türkçe kelimelerden dil tespiti (nasıl, nedir, söyle, istiyorum vb.)
   - `detectedLanguage` field eklendi ConciergeResponse'a
+- **PDF Rapor 7 sayfaya yeniden düzenlendi**:
+  - Page 1: Executive Summary
+  - Page 2: Trade Plan
+  - Page 3: Tokenomics Analysis
+  - Page 4: Analysis Steps 1-2 (Market Pulse + Asset Scanner)
+  - Page 5: Analysis Steps 3-4 (Safety Check + Timing)
+  - Page 6: Analysis Steps 5-6 (Trade Plan + Trap Check)
+  - Page 7: Final Verdict
+  - Fonksiyonlar: `generatePageSteps12`, `generatePageSteps34`, `generatePageSteps56`
 
 ---
 
