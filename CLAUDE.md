@@ -257,6 +257,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-22 | AI Concierge platform sorularını anlamıyordu | PLATFORM_INFO ve CONVERSATIONAL intent'leri eklendi. "özetle", "anlat", "platform nedir" gibi sorular artık cevaplanıyor | `concierge.service.ts`, `system-prompt.ts` |
 | 2026-01-22 | Production crash - @google/genai require ESM hatası | `require()` yerine ES module `import` kullanıldı. ESM bundle'da dynamic require desteklenmiyor | `apps/api/src/core/gemini.ts` |
 | 2026-01-22 | Email raporu gönderilemiyor - symbol ve takeProfits eksik | Reports sayfasında symbol/analysisId/generatedAt report seviyesindeydi, reportData içine eklendi. RecentAnalyses'ta step5.takeProfits dizisi kullanılmalıydı (takeProfit1/2/3 yok) | `reports/page.tsx`, `RecentAnalyses.tsx` |
+| 2026-01-22 | AI Concierge Türkçe yanıt vermiyor ve cümleler kesiliyor | VOLTRAN synthesis bypass edildi, `generateNaturalResponse()` kullanılıyor. Akıllı dil tespiti eklendi (80+ Türkçe kelime + özel karakterler). Tüm handler'lar detectedLanguage kullanıyor | `concierge.service.ts`, `ai-expert.service.ts` |
 
 ---
 
