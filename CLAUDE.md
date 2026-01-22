@@ -677,6 +677,11 @@ Kullanıcı Hakları Aktif:
   - Her iki dilde (TR/EN) kapsamlı platform açıklaması
   - 19 farklı intent tipi destekleniyor (17'den yükseltildi)
   - Rule-based detection ve Gemini fallback için yeni pattern'ler
+- **Gemini SDK güncellendi**:
+  - `@google/genai` SDK (v1.38.0) kullanılıyor (eski fetch tabanlı yaklaşım yerine)
+  - Daha iyi hata yönetimi ve otomatik retry
+  - Backward compatibility korundu (GeminiResponse format)
+  - Default model: `gemini-2.5-flash`
 
 ---
 
