@@ -800,7 +800,7 @@ class ConciergeService {
       }
     }
     // Greetings
-    else if (
+    if (
       lower.includes('merhaba') ||
       lower.includes('selam') ||
       lower.includes('hello') ||
