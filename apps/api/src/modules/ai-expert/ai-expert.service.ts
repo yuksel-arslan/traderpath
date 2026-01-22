@@ -1705,6 +1705,8 @@ FORMAT: Just your professional ${tradeCtx.label} synthesis about ${symbol}. Star
     const { symbol, userId, language = 'en', tradeType = 'dayTrade', interval = '4h' } = params;
     const upperSymbol = symbol.toUpperCase();
 
+    console.log(`[AIExpert] analyzeWithExpertPanel called: symbol=${upperSymbol}, tradeType=${tradeType}, interval=${interval}, language=${language}`);
+
     // Check if symbol is supported
     if (!this.SUPPORTED_SYMBOLS.includes(upperSymbol)) {
       return {

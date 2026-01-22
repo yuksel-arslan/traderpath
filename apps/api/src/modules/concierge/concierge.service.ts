@@ -365,11 +365,15 @@ function detectIntent(message: string): {
       interval = '1d';
     } else if (lower.includes('1w') || lower.includes('weekly') || lower.includes('haftalık')) {
       interval = '1W';
-    } else if (lower.includes('scalp')) {
+    } else if (lower.includes('scalp') || lower.includes('skalp') || lower.includes('skalpıng')) {
       interval = '15m';
     } else if (lower.includes('swing')) {
       interval = '1d';
+    } else if (lower.includes('day trade') || lower.includes('daytrade') || lower.includes('intraday')) {
+      interval = '4h';
     }
+
+    console.log(`[Concierge] Detected: symbol=${detectedCoin}, interval=${interval}, message="${lower}"`);
 
     return {
       intent: 'ANALYSIS',
@@ -1618,6 +1622,8 @@ Or visit /scheduled to delete.`,
     try {
       // Use AI Expert Panel for analysis
       const tradeType = getTradeType(interval);
+
+      console.log(`[Concierge] Analysis request: symbol=${symbol}, interval=${interval}, tradeType=${tradeType}, language=${language}`);
 
       const panelResult = await aiExpertService.analyzeWithExpertPanel({
         symbol,
