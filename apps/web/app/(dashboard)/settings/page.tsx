@@ -134,6 +134,20 @@ export default function SettingsPage() {
   const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
   const [profileSaveError, setProfileSaveError] = useState('');
 
+  // Language state
+  interface Language {
+    code: string;
+    name: string;
+    nativeName: string;
+    direction: 'ltr' | 'rtl';
+    flag: string;
+  }
+  const [languages, setLanguages] = useState<Language[]>([]);
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [isSavingLanguage, setIsSavingLanguage] = useState(false);
+  const [languageSaveSuccess, setLanguageSaveSuccess] = useState(false);
+  const [isDetectingLanguage, setIsDetectingLanguage] = useState(false);
+
   const handleAvatarButtonClick = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
@@ -176,11 +190,12 @@ export default function SettingsPage() {
     const fetchUserData = async () => {
       try {
         // Fetch all data in parallel for faster loading
-        const [userResponse, settingsResponse, alertSettingsResponse, twoFactorResponse] = await Promise.all([
+        const [userResponse, settingsResponse, alertSettingsResponse, twoFactorResponse, languagesResponse] = await Promise.all([
           authFetch('/api/auth/me'),
           authFetch('/api/user/settings'),
           authFetch('/api/alerts/settings'),
           authFetch('/api/auth/2fa/status').catch(() => null),
+          authFetch('/api/user/languages').catch(() => null),
         ]);
 
         // Process user profile
@@ -206,8 +221,21 @@ export default function SettingsPage() {
         // Process settings
         if (settingsResponse.ok) {
           const settingsData = await settingsResponse.json();
-          if (settingsData.success && settingsData.data.reportValidityPeriods) {
-            setReportValidityPeriods(settingsData.data.reportValidityPeriods);
+          if (settingsData.success && settingsData.data) {
+            if (settingsData.data.reportValidityPeriods) {
+              setReportValidityPeriods(settingsData.data.reportValidityPeriods);
+            }
+            if (settingsData.data.preferredLanguage) {
+              setSelectedLanguage(settingsData.data.preferredLanguage);
+            }
+          }
+        }
+
+        // Process languages
+        if (languagesResponse?.ok) {
+          const languagesData = await languagesResponse.json();
+          if (languagesData.success && languagesData.data?.languages) {
+            setLanguages(languagesData.data.languages);
           }
         }
 
@@ -538,6 +566,45 @@ export default function SettingsPage() {
       console.error('Failed to save report settings:', error);
     } finally {
       setIsSavingReportSettings(false);
+    }
+  };
+
+  const handleSaveLanguage = async (languageCode: string) => {
+    setIsSavingLanguage(true);
+    setLanguageSaveSuccess(false);
+    try {
+      const response = await authFetch('/api/user/language', {
+        method: 'PATCH',
+        body: JSON.stringify({ preferredLanguage: languageCode }),
+      });
+
+      if (response.ok) {
+        setSelectedLanguage(languageCode);
+        setLanguageSaveSuccess(true);
+        setTimeout(() => setLanguageSaveSuccess(false), 3000);
+      }
+    } catch (error) {
+      console.error('Failed to save language:', error);
+    } finally {
+      setIsSavingLanguage(false);
+    }
+  };
+
+  const handleDetectLanguage = async () => {
+    setIsDetectingLanguage(true);
+    try {
+      const response = await authFetch('/api/user/detect-language');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data?.detected) {
+          // Auto-save the detected language
+          await handleSaveLanguage(data.data.detected);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to detect language:', error);
+    } finally {
+      setIsDetectingLanguage(false);
     }
   };
 
@@ -1572,20 +1639,92 @@ export default function SettingsPage() {
 
                 <div className="space-y-6">
                   {/* Theme */}
-                  <div>
+                  <div className="p-4 bg-background rounded-lg">
                     <h3 className="font-medium mb-4">Theme</h3>
                     <ThemeToggle variant="buttons" />
                   </div>
 
                   {/* Language */}
-                  <div>
-                    <h3 className="font-medium mb-4">Language</h3>
-                    <select className="w-full px-4 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none">
-                      <option value="en">English</option>
-                      <option value="tr">Türkçe</option>
-                      <option value="es">Español</option>
-                      <option value="de">Deutsch</option>
-                    </select>
+                  <div className="p-4 bg-background rounded-lg">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-accent rounded-full">
+                          <Globe className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">Language</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Choose your preferred language for the interface
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleDetectLanguage}
+                        disabled={isDetectingLanguage}
+                        className="text-sm text-primary hover:underline flex items-center gap-1 disabled:opacity-50"
+                      >
+                        {isDetectingLanguage ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Detecting...
+                          </>
+                        ) : (
+                          'Auto-detect'
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      <select
+                        value={selectedLanguage}
+                        onChange={(e) => handleSaveLanguage(e.target.value)}
+                        disabled={isSavingLanguage}
+                        className="w-full px-4 py-3 bg-card border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none disabled:opacity-50"
+                      >
+                        {languages.length > 0 ? (
+                          languages.map((lang) => (
+                            <option key={lang.code} value={lang.code}>
+                              {lang.flag} {lang.nativeName} ({lang.name})
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="en">🇺🇸 English (English)</option>
+                            <option value="tr">🇹🇷 Türkçe (Turkish)</option>
+                            <option value="ar">🇸🇦 العربية (Arabic)</option>
+                            <option value="es">🇪🇸 Español (Spanish)</option>
+                            <option value="de">🇩🇪 Deutsch (German)</option>
+                            <option value="fr">🇫🇷 Français (French)</option>
+                            <option value="pt">🇧🇷 Português (Portuguese)</option>
+                            <option value="ru">🇷🇺 Русский (Russian)</option>
+                            <option value="zh">🇨🇳 简体中文 (Chinese)</option>
+                            <option value="ja">🇯🇵 日本語 (Japanese)</option>
+                            <option value="ko">🇰🇷 한국어 (Korean)</option>
+                          </>
+                        )}
+                      </select>
+
+                      {isSavingLanguage && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Saving...
+                        </div>
+                      )}
+
+                      {languageSaveSuccess && (
+                        <div className="flex items-center gap-2 text-sm text-green-500">
+                          <Check className="w-4 h-4" />
+                          Language saved successfully!
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 p-3 bg-blue-500/10 rounded-lg">
+                        <Info className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                        <p className="text-xs text-blue-600 dark:text-blue-400">
+                          Your language preference will be used across the platform, including AI Concierge responses.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

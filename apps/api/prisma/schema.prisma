@@ -72,6 +72,7 @@ model User {
   notificationSettings Json @default("{}") @map("notification_settings")
   reportValidityPeriods Int @default(50) @map("report_validity_periods") // Number of periods before report expires
   preferredInterface String? @map("preferred_interface") @db.VarChar(20) // 'ui' | 'concierge' | null (not selected)
+  preferredLanguage String @default("en") @map("preferred_language") @db.VarChar(10) // Language code: en, tr, ar, es, de, fr, etc.
 
   // Social Notification Settings
   telegramChatId   String?  @map("telegram_chat_id") @db.VarChar(50)

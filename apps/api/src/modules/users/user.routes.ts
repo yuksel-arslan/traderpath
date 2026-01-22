@@ -7,6 +7,13 @@ import { z } from 'zod';
 import { prisma } from '../../core/database';
 import { authenticate } from '../../core/auth/middleware';
 import { creditService } from '../credits/credit.service';
+import {
+  SUPPORTED_LANGUAGES,
+  DEFAULT_LANGUAGE,
+  isLanguageSupported,
+  detectLanguageFromHeader,
+  getLanguageFromCountry,
+} from '../../config/languages';
 
 export default async function userRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
@@ -92,6 +99,7 @@ export default async function userRoutes(app: FastifyInstance) {
   const settingsSchema = z.object({
     reportValidityPeriods: z.number().min(10).max(500).optional(),
     notificationSettings: z.record(z.boolean()).optional(),
+    preferredLanguage: z.string().min(2).max(5).optional(),
   });
 
   app.patch('/profile', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -126,11 +134,22 @@ export default async function userRoutes(app: FastifyInstance) {
 
   /**
    * PATCH /api/user/settings
-   * Update user settings (report validity, notifications, etc.)
+   * Update user settings (report validity, notifications, language, etc.)
    */
   app.patch('/settings', async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.user!.id;
     const body = settingsSchema.parse(request.body);
+
+    // Validate language code if provided
+    if (body.preferredLanguage && !isLanguageSupported(body.preferredLanguage)) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'INVALID_LANGUAGE',
+          message: `Language '${body.preferredLanguage}' is not supported.`,
+        },
+      });
+    }
 
     const user = await prisma.user.update({
       where: { id: userId },
@@ -142,6 +161,7 @@ export default async function userRoutes(app: FastifyInstance) {
       data: {
         reportValidityPeriods: user.reportValidityPeriods,
         notificationSettings: user.notificationSettings,
+        preferredLanguage: user.preferredLanguage,
       },
     });
   });
@@ -159,6 +179,7 @@ export default async function userRoutes(app: FastifyInstance) {
         reportValidityPeriods: true,
         notificationSettings: true,
         preferredCoins: true,
+        preferredLanguage: true,
       },
     });
 
@@ -171,7 +192,10 @@ export default async function userRoutes(app: FastifyInstance) {
 
     return reply.send({
       success: true,
-      data: user,
+      data: {
+        ...user,
+        preferredLanguage: user.preferredLanguage || DEFAULT_LANGUAGE,
+      },
     });
   });
 
@@ -290,6 +314,119 @@ export default async function userRoutes(app: FastifyInstance) {
     return reply.send({
       success: true,
       data: balance,
+    });
+  });
+
+  // ===========================================
+  // Language Preference Endpoints
+  // ===========================================
+
+  /**
+   * GET /api/user/languages
+   * Get list of supported languages
+   */
+  app.get('/languages', async (_request: FastifyRequest, reply: FastifyReply) => {
+    return reply.send({
+      success: true,
+      data: {
+        languages: SUPPORTED_LANGUAGES,
+        defaultLanguage: DEFAULT_LANGUAGE,
+      },
+    });
+  });
+
+  /**
+   * GET /api/user/language
+   * Get user's preferred language
+   */
+  app.get('/language', async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = request.user!.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferredLanguage: true },
+    });
+
+    if (!user) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: 'USER_NOT_FOUND', message: 'User not found' },
+      });
+    }
+
+    return reply.send({
+      success: true,
+      data: {
+        preferredLanguage: user.preferredLanguage || DEFAULT_LANGUAGE,
+      },
+    });
+  });
+
+  /**
+   * PATCH /api/user/language
+   * Update user's preferred language
+   */
+  const languageSchema = z.object({
+    preferredLanguage: z.string().min(2).max(5),
+  });
+
+  app.patch('/language', async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = request.user!.id;
+    const body = languageSchema.parse(request.body);
+
+    // Validate language code
+    if (!isLanguageSupported(body.preferredLanguage)) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'INVALID_LANGUAGE',
+          message: `Language '${body.preferredLanguage}' is not supported. Supported languages: ${SUPPORTED_LANGUAGES.map(l => l.code).join(', ')}`,
+        },
+      });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { preferredLanguage: body.preferredLanguage },
+    });
+
+    return reply.send({
+      success: true,
+      data: {
+        preferredLanguage: user.preferredLanguage,
+      },
+    });
+  });
+
+  /**
+   * GET /api/user/detect-language
+   * Auto-detect language based on browser header or IP location
+   */
+  app.get('/detect-language', async (request: FastifyRequest, reply: FastifyReply) => {
+    // First try browser Accept-Language header
+    const acceptLanguage = request.headers['accept-language'];
+    const detectedFromHeader = detectLanguageFromHeader(acceptLanguage);
+
+    // Get country from various headers (set by CDN/proxy)
+    const country =
+      (request.headers['cf-ipcountry'] as string) || // Cloudflare
+      (request.headers['x-country-code'] as string) || // Custom
+      (request.headers['x-vercel-ip-country'] as string); // Vercel
+
+    let detectedFromCountry: string | null = null;
+    if (country) {
+      detectedFromCountry = getLanguageFromCountry(country);
+    }
+
+    return reply.send({
+      success: true,
+      data: {
+        detected: detectedFromHeader,
+        fromBrowser: detectedFromHeader,
+        fromCountry: detectedFromCountry,
+        country: country || null,
+        acceptLanguageHeader: acceptLanguage || null,
+      },
     });
   });
 }
