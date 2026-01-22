@@ -279,7 +279,7 @@ export default function DashboardPage() {
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [recentAnalyses, setRecentAnalyses] = useState<RecentAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly'>('weekly');
+  const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const initialLoadDone = useRef(false);
 
   const fetchData = useCallback(async (forceRefresh = false) => {
@@ -410,23 +410,41 @@ export default function DashboardPage() {
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
 
+    // Hours for daily view (3-hour buckets)
     const hours: number[] = [];
     for (let h = 0; h < 24; h += 3) hours.push(h);
 
-    const days: string[] = [];
-    const dayLabels: string[] = [];
+    // Days for weekly view (last 7 days)
+    const weekDays: string[] = [];
+    const weekDayLabels: string[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      days.push(d.toISOString().split('T')[0]);
-      dayLabels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
+      weekDays.push(d.toISOString().split('T')[0]);
+      weekDayLabels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
+    }
+
+    // Days for monthly view (last 30 days, grouped by week)
+    const monthWeeks: { start: Date; end: Date; label: string }[] = [];
+    for (let i = 3; i >= 0; i--) {
+      const weekEnd = new Date();
+      weekEnd.setDate(weekEnd.getDate() - (i * 7));
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekStart.getDate() - 6);
+      monthWeeks.push({
+        start: weekStart,
+        end: weekEnd,
+        label: `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+      });
     }
 
     const hourlyPnL: Record<number, number[]> = {};
     hours.forEach(h => { hourlyPnL[h] = []; });
 
     const dailyPnL: Record<string, number[]> = {};
-    days.forEach(day => { dailyPnL[day] = []; });
+    weekDays.forEach(day => { dailyPnL[day] = []; });
+
+    const weeklyPnL: number[][] = [[], [], [], []];
 
     recentAnalyses
       .filter(o => o.unrealizedPnL !== undefined && o.createdAt)
@@ -434,19 +452,30 @@ export default function DashboardPage() {
         const tradeDate = new Date(o.createdAt);
         const tradeDateStr = tradeDate.toISOString().split('T')[0];
         const tradeHour = tradeDate.getHours();
+        const pnl = o.unrealizedPnL || 0;
 
+        // Daily (today's hourly data)
         if (tradeDateStr === todayStr) {
           const hourBucket = Math.floor(tradeHour / 3) * 3;
           if (hourlyPnL[hourBucket] !== undefined) {
-            hourlyPnL[hourBucket].push(o.unrealizedPnL || 0);
+            hourlyPnL[hourBucket].push(pnl);
           }
         }
 
+        // Weekly (last 7 days)
         if (dailyPnL[tradeDateStr]) {
-          dailyPnL[tradeDateStr].push(o.unrealizedPnL || 0);
+          dailyPnL[tradeDateStr].push(pnl);
         }
+
+        // Monthly (last 4 weeks)
+        monthWeeks.forEach((week, idx) => {
+          if (tradeDate >= week.start && tradeDate <= week.end) {
+            weeklyPnL[idx].push(pnl);
+          }
+        });
       });
 
+    // Build daily chart data (hourly)
     const dailyChartData = hours.map((h) => {
       const trades = hourlyPnL[h];
       const avgPnl = trades.length > 0 ? trades.reduce((sum, v) => sum + v, 0) / trades.length : 0;
@@ -460,11 +489,12 @@ export default function DashboardPage() {
       };
     });
 
-    const weeklyChartData = days.map((day, i) => {
+    // Build weekly chart data (daily)
+    const weeklyChartData = weekDays.map((day, i) => {
       const trades = dailyPnL[day];
       const avgPnl = trades.length > 0 ? trades.reduce((sum, v) => sum + v, 0) / trades.length : 0;
       return {
-        name: dayLabels[i],
+        name: weekDayLabels[i],
         date: day,
         pnl: avgPnl,
         positive: Math.max(0, avgPnl),
@@ -473,15 +503,57 @@ export default function DashboardPage() {
       };
     });
 
-    return pnlViewMode === 'daily' ? dailyChartData : weeklyChartData;
+    // Build monthly chart data (weekly)
+    const monthlyChartData = monthWeeks.map((week, i) => {
+      const trades = weeklyPnL[i];
+      const avgPnl = trades.length > 0 ? trades.reduce((sum, v) => sum + v, 0) / trades.length : 0;
+      return {
+        name: week.label,
+        pnl: avgPnl,
+        positive: Math.max(0, avgPnl),
+        negative: Math.min(0, avgPnl),
+        count: trades.length,
+      };
+    });
+
+    if (pnlViewMode === 'daily') return dailyChartData;
+    if (pnlViewMode === 'monthly') return monthlyChartData;
+    return weeklyChartData;
   };
 
   const chartData = buildChartData();
-  const relevantTrades = recentAnalyses.filter(o => o.unrealizedPnL !== undefined);
-  const avgPnL = relevantTrades.length > 0
-    ? relevantTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / relevantTrades.length
-    : 0;
-  const hasChartData = relevantTrades.length >= 1;
+
+  // Calculate avgPnL based on selected period
+  const calculatePeriodAvgPnL = () => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    let periodTrades = recentAnalyses.filter(o => o.unrealizedPnL !== undefined && o.createdAt);
+
+    if (pnlViewMode === 'daily') {
+      // Only today's trades
+      periodTrades = periodTrades.filter(o => {
+        const tradeDateStr = new Date(o.createdAt).toISOString().split('T')[0];
+        return tradeDateStr === todayStr;
+      });
+    } else if (pnlViewMode === 'weekly') {
+      // Last 7 days
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      periodTrades = periodTrades.filter(o => new Date(o.createdAt) >= weekAgo);
+    } else {
+      // Last 30 days
+      const monthAgo = new Date();
+      monthAgo.setDate(monthAgo.getDate() - 30);
+      periodTrades = periodTrades.filter(o => new Date(o.createdAt) >= monthAgo);
+    }
+
+    if (periodTrades.length === 0) return 0;
+    return periodTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / periodTrades.length;
+  };
+
+  const avgPnL = calculatePeriodAvgPnL();
+  const hasChartData = recentAnalyses.filter(o => o.unrealizedPnL !== undefined).length >= 1;
   const activeTrades = recentAnalyses.filter(t => t.outcome === 'pending');
 
   if (loading) {
@@ -497,52 +569,34 @@ export default function DashboardPage() {
 
   return (
     <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-6">
-      {/* ===== SECTION 1: Credits & Quick Actions ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Credit Balance */}
-        <div className="lg:col-span-1 relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-amber-200/50 dark:border-transparent">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-500/10 dark:from-amber-500/20 via-transparent to-transparent" />
-          <div className="relative z-10 p-5">
-            <div className="flex items-center gap-4">
-              <div className="relative shrink-0">
-                <div className="absolute inset-0 bg-amber-500/30 dark:bg-amber-500/40 blur-xl rounded-full animate-pulse" />
-                <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-500 flex items-center justify-center shadow-lg">
-                  <Gem className="w-7 h-7 text-white" />
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-amber-600 dark:text-slate-400 uppercase tracking-wider">Credits</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-gray-900 dark:text-white">{formatCredits(credits)}</span>
-                  {credits < 10 && credits > 0 && (
-                    <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-full animate-pulse">
-                      Low
-                    </span>
-                  )}
-                  {credits === 0 && (
-                    <span className="text-xs px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full animate-pulse">
-                      Empty
-                    </span>
-                  )}
-                </div>
+      {/* ===== SECTION 1: Credits ===== */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-amber-200/50 dark:border-transparent">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-500/10 dark:from-amber-500/20 via-transparent to-transparent" />
+        <div className="relative z-10 p-5">
+          <div className="flex items-center gap-4">
+            <div className="relative shrink-0">
+              <div className="absolute inset-0 bg-amber-500/30 dark:bg-amber-500/40 blur-xl rounded-full animate-pulse" />
+              <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-500 flex items-center justify-center shadow-lg">
+                <Gem className="w-7 h-7 text-white" />
               </div>
             </div>
-            {/* Low credit warning */}
-            {credits < 10 && (
-              <div className={cn(
-                "mt-3 p-2 rounded-lg text-xs font-medium flex items-center gap-2",
-                credits === 0
-                  ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                  : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-              )}>
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                {credits === 0
-                  ? "No credits left! Buy or earn credits to continue."
-                  : `Running low on credits (${formatCredits(credits)} remaining)`
-                }
+            <div>
+              <p className="text-xs font-medium text-amber-600 dark:text-slate-400 uppercase tracking-wider">Credits</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-gray-900 dark:text-white">{formatCredits(credits)}</span>
+                {credits < 10 && credits > 0 && (
+                  <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-full animate-pulse">
+                    Low
+                  </span>
+                )}
+                {credits === 0 && (
+                  <span className="text-xs px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full animate-pulse">
+                    Empty
+                  </span>
+                )}
               </div>
-            )}
-            <div className="flex items-center gap-3 mt-4">
+            </div>
+            <div className="ml-auto flex items-center gap-3">
               <Link
                 href="/pricing"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-sm font-medium hover:opacity-90 transition"
@@ -559,57 +613,21 @@ export default function DashboardPage() {
               </Link>
             </div>
           </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Link
-            href="/analyze"
-            className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-500/10 dark:to-green-500/10 border border-emerald-200/50 dark:border-emerald-500/20 p-4 hover:border-emerald-400 dark:hover:border-emerald-400 transition-colors"
-          >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center mb-2 shadow-lg shadow-emerald-500/30">
-              <TrendingUp className="w-5 h-5 text-white" />
+          {/* Low credit warning */}
+          {credits < 10 && (
+            <div className={cn(
+              "mt-3 p-2 rounded-lg text-xs font-medium flex items-center gap-2",
+              credits === 0
+                ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+            )}>
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              {credits === 0
+                ? "No credits left! Buy or earn credits to continue."
+                : `Running low on credits (${formatCredits(credits)} remaining)`
+              }
             </div>
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">New Analysis</h3>
-            <p className="text-xs text-gray-500 dark:text-slate-400">Analyze a coin</p>
-            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all" />
-          </Link>
-
-          <Link
-            href="/reports"
-            className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-500/10 dark:to-violet-500/10 border border-purple-200/50 dark:border-purple-500/20 p-4 hover:border-purple-400 dark:hover:border-purple-400 transition-colors"
-          >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-400 to-violet-500 flex items-center justify-center mb-2 shadow-lg shadow-purple-500/30">
-              <FileText className="w-5 h-5 text-white" />
-            </div>
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Reports</h3>
-            <p className="text-xs text-gray-500 dark:text-slate-400">Analysis history</p>
-            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-hover:text-purple-500 group-hover:translate-x-0.5 transition-all" />
-          </Link>
-
-          <Link
-            href="/ai-expert"
-            className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-500/10 dark:to-blue-500/10 border border-cyan-200/50 dark:border-cyan-500/20 p-4 hover:border-cyan-400 dark:hover:border-cyan-400 transition-colors"
-          >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center mb-2 shadow-lg shadow-cyan-500/30">
-              <Brain className="w-5 h-5 text-white" />
-            </div>
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">AI Expert</h3>
-            <p className="text-xs text-gray-500 dark:text-slate-400">Ask questions</p>
-            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-hover:text-cyan-500 group-hover:translate-x-0.5 transition-all" />
-          </Link>
-
-          <Link
-            href="/alerts"
-            className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 border border-amber-200/50 dark:border-amber-500/20 p-4 hover:border-amber-400 dark:hover:border-amber-400 transition-colors"
-          >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mb-2 shadow-lg shadow-amber-500/30">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Alerts</h3>
-            <p className="text-xs text-gray-500 dark:text-slate-400">Price alerts</p>
-            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all" />
-          </Link>
+          )}
         </div>
       </div>
 
@@ -702,6 +720,17 @@ export default function DashboardPage() {
                   )}
                 >
                   Week
+                </button>
+                <button
+                  onClick={() => setPnlViewMode('monthly')}
+                  className={cn(
+                    "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                    pnlViewMode === 'monthly'
+                      ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
+                      : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
+                  )}
+                >
+                  Month
                 </button>
               </div>
               <div className={cn(
