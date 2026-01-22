@@ -107,6 +107,8 @@ export default function ConciergePage() {
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const isSpeakingRef = useRef(false);
+  const isListeningRef = useRef(false);
 
   // Conversation history for display
   const [history, setHistory] = useState<Array<{ role: 'ai' | 'user'; text: string }>>([]);
@@ -140,8 +142,10 @@ export default function ConciergePage() {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         recognition.onresult = (event: any) => {
+          console.log('Speech recognition result:', event.results[0][0].transcript);
           const text = event.results[0][0].transcript.toLowerCase().trim();
           setTranscript(text);
+          isListeningRef.current = false;
           setIsListening(false);
           setMicError(null);
           handleUserInput(text);
@@ -150,6 +154,7 @@ export default function ConciergePage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         recognition.onerror = (event: any) => {
           console.error('Speech recognition error:', event.error);
+          isListeningRef.current = false;
           setIsListening(false);
 
           // Handle specific errors
@@ -159,8 +164,8 @@ export default function ConciergePage() {
               : 'Microphone permission denied. Allow in browser settings or type your response.');
             setVoiceSupported(false);
           } else if (event.error === 'no-speech') {
-            // Retry listening after no speech detected
-            setTimeout(() => startListening(), 500);
+            // Don't retry automatically - let user click mic again
+            console.log('No speech detected');
           } else if (event.error === 'audio-capture') {
             setMicError(detectedLang === 'tr'
               ? 'Mikrofon bulunamadı. Lütfen yazarak devam edin.'
@@ -174,6 +179,8 @@ export default function ConciergePage() {
         };
 
         recognition.onend = () => {
+          console.log('Speech recognition ended');
+          isListeningRef.current = false;
           setIsListening(false);
         };
 
@@ -224,6 +231,7 @@ export default function ConciergePage() {
     }
 
     synthRef.current.cancel();
+    isSpeakingRef.current = true;
     setIsSpeaking(true);
     setAiMessage(text);
     setHistory(prev => [...prev, { role: 'ai', text }]);
@@ -246,13 +254,21 @@ export default function ConciergePage() {
     }
 
     utterance.onend = () => {
+      isSpeakingRef.current = false;
       setIsSpeaking(false);
-      onEnd?.();
+      // Small delay to ensure state updates before callback
+      if (onEnd) {
+        setTimeout(onEnd, 100);
+      }
     };
 
     utterance.onerror = () => {
+      isSpeakingRef.current = false;
       setIsSpeaking(false);
-      onEnd?.();
+      // Small delay to ensure state updates before callback
+      if (onEnd) {
+        setTimeout(onEnd, 100);
+      }
     };
 
     utteranceRef.current = utterance;
@@ -261,25 +277,38 @@ export default function ConciergePage() {
 
   // Start listening
   const startListening = useCallback(() => {
-    if (!recognitionRef.current || isListening || isSpeaking) return;
+    // Use refs to check current state (avoids stale closure issues)
+    if (!recognitionRef.current || isListeningRef.current || isSpeakingRef.current) {
+      console.log('Cannot start listening:', {
+        hasRecognition: !!recognitionRef.current,
+        isListening: isListeningRef.current,
+        isSpeaking: isSpeakingRef.current
+      });
+      return;
+    }
 
     try {
       recognitionRef.current.lang = getSpeechLang(lang);
       recognitionRef.current.start();
+      isListeningRef.current = true;
       setIsListening(true);
       setTranscript('');
+      console.log('Started listening');
     } catch (e) {
       console.error('Failed to start recognition:', e);
+      isListeningRef.current = false;
+      setIsListening(false);
     }
-  }, [lang, isListening, isSpeaking]);
+  }, [lang]);
 
   // Stop listening
   const stopListening = useCallback(() => {
-    if (recognitionRef.current && isListening) {
+    if (recognitionRef.current && isListeningRef.current) {
       recognitionRef.current.stop();
+      isListeningRef.current = false;
       setIsListening(false);
     }
-  }, [isListening]);
+  }, []);
 
   // Handle user input based on current step
   const handleUserInput = useCallback((text: string) => {
