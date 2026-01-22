@@ -157,8 +157,8 @@ export default function ConciergePage() {
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = getSpeechLang(userLanguage);
-    utterance.rate = 0.92; // Slightly slower for natural speech
-    utterance.pitch = 1.05; // Slightly higher for pleasant female voice
+    utterance.rate = 0.9; // Slightly slower for authoritative speech
+    utterance.pitch = 0.95; // Slightly lower for strong male voice
     utterance.volume = 1.0;
 
     // Get all available voices
@@ -170,29 +170,29 @@ export default function ConciergePage() {
     // Priority 1: Google voices (best quality in Chrome)
     // Priority 2: Microsoft Neural/Online voices (best quality in Edge)
     // Priority 3: Apple premium voices (best quality in Safari)
-    // Priority 4: Known premium female voices by name
+    // Priority 4: Known premium male voices by name
 
     // Premium voice indicators (case-insensitive)
     const premiumIndicators = ['google', 'neural', 'online', 'premium', 'natural', 'wavenet', 'studio'];
 
-    // Known high-quality female voice names (full or partial matches)
-    const premiumFemaleVoices: Record<string, string[]> = {
-      'en': ['Google US English', 'Google UK English Female', 'Microsoft Aria', 'Microsoft Jenny', 'Samantha', 'Karen', 'Moira', 'Tessa', 'Serena'],
-      'tr': ['Google Türkçe', 'Microsoft Emel', 'Filiz', 'Yelda'],
-      'es': ['Google español', 'Microsoft Elena', 'Monica', 'Paulina', 'Lucia'],
-      'de': ['Google Deutsch', 'Microsoft Katja', 'Anna', 'Petra', 'Vicki'],
-      'fr': ['Google français', 'Microsoft Denise', 'Amelie', 'Audrey', 'Marie'],
-      'pt': ['Google português', 'Microsoft Francisca', 'Luciana'],
-      'ru': ['Google русский', 'Microsoft Irina', 'Milena'],
-      'zh': ['Google 普通话', 'Microsoft Xiaoxiao', 'Ting-Ting'],
-      'ja': ['Google 日本語', 'Microsoft Nanami', 'Kyoko', 'O-Ren'],
-      'ko': ['Google 한국어', 'Microsoft SunHi', 'Yuna'],
-      'ar': ['Google العربية', 'Microsoft Hoda', 'Laila'],
-      'it': ['Google italiano', 'Microsoft Elsa', 'Alice', 'Federica'],
+    // Known high-quality male voice names (full or partial matches)
+    const premiumMaleVoices: Record<string, string[]> = {
+      'en': ['Google UK English Male', 'Microsoft Guy', 'Microsoft Ryan', 'Microsoft Davis', 'Daniel', 'Alex', 'James', 'Fred', 'Tom', 'Aaron'],
+      'tr': ['Google Türkçe', 'Microsoft Ahmet', 'Tolga', 'Kerem'],
+      'es': ['Google español', 'Microsoft Alvaro', 'Microsoft Pablo', 'Jorge', 'Diego', 'Carlos'],
+      'de': ['Google Deutsch', 'Microsoft Conrad', 'Microsoft Stefan', 'Markus', 'Thomas'],
+      'fr': ['Google français', 'Microsoft Henri', 'Microsoft Paul', 'Thomas', 'Jacques'],
+      'pt': ['Google português', 'Microsoft Antonio', 'Microsoft Daniel', 'Luciano'],
+      'ru': ['Google русский', 'Microsoft Dmitry', 'Microsoft Pavel', 'Yuri'],
+      'zh': ['Google 普通话', 'Microsoft Yunxi', 'Microsoft Yunyang'],
+      'ja': ['Google 日本語', 'Microsoft Keita', 'Otoya', 'Ichiro'],
+      'ko': ['Google 한국어', 'Microsoft InJoon', 'Jihun'],
+      'ar': ['Google العربية', 'Microsoft Hamed', 'Microsoft Omar'],
+      'it': ['Google italiano', 'Microsoft Diego', 'Luca', 'Marco'],
     };
 
-    // Low quality voices to AVOID
-    const lowQualityVoices = ['microsoft david', 'microsoft mark', 'microsoft zira', 'microsoft george', 'espeak', 'default'];
+    // Low quality voices to AVOID (including some female voices we don't want)
+    const lowQualityVoices = ['espeak', 'default', 'zira', 'samantha', 'karen', 'moira'];
 
     // Filter voices for user's language
     const langVoices = voices.filter(v =>
@@ -213,37 +213,52 @@ export default function ConciergePage() {
     const isPremium = (v: SpeechSynthesisVoice) =>
       premiumIndicators.some(pi => v.name.toLowerCase().includes(pi));
 
-    // Helper: Check if voice matches premium female list
-    const isPremiumFemale = (v: SpeechSynthesisVoice) => {
-      const langFemales = premiumFemaleVoices[langCode] || premiumFemaleVoices['en'];
-      return langFemales.some(pf => v.name.toLowerCase().includes(pf.toLowerCase()));
+    // Helper: Check if voice matches premium male list
+    const isPremiumMale = (v: SpeechSynthesisVoice) => {
+      const langMales = premiumMaleVoices[langCode] || premiumMaleVoices['en'];
+      return langMales.some(pm => v.name.toLowerCase().includes(pm.toLowerCase()));
     };
 
-    // Strategy 1: Find Google voice for this language (best quality)
+    // Helper: Check if voice sounds male (heuristic based on common male voice names)
+    const isMaleVoice = (v: SpeechSynthesisVoice) => {
+      const maleIndicators = ['male', 'guy', 'ryan', 'davis', 'daniel', 'alex', 'james', 'fred', 'tom', 'aaron', 'david', 'mark', 'george', 'conrad', 'stefan', 'henri', 'paul', 'dmitry', 'pavel', 'diego', 'luca', 'marco', 'keita', 'injoon', 'hamed', 'omar', 'ahmet', 'tolga', 'antonio', 'yunxi', 'yunyang'];
+      const femaleIndicators = ['female', 'woman', 'aria', 'jenny', 'samantha', 'karen', 'moira', 'tessa', 'serena', 'elena', 'monica', 'katja', 'anna', 'denise', 'amelie', 'irina', 'xiaoxiao', 'nanami', 'sunhi', 'yuna', 'hoda', 'laila', 'elsa', 'alice', 'emel', 'filiz'];
+      const nameLower = v.name.toLowerCase();
+      const hasMaleIndicator = maleIndicators.some(mi => nameLower.includes(mi));
+      const hasFemaleIndicator = femaleIndicators.some(fi => nameLower.includes(fi));
+      return hasMaleIndicator || !hasFemaleIndicator;
+    };
+
+    // Strategy 1: Find Google male voice for this language (best quality)
     selectedVoice = langVoices.find(v =>
-      v.name.toLowerCase().includes('google') && !isLowQuality(v)
+      v.name.toLowerCase().includes('google') && isMaleVoice(v) && !isLowQuality(v)
     ) || null;
 
-    // Strategy 2: Find Microsoft Neural/Online voice
+    // Strategy 2: Find Microsoft Neural/Online male voice
     if (!selectedVoice) {
       selectedVoice = langVoices.find(v =>
-        (v.name.toLowerCase().includes('microsoft') &&
-         (v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('online'))) &&
-        !isLowQuality(v)
+        v.name.toLowerCase().includes('microsoft') &&
+        (v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('online')) &&
+        isMaleVoice(v) && !isLowQuality(v)
       ) || null;
     }
 
-    // Strategy 3: Find known premium female voice
+    // Strategy 3: Find known premium male voice
     if (!selectedVoice) {
-      selectedVoice = langVoices.find(v => isPremiumFemale(v) && !isLowQuality(v)) || null;
+      selectedVoice = langVoices.find(v => isPremiumMale(v) && !isLowQuality(v)) || null;
     }
 
-    // Strategy 4: Any premium indicator voice
+    // Strategy 4: Any premium indicator male voice
     if (!selectedVoice) {
-      selectedVoice = langVoices.find(v => isPremium(v) && !isLowQuality(v)) || null;
+      selectedVoice = langVoices.find(v => isPremium(v) && isMaleVoice(v) && !isLowQuality(v)) || null;
     }
 
-    // Strategy 5: Any non-low-quality voice
+    // Strategy 5: Any male voice (non-low-quality)
+    if (!selectedVoice) {
+      selectedVoice = langVoices.find(v => isMaleVoice(v) && !isLowQuality(v)) || null;
+    }
+
+    // Strategy 6: Any non-low-quality voice (fallback)
     if (!selectedVoice) {
       selectedVoice = langVoices.find(v => !isLowQuality(v)) || null;
     }
