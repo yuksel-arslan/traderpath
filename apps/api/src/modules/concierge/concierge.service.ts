@@ -609,30 +609,49 @@ class ConciergeService {
 
       console.log(`[Concierge] Message: "${message.substring(0, 50)}...", Detected language: ${detectedLanguage}`);
 
-      // First, try rule-based detection (fast)
-      let detectionResult = detectIntent(message);
-      let { intent, symbol, interval, expertType } = detectionResult;
+      // Initialize intent detection variables
+      let intent = 'UNKNOWN';
+      let symbol: string | undefined;
+      let interval: string | undefined;
+      let expertType: string | undefined;
       let targetPrice: number | undefined;
       let direction: string | undefined;
 
-      // If rule-based detection returns UNKNOWN, try Gemini (smarter but slower)
-      if (intent === 'UNKNOWN') {
-        console.log('[Concierge] Rule-based detection failed, trying Gemini...');
+      // PRIMARY: Use Gemini AI for intelligent intent detection
+      // Cost: ~$0.0002 per request (~$5/month for 1000 daily requests)
+      // Benefits: Better understanding of natural language, handles complex queries
+      console.log('[Concierge] Using Gemini AI for intent detection...');
+      const startTime = Date.now();
+
+      try {
         const geminiResult = await detectIntentWithGemini(message);
+        const duration = Date.now() - startTime;
+        console.log(`[Concierge] Gemini detected: intent=${geminiResult.intent}, symbol=${geminiResult.symbol}, interval=${geminiResult.interval}, language=${geminiResult.language} (${duration}ms)`);
 
         if (geminiResult.intent !== 'UNKNOWN') {
           intent = geminiResult.intent;
-          symbol = geminiResult.symbol || symbol;
-          interval = geminiResult.interval || interval;
-          expertType = geminiResult.expertType || expertType;
+          symbol = geminiResult.symbol;
+          interval = geminiResult.interval;
+          expertType = geminiResult.expertType;
           targetPrice = geminiResult.targetPrice;
           direction = geminiResult.direction;
-          // Update language if Gemini detected differently
+          // Use Gemini's language detection if available
           if (geminiResult.language) {
             detectedLanguage = geminiResult.language;
           }
-          console.log('[Concierge] Gemini detected intent:', intent);
         }
+      } catch (error) {
+        console.error('[Concierge] Gemini intent detection failed:', error);
+      }
+
+      // FALLBACK: Use rule-based detection if Gemini fails or returns UNKNOWN
+      if (intent === 'UNKNOWN') {
+        console.log('[Concierge] Gemini returned UNKNOWN, trying rule-based fallback...');
+        const ruleResult = detectIntent(message);
+        intent = ruleResult.intent;
+        symbol = ruleResult.symbol || symbol;
+        interval = ruleResult.interval || interval;
+        expertType = ruleResult.expertType || expertType;
       }
 
       // Handle different intents - ALL handlers use detectedLanguage
