@@ -115,9 +115,168 @@ export default function ConciergePage() {
   const [speechSupported, setSpeechSupported] = useState(false);
   const [userLanguage, setUserLanguage] = useState<string>('en');
 
+  // Voice greeting states
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [hasGreeted, setHasGreeted] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [greetingPhase, setGreetingPhase] = useState<'idle' | 'speaking' | 'listening'>('idle');
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
+  const synthRef = useRef<SpeechSynthesis | null>(null);
+
+  // Greeting messages in different languages
+  const getGreetingMessage = (lang: string): string => {
+    const greetings: Record<string, string> = {
+      'en': "Hello! I'm your AI Concierge. How can I help you today? You can ask me about any cryptocurrency.",
+      'tr': "Merhaba! Ben AI Concierge'iniz. Bugün size nasıl yardımcı olabilirim? Herhangi bir kripto para hakkında sorabilirsiniz.",
+      'es': "¡Hola! Soy tu AI Concierge. ¿Cómo puedo ayudarte hoy? Puedes preguntarme sobre cualquier criptomoneda.",
+      'de': "Hallo! Ich bin Ihr AI Concierge. Wie kann ich Ihnen heute helfen? Sie können mich zu jeder Kryptowährung befragen.",
+      'fr': "Bonjour! Je suis votre AI Concierge. Comment puis-je vous aider aujourd'hui? Vous pouvez me poser des questions sur n'importe quelle cryptomonnaie.",
+      'pt': "Olá! Sou seu AI Concierge. Como posso ajudá-lo hoje? Você pode me perguntar sobre qualquer criptomoeda.",
+      'ru': "Привет! Я ваш AI Консьерж. Как я могу помочь вам сегодня? Вы можете спросить меня о любой криптовалюте.",
+      'zh': "你好！我是你的AI礼宾。今天有什么可以帮助你的吗？你可以问我关于任何加密货币的问题。",
+      'ja': "こんにちは！私はあなたのAIコンシェルジュです。今日は何をお手伝いしましょうか？どの暗号通貨についても質問できます。",
+      'ko': "안녕하세요! 저는 당신의 AI 컨시어지입니다. 오늘 무엇을 도와드릴까요? 어떤 암호화폐에 대해서든 물어보세요.",
+      'ar': "مرحباً! أنا مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟ يمكنك أن تسألني عن أي عملة رقمية.",
+      'it': "Ciao! Sono il tuo AI Concierge. Come posso aiutarti oggi? Puoi chiedermi di qualsiasi criptovaluta.",
+    };
+    return greetings[lang] || greetings['en'];
+  };
+
+  // Speak function using Web Speech API
+  const speak = useCallback((text: string, onEnd?: () => void) => {
+    if (!synthRef.current || !voiceSupported) {
+      onEnd?.();
+      return;
+    }
+
+    // Cancel any ongoing speech
+    synthRef.current.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = getSpeechLang(userLanguage);
+    utterance.rate = 0.95; // Slightly slower for clarity
+    utterance.pitch = 1.1; // Slightly higher pitch for female voice
+    utterance.volume = 1.0;
+
+    // Try to get a female voice for the language
+    const voices = synthRef.current.getVoices();
+    const speechLang = getSpeechLang(userLanguage);
+
+    // Preferred female voice names by browser/OS
+    const femaleVoiceKeywords = [
+      'female', 'woman', 'samantha', 'victoria', 'karen', 'moira', 'tessa',
+      'susan', 'zira', 'hazel', 'heather', 'catherine', 'alice', 'sara',
+      'nora', 'linda', 'monica', 'anna', 'fiona', 'kate', 'paulina',
+      'yelda', 'filiz', // Turkish female voices
+      'lucia', 'monica', // Spanish
+      'amelie', 'audrey', // French
+      'anna', 'petra', // German
+    ];
+
+    // Priority: 1) Female voice in user's language, 2) Any female voice, 3) Any voice in language
+    let selectedVoice = null;
+
+    // First, try to find a female voice in the user's language
+    const langVoices = voices.filter(v => v.lang.toLowerCase().startsWith(userLanguage.toLowerCase()));
+    selectedVoice = langVoices.find(v =>
+      femaleVoiceKeywords.some(kw => v.name.toLowerCase().includes(kw))
+    );
+
+    // If no female voice found, try any voice with female keyword
+    if (!selectedVoice) {
+      selectedVoice = voices.find(v =>
+        femaleVoiceKeywords.some(kw => v.name.toLowerCase().includes(kw)) &&
+        v.lang.toLowerCase().startsWith(userLanguage.toLowerCase())
+      );
+    }
+
+    // Fallback: any voice in the language (prefer Google voices as they're higher quality)
+    if (!selectedVoice) {
+      selectedVoice = langVoices.find(v => v.name.toLowerCase().includes('google')) ||
+                      langVoices[0] ||
+                      voices.find(v => v.lang.startsWith(speechLang.split('-')[0])) ||
+                      voices[0];
+    }
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      console.log('[Voice] Selected voice:', selectedVoice.name, selectedVoice.lang);
+    }
+
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setGreetingPhase('speaking');
+    };
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      onEnd?.();
+    };
+
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      onEnd?.();
+    };
+
+    synthRef.current.speak(utterance);
+  }, [userLanguage, voiceSupported]);
+
+  // Initialize voice synthesis
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      synthRef.current = window.speechSynthesis;
+      setVoiceSupported(true);
+
+      // Load voices (needed for some browsers)
+      const loadVoices = () => {
+        window.speechSynthesis.getVoices();
+      };
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, []);
+
+  // Voice greeting on first load
+  useEffect(() => {
+    if (!hasGreeted && voiceSupported && userLanguage && messages.length === 0) {
+      // Small delay to ensure page is ready
+      const timer = setTimeout(() => {
+        setHasGreeted(true);
+        const greeting = getGreetingMessage(userLanguage);
+        speak(greeting, () => {
+          // After speaking, start listening
+          setGreetingPhase('listening');
+          if (recognitionRef.current && speechSupported) {
+            setTimeout(() => {
+              try {
+                recognitionRef.current.start();
+                setIsListening(true);
+              } catch {
+                setGreetingPhase('idle');
+              }
+            }, 500);
+          } else {
+            setGreetingPhase('idle');
+          }
+        });
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [hasGreeted, voiceSupported, userLanguage, messages.length, speak, speechSupported]);
+
+  // Skip greeting function
+  const skipGreeting = () => {
+    if (synthRef.current) {
+      synthRef.current.cancel();
+    }
+    setIsSpeaking(false);
+    setGreetingPhase('idle');
+    setHasGreeted(true);
+  };
 
   // Fetch user's language preference on mount
   useEffect(() => {
@@ -491,43 +650,172 @@ export default function ConciergePage() {
         <div className="max-w-3xl mx-auto space-y-3 sm:space-y-4">
           {messages.length === 0 ? (
             <div className="text-center py-8 sm:py-16">
-              {/* Welcome Animation */}
-              <div className="relative w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6">
-                <div className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-teal-500/20 to-teal-600/20 animate-pulse" />
-                <div className="absolute inset-1.5 sm:inset-2 rounded-xl sm:rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-teal-500/30">
-                  <Bot className="w-7 h-7 sm:w-10 sm:h-10 text-white" />
-                </div>
-              </div>
+              {/* Voice Greeting Animation */}
+              {(isSpeaking || greetingPhase === 'listening') ? (
+                <div className="relative">
+                  {/* Animated Background Orbs */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className={`absolute w-48 h-48 sm:w-72 sm:h-72 rounded-full bg-gradient-to-br from-teal-500/20 to-cyan-500/20 ${isSpeaking ? 'animate-pulse' : ''}`} style={{ animationDuration: '2s' }} />
+                    <div className={`absolute w-36 h-36 sm:w-56 sm:h-56 rounded-full bg-gradient-to-br from-teal-500/30 to-emerald-500/30 ${isSpeaking ? 'animate-pulse' : ''}`} style={{ animationDuration: '1.5s', animationDelay: '0.2s' }} />
+                    <div className={`absolute w-24 h-24 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-teal-500/40 to-teal-600/40 ${isSpeaking ? 'animate-pulse' : ''}`} style={{ animationDuration: '1s', animationDelay: '0.4s' }} />
+                  </div>
 
-              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2 sm:mb-3">
-                Welcome to AI Concierge
-              </h3>
-              <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mb-6 sm:mb-8 max-w-md mx-auto px-4">
-                Analyze cryptocurrencies, ask questions, and get insights. Try asking me something!
-              </p>
+                  {/* AI Avatar with Voice Animation */}
+                  <div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 sm:mb-8">
+                    {/* Outer ring animation */}
+                    <div className={`absolute inset-0 rounded-full ${isSpeaking ? 'animate-ping' : ''} bg-teal-500/20`} style={{ animationDuration: '1.5s' }} />
 
-              {/* Quick Commands - 2x2 grid on mobile */}
-              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 justify-center mb-4 sm:mb-6 px-2">
-                {QUICK_COMMANDS.map((cmd) => (
+                    {/* Sound wave rings */}
+                    {isSpeaking && (
+                      <>
+                        <div className="absolute inset-[-8px] sm:inset-[-12px] rounded-full border-2 border-teal-500/40 animate-ping" style={{ animationDuration: '1s' }} />
+                        <div className="absolute inset-[-16px] sm:inset-[-24px] rounded-full border-2 border-teal-500/30 animate-ping" style={{ animationDuration: '1.5s', animationDelay: '0.3s' }} />
+                        <div className="absolute inset-[-24px] sm:inset-[-36px] rounded-full border-2 border-teal-500/20 animate-ping" style={{ animationDuration: '2s', animationDelay: '0.6s' }} />
+                      </>
+                    )}
+
+                    {/* Listening rings */}
+                    {greetingPhase === 'listening' && !isSpeaking && (
+                      <>
+                        <div className="absolute inset-[-4px] sm:inset-[-6px] rounded-full border-2 border-coral-500/50 animate-pulse" />
+                        <div className="absolute inset-[-8px] sm:inset-[-12px] rounded-full border-2 border-coral-500/30 animate-pulse" style={{ animationDelay: '0.2s' }} />
+                      </>
+                    )}
+
+                    {/* Main avatar */}
+                    <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${greetingPhase === 'listening' && !isSpeaking ? 'from-coral-500 to-orange-600' : 'from-teal-500 to-teal-600'} flex items-center justify-center shadow-2xl ${isSpeaking ? 'shadow-teal-500/50' : greetingPhase === 'listening' ? 'shadow-coral-500/50' : 'shadow-teal-500/30'} transition-all duration-500`}>
+                      {greetingPhase === 'listening' && !isSpeaking ? (
+                        <Mic className="w-10 h-10 sm:w-14 sm:h-14 text-white animate-pulse" />
+                      ) : (
+                        <Bot className="w-10 h-10 sm:w-14 sm:h-14 text-white" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Sound Wave Visualization */}
+                  {isSpeaking && (
+                    <div className="flex items-center justify-center gap-1 mb-6 sm:mb-8 h-12 sm:h-16">
+                      {[...Array(9)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-1 sm:w-1.5 bg-gradient-to-t from-teal-500 to-cyan-400 rounded-full animate-soundwave"
+                          style={{
+                            animationDelay: `${i * 0.1}s`,
+                            animationDuration: `${0.5 + Math.random() * 0.5}s`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Listening Wave Visualization */}
+                  {greetingPhase === 'listening' && !isSpeaking && (
+                    <div className="flex items-center justify-center gap-1 mb-6 sm:mb-8 h-12 sm:h-16">
+                      {[...Array(9)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-1 sm:w-1.5 bg-gradient-to-t from-coral-500 to-orange-400 rounded-full animate-soundwave-slow"
+                          style={{
+                            animationDelay: `${i * 0.15}s`,
+                            animationDuration: `${0.8 + Math.random() * 0.4}s`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Status Text */}
+                  <div className="mb-6 sm:mb-8">
+                    {isSpeaking ? (
+                      <p className="text-lg sm:text-xl font-semibold text-teal-600 dark:text-teal-400 animate-pulse">
+                        {userLanguage === 'tr' ? 'Konuşuyor...' : 'Speaking...'}
+                      </p>
+                    ) : greetingPhase === 'listening' ? (
+                      <p className="text-lg sm:text-xl font-semibold text-coral-600 dark:text-coral-400 animate-pulse">
+                        {userLanguage === 'tr' ? '🎤 Dinliyorum... Şimdi konuşun' : '🎤 Listening... Speak now'}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {/* Skip Button */}
                   <button
-                    key={cmd.id}
-                    onClick={() => sendMessage(cmd.command)}
-                    disabled={isLoading}
-                    className="group flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700/50 hover:border-teal-500/50 shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={skipGreeting}
+                    className="px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-700/50 rounded-xl transition-colors"
                   >
-                    <span className="text-base sm:text-lg">{cmd.icon}</span>
-                    <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
-                      <span className="sm:hidden">{cmd.label}</span>
-                      <span className="hidden sm:inline">{cmd.labelFull}</span>
-                    </span>
+                    {userLanguage === 'tr' ? 'Atla ve yaz' : 'Skip & type instead'}
                   </button>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <>
+                  {/* Static Welcome (after greeting or no voice support) */}
+                  <div className="relative w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6">
+                    <div className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-teal-500/20 to-teal-600/20 animate-pulse" />
+                    <div className="absolute inset-1.5 sm:inset-2 rounded-xl sm:rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-teal-500/30">
+                      <Bot className="w-7 h-7 sm:w-10 sm:h-10 text-white" />
+                    </div>
+                  </div>
 
-              {/* Example prompts */}
-              <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 px-4">
-                Try: &quot;How is BTC?&quot; • &quot;What is RSI?&quot; • &quot;ETH 4h analysis&quot;
-              </p>
+                  <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2 sm:mb-3">
+                    {userLanguage === 'tr' ? 'AI Concierge\'e Hoşgeldiniz' : 'Welcome to AI Concierge'}
+                  </h3>
+                  <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mb-6 sm:mb-8 max-w-md mx-auto px-4">
+                    {userLanguage === 'tr'
+                      ? 'Kripto para analizi yapın, sorular sorun ve içgörüler alın.'
+                      : 'Analyze cryptocurrencies, ask questions, and get insights.'}
+                  </p>
+
+                  {/* Quick Commands - 2x2 grid on mobile */}
+                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 justify-center mb-4 sm:mb-6 px-2">
+                    {QUICK_COMMANDS.map((cmd) => (
+                      <button
+                        key={cmd.id}
+                        onClick={() => sendMessage(cmd.command)}
+                        disabled={isLoading}
+                        className="group flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700/50 hover:border-teal-500/50 shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span className="text-base sm:text-lg">{cmd.icon}</span>
+                        <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                          <span className="sm:hidden">{cmd.label}</span>
+                          <span className="hidden sm:inline">{cmd.labelFull}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Voice Button */}
+                  {speechSupported && voiceSupported && (
+                    <button
+                      onClick={() => {
+                        const greeting = getGreetingMessage(userLanguage);
+                        speak(greeting, () => {
+                          setGreetingPhase('listening');
+                          if (recognitionRef.current) {
+                            setTimeout(() => {
+                              try {
+                                recognitionRef.current.start();
+                                setIsListening(true);
+                              } catch {
+                                setGreetingPhase('idle');
+                              }
+                            }, 500);
+                          }
+                        });
+                      }}
+                      className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white rounded-xl sm:rounded-2xl shadow-lg shadow-teal-500/25 hover:shadow-xl transition-all text-sm sm:text-base font-medium mb-4"
+                    >
+                      <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+                      {userLanguage === 'tr' ? 'Sesli başlat' : 'Start with voice'}
+                    </button>
+                  )}
+
+                  {/* Example prompts */}
+                  <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 px-4">
+                    {userLanguage === 'tr'
+                      ? 'Örnek: "BTC nasıl?" • "RSI nedir?" • "ETH 4s analiz"'
+                      : 'Try: "How is BTC?" • "What is RSI?" • "ETH 4h analysis"'}
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <>
