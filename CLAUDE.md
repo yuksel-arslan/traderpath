@@ -256,6 +256,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-22 | Scheduled Analysis kredi çekilmeden iade yapıyordu | `creditService.deduct()` yerine `creditService.charge()` kullanıldı. Sadece kredi çekildiyse iade yapılıyor. `creditsCharged` flag eklendi | `scheduled-reports.service.ts:99-155` |
 | 2026-01-22 | AI Concierge platform sorularını anlamıyordu | PLATFORM_INFO ve CONVERSATIONAL intent'leri eklendi. "özetle", "anlat", "platform nedir" gibi sorular artık cevaplanıyor | `concierge.service.ts`, `system-prompt.ts` |
 | 2026-01-22 | Production crash - @google/genai require ESM hatası | `require()` yerine ES module `import` kullanıldı. ESM bundle'da dynamic require desteklenmiyor | `apps/api/src/core/gemini.ts` |
+| 2026-01-22 | Email raporu gönderilemiyor - symbol ve takeProfits eksik | Reports sayfasında symbol/analysisId/generatedAt report seviyesindeydi, reportData içine eklendi. RecentAnalyses'ta step5.takeProfits dizisi kullanılmalıydı (takeProfit1/2/3 yok) | `reports/page.tsx`, `RecentAnalyses.tsx` |
 
 ---
 
