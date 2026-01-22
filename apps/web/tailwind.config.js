@@ -217,6 +217,20 @@ module.exports = {
           '0%': { opacity: '0', transform: 'translateY(10px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        // Voice/Sound Wave Animations
+        'soundwave': {
+          '0%, 100%': { height: '8px' },
+          '50%': { height: '32px' },
+        },
+        'soundwave-slow': {
+          '0%, 100%': { height: '4px' },
+          '50%': { height: '24px' },
+        },
+        'voice-pulse': {
+          '0%': { transform: 'scale(1)', opacity: '1' },
+          '50%': { transform: 'scale(1.5)', opacity: '0.5' },
+          '100%': { transform: 'scale(2)', opacity: '0' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -245,6 +259,10 @@ module.exports = {
         'slide-down': 'slide-down 0.6s ease-out',
         'blur-in': 'blur-in 0.8s ease-out',
         'count-up': 'count-up 0.5s ease-out forwards',
+        // Voice/Sound Wave Animations
+        'soundwave': 'soundwave 0.5s ease-in-out infinite',
+        'soundwave-slow': 'soundwave-slow 0.8s ease-in-out infinite',
+        'voice-pulse': 'voice-pulse 1.5s ease-out infinite',
       },
       boxShadow: {
         'glow-teal': '0 0 30px rgba(45, 212, 168, 0.4), 0 0 60px rgba(20, 184, 166, 0.2)',

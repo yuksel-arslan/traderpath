@@ -660,6 +660,15 @@ Kullanıcı Hakları Aktif:
   - Divergence tespiti de dahil
   - ARIA için maxOutputTokens 200→350'ye çıkarıldı (daha detaylı analiz)
   - "CITE SPECIFIC INDICATORS" kuralı eklendi
+- **AI Concierge sesli karşılama özelliği eklendi**:
+  - Sayfa açıldığında AI sesli karşılama yapıyor (Web Speech API SpeechSynthesis)
+  - Kadın sesi tercih ediliyor (female voice keywords ile arama)
+  - 12+ dilde karşılama mesajları (TR, EN, ES, DE, FR, PT, RU, ZH, JA, KO, AR, IT)
+  - Karşılama sonrası otomatik dinleme başlıyor (SpeechRecognition)
+  - Ses dalgası animasyonları (soundwave, soundwave-slow, voice-pulse keyframes)
+  - Konuşurken ve dinlerken farklı görsel animasyonlar
+  - "Atla ve yaz" butonu ile sesli moddan çıkış
+  - Responsive tasarım (mobil uyumlu)
 
 ---
 
