@@ -688,6 +688,17 @@ Kullanıcı Hakları Aktif:
   - Pitch 0.95'e düşürüldü (otoriter erkek tonu için)
   - `isMaleVoice` helper fonksiyonu eklendi (kadın seslerini filtrelemek için)
   - 12+ dil için erkek ses isimleri tanımlandı
+- **AI Concierge erkek ses seçimi iyileştirildi**:
+  - 50+ kadın ses ismi blocklist'e eklendi
+  - Mantık değişti: "Erkek göstergesi OLMALI VE kadın OLMAMALI"
+  - Google Türkçe gibi cinsiyetsiz isimler artık otomatik erkek sayılmıyor
+  - Strateji: Bilinen erkek > Microsoft erkek > Açık erkek göstergesi > Non-female
+- **AI Concierge çoklu dil desteği eklendi (20 dil)**:
+  - Desteklenen diller: TR, EN, ES, DE, FR, AR, RU, ZH, JA, KO, PT, IT, NL, PL, HI, VI, TH, ID, FA, HE
+  - Her dil için native dil değiştirme komutları (örn: "说中文", "한국어로", "بالعربي")
+  - Mesaj içeriğinden otomatik dil algılama
+  - Türkçe kelimelerden dil tespiti (nasıl, nedir, söyle, istiyorum vb.)
+  - `detectedLanguage` field eklendi ConciergeResponse'a
 
 ---
 
