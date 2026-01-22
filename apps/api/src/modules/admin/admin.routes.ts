@@ -983,7 +983,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   const GEMINI_SETTINGS_KEY = 'admin:gemini:settings';
   const AVAILABLE_GEMINI_MODELS = [
-    { id: 'gemini-2.5-flash-preview-05-20', name: 'Gemini 2.5 Flash (Preview)', description: 'Newest, most capable flash model' },
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Preview)', description: 'Newest, most capable flash model' },
     { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', description: 'Fast and efficient, good balance' },
     { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Previous generation flash' },
     { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: 'More capable but slower' },
@@ -996,9 +996,9 @@ export default async function adminRoutes(app: FastifyInstance) {
     try {
       const settingsJson = await redis.get(GEMINI_SETTINGS_KEY);
       const settings = settingsJson ? JSON.parse(settingsJson) : {
-        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20',
-        expertModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20',
-        conciergeModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20',
+        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+        expertModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+        conciergeModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
       };
 
       return reply.send({
@@ -1006,7 +1006,7 @@ export default async function adminRoutes(app: FastifyInstance) {
         data: {
           settings,
           availableModels: AVAILABLE_GEMINI_MODELS,
-          envModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20',
+          envModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
         },
       });
     } catch (error) {
@@ -1051,9 +1051,9 @@ export default async function adminRoutes(app: FastifyInstance) {
 
       // Merge with new settings
       const newSettings = {
-        model: model || existing.model || process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20',
-        expertModel: expertModel || existing.expertModel || process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20',
-        conciergeModel: conciergeModel || existing.conciergeModel || process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20',
+        model: model || existing.model || process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+        expertModel: expertModel || existing.expertModel || process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+        conciergeModel: conciergeModel || existing.conciergeModel || process.env.GEMINI_MODEL || 'gemini-2.5-flash',
         updatedAt: new Date().toISOString(),
         updatedBy: request.user?.email,
       };
