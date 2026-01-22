@@ -709,6 +709,14 @@ Kullanıcı Hakları Aktif:
   - Page 6: Analysis Steps 5-6 (Trade Plan + Trap Check)
   - Page 7: Final Verdict
   - Fonksiyonlar: `generatePageSteps12`, `generatePageSteps34`, `generatePageSteps56`
+- **Pine Script profesyonel seviyeye yükseltildi**:
+  - TradingView BUY/SELL label shape'leri eklendi (shape.labelup/labeldown)
+  - Trade zone box'ları eklendi (yeşil profit zone, kırmızı loss zone)
+  - Info table eklendi (Entry, SL, TP1-3, R:R, Score gösterimi)
+  - Alert condition'lar eklendi (tüm fiyat seviyeleri için)
+  - Input settings eklendi (gösterim seçenekleri)
+  - "Add to TradingView" butonu eklendi (script kopyala + TV aç + talimat göster)
+  - Yüzde değişimleri fiyat label'larında gösteriliyor
 
 ---
 
