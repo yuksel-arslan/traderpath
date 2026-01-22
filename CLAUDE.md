@@ -717,6 +717,14 @@ Kullanıcı Hakları Aktif:
   - Input settings eklendi (gösterim seçenekleri)
   - "Add to TradingView" butonu eklendi (script kopyala + TV aç + talimat göster)
   - Yüzde değişimleri fiyat label'larında gösteriliyor
+- **AI Concierge welcome screen iyileştirildi (showcase)**:
+  - Canlı BTC/ETH fiyatları ve %24h değişim (Binance API)
+  - Fear & Greed Index göstergesi (Alternative.me API)
+  - Platform istatistikleri (toplam analiz, doğruluk, trader sayısı)
+  - Feature showcase kartları (40+ indikatör, 4 AI Expert, 60 saniye analiz, işlem planları)
+  - Gradient renkli quick command butonları
+  - Shimmer animasyonu ile voice butonu
+  - Her 60 saniyede otomatik veri yenileme
 
 ---
 
