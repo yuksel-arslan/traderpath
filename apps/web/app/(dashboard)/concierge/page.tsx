@@ -195,10 +195,8 @@ export default function ConciergePage() {
 
     fetchCredits();
 
-    // Start conversation after a short delay
-    setTimeout(() => {
-      startConversation();
-    }, 1000);
+    // Don't auto-start - require user click for microphone permission
+    // Chrome blocks microphone without user gesture
 
     return () => {
       if (synthRef.current) {
@@ -709,6 +707,39 @@ export default function ConciergePage() {
         <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-2xl overflow-hidden">
           {/* Conversation history */}
           <div className="h-[400px] overflow-y-auto p-6 space-y-4">
+            {/* Start button - shown when conversation hasn't started */}
+            {step === 'idle' && history.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full gap-6">
+                <div className="text-center">
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/30">
+                    <Bot className="w-10 h-10 text-white" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-white mb-2">
+                    {lang === 'tr' ? 'AI Concierge\'a Hoşgeldiniz' : 'Welcome to AI Concierge'}
+                  </h2>
+                  <p className="text-slate-400 text-sm max-w-xs">
+                    {lang === 'tr'
+                      ? 'Sesli komutlarla analiz yapabilir, sorular sorabilirsiniz.'
+                      : 'Analyze coins with voice commands and ask questions.'}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => startConversation()}
+                  className="px-8 py-4 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-white font-semibold text-lg shadow-lg shadow-teal-500/30 transition-all duration-200 flex items-center gap-3"
+                >
+                  <Mic className="w-6 h-6" />
+                  {lang === 'tr' ? 'Başla' : 'Start'}
+                </button>
+
+                <p className="text-slate-500 text-xs">
+                  {lang === 'tr'
+                    ? 'Mikrofon izni istenecektir'
+                    : 'Microphone permission will be requested'}
+                </p>
+              </div>
+            )}
+
             {history.map((msg, idx) => (
               <div
                 key={idx}
