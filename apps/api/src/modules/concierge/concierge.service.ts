@@ -416,33 +416,46 @@ function detectIntent(message: string): {
 
   // Analysis intent - coin detected
   if (detectedCoin) {
-    // Detect interval
-    let interval = '4h'; // default
+    // Detect interval - check if user explicitly specified
+    let interval = ''; // empty means not specified
+    let intervalExplicit = false;
 
     if (lower.includes('15m') || lower.includes('15 min') || lower.includes('15 dakika')) {
       interval = '15m';
+      intervalExplicit = true;
     } else if (lower.includes('1h') || lower.includes('1 hour') || lower.includes('saatlik') || lower.includes('1 saat')) {
       interval = '1h';
+      intervalExplicit = true;
     } else if (lower.includes('4h') || lower.includes('4 hour') || lower.includes('4 saat')) {
       interval = '4h';
+      intervalExplicit = true;
     } else if (lower.includes('1d') || lower.includes('daily') || lower.includes('günlük') || lower.includes('gün')) {
       interval = '1d';
+      intervalExplicit = true;
     } else if (lower.includes('1w') || lower.includes('weekly') || lower.includes('haftalık')) {
       interval = '1W';
-    } else if (lower.includes('scalp') || lower.includes('skalp') || lower.includes('skalpıng')) {
+      intervalExplicit = true;
+    } else if (lower.includes('scalp') || lower.includes('skalp') || lower.includes('skalpıng') || lower.includes('hızlı')) {
       interval = '15m';
-    } else if (lower.includes('swing')) {
+      intervalExplicit = true;
+    } else if (lower.includes('swing') || lower.includes('uzun vadeli') || lower.includes('long term') || lower.includes('yatırım')) {
       interval = '1d';
-    } else if (lower.includes('day trade') || lower.includes('daytrade') || lower.includes('intraday')) {
+      intervalExplicit = true;
+    } else if (lower.includes('day trade') || lower.includes('daytrade') || lower.includes('intraday') || lower.includes('gün içi') || lower.includes('günlük işlem')) {
       interval = '4h';
+      intervalExplicit = true;
+    } else if (lower.includes('kısa vadeli') || lower.includes('short term') || lower.includes('bugün')) {
+      interval = '1h';
+      intervalExplicit = true;
     }
 
-    console.log(`[Concierge] Detected: symbol=${detectedCoin}, interval=${interval}, message="${lower}"`);
+    console.log(`[Concierge] Detected: symbol=${detectedCoin}, interval=${interval || 'NOT_SPECIFIED'}, explicit=${intervalExplicit}, message="${lower}"`);
 
     return {
-      intent: 'ANALYSIS',
+      intent: intervalExplicit ? 'ANALYSIS' : 'ANALYSIS_NEEDS_CLARIFICATION',
       symbol: detectedCoin.toUpperCase(),
-      interval,
+      interval: interval || '4h', // fallback for later use
+      intervalExplicit,
     };
   }
 
@@ -619,6 +632,9 @@ class ConciergeService {
 
         case 'ANALYSIS':
           return await this.handleAnalysis(userId, symbol!, interval || '4h', detectedLanguage, creditBalance);
+
+        case 'ANALYSIS_NEEDS_CLARIFICATION':
+          return this.handleAnalysisClarification(symbol!, detectedLanguage, creditBalance);
 
         case 'EXPERT_ASK':
           return await this.handleExpertQuestion(userId, message, detectedLanguage, creditBalance, expertType);
@@ -1945,7 +1961,7 @@ Or visit /scheduled to delete.`,
       const panelResult = await aiExpertService.analyzeWithExpertPanel({
         symbol,
         userId,
-        language: language === 'tr' ? 'tr' : 'en',
+        language: language, // Pass the actual detected language (supports 20+ languages)
         tradeType,
         interval,
       });
@@ -2069,6 +2085,119 @@ ${aiResponse}`;
         error: error instanceof Error ? error.message : 'Question failed',
       };
     }
+  }
+
+  /**
+   * Ask user for clarification about their trading style
+   * Triggered when coin is detected but timeframe is not specified
+   */
+  private handleAnalysisClarification(
+    symbol: string,
+    language: string,
+    creditBalance: number
+  ): ConciergeResponse {
+    // Multi-language clarification messages
+    const clarificationMessages: Record<string, string> = {
+      'tr': `${symbol} analizi için yatırım tarzınızı anlamam gerekiyor:
+
+🏃 **Scalping/Hızlı Trade** - Dakikalar içinde alım-satım
+   → "hızlı" veya "scalp" deyin
+
+📊 **Gün İçi Trade** - Aynı gün içinde al-sat
+   → "gün içi" veya "intraday" deyin
+
+📈 **Uzun Vadeli/Swing** - Günler-haftalar tutma
+   → "uzun vadeli" veya "swing" deyin
+
+Hangisi size uygun?`,
+
+      'en': `To analyze ${symbol}, I need to understand your trading style:
+
+🏃 **Scalping** - Quick trades within minutes
+   → Say "scalp" or "quick"
+
+📊 **Day Trading** - Buy and sell same day
+   → Say "day trade" or "intraday"
+
+📈 **Swing Trading** - Hold for days to weeks
+   → Say "swing" or "long term"
+
+Which one fits your style?`,
+
+      'es': `Para analizar ${symbol}, necesito entender tu estilo de trading:
+
+🏃 **Scalping** - Operaciones rápidas en minutos
+📊 **Day Trading** - Comprar y vender el mismo día
+📈 **Swing Trading** - Mantener días a semanas
+
+¿Cuál es tu estilo? (scalp/day trade/swing)`,
+
+      'de': `Um ${symbol} zu analysieren, muss ich Ihren Trading-Stil verstehen:
+
+🏃 **Scalping** - Schnelle Trades in Minuten
+📊 **Day Trading** - Kauf und Verkauf am selben Tag
+📈 **Swing Trading** - Tage bis Wochen halten
+
+Was ist Ihr Stil? (scalp/day trade/swing)`,
+
+      'fr': `Pour analyser ${symbol}, je dois comprendre votre style de trading:
+
+🏃 **Scalping** - Trades rapides en minutes
+📊 **Day Trading** - Acheter et vendre le même jour
+📈 **Swing Trading** - Garder des jours à des semaines
+
+Quel est votre style? (scalp/day trade/swing)`,
+
+      'ar': `لتحليل ${symbol}، أحتاج لفهم أسلوب تداولك:
+
+🏃 **سكالبينج** - صفقات سريعة في دقائق
+📊 **تداول يومي** - شراء وبيع في نفس اليوم
+📈 **سوينج** - الاحتفاظ لأيام إلى أسابيع
+
+ما هو أسلوبك؟ (scalp/day trade/swing)`,
+
+      'ru': `Для анализа ${symbol} мне нужно понять ваш стиль торговли:
+
+🏃 **Скальпинг** - Быстрые сделки за минуты
+📊 **Дейтрейдинг** - Покупка и продажа в тот же день
+📈 **Свинг** - Удержание дни-недели
+
+Какой ваш стиль? (scalp/day trade/swing)`,
+
+      'zh': `分析${symbol}之前，我需要了解你的交易风格：
+
+🏃 **短线交易** - 几分钟内快速交易
+📊 **日内交易** - 当天买卖
+📈 **波段交易** - 持有数天到数周
+
+你的风格是什么？(scalp/day trade/swing)`,
+
+      'ja': `${symbol}を分析するには、取引スタイルを理解する必要があります：
+
+🏃 **スキャルピング** - 数分以内の高速取引
+📊 **デイトレード** - 同日中の売買
+📈 **スイング** - 数日〜数週間保有
+
+あなたのスタイルは？(scalp/day trade/swing)`,
+
+      'ko': `${symbol}를 분석하려면 거래 스타일을 이해해야 합니다:
+
+🏃 **스캘핑** - 몇 분 안에 빠른 거래
+📊 **데이 트레이딩** - 같은 날 매수/매도
+📈 **스윙** - 며칠에서 몇 주 보유
+
+어떤 스타일인가요? (scalp/day trade/swing)`,
+    };
+
+    const message = clarificationMessages[language] || clarificationMessages['en'];
+
+    return {
+      success: true,
+      intent: 'ANALYSIS_NEEDS_CLARIFICATION',
+      message,
+      creditsSpent: 0,
+      creditsRemaining: creditBalance,
+    };
   }
 
   private handleUnknown(language: string, creditBalance: number): ConciergeResponse {
