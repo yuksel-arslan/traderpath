@@ -530,9 +530,9 @@ export default function ConciergePage() {
           const data = await response.json();
           if (data.success) {
             setPlatformStats({
-              totalAnalyses: data.data.totalAnalyses || 0,
-              accuracy: data.data.accuracy || 0,
-              activeTraders: data.data.activeUsers || 0,
+              totalAnalyses: Number(data.data.totalAnalyses) || 0,
+              accuracy: Number(data.data.accuracy) || 0,
+              activeTraders: Number(data.data.activeUsers) || 0,
             });
           }
         }
