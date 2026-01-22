@@ -5,32 +5,10 @@ import { Bot, Mic, MicOff, Volume2, VolumeX, Loader2, ExternalLink, Mail, Check,
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
 
-// Web Speech API Types (not included in standard TypeScript DOM types)
-interface ISpeechRecognitionEvent extends Event {
-  results: {
-    length: number;
-    item(index: number): { transcript: string; confidence: number }[];
-    [index: number]: { transcript: string; confidence: number }[];
-  };
-  resultIndex: number;
-}
-
-interface ISpeechRecognitionErrorEvent extends Event {
-  error: string;
-  message?: string;
-}
-
-interface ISpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: ((event: ISpeechRecognitionEvent) => void) | null;
-  onerror: ((event: ISpeechRecognitionErrorEvent) => void) | null;
-  onend: (() => void) | null;
-  start(): void;
-  stop(): void;
-  abort(): void;
-}
+// Web Speech API - using 'any' for cross-browser compatibility
+// These APIs are not fully typed in standard TypeScript DOM types
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SpeechRecognitionInstance = any;
 
 // Types
 interface ConversationStep {
@@ -125,7 +103,7 @@ export default function ConciergePage() {
 
   // Refs
   const synthRef = useRef<SpeechSynthesis | null>(null);
-  const recognitionRef = useRef<ISpeechRecognition | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   // Conversation history for display
@@ -140,12 +118,8 @@ export default function ConciergePage() {
       synthRef.current = window.speechSynthesis;
 
       // Initialize speech recognition (with browser compatibility)
-      const SpeechRecognitionAPI = (window as Window & {
-        SpeechRecognition?: new () => ISpeechRecognition;
-        webkitSpeechRecognition?: new () => ISpeechRecognition;
-      }).SpeechRecognition || (window as Window & {
-        webkitSpeechRecognition?: new () => ISpeechRecognition;
-      }).webkitSpeechRecognition;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
       if (SpeechRecognitionAPI) {
         const recognition = new SpeechRecognitionAPI();
@@ -153,14 +127,16 @@ export default function ConciergePage() {
         recognition.interimResults = false;
         recognition.lang = getSpeechLang(detectedLang);
 
-        recognition.onresult = (event: ISpeechRecognitionEvent) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        recognition.onresult = (event: any) => {
           const text = event.results[0][0].transcript.toLowerCase().trim();
           setTranscript(text);
           setIsListening(false);
           handleUserInput(text);
         };
 
-        recognition.onerror = (event: ISpeechRecognitionErrorEvent) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        recognition.onerror = (event: any) => {
           console.error('Speech recognition error:', event.error);
           setIsListening(false);
           if (event.error === 'no-speech') {
