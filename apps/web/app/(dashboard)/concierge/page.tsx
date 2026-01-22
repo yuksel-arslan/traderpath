@@ -69,12 +69,44 @@ interface ConciergeResponse {
   chartData?: ChartData;
 }
 
-// Quick Commands - fewer on mobile
+// Quick Commands - enhanced with market context
 const QUICK_COMMANDS = [
-  { id: 'btc', label: 'BTC', labelFull: 'BTC Analysis', command: 'How is BTC?', icon: '₿' },
-  { id: 'eth', label: 'ETH', labelFull: 'ETH Analysis', command: 'How is ETH?', icon: 'Ξ' },
-  { id: 'chart', label: 'Chart', labelFull: 'Show Chart', command: 'Show BTC chart', icon: '📈' },
-  { id: 'help', label: 'Help', labelFull: 'Help', command: 'help', icon: '?' },
+  { id: 'btc', label: 'BTC', labelFull: 'Analyze Bitcoin', command: 'Analyze BTC for day trading', icon: '₿', color: 'from-orange-500 to-amber-500' },
+  { id: 'eth', label: 'ETH', labelFull: 'Analyze Ethereum', command: 'Analyze ETH for swing trade', icon: 'Ξ', color: 'from-indigo-500 to-purple-500' },
+  { id: 'sol', label: 'SOL', labelFull: 'Analyze Solana', command: 'Analyze SOL', icon: '◎', color: 'from-emerald-500 to-teal-500' },
+  { id: 'help', label: 'Guide', labelFull: 'Platform Guide', command: 'What can you do?', icon: '✨', color: 'from-pink-500 to-rose-500' },
+];
+
+// Feature cards for showcase
+const FEATURE_CARDS = [
+  {
+    icon: '🔬',
+    title: { en: '40+ Indicators', tr: '40+ İndikatör' },
+    desc: { en: 'RSI, MACD, Bollinger, and more', tr: 'RSI, MACD, Bollinger ve daha fazlası' },
+    color: 'from-blue-500/20 to-cyan-500/20',
+    border: 'border-blue-500/30',
+  },
+  {
+    icon: '🤖',
+    title: { en: '4 AI Experts', tr: '4 AI Uzman' },
+    desc: { en: 'ARIA, NEXUS, ORACLE, SENTINEL', tr: 'ARIA, NEXUS, ORACLE, SENTINEL' },
+    color: 'from-purple-500/20 to-pink-500/20',
+    border: 'border-purple-500/30',
+  },
+  {
+    icon: '⚡',
+    title: { en: '60-Second Analysis', tr: '60 Saniye Analiz' },
+    desc: { en: 'Complete analysis in one minute', tr: 'Bir dakikada tam analiz' },
+    color: 'from-amber-500/20 to-orange-500/20',
+    border: 'border-amber-500/30',
+  },
+  {
+    icon: '🎯',
+    title: { en: 'Trade Plans', tr: 'İşlem Planı' },
+    desc: { en: 'Entry, SL, TP with precision', tr: 'Giriş, SL, TP hassasiyetle' },
+    color: 'from-emerald-500/20 to-teal-500/20',
+    border: 'border-emerald-500/30',
+  },
 ];
 
 // Simple language detection based on Turkish characters and common words
@@ -105,6 +137,23 @@ function getVerdictStyle(verdict?: string) {
   }
 }
 
+// Market data type
+interface MarketData {
+  btcPrice: number;
+  btcChange: number;
+  ethPrice: number;
+  ethChange: number;
+  fearGreed: number;
+  fearGreedLabel: string;
+}
+
+// Platform stats type
+interface PlatformStats {
+  totalAnalyses: number;
+  accuracy: number;
+  activeTraders: number;
+}
+
 export default function ConciergePage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -120,6 +169,10 @@ export default function ConciergePage() {
   const [hasGreeted, setHasGreeted] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
   const [greetingPhase, setGreetingPhase] = useState<'idle' | 'speaking' | 'listening'>('idle');
+
+  // Market data & platform stats
+  const [marketData, setMarketData] = useState<MarketData | null>(null);
+  const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -421,6 +474,73 @@ export default function ConciergePage() {
       }
     };
     fetchUserLanguage();
+  }, []);
+
+  // Fetch market data (BTC, ETH prices, Fear & Greed)
+  useEffect(() => {
+    const fetchMarketData = async () => {
+      try {
+        // Fetch BTC and ETH prices from Binance
+        const [btcRes, ethRes, fgRes] = await Promise.allSettled([
+          fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT'),
+          fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT'),
+          fetch('https://api.alternative.me/fng/?limit=1'),
+        ]);
+
+        let btcPrice = 0, btcChange = 0, ethPrice = 0, ethChange = 0;
+        let fearGreed = 50, fearGreedLabel = 'Neutral';
+
+        if (btcRes.status === 'fulfilled' && btcRes.value.ok) {
+          const btcData = await btcRes.value.json();
+          btcPrice = parseFloat(btcData.lastPrice);
+          btcChange = parseFloat(btcData.priceChangePercent);
+        }
+
+        if (ethRes.status === 'fulfilled' && ethRes.value.ok) {
+          const ethData = await ethRes.value.json();
+          ethPrice = parseFloat(ethData.lastPrice);
+          ethChange = parseFloat(ethData.priceChangePercent);
+        }
+
+        if (fgRes.status === 'fulfilled' && fgRes.value.ok) {
+          const fgData = await fgRes.value.json();
+          if (fgData.data?.[0]) {
+            fearGreed = parseInt(fgData.data[0].value);
+            fearGreedLabel = fgData.data[0].value_classification;
+          }
+        }
+
+        setMarketData({ btcPrice, btcChange, ethPrice, ethChange, fearGreed, fearGreedLabel });
+      } catch {
+        // Keep null on error
+      }
+    };
+    fetchMarketData();
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchMarketData, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch platform stats
+  useEffect(() => {
+    const fetchPlatformStats = async () => {
+      try {
+        const response = await authFetch('/api/analysis/platform-stats');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setPlatformStats({
+              totalAnalyses: data.data.totalAnalyses || 0,
+              accuracy: data.data.accuracy || 0,
+              activeTraders: data.data.activeUsers || 0,
+            });
+          }
+        }
+      } catch {
+        // Keep null on error
+      }
+    };
+    fetchPlatformStats();
   }, []);
 
   // Auto scroll to bottom
@@ -874,39 +994,145 @@ export default function ConciergePage() {
                 </div>
               ) : (
                 <>
-                  {/* Static Welcome (after greeting or no voice support) */}
-                  <div className="relative w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6">
-                    <div className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-teal-500/20 to-teal-600/20 animate-pulse" />
-                    <div className="absolute inset-1.5 sm:inset-2 rounded-xl sm:rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-teal-500/30">
-                      <Bot className="w-7 h-7 sm:w-10 sm:h-10 text-white" />
+                  {/* Live Market Banner */}
+                  {marketData && (
+                    <div className="flex items-center justify-center gap-3 sm:gap-6 mb-6 sm:mb-8 px-2">
+                      {/* BTC */}
+                      <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+                        <span className="text-lg sm:text-xl">₿</span>
+                        <div className="text-left">
+                          <p className="text-xs text-slate-500 dark:text-slate-400">BTC</p>
+                          <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                            ${marketData.btcPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          </p>
+                        </div>
+                        <span className={`text-xs sm:text-sm font-semibold ${marketData.btcChange >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          {marketData.btcChange >= 0 ? '+' : ''}{marketData.btcChange.toFixed(2)}%
+                        </span>
+                      </div>
+                      {/* ETH */}
+                      <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+                        <span className="text-lg sm:text-xl">Ξ</span>
+                        <div className="text-left">
+                          <p className="text-xs text-slate-500 dark:text-slate-400">ETH</p>
+                          <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                            ${marketData.ethPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          </p>
+                        </div>
+                        <span className={`text-xs sm:text-sm font-semibold ${marketData.ethChange >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          {marketData.ethChange >= 0 ? '+' : ''}{marketData.ethChange.toFixed(2)}%
+                        </span>
+                      </div>
+                      {/* Fear & Greed (hidden on mobile) */}
+                      <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white ${
+                          marketData.fearGreed <= 25 ? 'bg-red-500' :
+                          marketData.fearGreed <= 45 ? 'bg-orange-500' :
+                          marketData.fearGreed <= 55 ? 'bg-yellow-500' :
+                          marketData.fearGreed <= 75 ? 'bg-lime-500' : 'bg-emerald-500'
+                        }`}>
+                          {marketData.fearGreed}
+                        </div>
+                        <div className="text-left">
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Fear & Greed</p>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{marketData.fearGreedLabel}</p>
+                        </div>
+                      </div>
                     </div>
+                  )}
+
+                  {/* AI Avatar with glow */}
+                  <div className="relative w-20 h-20 sm:w-28 sm:h-28 mx-auto mb-4 sm:mb-6">
+                    <div className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-teal-500/30 to-cyan-500/30 animate-pulse blur-xl" />
+                    <div className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-teal-500/20 to-teal-600/20" />
+                    <div className="absolute inset-1.5 sm:inset-2 rounded-xl sm:rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-teal-500/40">
+                      <Bot className="w-9 h-9 sm:w-12 sm:h-12 text-white" />
+                    </div>
+                    {/* Sparkle effects */}
+                    <Sparkles className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 text-amber-400 animate-pulse" />
+                    <Sparkles className="absolute -bottom-1 -left-1 w-3 h-3 sm:w-4 sm:h-4 text-teal-400 animate-pulse" style={{ animationDelay: '0.5s' }} />
                   </div>
 
-                  <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2 sm:mb-3">
-                    {userLanguage === 'tr' ? 'AI Concierge\'e Hoşgeldiniz' : 'Welcome to AI Concierge'}
+                  <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2 sm:mb-3">
+                    {userLanguage === 'tr' ? 'AI Concierge' : 'AI Concierge'}
                   </h3>
-                  <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mb-6 sm:mb-8 max-w-md mx-auto px-4">
+                  <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mb-4 sm:mb-6 max-w-lg mx-auto px-4">
                     {userLanguage === 'tr'
-                      ? 'Kripto para analizi yapın, sorular sorun ve içgörüler alın.'
-                      : 'Analyze cryptocurrencies, ask questions, and get insights.'}
+                      ? 'Yapay zeka destekli kripto analiz asistanınız. Sorularınızı sorun, anında analiz alın.'
+                      : 'Your AI-powered crypto analysis assistant. Ask questions, get instant insights.'}
                   </p>
 
-                  {/* Quick Commands - 2x2 grid on mobile */}
-                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 justify-center mb-4 sm:mb-6 px-2">
-                    {QUICK_COMMANDS.map((cmd) => (
-                      <button
-                        key={cmd.id}
-                        onClick={() => sendMessage(cmd.command)}
-                        disabled={isLoading}
-                        className="group flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700/50 hover:border-teal-500/50 shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  {/* Platform Stats */}
+                  {platformStats && (
+                    <div className="flex items-center justify-center gap-3 sm:gap-8 mb-6 sm:mb-8">
+                      <div className="text-center px-3 sm:px-4">
+                        <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-teal-500 to-cyan-500 bg-clip-text text-transparent">
+                          {platformStats.totalAnalyses.toLocaleString()}+
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
+                          {userLanguage === 'tr' ? 'Analiz' : 'Analyses'}
+                        </p>
+                      </div>
+                      <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+                      <div className="text-center px-3 sm:px-4">
+                        <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
+                          {platformStats.accuracy.toFixed(1)}%
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
+                          {userLanguage === 'tr' ? 'Doğruluk' : 'Accuracy'}
+                        </p>
+                      </div>
+                      <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+                      <div className="text-center px-3 sm:px-4">
+                        <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+                          {platformStats.activeTraders.toLocaleString()}+
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
+                          {userLanguage === 'tr' ? 'Trader' : 'Traders'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Feature Cards - showcase platform power */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-6 sm:mb-8 px-2 max-w-2xl mx-auto">
+                    {FEATURE_CARDS.map((card, idx) => (
+                      <div
+                        key={idx}
+                        className={`relative overflow-hidden rounded-xl p-3 sm:p-4 bg-gradient-to-br ${card.color} border ${card.border} backdrop-blur-sm transition-transform hover:scale-105`}
                       >
-                        <span className="text-base sm:text-lg">{cmd.icon}</span>
-                        <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
-                          <span className="sm:hidden">{cmd.label}</span>
-                          <span className="hidden sm:inline">{cmd.labelFull}</span>
-                        </span>
-                      </button>
+                        <span className="text-2xl sm:text-3xl mb-1 block">{card.icon}</span>
+                        <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">
+                          {card.title[userLanguage as 'en' | 'tr'] || card.title.en}
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                          {card.desc[userLanguage as 'en' | 'tr'] || card.desc.en}
+                        </p>
+                      </div>
                     ))}
+                  </div>
+
+                  {/* Quick Commands with gradient styling */}
+                  <div className="mb-6 sm:mb-8">
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-3">
+                      {userLanguage === 'tr' ? 'Hızlı Başlangıç' : 'Quick Start'}
+                    </p>
+                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 justify-center px-2">
+                      {QUICK_COMMANDS.map((cmd) => (
+                        <button
+                          key={cmd.id}
+                          onClick={() => sendMessage(cmd.command)}
+                          disabled={isLoading}
+                          className={`group flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r ${cmd.color} text-white rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105`}
+                        >
+                          <span className="text-base sm:text-lg">{cmd.icon}</span>
+                          <span className="text-xs sm:text-sm font-medium">
+                            <span className="sm:hidden">{cmd.label}</span>
+                            <span className="hidden sm:inline">{cmd.labelFull}</span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Voice Button */}
@@ -928,19 +1154,32 @@ export default function ConciergePage() {
                           }
                         });
                       }}
-                      className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white rounded-xl sm:rounded-2xl shadow-lg shadow-teal-500/25 hover:shadow-xl transition-all text-sm sm:text-base font-medium mb-4"
+                      className="inline-flex items-center gap-2 px-5 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-teal-500 via-cyan-500 to-teal-500 hover:from-teal-600 hover:via-cyan-600 hover:to-teal-600 text-white rounded-xl sm:rounded-2xl shadow-xl shadow-teal-500/30 hover:shadow-2xl transition-all text-sm sm:text-base font-semibold mb-4 animate-shimmer bg-[length:200%_100%]"
                     >
-                      <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
-                      {userLanguage === 'tr' ? 'Sesli başlat' : 'Start with voice'}
+                      <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
+                      {userLanguage === 'tr' ? 'Sesli Komut Ver' : 'Use Voice Command'}
                     </button>
                   )}
 
-                  {/* Example prompts */}
-                  <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 px-4">
-                    {userLanguage === 'tr'
-                      ? 'Örnek: "BTC nasıl?" • "RSI nedir?" • "ETH 4s analiz"'
-                      : 'Try: "How is BTC?" • "What is RSI?" • "ETH 4h analysis"'}
-                  </p>
+                  {/* Example prompts with better styling */}
+                  <div className="flex flex-wrap items-center justify-center gap-2 px-4">
+                    <span className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500">
+                      {userLanguage === 'tr' ? 'Örnek:' : 'Try:'}
+                    </span>
+                    {[
+                      userLanguage === 'tr' ? 'BTC nasıl?' : 'How is BTC?',
+                      userLanguage === 'tr' ? 'RSI nedir?' : 'What is RSI?',
+                      userLanguage === 'tr' ? 'SOL 4h analiz' : 'SOL 4h analysis',
+                    ].map((example, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => sendMessage(example)}
+                        className="text-[10px] sm:text-xs px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full hover:bg-teal-100 hover:text-teal-700 dark:hover:bg-teal-900/30 dark:hover:text-teal-400 transition-colors"
+                      >
+                        &quot;{example}&quot;
+                      </button>
+                    ))}
+                  </div>
                 </>
               )}
             </div>

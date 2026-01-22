@@ -231,6 +231,10 @@ module.exports = {
           '50%': { transform: 'scale(1.5)', opacity: '0.5' },
           '100%': { transform: 'scale(2)', opacity: '0' },
         },
+        'shimmer': {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -263,6 +267,7 @@ module.exports = {
         'soundwave': 'soundwave 0.5s ease-in-out infinite',
         'soundwave-slow': 'soundwave-slow 0.8s ease-in-out infinite',
         'voice-pulse': 'voice-pulse 1.5s ease-out infinite',
+        'shimmer': 'shimmer 3s ease-in-out infinite',
       },
       boxShadow: {
         'glow-teal': '0 0 30px rgba(45, 212, 168, 0.4), 0 0 60px rgba(20, 184, 166, 0.2)',
