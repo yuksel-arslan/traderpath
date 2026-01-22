@@ -5,9 +5,8 @@
 
 import { config } from './config';
 import { redis } from './cache';
-
-// @ts-ignore - SDK types may have issues but runtime works
-const { GoogleGenAI } = require('@google/genai');
+// @ts-ignore - SDK types may not be fully compatible
+import { GoogleGenAI } from '@google/genai';
 
 const GEMINI_API_KEY = config.gemini.apiKey;
 // Available models: gemini-2.5-flash, gemini-2.0-flash, gemini-1.5-flash, gemini-1.5-pro
