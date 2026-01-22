@@ -1,1301 +1,506 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, Send, Loader2, Coins, Trash2, Mic, MicOff, Sparkles, TrendingUp, TrendingDown, Minus, ExternalLink, AlertTriangle, HelpCircle, BarChart3, LineChart } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bot, Send, Loader2, Check, Mail, ExternalLink, TrendingUp, TrendingDown, Minus, ChevronRight } from 'lucide-react';
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-
-// Dynamically import TradePlanChart to avoid SSR issues
-const TradePlanChart = dynamic(
-  () => import('@/components/analysis/TradePlanChart').then(mod => mod.TradePlanChart),
-  { ssr: false, loading: () => <div className="h-[250px] sm:h-[400px] animate-pulse bg-slate-200 dark:bg-slate-800 rounded-lg" /> }
-);
 
 // Types
-interface ChartCandle {
-  time: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-}
-
-interface TradePlanData {
-  entry: number;
-  stopLoss: number;
-  takeProfit1: number;
-  takeProfit2?: number;
-  takeProfit3?: number;
-  direction: 'long' | 'short';
-}
-
-interface ChartData {
-  symbol: string;
-  interval: string;
-  candles: ChartCandle[];
-  tradePlan?: TradePlanData;
-  currentPrice?: number;
-}
-
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  intent?: string;
-  analysisData?: AnalysisData;
-  chartData?: ChartData;
-}
-
-interface AnalysisData {
-  verdict?: 'GO' | 'CONDITIONAL_GO' | 'WAIT' | 'AVOID';
-  score?: number;
-  analysisId?: string;
-}
-
-interface ConciergeResponse {
+interface AnalysisResult {
   success: boolean;
-  intent: string;
-  message: string;
-  creditsSpent: number;
-  creditsRemaining: number;
-  error?: string;
   analysisId?: string;
   verdict?: string;
   score?: number;
-  voltranSynthesis?: string;
-  chartData?: ChartData;
+  message?: string;
+  error?: string;
 }
 
-// Quick Commands - enhanced with market context
-const QUICK_COMMANDS = [
-  { id: 'btc', label: 'BTC', labelFull: 'Analyze Bitcoin', command: 'Analyze BTC for day trading', icon: '₿', color: 'from-orange-500 to-amber-500' },
-  { id: 'eth', label: 'ETH', labelFull: 'Analyze Ethereum', command: 'Analyze ETH for swing trade', icon: 'Ξ', color: 'from-indigo-500 to-purple-500' },
-  { id: 'sol', label: 'SOL', labelFull: 'Analyze Solana', command: 'Analyze SOL', icon: '◎', color: 'from-emerald-500 to-teal-500' },
-  { id: 'help', label: 'Guide', labelFull: 'Platform Guide', command: 'What can you do?', icon: '✨', color: 'from-pink-500 to-rose-500' },
+// Supported coins with display names
+const COINS = [
+  { symbol: 'BTC', name: 'Bitcoin', icon: '₿', color: 'from-orange-500 to-amber-500' },
+  { symbol: 'ETH', name: 'Ethereum', icon: 'Ξ', color: 'from-indigo-500 to-purple-500' },
+  { symbol: 'SOL', name: 'Solana', icon: '◎', color: 'from-emerald-500 to-teal-500' },
+  { symbol: 'BNB', name: 'BNB', icon: '⬡', color: 'from-yellow-500 to-amber-500' },
+  { symbol: 'XRP', name: 'Ripple', icon: '✕', color: 'from-blue-500 to-cyan-500' },
+  { symbol: 'DOGE', name: 'Dogecoin', icon: 'Ð', color: 'from-amber-400 to-yellow-500' },
+  { symbol: 'ADA', name: 'Cardano', icon: '₳', color: 'from-blue-600 to-indigo-600' },
+  { symbol: 'AVAX', name: 'Avalanche', icon: '▲', color: 'from-red-500 to-rose-500' },
 ];
 
-// Feature cards for showcase
-const FEATURE_CARDS = [
-  {
-    icon: '🔬',
-    title: { en: '40+ Indicators', tr: '40+ İndikatör' },
-    desc: { en: 'RSI, MACD, Bollinger, and more', tr: 'RSI, MACD, Bollinger ve daha fazlası' },
-    color: 'from-blue-500/20 to-cyan-500/20',
-    border: 'border-blue-500/30',
-  },
-  {
-    icon: '🤖',
-    title: { en: '4 AI Experts', tr: '4 AI Uzman' },
-    desc: { en: 'ARIA, NEXUS, ORACLE, SENTINEL', tr: 'ARIA, NEXUS, ORACLE, SENTINEL' },
-    color: 'from-purple-500/20 to-pink-500/20',
-    border: 'border-purple-500/30',
-  },
-  {
-    icon: '⚡',
-    title: { en: '60-Second Analysis', tr: '60 Saniye Analiz' },
-    desc: { en: 'Complete analysis in one minute', tr: 'Bir dakikada tam analiz' },
-    color: 'from-amber-500/20 to-orange-500/20',
-    border: 'border-amber-500/30',
-  },
-  {
-    icon: '🎯',
-    title: { en: 'Trade Plans', tr: 'İşlem Planı' },
-    desc: { en: 'Entry, SL, TP with precision', tr: 'Giriş, SL, TP hassasiyetle' },
-    color: 'from-emerald-500/20 to-teal-500/20',
-    border: 'border-emerald-500/30',
-  },
+// Timeframes
+const TIMEFRAMES = [
+  { value: '15m', label: 'Scalping', labelTr: 'Scalping', desc: '15 min', descTr: '15 dakika' },
+  { value: '1h', label: 'Day Trade', labelTr: 'Gün İçi', desc: '1 hour', descTr: '1 saat' },
+  { value: '4h', label: 'Swing', labelTr: 'Swing', desc: '4 hours', descTr: '4 saat' },
+  { value: '1d', label: 'Position', labelTr: 'Pozisyon', desc: 'Daily', descTr: 'Günlük' },
 ];
 
-// Simple language detection based on Turkish characters and common words
-function detectLanguage(text: string): 'tr' | 'en' {
-  const turkishChars = /[çğıöşüÇĞİÖŞÜ]/;
-  const turkishWords = /\b(nasıl|nedir|ne|için|ile|var|yok|bu|şu|ve|veya|ama|fakat|çünkü|gibi|kadar|daha|en|bir|iki|üç|analiz|fiyat|al|sat|git|gel|yap|et|ol|değil|mi|mı|mu|mü)\b/i;
+// Wizard steps
+type WizardStep = 'welcome' | 'select-coin' | 'select-timeframe' | 'confirm' | 'analyzing' | 'result' | 'email-confirm';
 
-  if (turkishChars.test(text) || turkishWords.test(text)) {
-    return 'tr';
-  }
-  return 'en';
+// Language detection
+function detectBrowserLanguage(): 'tr' | 'en' {
+  if (typeof window === 'undefined') return 'en';
+  const lang = navigator.language || 'en';
+  return lang.startsWith('tr') ? 'tr' : 'en';
 }
 
-// Verdict colors and icons
+// Verdict styling
 function getVerdictStyle(verdict?: string) {
   switch (verdict?.toUpperCase()) {
     case 'GO':
-      return { bg: 'from-emerald-500 to-green-600', text: 'text-white', icon: TrendingUp };
+      return { bg: 'from-emerald-500 to-green-600', text: 'text-white', icon: TrendingUp, label: 'GO', labelTr: 'GİT' };
     case 'CONDITIONAL_GO':
     case 'COND':
-      return { bg: 'from-amber-500 to-yellow-600', text: 'text-white', icon: TrendingUp };
+      return { bg: 'from-amber-500 to-yellow-600', text: 'text-white', icon: TrendingUp, label: 'CONDITIONAL', labelTr: 'ŞARTLI' };
     case 'WAIT':
-      return { bg: 'from-slate-500 to-gray-600', text: 'text-white', icon: Minus };
+      return { bg: 'from-slate-500 to-gray-600', text: 'text-white', icon: Minus, label: 'WAIT', labelTr: 'BEKLE' };
     case 'AVOID':
-      return { bg: 'from-red-500 to-rose-600', text: 'text-white', icon: TrendingDown };
+      return { bg: 'from-red-500 to-rose-600', text: 'text-white', icon: TrendingDown, label: 'AVOID', labelTr: 'KAÇIN' };
     default:
-      return { bg: 'from-slate-500 to-gray-600', text: 'text-white', icon: Minus };
+      return { bg: 'from-slate-500 to-gray-600', text: 'text-white', icon: Minus, label: 'N/A', labelTr: 'N/A' };
   }
 }
 
-// Market data type
-interface MarketData {
-  btcPrice: number;
-  btcChange: number;
-  ethPrice: number;
-  ethChange: number;
-  fearGreed: number;
-  fearGreedLabel: string;
-}
-
-// Platform stats type
-interface PlatformStats {
-  totalAnalyses: number;
-  accuracy: number;
-  activeTraders: number;
-}
-
 export default function ConciergePage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
+  const [step, setStep] = useState<WizardStep>('welcome');
+  const [lang, setLang] = useState<'tr' | 'en'>('en');
+  const [selectedCoin, setSelectedCoin] = useState<typeof COINS[0] | null>(null);
+  const [selectedTimeframe, setSelectedTimeframe] = useState<typeof TIMEFRAMES[0] | null>(null);
+  const [includeExpert, setIncludeExpert] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
-  const [isListening, setIsListening] = useState(false);
-  const [speechSupported, setSpeechSupported] = useState(false);
-  const [userLanguage, setUserLanguage] = useState<string>('en');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
-  // Voice greeting states
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [hasGreeted, setHasGreeted] = useState(false);
-  const [voiceSupported, setVoiceSupported] = useState(false);
-  const [greetingPhase, setGreetingPhase] = useState<'idle' | 'speaking' | 'listening'>('idle');
+  // Detect language on mount
+  useEffect(() => {
+    setLang(detectBrowserLanguage());
+    fetchCredits();
+  }, []);
 
-  // Market data & platform stats
-  const [marketData, setMarketData] = useState<MarketData | null>(null);
-  const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recognitionRef = useRef<any>(null);
-  const synthRef = useRef<SpeechSynthesis | null>(null);
-
-  // Greeting messages in different languages - energetic and concise
-  const getGreetingMessage = (lang: string): string => {
-    const greetings: Record<string, string> = {
-      'en': "Hey! Welcome to TraderPath! I'm your AI Concierge, ready to analyze any crypto for you. What would you like to know?",
-      'tr': "Selam! TraderPath'e hoş geldin! Ben senin AI asistanın, hangi coini analiz etmemi istersin?",
-      'es': "¡Hola! Bienvenido a TraderPath! Soy tu asistente AI, listo para analizar cualquier cripto. ¿Qué quieres saber?",
-      'de': "Hey! Willkommen bei TraderPath! Ich bin dein AI Assistent, bereit jede Krypto zu analysieren. Was möchtest du wissen?",
-      'fr': "Salut! Bienvenue sur TraderPath! Je suis ton assistant AI, prêt à analyser toute crypto. Que veux-tu savoir?",
-      'pt': "Oi! Bem-vindo ao TraderPath! Sou seu assistente AI, pronto para analisar qualquer cripto. O que você quer saber?",
-      'ru': "Привет! Добро пожаловать в TraderPath! Я твой AI ассистент, готов проанализировать любую крипту. Что хочешь узнать?",
-      'zh': "嘿！欢迎来到TraderPath！我是你的AI助手，随时为你分析任何加密货币。想了解什么？",
-      'ja': "こんにちは！TraderPathへようこそ！私はあなたのAIアシスタントです。何を分析しましょうか？",
-      'ko': "안녕! TraderPath에 오신 것을 환영합니다! 저는 당신의 AI 어시스턴트입니다. 무엇을 알고 싶으세요?",
-      'ar': "مرحبا! أهلا بك في TraderPath! أنا مساعدك الذكي، جاهز لتحليل أي عملة. ماذا تريد أن تعرف؟",
-      'it': "Ciao! Benvenuto su TraderPath! Sono il tuo assistente AI, pronto ad analizzare qualsiasi cripto. Cosa vuoi sapere?",
-    };
-    return greetings[lang] || greetings['en'];
+  // Fetch credits
+  const fetchCredits = async () => {
+    try {
+      const res = await authFetch('/api/credits/balance');
+      const data = await res.json();
+      if (data.success) {
+        setCredits(data.data.balance);
+      }
+    } catch {
+      console.error('Failed to fetch credits');
+    }
   };
 
-  // Speak function using Web Speech API
-  const speak = useCallback((text: string, onEnd?: () => void) => {
-    if (!synthRef.current || !voiceSupported) {
-      onEnd?.();
-      return;
-    }
+  // Run analysis
+  const runAnalysis = async () => {
+    if (!selectedCoin || !selectedTimeframe) return;
 
-    // Cancel any ongoing speech
-    synthRef.current.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = getSpeechLang(userLanguage);
-    utterance.rate = 1.15; // Faster, more energetic speech
-    utterance.pitch = 1.05; // Slightly higher for lively tone
-    utterance.volume = 1.0;
-
-    // Get all available voices
-    const voices = synthRef.current.getVoices();
-    const speechLang = getSpeechLang(userLanguage);
-    const langCode = userLanguage.toLowerCase();
-
-    // HIGH QUALITY VOICE SELECTION STRATEGY
-    // Priority 1: Google voices (best quality in Chrome)
-    // Priority 2: Microsoft Neural/Online voices (best quality in Edge)
-    // Priority 3: Apple premium voices (best quality in Safari)
-    // Priority 4: Known premium male voices by name
-
-    // Premium voice indicators (case-insensitive)
-    const premiumIndicators = ['google', 'neural', 'online', 'premium', 'natural', 'wavenet', 'studio'];
-
-    // Known high-quality male voice names (full or partial matches)
-    const premiumMaleVoices: Record<string, string[]> = {
-      'en': ['Google UK English Male', 'Microsoft Guy', 'Microsoft Ryan', 'Microsoft Davis', 'Daniel', 'Alex', 'James', 'Fred', 'Tom', 'Aaron'],
-      'tr': ['Google Türkçe', 'Microsoft Ahmet', 'Tolga', 'Kerem'],
-      'es': ['Google español', 'Microsoft Alvaro', 'Microsoft Pablo', 'Jorge', 'Diego', 'Carlos'],
-      'de': ['Google Deutsch', 'Microsoft Conrad', 'Microsoft Stefan', 'Markus', 'Thomas'],
-      'fr': ['Google français', 'Microsoft Henri', 'Microsoft Paul', 'Thomas', 'Jacques'],
-      'pt': ['Google português', 'Microsoft Antonio', 'Microsoft Daniel', 'Luciano'],
-      'ru': ['Google русский', 'Microsoft Dmitry', 'Microsoft Pavel', 'Yuri'],
-      'zh': ['Google 普通话', 'Microsoft Yunxi', 'Microsoft Yunyang'],
-      'ja': ['Google 日本語', 'Microsoft Keita', 'Otoya', 'Ichiro'],
-      'ko': ['Google 한국어', 'Microsoft InJoon', 'Jihun'],
-      'ar': ['Google العربية', 'Microsoft Hamed', 'Microsoft Omar'],
-      'it': ['Google italiano', 'Microsoft Diego', 'Luca', 'Marco'],
-    };
-
-    // Low quality voices to AVOID (including some female voices we don't want)
-    const lowQualityVoices = ['espeak', 'default', 'zira', 'samantha', 'karen', 'moira'];
-
-    // Filter voices for user's language
-    const langVoices = voices.filter(v =>
-      v.lang.toLowerCase().startsWith(langCode) ||
-      v.lang.toLowerCase().split('-')[0] === langCode
-    );
-
-    console.log(`[Voice] Found ${langVoices.length} voices for language ${langCode}:`,
-      langVoices.map(v => `${v.name} (${v.lang})`).join(', '));
-
-    let selectedVoice: SpeechSynthesisVoice | null = null;
-
-    // Helper: Check if voice is low quality
-    const isLowQuality = (v: SpeechSynthesisVoice) =>
-      lowQualityVoices.some(lq => v.name.toLowerCase().includes(lq));
-
-    // Helper: Check if voice is premium
-    const isPremium = (v: SpeechSynthesisVoice) =>
-      premiumIndicators.some(pi => v.name.toLowerCase().includes(pi));
-
-    // Helper: Check if voice matches premium male list
-    const isPremiumMale = (v: SpeechSynthesisVoice) => {
-      const langMales = premiumMaleVoices[langCode] || premiumMaleVoices['en'];
-      return langMales.some(pm => v.name.toLowerCase().includes(pm.toLowerCase()));
-    };
-
-    // Helper: Check if voice is DEFINITELY female (to exclude)
-    const isDefinitelyFemale = (v: SpeechSynthesisVoice) => {
-      const femaleIndicators = [
-        'female', 'woman', 'girl',
-        // English female voices
-        'aria', 'jenny', 'samantha', 'karen', 'moira', 'tessa', 'serena', 'victoria', 'fiona', 'kate', 'susan', 'heather', 'emily', 'catherine', 'elizabeth', 'allison', 'ava', 'zira', 'hazel', 'linda', 'michelle', 'clara',
-        // Turkish female voices
-        'emel', 'filiz', 'selin', 'zeynep', 'ayşe', 'elif', 'ece',
-        // Spanish female voices
-        'elena', 'monica', 'lucia', 'carmen', 'isabella', 'sofia',
-        // German female voices
-        'katja', 'anna', 'marlene', 'hedda', 'petra', 'sabine',
-        // French female voices
-        'denise', 'amelie', 'celine', 'julie', 'lea', 'virginie',
-        // Russian female voices
-        'irina', 'ekaterina', 'dariya', 'svetlana',
-        // Chinese female voices
-        'xiaoxiao', 'xiaoyi', 'xiaomo', 'huihui', 'yaoyao', 'lily',
-        // Japanese female voices
-        'nanami', 'ayumi', 'haruka', 'keiko', 'sayaka', 'misaki',
-        // Korean female voices
-        'sunhi', 'yuna', 'heami', 'jiyun',
-        // Arabic female voices
-        'hoda', 'laila', 'fatima', 'amira', 'zariyah',
-        // Italian female voices
-        'elsa', 'alice', 'cosimo', 'lucia',
-        // Portuguese female voices
-        'francisca', 'fernanda', 'raquel', 'camila'
-      ];
-      const nameLower = v.name.toLowerCase();
-      return femaleIndicators.some(fi => nameLower.includes(fi));
-    };
-
-    // Helper: Check if voice sounds male (ONLY positive identification)
-    const isMaleVoice = (v: SpeechSynthesisVoice) => {
-      const maleIndicators = [
-        'male', 'guy', 'man',
-        // English male voices
-        'ryan', 'davis', 'daniel', 'alex', 'james', 'fred', 'tom', 'aaron', 'david', 'mark', 'george', 'christopher', 'lee', 'eric', 'roger', 'bruce', 'adam', 'brian', 'sean', 'jason', 'matthew',
-        // Turkish male voices
-        'ahmet', 'tolga', 'kerem', 'cem', 'onur', 'mehmet', 'murat',
-        // Spanish male voices
-        'alvaro', 'pablo', 'jorge', 'diego', 'carlos', 'miguel', 'raul',
-        // German male voices
-        'conrad', 'stefan', 'markus', 'thomas', 'hans', 'klaus', 'jonas',
-        // French male voices
-        'henri', 'paul', 'thomas', 'jacques', 'pierre', 'alain', 'claude',
-        // Russian male voices
-        'dmitry', 'pavel', 'yuri', 'maxim', 'ivan', 'sergey', 'alexander',
-        // Chinese male voices
-        'yunxi', 'yunyang', 'kangkang',
-        // Japanese male voices
-        'keita', 'otoya', 'ichiro', 'kenta', 'takuya', 'hiroshi',
-        // Korean male voices
-        'injoon', 'jihun', 'hyunbin',
-        // Arabic male voices
-        'hamed', 'omar', 'naayf', 'hamdan',
-        // Italian male voices
-        'diego', 'luca', 'marco', 'giuseppe', 'andrea'
-      ];
-      const nameLower = v.name.toLowerCase();
-      // Must have a male indicator AND not be female
-      return maleIndicators.some(mi => nameLower.includes(mi)) && !isDefinitelyFemale(v);
-    };
-
-    // Strategy 1: Find known premium male voice first (highest priority)
-    selectedVoice = langVoices.find(v => isPremiumMale(v) && !isLowQuality(v) && !isDefinitelyFemale(v)) || null;
-    if (selectedVoice) console.log('[Voice] Strategy 1: Known premium male voice');
-
-    // Strategy 2: Find Microsoft male voice (they always have gender in name)
-    if (!selectedVoice) {
-      selectedVoice = langVoices.find(v =>
-        v.name.toLowerCase().includes('microsoft') &&
-        isMaleVoice(v) && !isLowQuality(v) && !isDefinitelyFemale(v)
-      ) || null;
-      if (selectedVoice) console.log('[Voice] Strategy 2: Microsoft male voice');
-    }
-
-    // Strategy 3: Any voice with explicit male indicator
-    if (!selectedVoice) {
-      selectedVoice = langVoices.find(v => isMaleVoice(v) && !isLowQuality(v) && !isDefinitelyFemale(v)) || null;
-      if (selectedVoice) console.log('[Voice] Strategy 3: Explicit male indicator');
-    }
-
-    // Strategy 4: Any premium non-female voice (Google voices without gender marker)
-    if (!selectedVoice) {
-      selectedVoice = langVoices.find(v => isPremium(v) && !isLowQuality(v) && !isDefinitelyFemale(v)) || null;
-      if (selectedVoice) console.log('[Voice] Strategy 4: Premium non-female voice');
-    }
-
-    // Strategy 5: Any non-female, non-low-quality voice
-    if (!selectedVoice) {
-      selectedVoice = langVoices.find(v => !isLowQuality(v) && !isDefinitelyFemale(v)) || null;
-      if (selectedVoice) console.log('[Voice] Strategy 5: Non-female voice');
-    }
-
-    // Strategy 6: Any non-low-quality voice (fallback - may be female)
-    if (!selectedVoice) {
-      selectedVoice = langVoices.find(v => !isLowQuality(v)) || null;
-      if (selectedVoice) console.log('[Voice] Strategy 6: Any non-low-quality (fallback)');
-    }
-
-    // Final fallback: first available voice
-    if (!selectedVoice) {
-      selectedVoice = langVoices[0] || voices.find(v => v.lang.startsWith('en')) || voices[0];
-      console.log('[Voice] Strategy 7: Final fallback');
-    }
-
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-      console.log('[Voice] ✓ Selected:', selectedVoice.name, `(${selectedVoice.lang})`,
-        isPremium(selectedVoice) ? '⭐ Premium' : '');
-    }
-
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-      setGreetingPhase('speaking');
-    };
-
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      onEnd?.();
-    };
-
-    utterance.onerror = () => {
-      setIsSpeaking(false);
-      onEnd?.();
-    };
-
-    synthRef.current.speak(utterance);
-  }, [userLanguage, voiceSupported]);
-
-  // Initialize voice synthesis
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      synthRef.current = window.speechSynthesis;
-      setVoiceSupported(true);
-
-      // Load voices (needed for some browsers)
-      const loadVoices = () => {
-        window.speechSynthesis.getVoices();
-      };
-      loadVoices();
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-  }, []);
-
-  // Voice greeting on first load
-  useEffect(() => {
-    if (!hasGreeted && voiceSupported && userLanguage && messages.length === 0) {
-      // Small delay to ensure page is ready
-      const timer = setTimeout(() => {
-        setHasGreeted(true);
-        const greeting = getGreetingMessage(userLanguage);
-        speak(greeting, () => {
-          // After speaking, start listening
-          setGreetingPhase('listening');
-          if (recognitionRef.current && speechSupported) {
-            setTimeout(() => {
-              try {
-                recognitionRef.current.start();
-                setIsListening(true);
-              } catch {
-                setGreetingPhase('idle');
-              }
-            }, 500);
-          } else {
-            setGreetingPhase('idle');
-          }
-        });
-      }, 1000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [hasGreeted, voiceSupported, userLanguage, messages.length, speak, speechSupported]);
-
-  // Skip greeting function
-  const skipGreeting = () => {
-    if (synthRef.current) {
-      synthRef.current.cancel();
-    }
-    setIsSpeaking(false);
-    setGreetingPhase('idle');
-    setHasGreeted(true);
-  };
-
-  // Fetch user's language preference on mount
-  useEffect(() => {
-    const fetchUserLanguage = async () => {
-      try {
-        const response = await authFetch('/api/user/language');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.data?.preferredLanguage) {
-            setUserLanguage(data.data.preferredLanguage);
-          }
-        }
-      } catch {
-        // Keep default language on error
-      }
-    };
-    fetchUserLanguage();
-  }, []);
-
-  // Fetch market data (BTC, ETH prices, Fear & Greed)
-  useEffect(() => {
-    const fetchMarketData = async () => {
-      try {
-        // Fetch BTC and ETH prices from Binance
-        const [btcRes, ethRes, fgRes] = await Promise.allSettled([
-          fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT'),
-          fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT'),
-          fetch('https://api.alternative.me/fng/?limit=1'),
-        ]);
-
-        let btcPrice = 0, btcChange = 0, ethPrice = 0, ethChange = 0;
-        let fearGreed = 50, fearGreedLabel = 'Neutral';
-
-        if (btcRes.status === 'fulfilled' && btcRes.value.ok) {
-          const btcData = await btcRes.value.json();
-          btcPrice = parseFloat(btcData.lastPrice);
-          btcChange = parseFloat(btcData.priceChangePercent);
-        }
-
-        if (ethRes.status === 'fulfilled' && ethRes.value.ok) {
-          const ethData = await ethRes.value.json();
-          ethPrice = parseFloat(ethData.lastPrice);
-          ethChange = parseFloat(ethData.priceChangePercent);
-        }
-
-        if (fgRes.status === 'fulfilled' && fgRes.value.ok) {
-          const fgData = await fgRes.value.json();
-          if (fgData.data?.[0]) {
-            fearGreed = parseInt(fgData.data[0].value);
-            fearGreedLabel = fgData.data[0].value_classification;
-          }
-        }
-
-        setMarketData({ btcPrice, btcChange, ethPrice, ethChange, fearGreed, fearGreedLabel });
-      } catch {
-        // Keep null on error
-      }
-    };
-    fetchMarketData();
-    // Refresh every 60 seconds
-    const interval = setInterval(fetchMarketData, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Fetch platform stats
-  useEffect(() => {
-    const fetchPlatformStats = async () => {
-      try {
-        const response = await authFetch('/api/analysis/platform-stats');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setPlatformStats({
-              totalAnalyses: Number(data.data.totalAnalyses) || 0,
-              accuracy: Number(data.data.accuracy) || 0,
-              activeTraders: Number(data.data.activeUsers) || 0,
-            });
-          }
-        }
-      } catch {
-        // Keep null on error
-      }
-    };
-    fetchPlatformStats();
-  }, []);
-
-  // Auto scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Map language code to speech recognition language code
-  const getSpeechLang = (langCode: string): string => {
-    const langMap: Record<string, string> = {
-      'en': 'en-US',
-      'tr': 'tr-TR',
-      'ar': 'ar-SA',
-      'es': 'es-ES',
-      'de': 'de-DE',
-      'fr': 'fr-FR',
-      'pt': 'pt-BR',
-      'ru': 'ru-RU',
-      'zh': 'zh-CN',
-      'ja': 'ja-JP',
-      'ko': 'ko-KR',
-      'it': 'it-IT',
-      'nl': 'nl-NL',
-      'pl': 'pl-PL',
-      'vi': 'vi-VN',
-      'th': 'th-TH',
-      'id': 'id-ID',
-      'hi': 'hi-IN',
-    };
-    return langMap[langCode] || 'en-US';
-  };
-
-  // Initialize speech recognition
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SpeechRecognitionClass) {
-        setSpeechSupported(true);
-        const recognition = new SpeechRecognitionClass();
-        recognition.continuous = false;
-        recognition.interimResults = true;
-        recognition.lang = getSpeechLang(userLanguage);
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        recognition.onresult = (event: any) => {
-          let transcript = '';
-          for (let i = 0; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript;
-          }
-          setInput(transcript);
-        };
-
-        recognition.onend = () => setIsListening(false);
-        recognition.onerror = () => setIsListening(false);
-
-        recognitionRef.current = recognition;
-      }
-    }
-  }, [userLanguage]);
-
-  const sendMessage = useCallback(async (message: string) => {
-    if (!message.trim() || isLoading) return;
-
-    setError(null);
+    setStep('analyzing');
     setIsLoading(true);
 
-    // Add user message
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: message,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
-
     try {
-      const response = await authFetch('/api/concierge/chat', {
+      const res = await authFetch('/api/concierge/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, language: userLanguage || detectLanguage(message) }),
+        body: JSON.stringify({
+          message: `Analyze ${selectedCoin.symbol} ${selectedTimeframe.value}`,
+          language: lang,
+        }),
       });
 
-      const data: ConciergeResponse = await response.json();
+      const data = await res.json();
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to send message');
-      }
-
-      // Parse analysis data if present
-      let analysisData: AnalysisData | undefined;
-      if ((data.intent === 'ANALYSIS' || data.intent === 'CHART_VIEW') && data.analysisId) {
-        analysisData = {
-          verdict: data.verdict as AnalysisData['verdict'],
-          score: data.score,
+      if (data.success) {
+        setResult({
+          success: true,
           analysisId: data.analysisId,
-        };
+          verdict: data.verdict,
+          score: data.score,
+          message: data.message,
+        });
+        setCredits(data.creditsRemaining);
+        setStep('result');
+      } else {
+        setResult({
+          success: false,
+          error: data.error || data.message || 'Analysis failed',
+        });
+        setStep('result');
       }
-
-      // Add assistant message
-      const assistantMsg: ChatMessage = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: data.message,
-        timestamp: new Date(),
-        intent: data.intent,
-        analysisData,
-        chartData: data.chartData,
-      };
-      setMessages(prev => [...prev, assistantMsg]);
-      setCredits(data.creditsRemaining);
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
-      setError(errorMessage);
-
-      const errorMsg: ChatMessage = {
-        id: `error-${Date.now()}`,
-        role: 'assistant',
-        content: `Error: ${errorMessage}`,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMsg]);
+    } catch (error) {
+      setResult({
+        success: false,
+        error: error instanceof Error ? error.message : 'Connection error',
+      });
+      setStep('result');
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, userLanguage]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    sendMessage(input);
   };
 
-  const toggleListening = () => {
-    if (!recognitionRef.current) return;
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } else {
-      try {
-        recognitionRef.current.start();
-        setIsListening(true);
-      } catch {
-        // Already started
+  // Send email
+  const sendEmail = async () => {
+    if (!result?.analysisId) return;
+
+    setEmailSending(true);
+    try {
+      const res = await authFetch('/api/reports/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          analysisId: result.analysisId,
+          language: lang,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setEmailSent(true);
       }
+    } catch {
+      console.error('Failed to send email');
+    } finally {
+      setEmailSending(false);
     }
   };
 
-  const clearChat = () => {
-    setMessages([]);
-    setError(null);
+  // Reset wizard
+  const reset = () => {
+    setStep('welcome');
+    setSelectedCoin(null);
+    setSelectedTimeframe(null);
+    setResult(null);
+    setEmailSent(false);
+    fetchCredits();
   };
 
-  // Render message content with special formatting for analysis results
-  const renderMessageContent = (msg: ChatMessage) => {
-    // If it's an analysis result with data, show the result card
-    if (msg.role === 'assistant' && msg.intent === 'ANALYSIS' && msg.analysisData) {
-      const { verdict, score, analysisId } = msg.analysisData;
-      const style = getVerdictStyle(verdict);
-      const VerdictIcon = style.icon;
+  // Texts
+  const texts = {
+    welcome: {
+      title: { en: 'AI Concierge', tr: 'AI Concierge' },
+      subtitle: { en: 'Your intelligent crypto assistant', tr: 'Akıllı kripto asistanınız' },
+      greeting: { en: 'Hello! Which coin would you like to analyze?', tr: 'Merhaba! Hangi coini analiz etmemi istersiniz?' },
+    },
+    selectCoin: {
+      title: { en: 'Select a Coin', tr: 'Coin Seçin' },
+      subtitle: { en: 'Choose the cryptocurrency to analyze', tr: 'Analiz edilecek kripto parayı seçin' },
+    },
+    selectTimeframe: {
+      title: { en: 'Select Timeframe', tr: 'Zaman Dilimi Seçin' },
+      subtitle: { en: 'What type of trade are you planning?', tr: 'Nasıl bir işlem planlıyorsunuz?' },
+    },
+    confirm: {
+      title: { en: 'Confirm Analysis', tr: 'Analizi Onaylayın' },
+      expertQuestion: { en: 'Include AI Expert commentary?', tr: 'AI Uzman yorumları eklensin mi?' },
+      cost: { en: 'Cost: 25 credits', tr: 'Maliyet: 25 kredi' },
+      start: { en: 'Start Analysis', tr: 'Analizi Başlat' },
+    },
+    analyzing: {
+      title: { en: 'Analyzing...', tr: 'Analiz Ediliyor...' },
+      subtitle: { en: 'Running 7-step analysis with 40+ indicators', tr: '40+ indikatör ile 7 adımlı analiz yapılıyor' },
+    },
+    result: {
+      title: { en: 'Analysis Complete', tr: 'Analiz Tamamlandı' },
+      emailQuestion: { en: 'Would you like to receive the report via email?', tr: 'Raporu e-posta ile almak ister misiniz?' },
+      sendEmail: { en: 'Send Email', tr: 'E-posta Gönder' },
+      viewDetails: { en: 'View Details', tr: 'Detayları Gör' },
+      newAnalysis: { en: 'New Analysis', tr: 'Yeni Analiz' },
+      emailSent: { en: 'Email sent!', tr: 'E-posta gönderildi!' },
+    },
+  };
 
-      return (
-        <div className="space-y-3">
-          {/* Verdict Card */}
-          <div className={`bg-gradient-to-r ${style.bg} rounded-xl p-3 sm:p-4 ${style.text}`}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <VerdictIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="font-bold text-base sm:text-lg">{verdict || 'WAIT'}</span>
-              </div>
-              {score !== undefined && (
-                <div className="flex items-center gap-1 bg-white/20 rounded-lg px-2 py-1">
-                  <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
-                  <span className="font-semibold text-sm sm:text-base">{score}/10</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Message text */}
-          <p className="text-xs sm:text-sm whitespace-pre-wrap">{msg.content}</p>
-
-          {/* View Details Link */}
-          {analysisId && (
-            <Link
-              href={`/analyze/details/${analysisId}`}
-              className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 rounded-lg transition-colors text-xs sm:text-sm font-medium"
-            >
-              <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
-              View Full Analysis
-            </Link>
-          )}
-        </div>
-      );
-    }
-
-    // Help intent - show with special formatting
-    if (msg.role === 'assistant' && msg.intent === 'HELP') {
-      return (
-        <div className="space-y-2 sm:space-y-3">
-          <div className="flex items-center gap-2 text-teal-500">
-            <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="font-semibold text-sm sm:text-base">AI Concierge Help</span>
-          </div>
-          <p className="text-xs sm:text-sm whitespace-pre-wrap">{msg.content}</p>
-        </div>
-      );
-    }
-
-    // Status intent
-    if (msg.role === 'assistant' && msg.intent === 'STATUS') {
-      return (
-        <div className="space-y-2 sm:space-y-3">
-          <div className="flex items-center gap-2 text-amber-500">
-            <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="font-semibold text-sm sm:text-base">Your Status</span>
-          </div>
-          <p className="text-xs sm:text-sm whitespace-pre-wrap">{msg.content}</p>
-        </div>
-      );
-    }
-
-    // Chart view intent
-    if (msg.role === 'assistant' && msg.intent === 'CHART_VIEW' && msg.chartData) {
-      const { symbol, interval, tradePlan, currentPrice } = msg.chartData;
-      const hasTradePlan = tradePlan && tradePlan.entry > 0 && tradePlan.stopLoss > 0;
-
-      // Convert tradePlan to TradePlanChart format
-      const entries = hasTradePlan ? [{ price: tradePlan.entry, percentage: 100 }] : [{ price: currentPrice || 0, percentage: 100 }];
-      const stopLossData = hasTradePlan
-        ? { price: tradePlan.stopLoss, percentage: Math.abs(((tradePlan.stopLoss - tradePlan.entry) / tradePlan.entry) * 100) }
-        : { price: 0, percentage: 0 };
-      const takeProfitsData = hasTradePlan
-        ? [
-            { price: tradePlan.takeProfit1, percentage: Math.abs(((tradePlan.takeProfit1 - tradePlan.entry) / tradePlan.entry) * 100), riskReward: 1 },
-            ...(tradePlan.takeProfit2 ? [{ price: tradePlan.takeProfit2, percentage: Math.abs(((tradePlan.takeProfit2 - tradePlan.entry) / tradePlan.entry) * 100), riskReward: 2 }] : []),
-            ...(tradePlan.takeProfit3 ? [{ price: tradePlan.takeProfit3, percentage: Math.abs(((tradePlan.takeProfit3 - tradePlan.entry) / tradePlan.entry) * 100), riskReward: 3 }] : []),
-          ]
-        : [{ price: 0, percentage: 0, riskReward: 0 }];
-
-      // Determine trade type from interval
-      const tradeType = interval === '15m' || interval === '5m' ? 'scalping' : interval === '1d' || interval === '1W' ? 'swing' : 'dayTrade';
-
-      return (
-        <div className="space-y-3 sm:space-y-4">
-          {/* Chart Header */}
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2 text-teal-500">
-              <LineChart className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="font-semibold text-sm sm:text-base">{symbol} {interval.toUpperCase()}</span>
-            </div>
-            {!hasTradePlan && (
-              <span className="text-[10px] sm:text-xs px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">
-                No Trade Plan
-              </span>
-            )}
-          </div>
-
-          {/* TradePlan Chart - responsive height */}
-          <div className="h-[250px] sm:h-[350px] md:h-[400px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
-            <TradePlanChart
-              symbol={symbol}
-              direction={tradePlan?.direction || 'long'}
-              entries={entries}
-              stopLoss={stopLossData}
-              takeProfits={takeProfitsData}
-              currentPrice={currentPrice || 0}
-              tradeType={tradeType}
-            />
-          </div>
-
-          {/* Message text */}
-          <p className="text-xs sm:text-sm whitespace-pre-wrap">{msg.content}</p>
-
-          {/* View Details Link */}
-          {(msg.analysisData?.analysisId) && (
-            <Link
-              href={`/analyze/details/${msg.analysisData.analysisId}`}
-              className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 rounded-lg transition-colors text-xs sm:text-sm font-medium"
-            >
-              <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
-              View Full Analysis
-            </Link>
-          )}
-        </div>
-      );
-    }
-
-    // Error content
-    if (msg.content.startsWith('Error:')) {
-      return (
-        <div className="flex items-start gap-2 text-red-500">
-          <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 mt-0.5" />
-          <p className="text-xs sm:text-sm">{msg.content}</p>
-        </div>
-      );
-    }
-
-    // Default text
-    return <p className="text-xs sm:text-sm whitespace-pre-wrap">{msg.content}</p>;
+  const t = (key: keyof typeof texts, subkey: string) => {
+    const section = texts[key] as Record<string, { en: string; tr: string }>;
+    return section[subkey]?.[lang] || section[subkey]?.['en'] || '';
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col bg-slate-50 dark:bg-slate-900/50">
-      {/* Gradient Background Orbs - smaller on mobile */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-20 -right-20 sm:-top-40 sm:-right-40 w-40 h-40 sm:w-80 sm:h-80 bg-teal-500/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 -left-20 sm:-left-40 w-40 h-40 sm:w-80 sm:h-80 bg-coral-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-20 right-1/4 sm:-bottom-40 sm:right-1/3 w-40 h-40 sm:w-80 sm:h-80 bg-purple-500/10 rounded-full blur-3xl" />
-      </div>
-
-      {/* Header - compact on mobile */}
-      <div className="sticky top-0 z-10 border-b border-slate-200/50 dark:border-slate-700/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl px-3 sm:px-4 py-3 sm:py-4">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/25">
-              <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 sm:p-6 lg:p-8">
+      {/* Header */}
+      <div className="max-w-2xl mx-auto mb-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 shadow-lg shadow-teal-500/20">
+              <Bot className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                AI Concierge
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 hidden sm:block">
-                Your intelligent crypto assistant
-              </p>
+              <h1 className="text-xl font-bold text-white">{t('welcome', 'title')}</h1>
+              <p className="text-sm text-slate-400">{t('welcome', 'subtitle')}</p>
             </div>
           </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            {credits !== null && (
-              <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-amber-100 to-amber-50 dark:from-amber-900/30 dark:to-amber-800/20 rounded-lg sm:rounded-xl border border-amber-200/50 dark:border-amber-700/50">
-                <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 dark:text-amber-400" />
-                <span className="text-xs sm:text-sm font-bold text-amber-700 dark:text-amber-300">
-                  {credits}
-                </span>
-              </div>
-            )}
-
-            {messages.length > 0 && (
-              <button
-                onClick={clearChat}
-                className="p-2 sm:p-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg sm:rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                title="Clear chat"
-              >
-                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-            )}
-          </div>
+          {credits !== null && (
+            <div className="px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20">
+              <span className="text-amber-400 font-medium">💰 {credits.toLocaleString()}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-6">
-        <div className="max-w-3xl mx-auto space-y-3 sm:space-y-4">
-          {messages.length === 0 ? (
-            <div className="text-center py-8 sm:py-16">
-              {/* Voice Greeting Animation */}
-              {(isSpeaking || greetingPhase === 'listening') ? (
-                <div className="relative">
-                  {/* Animated Background Orbs */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className={`absolute w-48 h-48 sm:w-72 sm:h-72 rounded-full bg-gradient-to-br from-teal-500/20 to-cyan-500/20 ${isSpeaking ? 'animate-pulse' : ''}`} style={{ animationDuration: '2s' }} />
-                    <div className={`absolute w-36 h-36 sm:w-56 sm:h-56 rounded-full bg-gradient-to-br from-teal-500/30 to-emerald-500/30 ${isSpeaking ? 'animate-pulse' : ''}`} style={{ animationDuration: '1.5s', animationDelay: '0.2s' }} />
-                    <div className={`absolute w-24 h-24 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-teal-500/40 to-teal-600/40 ${isSpeaking ? 'animate-pulse' : ''}`} style={{ animationDuration: '1s', animationDelay: '0.4s' }} />
-                  </div>
+      {/* Main Card */}
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-2xl overflow-hidden">
 
-                  {/* AI Avatar with Voice Animation */}
-                  <div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 sm:mb-8">
-                    {/* Outer ring animation */}
-                    <div className={`absolute inset-0 rounded-full ${isSpeaking ? 'animate-ping' : ''} bg-teal-500/20`} style={{ animationDuration: '1.5s' }} />
-
-                    {/* Sound wave rings */}
-                    {isSpeaking && (
-                      <>
-                        <div className="absolute inset-[-8px] sm:inset-[-12px] rounded-full border-2 border-teal-500/40 animate-ping" style={{ animationDuration: '1s' }} />
-                        <div className="absolute inset-[-16px] sm:inset-[-24px] rounded-full border-2 border-teal-500/30 animate-ping" style={{ animationDuration: '1.5s', animationDelay: '0.3s' }} />
-                        <div className="absolute inset-[-24px] sm:inset-[-36px] rounded-full border-2 border-teal-500/20 animate-ping" style={{ animationDuration: '2s', animationDelay: '0.6s' }} />
-                      </>
-                    )}
-
-                    {/* Listening rings */}
-                    {greetingPhase === 'listening' && !isSpeaking && (
-                      <>
-                        <div className="absolute inset-[-4px] sm:inset-[-6px] rounded-full border-2 border-coral-500/50 animate-pulse" />
-                        <div className="absolute inset-[-8px] sm:inset-[-12px] rounded-full border-2 border-coral-500/30 animate-pulse" style={{ animationDelay: '0.2s' }} />
-                      </>
-                    )}
-
-                    {/* Main avatar */}
-                    <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${greetingPhase === 'listening' && !isSpeaking ? 'from-coral-500 to-orange-600' : 'from-teal-500 to-teal-600'} flex items-center justify-center shadow-2xl ${isSpeaking ? 'shadow-teal-500/50' : greetingPhase === 'listening' ? 'shadow-coral-500/50' : 'shadow-teal-500/30'} transition-all duration-500`}>
-                      {greetingPhase === 'listening' && !isSpeaking ? (
-                        <Mic className="w-10 h-10 sm:w-14 sm:h-14 text-white animate-pulse" />
-                      ) : (
-                        <Bot className="w-10 h-10 sm:w-14 sm:h-14 text-white" />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Sound Wave Visualization */}
-                  {isSpeaking && (
-                    <div className="flex items-center justify-center gap-1 mb-6 sm:mb-8 h-12 sm:h-16">
-                      {[...Array(9)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="w-1 sm:w-1.5 bg-gradient-to-t from-teal-500 to-cyan-400 rounded-full animate-soundwave"
-                          style={{
-                            animationDelay: `${i * 0.1}s`,
-                            animationDuration: `${0.5 + Math.random() * 0.5}s`,
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Listening Wave Visualization */}
-                  {greetingPhase === 'listening' && !isSpeaking && (
-                    <div className="flex items-center justify-center gap-1 mb-6 sm:mb-8 h-12 sm:h-16">
-                      {[...Array(9)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="w-1 sm:w-1.5 bg-gradient-to-t from-coral-500 to-orange-400 rounded-full animate-soundwave-slow"
-                          style={{
-                            animationDelay: `${i * 0.15}s`,
-                            animationDuration: `${0.8 + Math.random() * 0.4}s`,
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Status Text */}
-                  <div className="mb-6 sm:mb-8">
-                    {isSpeaking ? (
-                      <p className="text-lg sm:text-xl font-semibold text-teal-600 dark:text-teal-400 animate-pulse">
-                        {userLanguage === 'tr' ? 'Konuşuyor...' : 'Speaking...'}
-                      </p>
-                    ) : greetingPhase === 'listening' ? (
-                      <p className="text-lg sm:text-xl font-semibold text-coral-600 dark:text-coral-400 animate-pulse">
-                        {userLanguage === 'tr' ? '🎤 Dinliyorum... Şimdi konuşun' : '🎤 Listening... Speak now'}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  {/* Skip Button */}
-                  <button
-                    onClick={skipGreeting}
-                    className="px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-700/50 rounded-xl transition-colors"
-                  >
-                    {userLanguage === 'tr' ? 'Atla ve yaz' : 'Skip & type instead'}
-                  </button>
+          {/* Step: Welcome */}
+          {step === 'welcome' && (
+            <div className="p-8 text-center">
+              <div className="mb-6">
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/30">
+                  <Bot className="w-10 h-10 text-white" />
                 </div>
-              ) : (
-                <>
-                  {/* Live Market Banner */}
-                  {marketData && (
-                    <div className="flex items-center justify-center gap-3 sm:gap-6 mb-6 sm:mb-8 px-2">
-                      {/* BTC */}
-                      <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
-                        <span className="text-lg sm:text-xl">₿</span>
-                        <div className="text-left">
-                          <p className="text-xs text-slate-500 dark:text-slate-400">BTC</p>
-                          <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                            ${marketData.btcPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                          </p>
-                        </div>
-                        <span className={`text-xs sm:text-sm font-semibold ${marketData.btcChange >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                          {marketData.btcChange >= 0 ? '+' : ''}{marketData.btcChange.toFixed(2)}%
-                        </span>
-                      </div>
-                      {/* ETH */}
-                      <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
-                        <span className="text-lg sm:text-xl">Ξ</span>
-                        <div className="text-left">
-                          <p className="text-xs text-slate-500 dark:text-slate-400">ETH</p>
-                          <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                            ${marketData.ethPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                          </p>
-                        </div>
-                        <span className={`text-xs sm:text-sm font-semibold ${marketData.ethChange >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                          {marketData.ethChange >= 0 ? '+' : ''}{marketData.ethChange.toFixed(2)}%
-                        </span>
-                      </div>
-                      {/* Fear & Greed (hidden on mobile) */}
-                      <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white ${
-                          marketData.fearGreed <= 25 ? 'bg-red-500' :
-                          marketData.fearGreed <= 45 ? 'bg-orange-500' :
-                          marketData.fearGreed <= 55 ? 'bg-yellow-500' :
-                          marketData.fearGreed <= 75 ? 'bg-lime-500' : 'bg-emerald-500'
-                        }`}>
-                          {marketData.fearGreed}
-                        </div>
-                        <div className="text-left">
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Fear & Greed</p>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{marketData.fearGreedLabel}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                <h2 className="text-2xl font-bold text-white mb-2">{t('welcome', 'greeting')}</h2>
+              </div>
 
-                  {/* AI Avatar with glow */}
-                  <div className="relative w-20 h-20 sm:w-28 sm:h-28 mx-auto mb-4 sm:mb-6">
-                    <div className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-teal-500/30 to-cyan-500/30 animate-pulse blur-xl" />
-                    <div className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-teal-500/20 to-teal-600/20" />
-                    <div className="absolute inset-1.5 sm:inset-2 rounded-xl sm:rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-teal-500/40">
-                      <Bot className="w-9 h-9 sm:w-12 sm:h-12 text-white" />
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {COINS.map((coin) => (
+                  <button
+                    key={coin.symbol}
+                    onClick={() => {
+                      setSelectedCoin(coin);
+                      setStep('select-timeframe');
+                    }}
+                    className={`p-4 rounded-xl bg-gradient-to-br ${coin.color} hover:scale-105 transition-all duration-200 shadow-lg group`}
+                  >
+                    <span className="text-2xl mb-1 block">{coin.icon}</span>
+                    <span className="text-white font-bold">{coin.symbol}</span>
+                    <span className="text-white/70 text-xs block">{coin.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Language toggle */}
+              <div className="mt-6 flex justify-center gap-2">
+                <button
+                  onClick={() => setLang('en')}
+                  className={`px-3 py-1 rounded-full text-sm ${lang === 'en' ? 'bg-teal-500 text-white' : 'bg-slate-700 text-slate-400'}`}
+                >
+                  🇬🇧 English
+                </button>
+                <button
+                  onClick={() => setLang('tr')}
+                  className={`px-3 py-1 rounded-full text-sm ${lang === 'tr' ? 'bg-teal-500 text-white' : 'bg-slate-700 text-slate-400'}`}
+                >
+                  🇹🇷 Türkçe
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step: Select Timeframe */}
+          {step === 'select-timeframe' && selectedCoin && (
+            <div className="p-8">
+              <div className="text-center mb-6">
+                <div className={`w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br ${selectedCoin.color} flex items-center justify-center shadow-lg`}>
+                  <span className="text-2xl text-white">{selectedCoin.icon}</span>
+                </div>
+                <h2 className="text-xl font-bold text-white">{selectedCoin.symbol} - {t('selectTimeframe', 'title')}</h2>
+                <p className="text-slate-400 text-sm mt-1">{t('selectTimeframe', 'subtitle')}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {TIMEFRAMES.map((tf) => (
+                  <button
+                    key={tf.value}
+                    onClick={() => {
+                      setSelectedTimeframe(tf);
+                      setStep('confirm');
+                    }}
+                    className="p-4 rounded-xl bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 hover:border-teal-500/50 transition-all duration-200 text-left group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-white font-bold block">{lang === 'tr' ? tf.labelTr : tf.label}</span>
+                        <span className="text-slate-400 text-sm">{lang === 'tr' ? tf.descTr : tf.desc}</span>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-teal-400 transition-colors" />
                     </div>
-                    {/* Sparkle effects */}
-                    <Sparkles className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 text-amber-400 animate-pulse" />
-                    <Sparkles className="absolute -bottom-1 -left-1 w-3 h-3 sm:w-4 sm:h-4 text-teal-400 animate-pulse" style={{ animationDelay: '0.5s' }} />
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setStep('welcome')}
+                className="mt-4 w-full py-2 text-slate-400 hover:text-white transition-colors"
+              >
+                ← {lang === 'tr' ? 'Geri' : 'Back'}
+              </button>
+            </div>
+          )}
+
+          {/* Step: Confirm */}
+          {step === 'confirm' && selectedCoin && selectedTimeframe && (
+            <div className="p-8">
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-bold text-white mb-4">{t('confirm', 'title')}</h2>
+
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-700/50 border border-slate-600/50 mb-6">
+                  <span className={`w-8 h-8 rounded-full bg-gradient-to-br ${selectedCoin.color} flex items-center justify-center text-white`}>
+                    {selectedCoin.icon}
+                  </span>
+                  <span className="text-white font-bold">{selectedCoin.symbol}</span>
+                  <span className="text-slate-400">•</span>
+                  <span className="text-slate-300">{lang === 'tr' ? selectedTimeframe.labelTr : selectedTimeframe.label}</span>
+                </div>
+              </div>
+
+              {/* Expert toggle */}
+              <div className="mb-6 p-4 rounded-xl bg-slate-700/30 border border-slate-600/30">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="text-white">{t('confirm', 'expertQuestion')}</span>
+                  <div
+                    onClick={() => setIncludeExpert(!includeExpert)}
+                    className={`w-12 h-6 rounded-full transition-colors ${includeExpert ? 'bg-teal-500' : 'bg-slate-600'} relative`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${includeExpert ? 'left-7' : 'left-1'}`} />
                   </div>
+                </label>
+              </div>
 
-                  <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2 sm:mb-3">
-                    {userLanguage === 'tr' ? 'AI Concierge' : 'AI Concierge'}
-                  </h3>
-                  <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mb-4 sm:mb-6 max-w-lg mx-auto px-4">
-                    {userLanguage === 'tr'
-                      ? 'Yapay zeka destekli kripto analiz asistanınız. Sorularınızı sorun, anında analiz alın.'
-                      : 'Your AI-powered crypto analysis assistant. Ask questions, get instant insights.'}
+              {/* Cost info */}
+              <div className="mb-6 text-center">
+                <span className="text-amber-400">{t('confirm', 'cost')}</span>
+                {credits !== null && credits < 25 && (
+                  <p className="text-red-400 text-sm mt-1">
+                    {lang === 'tr' ? 'Yetersiz kredi!' : 'Insufficient credits!'}
                   </p>
+                )}
+              </div>
 
-                  {/* Platform Stats */}
-                  {platformStats && (
-                    <div className="flex items-center justify-center gap-3 sm:gap-8 mb-6 sm:mb-8">
-                      <div className="text-center px-3 sm:px-4">
-                        <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-teal-500 to-cyan-500 bg-clip-text text-transparent">
-                          {platformStats.totalAnalyses.toLocaleString()}+
-                        </p>
-                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
-                          {userLanguage === 'tr' ? 'Analiz' : 'Analyses'}
-                        </p>
-                      </div>
-                      <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
-                      <div className="text-center px-3 sm:px-4">
-                        <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
-                          {platformStats.accuracy.toFixed(1)}%
-                        </p>
-                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
-                          {userLanguage === 'tr' ? 'Doğruluk' : 'Accuracy'}
-                        </p>
-                      </div>
-                      <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
-                      <div className="text-center px-3 sm:px-4">
-                        <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
-                          {platformStats.activeTraders.toLocaleString()}+
-                        </p>
-                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
-                          {userLanguage === 'tr' ? 'Trader' : 'Traders'}
-                        </p>
+              {/* Start button */}
+              <button
+                onClick={runAnalysis}
+                disabled={credits !== null && credits < 25}
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-bold text-lg shadow-lg shadow-teal-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                <Send className="w-5 h-5" />
+                {t('confirm', 'start')}
+              </button>
+
+              <button
+                onClick={() => setStep('select-timeframe')}
+                className="mt-4 w-full py-2 text-slate-400 hover:text-white transition-colors"
+              >
+                ← {lang === 'tr' ? 'Geri' : 'Back'}
+              </button>
+            </div>
+          )}
+
+          {/* Step: Analyzing */}
+          {step === 'analyzing' && (
+            <div className="p-8 text-center">
+              <div className="mb-6">
+                <Loader2 className="w-16 h-16 mx-auto text-teal-400 animate-spin" />
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">{t('analyzing', 'title')}</h2>
+              <p className="text-slate-400">{t('analyzing', 'subtitle')}</p>
+
+              {selectedCoin && selectedTimeframe && (
+                <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-700/50">
+                  <span className="text-white font-medium">{selectedCoin.symbol}</span>
+                  <span className="text-slate-400">•</span>
+                  <span className="text-slate-300">{selectedTimeframe.value}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step: Result */}
+          {step === 'result' && result && (
+            <div className="p-8">
+              {result.success ? (
+                <>
+                  {/* Verdict card */}
+                  {result.verdict && (
+                    <div className={`mb-6 p-6 rounded-xl bg-gradient-to-r ${getVerdictStyle(result.verdict).bg} shadow-lg`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {(() => {
+                            const Icon = getVerdictStyle(result.verdict).icon;
+                            return <Icon className="w-8 h-8 text-white" />;
+                          })()}
+                          <div>
+                            <span className="text-white/80 text-sm block">{selectedCoin?.symbol} {selectedTimeframe?.value.toUpperCase()}</span>
+                            <span className="text-white font-bold text-xl">
+                              {lang === 'tr' ? getVerdictStyle(result.verdict).labelTr : getVerdictStyle(result.verdict).label}
+                            </span>
+                          </div>
+                        </div>
+                        {result.score && (
+                          <div className="text-right">
+                            <span className="text-white/80 text-sm block">{lang === 'tr' ? 'Skor' : 'Score'}</span>
+                            <span className="text-white font-bold text-2xl">{result.score}/10</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
 
-                  {/* Feature Cards - showcase platform power */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-6 sm:mb-8 px-2 max-w-2xl mx-auto">
-                    {FEATURE_CARDS.map((card, idx) => (
-                      <div
-                        key={idx}
-                        className={`relative overflow-hidden rounded-xl p-3 sm:p-4 bg-gradient-to-br ${card.color} border ${card.border} backdrop-blur-sm transition-transform hover:scale-105`}
-                      >
-                        <span className="text-2xl sm:text-3xl mb-1 block">{card.icon}</span>
-                        <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">
-                          {card.title[userLanguage as 'en' | 'tr'] || card.title.en}
-                        </p>
-                        <p className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                          {card.desc[userLanguage as 'en' | 'tr'] || card.desc.en}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Quick Commands with gradient styling */}
-                  <div className="mb-6 sm:mb-8">
-                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-3">
-                      {userLanguage === 'tr' ? 'Hızlı Başlangıç' : 'Quick Start'}
-                    </p>
-                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 justify-center px-2">
-                      {QUICK_COMMANDS.map((cmd) => (
-                        <button
-                          key={cmd.id}
-                          onClick={() => sendMessage(cmd.command)}
-                          disabled={isLoading}
-                          className={`group flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r ${cmd.color} text-white rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105`}
-                        >
-                          <span className="text-base sm:text-lg">{cmd.icon}</span>
-                          <span className="text-xs sm:text-sm font-medium">
-                            <span className="sm:hidden">{cmd.label}</span>
-                            <span className="hidden sm:inline">{cmd.labelFull}</span>
-                          </span>
-                        </button>
-                      ))}
+                  {/* Message */}
+                  {result.message && (
+                    <div className="mb-6 p-4 rounded-xl bg-slate-700/30 border border-slate-600/30">
+                      <p className="text-slate-300 whitespace-pre-wrap">{result.message}</p>
                     </div>
-                  </div>
-
-                  {/* Voice Button */}
-                  {speechSupported && voiceSupported && (
-                    <button
-                      onClick={() => {
-                        const greeting = getGreetingMessage(userLanguage);
-                        speak(greeting, () => {
-                          setGreetingPhase('listening');
-                          if (recognitionRef.current) {
-                            setTimeout(() => {
-                              try {
-                                recognitionRef.current.start();
-                                setIsListening(true);
-                              } catch {
-                                setGreetingPhase('idle');
-                              }
-                            }, 500);
-                          }
-                        });
-                      }}
-                      className="inline-flex items-center gap-2 px-5 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-teal-500 via-cyan-500 to-teal-500 hover:from-teal-600 hover:via-cyan-600 hover:to-teal-600 text-white rounded-xl sm:rounded-2xl shadow-xl shadow-teal-500/30 hover:shadow-2xl transition-all text-sm sm:text-base font-semibold mb-4 animate-shimmer bg-[length:200%_100%]"
-                    >
-                      <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
-                      {userLanguage === 'tr' ? 'Sesli Komut Ver' : 'Use Voice Command'}
-                    </button>
                   )}
 
-                  {/* Example prompts with better styling */}
-                  <div className="flex flex-wrap items-center justify-center gap-2 px-4">
-                    <span className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500">
-                      {userLanguage === 'tr' ? 'Örnek:' : 'Try:'}
-                    </span>
-                    {[
-                      userLanguage === 'tr' ? 'BTC nasıl?' : 'How is BTC?',
-                      userLanguage === 'tr' ? 'RSI nedir?' : 'What is RSI?',
-                      userLanguage === 'tr' ? 'SOL 4h analiz' : 'SOL 4h analysis',
-                    ].map((example, idx) => (
+                  {/* Email question */}
+                  {!emailSent ? (
+                    <div className="mb-6 p-4 rounded-xl bg-teal-500/10 border border-teal-500/30">
+                      <p className="text-white mb-3">{t('result', 'emailQuestion')}</p>
                       <button
-                        key={idx}
-                        onClick={() => sendMessage(example)}
-                        className="text-[10px] sm:text-xs px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full hover:bg-teal-100 hover:text-teal-700 dark:hover:bg-teal-900/30 dark:hover:text-teal-400 transition-colors"
+                        onClick={sendEmail}
+                        disabled={emailSending}
+                        className="px-4 py-2 rounded-lg bg-teal-500 hover:bg-teal-600 text-white font-medium transition-colors flex items-center gap-2"
                       >
-                        &quot;{example}&quot;
+                        {emailSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                        {t('result', 'sendEmail')}
                       </button>
-                    ))}
+                    </div>
+                  ) : (
+                    <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2 text-emerald-400">
+                      <Check className="w-5 h-5" />
+                      {t('result', 'emailSent')}
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {result.analysisId && (
+                      <Link
+                        href={`/analyze/details/${result.analysisId}`}
+                        className="py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors flex items-center justify-center gap-2"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        {t('result', 'viewDetails')}
+                      </Link>
+                    )}
+                    <button
+                      onClick={reset}
+                      className="py-3 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-medium transition-colors"
+                    >
+                      {t('result', 'newAnalysis')}
+                    </button>
                   </div>
                 </>
-              )}
-            </div>
-          ) : (
-            <>
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[90%] sm:max-w-[85%] rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 ${
-                      msg.role === 'user'
-                        ? 'bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-tr-sm shadow-lg shadow-teal-500/20'
-                        : 'bg-white dark:bg-slate-800/50 text-slate-900 dark:text-white rounded-tl-sm shadow-sm border border-slate-100 dark:border-slate-700/50'
-                    }`}
-                  >
-                    {renderMessageContent(msg)}
-                    <span className={`text-[10px] sm:text-xs mt-1.5 sm:mt-2 block ${
-                      msg.role === 'user' ? 'text-teal-100' : 'text-slate-400'
-                    }`}>
-                      {new Date(msg.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                </div>
-              ))}
-
-              {/* Loading indicator */}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-white dark:bg-slate-800/50 rounded-2xl rounded-tl-sm px-3 sm:px-4 py-2.5 sm:py-3 shadow-sm border border-slate-100 dark:border-slate-700/50">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="flex gap-1">
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </div>
-                      <span className="text-xs sm:text-sm text-slate-500">Analyzing...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* Error banner */}
-      {error && (
-        <div className="px-3 sm:px-4 py-2 sm:py-3 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800">
-          <div className="max-w-3xl mx-auto flex items-center gap-2">
-            <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-500 flex-shrink-0" />
-            <p className="text-xs sm:text-sm text-red-600 dark:text-red-400 truncate">{error}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Input - optimized for mobile */}
-      <div className="sticky bottom-0 border-t border-slate-200/50 dark:border-slate-700/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl px-3 sm:px-4 py-3 sm:py-4">
-        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-100 dark:bg-slate-800/50 rounded-xl sm:rounded-2xl p-1.5 sm:p-2 border border-slate-200 dark:border-slate-700/50 focus-within:border-teal-500/50 focus-within:ring-2 focus-within:ring-teal-500/20 transition-all">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about crypto..."
-              disabled={isLoading}
-              className="flex-1 bg-transparent border-none outline-none px-2.5 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
-            />
-
-            {/* Voice input button */}
-            {speechSupported && (
-              <button
-                type="button"
-                onClick={toggleListening}
-                disabled={isLoading}
-                className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all flex-shrink-0 ${
-                  isListening
-                    ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600'
-                }`}
-                title={isListening ? 'Stop listening' : 'Voice input'}
-              >
-                {isListening ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
-              </button>
-            )}
-
-            {/* Send button */}
-            <button
-              type="submit"
-              disabled={!input.trim() || isLoading}
-              className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all flex-shrink-0 ${
-                input.trim() && !isLoading
-                  ? 'bg-gradient-to-r from-teal-500 to-teal-600 text-white hover:from-teal-600 hover:to-teal-700 shadow-lg shadow-teal-500/30'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
-              }`}
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
               ) : (
-                <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                // Error state
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
+                    <span className="text-3xl">❌</span>
+                  </div>
+                  <h2 className="text-xl font-bold text-white mb-2">{lang === 'tr' ? 'Hata Oluştu' : 'Error Occurred'}</h2>
+                  <p className="text-red-400 mb-6">{result.error}</p>
+                  <button
+                    onClick={reset}
+                    className="px-6 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors"
+                  >
+                    {lang === 'tr' ? 'Tekrar Dene' : 'Try Again'}
+                  </button>
+                </div>
               )}
-            </button>
-          </div>
-
-          {/* Listening indicator */}
-          {isListening && (
-            <div className="flex justify-center mt-2 sm:mt-3">
-              <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-red-500 text-white text-xs sm:text-sm rounded-full animate-pulse">
-                <Mic className="w-3 h-3 sm:w-4 sm:h-4" />
-                Listening...
-              </div>
             </div>
           )}
-        </form>
+        </div>
       </div>
     </div>
   );
