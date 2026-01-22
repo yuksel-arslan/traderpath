@@ -136,61 +136,240 @@ export default function AnalysisDetailsPage() {
     const tp1 = step5.takeProfits?.[0]?.price || step5.takeProfit1 || 0;
     const tp2 = step5.takeProfits?.[1]?.price || step5.takeProfit2 || 0;
     const tp3 = step5.takeProfits?.[2]?.price || step5.takeProfit3 || 0;
+    const riskReward = step5.riskReward || 2;
 
     const isLong = direction === 'long';
     const symbol = analysis.symbol;
     const date = new Date(analysis.createdAt).toLocaleDateString();
+    const score = step7.overallScore || analysis.totalScore || 0;
+    const verdict = step7.verdict || step7.action || 'N/A';
+
+    // Calculate percentages
+    const slPercent = entryPrice ? (((stopLoss - entryPrice) / entryPrice) * 100).toFixed(2) : '0';
+    const tp1Percent = entryPrice && tp1 ? (((tp1 - entryPrice) / entryPrice) * 100).toFixed(2) : '0';
+    const tp2Percent = entryPrice && tp2 ? (((tp2 - entryPrice) / entryPrice) * 100).toFixed(2) : '0';
+    const tp3Percent = entryPrice && tp3 ? (((tp3 - entryPrice) / entryPrice) * 100).toFixed(2) : '0';
 
     return `//@version=5
-indicator("TraderPath - ${symbol} Trade Plan", overlay=true)
+indicator("TraderPath - ${symbol} ${isLong ? 'LONG' : 'SHORT'}", overlay=true, max_boxes_count=500, max_labels_count=500, max_lines_count=500)
 
-// Trade Plan from TraderPath Analysis
-// Symbol: ${symbol} | Direction: ${direction.toUpperCase()} | Date: ${date}
+// ═══════════════════════════════════════════════════════════════
+// TraderPath.io - AI-Powered Trade Plan
+// Symbol: ${symbol}USDT | Direction: ${direction.toUpperCase()} | Score: ${score}/100
+// Generated: ${date} | Verdict: ${verdict}
+// ═══════════════════════════════════════════════════════════════
 
-// Price Levels
-entryPrice = ${entryPrice}
-stopLoss = ${stopLoss}
-tp1 = ${tp1}
-tp2 = ${tp2}
-tp3 = ${tp3}
+// === INPUT SETTINGS ===
+showLabels = input.bool(true, "Show Price Labels", group="Display")
+showZones = input.bool(true, "Show Trade Zones", group="Display")
+showTable = input.bool(true, "Show Info Table", group="Display")
+alertsEnabled = input.bool(true, "Enable Alerts", group="Alerts")
 
-// Draw Entry Level (Blue)
-entry_line = line.new(bar_index[100], entryPrice, bar_index, entryPrice, color=color.blue, width=2, style=line.style_solid, extend=extend.right)
-entry_label = label.new(bar_index, entryPrice, "Entry: " + str.tostring(entryPrice), color=color.blue, textcolor=color.white, style=label.style_label_left)
+// === PRICE LEVELS ===
+float entryPrice = ${entryPrice}
+float stopLoss = ${stopLoss}
+float tp1 = ${tp1 || 0}
+float tp2 = ${tp2 || 0}
+float tp3 = ${tp3 || 0}
+bool isLong = ${isLong}
 
-// Draw Stop Loss (Red)
-sl_line = line.new(bar_index[100], stopLoss, bar_index, stopLoss, color=color.red, width=2, style=line.style_dashed, extend=extend.right)
-sl_label = label.new(bar_index, stopLoss, "SL: " + str.tostring(stopLoss), color=color.red, textcolor=color.white, style=label.style_label_left)
+// === COLORS ===
+color entryColor = color.new(#2196F3, 0)  // Blue
+color slColor = color.new(#F44336, 0)     // Red
+color tp1Color = color.new(#4CAF50, 0)    // Green
+color tp2Color = color.new(#8BC34A, 0)    // Light Green
+color tp3Color = color.new(#00BCD4, 0)    // Cyan
+color zoneColorProfit = color.new(#4CAF50, 85)
+color zoneColorLoss = color.new(#F44336, 85)
 
-// Draw Take Profit 1 (Green)
-${tp1 ? `tp1_line = line.new(bar_index[100], tp1, bar_index, tp1, color=color.green, width=2, style=line.style_solid, extend=extend.right)
-tp1_label = label.new(bar_index, tp1, "TP1: " + str.tostring(tp1), color=color.green, textcolor=color.white, style=label.style_label_left)` : '// No TP1'}
+// === BUY/SELL SIGNAL ===
+var bool signalPlotted = false
+if barstate.islast and not signalPlotted
+    signalPlotted := true
 
-// Draw Take Profit 2 (Lime)
-${tp2 ? `tp2_line = line.new(bar_index[100], tp2, bar_index, tp2, color=color.lime, width=2, style=line.style_solid, extend=extend.right)
-tp2_label = label.new(bar_index, tp2, "TP2: " + str.tostring(tp2), color=color.lime, textcolor=color.white, style=label.style_label_left)` : '// No TP2'}
+    // Main BUY/SELL label at entry price
+    signalLabel = label.new(
+        bar_index + 5,
+        entryPrice,
+        isLong ? "BUY" : "SELL",
+        style=isLong ? label.style_label_up : label.style_label_down,
+        color=isLong ? color.new(#4CAF50, 0) : color.new(#F44336, 0),
+        textcolor=color.white,
+        size=size.large,
+        textalign=text.align_center
+    )
 
-// Draw Take Profit 3 (Aqua)
-${tp3 ? `tp3_line = line.new(bar_index[100], tp3, bar_index, tp3, color=color.aqua, width=2, style=line.style_solid, extend=extend.right)
-tp3_label = label.new(bar_index, tp3, "TP3: " + str.tostring(tp3), color=color.aqua, textcolor=color.white, style=label.style_label_left)` : '// No TP3'}
+// === HORIZONTAL PRICE LINES ===
+var line entryLine = na
+var line slLine = na
+var line tp1Line = na
+var line tp2Line = na
+var line tp3Line = na
 
-// Background fill for trade zone
-bgcolor(close >= math.min(entryPrice, stopLoss) and close <= math.max(entryPrice, stopLoss) ? ${isLong ? 'color.new(color.red, 90)' : 'color.new(color.green, 90)'} : na)
+if barstate.islast
+    // Entry Line
+    entryLine := line.new(bar_index - 100, entryPrice, bar_index + 20, entryPrice,
+        color=entryColor, width=2, style=line.style_solid, extend=extend.none)
 
-// Direction Arrow
-plotshape(barstate.islast, style=${isLong ? 'shape.triangleup' : 'shape.triangledown'}, location=location.belowbar, color=${isLong ? 'color.green' : 'color.red'}, size=size.large, title="${isLong ? 'LONG' : 'SHORT'} Signal")
+    // Stop Loss Line
+    slLine := line.new(bar_index - 100, stopLoss, bar_index + 20, stopLoss,
+        color=slColor, width=2, style=line.style_dashed, extend=extend.none)
+
+    // Take Profit Lines
+    if tp1 > 0
+        tp1Line := line.new(bar_index - 100, tp1, bar_index + 20, tp1,
+            color=tp1Color, width=2, style=line.style_solid, extend=extend.none)
+
+    if tp2 > 0
+        tp2Line := line.new(bar_index - 100, tp2, bar_index + 20, tp2,
+            color=tp2Color, width=2, style=line.style_solid, extend=extend.none)
+
+    if tp3 > 0
+        tp3Line := line.new(bar_index - 100, tp3, bar_index + 20, tp3,
+            color=tp3Color, width=2, style=line.style_solid, extend=extend.none)
+
+// === PRICE LABELS ===
+var label entryLabel = na
+var label slLabel = na
+var label tp1Label = na
+var label tp2Label = na
+var label tp3Label = na
+
+if barstate.islast and showLabels
+    // Entry Label
+    entryLabel := label.new(bar_index + 22, entryPrice,
+        "ENTRY $" + str.tostring(entryPrice, format.mintick),
+        style=label.style_label_left, color=entryColor, textcolor=color.white, size=size.normal)
+
+    // Stop Loss Label
+    slLabel := label.new(bar_index + 22, stopLoss,
+        "STOP $" + str.tostring(stopLoss, format.mintick) + " (${slPercent}%)",
+        style=label.style_label_left, color=slColor, textcolor=color.white, size=size.normal)
+
+    // Take Profit Labels
+    if tp1 > 0
+        tp1Label := label.new(bar_index + 22, tp1,
+            "TP1 $" + str.tostring(tp1, format.mintick) + " (+${tp1Percent}%)",
+            style=label.style_label_left, color=tp1Color, textcolor=color.white, size=size.normal)
+
+    if tp2 > 0
+        tp2Label := label.new(bar_index + 22, tp2,
+            "TP2 $" + str.tostring(tp2, format.mintick) + " (+${tp2Percent}%)",
+            style=label.style_label_left, color=tp2Color, textcolor=color.white, size=size.normal)
+
+    if tp3 > 0
+        tp3Label := label.new(bar_index + 22, tp3,
+            "TP3 $" + str.tostring(tp3, format.mintick) + " (+${tp3Percent}%)",
+            style=label.style_label_left, color=tp3Color, textcolor=color.white, size=size.normal)
+
+// === TRADE ZONES (Boxes) ===
+var box profitZone1 = na
+var box profitZone2 = na
+var box profitZone3 = na
+var box lossZone = na
+
+if barstate.islast and showZones
+    // Loss Zone (Entry to SL)
+    lossZone := box.new(bar_index - 50, entryPrice, bar_index + 10, stopLoss,
+        bgcolor=zoneColorLoss, border_color=slColor, border_width=1)
+
+    // Profit Zones
+    if tp1 > 0
+        profitZone1 := box.new(bar_index - 50, entryPrice, bar_index + 10, tp1,
+            bgcolor=zoneColorProfit, border_color=tp1Color, border_width=1)
+
+// === INFO TABLE ===
+var table infoTable = na
+if barstate.islast and showTable
+    infoTable := table.new(position.top_right, 2, 8,
+        bgcolor=color.new(#1E1E1E, 10), border_color=color.gray, border_width=1)
+
+    table.cell(infoTable, 0, 0, "TraderPath", text_color=color.white, text_size=size.normal, bgcolor=isLong ? color.new(#4CAF50, 20) : color.new(#F44336, 20))
+    table.cell(infoTable, 1, 0, isLong ? "LONG" : "SHORT", text_color=isLong ? #4CAF50 : #F44336, text_size=size.normal, bgcolor=isLong ? color.new(#4CAF50, 20) : color.new(#F44336, 20))
+
+    table.cell(infoTable, 0, 1, "Entry", text_color=color.gray, text_size=size.small)
+    table.cell(infoTable, 1, 1, "$" + str.tostring(entryPrice, format.mintick), text_color=#2196F3, text_size=size.small)
+
+    table.cell(infoTable, 0, 2, "Stop Loss", text_color=color.gray, text_size=size.small)
+    table.cell(infoTable, 1, 2, "$" + str.tostring(stopLoss, format.mintick), text_color=#F44336, text_size=size.small)
+
+    table.cell(infoTable, 0, 3, "TP1", text_color=color.gray, text_size=size.small)
+    table.cell(infoTable, 1, 3, tp1 > 0 ? "$" + str.tostring(tp1, format.mintick) : "-", text_color=#4CAF50, text_size=size.small)
+
+    table.cell(infoTable, 0, 4, "TP2", text_color=color.gray, text_size=size.small)
+    table.cell(infoTable, 1, 4, tp2 > 0 ? "$" + str.tostring(tp2, format.mintick) : "-", text_color=#8BC34A, text_size=size.small)
+
+    table.cell(infoTable, 0, 5, "TP3", text_color=color.gray, text_size=size.small)
+    table.cell(infoTable, 1, 5, tp3 > 0 ? "$" + str.tostring(tp3, format.mintick) : "-", text_color=#00BCD4, text_size=size.small)
+
+    table.cell(infoTable, 0, 6, "R:R", text_color=color.gray, text_size=size.small)
+    table.cell(infoTable, 1, 6, "1:${riskReward.toFixed(1)}", text_color=color.white, text_size=size.small)
+
+    table.cell(infoTable, 0, 7, "Score", text_color=color.gray, text_size=size.small)
+    table.cell(infoTable, 1, 7, "${score}/100", text_color=color.yellow, text_size=size.small)
+
+// === ALERTS ===
+if alertsEnabled
+    // Entry Alert
+    alertcondition(ta.crossover(close, entryPrice) or ta.crossunder(close, entryPrice),
+        title="Entry Price Reached", message="${symbol} reached entry price $" + str.tostring(entryPrice))
+
+    // Stop Loss Alert
+    alertcondition(isLong ? ta.crossunder(close, stopLoss) : ta.crossover(close, stopLoss),
+        title="Stop Loss Hit", message="${symbol} hit stop loss at $" + str.tostring(stopLoss))
+
+    // TP1 Alert
+    alertcondition(tp1 > 0 and (isLong ? ta.crossover(close, tp1) : ta.crossunder(close, tp1)),
+        title="TP1 Reached", message="${symbol} reached TP1 at $" + str.tostring(tp1))
+
+    // TP2 Alert
+    alertcondition(tp2 > 0 and (isLong ? ta.crossover(close, tp2) : ta.crossunder(close, tp2)),
+        title="TP2 Reached", message="${symbol} reached TP2 at $" + str.tostring(tp2))
+
+    // TP3 Alert
+    alertcondition(tp3 > 0 and (isLong ? ta.crossover(close, tp3) : ta.crossunder(close, tp3)),
+        title="TP3 Reached", message="${symbol} reached TP3 at $" + str.tostring(tp3))
+
+// === PLOT SHAPES FOR BUY/SELL ===
+// Show signal on the last bar
+plotshape(barstate.islast and isLong, title="BUY Signal", style=shape.labelup,
+    location=location.belowbar, color=#4CAF50, size=size.small, text="BUY", textcolor=color.white)
+plotshape(barstate.islast and not isLong, title="SELL Signal", style=shape.labeldown,
+    location=location.abovebar, color=#F44336, size=size.small, text="SELL", textcolor=color.white)
 `;
   };
 
-  // Copy Pine Script to clipboard
-  const handleCopyPineScript = async () => {
+  // Copy Pine Script to clipboard and optionally open TradingView
+  const handleCopyPineScript = async (openTradingView = false) => {
     const script = generatePineScript();
     if (!script) return;
 
     try {
       await navigator.clipboard.writeText(script);
       setScriptCopied(true);
-      setTimeout(() => setScriptCopied(false), 2000);
+
+      if (openTradingView) {
+        // Show instructions and open TradingView
+        const symbol = analysis?.symbol || 'BTC';
+        const tvUrl = `https://www.tradingview.com/chart/?symbol=BINANCE:${symbol}USDT`;
+
+        // Open TradingView in new tab
+        window.open(tvUrl, '_blank');
+
+        // Show alert with instructions
+        setTimeout(() => {
+          alert(
+            `Pine Script copied!\n\n` +
+            `To add the trade plan to your chart:\n` +
+            `1. In TradingView, click "Pine Editor" (bottom panel)\n` +
+            `2. Press Ctrl+A to select all, then Ctrl+V to paste\n` +
+            `3. Click "Add to Chart" button\n\n` +
+            `Your ${analysis?.step5Result?.direction?.toUpperCase() || 'LONG'} trade plan will appear on the chart!`
+          );
+        }, 500);
+      }
+
+      setTimeout(() => setScriptCopied(false), openTradingView ? 5000 : 2000);
     } catch (err) {
       console.error('Failed to copy script:', err);
       // Fallback for older browsers
@@ -454,37 +633,35 @@ plotshape(barstate.islast, style=${isLong ? 'shape.triangleup' : 'shape.triangle
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-gray-900 dark:text-white">Trade Plan Chart</h3>
                 <div className="flex items-center gap-2">
-                  <a
-                    href={`https://www.tradingview.com/chart/?symbol=BINANCE:${analysis.symbol}USDT`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 hover:opacity-90 text-white transition"
-                    title="Open in TradingView"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    <span className="hidden sm:inline">TradingView</span>
-                  </a>
                   <button
-                    onClick={handleCopyPineScript}
+                    onClick={() => handleCopyPineScript(true)}
                     className={cn(
                       "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition",
                       scriptCopied
                         ? "bg-green-500 text-white"
-                        : "bg-purple-500 hover:bg-purple-600 text-white"
+                        : "bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-white"
                     )}
-                    title="Copy Pine Script for TradingView"
+                    title="Copy Pine Script and open TradingView"
                   >
                     {scriptCopied ? (
                       <>
                         <Check className="w-4 h-4" />
-                        <span className="hidden sm:inline">Copied!</span>
+                        <span className="hidden sm:inline">Copied! Opening TV...</span>
                       </>
                     ) : (
                       <>
-                        <Copy className="w-4 h-4" />
-                        <span className="hidden sm:inline">Pine Script</span>
+                        <ExternalLink className="w-4 h-4" />
+                        <span className="hidden sm:inline">Add to TradingView</span>
                       </>
                     )}
+                  </button>
+                  <button
+                    onClick={() => handleCopyPineScript(false)}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 transition"
+                    title="Copy Pine Script only"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span className="hidden sm:inline">Copy Script</span>
                   </button>
                   <button
                     onClick={handleScreenshot}

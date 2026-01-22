@@ -592,7 +592,7 @@ class ConciergeService {
           return this.handlePlatformInfo(language, creditBalance);
 
         case 'CONVERSATIONAL':
-          return await this.handleConversational(message, language, creditBalance);
+          return await this.handleConversational(message, language, creditBalance, userId);
 
         case 'HELP':
           return this.handleHelp(language, creditBalance);
@@ -640,7 +640,8 @@ class ConciergeService {
           return await this.handleExpertQuestion(userId, message, detectedLanguage, creditBalance, expertType);
 
         default:
-          return this.handleUnknown(detectedLanguage, creditBalance);
+          // Route unknown intents to AI Experts for intelligent response
+          return await this.handleUnknown(userId, message, detectedLanguage, creditBalance);
       }
     } catch (error) {
       console.error('Concierge service error:', error);
@@ -689,7 +690,8 @@ class ConciergeService {
   private async handleConversational(
     message: string,
     language: string,
-    creditBalance: number
+    creditBalance: number,
+    userId?: string
   ): Promise<ConciergeResponse> {
     const lower = message.toLowerCase();
 
@@ -884,7 +886,7 @@ What would you like to do?`;
 
 What would you like to do now? For example, say "Analyze BTC" to start an analysis.`;
     }
-    // Default conversational response
+    // Default conversational response - route to AI Experts for intelligent answers
     else {
       // Try to detect Turkish from common words
       const turkishWords = ['ne', 'nasıl', 'nedir', 'neden', 'hangi', 'kaç', 'kim', 'yap', 'ver', 'göster', 'anlat', 'söyle', 'istiyorum', 'ister', 'misin', 'musun', 'bana', 'sana', 'için', 'ile', 'var', 'yok', 'bir', 'bu', 'şu', 'o', 've', 'ama', 'fakat', 'çünkü', 'eğer', 'ise'];
@@ -892,6 +894,50 @@ What would you like to do now? For example, say "Analyze BTC" to start an analys
       if (hasTurkish) {
         detectedLanguage = 'tr';
       }
+
+      // Check if it looks like a question that needs expert response
+      const questionIndicators = ['?', 'what', 'how', 'why', 'when', 'which', 'explain', 'ne', 'nasıl', 'neden', 'nedir', 'açıkla', 'anlat'];
+      const isQuestion = questionIndicators.some(q => lower.includes(q));
+
+      // If we have userId and it looks like a question, route to AI Expert
+      if (userId && isQuestion) {
+        try {
+          const expertType = this.detectExpertForQuestion(message);
+
+          const languageInstruction = detectedLanguage === 'tr'
+            ? '\n\n[IMPORTANT: Respond in Turkish (Türkçe yanıt ver). Be helpful and provide useful trading insights.]'
+            : '\n\n[Be helpful and provide useful trading insights.]';
+
+          const response = await aiExpertService.chat({
+            expertId: expertType,
+            message: message + languageInstruction,
+            userId,
+          });
+
+          if (response.response) {
+            const expertInfo: Record<string, { emoji: string; name: string }> = {
+              aria: { emoji: '🔬', name: detectedLanguage === 'tr' ? 'Teknik Uzman' : 'Technical Expert' },
+              nexus: { emoji: '⚖️', name: detectedLanguage === 'tr' ? 'Risk Uzmanı' : 'Risk Expert' },
+              oracle: { emoji: '🐋', name: detectedLanguage === 'tr' ? 'Balina Takipçisi' : 'Whale Tracker' },
+              sentinel: { emoji: '🛡️', name: detectedLanguage === 'tr' ? 'Güvenlik Uzmanı' : 'Security Expert' },
+            };
+            const expert = expertInfo[expertType] || expertInfo.aria;
+
+            return {
+              success: true,
+              intent: 'EXPERT_RESPONSE',
+              message: `${expert.emoji} ${expert.name}\n\n${response.response}`,
+              creditsSpent: 0,
+              creditsRemaining: creditBalance,
+            };
+          }
+        } catch (error) {
+          console.error('[Concierge] AI Expert in conversational failed:', error);
+          // Fall through to static response
+        }
+      }
+
+      // Static fallback
       responseText = detectedLanguage === 'tr'
         ? `Anlıyorum. Size şu konularda yardımcı olabilirim:
 
@@ -2200,17 +2246,126 @@ Quel est votre style? (scalp/day trade/swing)`,
     };
   }
 
-  private handleUnknown(language: string, creditBalance: number): ConciergeResponse {
-    const lang = language === 'tr' ? 'tr' : 'en';
-    const templates = RESPONSE_TEMPLATES[lang];
+  /**
+   * Handle unknown intents by routing to AI Experts
+   * This provides intelligent responses instead of generic "I don't understand" messages
+   */
+  private async handleUnknown(
+    userId: string,
+    message: string,
+    language: string,
+    creditBalance: number
+  ): Promise<ConciergeResponse> {
+    try {
+      // Determine the best expert based on the question content
+      const expertType = this.detectExpertForQuestion(message);
 
-    return {
-      success: true,
-      intent: 'UNKNOWN',
-      message: templates.UNKNOWN_INTENT,
-      creditsSpent: 0,
-      creditsRemaining: creditBalance,
-    };
+      console.log(`[Concierge] Routing unknown intent to ${expertType.toUpperCase()} expert`);
+
+      // Add language instruction
+      const languageInstruction = language === 'tr'
+        ? '\n\n[IMPORTANT: Respond in Turkish (Türkçe yanıt ver). Be helpful and conversational.]'
+        : language !== 'en'
+          ? `\n\n[IMPORTANT: Respond in ${language}. Be helpful and conversational.]`
+          : '\n\n[Be helpful and conversational. If the question is about trading, provide useful insights.]';
+
+      // Add context about what the user might want
+      const contextPrompt = language === 'tr'
+        ? `Kullanıcı şunu sordu: "${message}"\n\nLütfen yardımcı bir şekilde yanıt ver. Eğer soru trading ile ilgiliyse, bilgi ve tavsiyeler sun. Eğer platform hakkındaysa, TraderPath'in özelliklerini açıkla.`
+        : `User asked: "${message}"\n\nPlease respond helpfully. If the question is about trading, provide insights and advice. If about the platform, explain TraderPath features.`;
+
+      // Use AI Expert for intelligent response
+      const response = await aiExpertService.chat({
+        expertId: expertType,
+        message: contextPrompt + languageInstruction,
+        userId,
+      });
+
+      const aiResponse = response.response || (language === 'tr'
+        ? 'Üzgünüm, şu an yanıt üretemiyorum. Lütfen farklı bir şekilde sormayı deneyin.'
+        : 'Sorry, I couldn\'t generate a response. Please try asking differently.');
+
+      // Get expert info for formatting
+      const expertInfo: Record<string, { emoji: string; name: string }> = {
+        aria: { emoji: '🔬', name: language === 'tr' ? 'Teknik Uzman' : 'Technical Expert' },
+        nexus: { emoji: '⚖️', name: language === 'tr' ? 'Risk Uzmanı' : 'Risk Expert' },
+        oracle: { emoji: '🐋', name: language === 'tr' ? 'Balina Takipçisi' : 'Whale Tracker' },
+        sentinel: { emoji: '🛡️', name: language === 'tr' ? 'Güvenlik Uzmanı' : 'Security Expert' },
+      };
+
+      const expert = expertInfo[expertType] || expertInfo.aria;
+
+      return {
+        success: true,
+        intent: 'EXPERT_RESPONSE',
+        message: `${expert.emoji} ${expert.name}\n\n${aiResponse}`,
+        creditsSpent: 0, // Free for general questions
+        creditsRemaining: creditBalance,
+      };
+    } catch (error) {
+      console.error('[Concierge] AI Expert fallback failed:', error);
+
+      // Return static template as last resort
+      const lang = language === 'tr' ? 'tr' : 'en';
+      const templates = RESPONSE_TEMPLATES[lang];
+
+      return {
+        success: true,
+        intent: 'UNKNOWN',
+        message: templates.UNKNOWN_INTENT,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+      };
+    }
+  }
+
+  /**
+   * Detect which expert is best suited for a question
+   */
+  private detectExpertForQuestion(question: string): string {
+    const lower = question.toLowerCase();
+
+    // ARIA - Technical analysis keywords
+    const technicalKeywords = [
+      'rsi', 'macd', 'ema', 'sma', 'bollinger', 'indicator', 'indikatör',
+      'teknik', 'technical', 'trend', 'support', 'destek', 'resistance', 'direnç',
+      'pattern', 'formasyon', 'fibonacci', 'momentum', 'volume', 'hacim',
+      'chart', 'grafik', 'candlestick', 'mum', 'analysis', 'analiz',
+      'oversold', 'overbought', 'aşırı alım', 'aşırı satım', 'divergence', 'uyumsuzluk'
+    ];
+
+    // NEXUS - Risk management keywords
+    const riskKeywords = [
+      'risk', 'stop', 'loss', 'zarar', 'position', 'pozisyon', 'size', 'boyut',
+      'leverage', 'kaldıraç', 'margin', 'marjin', 'liquidation', 'tasfiye',
+      'portfolio', 'portföy', 'diversif', 'çeşitlendir', 'hedge', 'koruma',
+      'capital', 'sermaye', 'management', 'yönetim', 'r:r', 'risk/reward'
+    ];
+
+    // ORACLE - Whale/market movement keywords
+    const whaleKeywords = [
+      'whale', 'balina', 'big', 'büyük', 'order', 'emir', 'volume', 'hacim',
+      'institutional', 'kurumsal', 'manipulation', 'manipülasyon', 'pump', 'dump',
+      'accumulation', 'biriktirme', 'distribution', 'dağıtım', 'smart money',
+      'flow', 'akış', 'liquidation', 'tasfiye', 'open interest', 'funding'
+    ];
+
+    // SENTINEL - Security keywords
+    const securityKeywords = [
+      'scam', 'dolandırıcı', 'rug', 'fake', 'sahte', 'audit', 'denetim',
+      'security', 'güvenlik', 'hack', 'exploit', 'vulnerability', 'zafiyet',
+      'safe', 'güvenli', 'trust', 'güven', 'contract', 'sözleşme', 'token',
+      'suspicious', 'şüpheli', 'warning', 'uyarı', 'fraud', 'sahtekarlık'
+    ];
+
+    // Check for matches (order matters - more specific first)
+    if (securityKeywords.some(kw => lower.includes(kw))) return 'sentinel';
+    if (whaleKeywords.some(kw => lower.includes(kw))) return 'oracle';
+    if (riskKeywords.some(kw => lower.includes(kw))) return 'nexus';
+    if (technicalKeywords.some(kw => lower.includes(kw))) return 'aria';
+
+    // Default to ARIA for general trading questions
+    return 'aria';
   }
 
   /**
