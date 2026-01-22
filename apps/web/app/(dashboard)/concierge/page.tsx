@@ -5,6 +5,33 @@ import { Bot, Mic, MicOff, Volume2, VolumeX, Loader2, ExternalLink, Mail, Check,
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
 
+// Web Speech API Types (not included in standard TypeScript DOM types)
+interface ISpeechRecognitionEvent extends Event {
+  results: {
+    length: number;
+    item(index: number): { transcript: string; confidence: number }[];
+    [index: number]: { transcript: string; confidence: number }[];
+  };
+  resultIndex: number;
+}
+
+interface ISpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message?: string;
+}
+
+interface ISpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: ISpeechRecognitionEvent) => void) | null;
+  onerror: ((event: ISpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
 // Types
 interface ConversationStep {
   id: string;
@@ -98,7 +125,7 @@ export default function ConciergePage() {
 
   // Refs
   const synthRef = useRef<SpeechSynthesis | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   // Conversation history for display
@@ -112,22 +139,28 @@ export default function ConciergePage() {
     if (typeof window !== 'undefined') {
       synthRef.current = window.speechSynthesis;
 
-      // Initialize speech recognition
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
+      // Initialize speech recognition (with browser compatibility)
+      const SpeechRecognitionAPI = (window as Window & {
+        SpeechRecognition?: new () => ISpeechRecognition;
+        webkitSpeechRecognition?: new () => ISpeechRecognition;
+      }).SpeechRecognition || (window as Window & {
+        webkitSpeechRecognition?: new () => ISpeechRecognition;
+      }).webkitSpeechRecognition;
+
+      if (SpeechRecognitionAPI) {
+        const recognition = new SpeechRecognitionAPI();
         recognition.continuous = false;
         recognition.interimResults = false;
         recognition.lang = getSpeechLang(detectedLang);
 
-        recognition.onresult = (event) => {
+        recognition.onresult = (event: ISpeechRecognitionEvent) => {
           const text = event.results[0][0].transcript.toLowerCase().trim();
           setTranscript(text);
           setIsListening(false);
           handleUserInput(text);
         };
 
-        recognition.onerror = (event) => {
+        recognition.onerror = (event: ISpeechRecognitionErrorEvent) => {
           console.error('Speech recognition error:', event.error);
           setIsListening(false);
           if (event.error === 'no-speech') {
