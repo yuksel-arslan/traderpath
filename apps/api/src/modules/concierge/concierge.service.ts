@@ -678,9 +678,51 @@ class ConciergeService {
 
     // Detect the type of conversational message
     let responseText: string;
+    let detectedLanguage = language; // Start with user preference
 
-    // Greetings
+    // Language switch requests - detect from message content
     if (
+      lower.includes('türkçe söyle') ||
+      lower.includes('türkçe konuş') ||
+      lower.includes('türkçe yanıtla') ||
+      lower.includes('türkçe cevap') ||
+      lower.includes('turkish please') ||
+      lower.includes('speak turkish') ||
+      lower.includes('in turkish')
+    ) {
+      detectedLanguage = 'tr';
+      responseText = `Tabii, Türkçe konuşabilirim! 🇹🇷
+
+Size nasıl yardımcı olabilirim?
+
+• Coin analizi: "BTC analiz et" veya "ETH nasıl?"
+• Grafik: "BTC grafiği göster"
+• Teknik sorular: "RSI nedir?"
+• Hesap: "kredim ne kadar?"
+
+Ne yapmak istersiniz?`;
+    }
+    else if (
+      lower.includes('ingilizce söyle') ||
+      lower.includes('ingilizce konuş') ||
+      lower.includes('english please') ||
+      lower.includes('speak english') ||
+      lower.includes('in english')
+    ) {
+      detectedLanguage = 'en';
+      responseText = `Sure, I can speak English! 🇬🇧
+
+How can I help you?
+
+• Coin analysis: "Analyze BTC" or "How is ETH?"
+• Charts: "Show BTC chart"
+• Technical questions: "What is RSI?"
+• Account: "What's my credit balance?"
+
+What would you like to do?`;
+    }
+    // Greetings
+    else if (
       lower.includes('merhaba') ||
       lower.includes('selam') ||
       lower.includes('hello') ||
@@ -691,7 +733,11 @@ class ConciergeService {
       lower.includes('iyi akşamlar') ||
       lower.includes('good evening')
     ) {
-      responseText = language === 'tr'
+      // Detect language from greeting
+      if (lower.includes('merhaba') || lower.includes('selam') || lower.includes('günaydın') || lower.includes('iyi akşamlar')) {
+        detectedLanguage = 'tr';
+      }
+      responseText = detectedLanguage === 'tr'
         ? `Merhaba! Ben TraderPath AI Concierge. Size nasıl yardımcı olabilirim?
 
 Şunları yapabilirim:
@@ -720,7 +766,11 @@ What would you like to do?`;
       lower.includes('sağol') ||
       lower.includes('eyvallah')
     ) {
-      responseText = language === 'tr'
+      // Detect language from thanks
+      if (lower.includes('teşekkür') || lower.includes('sağol') || lower.includes('eyvallah')) {
+        detectedLanguage = 'tr';
+      }
+      responseText = detectedLanguage === 'tr'
         ? `Rica ederim! Başka bir konuda yardımcı olabilir miyim? Yeni bir analiz yapmak veya sorularınızı sormaktan çekinmeyin.`
         : `You're welcome! Is there anything else I can help you with? Feel free to run another analysis or ask questions.`;
     }
@@ -731,7 +781,11 @@ What would you like to do?`;
       lower === 'anladım' ||
       lower === 'okay'
     ) {
-      responseText = language === 'tr'
+      // Detect language from acknowledgment
+      if (lower === 'tamam' || lower === 'anladım') {
+        detectedLanguage = 'tr';
+      }
+      responseText = detectedLanguage === 'tr'
         ? `Harika! Başka bir şey için buradayım. Bir coin analiz etmemi ister misiniz?`
         : `Great! I'm here if you need anything else. Would you like me to analyze a coin?`;
     }
@@ -742,7 +796,11 @@ What would you like to do?`;
       lower.includes('sesli konuş') ||
       lower.includes('speak to me')
     ) {
-      responseText = language === 'tr'
+      // Detect language from voice request
+      if (lower.includes('sesli yanıt') || lower.includes('sesli konuş')) {
+        detectedLanguage = 'tr';
+      }
+      responseText = detectedLanguage === 'tr'
         ? `Sesli yanıt özelliği aktif! Tarayıcınızın ses çıkışı açıksa yanıtlarımı sesli olarak duyabilirsiniz.
 
 Şimdi ne yapmak istersiniz? Örneğin "BTC analiz" diyerek bir analiz başlatabilirsiniz.`
@@ -752,7 +810,13 @@ What would you like to do now? For example, say "Analyze BTC" to start an analys
     }
     // Default conversational response
     else {
-      responseText = language === 'tr'
+      // Try to detect Turkish from common words
+      const turkishWords = ['ne', 'nasıl', 'nedir', 'neden', 'hangi', 'kaç', 'kim', 'yap', 'ver', 'göster', 'anlat', 'söyle', 'istiyorum', 'ister', 'misin', 'musun', 'bana', 'sana', 'için', 'ile', 'var', 'yok', 'bir', 'bu', 'şu', 'o', 've', 'ama', 'fakat', 'çünkü', 'eğer', 'ise'];
+      const hasTurkish = turkishWords.some(word => lower.includes(word));
+      if (hasTurkish) {
+        detectedLanguage = 'tr';
+      }
+      responseText = detectedLanguage === 'tr'
         ? `Anlıyorum. Size şu konularda yardımcı olabilirim:
 
 • Coin analizi: "BTC analiz" veya "ETH nasıl?"
