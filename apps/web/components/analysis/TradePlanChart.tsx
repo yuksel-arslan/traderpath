@@ -16,6 +16,7 @@ import {
   CandlestickData,
   Time,
   IPriceLine,
+  SeriesMarker,
 } from 'lightweight-charts';
 import { Loader2, TrendingUp, TrendingDown, Target, AlertTriangle } from 'lucide-react';
 
@@ -108,6 +109,7 @@ export function TradePlanChart({
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
   const isDisposedRef = useRef(false);
+  const lastCandleTimeRef = useRef<Time | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -280,6 +282,22 @@ export function TradePlanChart({
       }
     });
 
+    // Add analysis marker on the last candle (shows when analysis was made)
+    if (lastCandleTimeRef.current && !isDisposedRef.current) {
+      try {
+        const marker: SeriesMarker<Time> = {
+          time: lastCandleTimeRef.current,
+          position: 'aboveBar',
+          color: '#a855f7', // Purple - distinct from entry/SL/TP colors
+          shape: 'circle',
+          text: 'Analysis',
+        };
+        series.setMarkers([marker]);
+      } catch {
+        // Marker may fail if chart is disposed
+      }
+    }
+
     // Stop Loss (red)
     if (stopLoss?.price) {
       addPriceLine({
@@ -375,6 +393,11 @@ export function TradePlanChart({
         low: parseFloat(k[3] as unknown as string),
         close: parseFloat(k[4] as unknown as string),
       }));
+
+      // Store last candle time for analysis marker
+      if (candleData.length > 0) {
+        lastCandleTimeRef.current = candleData[candleData.length - 1].time;
+      }
 
       // Guard chart operations with try-catch in case of disposal
       try {
