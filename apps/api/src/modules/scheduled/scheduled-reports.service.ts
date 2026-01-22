@@ -104,11 +104,16 @@ class ScheduledReportsService {
     // Get cost from settings (same as normal analysis)
     const analysisCost = await creditCostsService.getCreditCost('BUNDLE_FULL_ANALYSIS');
 
+    // Track if credits were charged (for proper refund on failure)
+    let creditsCharged = false;
+
     try {
-      // Check user credits
-      const balance = await creditService.getBalance(userId);
-      if (balance < analysisCost) {
-        console.log(`[ScheduledReports] User ${user.email} has insufficient credits (${balance})`);
+      // Check user credits - getBalance returns CreditBalance object
+      const balanceInfo = await creditService.getBalance(userId);
+      const userBalance = typeof balanceInfo === 'number' ? balanceInfo : balanceInfo.balance;
+
+      if (userBalance < analysisCost) {
+        console.log(`[ScheduledReports] User ${user.email} has insufficient credits (${userBalance})`);
 
         // Notify user about insufficient credits
         if (deliverEmail && user.email) {
@@ -118,11 +123,11 @@ class ScheduledReportsService {
             html: `
               <p>Hi ${user.name || 'Trader'},</p>
               <p>Your scheduled analysis for <strong>${symbol}/USDT</strong> was skipped due to insufficient credits.</p>
-              <p>Required: ${analysisCost} credits<br>Available: ${balance} credits</p>
+              <p>Required: ${analysisCost} credits<br>Available: ${userBalance} credits</p>
               <p>Please add credits to continue receiving scheduled analyses.</p>
               <p>- TraderPath Team</p>
             `,
-            text: `Your scheduled analysis for ${symbol}/USDT was skipped due to insufficient credits. Required: ${analysisCost}, Available: ${balance}`,
+            text: `Your scheduled analysis for ${symbol}/USDT was skipped due to insufficient credits. Required: ${analysisCost}, Available: ${userBalance}`,
           });
         }
 
@@ -132,11 +137,20 @@ class ScheduledReportsService {
         return { success: false, error: 'Insufficient credits' };
       }
 
-      // Deduct credits
-      await creditService.deduct(userId, analysisCost, 'scheduled_analysis', {
+      // Charge credits (not deduct - that method doesn't exist)
+      const chargeResult = await creditService.charge(userId, analysisCost, 'scheduled_analysis', {
         symbol,
         scheduledReportId: id,
       });
+
+      if (!chargeResult.success) {
+        console.log(`[ScheduledReports] Failed to charge credits for ${symbol}`);
+        await this.updateNextRunTime(id, report.frequency, report.scheduleHour, report.scheduleDayOfWeek);
+        return { success: false, error: 'Failed to charge credits' };
+      }
+
+      creditsCharged = true;
+      console.log(`[ScheduledReports] Charged ${analysisCost} credits for ${symbol}`);
 
       // Run analysis with user's selected interval
       const interval = report.interval || '4h';
@@ -210,15 +224,19 @@ class ScheduledReportsService {
     } catch (error) {
       console.error(`[ScheduledReports] Error running analysis for ${symbol}:`, error);
 
-      // Refund credits on failure
-      try {
-        await creditService.add(userId, analysisCost, 'REFUND', 'scheduled_analysis_failed', {
-          symbol,
-          scheduledReportId: id,
-          error: String(error),
-        });
-      } catch (refundError) {
-        console.error('[ScheduledReports] Failed to refund credits:', refundError);
+      // Only refund if credits were actually charged
+      if (creditsCharged) {
+        try {
+          await creditService.add(userId, analysisCost, 'BONUS', 'scheduled_analysis_refund', {
+            symbol,
+            scheduledReportId: id,
+            reason: 'Analysis failed - credits refunded',
+            error: String(error),
+          });
+          console.log(`[ScheduledReports] Refunded ${analysisCost} credits for failed ${symbol} analysis`);
+        } catch (refundError) {
+          console.error('[ScheduledReports] Failed to refund credits:', refundError);
+        }
       }
 
       // Update next run time anyway

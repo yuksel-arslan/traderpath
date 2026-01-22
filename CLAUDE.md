@@ -253,6 +253,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-22 | TradePlanChart fiyat formatlama hatası (1.937 → 1,937) | `toLocaleString()` yerine `formatPrice()` fonksiyonu eklendi - locale bağımsız doğru formatlama | `TradePlanChart.tsx` |
 | 2026-01-22 | TradePlanChart entry marker yanlış semantik | Marker "ENTRY @ $price" yerine "Analysis" olarak değiştirildi. Marker analiz zamanını gösterir, entry fiyatı sarı çizgi ile gösterilir (limit order farklı seviyede olabilir) | `TradePlanChart.tsx` |
 | 2026-01-22 | Stop Loss hesaplaması destek/direnç seviyelerini dikkate almıyordu | LONG için SL destek seviyesinin ALTINA, SHORT için SL direnç seviyesinin ÜSTÜNE yerleştiriliyor. Minimum %1.5 stop mesafesi zorunlu | `analysis.engine.ts:5231-5300` |
+| 2026-01-22 | Scheduled Analysis kredi çekilmeden iade yapıyordu | `creditService.deduct()` yerine `creditService.charge()` kullanıldı. Sadece kredi çekildiyse iade yapılıyor. `creditsCharged` flag eklendi | `scheduled-reports.service.ts:99-155` |
 
 ---
 
