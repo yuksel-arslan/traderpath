@@ -35,6 +35,7 @@ interface ConciergeResponse {
   creditsSpent: number;
   creditsRemaining: number;
   error?: string;
+  detectedLanguage?: string;  // Language detected from user message
   // Analysis-specific fields
   analysisId?: string;
   verdict?: string;
@@ -681,45 +682,104 @@ class ConciergeService {
     let detectedLanguage = language; // Start with user preference
 
     // Language switch requests - detect from message content
-    if (
-      lower.includes('türkçe söyle') ||
-      lower.includes('türkçe konuş') ||
-      lower.includes('türkçe yanıtla') ||
-      lower.includes('türkçe cevap') ||
-      lower.includes('turkish please') ||
-      lower.includes('speak turkish') ||
-      lower.includes('in turkish')
-    ) {
-      detectedLanguage = 'tr';
-      responseText = `Tabii, Türkçe konuşabilirim! 🇹🇷
+    // Multi-language support: Users can request any supported language
+    const languageSwitchPatterns: Record<string, { patterns: string[], response: string }> = {
+      'tr': {
+        patterns: ['türkçe söyle', 'türkçe konuş', 'türkçe yanıtla', 'turkish please', 'speak turkish', 'in turkish'],
+        response: `Tabii, Türkçe konuşabilirim! 🇹🇷\n\nSize nasıl yardımcı olabilirim?\n\n• Coin analizi: "BTC analiz et"\n• Grafik: "BTC grafiği göster"\n• Teknik sorular: "RSI nedir?"\n\nNe yapmak istersiniz?`
+      },
+      'en': {
+        patterns: ['ingilizce söyle', 'ingilizce konuş', 'english please', 'speak english', 'in english'],
+        response: `Sure, I can speak English! 🇬🇧\n\nHow can I help you?\n\n• Coin analysis: "Analyze BTC"\n• Charts: "Show BTC chart"\n• Technical questions: "What is RSI?"\n\nWhat would you like to do?`
+      },
+      'es': {
+        patterns: ['español por favor', 'habla español', 'en español', 'spanish please', 'speak spanish'],
+        response: `¡Claro, puedo hablar español! 🇪🇸\n\n¿Cómo puedo ayudarte?\n\n• Análisis de monedas: "Analiza BTC"\n• Gráficos: "Muestra gráfico de ETH"\n• Preguntas técnicas: "¿Qué es RSI?"\n\n¿Qué te gustaría hacer?`
+      },
+      'de': {
+        patterns: ['deutsch bitte', 'sprich deutsch', 'auf deutsch', 'german please', 'speak german'],
+        response: `Natürlich, ich kann Deutsch sprechen! 🇩🇪\n\nWie kann ich Ihnen helfen?\n\n• Münzanalyse: "Analysiere BTC"\n• Charts: "Zeige BTC-Chart"\n• Technische Fragen: "Was ist RSI?"\n\nWas möchten Sie tun?`
+      },
+      'fr': {
+        patterns: ['français s\'il vous plaît', 'parle français', 'en français', 'french please', 'speak french'],
+        response: `Bien sûr, je peux parler français! 🇫🇷\n\nComment puis-je vous aider?\n\n• Analyse de cryptos: "Analyse BTC"\n• Graphiques: "Montre graphique ETH"\n• Questions techniques: "C'est quoi RSI?"\n\nQue souhaitez-vous faire?`
+      },
+      'ar': {
+        patterns: ['بالعربي', 'تكلم عربي', 'arabic please', 'speak arabic', 'in arabic'],
+        response: `بالطبع، يمكنني التحدث بالعربية! 🇸🇦\n\nكيف يمكنني مساعدتك؟\n\n• تحليل العملات: "حلل BTC"\n• الرسوم البيانية: "أظهر رسم ETH"\n• أسئلة تقنية: "ما هو RSI؟"\n\nماذا تريد أن تفعل؟`
+      },
+      'ru': {
+        patterns: ['по-русски', 'говори по-русски', 'на русском', 'russian please', 'speak russian'],
+        response: `Конечно, я могу говорить по-русски! 🇷🇺\n\nКак я могу помочь?\n\n• Анализ монет: "Проанализируй BTC"\n• Графики: "Покажи график ETH"\n• Технические вопросы: "Что такое RSI?"\n\nЧто бы вы хотели сделать?`
+      },
+      'zh': {
+        patterns: ['说中文', '用中文', '中文回答', 'chinese please', 'speak chinese', 'in chinese'],
+        response: `当然，我可以说中文！🇨🇳\n\n我能帮你什么？\n\n• 分析币种："分析BTC"\n• 图表："显示ETH图表"\n• 技术问题："RSI是什么？"\n\n您想做什么？`
+      },
+      'ja': {
+        patterns: ['日本語で', '日本語でお願い', 'japanese please', 'speak japanese', 'in japanese'],
+        response: `はい、日本語で対応できます！🇯🇵\n\nご用件は何ですか？\n\n• コイン分析：「BTC分析」\n• チャート：「ETHチャート表示」\n• 技術的質問：「RSIとは？」\n\n何をしますか？`
+      },
+      'ko': {
+        patterns: ['한국어로', '한국어로 말해', 'korean please', 'speak korean', 'in korean'],
+        response: `네, 한국어로 대화할 수 있습니다! 🇰🇷\n\n무엇을 도와드릴까요?\n\n• 코인 분석: "BTC 분석"\n• 차트: "ETH 차트 보여줘"\n• 기술 질문: "RSI가 뭐야?"\n\n무엇을 하시겠습니까?`
+      },
+      'pt': {
+        patterns: ['português por favor', 'fala português', 'em português', 'portuguese please', 'speak portuguese'],
+        response: `Claro, posso falar português! 🇧🇷\n\nComo posso ajudar?\n\n• Análise de moedas: "Analise BTC"\n• Gráficos: "Mostre gráfico ETH"\n• Perguntas técnicas: "O que é RSI?"\n\nO que você gostaria de fazer?`
+      },
+      'it': {
+        patterns: ['italiano per favore', 'parla italiano', 'in italiano', 'italian please', 'speak italian'],
+        response: `Certo, posso parlare italiano! 🇮🇹\n\nCome posso aiutarti?\n\n• Analisi monete: "Analizza BTC"\n• Grafici: "Mostra grafico ETH"\n• Domande tecniche: "Cos'è RSI?"\n\nCosa vorresti fare?`
+      },
+      'nl': {
+        patterns: ['nederlands alstublieft', 'spreek nederlands', 'in het nederlands', 'dutch please', 'speak dutch'],
+        response: `Natuurlijk, ik kan Nederlands spreken! 🇳🇱\n\nHoe kan ik helpen?\n\n• Muntanalyse: "Analyseer BTC"\n• Grafieken: "Toon ETH grafiek"\n• Technische vragen: "Wat is RSI?"\n\nWat wilt u doen?`
+      },
+      'pl': {
+        patterns: ['po polsku', 'mów po polsku', 'polish please', 'speak polish', 'in polish'],
+        response: `Oczywiście, mogę mówić po polsku! 🇵🇱\n\nJak mogę pomóc?\n\n• Analiza monet: "Przeanalizuj BTC"\n• Wykresy: "Pokaż wykres ETH"\n• Pytania techniczne: "Co to RSI?"\n\nCo chciałbyś zrobić?`
+      },
+      'hi': {
+        patterns: ['हिंदी में', 'हिंदी में बोलो', 'hindi please', 'speak hindi', 'in hindi'],
+        response: `बिल्कुल, मैं हिंदी में बात कर सकता हूं! 🇮🇳\n\nमैं कैसे मदद कर सकता हूं?\n\n• कॉइन विश्लेषण: "BTC विश्लेषण करो"\n• चार्ट: "ETH चार्ट दिखाओ"\n• तकनीकी सवाल: "RSI क्या है?"\n\nआप क्या करना चाहेंगे?`
+      },
+      'vi': {
+        patterns: ['tiếng việt', 'nói tiếng việt', 'vietnamese please', 'speak vietnamese', 'in vietnamese'],
+        response: `Được, tôi có thể nói tiếng Việt! 🇻🇳\n\nTôi có thể giúp gì?\n\n• Phân tích coin: "Phân tích BTC"\n• Biểu đồ: "Hiện biểu đồ ETH"\n• Câu hỏi kỹ thuật: "RSI là gì?"\n\nBạn muốn làm gì?`
+      },
+      'th': {
+        patterns: ['ภาษาไทย', 'พูดภาษาไทย', 'thai please', 'speak thai', 'in thai'],
+        response: `ได้ครับ ผมพูดภาษาไทยได้! 🇹🇭\n\nผมช่วยอะไรได้บ้าง?\n\n• วิเคราะห์เหรียญ: "วิเคราะห์ BTC"\n• กราฟ: "แสดงกราฟ ETH"\n• คำถามเทคนิค: "RSI คืออะไร?"\n\nคุณต้องการทำอะไร?`
+      },
+      'id': {
+        patterns: ['bahasa indonesia', 'berbicara indonesia', 'indonesian please', 'speak indonesian', 'in indonesian'],
+        response: `Tentu, saya bisa berbicara Bahasa Indonesia! 🇮🇩\n\nBagaimana saya bisa membantu?\n\n• Analisis koin: "Analisis BTC"\n• Grafik: "Tampilkan grafik ETH"\n• Pertanyaan teknis: "Apa itu RSI?"\n\nApa yang ingin Anda lakukan?`
+      },
+      'fa': {
+        patterns: ['فارسی', 'به فارسی', 'persian please', 'speak persian', 'in persian', 'farsi please'],
+        response: `بله، من می‌توانم فارسی صحبت کنم! 🇮🇷\n\nچطور می‌توانم کمک کنم؟\n\n• تحلیل ارز: "BTC را تحلیل کن"\n• نمودار: "نمودار ETH را نشان بده"\n• سوالات فنی: "RSI چیست?"\n\nچه کاری می‌خواهید انجام دهید?`
+      },
+      'he': {
+        patterns: ['בעברית', 'דבר עברית', 'hebrew please', 'speak hebrew', 'in hebrew'],
+        response: `בטח, אני יכול לדבר עברית! 🇮🇱\n\nאיך אני יכול לעזור?\n\n• ניתוח מטבעות: "נתח BTC"\n• גרפים: "הצג גרף ETH"\n• שאלות טכניות: "מה זה RSI?"\n\nמה תרצה לעשות?`
+      },
+    };
 
-Size nasıl yardımcı olabilirim?
-
-• Coin analizi: "BTC analiz et" veya "ETH nasıl?"
-• Grafik: "BTC grafiği göster"
-• Teknik sorular: "RSI nedir?"
-• Hesap: "kredim ne kadar?"
-
-Ne yapmak istersiniz?`;
-    }
-    else if (
-      lower.includes('ingilizce söyle') ||
-      lower.includes('ingilizce konuş') ||
-      lower.includes('english please') ||
-      lower.includes('speak english') ||
-      lower.includes('in english')
-    ) {
-      detectedLanguage = 'en';
-      responseText = `Sure, I can speak English! 🇬🇧
-
-How can I help you?
-
-• Coin analysis: "Analyze BTC" or "How is ETH?"
-• Charts: "Show BTC chart"
-• Technical questions: "What is RSI?"
-• Account: "What's my credit balance?"
-
-What would you like to do?`;
+    // Check for language switch request
+    for (const [langCode, config] of Object.entries(languageSwitchPatterns)) {
+      if (config.patterns.some(pattern => lower.includes(pattern))) {
+        detectedLanguage = langCode;
+        responseText = config.response;
+        return {
+          success: true,
+          intent: 'CONVERSATIONAL',
+          message: responseText,
+          creditsSpent: 0,
+          creditsRemaining: creditBalance,
+          detectedLanguage,
+        };
+      }
     }
     // Greetings
     else if (
