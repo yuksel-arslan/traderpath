@@ -113,15 +113,59 @@ export default function ConciergePage() {
   const [credits, setCredits] = useState<number | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
+  const [userLanguage, setUserLanguage] = useState<string>('en');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
+  // Fetch user's language preference on mount
+  useEffect(() => {
+    const fetchUserLanguage = async () => {
+      try {
+        const response = await authFetch('/api/user/language');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data?.preferredLanguage) {
+            setUserLanguage(data.data.preferredLanguage);
+          }
+        }
+      } catch {
+        // Keep default language on error
+      }
+    };
+    fetchUserLanguage();
+  }, []);
+
   // Auto scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Map language code to speech recognition language code
+  const getSpeechLang = (langCode: string): string => {
+    const langMap: Record<string, string> = {
+      'en': 'en-US',
+      'tr': 'tr-TR',
+      'ar': 'ar-SA',
+      'es': 'es-ES',
+      'de': 'de-DE',
+      'fr': 'fr-FR',
+      'pt': 'pt-BR',
+      'ru': 'ru-RU',
+      'zh': 'zh-CN',
+      'ja': 'ja-JP',
+      'ko': 'ko-KR',
+      'it': 'it-IT',
+      'nl': 'nl-NL',
+      'pl': 'pl-PL',
+      'vi': 'vi-VN',
+      'th': 'th-TH',
+      'id': 'id-ID',
+      'hi': 'hi-IN',
+    };
+    return langMap[langCode] || 'en-US';
+  };
 
   // Initialize speech recognition
   useEffect(() => {
@@ -132,7 +176,7 @@ export default function ConciergePage() {
         const recognition = new SpeechRecognitionClass();
         recognition.continuous = false;
         recognition.interimResults = true;
-        recognition.lang = 'en-US';
+        recognition.lang = getSpeechLang(userLanguage);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         recognition.onresult = (event: any) => {
@@ -149,7 +193,7 @@ export default function ConciergePage() {
         recognitionRef.current = recognition;
       }
     }
-  }, []);
+  }, [userLanguage]);
 
   const sendMessage = useCallback(async (message: string) => {
     if (!message.trim() || isLoading) return;
@@ -171,7 +215,7 @@ export default function ConciergePage() {
       const response = await authFetch('/api/concierge/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, language: detectLanguage(message) }),
+        body: JSON.stringify({ message, language: userLanguage || detectLanguage(message) }),
       });
 
       const data: ConciergeResponse = await response.json();
@@ -217,7 +261,7 @@ export default function ConciergePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading]);
+  }, [isLoading, userLanguage]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

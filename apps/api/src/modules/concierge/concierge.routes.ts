@@ -2,11 +2,16 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { authenticate } from '../../core/auth/middleware';
 import { conciergeService } from './concierge.service';
+import { prisma } from '../../core/database';
+import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from '../../config/languages';
 
-// Request schema
+// Get list of supported language codes
+const supportedLanguageCodes = SUPPORTED_LANGUAGES.map(l => l.code);
+
+// Request schema - supports all configured languages
 const chatRequestSchema = z.object({
   message: z.string().min(1).max(500),
-  language: z.enum(['tr', 'en']).optional().default('en'),
+  language: z.string().min(2).max(5).optional(), // Don't enforce enum here, validate below
 });
 
 export async function conciergeRoutes(app: FastifyInstance) {
@@ -21,10 +26,30 @@ export async function conciergeRoutes(app: FastifyInstance) {
       const userId = request.user!.id;
       const body = chatRequestSchema.parse(request.body);
 
+      // Get user's language preference from database if not provided in request
+      let language = body.language;
+
+      if (!language) {
+        try {
+          const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { preferredLanguage: true },
+          });
+          language = user?.preferredLanguage || DEFAULT_LANGUAGE;
+        } catch {
+          language = DEFAULT_LANGUAGE;
+        }
+      }
+
+      // Validate language is supported, fallback to default if not
+      if (!supportedLanguageCodes.includes(language)) {
+        language = DEFAULT_LANGUAGE;
+      }
+
       const response = await conciergeService.processMessage({
         message: body.message,
         userId,
-        language: body.language,
+        language,
       });
 
       return reply.send(response);

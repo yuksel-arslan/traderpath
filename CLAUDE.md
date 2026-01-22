@@ -243,6 +243,11 @@ Kullanıcı Hakları Aktif:
 | 2026-01-21 | AI Concierge "Analysis Not Found" hatası - timeframe olmadan analiz yapılamıyor | Analiz veritabanına kaydedilmiyordu. `analyzeWithExpertPanel` fonksiyonuna `prisma.analysis.create` eklendi, interval parametresi eklendi | `ai-expert.service.ts`, `concierge.service.ts` |
 | 2026-01-21 | Chart View trade plan göstermiyor - yanlış step ve alan adları | Trade plan `step5Result`'tan alınmalı (step7 değil), alan adları: `averageEntry`, `stopLoss.price`, `takeProfits[].price`. Trade plan yoksa açıklayıcı mesaj eklendi | `concierge.service.ts`, `concierge/page.tsx` |
 | 2026-01-21 | AI Expert soruları Concierge'de çalışmıyor - "yanıt üretemiyorum" hatası | `response.reply` yerine `response.response` kullanılmalı. ChatResponse interface'inde `reply` alanı yok | `concierge.service.ts` |
+| 2026-01-22 | Email raporunda logo ve coin ikonu görünmüyor, rakamlar üst üste biniyor | Logo ve coin ikonu kaldırıldı, trade plan tablosuna `table-layout: fixed` ve `width: 20%` eklendi | `report.routes.ts` |
+| 2026-01-22 | CoinSelector filtre (Gainers, Losers) çalışmıyor | `fetch` → `authFetch`, loading state düzeltmesi, All Coins listesi filtre seçildiğinde gizleniyor | `CoinSelector.tsx` |
+| 2026-01-22 | AI Concierge "BTCUSDT 1h" anlamıyor | USDT/BUSD/PERP suffix'leri temizleniyor. `cleanedMessage` ile coin detection | `concierge.service.ts` |
+| 2026-01-22 | AI Concierge "chart" komutu MONTHLY_PERFORMANCE tetikliyor | "chart" ve "grafik" kelimeleri MONTHLY_PERFORMANCE'dan kaldırıldı | `concierge.service.ts` |
+| 2026-01-22 | AI Concierge karmaşık mesajları anlamıyor | Gemini AI fallback eklendi - rule-based başarısız olunca Gemini kullanılıyor | `concierge.service.ts`, `system-prompt.ts` |
 
 ---
 
@@ -600,6 +605,42 @@ Kullanıcı Hakları Aktif:
   - Script içeriği: Entry, Stop Loss, TP1/TP2/TP3 seviyeleri ve direction
   - Renk kodları: Blue (entry), Red (SL), Green/Lime/Aqua (TPs)
   - Direction arrow: LONG/SHORT sinyali grafikte gösteriliyor
+
+### 2026-01-22
+- **Email rapor şablonu düzeltildi**:
+  - Logo kaldırıldı (email client'larda görünmüyordu)
+  - Coin ikonu kaldırıldı
+  - Trade plan tablosunda üst üste binen rakamlar düzeltildi (sütun genişlikleri %20)
+- **CoinSelector filtre düzeltildi**:
+  - Smart coins filtre butonları çalışıyor (Trending, Gainers, Losers, Volume, Top Cap)
+  - `authFetch` ile doğru API domain'ine yönlendirme
+  - Loading state düzgün gösteriliyor
+  - "All Coins" listesi filtre seçildiğinde gizleniyor
+- **AI Concierge intent detection iyileştirildi**:
+  - USDT/BUSD/PERP suffix'leri otomatik temizleniyor (BTCUSDT → BTC)
+  - "chart" ve "grafik" kelimeleri MONTHLY_PERFORMANCE'dan kaldırıldı
+  - CHART_VIEW için doğru tetikleme
+- **AI Concierge bütüncül yaklaşım**:
+  - `system-prompt.ts` - Tüm platform özellikleri tanımlandı
+  - Gemini AI fallback eklendi (rule-based başarısız olunca)
+  - Response templates (TR/EN) merkezi yönetim
+  - Dil tespiti Gemini tarafından yapılıyor
+  - 17 farklı intent tipi destekleniyor
+- **Multi-language System (Çoklu Dil Sistemi)**:
+  - Yeni config: `apps/api/src/config/languages.ts` - 20+ dil desteği
+  - User model'e `preferredLanguage` field eklendi (default: en)
+  - **Desteklenen diller**: EN, TR, AR, ES, DE, FR, IT, PT, NL, PL, RU, FA, HE, ZH, JA, KO, VI, TH, ID, HI
+  - **API Endpoint'leri**:
+    - `GET /api/user/languages` - Desteklenen diller listesi
+    - `GET /api/user/language` - Kullanıcı dil tercihi
+    - `PATCH /api/user/language` - Dil tercihi güncelleme
+    - `GET /api/user/detect-language` - Browser/IP bazlı dil tespiti
+  - Settings sayfasına dil seçici eklendi (Appearance bölümü)
+  - Auto-detect özelliği: Accept-Language header veya IP'den ülke tespiti
+  - AI Concierge kullanıcının dil tercihini kullanıyor
+  - Speech Recognition dil bazlı (örn: tr-TR, ar-SA, es-ES)
+  - RTL dil desteği (Arapça, Farsça, İbranice)
+  - Country code → Language mapping (100+ ülke)
 
 ---
 

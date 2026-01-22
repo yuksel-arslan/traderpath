@@ -1,6 +1,8 @@
 import { prisma } from '../../core/database';
 import { creditService } from '../credits/credit.service';
 import { aiExpertService } from '../ai-expert/ai-expert.service';
+import { callGeminiWithRetry } from '../../core/gemini';
+import { INTENT_DETECTION_PROMPT, RESPONSE_TEMPLATES } from './system-prompt';
 
 interface ConciergeRequest {
   message: string;
@@ -160,6 +162,7 @@ function detectIntent(message: string): {
   }
 
   // Monthly/Weekly performance intent
+  // Note: 'chart' and 'grafik' removed - they should trigger CHART_VIEW instead
   if (
     lower.includes('aylık') ||
     lower.includes('haftalık') ||
@@ -171,9 +174,7 @@ function detectIntent(message: string): {
     lower.includes('last 7') ||
     lower.includes('this month') ||
     lower.includes('bu ay') ||
-    lower.includes('grafik') ||
-    lower.includes('chart') ||
-    lower.includes('trend')
+    (lower.includes('trend') && lower.includes('perform'))
   ) {
     return { intent: 'MONTHLY_PERFORMANCE' };
   }
@@ -244,9 +245,17 @@ function detectIntent(message: string): {
       }
     }
     if (!scheduleCoin) {
+      // Strip USDT/BUSD suffixes for better matching
+      const cleanedMessage = lower
+        .replace(/usdt/gi, ' ')
+        .replace(/busd/gi, ' ')
+        .replace(/perp/gi, ' ')
+        .replace(/\/usdt/gi, ' ')
+        .replace(/\/busd/gi, ' ');
+
       for (const coin of SUPPORTED_COINS) {
         const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
-        if (coinRegex.test(lower)) {
+        if (coinRegex.test(cleanedMessage) || coinRegex.test(lower)) {
           scheduleCoin = coin;
           break;
         }
@@ -291,9 +300,17 @@ function detectIntent(message: string): {
       }
     }
     if (!chartSymbol) {
+      // Strip USDT/BUSD suffixes for better matching
+      const cleanedMessage = lower
+        .replace(/usdt/gi, ' ')
+        .replace(/busd/gi, ' ')
+        .replace(/perp/gi, ' ')
+        .replace(/\/usdt/gi, ' ')
+        .replace(/\/busd/gi, ' ');
+
       for (const coin of SUPPORTED_COINS) {
         const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
-        if (coinRegex.test(lower)) {
+        if (coinRegex.test(cleanedMessage) || coinRegex.test(lower)) {
           chartSymbol = coin;
           break;
         }
@@ -313,12 +330,20 @@ function detectIntent(message: string): {
     }
   }
 
-  // Check for coin symbols
+  // Check for coin symbols (handle USDT/BUSD/PERP suffixes)
   if (!detectedCoin) {
+    // First, try to strip common trading pair suffixes
+    const cleanedMessage = lower
+      .replace(/usdt/gi, ' ')
+      .replace(/busd/gi, ' ')
+      .replace(/perp/gi, ' ')
+      .replace(/\/usdt/gi, ' ')
+      .replace(/\/busd/gi, ' ');
+
     for (const coin of SUPPORTED_COINS) {
-      // Match coin symbol with word boundaries
+      // Match coin symbol with word boundaries in cleaned message
       const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
-      if (coinRegex.test(lower)) {
+      if (coinRegex.test(cleanedMessage) || coinRegex.test(lower)) {
         detectedCoin = coin;
         break;
       }
@@ -381,6 +406,58 @@ function detectIntent(message: string): {
   return { intent: 'UNKNOWN' };
 }
 
+// Gemini-based intelligent intent detection (fallback for complex queries)
+async function detectIntentWithGemini(message: string): Promise<{
+  intent: string;
+  symbol?: string;
+  interval?: string;
+  expertType?: string;
+  targetPrice?: number;
+  direction?: string;
+  language?: string;
+}> {
+  try {
+    const prompt = INTENT_DETECTION_PROMPT.replace('{MESSAGE}', message);
+
+    const response = await callGeminiWithRetry(
+      {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.1, // Low temperature for consistent classification
+          maxOutputTokens: 500,
+        },
+      },
+      2, // max retries
+      'concierge_intent_detection'
+    );
+
+    const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    // Extract JSON from response
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.log('[Concierge] Gemini response not JSON:', responseText);
+      return { intent: 'UNKNOWN' };
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    console.log('[Concierge] Gemini parsed intent:', parsed);
+
+    return {
+      intent: parsed.intent || 'UNKNOWN',
+      symbol: parsed.entities?.symbol?.toUpperCase(),
+      interval: parsed.entities?.interval || '4h',
+      expertType: parsed.entities?.expertType,
+      targetPrice: parsed.entities?.targetPrice,
+      direction: parsed.entities?.direction,
+      language: parsed.language,
+    };
+  } catch (error) {
+    console.error('[Concierge] Gemini intent detection failed:', error);
+    return { intent: 'UNKNOWN' };
+  }
+}
+
 // Get trade type from interval
 function getTradeType(interval: string): 'scalping' | 'dayTrade' | 'swing' {
   switch (interval) {
@@ -404,8 +481,29 @@ class ConciergeService {
       const creditBalanceObj = await creditService.getBalance(userId);
       const creditBalance = creditBalanceObj.balance;
 
-      // Detect intent
-      const { intent, symbol, interval, expertType } = detectIntent(message);
+      // First, try rule-based detection (fast)
+      let detectionResult = detectIntent(message);
+      let { intent, symbol, interval, expertType } = detectionResult;
+      let targetPrice: number | undefined;
+      let direction: string | undefined;
+      let detectedLanguage = language;
+
+      // If rule-based detection returns UNKNOWN, try Gemini (smarter but slower)
+      if (intent === 'UNKNOWN') {
+        console.log('[Concierge] Rule-based detection failed, trying Gemini...');
+        const geminiResult = await detectIntentWithGemini(message);
+
+        if (geminiResult.intent !== 'UNKNOWN') {
+          intent = geminiResult.intent;
+          symbol = geminiResult.symbol || symbol;
+          interval = geminiResult.interval || interval;
+          expertType = geminiResult.expertType || expertType;
+          targetPrice = geminiResult.targetPrice;
+          direction = geminiResult.direction;
+          detectedLanguage = geminiResult.language || language;
+          console.log('[Concierge] Gemini detected intent:', intent);
+        }
+      }
 
       // Handle different intents
       switch (intent) {
@@ -446,13 +544,13 @@ class ConciergeService {
           return await this.handleScheduleDelete(userId, message, creditBalance, language);
 
         case 'ANALYSIS':
-          return await this.handleAnalysis(userId, symbol!, interval!, language, creditBalance);
+          return await this.handleAnalysis(userId, symbol!, interval || '4h', detectedLanguage, creditBalance);
 
         case 'EXPERT_ASK':
-          return await this.handleExpertQuestion(userId, message, language, creditBalance, expertType);
+          return await this.handleExpertQuestion(userId, message, detectedLanguage, creditBalance, expertType);
 
         default:
-          return this.handleUnknown(language, creditBalance);
+          return this.handleUnknown(detectedLanguage, creditBalance);
       }
     } catch (error) {
       console.error('Concierge service error:', error);
@@ -473,80 +571,13 @@ class ConciergeService {
   }
 
   private handleHelp(language: string, creditBalance: number): ConciergeResponse {
-    const helpText = language === 'tr'
-      ? `AI Concierge - Tam Özellikli Asistan
-
-ANALİZ (25 kredi)
-• "BTC nasıl?" - Hızlı analiz
-• "ETH 4h analiz" - Belirli timeframe
-• "SOL scalp" - Scalping analizi
-
-GRAFİK
-• "BTC grafiği göster" - İşlem planı grafikte
-• "candlestick göster" - Mum grafiği
-
-OTOMATİK ANALİZ
-• "BTC günlük analiz kur" - Zamanlama oluştur
-• "zamanlanmış analizlerim" - Liste
-• "BTC schedule sil" - Silme
-
-UZMAN SORULARI (ücretsiz)
-• "RSI nedir?" - Teknik analiz
-• "Risk yönetimi nasıl yapılır?"
-• "Balina aktivitesi ne demek?"
-
-PERFORMANS & İSTATİSTİK
-• "karlılık raporla" - Senin performansın
-• "aylık performans" - Haftalık grafik
-• "platform başarı oranı" - Genel istatistik
-
-ALARMLAR
-• "BTC 70000 olunca haber ver"
-• "alarmlarım" - Alarm listesi
-
-HESAP
-• "status" - Kredi bakiyesi
-
-50+ coin: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK, ARB, OP, APT, SUI, SEI...`
-      : `AI Concierge - Full-Featured Assistant
-
-ANALYSIS (25 credits)
-• "How is BTC?" - Quick analysis
-• "ETH 4h analysis" - Specific timeframe
-• "SOL scalp" - Scalping analysis
-
-CHARTS
-• "Show BTC chart" - Trade plan on chart
-• "Show candlestick" - Candle chart
-
-SCHEDULED ANALYSIS
-• "Schedule daily BTC analysis" - Auto analysis
-• "My schedules" - List schedules
-• "Delete BTC schedule" - Remove
-
-EXPERT QUESTIONS (free)
-• "What is RSI?" - Technical analysis
-• "How to manage risk?"
-• "What is whale activity?"
-
-PERFORMANCE & STATS
-• "report my profitability" - Your stats
-• "monthly performance" - Weekly chart
-• "platform stats" - Overall stats
-
-ALERTS
-• "BTC reaches 70000 notify me"
-• "my alerts" - Alert list
-
-ACCOUNT
-• "status" - Credit balance
-
-50+ coins: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK, ARB, OP, APT, SUI, SEI...`;
+    const lang = language === 'tr' ? 'tr' : 'en';
+    const templates = RESPONSE_TEMPLATES[lang];
 
     return {
       success: true,
       intent: 'HELP',
-      message: helpText,
+      message: templates.HELP_TEXT,
       creditsSpent: 0,
       creditsRemaining: creditBalance,
     };
@@ -1713,22 +1744,13 @@ ${aiResponse}`;
   }
 
   private handleUnknown(language: string, creditBalance: number): ConciergeResponse {
-    const unknownText = language === 'tr'
-      ? `Anlamadım. Şunları deneyebilirsiniz:
-
-• "BTC nasıl?" - Hızlı analiz
-• "RSI nedir?" - Uzman sorusu
-• "help" - Tüm komutlar`
-      : `I didn't understand. Try:
-
-• "How is BTC?" - Quick analysis
-• "What is RSI?" - Expert question
-• "help" - All commands`;
+    const lang = language === 'tr' ? 'tr' : 'en';
+    const templates = RESPONSE_TEMPLATES[lang];
 
     return {
       success: true,
       intent: 'UNKNOWN',
-      message: unknownText,
+      message: templates.UNKNOWN_INTENT,
       creditsSpent: 0,
       creditsRemaining: creditBalance,
     };
