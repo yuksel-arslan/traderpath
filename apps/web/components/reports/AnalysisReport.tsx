@@ -996,10 +996,10 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
 }
 
 // ===========================================
-// PAGE 4: Steps 1-3 (Market, Asset, Safety)
+// PAGE 4: Steps 1-2 (Market Pulse + Asset Scanner)
 // ===========================================
 
-function generatePageSteps123(data: AnalysisReportData, totalPages: number): string {
+function generatePageSteps12(data: AnalysisReportData, totalPages: number): string {
   // Default values to prevent null access errors
   const defaultGate = { canProceed: false, passed: false, reason: '', confidence: 0 };
   const defaultTrend = { direction: 'neutral', strength: 0 };
@@ -1008,22 +1008,18 @@ function generatePageSteps123(data: AnalysisReportData, totalPages: number): str
 
   const mp = data.marketPulse || { fearGreedIndex: 50, fearGreedLabel: 'N/A', btcDominance: 0, trend: defaultTrend, marketRegime: 'ranging', gate: defaultGate };
   const as = data.assetScan || { currentPrice: 0, priceChange24h: 0, volume24h: 0, direction: 'neutral', directionConfidence: 0, indicators: defaultIndicators, levels: defaultLevels, gate: defaultGate };
-  const sc = data.safetyCheck || { riskScore: 50, liquidityScore: 50, volatilityScore: 50, manipulationRisk: 50, overallSafety: 'moderate', gate: defaultGate };
   const tk = data.tokenomics;
   const mpGate = mp?.gate ? getGateStatus(mp.gate) : { text: 'N/A', color: '#666' };
   const asGate = as?.gate ? getGateStatus(as.gate) : { text: 'N/A', color: '#666' };
-  const scGate = sc?.gate ? getGateStatus(sc.gate) : { text: 'N/A', color: '#666' };
 
   // Step Summaries from gate reasons
   const mpSummary = mp?.gate?.reason ? `Market Pulse: ${mp.gate.reason}` : '';
   const asSummary = as?.gate?.reason ? `Asset Scan: ${as.gate.reason}` : '';
-  const scSummary = sc?.gate?.reason ? `Safety Check: ${sc.gate.reason}` : '';
 
   // Get indicators for each step
   const ind = data.indicatorDetails;
   const trendIndicators = ind?.trend ? Object.values(ind.trend).filter(Boolean).slice(0, 4) : [];
   const volumeIndicators = ind?.volume ? Object.values(ind.volume).filter(Boolean).slice(0, 4) : [];
-  const advancedIndicators = ind?.advanced ? Object.values(ind.advanced).filter(Boolean).slice(0, 4) : [];
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
@@ -1033,7 +1029,7 @@ function generatePageSteps123(data: AnalysisReportData, totalPages: number): str
         <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Analysis Steps 1-3</div>
+        <div class="report-title">Analysis Steps 1-2</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1151,6 +1147,45 @@ function generatePageSteps123(data: AnalysisReportData, totalPages: number): str
       ${asSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${asSummary}</div>` : ''}
     </div>
 
+    ${generateFooter(data, 4, totalPages)}
+  </div>
+</body></html>`;
+}
+
+// ===========================================
+// PAGE 5: Steps 3-4 (Safety Check + Timing)
+// ===========================================
+
+function generatePageSteps34(data: AnalysisReportData, totalPages: number): string {
+  const defaultGate = { canProceed: false, passed: false, reason: '', confidence: 0 };
+
+  const sc = data.safetyCheck || { riskScore: 50, liquidityScore: 50, volatilityScore: 50, manipulationRisk: 50, overallSafety: 'moderate', gate: defaultGate };
+  const tm = data.timing || { optimalEntryWindow: 'N/A', entryUrgency: 'wait', patterns: [], timeframeAlignment: 0, tradeNow: false, reason: 'Data unavailable', conditions: [], entryZones: [], gate: defaultGate };
+  const scGate = sc?.gate ? getGateStatus(sc.gate) : { text: 'N/A', color: '#666' };
+  const tmGate = tm?.gate ? getGateStatus(tm.gate) : { text: 'N/A', color: '#666' };
+
+  const scSummary = sc?.gate?.reason ? `Safety Check: ${sc.gate.reason}` : '';
+  const tmSummary = tm?.gate?.reason ? `Timing: ${tm.gate.reason}` : '';
+
+  const ind = data.indicatorDetails;
+  const advancedIndicators = ind?.advanced ? Object.values(ind.advanced).filter(Boolean).slice(0, 4) : [];
+  const momentumIndicators = ind?.momentum ? Object.values(ind.momentum).filter(Boolean).slice(0, 4) : [];
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
+  <div class="page">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">${logoSvg}</div>
+        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+      </div>
+      <div class="header-center">
+        <div class="report-title">Analysis Steps 3-4</div>
+      </div>
+      <div class="header-right">
+        <span class="symbol">${data.symbol}/USDT</span>
+      </div>
+    </div>
+
     <!-- Step 03: Safety Check -->
     <div class="step-box-expanded">
       <div class="step-box-header">
@@ -1182,7 +1217,7 @@ function generatePageSteps123(data: AnalysisReportData, totalPages: number): str
       </div>
       ` : ''}
       ${advancedIndicators.length > 0 ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Advanced Indicators (ORDER_FLOW, WHALE, SQUEEZE)</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Advanced Indicators</div>
       <div class="row" style="margin-top: 4px;">
         ${advancedIndicators.map(i => `
           <div class="col metric metric-sm">
@@ -1194,54 +1229,6 @@ function generatePageSteps123(data: AnalysisReportData, totalPages: number): str
       </div>
       ` : ''}
       ${scSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${scSummary}</div>` : ''}
-    </div>
-
-    ${generateFooter(data, 4, totalPages)}
-  </div>
-</body></html>`;
-}
-
-// ===========================================
-// PAGE 5: Steps 4-6 (Timing, Plan, Trap)
-// ===========================================
-
-function generatePageSteps456(data: AnalysisReportData, totalPages: number): string {
-  // Default values to prevent null access errors
-  const defaultGate = { canProceed: false, passed: false, reason: '', confidence: 0 };
-  const defaultTraps = { bullTrap: false, bearTrap: false, fakeoutRisk: 'low', liquidityGrab: { detected: false, zones: [] } };
-
-  const tm = data.timing || { optimalEntryWindow: 'N/A', entryUrgency: 'wait', patterns: [], timeframeAlignment: 0, tradeNow: false, reason: 'Data unavailable', conditions: [], entryZones: [], gate: defaultGate };
-  const tp = data.tradePlan || { direction: 'neutral', entry: 0, stopLoss: 0, takeProfit1: 0, takeProfit2: 0, takeProfit3: 0, riskReward: 0, positionSize: 0, leverage: 1, riskPercent: 0, potentialProfit: 0, potentialLoss: 0, gate: defaultGate };
-  const tc = data.trapCheck || { traps: defaultTraps, washTradingDetected: false, overallTrapRisk: 'low', warnings: [], proTip: '', gate: defaultGate };
-  const isLong = tp?.direction === 'long';
-  const tmGate = tm?.gate ? getGateStatus(tm.gate) : { text: 'N/A', color: '#666' };
-  const tpGate = tp?.gate ? getGateStatus(tp.gate) : { text: 'N/A', color: '#666' };
-  const tcGate = tc?.gate ? getGateStatus(tc.gate) : { text: 'N/A', color: '#666' };
-
-  // Step Summaries from gate reasons
-  const tmSummary = tm?.gate?.reason ? `Timing: ${tm.gate.reason}` : '';
-  const tpSummary = tp?.gate?.reason ? `Trade Plan: ${tp.gate.reason}` : '';
-  const tcSummary = tc?.gate?.reason ? `Trap Check: ${tc.gate.reason}` : '';
-
-  // Get indicators
-  const ind = data.indicatorDetails;
-  const momentumIndicators = ind?.momentum ? Object.values(ind.momentum).filter(Boolean).slice(0, 4) : [];
-  const volatilityIndicators = ind?.volatility ? Object.values(ind.volatility).filter(Boolean).slice(0, 4) : [];
-  const divergences = ind?.divergences || [];
-
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
-  <div class="page">
-    <div class="header">
-      <div class="brand">
-        <div class="logo">${logoSvg}</div>
-        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
-      </div>
-      <div class="header-center">
-        <div class="report-title">Analysis Steps 4-6</div>
-      </div>
-      <div class="header-right">
-        <span class="symbol">${data.symbol}/USDT</span>
-      </div>
     </div>
 
     <!-- Step 04: Timing Analysis -->
@@ -1287,7 +1274,7 @@ function generatePageSteps456(data: AnalysisReportData, totalPages: number): str
       </div>
       ` : ''}
       ${momentumIndicators.length > 0 ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Momentum Indicators (RSI, STOCH, MACD, SUPERTREND)</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Momentum Indicators</div>
       <div class="row" style="margin-top: 4px;">
         ${momentumIndicators.map(i => `
           <div class="col metric metric-sm">
@@ -1299,6 +1286,50 @@ function generatePageSteps456(data: AnalysisReportData, totalPages: number): str
       </div>
       ` : ''}
       ${tmSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tmSummary}</div>` : ''}
+    </div>
+
+    ${generateFooter(data, 5, totalPages)}
+  </div>
+</body></html>`;
+}
+
+// ===========================================
+// PAGE 6: Steps 5-6 (Trade Plan + Trap Check)
+// ===========================================
+
+function generatePageSteps56(data: AnalysisReportData, totalPages: number): string {
+  // Default values to prevent null access errors
+  const defaultGate = { canProceed: false, passed: false, reason: '', confidence: 0 };
+  const defaultTraps = { bullTrap: false, bearTrap: false, fakeoutRisk: 'low', liquidityGrab: { detected: false, zones: [] } };
+
+  const tp = data.tradePlan || { direction: 'neutral', entry: 0, stopLoss: 0, takeProfit1: 0, takeProfit2: 0, takeProfit3: 0, riskReward: 0, positionSize: 0, leverage: 1, riskPercent: 0, potentialProfit: 0, potentialLoss: 0, gate: defaultGate };
+  const tc = data.trapCheck || { traps: defaultTraps, washTradingDetected: false, overallTrapRisk: 'low', warnings: [], proTip: '', gate: defaultGate };
+  const isLong = tp?.direction === 'long';
+  const tpGate = tp?.gate ? getGateStatus(tp.gate) : { text: 'N/A', color: '#666' };
+  const tcGate = tc?.gate ? getGateStatus(tc.gate) : { text: 'N/A', color: '#666' };
+
+  // Step Summaries from gate reasons
+  const tpSummary = tp?.gate?.reason ? `Trade Plan: ${tp.gate.reason}` : '';
+  const tcSummary = tc?.gate?.reason ? `Trap Check: ${tc.gate.reason}` : '';
+
+  // Get indicators
+  const ind = data.indicatorDetails;
+  const volatilityIndicators = ind?.volatility ? Object.values(ind.volatility).filter(Boolean).slice(0, 4) : [];
+  const divergences = ind?.divergences || [];
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
+  <div class="page">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">${logoSvg}</div>
+        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+      </div>
+      <div class="header-center">
+        <div class="report-title">Analysis Steps 5-6</div>
+      </div>
+      <div class="header-right">
+        <span class="symbol">${data.symbol}/USDT</span>
+      </div>
     </div>
 
     <!-- Step 05: Trade Plan -->
@@ -1407,13 +1438,13 @@ function generatePageSteps456(data: AnalysisReportData, totalPages: number): str
     </div>
     ` : ''}
 
-    ${generateFooter(data, 5, totalPages)}
+    ${generateFooter(data, 6, totalPages)}
   </div>
 </body></html>`;
 }
 
 // ===========================================
-// PAGE 6: Final Verdict & Technical Indicators
+// PAGE 7: Final Verdict & Technical Indicators
 // ===========================================
 
 function generatePageVerdict(data: AnalysisReportData, totalPages: number): string {
@@ -1568,7 +1599,7 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
       <div class="summary-text">${v?.aiSummary || v?.recommendation || 'Analysis complete. Review all sections for detailed insights.'}</div>
     </div>
 
-    ${generateFooter(data, 6, totalPages)}
+    ${generateFooter(data, 7, totalPages)}
   </div>
 </body></html>`;
 }
@@ -1716,8 +1747,8 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
 
-    // Total pages: 6 (Executive Summary, Trade Plan, Tokenomics, Steps 1-3, Steps 4-6, Verdict)
-    const totalPages = 6;
+    // Total pages: 7 (Executive Summary, Trade Plan, Tokenomics, Steps 1-2, Steps 3-4, Steps 5-6, Verdict)
+    const totalPages = 7;
 
     // Page 1: Executive Summary
     console.log('[PDF] Generating page 1: Executive Summary');
@@ -1736,23 +1767,29 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
     const canvas3 = await renderPageToCanvas(generatePageTokenomics(data, totalPages));
     pdf.addImage(canvas3.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-    // Page 4: Steps 1-3
-    console.log('[PDF] Generating page 4: Steps 1-3');
+    // Page 4: Steps 1-2 (Market Pulse + Asset Scanner)
+    console.log('[PDF] Generating page 4: Steps 1-2');
     pdf.addPage();
-    const canvas4 = await renderPageToCanvas(generatePageSteps123(data, totalPages));
+    const canvas4 = await renderPageToCanvas(generatePageSteps12(data, totalPages));
     pdf.addImage(canvas4.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-    // Page 5: Steps 4-6
-    console.log('[PDF] Generating page 5: Steps 4-6');
+    // Page 5: Steps 3-4 (Safety Check + Timing)
+    console.log('[PDF] Generating page 5: Steps 3-4');
     pdf.addPage();
-    const canvas5 = await renderPageToCanvas(generatePageSteps456(data, totalPages));
+    const canvas5 = await renderPageToCanvas(generatePageSteps34(data, totalPages));
     pdf.addImage(canvas5.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-    // Page 6: Final Verdict
-    console.log('[PDF] Generating page 6: Final Verdict');
+    // Page 6: Steps 5-6 (Trade Plan Details + Trap Check)
+    console.log('[PDF] Generating page 6: Steps 5-6');
     pdf.addPage();
-    const canvas6 = await renderPageToCanvas(generatePageVerdict(data, totalPages));
+    const canvas6 = await renderPageToCanvas(generatePageSteps56(data, totalPages));
     pdf.addImage(canvas6.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+    // Page 7: Final Verdict
+    console.log('[PDF] Generating page 7: Final Verdict');
+    pdf.addPage();
+    const canvas7 = await renderPageToCanvas(generatePageVerdict(data, totalPages));
+    pdf.addImage(canvas7.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
     const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'DayTrade', swing: 'Swing' };
     const tradeType = data.tradeType ? tradeTypes[data.tradeType] || '' : '';
@@ -1761,7 +1798,7 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
     const pdfBase64 = pdf.output('datauristring').split(',')[1];
     pdf.save(fileName);
 
-    console.log(`[TraderPath] Report generated successfully: 6 pages`);
+    console.log(`[TraderPath] Report generated successfully: 7 pages`);
 
     return { base64: pdfBase64, fileName };
   } catch (error) {
