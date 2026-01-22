@@ -223,29 +223,87 @@ export default function ConciergePage() {
     }
   };
 
-  // Speak function
-  const speak = useCallback((text: string, onEnd?: () => void) => {
-    if (!synthRef.current) {
-      onEnd?.();
-      return;
-    }
-
-    synthRef.current.cancel();
+  // Speak function using Google Cloud TTS (high quality)
+  const speak = useCallback(async (text: string, onEnd?: () => void) => {
     isSpeakingRef.current = true;
     setIsSpeaking(true);
     setAiMessage(text);
     setHistory(prev => [...prev, { role: 'ai', text }]);
 
+    try {
+      // Call Google Cloud TTS API
+      const response = await authFetch('/api/concierge/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          language: lang,
+          gender: 'MALE',
+          speakingRate: 1.0,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.data?.audioContent) {
+        // Create audio from base64
+        const audioBlob = new Blob(
+          [Uint8Array.from(atob(data.data.audioContent), c => c.charCodeAt(0))],
+          { type: 'audio/mpeg' }
+        );
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+          isSpeakingRef.current = false;
+          setIsSpeaking(false);
+          if (onEnd) {
+            setTimeout(onEnd, 100);
+          }
+        };
+
+        audio.onerror = () => {
+          URL.revokeObjectURL(audioUrl);
+          console.error('Audio playback error');
+          isSpeakingRef.current = false;
+          setIsSpeaking(false);
+          if (onEnd) {
+            setTimeout(onEnd, 100);
+          }
+        };
+
+        await audio.play();
+      } else {
+        // Fallback to Web Speech API if Google TTS fails
+        console.warn('Google TTS failed, falling back to Web Speech API');
+        fallbackSpeak(text, onEnd);
+      }
+    } catch (error) {
+      console.error('TTS API error:', error);
+      // Fallback to Web Speech API
+      fallbackSpeak(text, onEnd);
+    }
+  }, [lang]);
+
+  // Fallback speak using Web Speech API
+  const fallbackSpeak = useCallback((text: string, onEnd?: () => void) => {
+    if (!synthRef.current) {
+      isSpeakingRef.current = false;
+      setIsSpeaking(false);
+      onEnd?.();
+      return;
+    }
+
+    synthRef.current.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = getSpeechLang(lang);
     utterance.rate = 1.1;
     utterance.pitch = 1.0;
 
-    // Try to find a good voice
     const voices = synthRef.current.getVoices();
     const langVoices = voices.filter(v => v.lang.toLowerCase().startsWith(lang));
     if (langVoices.length > 0) {
-      // Prefer Google or Microsoft voices
       const preferredVoice = langVoices.find(v =>
         v.name.toLowerCase().includes('google') ||
         v.name.toLowerCase().includes('microsoft')
@@ -256,7 +314,6 @@ export default function ConciergePage() {
     utterance.onend = () => {
       isSpeakingRef.current = false;
       setIsSpeaking(false);
-      // Small delay to ensure state updates before callback
       if (onEnd) {
         setTimeout(onEnd, 100);
       }
@@ -265,7 +322,6 @@ export default function ConciergePage() {
     utterance.onerror = () => {
       isSpeakingRef.current = false;
       setIsSpeaking(false);
-      // Small delay to ensure state updates before callback
       if (onEnd) {
         setTimeout(onEnd, 100);
       }
