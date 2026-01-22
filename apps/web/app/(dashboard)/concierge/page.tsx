@@ -179,21 +179,21 @@ export default function ConciergePage() {
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
 
-  // Greeting messages in different languages
+  // Greeting messages in different languages - energetic and concise
   const getGreetingMessage = (lang: string): string => {
     const greetings: Record<string, string> = {
-      'en': "Hello! I'm your AI Concierge. How can I help you today? You can ask me about any cryptocurrency.",
-      'tr': "Merhaba! Ben AI Concierge'iniz. Bugün size nasıl yardımcı olabilirim? Herhangi bir kripto para hakkında sorabilirsiniz.",
-      'es': "¡Hola! Soy tu AI Concierge. ¿Cómo puedo ayudarte hoy? Puedes preguntarme sobre cualquier criptomoneda.",
-      'de': "Hallo! Ich bin Ihr AI Concierge. Wie kann ich Ihnen heute helfen? Sie können mich zu jeder Kryptowährung befragen.",
-      'fr': "Bonjour! Je suis votre AI Concierge. Comment puis-je vous aider aujourd'hui? Vous pouvez me poser des questions sur n'importe quelle cryptomonnaie.",
-      'pt': "Olá! Sou seu AI Concierge. Como posso ajudá-lo hoje? Você pode me perguntar sobre qualquer criptomoeda.",
-      'ru': "Привет! Я ваш AI Консьерж. Как я могу помочь вам сегодня? Вы можете спросить меня о любой криптовалюте.",
-      'zh': "你好！我是你的AI礼宾。今天有什么可以帮助你的吗？你可以问我关于任何加密货币的问题。",
-      'ja': "こんにちは！私はあなたのAIコンシェルジュです。今日は何をお手伝いしましょうか？どの暗号通貨についても質問できます。",
-      'ko': "안녕하세요! 저는 당신의 AI 컨시어지입니다. 오늘 무엇을 도와드릴까요? 어떤 암호화폐에 대해서든 물어보세요.",
-      'ar': "مرحباً! أنا مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟ يمكنك أن تسألني عن أي عملة رقمية.",
-      'it': "Ciao! Sono il tuo AI Concierge. Come posso aiutarti oggi? Puoi chiedermi di qualsiasi criptovaluta.",
+      'en': "Hey! Welcome to TraderPath! I'm your AI Concierge, ready to analyze any crypto for you. What would you like to know?",
+      'tr': "Selam! TraderPath'e hoş geldin! Ben senin AI asistanın, hangi coini analiz etmemi istersin?",
+      'es': "¡Hola! Bienvenido a TraderPath! Soy tu asistente AI, listo para analizar cualquier cripto. ¿Qué quieres saber?",
+      'de': "Hey! Willkommen bei TraderPath! Ich bin dein AI Assistent, bereit jede Krypto zu analysieren. Was möchtest du wissen?",
+      'fr': "Salut! Bienvenue sur TraderPath! Je suis ton assistant AI, prêt à analyser toute crypto. Que veux-tu savoir?",
+      'pt': "Oi! Bem-vindo ao TraderPath! Sou seu assistente AI, pronto para analisar qualquer cripto. O que você quer saber?",
+      'ru': "Привет! Добро пожаловать в TraderPath! Я твой AI ассистент, готов проанализировать любую крипту. Что хочешь узнать?",
+      'zh': "嘿！欢迎来到TraderPath！我是你的AI助手，随时为你分析任何加密货币。想了解什么？",
+      'ja': "こんにちは！TraderPathへようこそ！私はあなたのAIアシスタントです。何を分析しましょうか？",
+      'ko': "안녕! TraderPath에 오신 것을 환영합니다! 저는 당신의 AI 어시스턴트입니다. 무엇을 알고 싶으세요?",
+      'ar': "مرحبا! أهلا بك في TraderPath! أنا مساعدك الذكي، جاهز لتحليل أي عملة. ماذا تريد أن تعرف؟",
+      'it': "Ciao! Benvenuto su TraderPath! Sono il tuo assistente AI, pronto ad analizzare qualsiasi cripto. Cosa vuoi sapere?",
     };
     return greetings[lang] || greetings['en'];
   };
@@ -210,8 +210,8 @@ export default function ConciergePage() {
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = getSpeechLang(userLanguage);
-    utterance.rate = 0.9; // Slightly slower for authoritative speech
-    utterance.pitch = 0.95; // Slightly lower for strong male voice
+    utterance.rate = 1.15; // Faster, more energetic speech
+    utterance.pitch = 1.05; // Slightly higher for lively tone
     utterance.volume = 1.0;
 
     // Get all available voices
