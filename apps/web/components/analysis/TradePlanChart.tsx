@@ -20,6 +20,40 @@ import {
 } from 'lightweight-charts';
 import { Loader2, TrendingUp, TrendingDown, Target, AlertTriangle } from 'lucide-react';
 
+/**
+ * Format price for display - handles crypto prices properly
+ * Avoids locale issues with toLocaleString()
+ */
+function formatPrice(price: number): string {
+  if (price === 0 || isNaN(price)) return '0';
+
+  // For very small prices (< 0.0001), use scientific-like format
+  if (price < 0.0001) {
+    return price.toFixed(8).replace(/\.?0+$/, '');
+  }
+
+  // For small prices (< 1), show more decimals
+  if (price < 1) {
+    return price.toFixed(6).replace(/\.?0+$/, '');
+  }
+
+  // For prices between 1 and 10, show 4 decimals
+  if (price < 10) {
+    return price.toFixed(4).replace(/\.?0+$/, '');
+  }
+
+  // For prices between 10 and 1000, show 2 decimals
+  if (price < 1000) {
+    return price.toFixed(2);
+  }
+
+  // For large prices (>= 1000), use comma as thousands separator with 2 decimals
+  return price.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 interface TradePlanChartProps {
   symbol: string;
   direction: 'long' | 'short';
@@ -248,15 +282,15 @@ export function TradePlanChart({
       }
     });
 
-    // Add entry marker (arrow) on the last candle
-    if (avgEntryPrice > 0 && lastCandleTimeRef.current && !isDisposedRef.current) {
+    // Add analysis marker on the last candle (shows when analysis was made)
+    if (lastCandleTimeRef.current && !isDisposedRef.current) {
       try {
         const marker: SeriesMarker<Time> = {
           time: lastCandleTimeRef.current,
-          position: direction === 'long' ? 'belowBar' : 'aboveBar',
-          color: '#fbbf24',
-          shape: direction === 'long' ? 'arrowUp' : 'arrowDown',
-          text: `ENTRY @ $${avgEntryPrice.toLocaleString()}`,
+          position: 'aboveBar',
+          color: '#a855f7', // Purple - distinct from entry/SL/TP colors
+          shape: 'circle',
+          text: 'Analysis',
         };
         series.setMarkers([marker]);
       } catch {
@@ -360,7 +394,7 @@ export function TradePlanChart({
         close: parseFloat(k[4] as unknown as string),
       }));
 
-      // Store last candle time for entry marker
+      // Store last candle time for analysis marker
       if (candleData.length > 0) {
         lastCandleTimeRef.current = candleData[candleData.length - 1].time;
       }
@@ -505,12 +539,12 @@ export function TradePlanChart({
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Entry Point</div>
           <div className="flex justify-between text-sm">
             <span className="text-yellow-400 font-bold">▶ AVG</span>
-            <span className="font-mono font-bold text-yellow-400">${avgEntry.toLocaleString()}</span>
+            <span className="font-mono font-bold text-yellow-400">${formatPrice(avgEntry)}</span>
           </div>
           {entries?.filter(e => e != null).map((entry, i) => (
             <div key={i} className="flex justify-between text-xs text-muted-foreground">
               <span className="text-cyan-500">E{i + 1}</span>
-              <span className="font-mono">${(entry.price ?? 0).toLocaleString()}</span>
+              <span className="font-mono">${formatPrice(entry.price ?? 0)}</span>
             </div>
           ))}
         </div>
@@ -520,7 +554,7 @@ export function TradePlanChart({
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Stop Loss</div>
           <div className="flex justify-between text-sm">
             <span className="text-red-500">SL</span>
-            <span className="font-mono">${slPrice.toLocaleString()}</span>
+            <span className="font-mono">${formatPrice(slPrice)}</span>
           </div>
           <div className="text-xs text-red-400">-{(stopLoss?.percentage ?? 0).toFixed(1)}% risk</div>
         </div>
@@ -533,7 +567,7 @@ export function TradePlanChart({
               <div key={i} className="text-sm">
                 <div className="flex justify-between">
                   <span className="text-green-500">TP{i + 1}</span>
-                  <span className="font-mono">${(tp.price ?? 0).toLocaleString()}</span>
+                  <span className="font-mono">${formatPrice(tp.price ?? 0)}</span>
                 </div>
                 <div className="text-xs text-green-400">{(tp.riskReward ?? 0).toFixed(1)}R</div>
               </div>
