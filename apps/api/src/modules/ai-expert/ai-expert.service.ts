@@ -1458,14 +1458,36 @@ export class AIExpertService {
     expertId: ExpertId,
     symbol: string,
     analysisData: Record<string, unknown>,
-    language: 'en' | 'tr' = 'en',
+    language: string = 'en',
     tradeType: 'scalping' | 'dayTrade' | 'swing' = 'dayTrade'
   ): Promise<{ expertId: string; expertName: string; comment: string }> {
     const expert = AI_EXPERTS[expertId];
 
-    const langInstruction = language === 'tr'
-      ? 'Respond in Turkish. Be professional and concise.'
-      : 'Respond in English. Be professional and concise.';
+    // Multi-language support for expert commentary
+    const languageNames: Record<string, string> = {
+      'en': 'English',
+      'tr': 'Turkish (Türkçe)',
+      'es': 'Spanish (Español)',
+      'de': 'German (Deutsch)',
+      'fr': 'French (Français)',
+      'ar': 'Arabic (العربية)',
+      'ru': 'Russian (Русский)',
+      'zh': 'Chinese (中文)',
+      'ja': 'Japanese (日本語)',
+      'ko': 'Korean (한국어)',
+      'pt': 'Portuguese (Português)',
+      'it': 'Italian (Italiano)',
+      'nl': 'Dutch (Nederlands)',
+      'pl': 'Polish (Polski)',
+      'hi': 'Hindi (हिन्दी)',
+      'vi': 'Vietnamese (Tiếng Việt)',
+      'th': 'Thai (ภาษาไทย)',
+      'id': 'Indonesian (Bahasa Indonesia)',
+      'fa': 'Persian (فارسی)',
+      'he': 'Hebrew (עברית)',
+    };
+    const langName = languageNames[language] || 'English';
+    const langInstruction = `Respond in ${langName}. Be professional and concise.`;
 
     // Trade type context for the AI
     const tradeTypeContext = {
@@ -1677,12 +1699,34 @@ FORMAT: Just your professional ${tradeCtx.label} insight about ${symbol}. Start 
     symbol: string,
     expertComments: Array<{ expertId: string; expertName: string; comment: string }>,
     verdict: Record<string, unknown>,
-    language: 'en' | 'tr' = 'en',
+    language: string = 'en',
     tradeType: 'scalping' | 'dayTrade' | 'swing' = 'dayTrade'
   ): Promise<string> {
-    const langInstruction = language === 'tr'
-      ? 'Respond in Turkish.'
-      : 'Respond in English.';
+    // Multi-language support for synthesis
+    const languageNames: Record<string, string> = {
+      'en': 'English',
+      'tr': 'Turkish (Türkçe)',
+      'es': 'Spanish (Español)',
+      'de': 'German (Deutsch)',
+      'fr': 'French (Français)',
+      'ar': 'Arabic (العربية)',
+      'ru': 'Russian (Русский)',
+      'zh': 'Chinese (中文)',
+      'ja': 'Japanese (日本語)',
+      'ko': 'Korean (한국어)',
+      'pt': 'Portuguese (Português)',
+      'it': 'Italian (Italiano)',
+      'nl': 'Dutch (Nederlands)',
+      'pl': 'Polish (Polski)',
+      'hi': 'Hindi (हिन्दी)',
+      'vi': 'Vietnamese (Tiếng Việt)',
+      'th': 'Thai (ภาษาไทย)',
+      'id': 'Indonesian (Bahasa Indonesia)',
+      'fa': 'Persian (فارسی)',
+      'he': 'Hebrew (עברית)',
+    };
+    const langName = languageNames[language] || 'English';
+    const langInstruction = `IMPORTANT: Respond in ${langName}. Be professional and concise.`;
 
     // Trade type context
     const tradeTypeContext = {
@@ -1750,7 +1794,7 @@ FORMAT: Just your professional ${tradeCtx.label} synthesis about ${symbol}. Star
   async analyzeWithExpertPanel(params: {
     symbol: string;
     userId: string;
-    language?: 'en' | 'tr';
+    language?: string;
     tradeType?: 'scalping' | 'dayTrade' | 'swing';
     interval?: string;
   }): Promise<ExpertPanelResult> {

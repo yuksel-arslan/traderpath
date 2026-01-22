@@ -1945,7 +1945,7 @@ Or visit /scheduled to delete.`,
       const panelResult = await aiExpertService.analyzeWithExpertPanel({
         symbol,
         userId,
-        language: language === 'tr' ? 'tr' : 'en',
+        language: language, // Pass the actual detected language (supports 20+ languages)
         tradeType,
         interval,
       });
