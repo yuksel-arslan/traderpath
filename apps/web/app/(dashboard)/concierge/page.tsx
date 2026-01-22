@@ -92,6 +92,8 @@ export default function ConciergePage() {
   const [transcript, setTranscript] = useState('');
   const [aiMessage, setAiMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [voiceSupported, setVoiceSupported] = useState(true);
+  const [micError, setMicError] = useState<string | null>(null);
 
   // Conversation data
   const [selectedCoin, setSelectedCoin] = useState<string | null>(null);
@@ -117,11 +119,20 @@ export default function ConciergePage() {
     if (typeof window !== 'undefined') {
       synthRef.current = window.speechSynthesis;
 
+      // Check HTTPS requirement
+      const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+      if (!isSecure) {
+        setVoiceSupported(false);
+        setMicError(detectedLang === 'tr'
+          ? 'Ses tanıma HTTPS gerektirir. Lütfen yazarak devam edin.'
+          : 'Voice recognition requires HTTPS. Please type your responses.');
+      }
+
       // Initialize speech recognition (with browser compatibility)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-      if (SpeechRecognitionAPI) {
+      if (SpeechRecognitionAPI && isSecure) {
         const recognition = new SpeechRecognitionAPI();
         recognition.continuous = false;
         recognition.interimResults = false;
@@ -132,6 +143,7 @@ export default function ConciergePage() {
           const text = event.results[0][0].transcript.toLowerCase().trim();
           setTranscript(text);
           setIsListening(false);
+          setMicError(null);
           handleUserInput(text);
         };
 
@@ -139,9 +151,25 @@ export default function ConciergePage() {
         recognition.onerror = (event: any) => {
           console.error('Speech recognition error:', event.error);
           setIsListening(false);
-          if (event.error === 'no-speech') {
-            // Retry listening
+
+          // Handle specific errors
+          if (event.error === 'not-allowed') {
+            setMicError(detectedLang === 'tr'
+              ? 'Mikrofon izni reddedildi. Tarayıcı ayarlarından izin verin veya yazarak devam edin.'
+              : 'Microphone permission denied. Allow in browser settings or type your response.');
+            setVoiceSupported(false);
+          } else if (event.error === 'no-speech') {
+            // Retry listening after no speech detected
             setTimeout(() => startListening(), 500);
+          } else if (event.error === 'audio-capture') {
+            setMicError(detectedLang === 'tr'
+              ? 'Mikrofon bulunamadı. Lütfen yazarak devam edin.'
+              : 'No microphone found. Please type your response.');
+            setVoiceSupported(false);
+          } else if (event.error === 'network') {
+            setMicError(detectedLang === 'tr'
+              ? 'Ağ hatası. Lütfen tekrar deneyin veya yazarak devam edin.'
+              : 'Network error. Please try again or type your response.');
           }
         };
 
@@ -150,6 +178,11 @@ export default function ConciergePage() {
         };
 
         recognitionRef.current = recognition;
+      } else if (!SpeechRecognitionAPI) {
+        setVoiceSupported(false);
+        setMicError(detectedLang === 'tr'
+          ? 'Tarayıcınız ses tanımayı desteklemiyor. Chrome veya Edge kullanın, ya da yazarak devam edin.'
+          : 'Your browser does not support voice recognition. Use Chrome/Edge or type your responses.');
       }
     }
 
@@ -679,21 +712,35 @@ export default function ConciergePage() {
 
           {/* Input area */}
           <div className="p-4 border-t border-slate-700/50 bg-slate-800/30">
+            {/* Mic error message */}
+            {micError && (
+              <div className="mb-3 p-3 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300 text-sm">
+                ⚠️ {micError}
+              </div>
+            )}
+
             <div className="flex items-center gap-3">
               {/* Mic button */}
               <button
                 onClick={isListening ? stopListening : startListening}
-                disabled={isSpeaking || step === 'analyzing'}
+                disabled={isSpeaking || step === 'analyzing' || !voiceSupported}
                 className={`p-4 rounded-xl transition-all duration-200 ${
-                  isListening
-                    ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30'
-                    : 'bg-slate-700 hover:bg-slate-600'
+                  !voiceSupported
+                    ? 'bg-slate-800 cursor-not-allowed opacity-50'
+                    : isListening
+                      ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30'
+                      : 'bg-slate-700 hover:bg-slate-600'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
+                title={!voiceSupported
+                  ? (lang === 'tr' ? 'Ses tanıma kullanılamıyor' : 'Voice not available')
+                  : (isListening
+                      ? (lang === 'tr' ? 'Dinlemeyi durdur' : 'Stop listening')
+                      : (lang === 'tr' ? 'Konuşmak için tıkla' : 'Click to speak'))}
               >
                 {isListening ? (
                   <MicOff className="w-6 h-6 text-white" />
                 ) : (
-                  <Mic className="w-6 h-6 text-white" />
+                  <Mic className={`w-6 h-6 ${voiceSupported ? 'text-white' : 'text-slate-500'}`} />
                 )}
               </button>
 
@@ -703,7 +750,7 @@ export default function ConciergePage() {
                   type="text"
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
-                  placeholder={lang === 'tr' ? 'Veya yazarak yanıtlayın...' : 'Or type your response...'}
+                  placeholder={lang === 'tr' ? 'Yazarak yanıtlayın...' : 'Type your response...'}
                   className="flex-1 px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600/50 text-white placeholder-slate-400 focus:outline-none focus:border-teal-500/50"
                   disabled={isSpeaking || step === 'analyzing'}
                 />
@@ -729,9 +776,13 @@ export default function ConciergePage() {
 
             {/* Hint */}
             <p className="mt-3 text-center text-xs text-slate-500">
-              {lang === 'tr'
-                ? '🎤 Mikrofona tıklayın ve konuşun, veya yazarak yanıtlayın'
-                : '🎤 Click the microphone and speak, or type your response'}
+              {voiceSupported
+                ? (lang === 'tr'
+                    ? '🎤 Mikrofona tıklayın ve konuşun, veya yazarak yanıtlayın'
+                    : '🎤 Click the microphone and speak, or type your response')
+                : (lang === 'tr'
+                    ? '⌨️ Yazarak yanıtlayın'
+                    : '⌨️ Type your response')}
             </p>
           </div>
         </div>
