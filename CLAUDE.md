@@ -252,6 +252,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-22 | AI Concierge "Unable to synthesize" hatası | VOLTRAN synthesis başarısız olunca verdict/score bazlı doğal dil fallback eklendi | `concierge.service.ts` |
 | 2026-01-22 | TradePlanChart fiyat formatlama hatası (1.937 → 1,937) | `toLocaleString()` yerine `formatPrice()` fonksiyonu eklendi - locale bağımsız doğru formatlama | `TradePlanChart.tsx` |
 | 2026-01-22 | TradePlanChart entry marker yanlış semantik | Marker "ENTRY @ $price" yerine "Analysis" olarak değiştirildi. Marker analiz zamanını gösterir, entry fiyatı sarı çizgi ile gösterilir (limit order farklı seviyede olabilir) | `TradePlanChart.tsx` |
+| 2026-01-22 | Stop Loss hesaplaması destek/direnç seviyelerini dikkate almıyordu | LONG için SL destek seviyesinin ALTINA, SHORT için SL direnç seviyesinin ÜSTÜNE yerleştiriliyor. Minimum %1.5 stop mesafesi zorunlu | `analysis.engine.ts:5231-5300` |
 
 ---
 
@@ -645,6 +646,13 @@ Kullanıcı Hakları Aktif:
   - Speech Recognition dil bazlı (örn: tr-TR, ar-SA, es-ES)
   - RTL dil desteği (Arapça, Farsça, İbranice)
   - Country code → Language mapping (100+ ülke)
+- **Stop Loss hesaplama mantığı düzeltildi**:
+  - LONG pozisyonlar için SL destek seviyesinin ALTINA yerleştiriliyor (en düşük destek - ATR buffer)
+  - SHORT pozisyonlar için SL direnç seviyesinin ÜSTÜNE yerleştiriliyor (en yüksek direnç + ATR buffer)
+  - Minimum %1.5 stop mesafesi zorunlu tutuldu (çok sıkı stop'ları engeller)
+  - R-bazlı TP seviyeleri artık doğru hesaplanıyor (daha geniş SL = daha gerçekçi TP'ler)
+- **Dashboard Quick Actions kaldırıldı**: Navigasyonda zaten mevcut, gereksiz tekrar
+- **Performance chart iyileştirildi**: Month view eklendi, avgPnL seçilen periyoda göre hesaplanıyor
 
 ---
 
