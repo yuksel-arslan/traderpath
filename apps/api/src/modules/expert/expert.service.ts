@@ -5,6 +5,7 @@
 
 import { prisma } from '../../core/database';
 import { config } from '../../core/config';
+import { callGeminiWithRetry } from '../../core/gemini';
 import { costService } from '../costs/cost.service';
 
 // Topic categories for question classification
@@ -361,38 +362,18 @@ RESPONSE FORMAT:
     }
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 1000,
-            },
-          }),
-        }
-      );
+      const response = await callGeminiWithRetry({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1000,
+        },
+      }, 3, 'expert_question', 'expert');
 
-      if (!response.ok) {
-        console.error('Gemini API error:', response.statusText);
-        return {
-          answer: 'Expert AI could not generate a response. Please try again.',
-          examples,
-          relatedTopics: [],
-          inputTokens: 0,
-          outputTokens: 0,
-          costUsd: 0,
-        };
-      }
-
-      const data = await response.json();
-      const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not generate response';
+      const answer = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || 'Could not generate response';
 
       // Extract token usage
-      const usageMetadata = data.usageMetadata || {};
+      const usageMetadata = response.usageMetadata || {};
       const inputTokens = usageMetadata.promptTokenCount || Math.ceil(prompt.length / 4);
       const outputTokens = usageMetadata.candidatesTokenCount || Math.ceil(answer.length / 4);
 

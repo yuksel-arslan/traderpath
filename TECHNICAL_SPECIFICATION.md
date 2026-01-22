@@ -186,6 +186,48 @@ TraderPath is a gamified cryptocurrency trading analysis platform that guides us
 | OpenAI/Gemini | AI summaries |
 | Stripe | Payments |
 
+### 3.6 Gemini AI Configuration (Admin Configurable)
+
+All Gemini API calls use the centralized `callGeminiWithRetry()` function from `apps/api/src/core/gemini.ts`.
+
+**Model Types:**
+| Type | Usage | Redis Setting |
+|------|-------|---------------|
+| `default` | Analysis gates, market pulse, AI summaries | `admin:gemini:settings.model` |
+| `expert` | AI Expert questions, VOLTRAN | `admin:gemini:settings.expertModel` |
+| `concierge` | AI Concierge chat | `admin:gemini:settings.conciergeModel` |
+
+**Available Models:**
+- `gemini-2.5-flash` (default, recommended)
+- `gemini-2.0-flash`
+- `gemini-1.5-flash`
+- `gemini-1.5-pro`
+
+**Function Signature:**
+```typescript
+callGeminiWithRetry(
+  options: GeminiRequestOptions,
+  maxRetries: number = 3,
+  operation: string = 'gemini_request',
+  modelType: 'default' | 'expert' | 'concierge' = 'default'
+): Promise<GeminiResponse>
+```
+
+**Files Using Centralized Function:**
+- `apps/api/src/modules/analysis/analysis.engine.ts` - 8 gate calls
+- `apps/api/src/modules/analysis/analysis.routes.ts` - getGeminiInsight
+- `apps/api/src/modules/expert/expert.service.ts` - Expert questions
+- `apps/api/src/modules/concierge/concierge.service.ts` - Concierge chat
+
+**Admin Settings Redis Key:** `admin:gemini:settings`
+```json
+{
+  "model": "gemini-2.5-flash",
+  "expertModel": "gemini-2.5-flash",
+  "conciergeModel": "gemini-2.5-flash"
+}
+```
+
 ---
 
 ## 4. Database Design
