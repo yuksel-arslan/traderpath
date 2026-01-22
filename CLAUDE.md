@@ -626,6 +626,21 @@ Kullanıcı Hakları Aktif:
   - Response templates (TR/EN) merkezi yönetim
   - Dil tespiti Gemini tarafından yapılıyor
   - 17 farklı intent tipi destekleniyor
+- **Multi-language System (Çoklu Dil Sistemi)**:
+  - Yeni config: `apps/api/src/config/languages.ts` - 20+ dil desteği
+  - User model'e `preferredLanguage` field eklendi (default: en)
+  - **Desteklenen diller**: EN, TR, AR, ES, DE, FR, IT, PT, NL, PL, RU, FA, HE, ZH, JA, KO, VI, TH, ID, HI
+  - **API Endpoint'leri**:
+    - `GET /api/user/languages` - Desteklenen diller listesi
+    - `GET /api/user/language` - Kullanıcı dil tercihi
+    - `PATCH /api/user/language` - Dil tercihi güncelleme
+    - `GET /api/user/detect-language` - Browser/IP bazlı dil tespiti
+  - Settings sayfasına dil seçici eklendi (Appearance bölümü)
+  - Auto-detect özelliği: Accept-Language header veya IP'den ülke tespiti
+  - AI Concierge kullanıcının dil tercihini kullanıyor
+  - Speech Recognition dil bazlı (örn: tr-TR, ar-SA, es-ES)
+  - RTL dil desteği (Arapça, Farsça, İbranice)
+  - Country code → Language mapping (100+ ülke)
 
 ---
 
