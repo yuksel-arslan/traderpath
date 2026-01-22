@@ -1726,7 +1726,11 @@ FORMAT: Just your professional ${tradeCtx.label} insight about ${symbol}. Start 
       'he': 'Hebrew (עברית)',
     };
     const langName = languageNames[language] || 'English';
-    const langInstruction = `IMPORTANT: Respond in ${langName}. Be professional and concise.`;
+    const langInstruction = language === 'tr'
+      ? `⚠️ ZORUNLU: Yanıtını tamamen TÜRKÇE olarak yaz. Profesyonel ve özlü ol. İngilizce kelime kullanma.`
+      : language !== 'en'
+        ? `⚠️ IMPORTANT: Write your entire response in ${langName}. Be professional and concise.`
+        : `Be professional and concise. Write in English.`;
 
     // Trade type context
     const tradeTypeContext = {
@@ -1765,13 +1769,13 @@ ONLY discuss ${symbol}, never mention other coins.
 FORMAT: Just your professional ${tradeCtx.label} synthesis about ${symbol}. Start directly with your unified recommendation.`;
 
     try {
-      // Use retry-enabled Gemini API call
+      // Use retry-enabled Gemini API call with higher token limit for complete responses
       const data = await callGeminiWithRetry(
         {
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 300,
+            maxOutputTokens: 600, // Increased from 300 to ensure complete responses
           },
         },
         3, // maxRetries - balanced for speed vs reliability

@@ -554,6 +554,47 @@ function getTradeType(interval: string): 'scalping' | 'dayTrade' | 'swing' {
 }
 
 class ConciergeService {
+  /**
+   * Smart language detection from message content
+   * Returns the detected language code
+   */
+  private detectLanguageFromMessage(message: string): string {
+    const lower = message.toLowerCase();
+
+    // Turkish indicators (comprehensive list)
+    const turkishWords = [
+      'merhaba', 'selam', 'nasıl', 'nedir', 'için', 'göster', 'analiz',
+      'işlem', 'grafik', 'fiyat', 'yardım', 'teşekkür', 'sağol', 'tamam',
+      'evet', 'hayır', 'lütfen', 'istiyorum', 'yapabilir', 'misin', 'musun',
+      'neler', 'hangi', 'kaç', 'kredi', 'bakiye', 'durum', 'scalping',
+      'hızlı', 'uzun', 'vadeli', 'kısa', 'alarm', 'bildir', 'söyle',
+      'anlat', 'açıkla', 'özetle', 'platform', 'sistem', 'ne', 'var',
+      'yok', 'olur', 'olmaz', 'güzel', 'iyi', 'kötü', 'risk', 'plan',
+      'hedef', 'giriş', 'çıkış', 'sat', 'al', 'bekle', 'kaçın',
+      'güncel', 'şu', 'bu', 'o', 've', 'veya', 'ile', 'gibi', 'daha',
+      'çok', 'az', 'fazla', 'yüksek', 'düşük', 'değer', 'piyasa',
+      'geçmiş', 'gelecek', 'bugün', 'yarın', 'dün', 'hafta', 'ay',
+      'saat', 'dakika', 'saniye', 'haber', 'bilgi', 'sonuç', 'rapor'
+    ];
+
+    // Turkish character indicators
+    const turkishChars = ['ş', 'ğ', 'ü', 'ö', 'ç', 'ı', 'İ'];
+
+    // Check for Turkish characters first (strong indicator)
+    if (turkishChars.some(char => lower.includes(char))) {
+      return 'tr';
+    }
+
+    // Count Turkish word matches
+    const turkishMatches = turkishWords.filter(word => lower.includes(word)).length;
+    if (turkishMatches >= 1) {
+      return 'tr';
+    }
+
+    // Default to English
+    return 'en';
+  }
+
   async processMessage(request: ConciergeRequest): Promise<ConciergeResponse> {
     const { message, userId, language = 'en' } = request;
 
@@ -562,12 +603,17 @@ class ConciergeService {
       const creditBalanceObj = await creditService.getBalance(userId);
       const creditBalance = creditBalanceObj.balance;
 
+      // SMART LANGUAGE DETECTION - Always detect from message first
+      const messageLanguage = this.detectLanguageFromMessage(message);
+      let detectedLanguage = messageLanguage !== 'en' ? messageLanguage : language;
+
+      console.log(`[Concierge] Message: "${message.substring(0, 50)}...", Detected language: ${detectedLanguage}`);
+
       // First, try rule-based detection (fast)
       let detectionResult = detectIntent(message);
       let { intent, symbol, interval, expertType } = detectionResult;
       let targetPrice: number | undefined;
       let direction: string | undefined;
-      let detectedLanguage = language;
 
       // If rule-based detection returns UNKNOWN, try Gemini (smarter but slower)
       if (intent === 'UNKNOWN') {
@@ -581,54 +627,57 @@ class ConciergeService {
           expertType = geminiResult.expertType || expertType;
           targetPrice = geminiResult.targetPrice;
           direction = geminiResult.direction;
-          detectedLanguage = geminiResult.language || language;
+          // Update language if Gemini detected differently
+          if (geminiResult.language) {
+            detectedLanguage = geminiResult.language;
+          }
           console.log('[Concierge] Gemini detected intent:', intent);
         }
       }
 
-      // Handle different intents
+      // Handle different intents - ALL handlers use detectedLanguage
       switch (intent) {
         case 'PLATFORM_INFO':
-          return this.handlePlatformInfo(language, creditBalance);
+          return this.handlePlatformInfo(detectedLanguage, creditBalance);
 
         case 'CONVERSATIONAL':
-          return await this.handleConversational(message, language, creditBalance, userId);
+          return await this.handleConversational(message, detectedLanguage, creditBalance, userId);
 
         case 'HELP':
-          return this.handleHelp(language, creditBalance);
+          return this.handleHelp(detectedLanguage, creditBalance);
 
         case 'STATUS':
-          return await this.handleStatus(userId, creditBalance, language);
+          return await this.handleStatus(userId, creditBalance, detectedLanguage);
 
         case 'PROFITABILITY':
-          return await this.handleProfitability(userId, creditBalance, language);
+          return await this.handleProfitability(userId, creditBalance, detectedLanguage);
 
         case 'PLATFORM_STATS':
-          return await this.handlePlatformStats(creditBalance, language);
+          return await this.handlePlatformStats(creditBalance, detectedLanguage);
 
         case 'MONTHLY_PERFORMANCE':
-          return await this.handleMonthlyPerformance(userId, creditBalance, language);
+          return await this.handleMonthlyPerformance(userId, creditBalance, detectedLanguage);
 
         case 'RECENT_ANALYSES':
-          return await this.handleRecentAnalyses(userId, creditBalance, language);
+          return await this.handleRecentAnalyses(userId, creditBalance, detectedLanguage);
 
         case 'ALERT_SET':
-          return await this.handleAlertSet(userId, message, creditBalance, language);
+          return await this.handleAlertSet(userId, message, creditBalance, detectedLanguage);
 
         case 'ALERT_LIST':
-          return await this.handleAlertList(userId, creditBalance, language);
+          return await this.handleAlertList(userId, creditBalance, detectedLanguage);
 
         case 'CHART_VIEW':
-          return await this.handleChartView(userId, symbol, creditBalance, language);
+          return await this.handleChartView(userId, symbol, creditBalance, detectedLanguage);
 
         case 'SCHEDULE_LIST':
-          return await this.handleScheduleList(userId, creditBalance, language);
+          return await this.handleScheduleList(userId, creditBalance, detectedLanguage);
 
         case 'SCHEDULE_CREATE':
-          return await this.handleScheduleCreate(userId, symbol, message, creditBalance, language);
+          return await this.handleScheduleCreate(userId, symbol, message, creditBalance, detectedLanguage);
 
         case 'SCHEDULE_DELETE':
-          return await this.handleScheduleDelete(userId, message, creditBalance, language);
+          return await this.handleScheduleDelete(userId, message, creditBalance, detectedLanguage);
 
         case 'ANALYSIS':
           return await this.handleAnalysis(userId, symbol!, interval || '4h', detectedLanguage, creditBalance);
