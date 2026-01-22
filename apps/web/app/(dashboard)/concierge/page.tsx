@@ -219,53 +219,112 @@ export default function ConciergePage() {
       return langMales.some(pm => v.name.toLowerCase().includes(pm.toLowerCase()));
     };
 
-    // Helper: Check if voice sounds male (heuristic based on common male voice names)
-    const isMaleVoice = (v: SpeechSynthesisVoice) => {
-      const maleIndicators = ['male', 'guy', 'ryan', 'davis', 'daniel', 'alex', 'james', 'fred', 'tom', 'aaron', 'david', 'mark', 'george', 'conrad', 'stefan', 'henri', 'paul', 'dmitry', 'pavel', 'diego', 'luca', 'marco', 'keita', 'injoon', 'hamed', 'omar', 'ahmet', 'tolga', 'antonio', 'yunxi', 'yunyang'];
-      const femaleIndicators = ['female', 'woman', 'aria', 'jenny', 'samantha', 'karen', 'moira', 'tessa', 'serena', 'elena', 'monica', 'katja', 'anna', 'denise', 'amelie', 'irina', 'xiaoxiao', 'nanami', 'sunhi', 'yuna', 'hoda', 'laila', 'elsa', 'alice', 'emel', 'filiz'];
+    // Helper: Check if voice is DEFINITELY female (to exclude)
+    const isDefinitelyFemale = (v: SpeechSynthesisVoice) => {
+      const femaleIndicators = [
+        'female', 'woman', 'girl',
+        // English female voices
+        'aria', 'jenny', 'samantha', 'karen', 'moira', 'tessa', 'serena', 'victoria', 'fiona', 'kate', 'susan', 'heather', 'emily', 'catherine', 'elizabeth', 'allison', 'ava', 'zira', 'hazel', 'linda', 'michelle', 'clara',
+        // Turkish female voices
+        'emel', 'filiz', 'selin', 'zeynep', 'ayşe', 'elif', 'ece',
+        // Spanish female voices
+        'elena', 'monica', 'lucia', 'carmen', 'isabella', 'sofia',
+        // German female voices
+        'katja', 'anna', 'marlene', 'hedda', 'petra', 'sabine',
+        // French female voices
+        'denise', 'amelie', 'celine', 'julie', 'lea', 'virginie',
+        // Russian female voices
+        'irina', 'ekaterina', 'dariya', 'svetlana',
+        // Chinese female voices
+        'xiaoxiao', 'xiaoyi', 'xiaomo', 'huihui', 'yaoyao', 'lily',
+        // Japanese female voices
+        'nanami', 'ayumi', 'haruka', 'keiko', 'sayaka', 'misaki',
+        // Korean female voices
+        'sunhi', 'yuna', 'heami', 'jiyun',
+        // Arabic female voices
+        'hoda', 'laila', 'fatima', 'amira', 'zariyah',
+        // Italian female voices
+        'elsa', 'alice', 'cosimo', 'lucia',
+        // Portuguese female voices
+        'francisca', 'fernanda', 'raquel', 'camila'
+      ];
       const nameLower = v.name.toLowerCase();
-      const hasMaleIndicator = maleIndicators.some(mi => nameLower.includes(mi));
-      const hasFemaleIndicator = femaleIndicators.some(fi => nameLower.includes(fi));
-      return hasMaleIndicator || !hasFemaleIndicator;
+      return femaleIndicators.some(fi => nameLower.includes(fi));
     };
 
-    // Strategy 1: Find Google male voice for this language (best quality)
-    selectedVoice = langVoices.find(v =>
-      v.name.toLowerCase().includes('google') && isMaleVoice(v) && !isLowQuality(v)
-    ) || null;
+    // Helper: Check if voice sounds male (ONLY positive identification)
+    const isMaleVoice = (v: SpeechSynthesisVoice) => {
+      const maleIndicators = [
+        'male', 'guy', 'man',
+        // English male voices
+        'ryan', 'davis', 'daniel', 'alex', 'james', 'fred', 'tom', 'aaron', 'david', 'mark', 'george', 'christopher', 'lee', 'eric', 'roger', 'bruce', 'adam', 'brian', 'sean', 'jason', 'matthew',
+        // Turkish male voices
+        'ahmet', 'tolga', 'kerem', 'cem', 'onur', 'mehmet', 'murat',
+        // Spanish male voices
+        'alvaro', 'pablo', 'jorge', 'diego', 'carlos', 'miguel', 'raul',
+        // German male voices
+        'conrad', 'stefan', 'markus', 'thomas', 'hans', 'klaus', 'jonas',
+        // French male voices
+        'henri', 'paul', 'thomas', 'jacques', 'pierre', 'alain', 'claude',
+        // Russian male voices
+        'dmitry', 'pavel', 'yuri', 'maxim', 'ivan', 'sergey', 'alexander',
+        // Chinese male voices
+        'yunxi', 'yunyang', 'kangkang',
+        // Japanese male voices
+        'keita', 'otoya', 'ichiro', 'kenta', 'takuya', 'hiroshi',
+        // Korean male voices
+        'injoon', 'jihun', 'hyunbin',
+        // Arabic male voices
+        'hamed', 'omar', 'naayf', 'hamdan',
+        // Italian male voices
+        'diego', 'luca', 'marco', 'giuseppe', 'andrea'
+      ];
+      const nameLower = v.name.toLowerCase();
+      // Must have a male indicator AND not be female
+      return maleIndicators.some(mi => nameLower.includes(mi)) && !isDefinitelyFemale(v);
+    };
 
-    // Strategy 2: Find Microsoft Neural/Online male voice
+    // Strategy 1: Find known premium male voice first (highest priority)
+    selectedVoice = langVoices.find(v => isPremiumMale(v) && !isLowQuality(v) && !isDefinitelyFemale(v)) || null;
+    if (selectedVoice) console.log('[Voice] Strategy 1: Known premium male voice');
+
+    // Strategy 2: Find Microsoft male voice (they always have gender in name)
     if (!selectedVoice) {
       selectedVoice = langVoices.find(v =>
         v.name.toLowerCase().includes('microsoft') &&
-        (v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('online')) &&
-        isMaleVoice(v) && !isLowQuality(v)
+        isMaleVoice(v) && !isLowQuality(v) && !isDefinitelyFemale(v)
       ) || null;
+      if (selectedVoice) console.log('[Voice] Strategy 2: Microsoft male voice');
     }
 
-    // Strategy 3: Find known premium male voice
+    // Strategy 3: Any voice with explicit male indicator
     if (!selectedVoice) {
-      selectedVoice = langVoices.find(v => isPremiumMale(v) && !isLowQuality(v)) || null;
+      selectedVoice = langVoices.find(v => isMaleVoice(v) && !isLowQuality(v) && !isDefinitelyFemale(v)) || null;
+      if (selectedVoice) console.log('[Voice] Strategy 3: Explicit male indicator');
     }
 
-    // Strategy 4: Any premium indicator male voice
+    // Strategy 4: Any premium non-female voice (Google voices without gender marker)
     if (!selectedVoice) {
-      selectedVoice = langVoices.find(v => isPremium(v) && isMaleVoice(v) && !isLowQuality(v)) || null;
+      selectedVoice = langVoices.find(v => isPremium(v) && !isLowQuality(v) && !isDefinitelyFemale(v)) || null;
+      if (selectedVoice) console.log('[Voice] Strategy 4: Premium non-female voice');
     }
 
-    // Strategy 5: Any male voice (non-low-quality)
+    // Strategy 5: Any non-female, non-low-quality voice
     if (!selectedVoice) {
-      selectedVoice = langVoices.find(v => isMaleVoice(v) && !isLowQuality(v)) || null;
+      selectedVoice = langVoices.find(v => !isLowQuality(v) && !isDefinitelyFemale(v)) || null;
+      if (selectedVoice) console.log('[Voice] Strategy 5: Non-female voice');
     }
 
-    // Strategy 6: Any non-low-quality voice (fallback)
+    // Strategy 6: Any non-low-quality voice (fallback - may be female)
     if (!selectedVoice) {
       selectedVoice = langVoices.find(v => !isLowQuality(v)) || null;
+      if (selectedVoice) console.log('[Voice] Strategy 6: Any non-low-quality (fallback)');
     }
 
     // Final fallback: first available voice
     if (!selectedVoice) {
       selectedVoice = langVoices[0] || voices.find(v => v.lang.startsWith('en')) || voices[0];
+      console.log('[Voice] Strategy 7: Final fallback');
     }
 
     if (selectedVoice) {
