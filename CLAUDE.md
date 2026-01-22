@@ -682,6 +682,11 @@ Kullanıcı Hakları Aktif:
   - Daha iyi hata yönetimi ve otomatik retry
   - Backward compatibility korundu (GeminiResponse format)
   - Default model: `gemini-2.5-flash`
+- **AI Concierge sesi erkek olarak değiştirildi**:
+  - Premium erkek sesleri tercih ediliyor (Google UK English Male, Microsoft Guy, Daniel vb.)
+  - Pitch 0.95'e düşürüldü (otoriter erkek tonu için)
+  - `isMaleVoice` helper fonksiyonu eklendi (kadın seslerini filtrelemek için)
+  - 12+ dil için erkek ses isimleri tanımlandı
 
 ---
 
