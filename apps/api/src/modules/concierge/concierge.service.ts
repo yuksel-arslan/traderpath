@@ -2077,16 +2077,26 @@ Or visit /scheduled to delete.`,
       // Build response message
       const verdict = panelResult.verdict?.toUpperCase() || 'WAIT';
       const score = panelResult.score || 5;
-      let synthesis = panelResult.voltranSynthesis || '';
 
-      // If synthesis failed or contains error message, generate natural fallback
-      if (!synthesis || synthesis.includes('Unable to synthesize') || synthesis.includes('error')) {
-        synthesis = this.generateNaturalResponse(symbol, interval, verdict, score, language);
-      }
+      // ALWAYS use generateNaturalResponse for concierge - it has proper language support
+      // VOLTRAN synthesis often comes in English regardless of language setting
+      const synthesis = this.generateNaturalResponse(symbol, interval, verdict, score, language);
 
-      const verdictLabel = verdict === 'GO' ? 'GO' : verdict === 'AVOID' ? 'AVOID' : verdict === 'CONDITIONAL_GO' ? 'COND' : 'WAIT';
+      // Localized labels
+      const isTurkish = language === 'tr';
+      const verdictLabel = verdict === 'GO' ? 'GO'
+        : verdict === 'AVOID' ? (isTurkish ? 'KAÇIN' : 'AVOID')
+        : verdict === 'CONDITIONAL_GO' ? (isTurkish ? 'ŞARTLI' : 'COND')
+        : (isTurkish ? 'BEKLE' : 'WAIT');
 
-      const analysisMessage = `${symbol} ${interval.toUpperCase()} Analysis
+      const analysisMessage = isTurkish
+        ? `${symbol} ${interval.toUpperCase()} Analizi
+
+Karar: ${verdictLabel}
+Skor: ${score}/10
+
+${synthesis}`
+        : `${symbol} ${interval.toUpperCase()} Analysis
 
 Verdict: ${verdictLabel}
 Score: ${score}/10
@@ -2104,6 +2114,7 @@ ${synthesis}`;
         verdict: verdict,
         score: score,
         voltranSynthesis: synthesis,
+        detectedLanguage: language, // Include detected language
       };
 
     } catch (error) {
@@ -2418,7 +2429,7 @@ Quel est votre style? (scalp/day trade/swing)`,
   }
 
   /**
-   * Generate a natural language response when VOLTRAN synthesis fails
+   * Generate a natural language response for concierge - proper language support
    */
   private generateNaturalResponse(
     symbol: string,
@@ -2429,49 +2440,49 @@ Quel est votre style? (scalp/day trade/swing)`,
   ): string {
     const isTurkish = language === 'tr';
 
-    // Determine trade type from interval
+    // Determine trade type from interval - with Turkish translations
     const tradeType = interval === '15m' || interval === '5m'
-      ? (isTurkish ? 'scalping' : 'scalping')
+      ? (isTurkish ? 'kısa vadeli işlem (scalping)' : 'scalping')
       : interval === '1d' || interval === '1W'
-        ? (isTurkish ? 'swing trade' : 'swing trade')
-        : (isTurkish ? 'day trade' : 'day trade');
+        ? (isTurkish ? 'uzun vadeli işlem (swing trade)' : 'swing trade')
+        : (isTurkish ? 'gün içi işlem (day trade)' : 'day trade');
 
-    // Score interpretation
+    // Score interpretation with more detail
     const scoreQuality = score >= 8
-      ? (isTurkish ? 'Güçlü sinyaller var' : 'Strong signals detected')
+      ? (isTurkish ? 'Teknik göstergeler güçlü sinyaller veriyor.' : 'Technical indicators show strong signals.')
       : score >= 6
-        ? (isTurkish ? 'Orta düzeyde sinyaller var' : 'Moderate signals detected')
+        ? (isTurkish ? 'Teknik göstergeler orta düzeyde sinyaller veriyor.' : 'Technical indicators show moderate signals.')
         : score >= 4
-          ? (isTurkish ? 'Zayıf sinyaller var' : 'Weak signals detected')
-          : (isTurkish ? 'Çok zayıf sinyaller var' : 'Very weak signals detected');
+          ? (isTurkish ? 'Teknik göstergeler zayıf sinyaller veriyor.' : 'Technical indicators show weak signals.')
+          : (isTurkish ? 'Teknik göstergeler çok zayıf sinyaller veriyor.' : 'Technical indicators show very weak signals.');
 
-    // Verdict-based response
+    // Verdict-based response - improved Turkish
     switch (verdict) {
       case 'GO':
         return isTurkish
-          ? `${symbol} için ${tradeType} yapılabilir. ${scoreQuality}. Piyasa koşulları uygun görünüyor. Detaylı analiz için "View Full Analysis" butonuna tıklayın.`
-          : `${tradeType.charAt(0).toUpperCase() + tradeType.slice(1)} opportunity for ${symbol}. ${scoreQuality}. Market conditions appear favorable. Click "View Full Analysis" for details.`;
+          ? `${symbol} için ${tradeType} yapılabilir. ${scoreQuality} Piyasa koşulları uygun görünüyor. Detaylı analiz için aşağıdaki butona tıklayın.`
+          : `${symbol} shows a favorable setup for ${tradeType}. ${scoreQuality} Market conditions appear favorable. Click below for detailed analysis.`;
 
       case 'CONDITIONAL_GO':
       case 'COND':
         return isTurkish
-          ? `${symbol} için ${tradeType} yapılabilir, ancak dikkatli olun. ${scoreQuality}. Belirli koşullar altında işleme girilebilir. Risk yönetimine dikkat edin.`
-          : `Conditional ${tradeType} opportunity for ${symbol}. ${scoreQuality}. Entry possible under certain conditions. Pay attention to risk management.`;
+          ? `${symbol} için ${tradeType} şartlı olarak yapılabilir. ${scoreQuality} Belirli koşullar altında işleme girilebilir ancak risk yönetimine dikkat edilmeli.`
+          : `${symbol} shows a conditional setup for ${tradeType}. ${scoreQuality} Entry possible under certain conditions. Pay attention to risk management.`;
 
       case 'WAIT':
         return isTurkish
-          ? `${symbol} için şu an ${tradeType} önerilmiyor. ${scoreQuality}. Daha net bir sinyal için beklemek daha güvenli olabilir. Piyasayı izlemeye devam edin.`
-          : `${tradeType.charAt(0).toUpperCase() + tradeType.slice(1)} not recommended for ${symbol} at this time. ${scoreQuality}. Waiting for clearer signals may be safer. Continue monitoring the market.`;
+          ? `${symbol} için şu an ${tradeType} önerilmiyor. ${scoreQuality} Daha net sinyaller için beklemek daha güvenli olabilir.`
+          : `${symbol} is not recommended for ${tradeType} at this time. ${scoreQuality} Waiting for clearer signals may be safer.`;
 
       case 'AVOID':
         return isTurkish
-          ? `${symbol} için ${tradeType} yapılmaması önerilir. ${scoreQuality}. Piyasa koşulları riskli görünüyor. Bu işlemden uzak durun ve daha iyi fırsatları bekleyin.`
-          : `Avoid ${tradeType} for ${symbol}. ${scoreQuality}. Market conditions appear risky. Stay away from this trade and wait for better opportunities.`;
+          ? `${symbol} için ${tradeType} yapılmaması önerilir. ${scoreQuality} Piyasa koşulları riskli görünüyor, bu işlemden uzak durmanız tavsiye edilir.`
+          : `Avoid ${tradeType} for ${symbol}. ${scoreQuality} Market conditions appear risky. Stay away from this trade.`;
 
       default:
         return isTurkish
-          ? `${symbol} analizi tamamlandı. Skor: ${score}/10. ${scoreQuality}. Detaylar için analiz sayfasını ziyaret edin.`
-          : `${symbol} analysis completed. Score: ${score}/10. ${scoreQuality}. Visit the analysis page for details.`;
+          ? `${symbol} analizi tamamlandı. ${scoreQuality} Detaylar için analiz sayfasını ziyaret edin.`
+          : `${symbol} analysis completed. ${scoreQuality} Visit the analysis page for details.`;
     }
   }
 }
