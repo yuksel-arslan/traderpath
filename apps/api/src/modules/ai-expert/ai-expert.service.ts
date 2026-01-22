@@ -1503,20 +1503,67 @@ export class AIExpertService {
       expectedHoldTime: tradeCtx.holdTime,
     };
 
+    // Extract indicator summary for cleaner AI prompt
+    const indicatorDetails = analysisData.indicatorDetails as Record<string, unknown> | undefined;
+    const indicatorSummary = indicatorDetails?.summary as Record<string, unknown> | undefined;
+    const trendIndicators = indicatorDetails?.trend as Record<string, unknown> | undefined;
+    const momentumIndicators = indicatorDetails?.momentum as Record<string, unknown> | undefined;
+    const volumeIndicators = indicatorDetails?.volume as Record<string, unknown> | undefined;
+    const volatilityIndicators = indicatorDetails?.volatility as Record<string, unknown> | undefined;
+    const divergences = indicatorDetails?.divergences as unknown[] | undefined;
+
     switch (expertId) {
       case 'aria':
+        // Build comprehensive indicator snapshot for ARIA
+        const indicatorSnapshot: Record<string, unknown> = {
+          // Summary statistics (40+ indicators analyzed)
+          totalIndicators: indicatorSummary?.totalIndicatorsUsed || 0,
+          bullishCount: indicatorSummary?.bullishIndicators || 0,
+          bearishCount: indicatorSummary?.bearishIndicators || 0,
+          neutralCount: indicatorSummary?.neutralIndicators || 0,
+          overallSignal: indicatorSummary?.overallSignal || 'neutral',
+          signalConfidence: indicatorSummary?.signalConfidence || 0,
+          leadingIndicatorsSignal: indicatorSummary?.leadingIndicatorsSignal || 'neutral',
+          // Key trend indicators
+          trendSignals: trendIndicators ? Object.entries(trendIndicators).map(([k, v]) => ({
+            name: (v as Record<string, unknown>)?.name || k,
+            signal: (v as Record<string, unknown>)?.signal,
+            interpretation: (v as Record<string, unknown>)?.interpretation,
+          })).slice(0, 5) : [],
+          // Key momentum indicators
+          momentumSignals: momentumIndicators ? Object.entries(momentumIndicators).map(([k, v]) => ({
+            name: (v as Record<string, unknown>)?.name || k,
+            value: (v as Record<string, unknown>)?.value,
+            signal: (v as Record<string, unknown>)?.signal,
+            interpretation: (v as Record<string, unknown>)?.interpretation,
+          })).slice(0, 5) : [],
+          // Volume analysis
+          volumeSignals: volumeIndicators ? Object.entries(volumeIndicators).map(([k, v]) => ({
+            name: (v as Record<string, unknown>)?.name || k,
+            signal: (v as Record<string, unknown>)?.signal,
+            interpretation: (v as Record<string, unknown>)?.interpretation,
+          })).slice(0, 3) : [],
+          // Divergences detected
+          divergences: divergences?.slice(0, 3) || [],
+        };
+
         focusData = {
           ...baseData,
           currentPrice: analysisData.currentPrice,
-          rsi: (analysisData.indicators as Record<string, unknown>)?.rsi,
-          macd: (analysisData.indicators as Record<string, unknown>)?.macd,
           timeframes: analysisData.timeframes,
           levels: analysisData.levels,
-          pvtTrend: (analysisData.advancedMetrics as Record<string, unknown>)?.pvtTrend,
-          volumeSpike: (analysisData.advancedMetrics as Record<string, unknown>)?.volumeSpike,
-          indicatorDetails: analysisData.indicatorDetails,
+          // Structured indicator analysis instead of raw dump
+          indicatorAnalysis: indicatorSnapshot,
         };
-        focusPrompt = `You are analyzing ${symbol} for ${tradeCtx.label} (${tradeCtx.timeframes} timeframes, ${tradeCtx.holdTime} holds). Focus on ${tradeCtx.focus}. NOT Bitcoin analysis - specifically ${symbol}.`;
+        focusPrompt = `You are analyzing ${symbol} for ${tradeCtx.label} using ${indicatorSnapshot.totalIndicators || '40+'} technical indicators.
+
+INDICATOR SUMMARY:
+- Bullish signals: ${indicatorSnapshot.bullishCount}
+- Bearish signals: ${indicatorSnapshot.bearishCount}
+- Overall signal: ${indicatorSnapshot.overallSignal} (${indicatorSnapshot.signalConfidence}% confidence)
+- Leading indicators: ${indicatorSnapshot.leadingIndicatorsSignal}
+
+Reference specific indicators from the data. Focus on ${tradeCtx.focus}. NOT Bitcoin - specifically ${symbol}.`;
         break;
 
       case 'oracle':
@@ -1561,6 +1608,11 @@ export class AIExpertService {
         break;
     }
 
+    // Dynamic output length based on expert type
+    const isARIA = expertId === 'aria';
+    const maxSentences = isARIA ? '3-4' : '2-3';
+    const maxTokens = isARIA ? 350 : 250;
+
     const prompt = `You are ${expert.name}, ${expert.title} at TraderPath.
 
 ⚠️ CRITICAL CONTEXT:
@@ -1576,8 +1628,8 @@ ${symbol} ${tradeCtx.label} DATA:
 ${JSON.stringify(focusData, null, 2)}
 
 RULES:
-- Give your expert opinion in 2-3 sentences MAX
-- Be specific with numbers and percentages
+- Give your expert opinion in ${maxSentences} sentences
+- ${isARIA ? 'CITE SPECIFIC INDICATORS by name (e.g., "RSI at 72", "MACD bullish crossover")' : 'Be specific with numbers and percentages'}
 - Tailor advice to ${tradeCtx.label} style (${tradeCtx.holdTime} holds)
 - ONLY discuss ${symbol}, never mention other coins
 - ${langInstruction}
@@ -1592,7 +1644,7 @@ FORMAT: Just your professional ${tradeCtx.label} insight about ${symbol}. Start 
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 200,
+            maxOutputTokens: maxTokens,
           },
         },
         3, // maxRetries - balanced for speed vs reliability

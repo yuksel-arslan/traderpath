@@ -653,6 +653,13 @@ Kullanıcı Hakları Aktif:
   - R-bazlı TP seviyeleri artık doğru hesaplanıyor (daha geniş SL = daha gerçekçi TP'ler)
 - **Dashboard Quick Actions kaldırıldı**: Navigasyonda zaten mevcut, gereksiz tekrar
 - **Performance chart iyileştirildi**: Month view eklendi, avgPnL seçilen periyoda göre hesaplanıyor
+- **AI Expert artık 40+ indikatörü kullanıyor**:
+  - ARIA prompt'u yeniden yapılandırıldı - indicator summary dahil edildi
+  - Bullish/bearish/neutral sinyal sayıları prompt'ta gösteriliyor
+  - Trend, momentum, volume indikatörleri yapılandırılmış olarak gönderiliyor
+  - Divergence tespiti de dahil
+  - ARIA için maxOutputTokens 200→350'ye çıkarıldı (daha detaylı analiz)
+  - "CITE SPECIFIC INDICATORS" kuralı eklendi
 
 ---
 
