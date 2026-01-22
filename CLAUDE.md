@@ -254,6 +254,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-22 | TradePlanChart entry marker yanlış semantik | Marker "ENTRY @ $price" yerine "Analysis" olarak değiştirildi. Marker analiz zamanını gösterir, entry fiyatı sarı çizgi ile gösterilir (limit order farklı seviyede olabilir) | `TradePlanChart.tsx` |
 | 2026-01-22 | Stop Loss hesaplaması destek/direnç seviyelerini dikkate almıyordu | LONG için SL destek seviyesinin ALTINA, SHORT için SL direnç seviyesinin ÜSTÜNE yerleştiriliyor. Minimum %1.5 stop mesafesi zorunlu | `analysis.engine.ts:5231-5300` |
 | 2026-01-22 | Scheduled Analysis kredi çekilmeden iade yapıyordu | `creditService.deduct()` yerine `creditService.charge()` kullanıldı. Sadece kredi çekildiyse iade yapılıyor. `creditsCharged` flag eklendi | `scheduled-reports.service.ts:99-155` |
+| 2026-01-22 | AI Concierge platform sorularını anlamıyordu | PLATFORM_INFO ve CONVERSATIONAL intent'leri eklendi. "özetle", "anlat", "platform nedir" gibi sorular artık cevaplanıyor | `concierge.service.ts`, `system-prompt.ts` |
 
 ---
 
@@ -670,6 +671,12 @@ Kullanıcı Hakları Aktif:
   - Konuşurken ve dinlerken farklı görsel animasyonlar
   - "Atla ve yaz" butonu ile sesli moddan çıkış
   - Responsive tasarım (mobil uyumlu)
+- **AI Concierge doğal dil anlama iyileştirildi**:
+  - `PLATFORM_INFO` intent eklendi: "özetle", "platform nedir", "sistem nasıl çalışır" gibi sorular
+  - `CONVERSATIONAL` intent eklendi: selamlaşma, teşekkür, sesli yanıt tercihi
+  - Her iki dilde (TR/EN) kapsamlı platform açıklaması
+  - 19 farklı intent tipi destekleniyor (17'den yükseltildi)
+  - Rule-based detection ve Gemini fallback için yeni pattern'ler
 
 ---
 
