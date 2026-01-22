@@ -114,7 +114,15 @@ Based on user message, classify into ONE of these intents:
 16. HELP - User needs help
     Keywords: help, yardım, ne yapabilirsin, what can you do, commands
 
-17. UNKNOWN - Cannot determine intent
+17. PLATFORM_INFO - User wants to learn about the platform
+    Keywords: özetle, summarize, describe, tanıt, platform nedir, nasıl çalışır, sistem, features, özellikleri, hakkında, about, anlat, açıkla platform
+    This is for general platform questions, NOT specific feature questions
+
+18. CONVERSATIONAL - User is having a general conversation or making a request that doesn't fit other intents
+    Examples: greetings, thank you, general chat, voice preferences, feedback
+    Use this for messages that are conversational in nature
+
+19. UNKNOWN - Cannot determine intent
 `;
 
 export const INTENT_DETECTION_PROMPT = `You are the TraderPath AI Concierge intent classifier.
@@ -155,6 +163,13 @@ Analyze the user message and respond with a JSON object:
 "Show BTC chart" → {"intent": "CHART_VIEW", "confidence": 0.95, "entities": {"symbol": "BTC"}, "language": "en"}
 "BTC 70000 olunca haber ver" → {"intent": "ALERT_SET", "confidence": 0.9, "entities": {"symbol": "BTC", "targetPrice": 70000, "direction": "above"}, "language": "tr"}
 "kredim ne kadar?" → {"intent": "STATUS", "confidence": 0.95, "entities": {}, "language": "tr"}
+"analiz sistemini özetle" → {"intent": "PLATFORM_INFO", "confidence": 0.95, "entities": {}, "language": "tr"}
+"TraderPath nedir?" → {"intent": "PLATFORM_INFO", "confidence": 0.9, "entities": {}, "language": "tr"}
+"What features do you have?" → {"intent": "PLATFORM_INFO", "confidence": 0.9, "entities": {}, "language": "en"}
+"Describe how the platform works" → {"intent": "PLATFORM_INFO", "confidence": 0.9, "entities": {}, "language": "en"}
+"Merhaba" → {"intent": "CONVERSATIONAL", "confidence": 0.9, "entities": {}, "language": "tr"}
+"Thank you for the analysis" → {"intent": "CONVERSATIONAL", "confidence": 0.85, "entities": {}, "language": "en"}
+"Sesli yanıt istiyorum" → {"intent": "CONVERSATIONAL", "confidence": 0.8, "entities": {}, "language": "tr"}
 
 User message: "{MESSAGE}"
 
@@ -201,6 +216,45 @@ ACCOUNT
 • "My win rate"
 
 50+ coins supported!`,
+    PLATFORM_INFO: `TraderPath - AI-Powered Crypto Trading Analysis
+
+TraderPath is an intelligent crypto trading analysis platform that uses 40+ technical indicators and AI experts to help you make better trading decisions.
+
+KEY FEATURES:
+
+1. COMPREHENSIVE ANALYSIS (25 credits)
+   • 7-step deep analysis using 40+ indicators
+   • Support for 50+ cryptocurrencies
+   • Multiple timeframes: 5m, 15m, 1h, 4h, 1d, 1W
+   • Clear verdicts: GO, CONDITIONAL_GO, WAIT, AVOID
+   • Complete trade plan: Entry, Stop Loss, Take Profits
+
+2. AI EXPERT PANEL
+   • ARIA: Technical analysis specialist
+   • NEXUS: Risk management expert
+   • ORACLE: Whale activity tracker
+   • SENTINEL: Security auditor
+   • VOLTRAN: Master synthesizer
+
+3. ADVANCED FEATURES
+   • Automatic scheduled analyses
+   • Price alerts with notifications
+   • PDF and email reports
+   • Performance tracking
+   • TradingView Pine Script export
+
+HOW IT WORKS:
+Just tell me what you want! For example:
+• "Analyze BTC" - Run a full analysis
+• "Show ETH chart" - View with trade levels
+• "What is RSI?" - Ask the experts
+• "Schedule daily SOL analysis" - Automate
+
+I understand both English and Turkish. How can I help you today?`,
+    CONVERSATIONAL: (message: string) => {
+      // This will be handled dynamically based on context
+      return `I'm here to help you with crypto analysis! ${message}`;
+    },
   },
   tr: {
     INSUFFICIENT_CREDITS: (required: number, available: number) =>
@@ -242,5 +296,43 @@ HESAP
 • "Başarı oranım"
 
 50+ coin destekleniyor!`,
+    PLATFORM_INFO: `TraderPath - Yapay Zeka Destekli Kripto Analiz Platformu
+
+TraderPath, daha iyi trade kararları vermenize yardımcı olmak için 40+ teknik indikatör ve AI uzmanları kullanan akıllı bir kripto analiz platformudur.
+
+TEMEL ÖZELLİKLER:
+
+1. KAPSAMLI ANALİZ (25 kredi)
+   • 40+ indikatör kullanan 7 adımlı derinlemesine analiz
+   • 50+ kripto para desteği
+   • Çoklu zaman dilimleri: 5m, 15m, 1h, 4h, 1d, 1W
+   • Net kararlar: GO, CONDITIONAL_GO, WAIT, AVOID
+   • Tam işlem planı: Giriş, Stop Loss, Take Profit seviyeleri
+
+2. AI UZMAN PANELİ
+   • ARIA: Teknik analiz uzmanı
+   • NEXUS: Risk yönetimi uzmanı
+   • ORACLE: Balina aktivite takipçisi
+   • SENTINEL: Güvenlik denetçisi
+   • VOLTRAN: Ana sentezleyici
+
+3. GELİŞMİŞ ÖZELLİKLER
+   • Otomatik zamanlanmış analizler
+   • Bildirimli fiyat alarmları
+   • PDF ve email raporları
+   • Performans takibi
+   • TradingView Pine Script export
+
+NASIL ÇALIŞIR:
+Bana ne istediğinizi söyleyin! Örneğin:
+• "BTC analiz" - Tam analiz yap
+• "ETH grafiği göster" - İşlem seviyeleriyle görüntüle
+• "RSI nedir?" - Uzmanlara sor
+• "Günlük SOL analizi kur" - Otomatikleştir
+
+Hem Türkçe hem İngilizce anlıyorum. Size nasıl yardımcı olabilirim?`,
+    CONVERSATIONAL: (message: string) => {
+      return `Kripto analizi konusunda size yardımcı olmak için buradayım! ${message}`;
+    },
   },
 };

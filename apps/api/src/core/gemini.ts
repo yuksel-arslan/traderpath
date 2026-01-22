@@ -1,15 +1,21 @@
 // ===========================================
-// Gemini API Client with Retry Logic
-// Handles rate limits (429) with exponential backoff
+// Gemini API Client using @google/genai SDK
+// Handles rate limits with exponential backoff
 // ===========================================
 
 import { config } from './config';
 import { redis } from './cache';
 
+// @ts-ignore - SDK types may have issues but runtime works
+const { GoogleGenAI } = require('@google/genai');
+
 const GEMINI_API_KEY = config.gemini.apiKey;
-// Available models: gemini-2.5-flash-preview-05-20, gemini-2.0-flash, gemini-1.5-flash, gemini-1.5-pro
-const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20';
+// Available models: gemini-2.5-flash, gemini-2.0-flash, gemini-1.5-flash, gemini-1.5-pro
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const GEMINI_SETTINGS_KEY = 'admin:gemini:settings';
+
+// Initialize the Genai client
+const genai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 // Cache for settings to avoid Redis calls on every request
 let cachedSettings: { model: string; expertModel: string; conciergeModel: string; cachedAt: number } | null = null;
@@ -45,17 +51,16 @@ async function getGeminiModel(type: 'default' | 'expert' | 'concierge' = 'defaul
   return DEFAULT_GEMINI_MODEL;
 }
 
-// Build API URL for a given model
+// Build API URL for a given model (for backward compatibility)
 function buildGeminiApiUrl(model: string): string {
   return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 }
 
-// Legacy export for backward compatibility
+// Legacy exports for backward compatibility
 const GEMINI_MODEL = DEFAULT_GEMINI_MODEL;
 const GEMINI_API_URL = buildGeminiApiUrl(DEFAULT_GEMINI_MODEL);
 
 // Timeouts and limits
-const FETCH_TIMEOUT_MS = 30000; // 30 seconds max for API call
 const MAX_WAIT_TIME_MS = 20000; // 20 seconds max wait between retries
 const DEFAULT_MAX_RETRIES = 3;
 
@@ -84,74 +89,13 @@ export interface GeminiResponse {
     promptTokenCount?: number;
     candidatesTokenCount?: number;
   };
-}
-
-interface GeminiError {
-  error?: {
-    code?: number;
-    message?: string;
-    status?: string;
-    details?: Array<{
-      '@type'?: string;
-      retryDelay?: string;
-    }>;
-  };
+  // Also include text getter for new SDK
+  text?: string;
 }
 
 // ===========================================
 // Helper Functions
 // ===========================================
-
-/**
- * Parse retry delay from Gemini error response
- * Looks for retryDelay in error details or parses from message
- */
-function parseRetryDelay(errorBody: GeminiError): number {
-  // Try to get from error details (RetryInfo)
-  if (errorBody.error?.details) {
-    for (const detail of errorBody.error.details) {
-      if (detail['@type']?.includes('RetryInfo') && detail.retryDelay) {
-        // Parse "56s" or "56.993352611s" format
-        const match = detail.retryDelay.match(/(\d+\.?\d*)/);
-        if (match) {
-          return Math.ceil(parseFloat(match[1]) * 1000); // Convert to ms
-        }
-      }
-    }
-  }
-
-  // Try to parse from message (e.g., "Please retry in 56.993352611s")
-  if (errorBody.error?.message) {
-    const match = errorBody.error.message.match(/retry in (\d+\.?\d*)s/i);
-    if (match) {
-      return Math.ceil(parseFloat(match[1]) * 1000); // Convert to ms
-    }
-  }
-
-  return 0; // No specific delay found
-}
-
-/**
- * Fetch with timeout
- */
-async function fetchWithTimeout(
-  url: string,
-  options: RequestInit,
-  timeoutMs: number = FETCH_TIMEOUT_MS
-): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    return response;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
 
 /**
  * Check if error is a rate limit error
@@ -179,7 +123,44 @@ export function extractRetryDelay(error: unknown): number {
       return Math.ceil(parseFloat(match[1]) * 1000);
     }
   }
-  return 10000; // Default to 10 seconds (reduced from 60)
+  return 10000; // Default to 10 seconds
+}
+
+/**
+ * Convert SDK response to our GeminiResponse format
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function convertResponse(response: any): GeminiResponse {
+  // New SDK provides .text getter directly
+  if (response.text) {
+    return {
+      candidates: [{
+        content: {
+          parts: [{ text: response.text }],
+        },
+      }],
+      usageMetadata: response.usageMetadata ? {
+        promptTokenCount: response.usageMetadata.promptTokenCount,
+        candidatesTokenCount: response.usageMetadata.candidatesTokenCount,
+      } : undefined,
+      text: response.text,
+    };
+  }
+
+  // Fallback to legacy format
+  return {
+    candidates: response.candidates?.map((candidate: { content?: { parts?: Array<{ text?: string }> } }) => ({
+      content: {
+        parts: candidate.content?.parts?.map((part: { text?: string }) => ({
+          text: part.text,
+        })),
+      },
+    })),
+    usageMetadata: response.usageMetadata ? {
+      promptTokenCount: response.usageMetadata.promptTokenCount,
+      candidatesTokenCount: response.usageMetadata.candidatesTokenCount,
+    } : undefined,
+  };
 }
 
 // ===========================================
@@ -188,6 +169,7 @@ export function extractRetryDelay(error: unknown): number {
 
 /**
  * Make a Gemini API request with retry logic and rate limit handling
+ * Uses @google/genai SDK
  *
  * @param options - The Gemini API request options
  * @param maxRetries - Maximum number of retries (default: 3)
@@ -200,7 +182,6 @@ export function extractRetryDelay(error: unknown): number {
  * - Respects retry-after delay from API response (capped at 20s)
  * - Handles 503 (service unavailable) errors
  * - Network error resilience
- * - 30 second timeout per request
  */
 export async function callGeminiWithRetry(
   options: GeminiRequestOptions,
@@ -213,8 +194,7 @@ export async function callGeminiWithRetry(
   }
 
   // Get model from admin settings
-  const model = await getGeminiModel(modelType);
-  const apiUrl = buildGeminiApiUrl(model);
+  const modelName = await getGeminiModel(modelType);
 
   let lastError: Error = new Error(`Gemini API failed after ${maxRetries} attempts`);
   let attempt = 0;
@@ -223,62 +203,61 @@ export async function callGeminiWithRetry(
     attempt++;
 
     try {
-      const response = await fetchWithTimeout(
-        `${apiUrl}?key=${GEMINI_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(options),
+      // Build the prompt from contents
+      const prompt = options.contents
+        .map(content => content.parts.map(part => part.text).join('\n'))
+        .join('\n\n');
+
+      // Call the SDK
+      const response = await genai.models.generateContent({
+        model: modelName,
+        contents: prompt,
+        config: {
+          temperature: options.generationConfig.temperature,
+          topP: options.generationConfig.topP,
+          topK: options.generationConfig.topK,
+          maxOutputTokens: options.generationConfig.maxOutputTokens,
         },
-        FETCH_TIMEOUT_MS
-      );
+      });
 
-      // Success - return the response
-      if (response.ok) {
-        return await response.json();
-      }
+      // Convert to our format and return
+      return convertResponse(response);
 
-      // Parse error response
-      const errorText = await response.text();
-      let errorBody: GeminiError = {};
-      try {
-        errorBody = JSON.parse(errorText);
-      } catch {
-        // Not JSON, use as-is
-      }
-
-      const errorMessage = errorBody.error?.message || errorText || `HTTP ${response.status}`;
-      lastError = new Error(`Gemini API error (${response.status}): ${errorMessage}`);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      const errorMessage = lastError.message.toLowerCase();
 
       // Rate limit error (429) - retry with backoff
-      if (response.status === 429) {
-        // Get retry delay from response or calculate exponential backoff
-        const apiRetryDelay = parseRetryDelay(errorBody);
+      if (
+        errorMessage.includes('429') ||
+        errorMessage.includes('rate limit') ||
+        errorMessage.includes('resource_exhausted') ||
+        errorMessage.includes('quota')
+      ) {
+        // Calculate exponential backoff with jitter
         const exponentialDelay = Math.min(2000 * Math.pow(2, attempt - 1), MAX_WAIT_TIME_MS);
-        const jitter = Math.random() * 1000; // Add 0-1s jitter
+        const jitter = Math.random() * 1000;
+        const waitTime = exponentialDelay + jitter;
 
-        // Use API-suggested delay if available, otherwise use exponential backoff
-        // Cap at MAX_WAIT_TIME_MS to prevent excessive waits
-        const waitTime = apiRetryDelay > 0
+        // Try to extract delay from error message
+        const apiRetryDelay = extractRetryDelay(error);
+        const finalWaitTime = apiRetryDelay > 0
           ? Math.min(apiRetryDelay + jitter, MAX_WAIT_TIME_MS)
-          : exponentialDelay + jitter;
+          : waitTime;
 
         console.warn(
           `[Gemini Rate Limit] ${operation} - Attempt ${attempt}/${maxRetries}. ` +
-          `Waiting ${Math.round(waitTime / 1000)}s before retry. ` +
-          `Status: ${errorBody.error?.status || 'RESOURCE_EXHAUSTED'}`
+          `Waiting ${Math.round(finalWaitTime / 1000)}s before retry.`
         );
 
-        // If we have more retries, wait and continue
         if (attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, waitTime));
+          await new Promise(resolve => setTimeout(resolve, finalWaitTime));
           continue;
         }
-        // Last attempt failed - will throw lastError after loop
       }
 
       // Service unavailable (503) - also retry
-      if (response.status === 503) {
+      if (errorMessage.includes('503') || errorMessage.includes('unavailable')) {
         const waitTime = Math.min(2000 * attempt + Math.random() * 1000, MAX_WAIT_TIME_MS);
 
         console.warn(
@@ -292,31 +271,15 @@ export async function callGeminiWithRetry(
         }
       }
 
-      // Don't retry on other client errors (4xx except 429)
-      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
-        throw lastError;
-      }
-
-    } catch (error) {
-      // Timeout error
-      if (error instanceof Error && error.name === 'AbortError') {
-        lastError = new Error(`Gemini API timeout after ${FETCH_TIMEOUT_MS / 1000}s`);
-        console.warn(
-          `[Gemini Timeout] ${operation} - Attempt ${attempt}/${maxRetries}. Request timed out.`
-        );
-
-        if (attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          continue;
-        }
-      }
-
       // Network errors - retry
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        lastError = new Error(`Gemini network error: ${error.message}`);
+      if (
+        errorMessage.includes('network') ||
+        errorMessage.includes('econnreset') ||
+        errorMessage.includes('timeout')
+      ) {
         console.warn(
           `[Gemini Network Error] ${operation} - Attempt ${attempt}/${maxRetries}. ` +
-          `Error: ${error.message}`
+          `Error: ${lastError.message}`
         );
 
         if (attempt < maxRetries) {
@@ -326,12 +289,9 @@ export async function callGeminiWithRetry(
         }
       }
 
-      // Re-throw if it's our error
-      if (error instanceof Error && error.message.startsWith('Gemini API error')) {
-        throw error;
-      }
-
-      lastError = error instanceof Error ? error : new Error(String(error));
+      // Don't retry on other errors
+      console.error(`[Gemini Error] ${operation} - ${lastError.message}`);
+      throw lastError;
     }
   }
 
@@ -347,23 +307,26 @@ export async function callGemini(options: GeminiRequestOptions): Promise<GeminiR
     throw new Error('GEMINI_API_KEY is not configured.');
   }
 
-  const response = await fetchWithTimeout(
-    `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(options),
+  const prompt = options.contents
+    .map(content => content.parts.map(part => part.text).join('\n'))
+    .join('\n\n');
+
+  const response = await genai.models.generateContent({
+    model: DEFAULT_GEMINI_MODEL,
+    contents: prompt,
+    config: {
+      temperature: options.generationConfig.temperature,
+      topP: options.generationConfig.topP,
+      topK: options.generationConfig.topK,
+      maxOutputTokens: options.generationConfig.maxOutputTokens,
     },
-    FETCH_TIMEOUT_MS
-  );
+  });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Gemini API error: ${error}`);
-  }
-
-  return response.json();
+  return convertResponse(response);
 }
+
+// Export the SDK client for direct access if needed
+export { genai };
 
 // Export model and URL for reference
 export { GEMINI_MODEL, GEMINI_API_URL, getGeminiModel, buildGeminiApiUrl };

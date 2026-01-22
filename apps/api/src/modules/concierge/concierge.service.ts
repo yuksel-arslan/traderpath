@@ -104,8 +104,71 @@ function detectIntent(message: string): {
 } {
   const lower = message.toLowerCase().trim();
 
-  // Help intent
-  if (lower === 'help' || lower === '?' || lower.includes('yardım') || lower === 'nasıl kullanılır') {
+  // Platform info intent - questions about the platform itself
+  if (
+    lower.includes('özetle') ||
+    lower.includes('summarize') ||
+    lower.includes('tanıt') ||
+    lower.includes('describe') ||
+    lower.includes('platform nedir') ||
+    lower.includes('platform nasıl') ||
+    lower.includes('traderpath nedir') ||
+    lower.includes('what is traderpath') ||
+    lower.includes('how does traderpath') ||
+    lower.includes('özellikleri') ||
+    lower.includes('features') ||
+    lower.includes('sistem nedir') ||
+    lower.includes('sistem nasıl') ||
+    lower.includes('analiz sistemi') ||
+    lower.includes('analysis system') ||
+    (lower.includes('anlat') && (lower.includes('platform') || lower.includes('sistem'))) ||
+    (lower.includes('explain') && (lower.includes('platform') || lower.includes('system'))) ||
+    (lower.includes('hakkında') && (lower.includes('platform') || lower.includes('traderpath'))) ||
+    (lower.includes('about') && (lower.includes('platform') || lower.includes('traderpath')))
+  ) {
+    return { intent: 'PLATFORM_INFO' };
+  }
+
+  // Conversational intent - greetings, thanks, general chat
+  if (
+    lower === 'merhaba' ||
+    lower === 'selam' ||
+    lower === 'hello' ||
+    lower === 'hi' ||
+    lower === 'hey' ||
+    lower.includes('teşekkür') ||
+    lower.includes('thank') ||
+    lower.includes('sağol') ||
+    lower.includes('eyvallah') ||
+    lower === 'ok' ||
+    lower === 'tamam' ||
+    lower === 'anladım' ||
+    lower === 'okay' ||
+    lower.includes('günaydın') ||
+    lower.includes('good morning') ||
+    lower.includes('iyi akşamlar') ||
+    lower.includes('good evening') ||
+    lower.includes('sesli yanıt') ||
+    lower.includes('voice response') ||
+    lower.includes('sesli konuş') ||
+    lower.includes('speak to me')
+  ) {
+    return { intent: 'CONVERSATIONAL' };
+  }
+
+  // Help intent - expanded patterns
+  if (
+    lower === 'help' ||
+    lower === '?' ||
+    lower.includes('yardım') ||
+    lower === 'nasıl kullanılır' ||
+    lower.includes('ne yapabilirsin') ||
+    lower.includes('what can you do') ||
+    lower.includes('komutlar') ||
+    lower.includes('commands') ||
+    lower.includes('neler yapabilirsin') ||
+    lower.includes('how to use')
+  ) {
     return { intent: 'HELP' };
   }
 
@@ -511,6 +574,12 @@ class ConciergeService {
 
       // Handle different intents
       switch (intent) {
+        case 'PLATFORM_INFO':
+          return this.handlePlatformInfo(language, creditBalance);
+
+        case 'CONVERSATIONAL':
+          return await this.handleConversational(message, language, creditBalance);
+
         case 'HELP':
           return this.handleHelp(language, creditBalance);
 
@@ -582,6 +651,130 @@ class ConciergeService {
       success: true,
       intent: 'HELP',
       message: templates.HELP_TEXT,
+      creditsSpent: 0,
+      creditsRemaining: creditBalance,
+    };
+  }
+
+  private handlePlatformInfo(language: string, creditBalance: number): ConciergeResponse {
+    const lang = language === 'tr' ? 'tr' : 'en';
+    const templates = RESPONSE_TEMPLATES[lang];
+
+    return {
+      success: true,
+      intent: 'PLATFORM_INFO',
+      message: templates.PLATFORM_INFO,
+      creditsSpent: 0,
+      creditsRemaining: creditBalance,
+    };
+  }
+
+  private async handleConversational(
+    message: string,
+    language: string,
+    creditBalance: number
+  ): Promise<ConciergeResponse> {
+    const lower = message.toLowerCase();
+
+    // Detect the type of conversational message
+    let responseText: string;
+
+    // Greetings
+    if (
+      lower.includes('merhaba') ||
+      lower.includes('selam') ||
+      lower.includes('hello') ||
+      lower.includes('hi') ||
+      lower.includes('hey') ||
+      lower.includes('günaydın') ||
+      lower.includes('good morning') ||
+      lower.includes('iyi akşamlar') ||
+      lower.includes('good evening')
+    ) {
+      responseText = language === 'tr'
+        ? `Merhaba! Ben TraderPath AI Concierge. Size nasıl yardımcı olabilirim?
+
+Şunları yapabilirim:
+• Coin analizi (örn: "BTC analiz")
+• Grafik gösterimi (örn: "ETH grafiği")
+• Teknik sorulara cevap (örn: "RSI nedir?")
+• Fiyat alarmı kurma
+• Ve daha fazlası...
+
+Ne yapmak istersiniz?`
+        : `Hello! I'm TraderPath AI Concierge. How can I help you?
+
+I can:
+• Analyze coins (e.g., "Analyze BTC")
+• Show charts (e.g., "Show ETH chart")
+• Answer technical questions (e.g., "What is RSI?")
+• Set price alerts
+• And more...
+
+What would you like to do?`;
+    }
+    // Thanks
+    else if (
+      lower.includes('teşekkür') ||
+      lower.includes('thank') ||
+      lower.includes('sağol') ||
+      lower.includes('eyvallah')
+    ) {
+      responseText = language === 'tr'
+        ? `Rica ederim! Başka bir konuda yardımcı olabilir miyim? Yeni bir analiz yapmak veya sorularınızı sormaktan çekinmeyin.`
+        : `You're welcome! Is there anything else I can help you with? Feel free to run another analysis or ask questions.`;
+    }
+    // Acknowledgment
+    else if (
+      lower === 'ok' ||
+      lower === 'tamam' ||
+      lower === 'anladım' ||
+      lower === 'okay'
+    ) {
+      responseText = language === 'tr'
+        ? `Harika! Başka bir şey için buradayım. Bir coin analiz etmemi ister misiniz?`
+        : `Great! I'm here if you need anything else. Would you like me to analyze a coin?`;
+    }
+    // Voice preference request
+    else if (
+      lower.includes('sesli yanıt') ||
+      lower.includes('voice response') ||
+      lower.includes('sesli konuş') ||
+      lower.includes('speak to me')
+    ) {
+      responseText = language === 'tr'
+        ? `Sesli yanıt özelliği aktif! Tarayıcınızın ses çıkışı açıksa yanıtlarımı sesli olarak duyabilirsiniz.
+
+Şimdi ne yapmak istersiniz? Örneğin "BTC analiz" diyerek bir analiz başlatabilirsiniz.`
+        : `Voice response is enabled! If your browser's audio output is on, you can hear my responses spoken aloud.
+
+What would you like to do now? For example, say "Analyze BTC" to start an analysis.`;
+    }
+    // Default conversational response
+    else {
+      responseText = language === 'tr'
+        ? `Anlıyorum. Size şu konularda yardımcı olabilirim:
+
+• Coin analizi: "BTC analiz" veya "ETH nasıl?"
+• Grafik görüntüleme: "BTC grafiği göster"
+• Teknik sorular: "RSI nedir?" veya "MACD nasıl çalışır?"
+• Hesap durumu: "kredim" veya "son analizlerim"
+
+Hangisini yapmak istersiniz?`
+        : `I understand. I can help you with:
+
+• Coin analysis: "Analyze BTC" or "How is ETH?"
+• Chart viewing: "Show BTC chart"
+• Technical questions: "What is RSI?" or "How does MACD work?"
+• Account status: "my credits" or "my recent analyses"
+
+Which would you like to do?`;
+    }
+
+    return {
+      success: true,
+      intent: 'CONVERSATIONAL',
+      message: responseText,
       creditsSpent: 0,
       creditsRemaining: creditBalance,
     };
