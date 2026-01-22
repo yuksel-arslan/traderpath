@@ -250,6 +250,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-22 | AI Concierge karmaşık mesajları anlamıyor | Gemini AI fallback eklendi - rule-based başarısız olunca Gemini kullanılıyor | `concierge.service.ts`, `system-prompt.ts` |
 | 2026-01-22 | OAuth login P2022 hatası - preferred_language column yok | Migration eklendi: `ALTER TABLE users ADD COLUMN preferred_language VARCHAR(10) DEFAULT 'en'` | `apps/api/prisma/migrations/add_preferred_language_column.sql` |
 | 2026-01-22 | AI Concierge "Unable to synthesize" hatası | VOLTRAN synthesis başarısız olunca verdict/score bazlı doğal dil fallback eklendi | `concierge.service.ts` |
+| 2026-01-22 | TradePlanChart fiyat formatlama hatası (1.937 → 1,937) | `toLocaleString()` yerine `formatPrice()` fonksiyonu eklendi - locale bağımsız doğru formatlama | `TradePlanChart.tsx` |
 
 ---
 
