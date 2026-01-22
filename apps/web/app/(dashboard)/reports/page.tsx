@@ -162,7 +162,7 @@ export default function ReportsPage() {
         throw new Error('Report data not found');
       }
 
-      // Send email
+      // Send email - include symbol and other fields from report level
       const emailResponse = await authFetch('/api/reports/send-html-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -170,6 +170,9 @@ export default function ReportsPage() {
           reportId: report.id,
           reportData: {
             ...data.data.reportData,
+            symbol: data.data.symbol || report.symbol, // Ensure symbol is included
+            analysisId: data.data.analysisId || report.analysisId,
+            generatedAt: data.data.generatedAt || report.generatedAt,
             aiExpertComment: data.data.aiExpertComment,
           },
         }),

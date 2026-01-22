@@ -247,10 +247,10 @@ export function RecentAnalyses() {
           direction: step5.direction || analysis.direction,
           averageEntry: step5.averageEntry || step5.entryPrice || analysis.entryPrice,
           stopLoss: { price: step5.stopLoss?.price || step5.stopLoss || analysis.stopLoss },
-          takeProfits: [
-            { price: step5.takeProfit1 || analysis.takeProfit1 },
-            { price: step5.takeProfit2 || analysis.takeProfit2 },
-            { price: step5.takeProfit3 || analysis.takeProfit3 },
+          takeProfits: step5.takeProfits || [
+            { price: analysis.takeProfit1 },
+            { price: analysis.takeProfit2 },
+            { price: analysis.takeProfit3 },
           ].filter(tp => tp.price),
           riskReward: step5.riskReward || 2,
         },
