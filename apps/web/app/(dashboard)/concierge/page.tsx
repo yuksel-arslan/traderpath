@@ -157,53 +157,106 @@ export default function ConciergePage() {
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = getSpeechLang(userLanguage);
-    utterance.rate = 0.95; // Slightly slower for clarity
-    utterance.pitch = 1.1; // Slightly higher pitch for female voice
+    utterance.rate = 0.92; // Slightly slower for natural speech
+    utterance.pitch = 1.05; // Slightly higher for pleasant female voice
     utterance.volume = 1.0;
 
-    // Try to get a female voice for the language
+    // Get all available voices
     const voices = synthRef.current.getVoices();
     const speechLang = getSpeechLang(userLanguage);
+    const langCode = userLanguage.toLowerCase();
 
-    // Preferred female voice names by browser/OS
-    const femaleVoiceKeywords = [
-      'female', 'woman', 'samantha', 'victoria', 'karen', 'moira', 'tessa',
-      'susan', 'zira', 'hazel', 'heather', 'catherine', 'alice', 'sara',
-      'nora', 'linda', 'monica', 'anna', 'fiona', 'kate', 'paulina',
-      'yelda', 'filiz', // Turkish female voices
-      'lucia', 'monica', // Spanish
-      'amelie', 'audrey', // French
-      'anna', 'petra', // German
-    ];
+    // HIGH QUALITY VOICE SELECTION STRATEGY
+    // Priority 1: Google voices (best quality in Chrome)
+    // Priority 2: Microsoft Neural/Online voices (best quality in Edge)
+    // Priority 3: Apple premium voices (best quality in Safari)
+    // Priority 4: Known premium female voices by name
 
-    // Priority: 1) Female voice in user's language, 2) Any female voice, 3) Any voice in language
-    let selectedVoice = null;
+    // Premium voice indicators (case-insensitive)
+    const premiumIndicators = ['google', 'neural', 'online', 'premium', 'natural', 'wavenet', 'studio'];
 
-    // First, try to find a female voice in the user's language
-    const langVoices = voices.filter(v => v.lang.toLowerCase().startsWith(userLanguage.toLowerCase()));
-    selectedVoice = langVoices.find(v =>
-      femaleVoiceKeywords.some(kw => v.name.toLowerCase().includes(kw))
+    // Known high-quality female voice names (full or partial matches)
+    const premiumFemaleVoices: Record<string, string[]> = {
+      'en': ['Google US English', 'Google UK English Female', 'Microsoft Aria', 'Microsoft Jenny', 'Samantha', 'Karen', 'Moira', 'Tessa', 'Serena'],
+      'tr': ['Google Türkçe', 'Microsoft Emel', 'Filiz', 'Yelda'],
+      'es': ['Google español', 'Microsoft Elena', 'Monica', 'Paulina', 'Lucia'],
+      'de': ['Google Deutsch', 'Microsoft Katja', 'Anna', 'Petra', 'Vicki'],
+      'fr': ['Google français', 'Microsoft Denise', 'Amelie', 'Audrey', 'Marie'],
+      'pt': ['Google português', 'Microsoft Francisca', 'Luciana'],
+      'ru': ['Google русский', 'Microsoft Irina', 'Milena'],
+      'zh': ['Google 普通话', 'Microsoft Xiaoxiao', 'Ting-Ting'],
+      'ja': ['Google 日本語', 'Microsoft Nanami', 'Kyoko', 'O-Ren'],
+      'ko': ['Google 한국어', 'Microsoft SunHi', 'Yuna'],
+      'ar': ['Google العربية', 'Microsoft Hoda', 'Laila'],
+      'it': ['Google italiano', 'Microsoft Elsa', 'Alice', 'Federica'],
+    };
+
+    // Low quality voices to AVOID
+    const lowQualityVoices = ['microsoft david', 'microsoft mark', 'microsoft zira', 'microsoft george', 'espeak', 'default'];
+
+    // Filter voices for user's language
+    const langVoices = voices.filter(v =>
+      v.lang.toLowerCase().startsWith(langCode) ||
+      v.lang.toLowerCase().split('-')[0] === langCode
     );
 
-    // If no female voice found, try any voice with female keyword
+    console.log(`[Voice] Found ${langVoices.length} voices for language ${langCode}:`,
+      langVoices.map(v => `${v.name} (${v.lang})`).join(', '));
+
+    let selectedVoice: SpeechSynthesisVoice | null = null;
+
+    // Helper: Check if voice is low quality
+    const isLowQuality = (v: SpeechSynthesisVoice) =>
+      lowQualityVoices.some(lq => v.name.toLowerCase().includes(lq));
+
+    // Helper: Check if voice is premium
+    const isPremium = (v: SpeechSynthesisVoice) =>
+      premiumIndicators.some(pi => v.name.toLowerCase().includes(pi));
+
+    // Helper: Check if voice matches premium female list
+    const isPremiumFemale = (v: SpeechSynthesisVoice) => {
+      const langFemales = premiumFemaleVoices[langCode] || premiumFemaleVoices['en'];
+      return langFemales.some(pf => v.name.toLowerCase().includes(pf.toLowerCase()));
+    };
+
+    // Strategy 1: Find Google voice for this language (best quality)
+    selectedVoice = langVoices.find(v =>
+      v.name.toLowerCase().includes('google') && !isLowQuality(v)
+    ) || null;
+
+    // Strategy 2: Find Microsoft Neural/Online voice
     if (!selectedVoice) {
-      selectedVoice = voices.find(v =>
-        femaleVoiceKeywords.some(kw => v.name.toLowerCase().includes(kw)) &&
-        v.lang.toLowerCase().startsWith(userLanguage.toLowerCase())
-      );
+      selectedVoice = langVoices.find(v =>
+        (v.name.toLowerCase().includes('microsoft') &&
+         (v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('online'))) &&
+        !isLowQuality(v)
+      ) || null;
     }
 
-    // Fallback: any voice in the language (prefer Google voices as they're higher quality)
+    // Strategy 3: Find known premium female voice
     if (!selectedVoice) {
-      selectedVoice = langVoices.find(v => v.name.toLowerCase().includes('google')) ||
-                      langVoices[0] ||
-                      voices.find(v => v.lang.startsWith(speechLang.split('-')[0])) ||
-                      voices[0];
+      selectedVoice = langVoices.find(v => isPremiumFemale(v) && !isLowQuality(v)) || null;
+    }
+
+    // Strategy 4: Any premium indicator voice
+    if (!selectedVoice) {
+      selectedVoice = langVoices.find(v => isPremium(v) && !isLowQuality(v)) || null;
+    }
+
+    // Strategy 5: Any non-low-quality voice
+    if (!selectedVoice) {
+      selectedVoice = langVoices.find(v => !isLowQuality(v)) || null;
+    }
+
+    // Final fallback: first available voice
+    if (!selectedVoice) {
+      selectedVoice = langVoices[0] || voices.find(v => v.lang.startsWith('en')) || voices[0];
     }
 
     if (selectedVoice) {
       utterance.voice = selectedVoice;
-      console.log('[Voice] Selected voice:', selectedVoice.name, selectedVoice.lang);
+      console.log('[Voice] ✓ Selected:', selectedVoice.name, `(${selectedVoice.lang})`,
+        isPremium(selectedVoice) ? '⭐ Premium' : '');
     }
 
     utterance.onstart = () => {
