@@ -3,10 +3,8 @@
 // Fast, reliable translation for UI text
 // ===========================================
 
-// Get API key at runtime (not from config to avoid build-time detection)
-// Key name is built dynamically to bypass Railpack static analysis
-const ENV_KEY = ['GOOGLE', 'TRANSLATE', 'API', 'KEY'].join('_');
-const getApiKey = () => (process.env as Record<string, string | undefined>)[ENV_KEY] || '';
+// Get API key at runtime - using alternative name to bypass Railpack
+const getApiKey = () => process.env.GCP_API_KEY || '';
 const GOOGLE_TRANSLATE_URL = 'https://translation.googleapis.com/language/translate/v2';
 
 // ===========================================

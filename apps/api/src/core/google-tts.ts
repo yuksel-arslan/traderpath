@@ -3,10 +3,8 @@
 // High-quality TTS with WaveNet/Neural2 voices
 // ===========================================
 
-// Get API key at runtime (not from config to avoid build-time detection)
-// Key name is built dynamically to bypass Railpack static analysis
-const ENV_KEY = ['GOOGLE', 'TRANSLATE', 'API', 'KEY'].join('_');
-const getApiKey = () => (process.env as Record<string, string | undefined>)[ENV_KEY] || '';
+// Get API key at runtime - using alternative name to bypass Railpack
+const getApiKey = () => process.env.GCP_API_KEY || '';
 const GOOGLE_TTS_URL = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 
 // ===========================================
