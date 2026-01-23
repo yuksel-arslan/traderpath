@@ -756,6 +756,23 @@ Kullanıcı Hakları Aktif:
 - **AI Concierge mikrofon hatası düzeltildi**:
   - Chrome kullanıcı tıklaması gerektiriyor (auto-start kaldırıldı)
   - "Start" butonu eklendi
+- **Top Coins by Reliability Score özelliği eklendi**:
+  - Yeni tablo: `CoinScoreCache` - periyodik coin tarama sonuçlarını cache'liyor
+  - Yeni servis: `coin-score-cache.service.ts` - top 30 coini tarayıp skorlar
+  - **Skor Bileşenleri**:
+    - Liquidity Score: Volume/MarketCap oranı (yüksek = daha likit)
+    - Volatility Score: ATR % (düşük = daha stabil)
+    - Trend Score: MA convergence (hizalı = güçlü trend)
+    - Momentum Score: RSI, MACD (optimal aralıkta = yüksek skor)
+  - **Cron Job**: Her 2 saatte bir otomatik tarama (00:30, 02:30, ...)
+  - **API Endpoint**: `GET /api/analysis/top-coins` (ücretsiz)
+    - `limit`: 1-20 arası (varsayılan 5)
+    - `sortBy`: 'reliabilityScore' | 'totalScore'
+    - `tradeableOnly`: true = sadece GO/CONDITIONAL_GO
+  - **AI Concierge Intent**: `TOP_COINS_BY_SCORE`
+    - Örnek komutlar: "en yüksek skorlu 5 coin", "hangi coin almalı", "güvenilir coinler"
+    - Ücretsiz kullanım (cache'den okuma)
+  - Admin refresh endpoint: `POST /api/analysis/top-coins/refresh`
 
 ---
 

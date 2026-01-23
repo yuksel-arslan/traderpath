@@ -41,6 +41,7 @@ import scheduledReportsRoutes from './modules/scheduled/scheduled-reports.routes
 import smartCoinsRoutes from './modules/analysis/smart-coins.routes';
 import { scheduledReportsService } from './modules/scheduled/scheduled-reports.service';
 import { conciergeRoutes } from './modules/concierge/concierge.routes';
+import { startCoinScoreCacheJob, stopCoinScoreCacheJob } from './modules/analysis/coin-score-cache.job';
 
 // ===========================================
 // Server Configuration
@@ -461,6 +462,10 @@ const start = async () => {
     scheduledReportsService.start();
     logger.info('✓ Scheduled reports cron started');
 
+    // Start coin score cache cron job
+    startCoinScoreCacheJob();
+    logger.info('✓ Coin score cache cron started');
+
     // Start server
     await app.listen({
       port: config.port,
@@ -506,6 +511,10 @@ const shutdown = async (signal: string) => {
     // Stop scheduled reports cron
     scheduledReportsService.stop();
     logger.info('✓ Scheduled reports cron stopped');
+
+    // Stop coin score cache cron
+    stopCoinScoreCacheJob();
+    logger.info('✓ Coin score cache cron stopped');
 
     // Stop accepting new connections
     await app.close();

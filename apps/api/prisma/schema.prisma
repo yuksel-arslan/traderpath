@@ -745,3 +745,47 @@ model CostSettings {
 
   @@map("cost_settings")
 }
+
+// ===========================================
+// Coin Score Cache (Top Coins by Reliability)
+// ===========================================
+
+model CoinScoreCache {
+  id           String   @id @default(uuid()) @db.Uuid
+  symbol       String   @unique @db.VarChar(20)
+
+  // Analysis scores
+  totalScore       Decimal  @map("total_score") @db.Decimal(4, 1)      // 0-100 overall score
+  reliabilityScore Decimal  @map("reliability_score") @db.Decimal(4, 1) // 0-100 reliability score
+
+  // Score components
+  liquidityScore   Decimal  @map("liquidity_score") @db.Decimal(4, 1)   // Volume/MarketCap ratio
+  volatilityScore  Decimal  @map("volatility_score") @db.Decimal(4, 1)  // ATR-based (lower = more stable)
+  trendScore       Decimal  @map("trend_score") @db.Decimal(4, 1)       // MA convergence
+  momentumScore    Decimal  @map("momentum_score") @db.Decimal(4, 1)    // RSI, MACD strength
+
+  // Verdict info
+  verdict          String   @db.VarChar(20) // GO, CONDITIONAL_GO, WAIT, AVOID
+  direction        String?  @db.VarChar(10) // LONG, SHORT
+  confidence       Decimal  @db.Decimal(3, 1) // 0-10 confidence level
+
+  // Market data snapshot
+  price            Decimal  @db.Decimal(20, 8)
+  priceChange24h   Decimal  @map("price_change_24h") @db.Decimal(6, 2)
+  volume24h        Decimal  @map("volume_24h") @db.Decimal(20, 2)
+  marketCap        Decimal  @map("market_cap") @db.Decimal(20, 2)
+
+  // Analysis reference
+  analysisId       String?  @map("analysis_id") @db.Uuid
+  interval         String   @default("4h") @db.VarChar(10)
+
+  // Timestamps
+  scannedAt        DateTime @default(now()) @map("scanned_at")
+  expiresAt        DateTime @map("expires_at")
+
+  @@index([reliabilityScore(sort: Desc)])
+  @@index([totalScore(sort: Desc)])
+  @@index([verdict])
+  @@index([scannedAt])
+  @@map("coin_score_cache")
+}

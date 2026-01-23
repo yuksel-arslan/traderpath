@@ -4,6 +4,7 @@ export type IntentType =
   | 'QUICK_ANALYSIS'      // "BTC nasıl?", "ETH'ye gireyim mi?"
   | 'SPECIFIC_ANALYSIS'   // "BTC scalp analizi", "ETH 1h analiz"
   | 'MULTI_ANALYSIS'      // "Top 5 coin analiz et", "Favori coinlerim"
+  | 'TOP_COINS_BY_SCORE'  // "En yüksek skorlu coinler", "Top 5 güvenilir coin"
   | 'EXPERT_ASK'          // "RSI nedir?", "MACD nasıl çalışır?"
   | 'ALERT_SET'           // "BTC 70K olunca haber ver"
   | 'ALERT_LIST'          // "Alarmlarım neler?"
@@ -92,6 +93,22 @@ export interface HelpResult {
   examples: string[];
 }
 
+export interface TopCoinResult {
+  symbol: string;
+  reliabilityScore: number;
+  totalScore: number;
+  verdict: VerdictType;
+  direction: 'LONG' | 'SHORT' | null;
+  price: number;
+  priceChange24h: number;
+  confidence: number;
+}
+
+export interface TopCoinsResult {
+  coins: TopCoinResult[];
+  lastScanAt: Date | null;
+}
+
 export type ConciergeResultData =
   | QuickAnalysisResult
   | QuickAnalysisResult[]   // Multi-analysis
@@ -99,6 +116,7 @@ export type ConciergeResultData =
   | AlertSetResult
   | StatusResult
   | HelpResult
+  | TopCoinsResult          // Top coins by reliability score
   | { error: string };
 
 export interface ConciergeResponse {
