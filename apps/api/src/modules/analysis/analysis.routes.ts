@@ -15,6 +15,7 @@ import { TradeType, getTradeConfig, getStepConfig, getTradeTypeFromInterval } fr
 import { economicCalendarService } from './services/economic-calendar.service';
 import { getCautionRate, calculateCautionOutcomes, calculateExpiredOutcomes } from '../reports/outcome.service';
 import { prisma } from '../../core/database';
+import { coinScoreCacheService, CoinScore } from './services/coin-score-cache.service';
 
 // User type from JWT
 interface JwtUser {
@@ -4477,6 +4478,96 @@ Explain the key risks and what conditions would need to change before trading th
       return reply.status(500).send({
         success: false,
         error: { code: 'PURCHASE_ERROR', message: 'Failed to purchase analysis' },
+      });
+    }
+  });
+
+  /**
+   * GET /api/analysis/top-coins
+   * Get top coins by reliability/analysis score
+   * Query params:
+   *   - limit: number (1-20, default 5)
+   *   - sortBy: 'reliabilityScore' | 'totalScore' (default 'reliabilityScore')
+   *   - tradeableOnly: boolean (default false) - only GO/CONDITIONAL_GO verdicts
+   */
+  app.get('/top-coins', async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const query = request.query as {
+        limit?: string;
+        sortBy?: string;
+        tradeableOnly?: string;
+      };
+
+      const limit = Math.min(20, Math.max(1, parseInt(query.limit || '5', 10)));
+      const sortBy = (query.sortBy === 'totalScore' ? 'totalScore' : 'reliabilityScore') as 'reliabilityScore' | 'totalScore';
+      const tradeableOnly = query.tradeableOnly === 'true';
+
+      let coins: CoinScore[];
+
+      if (tradeableOnly) {
+        coins = await coinScoreCacheService.getTopTradeableCoins(limit);
+      } else {
+        coins = await coinScoreCacheService.getTopCoinsByScore(limit, sortBy);
+      }
+
+      // Check if cache is stale
+      const cacheStats = await coinScoreCacheService.getCacheStats();
+
+      return reply.send({
+        success: true,
+        data: {
+          coins,
+          cacheInfo: {
+            lastScanAt: cacheStats.lastScanAt,
+            totalCoinsInCache: cacheStats.totalCoins,
+            freshCoins: cacheStats.freshCoins,
+            isStale: cacheStats.staleCoins > cacheStats.freshCoins,
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Get top coins error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'TOP_COINS_ERROR', message: 'Failed to get top coins' },
+      });
+    }
+  });
+
+  /**
+   * POST /api/analysis/top-coins/refresh
+   * Manually trigger a coin score cache refresh (admin only)
+   */
+  app.post('/top-coins/refresh', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const user = getUser(request);
+
+      // Admin only
+      if (!user.isAdmin) {
+        return reply.status(403).send({
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'Admin access required' },
+        });
+      }
+
+      // Trigger scan in background
+      coinScoreCacheService.scanAllCoins('4h').then((result) => {
+        console.log(`[TopCoins] Manual refresh complete. Success: ${result.success}, Failed: ${result.failed}`);
+      }).catch((error) => {
+        console.error('[TopCoins] Manual refresh failed:', error);
+      });
+
+      return reply.send({
+        success: true,
+        data: {
+          message: 'Coin score cache refresh started. Results will be available shortly.',
+        },
+      });
+    } catch (error) {
+      console.error('Refresh top coins error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'REFRESH_ERROR', message: 'Failed to start refresh' },
       });
     }
   });

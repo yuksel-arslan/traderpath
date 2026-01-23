@@ -157,6 +157,36 @@ function detectIntent(message: string): {
     return { intent: 'CONVERSATIONAL' };
   }
 
+  // TOP_COINS_BY_SCORE intent - top reliable/tradeable coins
+  if (
+    lower.includes('en yüksek skor') ||
+    lower.includes('en yüksek puan') ||
+    lower.includes('highest score') ||
+    lower.includes('top score') ||
+    lower.includes('güvenilir coin') ||
+    lower.includes('reliable coin') ||
+    lower.includes('en iyi coin') ||
+    lower.includes('best coin') ||
+    lower.includes('hangi coin') ||
+    lower.includes('which coin') ||
+    lower.includes('önerebilir') ||
+    lower.includes('recommend') ||
+    lower.includes('trade yapayım') ||
+    lower.includes('işlem yapayım') ||
+    lower.includes('ne almalı') ||
+    lower.includes('what should i buy') ||
+    lower.includes('en güvenilir') ||
+    lower.includes('most reliable') ||
+    (lower.includes('top') && lower.includes('coin') && !lower.includes('analiz')) ||
+    (lower.includes('ilk') && (lower.includes('coin') || lower.includes('kripto'))) ||
+    (lower.includes('listele') && (lower.includes('en iyi') || lower.includes('güvenilir')))
+  ) {
+    // Extract count if specified
+    const countMatch = lower.match(/(\d+)/);
+    const count = countMatch ? parseInt(countMatch[1], 10) : 5;
+    return { intent: 'TOP_COINS_BY_SCORE', symbol: String(Math.min(20, Math.max(1, count))) };
+  }
+
   // Help intent - expanded patterns
   if (
     lower === 'help' ||
@@ -697,6 +727,9 @@ class ConciergeService {
 
         case 'SCHEDULE_DELETE':
           return await this.handleScheduleDelete(userId, message, creditBalance, detectedLanguage);
+
+        case 'TOP_COINS_BY_SCORE':
+          return await this.handleTopCoinsByScore(symbol ? parseInt(symbol, 10) : 5, creditBalance, detectedLanguage);
 
         case 'ANALYSIS':
           return await this.handleAnalysis(userId, symbol!, interval || '4h', detectedLanguage, creditBalance);
@@ -2041,6 +2074,78 @@ Or visit /scheduled to delete.`,
       creditsSpent: 0,
       creditsRemaining: creditBalance,
     };
+  }
+
+  private async handleTopCoinsByScore(
+    limit: number,
+    creditBalance: number,
+    language: string
+  ): Promise<ConciergeResponse> {
+    try {
+      // Import and use the coin score cache service
+      const { coinScoreCacheService } = await import('../analysis/services/coin-score-cache.service');
+
+      // Get top coins by reliability score
+      const coins = await coinScoreCacheService.getTopCoinsByScore(limit, 'reliabilityScore');
+      const cacheStats = await coinScoreCacheService.getCacheStats();
+
+      if (coins.length === 0) {
+        // Cache is empty - might be first run
+        return {
+          success: false,
+          intent: 'TOP_COINS_BY_SCORE',
+          message: language === 'tr'
+            ? 'Henüz coin taraması yapılmamış. Sistem her 2 saatte bir top coinleri otomatik tarar. Lütfen kısa süre sonra tekrar deneyin.'
+            : 'No coin scan data available yet. The system automatically scans top coins every 2 hours. Please try again shortly.',
+          creditsSpent: 0,
+          creditsRemaining: creditBalance,
+        };
+      }
+
+      // Build formatted response
+      const coinListStr = coins.map((coin, index) => {
+        const verdictEmoji = coin.verdict === 'GO' ? '🟢' : coin.verdict === 'CONDITIONAL_GO' ? '🟡' : coin.verdict === 'WAIT' ? '🟠' : '🔴';
+        const directionStr = coin.direction ? (coin.direction === 'LONG' ? '↑' : '↓') : '-';
+        const changeStr = coin.priceChange24h >= 0 ? `+${coin.priceChange24h.toFixed(1)}%` : `${coin.priceChange24h.toFixed(1)}%`;
+
+        return language === 'tr'
+          ? `${index + 1}. ${verdictEmoji} **${coin.symbol}** - Skor: ${coin.reliabilityScore}/100 ${directionStr}\n   Fiyat: $${coin.price.toLocaleString()} (${changeStr})`
+          : `${index + 1}. ${verdictEmoji} **${coin.symbol}** - Score: ${coin.reliabilityScore}/100 ${directionStr}\n   Price: $${coin.price.toLocaleString()} (${changeStr})`;
+      }).join('\n\n');
+
+      const lastScanStr = cacheStats.lastScanAt
+        ? new Date(cacheStats.lastScanAt).toLocaleString(language === 'tr' ? 'tr-TR' : 'en-US')
+        : (language === 'tr' ? 'Bilinmiyor' : 'Unknown');
+
+      const headerText = language === 'tr'
+        ? `📊 **En Yüksek Güvenilirlik Skoruna Sahip ${coins.length} Coin:**`
+        : `📊 **Top ${coins.length} Coins by Reliability Score:**`;
+
+      const footerText = language === 'tr'
+        ? `\n\n_Son tarama: ${lastScanStr}_\n💡 Detaylı analiz için "BTC analiz et" yazabilirsiniz.`
+        : `\n\n_Last scan: ${lastScanStr}_\n💡 Type "analyze BTC" for detailed analysis.`;
+
+      return {
+        success: true,
+        intent: 'TOP_COINS_BY_SCORE',
+        message: `${headerText}\n\n${coinListStr}${footerText}`,
+        creditsSpent: 0, // Free feature
+        creditsRemaining: creditBalance,
+        detectedLanguage: language,
+      };
+    } catch (error) {
+      console.error('[Concierge] Top coins by score error:', error);
+      return {
+        success: false,
+        intent: 'TOP_COINS_BY_SCORE',
+        message: language === 'tr'
+          ? 'Top coin listesi alınırken hata oluştu. Lütfen tekrar deneyin.'
+          : 'Error fetching top coins list. Please try again.',
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 
   private async handleAnalysis(
