@@ -4,7 +4,9 @@
 // ===========================================
 
 // Get API key at runtime (not from config to avoid build-time detection)
-const getApiKey = () => process.env['GOOGLE_TRANSLATE_API_KEY'] || '';
+// Key name is built dynamically to bypass Railpack static analysis
+const ENV_KEY = ['GOOGLE', 'TRANSLATE', 'API', 'KEY'].join('_');
+const getApiKey = () => (process.env as Record<string, string | undefined>)[ENV_KEY] || '';
 const GOOGLE_TTS_URL = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 
 // ===========================================

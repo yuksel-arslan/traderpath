@@ -56,8 +56,8 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
 
-  // Note: Google Cloud keys (GOOGLE_TRANSLATE_API_KEY, GOOGLE_CLOUD_PROJECT_ID)
-  // are accessed dynamically at runtime to avoid Railpack static detection
+  // Note: Google Cloud keys are accessed dynamically at runtime
+  // to avoid Railpack static detection (see google-tts.ts, google-translate.ts)
 
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default('60000'),
