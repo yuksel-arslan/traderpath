@@ -477,28 +477,7 @@ export default function ConciergePage() {
     }
   }, [lang, selectedCoin, speak, startListening]);
 
-  // Handle expert input
-  const handleExpertInput = useCallback((text: string) => {
-    const lowerText = text.toLowerCase();
-    const isYes = YES_KEYWORDS.some(k => lowerText.includes(k));
-    const isNo = NO_KEYWORDS.some(k => lowerText.includes(k));
-
-    if (isYes || isNo) {
-      setIncludeExpert(isYes);
-      runAnalysis(isYes);
-    } else {
-      // Not understood
-      const retryMsg = lang === 'tr'
-        ? 'Evet veya hayır diyebilir misiniz?'
-        : 'Could you say yes or no?';
-
-      speak(retryMsg, () => {
-        startListening();
-      });
-    }
-  }, [lang, speak, startListening, runAnalysis]);
-
-  // Run analysis
+  // Run analysis (moved before handleExpertInput to avoid "used before declaration" error)
   const runAnalysis = useCallback(async (withExpert: boolean) => {
     if (!selectedCoin || !selectedTimeframe) return;
 
@@ -565,6 +544,27 @@ export default function ConciergePage() {
       setStep('idle');
     }
   }, [selectedCoin, selectedTimeframe, lang, speak, startListening]);
+
+  // Handle expert input
+  const handleExpertInput = useCallback((text: string) => {
+    const lowerText = text.toLowerCase();
+    const isYes = YES_KEYWORDS.some(k => lowerText.includes(k));
+    const isNo = NO_KEYWORDS.some(k => lowerText.includes(k));
+
+    if (isYes || isNo) {
+      setIncludeExpert(isYes);
+      runAnalysis(isYes);
+    } else {
+      // Not understood
+      const retryMsg = lang === 'tr'
+        ? 'Evet veya hayır diyebilir misiniz?'
+        : 'Could you say yes or no?';
+
+      speak(retryMsg, () => {
+        startListening();
+      });
+    }
+  }, [lang, speak, startListening, runAnalysis]);
 
   // Handle email input
   const handleEmailInput = useCallback(async (text: string) => {
