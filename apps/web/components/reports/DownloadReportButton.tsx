@@ -1291,7 +1291,13 @@ export function DownloadReportButton({
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Score:</span>
-                        <span className="font-medium text-foreground">{lastPdfData?.reportData.verdict.overallScore}/100</span>
+                        <span className="font-medium text-foreground">
+                          {lastPdfData?.reportData.verdict.overallScore
+                            ? (lastPdfData.reportData.verdict.overallScore <= 10
+                                ? Math.round(lastPdfData.reportData.verdict.overallScore * 10)
+                                : Math.round(lastPdfData.reportData.verdict.overallScore))
+                            : 0}/100
+                        </span>
                       </div>
                     </div>
 
