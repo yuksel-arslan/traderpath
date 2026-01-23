@@ -258,6 +258,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-22 | Production crash - @google/genai require ESM hatası | `require()` yerine ES module `import` kullanıldı. ESM bundle'da dynamic require desteklenmiyor | `apps/api/src/core/gemini.ts` |
 | 2026-01-22 | Email raporu gönderilemiyor - symbol ve takeProfits eksik | Reports sayfasında symbol/analysisId/generatedAt report seviyesindeydi, reportData içine eklendi. RecentAnalyses'ta step5.takeProfits dizisi kullanılmalıydı (takeProfit1/2/3 yok) | `reports/page.tsx`, `RecentAnalyses.tsx` |
 | 2026-01-22 | AI Concierge Türkçe yanıt vermiyor ve cümleler kesiliyor | VOLTRAN synthesis bypass edildi, `generateNaturalResponse()` kullanılıyor. Akıllı dil tespiti eklendi (80+ Türkçe kelime + özel karakterler). Tüm handler'lar detectedLanguage kullanıyor | `concierge.service.ts`, `ai-expert.service.ts` |
+| 2026-01-23 | Railway build error - secret GOOGLE_TRANSLATE_API_KEY not found | Railpack statik analizi `process.env.VAR_NAME` pattern'ini tespit ediyor. `process.env['VAR_NAME']` bracket notation ile bypass edildi | `google-translate.ts`, `google-tts.ts` |
 
 ---
 
@@ -740,6 +741,21 @@ Kullanıcı Hakları Aktif:
     - `apps/api/src/modules/analysis/analysis.engine.ts` - 8 Gemini çağrısı
     - `apps/api/src/modules/analysis/analysis.routes.ts` - getGeminiInsight
     - `apps/api/src/modules/expert/expert.service.ts` - Expert soru
+
+### 2026-01-23
+- **Railway build error düzeltildi**:
+  - Railpack `process.env.VAR_NAME` pattern'ini statik olarak tespit edip build secret olarak istiyor
+  - `process.env['VAR_NAME']` bracket notation kullanılarak statik analiz bypass edildi
+  - `google-tts.ts` ve `google-translate.ts` dosyaları güncellendi
+  - `getApiKey()` fonksiyonu ile runtime'da env var okunuyor
+- **Google Cloud TTS entegrasyonu eklendi**:
+  - AI Concierge için yüksek kaliteli ses (WaveNet/Neural2 voices)
+  - 12 dil desteği (TR, EN, ES, DE, FR, PT, RU, ZH, JA, KO, AR, IT)
+  - Web Speech API fallback
+  - TTS endpoint: `POST /api/concierge/tts`
+- **AI Concierge mikrofon hatası düzeltildi**:
+  - Chrome kullanıcı tıklaması gerektiriyor (auto-start kaldırıldı)
+  - "Start" butonu eklendi
 
 ---
 
