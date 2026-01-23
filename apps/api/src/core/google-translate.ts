@@ -3,9 +3,8 @@
 // Fast, reliable translation for UI text
 // ===========================================
 
-import { config } from './config';
-
-const GOOGLE_TRANSLATE_API_KEY = config.googleCloud.translateApiKey;
+// Get API key at runtime (not from config to avoid build-time detection)
+const getApiKey = () => process.env['GOOGLE_TRANSLATE_API_KEY'] || '';
 const GOOGLE_TRANSLATE_URL = 'https://translation.googleapis.com/language/translate/v2';
 
 // ===========================================
@@ -73,7 +72,8 @@ export const GOOGLE_TRANSLATE_LANGUAGES: Record<string, string> = {
 export async function translateWithGoogle(
   request: TranslateRequest
 ): Promise<TranslateResponse> {
-  if (!GOOGLE_TRANSLATE_API_KEY) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
     throw new Error('GOOGLE_TRANSLATE_API_KEY is not configured');
   }
 
@@ -96,7 +96,7 @@ export async function translateWithGoogle(
 
   try {
     const response = await fetch(
-      `${GOOGLE_TRANSLATE_URL}?key=${GOOGLE_TRANSLATE_API_KEY}`,
+      `${GOOGLE_TRANSLATE_URL}?key=${apiKey}`,
       {
         method: 'POST',
         headers: {
@@ -189,20 +189,21 @@ export async function translateRecord(
  * Check if Google Translate API is available
  */
 export function isGoogleTranslateAvailable(): boolean {
-  return !!GOOGLE_TRANSLATE_API_KEY;
+  return !!getApiKey();
 }
 
 /**
  * Detect the language of a text
  */
 export async function detectLanguage(text: string): Promise<string | null> {
-  if (!GOOGLE_TRANSLATE_API_KEY) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
     return null;
   }
 
   try {
     const response = await fetch(
-      `https://translation.googleapis.com/language/translate/v2/detect?key=${GOOGLE_TRANSLATE_API_KEY}`,
+      `https://translation.googleapis.com/language/translate/v2/detect?key=${apiKey}`,
       {
         method: 'POST',
         headers: {

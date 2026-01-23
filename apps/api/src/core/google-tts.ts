@@ -3,10 +3,8 @@
 // High-quality TTS with WaveNet/Neural2 voices
 // ===========================================
 
-import { config } from './config';
-
-// Use same API key as Translate (same GCP project)
-const GOOGLE_TTS_API_KEY = config.googleCloud.translateApiKey;
+// Get API key at runtime (not from config to avoid build-time detection)
+const getApiKey = () => process.env['GOOGLE_TRANSLATE_API_KEY'] || '';
 const GOOGLE_TTS_URL = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 
 // ===========================================
@@ -110,7 +108,8 @@ const VOICE_CONFIG: Record<string, { male: string; female: string; languageCode:
  * @returns Base64 encoded audio content
  */
 export async function synthesizeSpeech(request: TTSRequest): Promise<TTSResponse> {
-  if (!GOOGLE_TTS_API_KEY) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
     throw new Error('GOOGLE_TTS_API_KEY is not configured');
   }
 
@@ -136,7 +135,7 @@ export async function synthesizeSpeech(request: TTSRequest): Promise<TTSResponse
   };
 
   try {
-    const response = await fetch(`${GOOGLE_TTS_URL}?key=${GOOGLE_TTS_API_KEY}`, {
+    const response = await fetch(`${GOOGLE_TTS_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -169,7 +168,7 @@ export async function synthesizeSpeech(request: TTSRequest): Promise<TTSResponse
  * Check if Google TTS is available
  */
 export function isGoogleTTSAvailable(): boolean {
-  return !!GOOGLE_TTS_API_KEY;
+  return !!getApiKey();
 }
 
 /**
