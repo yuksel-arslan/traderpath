@@ -370,7 +370,8 @@ async function translateReportContent(
 async function sendReportEmail(
   reportData: AnalysisReportData,
   pdfBase64: string,
-  fileName: string
+  fileName: string,
+  analysisId?: string
 ): Promise<{ success: boolean; email?: string; error?: string }> {
   try {
     const token = await getAuthToken();
@@ -390,6 +391,7 @@ async function sendReportEmail(
         generatedAt: reportData.generatedAt,
         pdfBase64,
         fileName,
+        analysisId,
       }),
     });
 
@@ -1051,7 +1053,8 @@ export function DownloadReportButton({
     const result = await sendReportEmail(
       lastPdfData.reportData,
       lastPdfData.base64,
-      lastPdfData.fileName
+      lastPdfData.fileName,
+      analysisId
     );
 
     setIsSendingEmail(false);
