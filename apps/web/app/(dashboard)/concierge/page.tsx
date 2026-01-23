@@ -397,8 +397,8 @@ export default function ConciergePage() {
   const startConversation = useCallback(() => {
     setStep('welcome');
     const welcomeMsg = lang === 'tr'
-      ? 'Merhaba! Ben TraderPath AI asistanınızım. Hangi coini analiz etmemi istersiniz?'
-      : "Hello! I'm your TraderPath AI assistant. Which coin would you like me to analyze?";
+      ? 'Merhaba! Ben TraderPath asistanınızım. Hangi coini analiz etmemi istersiniz?'
+      : "Hello! I'm your TraderPath assistant. Which coin would you like me to analyze?";
 
     speak(welcomeMsg, () => {
       setStep('ask-coin');
@@ -459,8 +459,8 @@ export default function ConciergePage() {
 
       const tfLabel = lang === 'tr' ? foundTimeframe.label.tr : foundTimeframe.label.en;
       const expertMsg = lang === 'tr'
-        ? `${selectedCoin} için ${tfLabel} analizi yapacağım. AI uzman yorumları da ekleyeyim mi?`
-        : `I'll analyze ${selectedCoin} for ${tfLabel}. Should I include AI expert commentary?`;
+        ? `${selectedCoin} için ${tfLabel} analizi yapacağım. Uzman yorumları da ekleyeyim mi?`
+        : `I'll analyze ${selectedCoin} for ${tfLabel}. Should I include expert commentary?`;
 
       speak(expertMsg, () => {
         startListening();
@@ -496,7 +496,7 @@ export default function ConciergePage() {
         startListening();
       });
     }
-  }, [lang, speak, startListening]);
+  }, [lang, speak, startListening, runAnalysis]);
 
   // Run analysis
   const runAnalysis = useCallback(async (withExpert: boolean) => {
