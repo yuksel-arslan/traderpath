@@ -230,6 +230,7 @@ export default function ConciergePage() {
 
     try {
       // Call Google Cloud TTS API
+      console.log('[TTS] Calling Google Cloud TTS API...');
       const response = await authFetch('/api/concierge/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -242,8 +243,10 @@ export default function ConciergePage() {
       });
 
       const data = await response.json();
+      console.log('[TTS] Response:', { success: data.success, hasAudio: !!data.data?.audioContent });
 
       if (data.success && data.data?.audioContent) {
+        console.log('[TTS] Playing Google Cloud TTS audio...');
         // Create audio from base64
         const audioBlob = new Blob(
           [Uint8Array.from(atob(data.data.audioContent), c => c.charCodeAt(0))],
@@ -263,7 +266,7 @@ export default function ConciergePage() {
 
         audio.onerror = () => {
           URL.revokeObjectURL(audioUrl);
-          console.error('Audio playback error');
+          console.error('[TTS] Audio playback error');
           isSpeakingRef.current = false;
           setIsSpeaking(false);
           if (onEnd) {
@@ -272,13 +275,14 @@ export default function ConciergePage() {
         };
 
         await audio.play();
+        console.log('[TTS] Audio started playing');
       } else {
         // Fallback to Web Speech API if Google TTS fails
-        console.warn('Google TTS failed, falling back to Web Speech API');
+        console.warn('[TTS] Google TTS failed, falling back to Web Speech API. Response:', data);
         fallbackSpeak(text, onEnd);
       }
     } catch (error) {
-      console.error('TTS API error:', error);
+      console.error('[TTS] API error:', error);
       // Fallback to Web Speech API
       fallbackSpeak(text, onEnd);
     }
