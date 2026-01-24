@@ -190,14 +190,16 @@ export const RESPONSE_TEMPLATES = {
     UNKNOWN_INTENT: `I didn't understand. Try:\n\n• "Analyze BTC" - Coin analysis\n• "Show chart" - View chart\n• "What is RSI?" - Expert question\n• "help" - All commands`,
     HELP_TEXT: `TraderPath AI Concierge
 
-TOP 30 COINS (FREE - Pre-computed)
-• BTC, ETH, SOL, BNB, XRP, DOGE, AVAX, LINK...
-• Analysis refreshed every 2 hours automatically
-• Just ask: "How is BTC?" - instant free result!
+COIN ANALYSIS (25 credits)
+• 50+ coins: BTC, ETH, SOL, PEPE, WIF, SHIB...
+• "Analyze BTC" / "ETH 4h analysis"
+• 7-step deep analysis with 40+ indicators
 
-OTHER COINS (25 credits)
-• 50+ coins supported beyond top 30
-• "Analyze PEPE" / "WIF scalp"
+TOP 30 COIN SCAN (300 credits)
+• "Scan top 30 coins" - Full market scan
+• Analyzes top 30 coins by volume
+• Shows reliability scores & rankings
+• 60% off (normal: 750 credits)
 
 CHARTS (free)
 • "Show BTC chart"
@@ -213,7 +215,7 @@ ALERTS
 • "My alerts"
 
 TOP COINS
-• "Top 5 coins" - Best scoring coins
+• "Top 5 coins" - Best scoring from last scan
 • "Best coins to trade" - GO signals only
 
 SCHEDULED ANALYSIS
@@ -279,14 +281,16 @@ I understand both English and Turkish. How can I help you today?`,
     UNKNOWN_INTENT: `Anlamadım. Şunları deneyin:\n\n• "BTC analiz" - Coin analizi\n• "Grafik göster" - Grafik görüntüle\n• "RSI nedir?" - Uzman sorusu\n• "yardım" - Tüm komutlar`,
     HELP_TEXT: `TraderPath AI Concierge
 
-TOP 30 COİN (ÜCRETSİZ - Ön-hesaplanmış)
-• BTC, ETH, SOL, BNB, XRP, DOGE, AVAX, LINK...
-• Her 2 saatte otomatik yenilenir
-• Sadece sor: "BTC nasıl?" - anında ücretsiz sonuç!
+COİN ANALİZİ (25 kredi)
+• 50+ coin: BTC, ETH, SOL, PEPE, WIF, SHIB...
+• "BTC analiz" / "ETH 4h analiz"
+• 40+ indikatörle 7 adımlı derin analiz
 
-DİĞER COİNLER (25 kredi)
-• Top 30 dışında 50+ coin destekleniyor
-• "PEPE analiz" / "WIF scalp"
+TOP 30 COİN TARAMASI (300 kredi)
+• "Top 30 coin tara" - Tam piyasa taraması
+• Hacme göre ilk 30 coini analiz eder
+• Güvenilirlik skorları ve sıralama gösterir
+• %60 indirimli (normal: 750 kredi)
 
 GRAFİK (ücretsiz)
 • "BTC grafiği göster"
@@ -302,7 +306,7 @@ ALARMLAR
 • "Alarmlarım"
 
 EN İYİ COİNLER
-• "En iyi 5 coin" - En yüksek skorlu coinler
+• "En iyi 5 coin" - Son taramadan en yüksek skorlular
 • "Hangi coin almalı?" - Sadece GO sinyalleri
 
 OTOMATİK ANALİZ

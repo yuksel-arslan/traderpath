@@ -1,7 +1,7 @@
 // ===========================================
 // Coin Score Cache Job
-// Periodic scanning of top coins for reliability scores
-// Runs every 2 hours
+// DISABLED: Automatic scanning removed to reduce costs
+// Now triggered on-demand by user request (300 credits)
 // ===========================================
 
 import cron from 'node-cron';
@@ -11,9 +11,15 @@ let cronJob: cron.ScheduledTask | null = null;
 
 /**
  * Start the coin score cache cron job
- * Runs every 2 hours at minute 30
+ * DISABLED: Automatic scanning removed - now on-demand only
  */
 export function startCoinScoreCacheJob(): void {
+  // DISABLED: Automatic scanning removed to reduce platform costs
+  // Users can request top coin scans on-demand for 300 credits
+  console.log('[CoinScoreCache] Automatic cron job DISABLED - on-demand scanning only');
+  return;
+
+  /* DISABLED CODE - kept for reference
   if (cronJob) {
     console.log('[CoinScoreCache] Cron job already running');
     return;
@@ -47,6 +53,7 @@ export function startCoinScoreCacheJob(): void {
       console.error('[CoinScoreCache] Initial scan failed:', error);
     }
   }, 30000); // 30 seconds delay
+  */
 }
 
 /**
@@ -61,7 +68,8 @@ export function stopCoinScoreCacheJob(): void {
 }
 
 /**
- * Manually trigger a scan (for admin use)
+ * Manually trigger a scan (for admin or paid user request)
+ * Cost: 300 credits for users (discounted from 750)
  */
 export async function triggerManualScan(): Promise<{ success: number; failed: number }> {
   console.log('[CoinScoreCache] Manual scan triggered');
