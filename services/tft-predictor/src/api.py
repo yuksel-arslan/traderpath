@@ -85,6 +85,18 @@ class TrainRequest(BaseModel):
     epochs: int = Field(50, description="Number of training epochs")
     batch_size: int = Field(64, description="Training batch size")
     trade_type: str = Field("swing", description="Trade type: scalp, swing, or position")
+    use_cloud: bool = Field(True, description="Use Google Cloud Vertex AI for training")
+
+
+class CloudTrainRequest(BaseModel):
+    """Request model for cloud training."""
+    symbols: List[str] = Field(..., description="Symbols to train on")
+    epochs: int = Field(100, description="Number of training epochs")
+    batch_size: int = Field(64, description="Training batch size")
+    trade_type: str = Field("swing", description="Trade type: scalp, swing, or position")
+    machine_type: str = Field("n1-standard-8", description="GCP machine type")
+    accelerator_type: str = Field("NVIDIA_TESLA_T4", description="GPU type")
+    accelerator_count: int = Field(1, description="Number of GPUs")
 
 
 class TrainStatusResponse(BaseModel):
@@ -351,6 +363,132 @@ async def stop_training():
     logger.info("Training stop requested")
 
     return {"message": "Training stopped"}
+
+
+# ============ Google Cloud Vertex AI Training ============
+
+@app.post("/train/cloud/start", tags=["Cloud Training"])
+async def start_cloud_training(request: CloudTrainRequest):
+    """
+    Start model training on Google Cloud Vertex AI.
+
+    This is the recommended way to train TFT models as it uses
+    GPU-accelerated compute instances.
+
+    Requires:
+    - GOOGLE_CLOUD_PROJECT environment variable
+    - Service account with Vertex AI permissions
+    """
+    # Check for required environment variables
+    project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
+    if not project_id:
+        raise HTTPException(
+            status_code=400,
+            detail="GOOGLE_CLOUD_PROJECT environment variable not set. Cloud training requires Google Cloud configuration."
+        )
+
+    # Validate trade type
+    valid_trade_types = ['scalp', 'swing', 'position']
+    if request.trade_type not in valid_trade_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid trade type. Must be one of: {', '.join(valid_trade_types)}"
+        )
+
+    try:
+        from .cloud.vertex_ai_trainer import VertexAITrainer
+
+        region = os.getenv("GOOGLE_CLOUD_REGION", "europe-west4")
+        trainer = VertexAITrainer(project_id=project_id, region=region)
+
+        # Start the training job
+        job_info = trainer.start_training(
+            trade_type=request.trade_type,
+            symbols=request.symbols,
+            epochs=request.epochs,
+            batch_size=request.batch_size,
+            machine_type=request.machine_type,
+            accelerator_type=request.accelerator_type,
+            accelerator_count=request.accelerator_count,
+        )
+
+        # Update local state for tracking
+        training_state["status"] = "training"
+        training_state["symbols"] = request.symbols
+        training_state["trade_type"] = request.trade_type
+        training_state["progress"] = {
+            "epoch": 0,
+            "total_epochs": request.epochs,
+            "loss": 0,
+            "val_loss": 0,
+            "eta": "Running on Google Cloud...",
+            "status": "cloud_training",
+            "logs": [
+                f"Trade Type: {request.trade_type.upper()}",
+                f"Started Vertex AI job: {job_info['job_name']}",
+                f"Machine: {request.machine_type} + {request.accelerator_type}",
+                f"Symbols: {', '.join(request.symbols)}",
+                "Training is running on Google Cloud. Check job status for progress.",
+            ]
+        }
+        training_state["cloud_job_id"] = job_info["job_id"]
+
+        logger.info(f"Started Vertex AI training job: {job_info['job_name']}")
+
+        return {
+            "success": True,
+            "message": "Cloud training started",
+            "job": job_info,
+        }
+
+    except ImportError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Google Cloud SDK not installed: {e}. Install with: pip install google-cloud-aiplatform"
+        )
+    except Exception as e:
+        logger.error(f"Failed to start cloud training: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/train/cloud/status/{job_id}", tags=["Cloud Training"])
+async def get_cloud_training_status(job_id: str):
+    """Get status of a Vertex AI training job."""
+    project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
+    if not project_id:
+        raise HTTPException(status_code=400, detail="GOOGLE_CLOUD_PROJECT not set")
+
+    try:
+        from .cloud.vertex_ai_trainer import VertexAITrainer
+
+        region = os.getenv("GOOGLE_CLOUD_REGION", "europe-west4")
+        trainer = VertexAITrainer(project_id=project_id, region=region)
+
+        status = trainer.get_job_status(job_id)
+        return {"success": True, "data": status}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/train/cloud/jobs", tags=["Cloud Training"])
+async def list_cloud_training_jobs(limit: int = 10):
+    """List recent Vertex AI training jobs."""
+    project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
+    if not project_id:
+        raise HTTPException(status_code=400, detail="GOOGLE_CLOUD_PROJECT not set")
+
+    try:
+        from .cloud.vertex_ai_trainer import VertexAITrainer
+
+        region = os.getenv("GOOGLE_CLOUD_REGION", "europe-west4")
+        trainer = VertexAITrainer(project_id=project_id, region=region)
+
+        jobs = trainer.list_jobs(limit=limit)
+        return {"success": True, "data": {"jobs": jobs}}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 def register_model_with_api(
