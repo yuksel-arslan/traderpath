@@ -282,6 +282,14 @@ async def start_training(request: TrainRequest):
     if training_state["status"] == "training":
         raise HTTPException(status_code=400, detail="Training already in progress")
 
+    # CHECK: Real training must be enabled - NO SILENT SIMULATION
+    use_real_training = os.getenv("TFT_REAL_TRAINING", "false").lower() == "true"
+    if not use_real_training:
+        raise HTTPException(
+            status_code=400,
+            detail="⚠️ REAL TRAINING NOT ENABLED! Set TFT_REAL_TRAINING=true in environment variables. Simulation mode is disabled to prevent wasting resources."
+        )
+
     # Validate trade type
     valid_trade_types = ['scalp', 'swing', 'position']
     if request.trade_type not in valid_trade_types:
@@ -473,14 +481,10 @@ def run_training_sync(symbols: List[str], epochs: int, batch_size: int, trade_ty
             f"Config: interval={info['interval']}, horizon={info['horizon']}, data={info['data_days']} days"
         )
 
-        # Check if we should use real training or simulation
-        use_real_training = os.getenv("TFT_REAL_TRAINING", "false").lower() == "true"
+        # ========== REAL TFT TRAINING (No simulation mode) ==========
+        training_state["progress"]["logs"].append("Starting REAL TFT training...")
 
-        if use_real_training:
-            # ========== REAL TFT TRAINING ==========
-            training_state["progress"]["logs"].append("Starting REAL TFT training...")
-
-            try:
+        try:
                 from .training.config import TrainingConfig, TradeType
                 from .training.trainer import TFTTrainer
 
@@ -568,55 +572,13 @@ def run_training_sync(symbols: List[str], epochs: int, batch_size: int, trade_ty
                 }
 
             except ImportError as e:
-                training_state["progress"]["logs"].append(f"Warning: Could not import trainer: {e}")
-                training_state["progress"]["logs"].append("Falling back to simulation mode...")
-                use_real_training = False
+                error_msg = f"FATAL: Could not import TFT trainer module: {e}"
+                training_state["progress"]["logs"].append(error_msg)
+                training_state["progress"]["logs"].append("Please ensure PyTorch and pytorch-forecasting are installed correctly.")
+                raise Exception(error_msg)
             except Exception as e:
                 training_state["progress"]["logs"].append(f"Real training error: {e}")
                 raise
-
-        if not use_real_training:
-            # ========== SIMULATION MODE ==========
-            training_state["progress"]["logs"].append("Running in SIMULATION mode (set TFT_REAL_TRAINING=true for real training)")
-
-            for epoch in range(1, epochs + 1):
-                # Check stop flag
-                if _stop_training_flag.is_set():
-                    logger.info("Training stopped by user request")
-                    break
-
-                # Check if status changed externally
-                if training_state["status"] != "training":
-                    logger.info(f"Training stopped: status changed to {training_state['status']}")
-                    break
-
-                # Simulate training progress
-                time.sleep(1)  # Faster simulation
-
-                # Calculate metrics with some randomness for realism
-                base_loss = 1.0 - (epoch / epochs) * 0.8
-                noise = random.uniform(-0.05, 0.05)
-                loss = max(0.01, base_loss + noise)
-                val_loss = max(0.02, base_loss + 0.05 + noise)
-
-                # Update progress
-                training_state["progress"]["epoch"] = epoch
-                training_state["progress"]["loss"] = round(loss, 4)
-                training_state["progress"]["val_loss"] = round(val_loss, 4)
-
-                remaining = epochs - epoch
-                elapsed = time.time() - start_time
-                avg_epoch_time = elapsed / epoch
-                eta_seconds = int(remaining * avg_epoch_time)
-                training_state["progress"]["eta"] = f"{eta_seconds}s" if eta_seconds < 60 else f"{eta_seconds // 60}m {eta_seconds % 60}s"
-
-                log_msg = f"Epoch {epoch}/{epochs} - Loss: {loss:.4f}, Val Loss: {val_loss:.4f}"
-                training_state["progress"]["logs"].append(log_msg)
-                logger.info(log_msg)
-
-                # Keep only last 100 logs to prevent memory issues
-                if len(training_state["progress"]["logs"]) > 100:
-                    training_state["progress"]["logs"] = training_state["progress"]["logs"][-100:]
 
         # Training complete
         if training_state["status"] == "training" and not _stop_training_flag.is_set():
