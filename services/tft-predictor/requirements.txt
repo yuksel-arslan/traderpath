@@ -2,9 +2,11 @@
 # PyTorch CPU-only (GPU support will be added later)
 # This reduces Docker image from ~5GB to ~1GB
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch>=2.0.0
-pytorch-forecasting>=1.0.0
-pytorch-lightning>=2.0.0
+torch>=2.0.0,<2.4.0
+# IMPORTANT: pytorch-forecasting requires pytorch-lightning<2.0
+# Using compatible versions to avoid "model must be LightningModule" error
+pytorch-forecasting>=1.0.0,<1.1.0
+pytorch-lightning>=1.9.0,<2.0.0
 
 # Data Processing
 pandas>=2.0.0
