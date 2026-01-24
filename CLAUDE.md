@@ -817,6 +817,15 @@ Kullanıcı Hakları Aktif:
   - AAVE, MKR, CRV, COMP, SNX, YFI, 1INCH (DeFi) eklendi
   - SAND, MANA, AXS, GALA, IMX, ENJ (Gaming) eklendi
   - Concierge SUPPORTED_COINS ile senkronize edildi
+- **AI Concierge Akıllı Cache Entegrasyonu**:
+  - Top 30 coin her 2 saatte ön-hesaplanıyor (CoinScoreCache)
+  - Kullanıcı bu coinleri sorduğunda ÜCRETSİZ cache'den döndürülüyor
+  - Cache'de olmayan coinler için normal analiz akışı (25 kredi)
+  - `getCoinFromCache()` ve `getCachedAnalysisData()` metodları eklendi
+  - `handleAnalysis()` önce cache kontrol ediyor
+  - Response'a `fromCache` ve `cacheExpiresAt` field'ları eklendi
+  - Help mesajları güncellendi (EN/TR) - cache özelliği açıklandı
+  - "Top 5 coins" ve "Hangi coin almalı?" komutları eklendi
 
 ---
 
