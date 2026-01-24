@@ -18,9 +18,13 @@ import {
   Save,
   Bot,
   MessageSquare,
+  Layers,
+  Filter,
+  Plus,
 } from 'lucide-react';
 import Link from 'next/link';
 import { authFetch } from '../../../../lib/api';
+import { TFTModelCard, TFTModel } from '../../../../components/admin/TFTModelCard';
 
 interface GeminiModel {
   id: string;
@@ -76,6 +80,12 @@ export default function AdminModelsPage() {
   const [isSavingGemini, setIsSavingGemini] = useState(false);
   const [geminiSuccess, setGeminiSuccess] = useState<string | null>(null);
 
+  // TFT Models state
+  const [tftModels, setTftModels] = useState<TFTModel[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelFilter, setModelFilter] = useState<string>('all');
+  const [modelActionLoading, setModelActionLoading] = useState<string | null>(null);
+
   const availableSymbols = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC'];
 
   const tradeTypeOptions = [
@@ -96,6 +106,104 @@ export default function AdminModelsPage() {
       console.error('Failed to fetch Gemini settings:', err);
     }
   }, []);
+
+  const fetchTFTModels = useCallback(async () => {
+    setModelsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (modelFilter !== 'all') {
+        params.set('tradeType', modelFilter);
+      }
+      params.set('limit', '50');
+
+      const response = await authFetch(`/api/admin/tft/models?${params.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTftModels(data.data.models);
+      }
+    } catch (err) {
+      console.error('Failed to fetch TFT models:', err);
+    } finally {
+      setModelsLoading(false);
+    }
+  }, [modelFilter]);
+
+  const handleActivateModel = async (modelId: string) => {
+    if (!confirm('Activate this model? It will become the active model for its trade type.')) {
+      return;
+    }
+
+    setModelActionLoading(modelId);
+    try {
+      const response = await authFetch(`/api/admin/tft/models/${modelId}/activate`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        await fetchTFTModels();
+        alert('Model activated successfully');
+      } else {
+        const data = await response.json();
+        alert(`Failed to activate model: ${data.error?.message || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Failed to activate model:', err);
+      alert('Failed to activate model');
+    } finally {
+      setModelActionLoading(null);
+    }
+  };
+
+  const handleArchiveModel = async (modelId: string) => {
+    if (!confirm('Archive this model? It will no longer appear in the main list.')) {
+      return;
+    }
+
+    setModelActionLoading(modelId);
+    try {
+      const response = await authFetch(`/api/admin/tft/models/${modelId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'ARCHIVED' }),
+      });
+
+      if (response.ok) {
+        await fetchTFTModels();
+      } else {
+        const data = await response.json();
+        alert(`Failed to archive model: ${data.error?.message || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Failed to archive model:', err);
+      alert('Failed to archive model');
+    } finally {
+      setModelActionLoading(null);
+    }
+  };
+
+  const handleDeleteModel = async (modelId: string) => {
+    if (!confirm('Delete this model permanently? This action cannot be undone.')) {
+      return;
+    }
+
+    setModelActionLoading(modelId);
+    try {
+      const response = await authFetch(`/api/admin/tft/models/${modelId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        await fetchTFTModels();
+      } else {
+        const data = await response.json();
+        alert(`Failed to delete model: ${data.error?.message || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Failed to delete model:', err);
+      alert('Failed to delete model');
+    } finally {
+      setModelActionLoading(null);
+    }
+  };
 
   const saveGeminiSettings = async () => {
     if (!geminiSettings) return;
@@ -166,9 +274,14 @@ export default function AdminModelsPage() {
   useEffect(() => {
     fetchStatus();
     fetchGeminiSettings();
+    fetchTFTModels();
     const interval = setInterval(fetchStatus, 10000);
     return () => clearInterval(interval);
-  }, [fetchStatus, fetchGeminiSettings]);
+  }, [fetchStatus, fetchGeminiSettings, fetchTFTModels]);
+
+  useEffect(() => {
+    fetchTFTModels();
+  }, [modelFilter, fetchTFTModels]);
 
   useEffect(() => {
     if (modelStatus?.status === 'training') {
@@ -632,6 +745,116 @@ export default function AdminModelsPage() {
           </div>
         </div>
       )}
+
+      {/* TFT Models Library */}
+      <div className="mt-8 sm:mt-12">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <Layers className="w-6 h-6 text-primary" />
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold">Trained Models Library</h2>
+              <p className="text-sm text-muted-foreground">
+                {tftModels.length} model{tftModels.length !== 1 ? 's' : ''} available
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <select
+                value={modelFilter}
+                onChange={(e) => setModelFilter(e.target.value)}
+                className="px-3 py-2 bg-background border rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none"
+              >
+                <option value="all">All Trade Types</option>
+                <option value="scalp">Scalp</option>
+                <option value="swing">Swing</option>
+                <option value="position">Position</option>
+              </select>
+            </div>
+            <button
+              onClick={fetchTFTModels}
+              disabled={modelsLoading}
+              className="p-2 border rounded-lg hover:bg-accent transition disabled:opacity-50"
+              title="Refresh models"
+            >
+              <RefreshCw className={`w-4 h-4 ${modelsLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {modelsLoading && tftModels.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <RefreshCw className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : tftModels.length === 0 ? (
+          <div className="bg-card border rounded-lg p-8 text-center">
+            <Database className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">No Models Found</h3>
+            <p className="text-muted-foreground mb-4">
+              {modelFilter !== 'all'
+                ? `No ${modelFilter} models have been trained yet.`
+                : 'No models have been trained yet. Start training above to create your first model.'}
+            </p>
+            {modelFilter !== 'all' && (
+              <button
+                onClick={() => setModelFilter('all')}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition"
+              >
+                Show All Models
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {tftModels.map((model) => (
+              <TFTModelCard
+                key={model.id}
+                model={model}
+                onActivate={handleActivateModel}
+                onArchive={handleArchiveModel}
+                onDelete={handleDeleteModel}
+                isLoading={modelActionLoading === model.id}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Active Models Summary */}
+        {tftModels.filter(m => m.isActive).length > 0 && (
+          <div className="mt-8 p-4 sm:p-6 bg-gradient-to-r from-green-500/10 to-teal-500/10 border border-green-500/20 rounded-lg">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              Active Models by Trade Type
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {['scalp', 'swing', 'position'].map((type) => {
+                const activeModel = tftModels.find(m => m.isActive && m.tradeType === type);
+                return (
+                  <div
+                    key={type}
+                    className={`p-4 rounded-lg border ${
+                      activeModel
+                        ? 'bg-green-500/5 border-green-500/30'
+                        : 'bg-background/50 border-dashed'
+                    }`}
+                  >
+                    <p className="text-sm font-medium capitalize mb-1">{type}</p>
+                    {activeModel ? (
+                      <>
+                        <p className="font-semibold truncate">{activeModel.name}</p>
+                        <p className="text-xs text-muted-foreground">v{activeModel.version}</p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No active model</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

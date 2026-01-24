@@ -775,6 +775,37 @@ Kullanıcı Hakları Aktif:
     - Ücretsiz kullanım (cache'den okuma)
   - Admin refresh endpoint: `POST /api/analysis/top-coins/refresh`
 
+### 2026-01-24
+- **TFT Model Yönetim Sistemi eklendi**:
+  - Yeni tablo: `TFTModel` - eğitilmiş TFT modellerini veritabanında saklıyor
+  - **Model Özellikleri**:
+    - name, version, tradeType (scalp/swing/position)
+    - filePath, fileSize, checksum (integrity check)
+    - symbols, epochs, batchSize, dataInterval, lookbackDays
+    - validationLoss, mape, trainingSamples, trainingTime
+    - hyperparameters (JSON), status, isActive
+  - **API Endpoints** (Admin):
+    - `GET /api/admin/tft/models` - Tüm modelleri listele
+    - `GET /api/admin/tft/models/active` - Trade type bazında aktif modeller
+    - `GET /api/admin/tft/models/:id` - Tekil model detayı
+    - `POST /api/admin/tft/models` - Yeni model kaydet
+    - `POST /api/admin/tft/models/:id/activate` - Modeli aktif yap
+    - `PATCH /api/admin/tft/models/:id` - Model güncelle
+    - `DELETE /api/admin/tft/models/:id` - Model sil
+  - **Frontend Bileşenleri**:
+    - `TFTModelCard.tsx` - Model kartı (metrikler, aksiyonlar, durum)
+    - Admin Models sayfası güncellendi (model listesi, filtreler)
+  - **Model Durumları**: TRAINING, READY, ACTIVE, ARCHIVED, FAILED
+  - Her trade type için sadece 1 aktif model olabilir
+  - Aktif model silinemiyor/arşivlenemiyor (önce başka model aktif edilmeli)
+- **Analysis screenshot tüm sayfayı yakalıyor**:
+  - `handleScreenshot` fonksiyonu `chartRef` yerine `pageRef` kullanıyor
+  - Tüm analiz içeriği (7 adım, verdict, trade plan) yakalanıyor
+- **Export dropdown PNG/JPG/Email seçenekleri**:
+  - Analysis ve Reports detay sayfalarına eklendi
+  - "Send via Email" önce dosyayı indiriyor, sonra email gönderiyor
+  - PDF butonu kaldırıldı, screenshot tabanlı export kullanılıyor
+
 ---
 
 ## 🤖 Claude Code Talimatları

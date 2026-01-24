@@ -789,3 +789,62 @@ model CoinScoreCache {
   @@index([scannedAt])
   @@map("coin_score_cache")
 }
+
+// ===========================================
+// TFT Prediction Models
+// ===========================================
+
+model TFTModel {
+  id           String   @id @default(uuid()) @db.Uuid
+
+  // Model identification
+  name         String   @db.VarChar(100) // e.g., "TFT Swing v1.2.0"
+  version      String   @db.VarChar(20)  // e.g., "1.2.0"
+  tradeType    String   @map("trade_type") @db.VarChar(20) // scalp, swing, position
+
+  // Model file path (relative or cloud storage URL)
+  filePath     String   @map("file_path") @db.VarChar(500)
+  fileSize     BigInt   @map("file_size") // bytes
+  checksum     String?  @db.VarChar(64) // SHA256 for integrity check
+
+  // Training configuration
+  symbols      String[] // ["BTC", "ETH", "SOL"]
+  epochs       Int
+  batchSize    Int      @default(64) @map("batch_size")
+  dataInterval String   @map("data_interval") @db.VarChar(10) // 15m, 1h, 4h
+  lookbackDays Int      @map("lookback_days")
+
+  // Training metrics
+  validationLoss  Decimal  @map("validation_loss") @db.Decimal(10, 6)
+  mape            Decimal  @db.Decimal(6, 2) // Mean Absolute Percentage Error
+  trainingSamples Int      @map("training_samples")
+  trainingTime    Int      @map("training_time") // seconds
+
+  // Hyperparameters (stored as JSON)
+  hyperparameters Json     @default("{}") // hidden_size, attention_heads, dropout, etc.
+
+  // Status
+  status       TFTModelStatus @default(READY)
+  isActive     Boolean  @default(false) @map("is_active") // Only one can be active per tradeType
+
+  // Metadata
+  description  String?  @db.VarChar(500)
+  trainedBy    String?  @map("trained_by") @db.Uuid // Admin user ID
+
+  // Timestamps
+  createdAt    DateTime @default(now()) @map("created_at")
+  activatedAt  DateTime? @map("activated_at")
+
+  @@index([tradeType, isActive])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@map("tft_models")
+}
+
+enum TFTModelStatus {
+  TRAINING
+  READY
+  ACTIVE
+  ARCHIVED
+  FAILED
+}
