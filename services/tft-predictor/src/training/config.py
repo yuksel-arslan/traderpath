@@ -56,61 +56,67 @@ class TradeTypeConfig:
 
 # Trade tipi bazlı varsayılan konfigürasyonlar
 TRADE_TYPE_CONFIGS: Dict[TradeType, TradeTypeConfig] = {
+    # SCALP: 15m interval, 6 ay veri = 180 * 24 * 4 = 17,280 candle
+    # Sequence: 72 + 4 = 76 candle → ~17,200 sequence (yeterli)
     TradeType.SCALP: TradeTypeConfig(
         trade_type=TradeType.SCALP,
-        prediction_horizons=[1, 2, 4],  # 1, 2, 4 saat
-        min_encoder_length=24,           # 24 saat minimum history
-        max_encoder_length=72,           # 72 saat maximum history (3 gün)
+        prediction_horizons=[1, 2, 4],        # 1, 2, 4 saat
+        min_encoder_length=24,                # 6 saat minimum (24 × 15m)
+        max_encoder_length=72,                # 18 saat maximum (72 × 15m)
         min_prediction_length=1,
-        max_prediction_length=4,
-        min_training_samples=50000,      # Scalp için çok veri lazım
-        data_interval="15m",             # 15 dakikalık mumlar
-        lookback_days=180,               # 6 ay veri
-        hidden_size_range=(64, 128),     # Daha küçük model, hızlı inference
+        max_prediction_length=4,              # 1 saat prediction (4 × 15m)
+        min_training_samples=15000,           # 17,280 candle, validation ile ~15K OK
+        data_interval="15m",                  # 15 dakikalık mumlar
+        lookback_days=180,                    # 6 ay veri = 17,280 candle
+        hidden_size_range=(64, 128),
         attention_heads_range=(2, 4),
         dropout_range=(0.1, 0.25),
         learning_rate_range=(1e-4, 5e-3),
-        use_orderbook_features=True,     # Order book çok önemli scalp için
+        use_orderbook_features=True,
         use_whale_features=True,
         early_stopping_patience=8,
-        n_walk_forward_splits=8,         # Daha fazla validation split
+        n_walk_forward_splits=5,
     ),
 
+    # SWING: 1h interval, 2 yıl veri = 730 * 24 = 17,520 candle
+    # Sequence: 168 + 48 = 216 candle → ~17,300 sequence (yeterli)
     TradeType.SWING: TradeTypeConfig(
         trade_type=TradeType.SWING,
-        prediction_horizons=[24, 48, 168],   # 1, 2, 7 gün
-        min_encoder_length=168,              # 7 gün minimum history
-        max_encoder_length=504,              # 21 gün maximum history
+        prediction_horizons=[24, 48],         # 1, 2 gün (168 çok uzun, kaldırıldı)
+        min_encoder_length=72,                # 3 gün minimum history
+        max_encoder_length=168,               # 7 gün maximum history
         min_prediction_length=24,
-        max_prediction_length=168,
-        min_training_samples=10000,          # Google Cloud GPU ile daha fazla veri
-        data_interval="1h",                  # Saatlik mumlar
-        lookback_days=730,                   # 2 yıl veri
-        hidden_size_range=(64, 256),         # Full size for GPU training
-        attention_heads_range=(2, 8),
+        max_prediction_length=48,             # 2 gün prediction
+        min_training_samples=15000,           # 17,520 candle, validation ile ~15K OK
+        data_interval="1h",                   # Saatlik mumlar
+        lookback_days=730,                    # 2 yıl veri = 17,520 candle
+        hidden_size_range=(64, 128),          # Orta boy model
+        attention_heads_range=(2, 4),
         dropout_range=(0.1, 0.3),
-        learning_rate_range=(1e-5, 1e-3),
+        learning_rate_range=(1e-4, 1e-3),
         use_orderbook_features=True,
         use_whale_features=True,
         early_stopping_patience=10,
         n_walk_forward_splits=5,
     ),
 
+    # POSITION: 4h interval, 3 yıl veri = 1095 * 6 = 6,570 candle
+    # Sequence: 252 + 168 = 420 candle → ~6,150 sequence (minimum yeterli)
     TradeType.POSITION: TradeTypeConfig(
         trade_type=TradeType.POSITION,
-        prediction_horizons=[168, 336, 672],  # 1, 2, 4 hafta
-        min_encoder_length=336,               # 2 hafta minimum history
-        max_encoder_length=1008,              # 6 hafta maximum history
-        min_prediction_length=168,
-        max_prediction_length=672,
-        min_training_samples=10000,
+        prediction_horizons=[168, 336],       # 1, 2 hafta (672 çok uzun)
+        min_encoder_length=168,               # 4 hafta minimum (168 × 4h = 28 gün)
+        max_encoder_length=252,               # 6 hafta maximum (252 × 4h = 42 gün)
+        min_prediction_length=42,             # 1 hafta minimum
+        max_prediction_length=168,            # 4 hafta maximum (168 × 4h = 28 gün)
+        min_training_samples=5000,            # 6,570 candle, validation ile ~5K OK
         data_interval="4h",                   # 4 saatlik mumlar
-        lookback_days=1095,                   # 3 yıl veri
-        hidden_size_range=(128, 256),         # Daha büyük model
-        attention_heads_range=(4, 8),
-        dropout_range=(0.15, 0.35),
+        lookback_days=1095,                   # 3 yıl veri = 6,570 candle
+        hidden_size_range=(64, 128),
+        attention_heads_range=(2, 4),
+        dropout_range=(0.15, 0.3),
         learning_rate_range=(1e-5, 5e-4),
-        use_orderbook_features=False,         # Uzun vade için order book gereksiz
+        use_orderbook_features=False,
         use_whale_features=True,
         early_stopping_patience=15,
         n_walk_forward_splits=4,
