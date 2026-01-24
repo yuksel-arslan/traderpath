@@ -205,6 +205,51 @@ export default function AdminModelsPage() {
     }
   };
 
+  const handleAddSampleModel = async () => {
+    const tradeTypes = ['scalp', 'swing', 'position'];
+    const selectedType = tradeTypes[Math.floor(Math.random() * tradeTypes.length)];
+    const timestamp = Date.now();
+
+    const sampleModel = {
+      name: `TFT ${selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} Model`,
+      version: `v${timestamp}`,
+      tradeType: selectedType,
+      filePath: `models/tft_${selectedType}_${new Date().toISOString().replace(/[:-]/g, '').slice(0, 15)}.pt`,
+      fileSize: Math.floor(Math.random() * 500000000) + 100000000, // 100MB - 600MB
+      symbols: selectedSymbols.length > 0 ? selectedSymbols : ['BTC', 'ETH', 'SOL', 'BNB', 'XRP'],
+      epochs: epochs,
+      batchSize: 64,
+      dataInterval: selectedType === 'scalp' ? '15m' : selectedType === 'swing' ? '1h' : '4h',
+      lookbackDays: selectedType === 'scalp' ? 180 : selectedType === 'swing' ? 730 : 1095,
+      validationLoss: Math.random() * 0.1 + 0.05, // 0.05 - 0.15
+      mape: Math.random() * 3 + 1, // 1% - 4%
+      trainingSamples: Math.floor(Math.random() * 100000) + 50000,
+      trainingTime: Math.floor(Math.random() * 7200) + 1800, // 30min - 2.5h
+      description: `Sample ${selectedType} model for testing purposes`,
+    };
+
+    setModelsLoading(true);
+    try {
+      const response = await authFetch('/api/admin/tft/models', {
+        method: 'POST',
+        body: JSON.stringify(sampleModel),
+      });
+
+      if (response.ok) {
+        await fetchTFTModels();
+        alert(`Sample ${selectedType} model added successfully!`);
+      } else {
+        const data = await response.json();
+        alert(`Failed to add model: ${data.error?.message || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Failed to add sample model:', err);
+      alert('Failed to add sample model');
+    } finally {
+      setModelsLoading(false);
+    }
+  };
+
   const saveGeminiSettings = async () => {
     if (!geminiSettings) return;
 
@@ -772,6 +817,15 @@ export default function AdminModelsPage() {
                 <option value="position">Position</option>
               </select>
             </div>
+            <button
+              onClick={handleAddSampleModel}
+              disabled={modelsLoading}
+              className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition disabled:opacity-50"
+              title="Add sample model for testing"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Sample</span>
+            </button>
             <button
               onClick={fetchTFTModels}
               disabled={modelsLoading}

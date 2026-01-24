@@ -6,12 +6,14 @@ Exposes REST API endpoints for crypto price predictions
 import os
 import threading
 import asyncio
+import httpx
 from datetime import datetime
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from loguru import logger
+from pathlib import Path
 
 from .predictor import get_predictor_service
 
@@ -302,6 +304,73 @@ async def stop_training():
     return {"message": "Training stopped"}
 
 
+def register_model_with_api(
+    name: str,
+    version: str,
+    trade_type: str,
+    file_path: str,
+    symbols: List[str],
+    epochs: int,
+    batch_size: int,
+    metrics: dict
+) -> bool:
+    """Register trained model with Node.js API."""
+    api_url = os.getenv("MAIN_API_URL", "http://localhost:3001")
+    admin_secret = os.getenv("ADMIN_API_SECRET", "")
+
+    try:
+        # Calculate file size if file exists
+        file_size = 0
+        path = Path(file_path)
+        if path.exists():
+            file_size = path.stat().st_size
+
+        # Data interval based on trade type
+        data_intervals = {"scalp": "15m", "swing": "1h", "position": "4h"}
+        lookback_days = {"scalp": 180, "swing": 730, "position": 1095}
+
+        payload = {
+            "name": name,
+            "version": version,
+            "tradeType": trade_type,
+            "filePath": file_path,
+            "fileSize": file_size,
+            "symbols": symbols,
+            "epochs": epochs,
+            "batchSize": batch_size,
+            "dataInterval": data_intervals.get(trade_type, "1h"),
+            "lookbackDays": lookback_days.get(trade_type, 365),
+            "validationLoss": metrics.get("validationLoss", 0),
+            "mape": metrics.get("mape", 0),
+            "trainingSamples": metrics.get("trainingSamples", 0),
+            "trainingTime": metrics.get("trainingTime", 0),
+            "description": f"Auto-registered {trade_type} model trained on {len(symbols)} symbols",
+        }
+
+        # Make sync HTTP request (we're in a thread)
+        import requests
+        response = requests.post(
+            f"{api_url}/api/admin/tft/models",
+            json=payload,
+            headers={
+                "Content-Type": "application/json",
+                "X-Admin-Secret": admin_secret,
+            },
+            timeout=10
+        )
+
+        if response.status_code == 200 or response.status_code == 201:
+            logger.info(f"Model registered successfully: {name}")
+            return True
+        else:
+            logger.warning(f"Failed to register model: {response.status_code} - {response.text}")
+            return False
+
+    except Exception as e:
+        logger.error(f"Failed to register model with API: {e}")
+        return False
+
+
 def run_training_sync(symbols: List[str], epochs: int, batch_size: int, trade_type: str = "swing"):
     """
     Synchronous training task running in a separate thread.
@@ -370,19 +439,41 @@ def run_training_sync(symbols: List[str], epochs: int, batch_size: int, trade_ty
 
         # Training complete
         if training_state["status"] == "training" and not _stop_training_flag.is_set():
+            total_time = int(time.time() - start_time)
+            model_version = f"{trade_type}_v{int(datetime.now().timestamp())}"
+            model_path = f"models/tft_{trade_type}_{datetime.now().strftime('%Y%m%d_%H%M')}.pt"
+
             training_state["status"] = "trained"
             training_state["last_trained_at"] = datetime.now().isoformat()
-            training_state["model_version"] = f"{trade_type}_v{int(datetime.now().timestamp())}"
+            training_state["model_version"] = model_version
             training_state["metrics"] = {
                 "validationLoss": training_state["progress"]["val_loss"],
                 "mape": round(2.0 + random.uniform(0, 1.5), 2),
                 "trainingSamples": len(symbols) * 1000,
                 "epochs": epochs,
-                "tradeType": trade_type
+                "tradeType": trade_type,
+                "trainingTime": total_time
             }
             training_state["progress"]["status"] = "completed"
-            training_state["progress"]["logs"].append(f"Training completed! Model: {training_state['model_version']}")
-            logger.info(f"Training completed successfully! Model version: {training_state['model_version']}")
+            training_state["progress"]["logs"].append(f"Training completed! Model: {model_version}")
+            logger.info(f"Training completed successfully! Model version: {model_version}")
+
+            # Register model with Node.js API
+            training_state["progress"]["logs"].append("Registering model with database...")
+            registered = register_model_with_api(
+                name=f"TFT {trade_type.capitalize()} Model",
+                version=model_version,
+                trade_type=trade_type,
+                file_path=model_path,
+                symbols=symbols,
+                epochs=epochs,
+                batch_size=batch_size,
+                metrics=training_state["metrics"]
+            )
+            if registered:
+                training_state["progress"]["logs"].append("Model registered in database successfully!")
+            else:
+                training_state["progress"]["logs"].append("Warning: Could not register model in database")
 
     except Exception as e:
         error_msg = f"Training failed: {str(e)}"
