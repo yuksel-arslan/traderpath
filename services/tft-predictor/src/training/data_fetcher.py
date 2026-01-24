@@ -56,7 +56,8 @@ class HistoricalDataFetcher:
         self.client: Optional[httpx.AsyncClient] = None
 
     async def __aenter__(self):
-        self.client = httpx.AsyncClient(timeout=30.0)
+        # Increased timeout for Railway network latency
+        self.client = httpx.AsyncClient(timeout=60.0)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -258,11 +259,23 @@ class HistoricalDataFetcher:
 
         for symbol in symbols:
             try:
+                logger.info(f"Fetching {symbol}...")
                 df = await self.fetch_symbol_data(symbol, config, use_cache)
                 if len(df) > 0:
                     results[symbol] = df
+                    logger.info(f"  {symbol}: Successfully fetched {len(df)} candles")
+                else:
+                    logger.warning(f"  {symbol}: No data returned from API")
+            except httpx.ConnectError as e:
+                logger.error(f"{symbol} connection error: {e}")
+                continue
+            except httpx.TimeoutException as e:
+                logger.error(f"{symbol} timeout error: {e}")
+                continue
             except Exception as e:
-                logger.error(f"{symbol} veri çekme hatası: {e}")
+                logger.error(f"{symbol} veri çekme hatası: {type(e).__name__}: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
                 continue
 
             # Semboller arası bekleme
