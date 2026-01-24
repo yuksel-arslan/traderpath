@@ -545,13 +545,92 @@ function FeaturesSection() {
 
   return (
     <>
-      {/* Feature 1: 7-Step Analysis Suite */}
-      <section id="features" className="py-20">
+      {/* Feature 1: Top Coins by Analysis Accuracy Score */}
+      <section id="features" className="py-20 bg-gradient-to-b from-emerald-500/5 via-teal-500/5 to-transparent">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <span className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-sm font-medium mb-4">
+              <TrendingUp className="w-4 h-4" />
+              Feature 1
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
+              Top Coins by Analysis Accuracy Score
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Our AI automatically analyzes 30+ cryptocurrencies every 2 hours using the full 7-step analysis. See which coins are currently showing the strongest trading signals.
+            </p>
+          </div>
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="p-4 bg-card border rounded-xl text-center">
+                <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <Activity className="w-5 h-5 text-blue-500" />
+                </div>
+                <div className="text-2xl font-bold text-foreground">30+</div>
+                <div className="text-xs text-muted-foreground">Coins Analyzed</div>
+              </div>
+              <div className="p-4 bg-card border rounded-xl text-center">
+                <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <BarChart3 className="w-5 h-5 text-purple-500" />
+                </div>
+                <div className="text-2xl font-bold text-foreground">40+</div>
+                <div className="text-xs text-muted-foreground">Indicators Used</div>
+              </div>
+              <div className="p-4 bg-card border rounded-xl text-center">
+                <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <Clock className="w-5 h-5 text-amber-500" />
+                </div>
+                <div className="text-2xl font-bold text-foreground">2h</div>
+                <div className="text-xs text-muted-foreground">Update Interval</div>
+              </div>
+              <div className="p-4 bg-card border rounded-xl text-center">
+                <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <Zap className="w-5 h-5 text-green-500" />
+                </div>
+                <div className="text-2xl font-bold text-foreground">Free</div>
+                <div className="text-xs text-muted-foreground">To View Results</div>
+              </div>
+            </div>
+            <div className="p-6 bg-card border rounded-xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                  <Target className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">How It Works</h3>
+                  <p className="text-sm text-muted-foreground">Automated market scanning powered by our 7-step analysis</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-muted-foreground">Full technical analysis with Market Pulse, Asset Scanner, Safety Check, and more</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-muted-foreground">Scores based on liquidity, volatility, trend strength, and momentum</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-muted-foreground">GO/CONDITIONAL signals for actionable trade opportunities</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-muted-foreground">Ask AI Concierge: &quot;Top 5 coins&quot; or &quot;Which coin should I trade?&quot;</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature 2: 7-Step Analysis Suite */}
+      <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-4">
             <span className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary text-sm font-medium mb-4">
               <BarChart3 className="w-4 h-4" />
-              Feature 1
+              Feature 2
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
               7-Step Analysis Suite
@@ -629,85 +708,6 @@ function FeaturesSection() {
                   </div>
                 );
               })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature 2: Top Coins by Analysis Accuracy Score */}
-      <section className="py-20 bg-gradient-to-b from-emerald-500/5 via-teal-500/5 to-transparent">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <span className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-sm font-medium mb-4">
-              <TrendingUp className="w-4 h-4" />
-              Feature 2
-            </span>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-              Top Coins by Analysis Accuracy Score
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Our AI automatically analyzes 30+ cryptocurrencies every 2 hours using the full 7-step analysis. See which coins are currently showing the strongest trading signals.
-            </p>
-          </div>
-          <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="p-4 bg-card border rounded-xl text-center">
-                <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-                  <Activity className="w-5 h-5 text-blue-500" />
-                </div>
-                <div className="text-2xl font-bold text-foreground">30+</div>
-                <div className="text-xs text-muted-foreground">Coins Analyzed</div>
-              </div>
-              <div className="p-4 bg-card border rounded-xl text-center">
-                <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-                  <BarChart3 className="w-5 h-5 text-purple-500" />
-                </div>
-                <div className="text-2xl font-bold text-foreground">40+</div>
-                <div className="text-xs text-muted-foreground">Indicators Used</div>
-              </div>
-              <div className="p-4 bg-card border rounded-xl text-center">
-                <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-                  <Clock className="w-5 h-5 text-amber-500" />
-                </div>
-                <div className="text-2xl font-bold text-foreground">2h</div>
-                <div className="text-xs text-muted-foreground">Update Interval</div>
-              </div>
-              <div className="p-4 bg-card border rounded-xl text-center">
-                <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-                  <Zap className="w-5 h-5 text-green-500" />
-                </div>
-                <div className="text-2xl font-bold text-foreground">Free</div>
-                <div className="text-xs text-muted-foreground">To View Results</div>
-              </div>
-            </div>
-            <div className="p-6 bg-card border rounded-xl">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-                  <Target className="w-5 h-5 text-emerald-500" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">How It Works</h3>
-                  <p className="text-sm text-muted-foreground">Automated market scanning powered by our 7-step analysis</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Full technical analysis with Market Pulse, Asset Scanner, Safety Check, and more</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Scores based on liquidity, volatility, trend strength, and momentum</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">GO/CONDITIONAL signals for actionable trade opportunities</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Ask AI Concierge: &quot;Top 5 coins&quot; or &quot;Which coin should I trade?&quot;</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
