@@ -3,6 +3,7 @@ import { creditService } from '../credits/credit.service';
 import { aiExpertService } from '../ai-expert/ai-expert.service';
 import { callGeminiWithRetry } from '../../core/gemini';
 import { INTENT_DETECTION_PROMPT, RESPONSE_TEMPLATES } from './system-prompt';
+import { coinScoreCacheService, CoinScore } from '../analysis/services/coin-score-cache.service';
 
 interface ConciergeRequest {
   message: string;
@@ -41,6 +42,8 @@ interface ConciergeResponse {
   verdict?: string;
   score?: number;
   voltranSynthesis?: string;
+  fromCache?: boolean;  // True if result came from pre-computed cache (free)
+  cacheExpiresAt?: Date;  // When the cached result expires
   // Chart-specific fields
   chartData?: {
     symbol: string;
@@ -2156,15 +2159,103 @@ Or visit /scheduled to delete.`,
     creditBalance: number
   ): Promise<ConciergeResponse> {
     const ANALYSIS_COST = 25;
+    const upperSymbol = symbol.toUpperCase();
+    const isTurkish = language === 'tr';
+
+    // ===========================================
+    // STEP 1: Check if coin is in pre-computed cache (FREE)
+    // ===========================================
+    const cachedCoin = await coinScoreCacheService.getCoinFromCache(upperSymbol);
+
+    if (cachedCoin && cachedCoin.analysisId) {
+      console.log(`[Concierge] Cache HIT for ${upperSymbol} - returning free analysis`);
+
+      // Calculate time remaining until cache expires
+      const expiresIn = Math.round((cachedCoin.expiresAt.getTime() - Date.now()) / 60000);
+      const expiresText = isTurkish
+        ? `Sonuç ${expiresIn} dakika geçerli.`
+        : `Result valid for ${expiresIn} minutes.`;
+
+      // Generate natural response from cached data
+      const verdict = cachedCoin.verdict?.toUpperCase() || 'WAIT';
+      const score = Math.round(cachedCoin.reliabilityScore / 10); // Convert 0-100 to 0-10
+      const synthesis = this.generateNaturalResponse(upperSymbol, cachedCoin.interval, verdict, score, language);
+
+      // Localized labels
+      const verdictLabel = verdict === 'GO' ? 'GO'
+        : verdict === 'AVOID' ? (isTurkish ? 'KAÇIN' : 'AVOID')
+        : verdict === 'CONDITIONAL_GO' ? (isTurkish ? 'ŞARTLI' : 'COND')
+        : (isTurkish ? 'BEKLE' : 'WAIT');
+
+      // Additional info from cache
+      const priceChange = cachedCoin.priceChange24h >= 0 ? `+${cachedCoin.priceChange24h.toFixed(2)}%` : `${cachedCoin.priceChange24h.toFixed(2)}%`;
+      const direction = cachedCoin.direction ? (isTurkish ? `Yön: ${cachedCoin.direction}` : `Direction: ${cachedCoin.direction}`) : '';
+
+      const cacheNote = isTurkish
+        ? `[Ön-hesaplanmış analiz - ÜCRETSİZ]`
+        : `[Pre-computed analysis - FREE]`;
+
+      const analysisMessage = isTurkish
+        ? `${upperSymbol} ${cachedCoin.interval.toUpperCase()} Analizi ${cacheNote}
+
+Karar: ${verdictLabel}
+Skor: ${score}/10
+Fiyat: $${cachedCoin.price.toLocaleString()} (${priceChange})
+${direction}
+
+${synthesis}
+
+${expiresText}
+AI Expert yorumu için: "${upperSymbol} hakkında ne düşünüyorsun?"`
+        : `${upperSymbol} ${cachedCoin.interval.toUpperCase()} Analysis ${cacheNote}
+
+Verdict: ${verdictLabel}
+Score: ${score}/10
+Price: $${cachedCoin.price.toLocaleString()} (${priceChange})
+${direction}
+
+${synthesis}
+
+${expiresText}
+For AI Expert commentary: "What do you think about ${upperSymbol}?"`;
+
+      return {
+        success: true,
+        intent: 'ANALYSIS',
+        message: analysisMessage,
+        creditsSpent: 0, // FREE from cache
+        creditsRemaining: creditBalance,
+        analysisId: cachedCoin.analysisId,
+        verdict: verdict,
+        score: score,
+        voltranSynthesis: synthesis,
+        detectedLanguage: language,
+        fromCache: true,
+        cacheExpiresAt: cachedCoin.expiresAt,
+      };
+    }
+
+    // ===========================================
+    // STEP 2: Coin not in cache - run paid analysis
+    // ===========================================
+    console.log(`[Concierge] Cache MISS for ${upperSymbol} - running paid analysis`);
 
     // Check credits
     if (creditBalance < ANALYSIS_COST) {
+      const cacheHint = coinScoreCacheService.isTopCoin(upperSymbol)
+        ? (isTurkish
+            ? ` (Bu coin normalde cache'de olmalı - cache yenileniyor olabilir, birkaç dakika sonra tekrar deneyin.)`
+            : ` (This coin is normally cached - cache may be refreshing, try again in a few minutes.)`)
+        : (isTurkish
+            ? ` (Bu coin top 30 listesinde değil - tam analiz gerekiyor.)`
+            : ` (This coin is not in top 30 list - full analysis required.)`);
+
       return {
         success: false,
         intent: 'ANALYSIS',
-        message: language === 'tr'
+        message: (isTurkish
           ? `Yetersiz kredi. Analiz için ${ANALYSIS_COST} kredi gerekli, bakiyeniz: ${creditBalance}`
-          : `Insufficient credits. Analysis requires ${ANALYSIS_COST} credits, you have: ${creditBalance}`,
+          : `Insufficient credits. Analysis requires ${ANALYSIS_COST} credits, you have: ${creditBalance}`) + cacheHint,
         creditsSpent: 0,
         creditsRemaining: creditBalance,
         error: 'INSUFFICIENT_CREDITS',
@@ -2175,12 +2266,12 @@ Or visit /scheduled to delete.`,
       // Use AI Expert Panel for analysis
       const tradeType = getTradeType(interval);
 
-      console.log(`[Concierge] Analysis request: symbol=${symbol}, interval=${interval}, tradeType=${tradeType}, language=${language}`);
+      console.log(`[Concierge] Analysis request: symbol=${upperSymbol}, interval=${interval}, tradeType=${tradeType}, language=${language}`);
 
       const panelResult = await aiExpertService.analyzeWithExpertPanel({
-        symbol,
+        symbol: upperSymbol,
         userId,
-        language: language, // Pass the actual detected language (supports 20+ languages)
+        language: language,
         tradeType,
         interval,
       });
@@ -2189,7 +2280,7 @@ Or visit /scheduled to delete.`,
         return {
           success: false,
           intent: 'ANALYSIS',
-          message: language === 'tr'
+          message: isTurkish
             ? `Analiz başarısız: ${panelResult.error || 'Bilinmeyen hata'}`
             : `Analysis failed: ${panelResult.error || 'Unknown error'}`,
           creditsSpent: 0,
@@ -2202,25 +2293,22 @@ Or visit /scheduled to delete.`,
       const verdict = panelResult.verdict?.toUpperCase() || 'WAIT';
       const score = panelResult.score || 5;
 
-      // ALWAYS use generateNaturalResponse for concierge - it has proper language support
-      // VOLTRAN synthesis often comes in English regardless of language setting
-      const synthesis = this.generateNaturalResponse(symbol, interval, verdict, score, language);
+      const synthesis = this.generateNaturalResponse(upperSymbol, interval, verdict, score, language);
 
       // Localized labels
-      const isTurkish = language === 'tr';
       const verdictLabel = verdict === 'GO' ? 'GO'
         : verdict === 'AVOID' ? (isTurkish ? 'KAÇIN' : 'AVOID')
         : verdict === 'CONDITIONAL_GO' ? (isTurkish ? 'ŞARTLI' : 'COND')
         : (isTurkish ? 'BEKLE' : 'WAIT');
 
       const analysisMessage = isTurkish
-        ? `${symbol} ${interval.toUpperCase()} Analizi
+        ? `${upperSymbol} ${interval.toUpperCase()} Analizi
 
 Karar: ${verdictLabel}
 Skor: ${score}/10
 
 ${synthesis}`
-        : `${symbol} ${interval.toUpperCase()} Analysis
+        : `${upperSymbol} ${interval.toUpperCase()} Analysis
 
 Verdict: ${verdictLabel}
 Score: ${score}/10
@@ -2233,12 +2321,12 @@ ${synthesis}`;
         message: analysisMessage,
         creditsSpent: panelResult.creditsSpent || ANALYSIS_COST,
         creditsRemaining: panelResult.remainingCredits ?? (creditBalance - ANALYSIS_COST),
-        // Analysis-specific data
         analysisId: panelResult.analysisId,
         verdict: verdict,
         score: score,
         voltranSynthesis: synthesis,
-        detectedLanguage: language, // Include detected language
+        detectedLanguage: language,
+        fromCache: false,
       };
 
     } catch (error) {
@@ -2246,7 +2334,7 @@ ${synthesis}`;
       return {
         success: false,
         intent: 'ANALYSIS',
-        message: language === 'tr'
+        message: isTurkish
           ? 'Analiz sırasında hata oluştu. Lütfen tekrar deneyin.'
           : 'Error during analysis. Please try again.',
         creditsSpent: 0,
