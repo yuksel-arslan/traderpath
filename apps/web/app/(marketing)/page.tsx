@@ -634,13 +634,92 @@ function FeaturesSection() {
         </div>
       </section>
 
-      {/* Feature 2: 4 AI Experts Council */}
+      {/* Feature 2: Top Coins by Analysis Accuracy Score */}
+      <section className="py-20 bg-gradient-to-b from-emerald-500/5 via-teal-500/5 to-transparent">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <span className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-sm font-medium mb-4">
+              <TrendingUp className="w-4 h-4" />
+              Feature 2
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
+              Top Coins by Analysis Accuracy Score
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Our AI automatically analyzes 30+ cryptocurrencies every 2 hours using the full 7-step analysis. See which coins are currently showing the strongest trading signals.
+            </p>
+          </div>
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="p-4 bg-card border rounded-xl text-center">
+                <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <Activity className="w-5 h-5 text-blue-500" />
+                </div>
+                <div className="text-2xl font-bold text-foreground">30+</div>
+                <div className="text-xs text-muted-foreground">Coins Analyzed</div>
+              </div>
+              <div className="p-4 bg-card border rounded-xl text-center">
+                <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <BarChart3 className="w-5 h-5 text-purple-500" />
+                </div>
+                <div className="text-2xl font-bold text-foreground">40+</div>
+                <div className="text-xs text-muted-foreground">Indicators Used</div>
+              </div>
+              <div className="p-4 bg-card border rounded-xl text-center">
+                <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <Clock className="w-5 h-5 text-amber-500" />
+                </div>
+                <div className="text-2xl font-bold text-foreground">2h</div>
+                <div className="text-xs text-muted-foreground">Update Interval</div>
+              </div>
+              <div className="p-4 bg-card border rounded-xl text-center">
+                <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <Zap className="w-5 h-5 text-green-500" />
+                </div>
+                <div className="text-2xl font-bold text-foreground">Free</div>
+                <div className="text-xs text-muted-foreground">To View Results</div>
+              </div>
+            </div>
+            <div className="p-6 bg-card border rounded-xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                  <Target className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">How It Works</h3>
+                  <p className="text-sm text-muted-foreground">Automated market scanning powered by our 7-step analysis</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-muted-foreground">Full technical analysis with Market Pulse, Asset Scanner, Safety Check, and more</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-muted-foreground">Scores based on liquidity, volatility, trend strength, and momentum</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-muted-foreground">GO/CONDITIONAL signals for actionable trade opportunities</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-muted-foreground">Ask AI Concierge: &quot;Top 5 coins&quot; or &quot;Which coin should I trade?&quot;</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature 3: 4 AI Experts Council */}
       <section className="py-20 bg-gradient-to-b from-purple-500/5 via-blue-500/5 to-transparent">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <span className="inline-flex items-center gap-2 px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-500 text-sm font-medium mb-4">
               <Brain className="w-4 h-4" />
-              Feature 2
+              Feature 3
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
               <span className="gradient-text-logo-animate">4 AI Experts Council</span>
@@ -696,13 +775,13 @@ function FeaturesSection() {
         </div>
       </section>
 
-      {/* Feature 3: Advanced Reporting */}
+      {/* Feature 4: Advanced Reporting */}
       <section className="py-20 bg-gradient-to-b from-cyan-500/5 via-blue-500/5 to-transparent">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <span className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-cyan-500 text-sm font-medium mb-4">
               <FileText className="w-4 h-4" />
-              Feature 3
+              Feature 4
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
               <span className="gradient-text-logo-animate">Advanced Reporting</span>
@@ -742,13 +821,13 @@ function FeaturesSection() {
         </div>
       </section>
 
-      {/* Feature 4: Alerts */}
+      {/* Feature 5: Alerts */}
       <section className="py-20 bg-gradient-to-b from-yellow-500/5 via-orange-500/5 to-transparent">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <span className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-full text-yellow-500 text-sm font-medium mb-4">
               <Bell className="w-4 h-4" />
-              Feature 4
+              Feature 5
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
               <span className="gradient-text-logo-animate">Smart Alerts</span>
@@ -801,13 +880,13 @@ function FeaturesSection() {
         </div>
       </section>
 
-      {/* Feature 5: AI Concierge */}
+      {/* Feature 6: AI Concierge */}
       <section className="py-20 bg-gradient-to-b from-emerald-500/5 via-teal-500/5 to-transparent">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <span className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-sm font-medium mb-4">
               <Bot className="w-4 h-4" />
-              Feature 5
+              Feature 6
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
               <span className="gradient-text-logo-animate">AI Concierge</span>
@@ -910,13 +989,13 @@ function FeaturesSection() {
         </div>
       </section>
 
-      {/* Feature 6: TFT Model Prediction (Coming Soon) */}
+      {/* Feature 7: TFT Model Prediction (Coming Soon) */}
       <section className="py-20 bg-gradient-to-b from-pink-500/5 via-purple-500/5 to-transparent">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <span className="inline-flex items-center gap-2 px-3 py-1 bg-pink-500/10 border border-pink-500/20 rounded-full text-pink-500 text-sm font-medium mb-4">
               <Brain className="w-4 h-4" />
-              Feature 6
+              Feature 7
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
               <span className="gradient-text-logo-animate">TFT Model Prediction</span>
@@ -1767,115 +1846,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-      {/* Top Coins by Reliability Score */}
-      {topCoins.length > 0 && (
-        <section className="py-20 bg-gradient-to-b from-emerald-500/5 via-teal-500/5 to-transparent">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-full text-sm font-medium mb-4">
-                <TrendingUp className="w-4 h-4" />
-                Live Analysis Results
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-                Top Coins by Reliability Score
-              </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Our AI analyzes 30+ cryptocurrencies every 2 hours. These are the current top performers based on liquidity, volatility, trend strength, and momentum indicators.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 max-w-6xl mx-auto">
-              {isLoadingTopCoins ? (
-                // Loading skeleton
-                Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="bg-card border rounded-xl p-4 animate-pulse">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-muted rounded-full" />
-                      <div className="flex-1">
-                        <div className="h-4 bg-muted rounded w-16 mb-1" />
-                        <div className="h-3 bg-muted rounded w-12" />
-                      </div>
-                    </div>
-                    <div className="h-8 bg-muted rounded w-20 mx-auto" />
-                  </div>
-                ))
-              ) : (
-                topCoins.map((coin, index) => (
-                  <div
-                    key={coin.symbol}
-                    className="bg-card border rounded-xl p-4 hover:shadow-lg hover:border-primary/50 transition-all duration-300 group"
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="relative">
-                        <img
-                          src={getCoinIcon(coin.symbol)}
-                          alt={coin.symbol}
-                          className="w-10 h-10 rounded-full"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON;
-                          }}
-                        />
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold">
-                          {index + 1}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-bold text-lg">{coin.symbol}</div>
-                        <div className={`text-xs font-medium ${coin.priceChange24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {coin.priceChange24h >= 0 ? '+' : ''}{coin.priceChange24h.toFixed(1)}%
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-primary mb-1">
-                        {coin.reliabilityScore}
-                        <span className="text-sm text-muted-foreground">/100</span>
-                      </div>
-                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                        coin.verdict === 'GO'
-                          ? 'bg-green-500/10 text-green-600 dark:text-green-400'
-                          : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
-                      }`}>
-                        {coin.verdict === 'GO' ? (
-                          <>
-                            <CheckCircle className="w-3 h-3" />
-                            GO
-                          </>
-                        ) : (
-                          <>
-                            <AlertTriangle className="w-3 h-3" />
-                            CONDITIONAL
-                          </>
-                        )}
-                        {coin.direction && (
-                          <span className="ml-1">
-                            {coin.direction === 'LONG' ? '↑' : '↓'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="text-center mt-8">
-              <Link
-                href="/analyze"
-                className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition"
-              >
-                Analyze Any Coin
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              <p className="text-xs text-muted-foreground mt-3">
-                Updated every 2 hours • Powered by 40+ technical indicators
-              </p>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Testimonials */}
       <section className="py-20">
