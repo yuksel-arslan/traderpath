@@ -978,6 +978,329 @@ export default async function adminRoutes(app: FastifyInstance) {
   });
 
   // ===========================================
+  // TFT Model Management (Database)
+  // ===========================================
+
+  // GET /api/admin/tft/models - List all trained models
+  app.get('/tft/models', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { tradeType, status, limit = '20', offset = '0' } = request.query as Record<string, string>;
+
+    const where: any = {};
+    if (tradeType) where.tradeType = tradeType;
+    if (status) where.status = status;
+
+    const [models, total] = await Promise.all([
+      prisma.tFTModel.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: Math.min(parseInt(limit), 50),
+        skip: parseInt(offset),
+      }),
+      prisma.tFTModel.count({ where }),
+    ]);
+
+    // Convert BigInt to number for JSON serialization
+    const modelsFormatted = models.map(m => ({
+      ...m,
+      fileSize: Number(m.fileSize),
+      validationLoss: Number(m.validationLoss),
+      mape: Number(m.mape),
+    }));
+
+    return reply.send({
+      success: true,
+      data: {
+        models: modelsFormatted,
+        pagination: { total, limit: parseInt(limit), offset: parseInt(offset) },
+      },
+    });
+  });
+
+  // GET /api/admin/tft/models/active - Get active models for each trade type
+  app.get('/tft/models/active', {
+    preHandler: requireAdmin,
+  }, async (_request: FastifyRequest, reply: FastifyReply) => {
+    const activeModels = await prisma.tFTModel.findMany({
+      where: { isActive: true },
+      orderBy: { tradeType: 'asc' },
+    });
+
+    const modelsFormatted = activeModels.map(m => ({
+      ...m,
+      fileSize: Number(m.fileSize),
+      validationLoss: Number(m.validationLoss),
+      mape: Number(m.mape),
+    }));
+
+    // Create a map by trade type
+    const activeByTradeType: Record<string, any> = {};
+    for (const model of modelsFormatted) {
+      activeByTradeType[model.tradeType] = model;
+    }
+
+    return reply.send({
+      success: true,
+      data: {
+        models: modelsFormatted,
+        byTradeType: activeByTradeType,
+      },
+    });
+  });
+
+  // GET /api/admin/tft/models/:id - Get single model details
+  app.get('/tft/models/:id', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+
+    const model = await prisma.tFTModel.findUnique({ where: { id } });
+
+    if (!model) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Model not found' },
+      });
+    }
+
+    return reply.send({
+      success: true,
+      data: {
+        model: {
+          ...model,
+          fileSize: Number(model.fileSize),
+          validationLoss: Number(model.validationLoss),
+          mape: Number(model.mape),
+        },
+      },
+    });
+  });
+
+  // POST /api/admin/tft/models - Save a trained model to database
+  app.post('/tft/models', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as {
+      name: string;
+      version: string;
+      tradeType: string;
+      filePath: string;
+      fileSize: number;
+      checksum?: string;
+      symbols: string[];
+      epochs: number;
+      batchSize?: number;
+      dataInterval: string;
+      lookbackDays: number;
+      validationLoss: number;
+      mape: number;
+      trainingSamples: number;
+      trainingTime: number;
+      hyperparameters?: Record<string, any>;
+      description?: string;
+    };
+
+    // Validate required fields
+    if (!body.name || !body.version || !body.tradeType || !body.filePath) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'MISSING_FIELDS', message: 'Name, version, tradeType, and filePath are required' },
+      });
+    }
+
+    // Validate trade type
+    const validTradeTypes = ['scalp', 'swing', 'position'];
+    if (!validTradeTypes.includes(body.tradeType)) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'INVALID_TRADE_TYPE', message: 'Trade type must be: scalp, swing, or position' },
+      });
+    }
+
+    const model = await prisma.tFTModel.create({
+      data: {
+        name: body.name,
+        version: body.version,
+        tradeType: body.tradeType,
+        filePath: body.filePath,
+        fileSize: BigInt(body.fileSize || 0),
+        checksum: body.checksum,
+        symbols: body.symbols || [],
+        epochs: body.epochs || 50,
+        batchSize: body.batchSize || 64,
+        dataInterval: body.dataInterval || '1h',
+        lookbackDays: body.lookbackDays || 365,
+        validationLoss: body.validationLoss || 0,
+        mape: body.mape || 0,
+        trainingSamples: body.trainingSamples || 0,
+        trainingTime: body.trainingTime || 0,
+        hyperparameters: body.hyperparameters || {},
+        description: body.description,
+        trainedBy: request.user?.id,
+        status: 'READY',
+      },
+    });
+
+    return reply.send({
+      success: true,
+      data: {
+        model: {
+          ...model,
+          fileSize: Number(model.fileSize),
+          validationLoss: Number(model.validationLoss),
+          mape: Number(model.mape),
+        },
+      },
+    });
+  });
+
+  // POST /api/admin/tft/models/:id/activate - Activate a model for predictions
+  app.post('/tft/models/:id/activate', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+
+    // Get the model to activate
+    const model = await prisma.tFTModel.findUnique({ where: { id } });
+
+    if (!model) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Model not found' },
+      });
+    }
+
+    if (model.status === 'FAILED' || model.status === 'TRAINING') {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'INVALID_STATUS', message: 'Cannot activate a model that is training or failed' },
+      });
+    }
+
+    // Deactivate all other models of the same trade type
+    await prisma.tFTModel.updateMany({
+      where: { tradeType: model.tradeType, isActive: true },
+      data: { isActive: false, status: 'READY' },
+    });
+
+    // Activate this model
+    const updatedModel = await prisma.tFTModel.update({
+      where: { id },
+      data: { isActive: true, status: 'ACTIVE', activatedAt: new Date() },
+    });
+
+    // Notify TFT service to load the new model (if available)
+    try {
+      await fetch(`${TFT_SERVICE_URL}/models/load`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model_path: model.filePath,
+          trade_type: model.tradeType,
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+    } catch (error) {
+      // Log but don't fail - TFT service might be unavailable
+      console.warn('Failed to notify TFT service of model activation:', error);
+    }
+
+    return reply.send({
+      success: true,
+      data: {
+        model: {
+          ...updatedModel,
+          fileSize: Number(updatedModel.fileSize),
+          validationLoss: Number(updatedModel.validationLoss),
+          mape: Number(updatedModel.mape),
+        },
+        message: `Model "${model.name}" is now active for ${model.tradeType} predictions`,
+      },
+    });
+  });
+
+  // PATCH /api/admin/tft/models/:id - Update model metadata
+  app.patch('/tft/models/:id', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as {
+      name?: string;
+      description?: string;
+      status?: 'READY' | 'ARCHIVED';
+    };
+
+    const model = await prisma.tFTModel.findUnique({ where: { id } });
+
+    if (!model) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Model not found' },
+      });
+    }
+
+    // Don't allow changing active model status to ARCHIVED
+    if (model.isActive && body.status === 'ARCHIVED') {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'CANNOT_ARCHIVE_ACTIVE', message: 'Cannot archive an active model. Activate another model first.' },
+      });
+    }
+
+    const updatedModel = await prisma.tFTModel.update({
+      where: { id },
+      data: {
+        ...(body.name && { name: body.name }),
+        ...(body.description !== undefined && { description: body.description }),
+        ...(body.status && { status: body.status }),
+      },
+    });
+
+    return reply.send({
+      success: true,
+      data: {
+        model: {
+          ...updatedModel,
+          fileSize: Number(updatedModel.fileSize),
+          validationLoss: Number(updatedModel.validationLoss),
+          mape: Number(updatedModel.mape),
+        },
+      },
+    });
+  });
+
+  // DELETE /api/admin/tft/models/:id - Delete a model
+  app.delete('/tft/models/:id', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+
+    const model = await prisma.tFTModel.findUnique({ where: { id } });
+
+    if (!model) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Model not found' },
+      });
+    }
+
+    if (model.isActive) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'CANNOT_DELETE_ACTIVE', message: 'Cannot delete an active model. Activate another model first.' },
+      });
+    }
+
+    await prisma.tFTModel.delete({ where: { id } });
+
+    return reply.send({
+      success: true,
+      message: 'Model deleted successfully',
+    });
+  });
+
+  // ===========================================
   // Gemini AI Settings
   // ===========================================
 
