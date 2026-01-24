@@ -1242,6 +1242,34 @@ export default function LandingPage() {
   const [livePrices, setLivePrices] = useState<LivePrice[]>([]);
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [topCoins, setTopCoins] = useState<Array<{
+    symbol: string;
+    reliabilityScore: number;
+    verdict: string;
+    direction: string | null;
+    price: number;
+    priceChange24h: number;
+  }>>([]);
+  const [isLoadingTopCoins, setIsLoadingTopCoins] = useState(true);
+
+  // Fetch top coins by reliability score
+  const fetchTopCoins = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io'}/api/analysis/top-coins?limit=5&tradeableOnly=true`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data?.coins) {
+          setTopCoins(data.data.coins);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch top coins:', error);
+    } finally {
+      setIsLoadingTopCoins(false);
+    }
+  }, []);
 
   const fetchPrices = useCallback(async () => {
     try {
@@ -1277,9 +1305,10 @@ export default function LandingPage() {
 
   useEffect(() => {
     fetchPrices();
+    fetchTopCoins();
     const interval = setInterval(fetchPrices, 30000); // Update every 30 seconds
     return () => clearInterval(interval);
-  }, [fetchPrices]);
+  }, [fetchPrices, fetchTopCoins]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -1738,6 +1767,115 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Top Coins by Reliability Score */}
+      {topCoins.length > 0 && (
+        <section className="py-20 bg-gradient-to-b from-emerald-500/5 via-teal-500/5 to-transparent">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-full text-sm font-medium mb-4">
+                <TrendingUp className="w-4 h-4" />
+                Live Analysis Results
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
+                Top Coins by Reliability Score
+              </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Our AI analyzes 30+ cryptocurrencies every 2 hours. These are the current top performers based on liquidity, volatility, trend strength, and momentum indicators.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 max-w-6xl mx-auto">
+              {isLoadingTopCoins ? (
+                // Loading skeleton
+                Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="bg-card border rounded-xl p-4 animate-pulse">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-muted rounded-full" />
+                      <div className="flex-1">
+                        <div className="h-4 bg-muted rounded w-16 mb-1" />
+                        <div className="h-3 bg-muted rounded w-12" />
+                      </div>
+                    </div>
+                    <div className="h-8 bg-muted rounded w-20 mx-auto" />
+                  </div>
+                ))
+              ) : (
+                topCoins.map((coin, index) => (
+                  <div
+                    key={coin.symbol}
+                    className="bg-card border rounded-xl p-4 hover:shadow-lg hover:border-primary/50 transition-all duration-300 group"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="relative">
+                        <img
+                          src={getCoinIcon(coin.symbol)}
+                          alt={coin.symbol}
+                          className="w-10 h-10 rounded-full"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON;
+                          }}
+                        />
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold">
+                          {index + 1}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-bold text-lg">{coin.symbol}</div>
+                        <div className={`text-xs font-medium ${coin.priceChange24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                          {coin.priceChange24h >= 0 ? '+' : ''}{coin.priceChange24h.toFixed(1)}%
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-primary mb-1">
+                        {coin.reliabilityScore}
+                        <span className="text-sm text-muted-foreground">/100</span>
+                      </div>
+                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        coin.verdict === 'GO'
+                          ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                          : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
+                      }`}>
+                        {coin.verdict === 'GO' ? (
+                          <>
+                            <CheckCircle className="w-3 h-3" />
+                            GO
+                          </>
+                        ) : (
+                          <>
+                            <AlertTriangle className="w-3 h-3" />
+                            CONDITIONAL
+                          </>
+                        )}
+                        {coin.direction && (
+                          <span className="ml-1">
+                            {coin.direction === 'LONG' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="text-center mt-8">
+              <Link
+                href="/analyze"
+                className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition"
+              >
+                Analyze Any Coin
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <p className="text-xs text-muted-foreground mt-3">
+                Updated every 2 hours • Powered by 40+ technical indicators
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Testimonials */}
       <section className="py-20">
