@@ -23,12 +23,8 @@ import {
   Search,
   Crosshair,
   Bot,
-  FileDown,
   Camera,
-  Download,
-  ChevronDown,
   Mail,
-  Image,
   Check,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
@@ -99,12 +95,8 @@ export default function ReportViewPage() {
   const [aiExpertComment, setAiExpertComment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const [capturingScreenshot, setCapturingScreenshot] = useState(false);
-  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
 
@@ -132,62 +124,11 @@ export default function ReportViewPage() {
     fetchReport();
   }, [reportId, router]);
 
-  // Download PDF with chart capture
-  const handleDownloadPdf = async () => {
-    if (!report || downloadingPdf) return;
-    setDownloadingPdf(true);
+  // Save screenshot as JPEG and automatically send via email
+  const handleSaveAndEmail = async () => {
+    if (!pageRef.current || saving || !report) return;
 
-    try {
-      // Build report data for PDF
-      const reportData: any = {
-        symbol: report.symbol,
-        generatedAt: report.generatedAt,
-        tradeType: report.tradeType,
-        marketPulse: report.marketPulse,
-        assetScan: report.assetScan,
-        safetyCheck: report.safetyCheck,
-        timing: report.timing,
-        tradePlan: report.tradePlan,
-        trapCheck: report.trapCheck,
-        verdict: report.verdict,
-      };
-
-      // Capture chart if visible
-      if (chartRef.current) {
-        try {
-          chartRef.current.scrollIntoView({ behavior: 'instant', block: 'center' });
-          await new Promise(resolve => setTimeout(resolve, 1500));
-
-          const canvas = await html2canvas(chartRef.current, {
-            backgroundColor: '#1a1a2e',
-            scale: 2,
-            logging: false,
-            useCORS: true,
-            allowTaint: true,
-          });
-          reportData.chartImage = canvas.toDataURL('image/png');
-          console.log('[PDF Download] Chart captured successfully');
-        } catch (chartErr) {
-          console.warn('[PDF Download] Failed to capture chart:', chartErr);
-        }
-      }
-
-      // Generate and download PDF
-      const { generateAnalysisReport } = await import('../../../../components/reports/AnalysisReport');
-      await generateAnalysisReport(reportData, false);
-    } catch (err) {
-      console.error('Failed to download PDF:', err);
-      alert(err instanceof Error ? err.message : 'Failed to download PDF');
-    } finally {
-      setDownloadingPdf(false);
-    }
-  };
-
-  // Screenshot full report (not just chart)
-  const handleScreenshot = async () => {
-    if (!pageRef.current || capturingScreenshot) return;
-
-    setCapturingScreenshot(true);
+    setSaving(true);
     try {
       const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#ffffff',
@@ -204,100 +145,21 @@ export default function ReportViewPage() {
         },
       });
 
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          alert('Failed to create image');
-          return;
-        }
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const symbol = report?.symbol || 'Report';
-        const date = new Date().toISOString().split('T')[0];
-        link.download = `TraderPath_${symbol}_Report_${date}.png`;
-        link.href = url;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 'image/png');
-    } catch (err) {
-      console.error('Failed to capture screenshot:', err);
-      alert('Failed to capture screenshot');
-    } finally {
-      setCapturingScreenshot(false);
-    }
-  };
+      // Use JPEG for better compatibility with Microsoft Photos / Google Photos
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
 
-  // Export full page as image (PNG or JPG)
-  const handleExportImage = async (format: 'png' | 'jpg') => {
-    if (!pageRef.current || exporting) return;
+      // Download the image
+      const link = document.createElement('a');
+      const symbol = report.symbol || 'Report';
+      const date = new Date().toISOString().split('T')[0];
+      link.download = `TraderPath_${symbol}_${date}.jpg`;
+      link.href = imageBase64;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-    setExporting(true);
-    setExportDropdownOpen(false);
-
-    try {
-      const canvas = await html2canvas(pageRef.current, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        windowWidth: 1200,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('[data-export-container]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.overflow = 'visible';
-          }
-        },
-      });
-
-      const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
-      const quality = format === 'jpg' ? 0.92 : undefined;
-
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          alert('Failed to create image');
-          return;
-        }
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const symbol = report?.symbol || 'Report';
-        const date = new Date().toISOString().split('T')[0];
-        link.download = `TraderPath_${symbol}_Report_${date}.${format}`;
-        link.href = url;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, mimeType, quality);
-    } catch (err) {
-      console.error('Failed to export image:', err);
-      alert('Failed to export image');
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  // Send screenshot via email
-  const handleSendEmail = async () => {
-    if (!pageRef.current || sendingEmail || !report) return;
-
-    setSendingEmail(true);
-    setExportDropdownOpen(false);
-
-    try {
-      const canvas = await html2canvas(pageRef.current, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        windowWidth: 1200,
-      });
-
-      const imageBase64 = canvas.toDataURL('image/png');
-
-      const response = await authFetch('/api/reports/email-screenshot', {
+      // Send via email in background
+      authFetch('/api/reports/email-screenshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -307,21 +169,15 @@ export default function ReportViewPage() {
           score: report.verdict?.overallScore ? report.verdict.overallScore * 10 : 0,
           direction: report.tradePlan?.direction || 'long',
         }),
-      });
+      }).catch(err => console.error('Email send failed:', err));
 
-      const data = await response.json();
-
-      if (data.success) {
-        setEmailSent(true);
-        setTimeout(() => setEmailSent(false), 3000);
-      } else {
-        throw new Error(data.error || 'Failed to send email');
-      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      console.error('Failed to send email:', err);
-      alert(err instanceof Error ? err.message : 'Failed to send email');
+      console.error('Failed to save:', err);
+      alert('Failed to save image');
     } finally {
-      setSendingEmail(false);
+      setSaving(false);
     }
   };
 
@@ -548,17 +404,24 @@ export default function ReportViewPage() {
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-gray-900 dark:text-white">Trade Plan Chart</h3>
                 <button
-                  onClick={handleDownloadPdf}
-                  disabled={downloadingPdf}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-gradient-to-r from-red-500 via-amber-500 to-green-500 hover:opacity-90 text-white transition disabled:opacity-50"
-                  title="Download PDF report with chart"
-                >
-                  {downloadingPdf ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <FileDown className="w-4 h-4" />
+                  onClick={handleSaveAndEmail}
+                  disabled={saving}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition disabled:opacity-50",
+                    saved
+                      ? "bg-green-500 text-white"
+                      : "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white"
                   )}
-                  <span>Download PDF</span>
+                  title="Save as image and send via email"
+                >
+                  {saving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : saved ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <Camera className="w-4 h-4" />
+                  )}
+                  <span>{saved ? 'Saved & Sent!' : 'Save & Email'}</span>
                 </button>
               </div>
               <div ref={chartRef} className="bg-white dark:bg-slate-800 rounded-xl p-2">
@@ -602,101 +465,11 @@ export default function ReportViewPage() {
             </div>
           )}
 
-          {/* Export Section */}
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700">
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              {/* Export Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-                  disabled={exporting || sendingEmail}
-                  className={cn(
-                    "flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-xl transition shadow-lg",
-                    "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white",
-                    (exporting || sendingEmail) && "opacity-50 cursor-not-allowed"
-                  )}
-                >
-                  {exporting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Exporting...
-                    </>
-                  ) : sendingEmail ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : emailSent ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      Email Sent!
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      Export Report
-                      <ChevronDown className={cn("w-4 h-4 transition-transform", exportDropdownOpen && "rotate-180")} />
-                    </>
-                  )}
-                </button>
-
-                {/* Dropdown Menu */}
-                {exportDropdownOpen && (
-                  <>
-                    {/* Backdrop */}
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setExportDropdownOpen(false)}
-                    />
-                    {/* Menu */}
-                    <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 z-50 overflow-hidden">
-                      <button
-                        onClick={() => handleExportImage('png')}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-                      >
-                        <Image className="w-4 h-4 text-teal-500" />
-                        Download as PNG
-                        <span className="ml-auto text-xs text-gray-400">High Quality</span>
-                      </button>
-                      <button
-                        onClick={() => handleExportImage('jpg')}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-                      >
-                        <Image className="w-4 h-4 text-blue-500" />
-                        Download as JPG
-                        <span className="ml-auto text-xs text-gray-400">Smaller Size</span>
-                      </button>
-                      <div className="border-t border-gray-200 dark:border-slate-700" />
-                      <button
-                        onClick={handleSendEmail}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-                      >
-                        <Mail className="w-4 h-4 text-amber-500" />
-                        Send via Email
-                        <span className="ml-auto text-xs text-gray-400">To your email</span>
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Quick Save Button */}
-              <button
-                onClick={handleScreenshot}
-                disabled={capturingScreenshot}
-                className="flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-xl bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 transition disabled:opacity-50"
-                title="Quick save as PNG"
-              >
-                {capturingScreenshot ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Camera className="w-4 h-4" />
-                )}
-                <span>Save as Image</span>
-              </button>
-            </div>
-            <p className="text-center text-xs text-gray-500 dark:text-slate-400 mt-4">
-              Export as image for quick sharing or use the PDF button above for detailed report
+          {/* Export Info */}
+          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-700">
+            <p className="text-center text-xs text-gray-500 dark:text-slate-400 flex items-center justify-center gap-2">
+              <Mail className="w-3 h-3" />
+              Click "Save & Email" to download and automatically send to your email
             </p>
           </div>
 
