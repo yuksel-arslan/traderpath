@@ -571,14 +571,14 @@ def run_training_sync(symbols: List[str], epochs: int, batch_size: int, trade_ty
                     "trainingTime": total_time
                 }
 
-            except ImportError as e:
-                error_msg = f"FATAL: Could not import TFT trainer module: {e}"
-                training_state["progress"]["logs"].append(error_msg)
-                training_state["progress"]["logs"].append("Please ensure PyTorch and pytorch-forecasting are installed correctly.")
-                raise Exception(error_msg)
-            except Exception as e:
-                training_state["progress"]["logs"].append(f"Real training error: {e}")
-                raise
+        except ImportError as e:
+            error_msg = f"FATAL: Could not import TFT trainer module: {e}"
+            training_state["progress"]["logs"].append(error_msg)
+            training_state["progress"]["logs"].append("Please ensure PyTorch and pytorch-forecasting are installed correctly.")
+            raise Exception(error_msg)
+        except Exception as e:
+            training_state["progress"]["logs"].append(f"Real training error: {e}")
+            raise
 
         # Training complete
         if training_state["status"] == "training" and not _stop_training_flag.is_set():
