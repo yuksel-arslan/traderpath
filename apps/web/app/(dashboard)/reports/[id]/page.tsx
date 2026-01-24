@@ -23,8 +23,10 @@ import {
   Search,
   Crosshair,
   Bot,
-  Camera,
+  Download,
+  ChevronDown,
   Mail,
+  Image,
   Check,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
@@ -95,8 +97,9 @@ export default function ReportViewPage() {
   const [aiExpertComment, setAiExpertComment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
 
@@ -124,11 +127,12 @@ export default function ReportViewPage() {
     fetchReport();
   }, [reportId, router]);
 
-  // Save screenshot as JPEG and automatically send via email
-  const handleSaveAndEmail = async () => {
-    if (!pageRef.current || saving || !report) return;
+  // Export as PNG
+  const handleExportPNG = async () => {
+    if (!pageRef.current || exporting || !report) return;
 
-    setSaving(true);
+    setExporting(true);
+    setExportDropdownOpen(false);
     try {
       const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#ffffff',
@@ -145,10 +149,87 @@ export default function ReportViewPage() {
         },
       });
 
-      // Use JPEG for better compatibility with Microsoft Photos / Google Photos
+      const imageBase64 = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      const symbol = report.symbol || 'Report';
+      const date = new Date().toISOString().split('T')[0];
+      link.download = `TraderPath_${symbol}_${date}.png`;
+      link.href = imageBase64;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Failed to export PNG:', err);
+      alert('Failed to export image');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Export as JPG
+  const handleExportJPG = async () => {
+    if (!pageRef.current || exporting || !report) return;
+
+    setExporting(true);
+    setExportDropdownOpen(false);
+    try {
+      const canvas = await html2canvas(pageRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: 1200,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-export-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+          }
+        },
+      });
+
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
+      const link = document.createElement('a');
+      const symbol = report.symbol || 'Report';
+      const date = new Date().toISOString().split('T')[0];
+      link.download = `TraderPath_${symbol}_${date}.jpg`;
+      link.href = imageBase64;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Failed to export JPG:', err);
+      alert('Failed to export image');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Send via Email - downloads JPG and sends email
+  const handleSendEmail = async () => {
+    if (!pageRef.current || exporting || !report) return;
+
+    setExporting(true);
+    setExportDropdownOpen(false);
+    try {
+      const canvas = await html2canvas(pageRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: 1200,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-export-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+          }
+        },
+      });
+
       const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
 
-      // Download the image
+      // Download the image first
       const link = document.createElement('a');
       const symbol = report.symbol || 'Report';
       const date = new Date().toISOString().split('T')[0];
@@ -158,8 +239,8 @@ export default function ReportViewPage() {
       link.click();
       document.body.removeChild(link);
 
-      // Send via email in background
-      authFetch('/api/reports/email-screenshot', {
+      // Then send via email
+      const response = await authFetch('/api/reports/email-screenshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -169,15 +250,17 @@ export default function ReportViewPage() {
           score: report.verdict?.overallScore ? report.verdict.overallScore * 10 : 0,
           direction: report.tradePlan?.direction || 'long',
         }),
-      }).catch(err => console.error('Email send failed:', err));
+      });
 
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      if (response.ok) {
+        setEmailSent(true);
+        setTimeout(() => setEmailSent(false), 3000);
+      }
     } catch (err) {
-      console.error('Failed to save:', err);
-      alert('Failed to save image');
+      console.error('Failed to send email:', err);
+      alert('Failed to send email');
     } finally {
-      setSaving(false);
+      setExporting(false);
     }
   };
 
@@ -403,26 +486,68 @@ export default function ReportViewPage() {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-gray-900 dark:text-white">Trade Plan Chart</h3>
-                <button
-                  onClick={handleSaveAndEmail}
-                  disabled={saving}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition disabled:opacity-50",
-                    saved
-                      ? "bg-green-500 text-white"
-                      : "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white"
+                {/* Export Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                    disabled={exporting}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition disabled:opacity-50",
+                      emailSent
+                        ? "bg-green-500 text-white"
+                        : "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white"
+                    )}
+                  >
+                    {exporting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : emailSent ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    <span>{exporting ? 'Exporting...' : emailSent ? 'Sent!' : 'Export'}</span>
+                    <ChevronDown className={cn("w-3 h-3 transition-transform", exportDropdownOpen && "rotate-180")} />
+                  </button>
+
+                  {exportDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setExportDropdownOpen(false)} />
+                      <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 z-50 overflow-hidden">
+                        <button
+                          onClick={handleExportPNG}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                        >
+                          <Image className="w-4 h-4 text-teal-500" />
+                          <div>
+                            <div>Download PNG</div>
+                            <div className="text-xs text-gray-400">High Quality</div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={handleExportJPG}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                        >
+                          <Image className="w-4 h-4 text-blue-500" />
+                          <div>
+                            <div>Download JPG</div>
+                            <div className="text-xs text-gray-400">Smaller Size</div>
+                          </div>
+                        </button>
+                        <div className="border-t border-gray-200 dark:border-slate-700" />
+                        <button
+                          onClick={handleSendEmail}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                        >
+                          <Mail className="w-4 h-4 text-amber-500" />
+                          <div>
+                            <div>Send via Email</div>
+                            <div className="text-xs text-gray-400">Download + Email</div>
+                          </div>
+                        </button>
+                      </div>
+                    </>
                   )}
-                  title="Save as image and send via email"
-                >
-                  {saving ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : saved ? (
-                    <Check className="w-4 h-4" />
-                  ) : (
-                    <Camera className="w-4 h-4" />
-                  )}
-                  <span>{saved ? 'Saved & Sent!' : 'Save & Email'}</span>
-                </button>
+                </div>
               </div>
               <div ref={chartRef} className="bg-white dark:bg-slate-800 rounded-xl p-2">
                 <TradePlanChart
@@ -468,8 +593,8 @@ export default function ReportViewPage() {
           {/* Export Info */}
           <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-700">
             <p className="text-center text-xs text-gray-500 dark:text-slate-400 flex items-center justify-center gap-2">
-              <Mail className="w-3 h-3" />
-              Click "Save & Email" to download and automatically send to your email
+              <Download className="w-3 h-3" />
+              Use "Export" to download as PNG/JPG or send via email
             </p>
           </div>
 
