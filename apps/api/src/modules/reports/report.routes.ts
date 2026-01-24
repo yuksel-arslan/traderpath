@@ -1452,7 +1452,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
   }
 
   fastify.post<{ Body: SendScreenshotEmailBody }>(
-    '/email-screenshot',
+    '/api/reports/email-screenshot',
     { preHandler: [authenticate] },
     async (
       request: FastifyRequest<{ Body: SendScreenshotEmailBody }>,
