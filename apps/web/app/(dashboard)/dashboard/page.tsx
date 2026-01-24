@@ -113,6 +113,16 @@ interface RecentAnalysis {
   takeProfit1?: number;
 }
 
+interface TopCoin {
+  symbol: string;
+  totalScore: number;
+  reliabilityScore: number;
+  verdict: string;
+  direction: string | null;
+  price: number;
+  priceChange24h: number;
+}
+
 // ===========================================
 // Helper Functions
 // ===========================================
@@ -278,6 +288,7 @@ export default function DashboardPage() {
   const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [recentAnalyses, setRecentAnalyses] = useState<RecentAnalysis[]>([]);
+  const [topCoins, setTopCoins] = useState<TopCoin[]>([]);
   const [loading, setLoading] = useState(true);
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const initialLoadDone = useRef(false);
@@ -295,6 +306,7 @@ export default function DashboardPage() {
               setPlatformStats(data.platformStats);
               setUserStats(data.userStats);
               setRecentAnalyses(data.recentAnalyses);
+              setTopCoins(data.topCoins || []);
               setLoading(false);
               return;
             }
@@ -302,17 +314,19 @@ export default function DashboardPage() {
         } catch {}
       }
 
-      const [creditsRes, platformRes, statsRes, livePricesRes] = await Promise.all([
+      const [creditsRes, platformRes, statsRes, livePricesRes, topCoinsRes] = await Promise.all([
         authFetch('/api/user/credits'),
         fetch(getApiUrl('/api/analysis/platform-stats')),
         authFetch('/api/analysis/statistics'),
         authFetch('/api/analysis/live-prices'),
+        fetch(getApiUrl('/api/analysis/top-coins?limit=5&tradeableOnly=true')),
       ]);
 
       let newCredits = 0;
       let newPlatformStats = null;
       let newUserStats = null;
       let newRecentAnalyses: RecentAnalysis[] = [];
+      let newTopCoins: TopCoin[] = [];
 
       if (creditsRes.ok) {
         const data = await creditsRes.json();
@@ -373,6 +387,12 @@ export default function DashboardPage() {
         setRecentAnalyses(newRecentAnalyses);
       }
 
+      if (topCoinsRes.ok) {
+        const data = await topCoinsRes.json();
+        newTopCoins = data.data?.coins || [];
+        setTopCoins(newTopCoins);
+      }
+
       // Save to cache
       try {
         sessionStorage.setItem(CACHE_KEY, JSON.stringify({
@@ -381,6 +401,7 @@ export default function DashboardPage() {
             platformStats: newPlatformStats,
             userStats: newUserStats,
             recentAnalyses: newRecentAnalyses,
+            topCoins: newTopCoins,
           },
           timestamp: Date.now(),
         }));
@@ -679,6 +700,89 @@ export default function DashboardPage() {
           color="cyan"
         />
       </div>
+
+      {/* ===== SECTION 2.5: Top Coins by Analysis Accuracy Score ===== */}
+      {topCoins.length > 0 && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-emerald-900/20 dark:via-slate-800 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700/50">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/10 dark:from-emerald-500/20 via-transparent to-transparent" />
+
+          <div className="relative z-10 p-5">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                  <TrendingUp className="w-4.5 h-4.5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Top Coins by Score</h2>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">AI-analyzed every 2 hours</p>
+                </div>
+              </div>
+              <Link
+                href="/analyze"
+                className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+              >
+                Analyze now <ChevronRight className="w-3 h-3" />
+              </Link>
+            </div>
+
+            {/* Top Coins Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {topCoins.map((coin, index) => {
+                const verdictLower = coin.verdict?.toLowerCase() || '';
+                const isGo = verdictLower === 'go' || verdictLower === 'go!';
+                const isConditional = verdictLower.includes('conditional');
+
+                return (
+                  <Link
+                    key={coin.symbol}
+                    href={`/analyze?symbol=${coin.symbol}`}
+                    className="group p-3 rounded-xl bg-white/60 dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-lg transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-gray-400 dark:text-slate-500">#{index + 1}</span>
+                        <img
+                          src={getCoinIcon(coin.symbol)}
+                          alt={coin.symbol}
+                          className="w-6 h-6 rounded-full"
+                          onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON; }}
+                        />
+                        <span className="font-semibold text-gray-900 dark:text-white">{coin.symbol}</span>
+                      </div>
+                      <span className={cn(
+                        "text-xs font-bold px-1.5 py-0.5 rounded",
+                        isGo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                        isConditional ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                        "bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400"
+                      )}>
+                        {isGo ? 'GO' : isConditional ? 'COND' : coin.verdict?.toUpperCase()?.slice(0, 4)}
+                      </span>
+                    </div>
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <div className="text-lg font-bold text-gray-900 dark:text-white">
+                          {coin.reliabilityScore?.toFixed(0) || coin.totalScore?.toFixed(0) || '—'}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-slate-400">Score</div>
+                      </div>
+                      <div className="text-right">
+                        <div className={cn(
+                          "text-sm font-medium",
+                          coin.priceChange24h >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                        )}>
+                          {coin.priceChange24h >= 0 ? '+' : ''}{coin.priceChange24h?.toFixed(2) || 0}%
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-slate-400">24h</div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== SECTION 3: Performance Chart ===== */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
