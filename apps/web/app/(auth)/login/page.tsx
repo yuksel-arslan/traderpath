@@ -127,11 +127,13 @@ export default function LoginPage() {
   return (
     <>
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold gradient-text-logo-animate">Welcome back!</h1>
-        <p className="text-muted-foreground mt-2">Sign in to your account to continue</p>
+        <h1 className="text-3xl font-bold">
+          <span className="gradient-text-logo-animate">Welcome back!</span>
+        </h1>
+        <p className="text-slate-600 dark:text-muted-foreground mt-2">Sign in to your account to continue</p>
       </div>
 
-      <div className="bg-card border rounded-lg p-6 shadow-lg">
+      <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-2xl p-6 sm:p-8 shadow-xl shadow-slate-200/50 dark:shadow-none">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Success Message */}
             {successMessage && (
@@ -168,9 +170,9 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
+              <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-foreground">Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-muted-foreground" />
                 <input
                   type="email"
                   value={email}
@@ -178,28 +180,28 @@ export default function LoginPage() {
                   placeholder="you@example.com"
                   required
                   autoComplete="email"
-                  className="w-full pl-10 pr-4 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-background border border-slate-200 dark:border-border rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none text-slate-900 dark:text-foreground placeholder:text-slate-400 dark:placeholder:text-muted-foreground transition-all"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Password</label>
+              <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-foreground">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-muted-foreground" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="********"
+                  placeholder="Enter your password"
                   required
                   autoComplete="current-password"
-                  className="w-full pl-10 pr-10 py-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-background border border-slate-200 dark:border-border rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none text-slate-900 dark:text-foreground placeholder:text-slate-400 dark:placeholder:text-muted-foreground transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-muted-foreground dark:hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -207,11 +209,11 @@ export default function LoginPage() {
             </div>
 
             <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="rounded border-border" />
+              <label className="flex items-center gap-2 cursor-pointer text-slate-600 dark:text-muted-foreground">
+                <input type="checkbox" className="rounded border-slate-300 dark:border-border text-teal-500 focus:ring-teal-500" />
                 <span>Remember me</span>
               </label>
-              <Link href="/forgot-password" className="text-primary hover:underline">
+              <Link href="/forgot-password" className="text-teal-600 dark:text-primary hover:text-teal-700 dark:hover:text-primary/80 font-medium transition-colors">
                 Forgot password?
               </Link>
             </div>
@@ -219,7 +221,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40"
             >
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               {isLoading ? 'Signing in...' : 'Sign In'}
@@ -229,10 +231,10 @@ export default function LoginPage() {
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t" />
+                <div className="w-full border-t border-slate-200 dark:border-border" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-card text-muted-foreground">Or continue with</span>
+                <span className="px-3 bg-white dark:bg-card text-slate-500 dark:text-muted-foreground">Or continue with</span>
               </div>
             </div>
 
@@ -243,7 +245,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => handleOAuthClick('google')}
                 disabled={loadingProvider !== null}
-                className="py-2.5 border rounded-lg font-medium hover:bg-accent transition flex items-center justify-center gap-2 disabled:opacity-50"
+                className="py-3 border border-slate-200 dark:border-border rounded-xl font-medium bg-white dark:bg-transparent hover:bg-slate-50 dark:hover:bg-accent transition-all flex items-center justify-center gap-2 disabled:opacity-50 hover:border-slate-300 dark:hover:border-border"
                 title="Continue with Google"
               >
                 {loadingProvider === 'google' ? (
@@ -263,7 +265,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => handleOAuthClick('github')}
                 disabled={loadingProvider !== null}
-                className="py-2.5 border rounded-lg font-medium hover:bg-accent transition flex items-center justify-center gap-2 disabled:opacity-50"
+                className="py-3 border border-slate-200 dark:border-border rounded-xl font-medium bg-white dark:bg-transparent hover:bg-slate-50 dark:hover:bg-accent transition-all flex items-center justify-center gap-2 disabled:opacity-50 hover:border-slate-300 dark:hover:border-border text-slate-700 dark:text-current"
                 title="Continue with GitHub"
               >
                 {loadingProvider === 'github' ? (
@@ -280,7 +282,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => handleOAuthClick('twitter')}
                 disabled={loadingProvider !== null}
-                className="py-2.5 border rounded-lg font-medium hover:bg-accent transition flex items-center justify-center gap-2 disabled:opacity-50"
+                className="py-3 border border-slate-200 dark:border-border rounded-xl font-medium bg-white dark:bg-transparent hover:bg-slate-50 dark:hover:bg-accent transition-all flex items-center justify-center gap-2 disabled:opacity-50 hover:border-slate-300 dark:hover:border-border text-slate-700 dark:text-current"
                 title="Continue with X"
               >
                 {loadingProvider === 'twitter' ? (
@@ -294,9 +296,9 @@ export default function LoginPage() {
             </div>
           </div>
 
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+        <p className="mt-6 text-center text-sm text-slate-600 dark:text-muted-foreground">
           Don&apos;t have an account?{' '}
-          <Link href="/register" className="text-primary hover:underline font-medium">
+          <Link href="/register" className="text-teal-600 dark:text-primary hover:text-teal-700 dark:hover:text-primary/80 font-semibold transition-colors">
             Sign up
           </Link>
         </p>
