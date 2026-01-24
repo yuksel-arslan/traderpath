@@ -190,9 +190,16 @@ export const RESPONSE_TEMPLATES = {
     UNKNOWN_INTENT: `I didn't understand. Try:\n\n• "Analyze BTC" - Coin analysis\n• "Show chart" - View chart\n• "What is RSI?" - Expert question\n• "help" - All commands`,
     HELP_TEXT: `TraderPath AI Concierge
 
-ANALYSIS (25 credits)
-• "Analyze BTC" / "BTC nasıl?"
-• "ETH 4h analysis" / "SOL scalp"
+COIN ANALYSIS (25 credits)
+• 50+ coins: BTC, ETH, SOL, PEPE, WIF, SHIB...
+• "Analyze BTC" / "ETH 4h analysis"
+• 7-step deep analysis with 40+ indicators
+
+TOP 30 COIN SCAN (300 credits)
+• "Scan top 30 coins" - Full market scan
+• Analyzes top 30 coins by volume
+• Shows reliability scores & rankings
+• 60% off (normal: 750 credits)
 
 CHARTS (free)
 • "Show BTC chart"
@@ -201,10 +208,15 @@ CHARTS (free)
 EXPERT QUESTIONS (free)
 • "What is RSI?"
 • "How does MACD work?"
+• "What do you think about ETH?" (AI Expert review)
 
 ALERTS
 • "Alert me when BTC hits 70000"
 • "My alerts"
+
+TOP COINS
+• "Top 5 coins" - Best scoring from last scan
+• "Best coins to trade" - GO signals only
 
 SCHEDULED ANALYSIS
 • "Schedule daily BTC analysis"
@@ -213,7 +225,6 @@ SCHEDULED ANALYSIS
 ACCOUNT
 • "My credits" / "Status"
 • "My recent analyses"
-• "My win rate"
 
 50+ coins supported!`,
     PLATFORM_INFO: `TraderPath - AI-Powered Crypto Trading Analysis
@@ -270,9 +281,16 @@ I understand both English and Turkish. How can I help you today?`,
     UNKNOWN_INTENT: `Anlamadım. Şunları deneyin:\n\n• "BTC analiz" - Coin analizi\n• "Grafik göster" - Grafik görüntüle\n• "RSI nedir?" - Uzman sorusu\n• "yardım" - Tüm komutlar`,
     HELP_TEXT: `TraderPath AI Concierge
 
-ANALİZ (25 kredi)
-• "BTC analiz" / "ETH nasıl?"
-• "SOL 4h analizi" / "BTC scalp"
+COİN ANALİZİ (25 kredi)
+• 50+ coin: BTC, ETH, SOL, PEPE, WIF, SHIB...
+• "BTC analiz" / "ETH 4h analiz"
+• 40+ indikatörle 7 adımlı derin analiz
+
+TOP 30 COİN TARAMASI (300 kredi)
+• "Top 30 coin tara" - Tam piyasa taraması
+• Hacme göre ilk 30 coini analiz eder
+• Güvenilirlik skorları ve sıralama gösterir
+• %60 indirimli (normal: 750 kredi)
 
 GRAFİK (ücretsiz)
 • "BTC grafiği göster"
@@ -281,10 +299,15 @@ GRAFİK (ücretsiz)
 UZMAN SORULARI (ücretsiz)
 • "RSI nedir?"
 • "MACD nasıl çalışır?"
+• "ETH hakkında ne düşünüyorsun?" (AI Expert yorumu)
 
 ALARMLAR
 • "BTC 70000 olunca haber ver"
 • "Alarmlarım"
+
+EN İYİ COİNLER
+• "En iyi 5 coin" - Son taramadan en yüksek skorlular
+• "Hangi coin almalı?" - Sadece GO sinyalleri
 
 OTOMATİK ANALİZ
 • "Günlük BTC analizi kur"
@@ -293,7 +316,6 @@ OTOMATİK ANALİZ
 HESAP
 • "Kredim" / "Durumum"
 • "Son analizlerim"
-• "Başarı oranım"
 
 50+ coin destekleniyor!`,
     PLATFORM_INFO: `TraderPath - Yapay Zeka Destekli Kripto Analiz Platformu

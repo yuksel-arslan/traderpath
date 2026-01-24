@@ -82,8 +82,9 @@ export const ANALYSIS_COSTS = [
 ];
 
 // Analysis bundles with discounts
+// NOTE: These values must match backend credit-costs.service.ts (BUNDLE_FULL_ANALYSIS = 25)
 export const ANALYSIS_BUNDLES = [
-  { name: 'Full Analysis', steps: 'All 7 Steps', credits: 35, description: 'Complete trading analysis', comingSoon: false },
+  { name: 'Full Analysis', steps: 'All 7 Steps', credits: 25, description: 'Complete trading analysis', comingSoon: false },
   { name: 'TFT Analysis', steps: 'Full Analysis + AI Price Prediction', credits: 50, description: 'With TFT deep learning model', comingSoon: true },
 ];
 

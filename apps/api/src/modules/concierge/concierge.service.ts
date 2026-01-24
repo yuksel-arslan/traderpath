@@ -3,6 +3,7 @@ import { creditService } from '../credits/credit.service';
 import { aiExpertService } from '../ai-expert/ai-expert.service';
 import { callGeminiWithRetry } from '../../core/gemini';
 import { INTENT_DETECTION_PROMPT, RESPONSE_TEMPLATES } from './system-prompt';
+import { coinScoreCacheService, CoinScore } from '../analysis/services/coin-score-cache.service';
 
 interface ConciergeRequest {
   message: string;
@@ -41,6 +42,8 @@ interface ConciergeResponse {
   verdict?: string;
   score?: number;
   voltranSynthesis?: string;
+  fromCache?: boolean;  // True if result came from pre-computed cache (free)
+  cacheExpiresAt?: Date;  // When the cached result expires
   // Chart-specific fields
   chartData?: {
     symbol: string;
@@ -185,6 +188,21 @@ function detectIntent(message: string): {
     const countMatch = lower.match(/(\d+)/);
     const count = countMatch ? parseInt(countMatch[1], 10) : 5;
     return { intent: 'TOP_COINS_BY_SCORE', symbol: String(Math.min(20, Math.max(1, count))) };
+  }
+
+  // TOP_COINS_SCAN intent - start paid scan
+  if (
+    lower.includes('taramayı başlat') ||
+    lower.includes('tarama başlat') ||
+    lower.includes('scan now') ||
+    lower.includes('start scan') ||
+    lower.includes('30 coin tara') ||
+    lower.includes('top 30 tara') ||
+    lower.includes('scan top 30') ||
+    lower.includes('scan 30') ||
+    lower.includes('taramaya başla')
+  ) {
+    return { intent: 'TOP_COINS_SCAN' };
   }
 
   // Help intent - expanded patterns
@@ -730,6 +748,9 @@ class ConciergeService {
 
         case 'TOP_COINS_BY_SCORE':
           return await this.handleTopCoinsByScore(symbol ? parseInt(symbol, 10) : 5, creditBalance, detectedLanguage);
+
+        case 'TOP_COINS_SCAN':
+          return await this.handleTopCoinsScan(userId, creditBalance, detectedLanguage);
 
         case 'ANALYSIS':
           return await this.handleAnalysis(userId, symbol!, interval || '4h', detectedLanguage, creditBalance);
@@ -2081,55 +2102,82 @@ Or visit /scheduled to delete.`,
     creditBalance: number,
     language: string
   ): Promise<ConciergeResponse> {
+    const SCAN_COST = 300; // Discounted from 750 (30 × 25) - 60% off
+
     try {
-      // Import and use the coin score cache service
-      const { coinScoreCacheService } = await import('../analysis/services/coin-score-cache.service');
-
-      // Get top coins by reliability score
-      const coins = await coinScoreCacheService.getTopCoinsByScore(limit, 'reliabilityScore');
+      // Check if there's recent scan data in cache
       const cacheStats = await coinScoreCacheService.getCacheStats();
+      const coins = await coinScoreCacheService.getTopCoinsByScore(limit, 'reliabilityScore');
 
-      if (coins.length === 0) {
-        // Cache is empty - might be first run
+      // If cache has data and is not too old (less than 24 hours), show it
+      const cacheAgeHours = cacheStats.lastScanAt
+        ? (Date.now() - new Date(cacheStats.lastScanAt).getTime()) / (1000 * 60 * 60)
+        : Infinity;
+
+      if (coins.length > 0 && cacheAgeHours < 24) {
+        // Show cached results
+        const coinListStr = coins.map((coin, index) => {
+          const verdictEmoji = coin.verdict === 'GO' ? '🟢' : coin.verdict === 'CONDITIONAL_GO' ? '🟡' : coin.verdict === 'WAIT' ? '🟠' : '🔴';
+          const directionStr = coin.direction ? (coin.direction === 'LONG' ? '↑' : '↓') : '-';
+          const changeStr = coin.priceChange24h >= 0 ? `+${coin.priceChange24h.toFixed(1)}%` : `${coin.priceChange24h.toFixed(1)}%`;
+
+          return language === 'tr'
+            ? `${index + 1}. ${verdictEmoji} **${coin.symbol}** - Skor: ${coin.reliabilityScore}/100 ${directionStr}\n   Fiyat: $${coin.price.toLocaleString()} (${changeStr})`
+            : `${index + 1}. ${verdictEmoji} **${coin.symbol}** - Score: ${coin.reliabilityScore}/100 ${directionStr}\n   Price: $${coin.price.toLocaleString()} (${changeStr})`;
+        }).join('\n\n');
+
+        const lastScanStr = cacheStats.lastScanAt
+          ? new Date(cacheStats.lastScanAt).toLocaleString(language === 'tr' ? 'tr-TR' : 'en-US')
+          : (language === 'tr' ? 'Bilinmiyor' : 'Unknown');
+
+        const headerText = language === 'tr'
+          ? `📊 **En Yüksek Güvenilirlik Skoruna Sahip ${coins.length} Coin:**`
+          : `📊 **Top ${coins.length} Coins by Reliability Score:**`;
+
+        const footerText = language === 'tr'
+          ? `\n\n_Son tarama: ${lastScanStr}_\n💡 Güncel tarama için "top 30 coin tara" yazın (${SCAN_COST} kredi)`
+          : `\n\n_Last scan: ${lastScanStr}_\n💡 For fresh scan type "scan top 30 coins" (${SCAN_COST} credits)`;
+
         return {
-          success: false,
+          success: true,
           intent: 'TOP_COINS_BY_SCORE',
-          message: language === 'tr'
-            ? 'Henüz coin taraması yapılmamış. Sistem her 2 saatte bir top coinleri otomatik tarar. Lütfen kısa süre sonra tekrar deneyin.'
-            : 'No coin scan data available yet. The system automatically scans top coins every 2 hours. Please try again shortly.',
+          message: `${headerText}\n\n${coinListStr}${footerText}`,
           creditsSpent: 0,
           creditsRemaining: creditBalance,
+          detectedLanguage: language,
         };
       }
 
-      // Build formatted response
-      const coinListStr = coins.map((coin, index) => {
-        const verdictEmoji = coin.verdict === 'GO' ? '🟢' : coin.verdict === 'CONDITIONAL_GO' ? '🟡' : coin.verdict === 'WAIT' ? '🟠' : '🔴';
-        const directionStr = coin.direction ? (coin.direction === 'LONG' ? '↑' : '↓') : '-';
-        const changeStr = coin.priceChange24h >= 0 ? `+${coin.priceChange24h.toFixed(1)}%` : `${coin.priceChange24h.toFixed(1)}%`;
+      // No cache or too old - offer to scan
+      const offerMessage = language === 'tr'
+        ? `📊 **Top 30 Coin Taraması**
 
-        return language === 'tr'
-          ? `${index + 1}. ${verdictEmoji} **${coin.symbol}** - Skor: ${coin.reliabilityScore}/100 ${directionStr}\n   Fiyat: $${coin.price.toLocaleString()} (${changeStr})`
-          : `${index + 1}. ${verdictEmoji} **${coin.symbol}** - Score: ${coin.reliabilityScore}/100 ${directionStr}\n   Price: $${coin.price.toLocaleString()} (${changeStr})`;
-      }).join('\n\n');
+Sizin için hacim olarak ilk 30 coini analiz edip, analiz doğruluk skoruna göre sıralayabilirim.
 
-      const lastScanStr = cacheStats.lastScanAt
-        ? new Date(cacheStats.lastScanAt).toLocaleString(language === 'tr' ? 'tr-TR' : 'en-US')
-        : (language === 'tr' ? 'Bilinmiyor' : 'Unknown');
+💰 **Fiyatlandırma:**
+- Normal fiyat: 750 kredi (30 × 25)
+- Size özel: **300 kredi** (%60 indirim!)
 
-      const headerText = language === 'tr'
-        ? `📊 **En Yüksek Güvenilirlik Skoruna Sahip ${coins.length} Coin:**`
-        : `📊 **Top ${coins.length} Coins by Reliability Score:**`;
+⏱️ Tarama yaklaşık 3-5 dakika sürer.
 
-      const footerText = language === 'tr'
-        ? `\n\n_Son tarama: ${lastScanStr}_\n💡 Detaylı analiz için "BTC analiz et" yazabilirsiniz.`
-        : `\n\n_Last scan: ${lastScanStr}_\n💡 Type "analyze BTC" for detailed analysis.`;
+Devam etmek için "taramayı başlat" veya "scan now" yazın.`
+        : `📊 **Top 30 Coins Scan**
+
+I can analyze the top 30 coins by volume and rank them by reliability score.
+
+💰 **Pricing:**
+- Normal price: 750 credits (30 × 25)
+- Special offer: **300 credits** (60% off!)
+
+⏱️ Scan takes approximately 3-5 minutes.
+
+Type "start scan" or "taramayı başlat" to continue.`;
 
       return {
         success: true,
         intent: 'TOP_COINS_BY_SCORE',
-        message: `${headerText}\n\n${coinListStr}${footerText}`,
-        creditsSpent: 0, // Free feature
+        message: offerMessage,
+        creditsSpent: 0,
         creditsRemaining: creditBalance,
         detectedLanguage: language,
       };
@@ -2148,6 +2196,96 @@ Or visit /scheduled to delete.`,
     }
   }
 
+  /**
+   * Handle top coins scan request (paid feature - 300 credits)
+   */
+  private async handleTopCoinsScan(
+    userId: string,
+    creditBalance: number,
+    language: string
+  ): Promise<ConciergeResponse> {
+    const SCAN_COST = 300;
+
+    // Check credits
+    if (creditBalance < SCAN_COST) {
+      return {
+        success: false,
+        intent: 'TOP_COINS_SCAN',
+        message: language === 'tr'
+          ? `Yetersiz kredi. Top 30 coin taraması için ${SCAN_COST} kredi gerekli, bakiyeniz: ${creditBalance}`
+          : `Insufficient credits. Top 30 coins scan requires ${SCAN_COST} credits, you have: ${creditBalance}`,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: 'INSUFFICIENT_CREDITS',
+      };
+    }
+
+    try {
+      // Charge credits
+      const chargeResult = await creditService.charge(userId, SCAN_COST, 'top_coins_scan', {
+        description: 'Top 30 coins analysis scan',
+      });
+
+      if (!chargeResult.success) {
+        return {
+          success: false,
+          intent: 'TOP_COINS_SCAN',
+          message: language === 'tr'
+            ? 'Kredi çekimi başarısız oldu. Lütfen tekrar deneyin.'
+            : 'Credit charge failed. Please try again.',
+          creditsSpent: 0,
+          creditsRemaining: creditBalance,
+          error: 'CHARGE_FAILED',
+        };
+      }
+
+      // Start scanning message
+      const startMessage = language === 'tr'
+        ? `🔄 **Top 30 Coin Taraması Başlatıldı**
+
+${SCAN_COST} kredi çekildi.
+Tarama arka planda devam ediyor...
+
+⏱️ Bu işlem 3-5 dakika sürebilir.
+Tamamlandığında sonuçları görmek için "top coins" yazın.`
+        : `🔄 **Top 30 Coins Scan Started**
+
+${SCAN_COST} credits charged.
+Scanning in background...
+
+⏱️ This may take 3-5 minutes.
+Type "top coins" to see results when complete.`;
+
+      // Start scan in background (don't await)
+      coinScoreCacheService.scanAllCoins('4h').then(result => {
+        console.log(`[Concierge] Top coins scan complete: ${result.success} success, ${result.failed} failed`);
+      }).catch(err => {
+        console.error('[Concierge] Top coins scan error:', err);
+      });
+
+      return {
+        success: true,
+        intent: 'TOP_COINS_SCAN',
+        message: startMessage,
+        creditsSpent: SCAN_COST,
+        creditsRemaining: chargeResult.newBalance,
+        detectedLanguage: language,
+      };
+    } catch (error) {
+      console.error('[Concierge] Top coins scan error:', error);
+      return {
+        success: false,
+        intent: 'TOP_COINS_SCAN',
+        message: language === 'tr'
+          ? 'Tarama başlatılamadı. Lütfen tekrar deneyin.'
+          : 'Failed to start scan. Please try again.',
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
   private async handleAnalysis(
     userId: string,
     symbol: string,
@@ -2156,13 +2294,15 @@ Or visit /scheduled to delete.`,
     creditBalance: number
   ): Promise<ConciergeResponse> {
     const ANALYSIS_COST = 25;
+    const upperSymbol = symbol.toUpperCase();
+    const isTurkish = language === 'tr';
 
     // Check credits
     if (creditBalance < ANALYSIS_COST) {
       return {
         success: false,
         intent: 'ANALYSIS',
-        message: language === 'tr'
+        message: isTurkish
           ? `Yetersiz kredi. Analiz için ${ANALYSIS_COST} kredi gerekli, bakiyeniz: ${creditBalance}`
           : `Insufficient credits. Analysis requires ${ANALYSIS_COST} credits, you have: ${creditBalance}`,
         creditsSpent: 0,
@@ -2175,12 +2315,12 @@ Or visit /scheduled to delete.`,
       // Use AI Expert Panel for analysis
       const tradeType = getTradeType(interval);
 
-      console.log(`[Concierge] Analysis request: symbol=${symbol}, interval=${interval}, tradeType=${tradeType}, language=${language}`);
+      console.log(`[Concierge] Analysis request: symbol=${upperSymbol}, interval=${interval}, tradeType=${tradeType}, language=${language}`);
 
       const panelResult = await aiExpertService.analyzeWithExpertPanel({
-        symbol,
+        symbol: upperSymbol,
         userId,
-        language: language, // Pass the actual detected language (supports 20+ languages)
+        language: language,
         tradeType,
         interval,
       });
@@ -2189,7 +2329,7 @@ Or visit /scheduled to delete.`,
         return {
           success: false,
           intent: 'ANALYSIS',
-          message: language === 'tr'
+          message: isTurkish
             ? `Analiz başarısız: ${panelResult.error || 'Bilinmeyen hata'}`
             : `Analysis failed: ${panelResult.error || 'Unknown error'}`,
           creditsSpent: 0,
@@ -2202,25 +2342,22 @@ Or visit /scheduled to delete.`,
       const verdict = panelResult.verdict?.toUpperCase() || 'WAIT';
       const score = panelResult.score || 5;
 
-      // ALWAYS use generateNaturalResponse for concierge - it has proper language support
-      // VOLTRAN synthesis often comes in English regardless of language setting
-      const synthesis = this.generateNaturalResponse(symbol, interval, verdict, score, language);
+      const synthesis = this.generateNaturalResponse(upperSymbol, interval, verdict, score, language);
 
       // Localized labels
-      const isTurkish = language === 'tr';
       const verdictLabel = verdict === 'GO' ? 'GO'
         : verdict === 'AVOID' ? (isTurkish ? 'KAÇIN' : 'AVOID')
         : verdict === 'CONDITIONAL_GO' ? (isTurkish ? 'ŞARTLI' : 'COND')
         : (isTurkish ? 'BEKLE' : 'WAIT');
 
       const analysisMessage = isTurkish
-        ? `${symbol} ${interval.toUpperCase()} Analizi
+        ? `${upperSymbol} ${interval.toUpperCase()} Analizi
 
 Karar: ${verdictLabel}
 Skor: ${score}/10
 
 ${synthesis}`
-        : `${symbol} ${interval.toUpperCase()} Analysis
+        : `${upperSymbol} ${interval.toUpperCase()} Analysis
 
 Verdict: ${verdictLabel}
 Score: ${score}/10
@@ -2233,12 +2370,11 @@ ${synthesis}`;
         message: analysisMessage,
         creditsSpent: panelResult.creditsSpent || ANALYSIS_COST,
         creditsRemaining: panelResult.remainingCredits ?? (creditBalance - ANALYSIS_COST),
-        // Analysis-specific data
         analysisId: panelResult.analysisId,
         verdict: verdict,
         score: score,
         voltranSynthesis: synthesis,
-        detectedLanguage: language, // Include detected language
+        detectedLanguage: language,
       };
 
     } catch (error) {
@@ -2246,7 +2382,7 @@ ${synthesis}`;
       return {
         success: false,
         intent: 'ANALYSIS',
-        message: language === 'tr'
+        message: isTurkish
           ? 'Analiz sırasında hata oluştu. Lütfen tekrar deneyin.'
           : 'Error during analysis. Please try again.',
         creditsSpent: 0,

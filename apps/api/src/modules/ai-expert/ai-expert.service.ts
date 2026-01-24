@@ -1314,10 +1314,23 @@ export class AIExpertService {
   /**
    * Supported coin symbols for analysis
    */
+  // Supported coin symbols for analysis - synced with concierge.service.ts SUPPORTED_COINS
   private readonly SUPPORTED_SYMBOLS = [
+    // Top coins by market cap
     'BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOGE',
-    'DOT', 'MATIC', 'LINK', 'UNI', 'ATOM', 'LTC', 'INJ', 'ARB',
-    'OP', 'APT', 'SUI', 'SEI', 'TIA', 'NEAR', 'FTM', 'ALGO'
+    'DOT', 'MATIC', 'LINK', 'UNI', 'ATOM', 'LTC', 'TRX', 'BCH',
+    // DeFi tokens
+    'AAVE', 'MKR', 'CRV', 'COMP', 'SNX', 'YFI', '1INCH',
+    // Layer 2 / New chains
+    'ARB', 'OP', 'APT', 'SUI', 'SEI', 'NEAR', 'FTM', 'ALGO', 'EGLD', 'FLOW',
+    // Meme coins
+    'PEPE', 'SHIB', 'FLOKI', 'WIF', 'BONK',
+    // Gaming / Metaverse
+    'SAND', 'MANA', 'AXS', 'GALA', 'IMX', 'ENJ',
+    // AI tokens
+    'FET', 'AGIX', 'OCEAN', 'RNDR', 'TAO', 'WLD',
+    // Others
+    'INJ', 'TIA', 'VET', 'HBAR', 'QNT', 'LDO', 'RUNE', 'GRT', 'FIL', 'THETA', 'ICP',
   ];
 
   /**
