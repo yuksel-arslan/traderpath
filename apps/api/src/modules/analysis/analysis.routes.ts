@@ -4573,6 +4573,205 @@ Explain the key risks and what conditions would need to change before trading th
   });
 
   /**
+   * GET /api/analysis/performance-history
+   * Returns daily realized P/L for chart visualization
+   * - Weekly/Monthly view: Uses outcomeAt date for realized P/L
+   * - Daily view: Realized P/L + unrealized P/L for active trades
+   */
+  app.get('/performance-history', {
+    preHandler: authenticate,
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = getUser(request).id;
+    const query = request.query as { days?: string };
+    const days = Math.min(90, Math.max(7, parseInt(query.days || '30', 10)));
+
+    try {
+      const now = new Date();
+      const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+      startDate.setHours(0, 0, 0, 0);
+
+      // Get all analyses with outcomes for this user in the date range
+      const analyses = await prisma.analysis.findMany({
+        where: {
+          userId,
+          OR: [
+            // Closed trades (has outcome)
+            {
+              outcome: { in: ['tp1_hit', 'tp2_hit', 'tp3_hit', 'sl_hit'] },
+              outcomeAt: { gte: startDate }
+            },
+            // Active trades (no outcome, not expired)
+            {
+              outcome: null,
+              expiresAt: { gt: now },
+              createdAt: { gte: startDate }
+            }
+          ]
+        },
+        select: {
+          id: true,
+          symbol: true,
+          outcome: true,
+          outcomeAt: true,
+          outcomePrice: true,
+          createdAt: true,
+          expiresAt: true,
+          step5Result: true,
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      // Calculate P/L for each trade
+      const tradesWithPnL = analyses.map(analysis => {
+        const step5 = analysis.step5Result as Record<string, unknown> | null;
+        const direction = ((step5?.direction as string) || 'long').toLowerCase();
+        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
+        const stopLoss = Number((step5?.stopLoss as Record<string, unknown>)?.price || step5?.stopLossPrice || 0);
+        const tp1 = Number((step5?.takeProfits as Array<Record<string, unknown>>)?.[0]?.price || step5?.takeProfit1 || 0);
+        const tp2 = Number((step5?.takeProfits as Array<Record<string, unknown>>)?.[1]?.price || step5?.takeProfit2 || 0);
+        const tp3 = Number((step5?.takeProfits as Array<Record<string, unknown>>)?.[2]?.price || step5?.takeProfit3 || 0);
+
+        let pnlPercent = 0;
+        let isRealized = false;
+        let outcomeDate: Date | null = null;
+
+        if (analysis.outcome && analysis.outcomePrice && entryPrice > 0) {
+          // Realized P/L
+          isRealized = true;
+          outcomeDate = analysis.outcomeAt;
+          const exitPrice = Number(analysis.outcomePrice);
+
+          if (direction === 'short') {
+            pnlPercent = ((entryPrice - exitPrice) / entryPrice) * 100;
+          } else {
+            pnlPercent = ((exitPrice - entryPrice) / entryPrice) * 100;
+          }
+        }
+
+        return {
+          id: analysis.id,
+          symbol: analysis.symbol,
+          direction,
+          entryPrice,
+          stopLoss,
+          tp1,
+          tp2,
+          tp3,
+          outcome: analysis.outcome,
+          outcomePrice: analysis.outcomePrice ? Number(analysis.outcomePrice) : null,
+          outcomeDate,
+          createdAt: analysis.createdAt,
+          pnlPercent: Number(pnlPercent.toFixed(2)),
+          isRealized,
+          isActive: !analysis.outcome && analysis.expiresAt && new Date(analysis.expiresAt) > now,
+        };
+      });
+
+      // Group by date for chart
+      const dailyData: Record<string, { realized: number; unrealized: number; trades: number }> = {};
+
+      // Initialize all days
+      for (let i = 0; i < days; i++) {
+        const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        const dateStr = d.toISOString().split('T')[0];
+        dailyData[dateStr] = { realized: 0, unrealized: 0, trades: 0 };
+      }
+
+      // Fill in realized P/L by outcomeAt date
+      tradesWithPnL.filter(t => t.isRealized && t.outcomeDate).forEach(trade => {
+        const dateStr = trade.outcomeDate!.toISOString().split('T')[0];
+        if (dailyData[dateStr]) {
+          dailyData[dateStr].realized += trade.pnlPercent;
+          dailyData[dateStr].trades++;
+        }
+      });
+
+      // Get current prices for active trades to calculate unrealized P/L
+      const activeTrades = tradesWithPnL.filter(t => t.isActive && t.entryPrice > 0);
+      if (activeTrades.length > 0) {
+        const symbols = [...new Set(activeTrades.map(t => t.symbol))];
+        const prices: Record<string, number> = {};
+
+        try {
+          const pairs = symbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
+          const priceResponse = await fetch(
+            `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
+          );
+          if (priceResponse.ok) {
+            const priceData = await priceResponse.json();
+            for (const item of priceData) {
+              const symbol = item.symbol.replace('USDT', '');
+              prices[symbol] = parseFloat(item.price);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to fetch prices:', err);
+        }
+
+        // Calculate unrealized P/L for today
+        const todayStr = now.toISOString().split('T')[0];
+        activeTrades.forEach(trade => {
+          const currentPrice = prices[trade.symbol] || 0;
+          if (currentPrice > 0 && trade.entryPrice > 0) {
+            let unrealizedPnL = 0;
+            if (trade.direction === 'short') {
+              unrealizedPnL = ((trade.entryPrice - currentPrice) / trade.entryPrice) * 100;
+            } else {
+              unrealizedPnL = ((currentPrice - trade.entryPrice) / trade.entryPrice) * 100;
+            }
+            if (dailyData[todayStr]) {
+              dailyData[todayStr].unrealized += unrealizedPnL;
+            }
+          }
+        });
+      }
+
+      // Convert to array sorted by date
+      const chartData = Object.entries(dailyData)
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([date, data]) => ({
+          date,
+          realized: Number(data.realized.toFixed(2)),
+          unrealized: Number(data.unrealized.toFixed(2)),
+          total: Number((data.realized + data.unrealized).toFixed(2)),
+          trades: data.trades,
+        }));
+
+      // Calculate cumulative P/L
+      let cumulative = 0;
+      const cumulativeData = chartData.map(d => {
+        cumulative += d.realized;
+        return {
+          ...d,
+          cumulative: Number(cumulative.toFixed(2)),
+        };
+      });
+
+      return reply.send({
+        success: true,
+        data: {
+          daily: cumulativeData,
+          summary: {
+            totalRealizedPnL: Number(cumulative.toFixed(2)),
+            totalTrades: tradesWithPnL.filter(t => t.isRealized).length,
+            activeTrades: activeTrades.length,
+            winRate: tradesWithPnL.filter(t => t.isRealized).length > 0
+              ? Number((tradesWithPnL.filter(t => t.isRealized && t.pnlPercent > 0).length /
+                  tradesWithPnL.filter(t => t.isRealized).length * 100).toFixed(1))
+              : 0,
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Performance history error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'PERFORMANCE_HISTORY_ERROR', message: 'Failed to fetch performance history' },
+      });
+    }
+  });
+
+  /**
    * GET /api/analysis/supported-symbols
    */
   app.get('/supported-symbols', async (_request: FastifyRequest, reply: FastifyReply) => {
