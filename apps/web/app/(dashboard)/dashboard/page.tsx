@@ -762,16 +762,16 @@ export default function DashboardPage() {
                     <div className="flex items-end justify-between">
                       <div>
                         <div className="text-lg font-bold text-gray-900 dark:text-white">
-                          {coin.reliabilityScore?.toFixed(0) || coin.totalScore?.toFixed(0) || '—'}
+                          {(coin.reliabilityScore ?? coin.totalScore ?? 0).toFixed(0)}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-slate-400">Score</div>
                       </div>
                       <div className="text-right">
                         <div className={cn(
                           "text-sm font-medium",
-                          coin.priceChange24h >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                          (coin.priceChange24h ?? 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                         )}>
-                          {coin.priceChange24h >= 0 ? '+' : ''}{coin.priceChange24h?.toFixed(2) || 0}%
+                          {(coin.priceChange24h ?? 0) >= 0 ? '+' : ''}{(coin.priceChange24h ?? 0).toFixed(2)}%
                         </div>
                         <div className="text-xs text-gray-500 dark:text-slate-400">24h</div>
                       </div>
