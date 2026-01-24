@@ -1,909 +1,656 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bot, Mic, MicOff, Volume2, VolumeX, Loader2, ExternalLink, Mail, Check, RefreshCw } from 'lucide-react';
-import { authFetch } from '@/lib/api';
-import Link from 'next/link';
+// ===========================================
+// AI Concierge Page - 2026 Design Trends
+// Glassmorphism, Gradient Orbs, Grain Texture
+// ===========================================
 
-// Web Speech API - using 'any' for cross-browser compatibility
-// These APIs are not fully typed in standard TypeScript DOM types
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SpeechRecognitionInstance = any;
+import { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  Bot,
+  Mic,
+  MicOff,
+  Send,
+  Sparkles,
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  Target,
+  Zap,
+  ArrowRight,
+  ExternalLink,
+  RefreshCw,
+  Volume2,
+  Clock,
+  Activity,
+  Brain,
+  Shield,
+  LineChart,
+} from 'lucide-react';
+import { authFetch, getApiUrl } from '@/lib/api';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
+import dynamic from 'next/dynamic';
+
+// Lazy load TradePlanChart
+const TradePlanChart = dynamic(
+  () => import('@/components/analysis/TradePlanChart').then(mod => ({ default: mod.TradePlanChart })),
+  { ssr: false, loading: () => <div className="h-[300px] bg-slate-800/50 rounded-xl animate-pulse" /> }
+);
 
 // Types
-interface ConversationStep {
+interface ChatMessage {
   id: string;
-  aiMessage: { tr: string; en: string };
-  expectingInput: boolean;
-  inputType: 'coin' | 'timeframe' | 'yesno' | 'none';
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  data?: {
+    verdict?: string;
+    score?: number;
+    analysisId?: string;
+    direction?: string;
+    chartData?: Array<{ time: number; open: number; high: number; low: number; close: number }>;
+    tradePlan?: {
+      entry: number;
+      stopLoss: number;
+      takeProfits: number[];
+    };
+  };
 }
 
-interface AnalysisResult {
-  success: boolean;
-  analysisId?: string;
-  verdict?: string;
-  score?: number;
-  message?: string;
-  error?: string;
+interface MarketData {
+  btcPrice: number;
+  btcChange: number;
+  ethPrice: number;
+  ethChange: number;
+  fearGreed: number;
+  fearGreedLabel: string;
 }
 
-// Supported coins
-const COINS: Record<string, string> = {
-  'bitcoin': 'BTC', 'btc': 'BTC', 'bitkoyn': 'BTC',
-  'ethereum': 'ETH', 'eth': 'ETH', 'eter': 'ETH', 'etereum': 'ETH',
-  'solana': 'SOL', 'sol': 'SOL',
-  'bnb': 'BNB', 'binance': 'BNB',
-  'ripple': 'XRP', 'xrp': 'XRP',
-  'doge': 'DOGE', 'dogecoin': 'DOGE', 'dogekoin': 'DOGE',
-  'cardano': 'ADA', 'ada': 'ADA',
-  'avalanche': 'AVAX', 'avax': 'AVAX',
-  'polkadot': 'DOT', 'dot': 'DOT',
-  'polygon': 'MATIC', 'matic': 'MATIC',
-};
-
-// Timeframe keywords
-const TIMEFRAMES: Record<string, { value: string; label: { tr: string; en: string } }> = {
-  'scalping': { value: '15m', label: { tr: 'scalping', en: 'scalping' } },
-  'skalping': { value: '15m', label: { tr: 'scalping', en: 'scalping' } },
-  'kısa': { value: '15m', label: { tr: 'scalping', en: 'scalping' } },
-  'short': { value: '15m', label: { tr: 'scalping', en: 'scalping' } },
-  'hızlı': { value: '15m', label: { tr: 'scalping', en: 'scalping' } },
-  'quick': { value: '15m', label: { tr: 'scalping', en: 'scalping' } },
-
-  'gün içi': { value: '1h', label: { tr: 'gün içi', en: 'day trade' } },
-  'günlük': { value: '1h', label: { tr: 'gün içi', en: 'day trade' } },
-  'day trade': { value: '1h', label: { tr: 'gün içi', en: 'day trade' } },
-  'daytrade': { value: '1h', label: { tr: 'gün içi', en: 'day trade' } },
-  'intraday': { value: '1h', label: { tr: 'gün içi', en: 'day trade' } },
-
-  'swing': { value: '4h', label: { tr: 'swing', en: 'swing' } },
-  'orta': { value: '4h', label: { tr: 'swing', en: 'swing' } },
-  'medium': { value: '4h', label: { tr: 'swing', en: 'swing' } },
-
-  'uzun': { value: '1d', label: { tr: 'pozisyon', en: 'position' } },
-  'pozisyon': { value: '1d', label: { tr: 'pozisyon', en: 'position' } },
-  'position': { value: '1d', label: { tr: 'pozisyon', en: 'position' } },
-  'long term': { value: '1d', label: { tr: 'pozisyon', en: 'position' } },
-  'yatırım': { value: '1d', label: { tr: 'pozisyon', en: 'position' } },
-};
-
-// Yes/No keywords
-const YES_KEYWORDS = ['evet', 'yes', 'ok', 'tamam', 'olur', 'yap', 'gönder', 'ekle', 'istiyorum', 'lütfen', 'sure', 'yeah', 'yep', 'please', 'do it'];
-const NO_KEYWORDS = ['hayır', 'no', 'yok', 'gerek yok', 'istemiyorum', 'nope', 'dont', "don't", 'skip', 'atla', 'geçelim'];
-
-// Detect browser language
-function detectBrowserLanguage(): 'tr' | 'en' {
-  if (typeof window === 'undefined') return 'en';
-  const lang = navigator.language || 'en';
-  return lang.startsWith('tr') ? 'tr' : 'en';
+// Grain Texture Overlay
+function GrainOverlay() {
+  return (
+    <div
+      className="pointer-events-none fixed inset-0 z-50 opacity-[0.02]"
+      style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+        backgroundRepeat: 'repeat',
+      }}
+    />
+  );
 }
 
-// Get speech recognition language code
-function getSpeechLang(lang: 'tr' | 'en'): string {
-  return lang === 'tr' ? 'tr-TR' : 'en-US';
+// Gradient Orbs
+function GradientOrbs() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-gradient-to-br from-teal-500/20 to-emerald-500/10 rounded-full blur-3xl animate-float-slow" />
+      <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] bg-gradient-to-tr from-purple-500/15 to-blue-500/10 rounded-full blur-3xl animate-float-slow" style={{ animationDelay: '-3s' }} />
+      <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] bg-gradient-to-br from-amber-500/10 to-orange-500/5 rounded-full blur-3xl animate-orb-move" />
+    </div>
+  );
+}
+
+// Quick Command Button
+function QuickCommand({
+  icon: Icon,
+  label,
+  onClick,
+  gradient
+}: {
+  icon: React.ElementType;
+  label: string;
+  onClick: () => void;
+  gradient: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "group flex items-center gap-2 px-4 py-2.5 rounded-xl",
+        "bg-gradient-to-r backdrop-blur-sm border border-white/10",
+        "hover:scale-[1.02] hover:shadow-lg transition-all duration-200",
+        gradient
+      )}
+    >
+      <Icon className="w-4 h-4 text-white/80 group-hover:text-white" />
+      <span className="text-sm font-medium text-white/90 group-hover:text-white">{label}</span>
+    </button>
+  );
+}
+
+// Stat Card
+function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string; color: string }) {
+  return (
+    <div className={cn(
+      "flex items-center gap-3 px-4 py-3 rounded-xl",
+      "bg-white/5 backdrop-blur-sm border border-white/10"
+    )}>
+      <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", color)}>
+        <Icon className="w-5 h-5 text-white" />
+      </div>
+      <div>
+        <p className="text-xs text-slate-400">{label}</p>
+        <p className="text-lg font-bold text-white">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+// Verdict Badge
+function VerdictBadge({ verdict, score }: { verdict: string; score?: number }) {
+  const verdictUpper = verdict?.toUpperCase() || '';
+  const config = {
+    'GO': { bg: 'from-emerald-500 to-green-600', text: 'GO', shadow: 'shadow-emerald-500/30' },
+    'CONDITIONAL_GO': { bg: 'from-amber-500 to-yellow-600', text: 'CONDITIONAL', shadow: 'shadow-amber-500/30' },
+    'COND': { bg: 'from-amber-500 to-yellow-600', text: 'CONDITIONAL', shadow: 'shadow-amber-500/30' },
+    'WAIT': { bg: 'from-slate-500 to-gray-600', text: 'WAIT', shadow: 'shadow-slate-500/30' },
+    'AVOID': { bg: 'from-red-500 to-rose-600', text: 'AVOID', shadow: 'shadow-red-500/30' },
+  }[verdictUpper] || { bg: 'from-slate-500 to-gray-600', text: verdict, shadow: '' };
+
+  return (
+    <div className={cn(
+      "inline-flex items-center gap-3 px-5 py-2.5 rounded-xl",
+      "bg-gradient-to-r shadow-lg",
+      config.bg, config.shadow
+    )}>
+      <span className="text-lg font-bold text-white">{config.text}</span>
+      {score !== undefined && (
+        <span className="text-white/80 font-medium">{score}/10</span>
+      )}
+    </div>
+  );
 }
 
 export default function ConciergePage() {
-  // State
-  const [lang, setLang] = useState<'tr' | 'en'>('en');
-  const [step, setStep] = useState<'idle' | 'welcome' | 'ask-coin' | 'ask-timeframe' | 'ask-expert' | 'analyzing' | 'result' | 'ask-email'>('idle');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [aiMessage, setAiMessage] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [voiceSupported, setVoiceSupported] = useState(true);
-  const [micError, setMicError] = useState<string | null>(null);
-
-  // Conversation data
-  const [selectedCoin, setSelectedCoin] = useState<string | null>(null);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<string | null>(null);
-  const [includeExpert, setIncludeExpert] = useState(true);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
-  const [emailSent, setEmailSent] = useState(false);
+  const [marketData, setMarketData] = useState<MarketData | null>(null);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
 
-  // Refs
-  const synthRef = useRef<SpeechSynthesis | null>(null);
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const isSpeakingRef = useRef(false);
-  const isListeningRef = useRef(false);
-
-  // Conversation history for display
-  const [history, setHistory] = useState<Array<{ role: 'ai' | 'user'; text: string }>>([]);
-
-  // Initialize speech APIs
+  // Fetch market data
   useEffect(() => {
-    const detectedLang = detectBrowserLanguage();
-    setLang(detectedLang);
+    const fetchMarketData = async () => {
+      try {
+        const [btcRes, ethRes, fgRes] = await Promise.all([
+          fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT'),
+          fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT'),
+          fetch('https://api.alternative.me/fng/?limit=1'),
+        ]);
 
-    if (typeof window !== 'undefined') {
-      synthRef.current = window.speechSynthesis;
+        const [btcData, ethData, fgData] = await Promise.all([
+          btcRes.json(),
+          ethRes.json(),
+          fgRes.json(),
+        ]);
 
-      // Check HTTPS requirement
-      const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
-      if (!isSecure) {
-        setVoiceSupported(false);
-        setMicError(detectedLang === 'tr'
-          ? 'Ses tanıma HTTPS gerektirir. Lütfen yazarak devam edin.'
-          : 'Voice recognition requires HTTPS. Please type your responses.');
+        setMarketData({
+          btcPrice: parseFloat(btcData.lastPrice),
+          btcChange: parseFloat(btcData.priceChangePercent),
+          ethPrice: parseFloat(ethData.lastPrice),
+          ethChange: parseFloat(ethData.priceChangePercent),
+          fearGreed: parseInt(fgData.data?.[0]?.value || '50'),
+          fearGreedLabel: fgData.data?.[0]?.value_classification || 'Neutral',
+        });
+      } catch (error) {
+        console.error('Failed to fetch market data:', error);
       }
+    };
 
-      // Initialize speech recognition (with browser compatibility)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    fetchMarketData();
+    const interval = setInterval(fetchMarketData, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
-      if (SpeechRecognitionAPI && isSecure) {
-        const recognition = new SpeechRecognitionAPI();
+  // Fetch credits
+  useEffect(() => {
+    const fetchCredits = async () => {
+      try {
+        const res = await authFetch('/api/credits/balance');
+        const data = await res.json();
+        if (data.success) {
+          setCredits(data.data?.balance || 0);
+        }
+      } catch (error) {
+        console.error('Failed to fetch credits:', error);
+      }
+    };
+    fetchCredits();
+  }, []);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
         recognition.continuous = false;
         recognition.interimResults = false;
-        recognition.lang = getSpeechLang(detectedLang);
+        recognition.lang = navigator.language?.startsWith('tr') ? 'tr-TR' : 'en-US';
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         recognition.onresult = (event: any) => {
-          console.log('Speech recognition result:', event.results[0][0].transcript);
-          const text = event.results[0][0].transcript.toLowerCase().trim();
-          setTranscript(text);
-          isListeningRef.current = false;
+          const text = event.results[0][0].transcript;
+          setInput(text);
           setIsListening(false);
-          setMicError(null);
-          handleUserInput(text);
         };
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        recognition.onerror = (event: any) => {
-          console.error('Speech recognition error:', event.error);
-          isListeningRef.current = false;
+        recognition.onerror = () => {
           setIsListening(false);
-
-          // Handle specific errors
-          if (event.error === 'not-allowed') {
-            setMicError(detectedLang === 'tr'
-              ? 'Mikrofon izni reddedildi. Tarayıcı ayarlarından izin verin veya yazarak devam edin.'
-              : 'Microphone permission denied. Allow in browser settings or type your response.');
-            setVoiceSupported(false);
-          } else if (event.error === 'no-speech') {
-            // Don't retry automatically - let user click mic again
-            console.log('No speech detected');
-          } else if (event.error === 'audio-capture') {
-            setMicError(detectedLang === 'tr'
-              ? 'Mikrofon bulunamadı. Lütfen yazarak devam edin.'
-              : 'No microphone found. Please type your response.');
-            setVoiceSupported(false);
-          } else if (event.error === 'network') {
-            setMicError(detectedLang === 'tr'
-              ? 'Ağ hatası. Lütfen tekrar deneyin veya yazarak devam edin.'
-              : 'Network error. Please try again or type your response.');
-          }
         };
 
         recognition.onend = () => {
-          console.log('Speech recognition ended');
-          isListeningRef.current = false;
           setIsListening(false);
         };
 
         recognitionRef.current = recognition;
-      } else if (!SpeechRecognitionAPI) {
-        setVoiceSupported(false);
-        setMicError(detectedLang === 'tr'
-          ? 'Tarayıcınız ses tanımayı desteklemiyor. Chrome veya Edge kullanın, ya da yazarak devam edin.'
-          : 'Your browser does not support voice recognition. Use Chrome/Edge or type your responses.');
       }
-    }
-
-    fetchCredits();
-
-    // Don't auto-start - require user click for microphone permission
-    // Chrome blocks microphone without user gesture
-
-    return () => {
-      if (synthRef.current) {
-        synthRef.current.cancel();
-      }
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-      }
-    };
-  }, []);
-
-  // Fetch credits
-  const fetchCredits = async () => {
-    try {
-      const res = await authFetch('/api/credits/balance');
-      const data = await res.json();
-      if (data.success) {
-        setCredits(data.data.balance);
-      }
-    } catch {
-      console.error('Failed to fetch credits');
-    }
-  };
-
-  // Speak function using Google Cloud TTS (high quality)
-  const speak = useCallback(async (text: string, onEnd?: () => void) => {
-    isSpeakingRef.current = true;
-    setIsSpeaking(true);
-    setAiMessage(text);
-    setHistory(prev => [...prev, { role: 'ai', text }]);
-
-    try {
-      // Call Google Cloud TTS API
-      console.log('[TTS] Calling Google Cloud TTS API...');
-      const response = await authFetch('/api/concierge/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          language: lang,
-          gender: 'MALE',
-          speakingRate: 1.0,
-        }),
-      });
-
-      const data = await response.json();
-      console.log('[TTS] Response:', { success: data.success, hasAudio: !!data.data?.audioContent });
-
-      if (data.success && data.data?.audioContent) {
-        console.log('[TTS] Playing Google Cloud TTS audio...');
-        // Create audio from base64
-        const audioBlob = new Blob(
-          [Uint8Array.from(atob(data.data.audioContent), c => c.charCodeAt(0))],
-          { type: 'audio/mpeg' }
-        );
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-
-        audio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
-          isSpeakingRef.current = false;
-          setIsSpeaking(false);
-          if (onEnd) {
-            setTimeout(onEnd, 100);
-          }
-        };
-
-        audio.onerror = () => {
-          URL.revokeObjectURL(audioUrl);
-          console.error('[TTS] Audio playback error');
-          isSpeakingRef.current = false;
-          setIsSpeaking(false);
-          if (onEnd) {
-            setTimeout(onEnd, 100);
-          }
-        };
-
-        await audio.play();
-        console.log('[TTS] Audio started playing');
-      } else {
-        // Fallback to Web Speech API if Google TTS fails
-        console.warn('[TTS] Google TTS failed, falling back to Web Speech API. Response:', data);
-        fallbackSpeak(text, onEnd);
-      }
-    } catch (error) {
-      console.error('[TTS] API error:', error);
-      // Fallback to Web Speech API
-      fallbackSpeak(text, onEnd);
-    }
-  }, [lang]);
-
-  // Fallback speak using Web Speech API
-  const fallbackSpeak = useCallback((text: string, onEnd?: () => void) => {
-    if (!synthRef.current) {
-      isSpeakingRef.current = false;
-      setIsSpeaking(false);
-      onEnd?.();
-      return;
-    }
-
-    synthRef.current.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = getSpeechLang(lang);
-    utterance.rate = 1.1;
-    utterance.pitch = 1.0;
-
-    const voices = synthRef.current.getVoices();
-    const langVoices = voices.filter(v => v.lang.toLowerCase().startsWith(lang));
-    if (langVoices.length > 0) {
-      const preferredVoice = langVoices.find(v =>
-        v.name.toLowerCase().includes('google') ||
-        v.name.toLowerCase().includes('microsoft')
-      ) || langVoices[0];
-      utterance.voice = preferredVoice;
-    }
-
-    utterance.onend = () => {
-      isSpeakingRef.current = false;
-      setIsSpeaking(false);
-      if (onEnd) {
-        setTimeout(onEnd, 100);
-      }
-    };
-
-    utterance.onerror = () => {
-      isSpeakingRef.current = false;
-      setIsSpeaking(false);
-      if (onEnd) {
-        setTimeout(onEnd, 100);
-      }
-    };
-
-    utteranceRef.current = utterance;
-    synthRef.current.speak(utterance);
-  }, [lang]);
-
-  // Start listening
-  const startListening = useCallback(() => {
-    // Use refs to check current state (avoids stale closure issues)
-    if (!recognitionRef.current || isListeningRef.current || isSpeakingRef.current) {
-      console.log('Cannot start listening:', {
-        hasRecognition: !!recognitionRef.current,
-        isListening: isListeningRef.current,
-        isSpeaking: isSpeakingRef.current
-      });
-      return;
-    }
-
-    try {
-      recognitionRef.current.lang = getSpeechLang(lang);
-      recognitionRef.current.start();
-      isListeningRef.current = true;
-      setIsListening(true);
-      setTranscript('');
-      console.log('Started listening');
-    } catch (e) {
-      console.error('Failed to start recognition:', e);
-      isListeningRef.current = false;
-      setIsListening(false);
-    }
-  }, [lang]);
-
-  // Stop listening
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current && isListeningRef.current) {
-      recognitionRef.current.stop();
-      isListeningRef.current = false;
-      setIsListening(false);
     }
   }, []);
 
-  // Handle user input based on current step
-  const handleUserInput = useCallback((text: string) => {
-    setHistory(prev => [...prev, { role: 'user', text }]);
+  // Auto-scroll
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-    switch (step) {
-      case 'ask-coin':
-        handleCoinInput(text);
-        break;
-      case 'ask-timeframe':
-        handleTimeframeInput(text);
-        break;
-      case 'ask-expert':
-        handleExpertInput(text);
-        break;
-      case 'ask-email':
-        handleEmailInput(text);
-        break;
-      default:
-        // If not in a specific step, try to understand
-        if (Object.keys(COINS).some(k => text.includes(k))) {
-          handleCoinInput(text);
-        }
-    }
-  }, [step]);
+  // Send message
+  const sendMessage = async (text?: string) => {
+    const messageText = text || input.trim();
+    if (!messageText || isLoading) return;
 
-  // Start conversation
-  const startConversation = useCallback(() => {
-    setStep('welcome');
-    const welcomeMsg = lang === 'tr'
-      ? 'Merhaba! Ben TraderPath asistanınızım. Hangi coini analiz etmemi istersiniz?'
-      : "Hello! I'm your TraderPath assistant. Which coin would you like me to analyze?";
+    setShowWelcome(false);
+    setInput('');
 
-    speak(welcomeMsg, () => {
-      setStep('ask-coin');
-      startListening();
-    });
-  }, [lang, speak, startListening]);
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: messageText,
+      timestamp: new Date(),
+    };
 
-  // Handle coin input
-  const handleCoinInput = useCallback((text: string) => {
-    const lowerText = text.toLowerCase();
-    let foundCoin: string | null = null;
-
-    for (const [keyword, symbol] of Object.entries(COINS)) {
-      if (lowerText.includes(keyword)) {
-        foundCoin = symbol;
-        break;
-      }
-    }
-
-    if (foundCoin) {
-      setSelectedCoin(foundCoin);
-      setStep('ask-timeframe');
-
-      const timeframeMsg = lang === 'tr'
-        ? `Tamam, ${foundCoin}. Nasıl bir işlem düşünüyorsunuz? Scalping, gün içi, swing veya uzun vadeli?`
-        : `Got it, ${foundCoin}. What type of trade are you planning? Scalping, day trade, swing, or position?`;
-
-      speak(timeframeMsg, () => {
-        startListening();
-      });
-    } else {
-      // Coin not understood
-      const retryMsg = lang === 'tr'
-        ? 'Anlayamadım. Bitcoin, Ethereum, Solana gibi bir coin söyleyebilir misiniz?'
-        : "I didn't catch that. Could you say a coin like Bitcoin, Ethereum, or Solana?";
-
-      speak(retryMsg, () => {
-        startListening();
-      });
-    }
-  }, [lang, speak, startListening]);
-
-  // Handle timeframe input
-  const handleTimeframeInput = useCallback((text: string) => {
-    const lowerText = text.toLowerCase();
-    let foundTimeframe: { value: string; label: { tr: string; en: string } } | null = null;
-
-    for (const [keyword, tf] of Object.entries(TIMEFRAMES)) {
-      if (lowerText.includes(keyword)) {
-        foundTimeframe = tf;
-        break;
-      }
-    }
-
-    if (foundTimeframe) {
-      setSelectedTimeframe(foundTimeframe.value);
-      setStep('ask-expert');
-
-      const tfLabel = lang === 'tr' ? foundTimeframe.label.tr : foundTimeframe.label.en;
-      const expertMsg = lang === 'tr'
-        ? `${selectedCoin} için ${tfLabel} analizi yapacağım. Uzman yorumları da ekleyeyim mi?`
-        : `I'll analyze ${selectedCoin} for ${tfLabel}. Should I include expert commentary?`;
-
-      speak(expertMsg, () => {
-        startListening();
-      });
-    } else {
-      // Timeframe not understood
-      const retryMsg = lang === 'tr'
-        ? 'Anlayamadım. Scalping, gün içi, swing veya uzun vadeli diyebilirsiniz.'
-        : "I didn't catch that. You can say scalping, day trade, swing, or position.";
-
-      speak(retryMsg, () => {
-        startListening();
-      });
-    }
-  }, [lang, selectedCoin, speak, startListening]);
-
-  // Run analysis (moved before handleExpertInput to avoid "used before declaration" error)
-  const runAnalysis = useCallback(async (withExpert: boolean) => {
-    if (!selectedCoin || !selectedTimeframe) return;
-
-    setStep('analyzing');
-
-    const analyzingMsg = lang === 'tr'
-      ? `${selectedCoin} analizi başlıyor. Bu yaklaşık 60 saniye sürecek...`
-      : `Starting ${selectedCoin} analysis. This will take about 60 seconds...`;
-
-    speak(analyzingMsg);
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
 
     try {
       const res = await authFetch('/api/concierge/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: `Analyze ${selectedCoin} ${selectedTimeframe}`,
-          language: lang,
-        }),
+        body: JSON.stringify({ message: messageText }),
       });
 
       const data = await res.json();
 
-      if (data.success) {
-        setResult({
-          success: true,
-          analysisId: data.analysisId,
+      const assistantMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.message || data.response || 'Sorry, I could not process your request.',
+        timestamp: new Date(),
+        data: data.verdict ? {
           verdict: data.verdict,
           score: data.score,
-          message: data.message,
-        });
+          analysisId: data.analysisId,
+          direction: data.direction,
+          chartData: data.chartData,
+          tradePlan: data.tradePlan,
+        } : undefined,
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+
+      if (data.creditsRemaining !== undefined) {
         setCredits(data.creditsRemaining);
-        setStep('result');
-
-        // Announce result
-        const verdictText = getVerdictText(data.verdict, lang);
-        const resultMsg = lang === 'tr'
-          ? `Analiz tamamlandı! ${selectedCoin} için ${verdictText}, skor ${data.score} üzerinden 10. Raporu e-posta ile göndermemi ister misiniz?`
-          : `Analysis complete! ${selectedCoin} shows ${verdictText}, score ${data.score} out of 10. Would you like me to email you the report?`;
-
-        speak(resultMsg, () => {
-          setStep('ask-email');
-          startListening();
-        });
-      } else {
-        setResult({
-          success: false,
-          error: data.error || data.message,
-        });
-
-        const errorMsg = lang === 'tr'
-          ? `Üzgünüm, bir hata oluştu: ${data.error || 'Bilinmeyen hata'}. Tekrar denemek ister misiniz?`
-          : `Sorry, an error occurred: ${data.error || 'Unknown error'}. Would you like to try again?`;
-
-        speak(errorMsg);
-        setStep('idle');
       }
     } catch (error) {
-      const errorMsg = lang === 'tr'
-        ? 'Bağlantı hatası oluştu. Lütfen tekrar deneyin.'
-        : 'Connection error occurred. Please try again.';
-
-      speak(errorMsg);
-      setStep('idle');
-    }
-  }, [selectedCoin, selectedTimeframe, lang, speak, startListening]);
-
-  // Handle expert input
-  const handleExpertInput = useCallback((text: string) => {
-    const lowerText = text.toLowerCase();
-    const isYes = YES_KEYWORDS.some(k => lowerText.includes(k));
-    const isNo = NO_KEYWORDS.some(k => lowerText.includes(k));
-
-    if (isYes || isNo) {
-      setIncludeExpert(isYes);
-      runAnalysis(isYes);
-    } else {
-      // Not understood
-      const retryMsg = lang === 'tr'
-        ? 'Evet veya hayır diyebilir misiniz?'
-        : 'Could you say yes or no?';
-
-      speak(retryMsg, () => {
-        startListening();
-      });
-    }
-  }, [lang, speak, startListening, runAnalysis]);
-
-  // Handle email input
-  const handleEmailInput = useCallback(async (text: string) => {
-    const lowerText = text.toLowerCase();
-    const isYes = YES_KEYWORDS.some(k => lowerText.includes(k));
-
-    if (isYes && result?.analysisId) {
-      const sendingMsg = lang === 'tr' ? 'E-posta gönderiliyor...' : 'Sending email...';
-      speak(sendingMsg);
-
-      try {
-        const res = await authFetch('/api/reports/send-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            analysisId: result.analysisId,
-            language: lang,
-          }),
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-          setEmailSent(true);
-          const successMsg = lang === 'tr'
-            ? 'E-posta gönderildi! Başka bir analiz yapmak ister misiniz?'
-            : 'Email sent! Would you like to do another analysis?';
-          speak(successMsg, () => {
-            setStep('idle');
-          });
-        } else {
-          const failMsg = lang === 'tr'
-            ? 'E-posta gönderilemedi. Başka bir analiz yapmak ister misiniz?'
-            : 'Failed to send email. Would you like to do another analysis?';
-          speak(failMsg, () => {
-            setStep('idle');
-          });
-        }
-      } catch {
-        const failMsg = lang === 'tr'
-          ? 'E-posta gönderilemedi. Başka bir analiz yapmak ister misiniz?'
-          : 'Failed to send email. Would you like to do another analysis?';
-        speak(failMsg, () => {
-          setStep('idle');
-        });
-      }
-    } else {
-      const noEmailMsg = lang === 'tr'
-        ? 'Tamam, e-posta göndermiyorum. Detayları ekranda görebilirsiniz. Başka bir analiz ister misiniz?'
-        : "Okay, I won't send an email. You can see the details on screen. Would you like another analysis?";
-      speak(noEmailMsg, () => {
-        setStep('idle');
-      });
-    }
-  }, [lang, result, speak]);
-
-  // Get verdict text
-  const getVerdictText = (verdict: string | undefined, lang: 'tr' | 'en'): string => {
-    switch (verdict?.toUpperCase()) {
-      case 'GO':
-        return lang === 'tr' ? 'giriş önerisi' : 'a go signal';
-      case 'CONDITIONAL_GO':
-      case 'COND':
-        return lang === 'tr' ? 'şartlı giriş' : 'a conditional entry';
-      case 'WAIT':
-        return lang === 'tr' ? 'bekleme önerisi' : 'a wait signal';
-      case 'AVOID':
-        return lang === 'tr' ? 'kaçınma önerisi' : 'an avoid signal';
-      default:
-        return lang === 'tr' ? 'sonuç' : 'a result';
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Sorry, there was an error processing your request. Please try again.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Get verdict color
-  const getVerdictColor = (verdict?: string): string => {
-    switch (verdict?.toUpperCase()) {
-      case 'GO': return 'from-emerald-500 to-green-600';
-      case 'CONDITIONAL_GO':
-      case 'COND': return 'from-amber-500 to-yellow-600';
-      case 'WAIT': return 'from-slate-500 to-gray-600';
-      case 'AVOID': return 'from-red-500 to-rose-600';
-      default: return 'from-slate-500 to-gray-600';
+  // Toggle listening
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else if (recognitionRef.current) {
+      recognitionRef.current.start();
+      setIsListening(true);
     }
   };
 
-  // Reset and start over
-  const resetConversation = () => {
-    setSelectedCoin(null);
-    setSelectedTimeframe(null);
-    setResult(null);
-    setEmailSent(false);
-    setHistory([]);
-    setTranscript('');
-    setError(null);
-    startConversation();
-  };
-
-  // Manual text input as fallback
-  const [textInput, setTextInput] = useState('');
-  const handleTextSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (textInput.trim()) {
-      handleUserInput(textInput.trim().toLowerCase());
-      setTextInput('');
-    }
-  };
+  // Quick commands
+  const quickCommands = [
+    { icon: TrendingUp, label: 'Analyze BTC', command: 'Analyze BTC 4h', gradient: 'from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30' },
+    { icon: Activity, label: 'Analyze ETH', command: 'Analyze ETH 4h', gradient: 'from-blue-500/20 to-indigo-500/20 hover:from-blue-500/30 hover:to-indigo-500/30' },
+    { icon: Target, label: 'Top Coins', command: 'Show top 5 coins by score', gradient: 'from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30' },
+    { icon: Brain, label: 'Help', command: 'What can you do?', gradient: 'from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30' },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="relative min-h-[calc(100vh-4rem)] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      <GrainOverlay />
+      <GradientOrbs />
+
+      <div className="relative z-10 max-w-5xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className={`p-3 rounded-2xl ${isSpeaking ? 'bg-gradient-to-br from-teal-400 to-emerald-500 animate-pulse' : 'bg-gradient-to-br from-teal-500 to-emerald-600'} shadow-lg`}>
-              <Bot className="w-8 h-8 text-white" />
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-2xl blur-lg opacity-50" />
+              <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-xl">
+                <Bot className="w-7 h-7 text-white" />
+              </div>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">AI Concierge</h1>
-              <p className="text-sm text-slate-400">
-                {lang === 'tr' ? 'Sesli asistanınız' : 'Your voice assistant'}
-              </p>
+              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                AI Concierge
+                <Sparkles className="w-5 h-5 text-amber-400" />
+              </h1>
+              <p className="text-sm text-slate-400">Your intelligent trading assistant</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Language toggle */}
-            <button
-              onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')}
-              className="px-3 py-1.5 rounded-lg bg-slate-700 text-slate-300 text-sm hover:bg-slate-600 transition-colors"
-            >
-              {lang === 'tr' ? '🇹🇷 TR' : '🇬🇧 EN'}
-            </button>
-
-            {/* Credits */}
-            {credits !== null && (
-              <div className="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                <span className="text-amber-400 font-medium text-sm">💰 {credits.toLocaleString()}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Main conversation area */}
-        <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-2xl overflow-hidden">
-          {/* Conversation history */}
-          <div className="h-[400px] overflow-y-auto p-6 space-y-4">
-            {/* Start button - shown when conversation hasn't started */}
-            {step === 'idle' && history.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full gap-6">
-                <div className="text-center">
-                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/30">
-                    <Bot className="w-10 h-10 text-white" />
-                  </div>
-                  <h2 className="text-xl font-semibold text-white mb-2">
-                    {lang === 'tr' ? 'AI Concierge\'a Hoşgeldiniz' : 'Welcome to AI Concierge'}
-                  </h2>
-                  <p className="text-slate-400 text-sm max-w-xs">
-                    {lang === 'tr'
-                      ? 'Sesli komutlarla analiz yapabilir, sorular sorabilirsiniz.'
-                      : 'Analyze coins with voice commands and ask questions.'}
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => startConversation()}
-                  className="px-8 py-4 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-white font-semibold text-lg shadow-lg shadow-teal-500/30 transition-all duration-200 flex items-center gap-3"
-                >
-                  <Mic className="w-6 h-6" />
-                  {lang === 'tr' ? 'Başla' : 'Start'}
-                </button>
-
-                <p className="text-slate-500 text-xs">
-                  {lang === 'tr'
-                    ? 'Mikrofon izni istenecektir'
-                    : 'Microphone permission will be requested'}
-                </p>
-              </div>
-            )}
-
-            {history.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] px-4 py-3 rounded-2xl ${
-                    msg.role === 'user'
-                      ? 'bg-teal-500 text-white rounded-br-md'
-                      : 'bg-slate-700 text-slate-200 rounded-bl-md'
-                  }`}
-                >
-                  {msg.role === 'ai' && (
-                    <div className="flex items-center gap-2 mb-1">
-                      <Bot className="w-4 h-4 text-teal-400" />
-                      <span className="text-xs text-teal-400 font-medium">AI</span>
-                    </div>
-                  )}
-                  <p className="text-sm leading-relaxed">{msg.text}</p>
-                </div>
-              </div>
-            ))}
-
-            {/* Listening indicator */}
-            {isListening && (
-              <div className="flex justify-center">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/20 border border-red-500/30">
-                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-red-400 text-sm">
-                    {lang === 'tr' ? 'Dinliyorum...' : 'Listening...'}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Speaking indicator */}
-            {isSpeaking && (
-              <div className="flex justify-center">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-teal-500/20 border border-teal-500/30">
-                  <Volume2 className="w-4 h-4 text-teal-400 animate-pulse" />
-                  <span className="text-teal-400 text-sm">
-                    {lang === 'tr' ? 'Konuşuyor...' : 'Speaking...'}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Analyzing indicator */}
-            {step === 'analyzing' && (
-              <div className="flex justify-center">
-                <div className="flex items-center gap-3 px-6 py-3 rounded-xl bg-slate-700/50 border border-slate-600/50">
-                  <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
-                  <span className="text-slate-300">
-                    {lang === 'tr' ? 'Analiz yapılıyor...' : 'Analyzing...'}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Result card (if analysis complete) */}
-          {result?.success && result.verdict && step !== 'analyzing' && (
-            <div className={`mx-6 mb-4 p-4 rounded-xl bg-gradient-to-r ${getVerdictColor(result.verdict)} shadow-lg`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-white/80 text-sm">{selectedCoin} {selectedTimeframe?.toUpperCase()}</span>
-                  <p className="text-white font-bold text-lg">{result.verdict}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-white/80 text-sm">{lang === 'tr' ? 'Skor' : 'Score'}</span>
-                  <p className="text-white font-bold text-2xl">{result.score}/10</p>
-                </div>
-              </div>
-
-              {result.analysisId && (
-                <Link
-                  href={`/analyze/details/${result.analysisId}`}
-                  className="mt-3 flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white font-medium transition-colors"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  {lang === 'tr' ? 'Detayları Gör' : 'View Details'}
-                </Link>
-              )}
+          {credits !== null && (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+              <Zap className="w-4 h-4 text-amber-400" />
+              <span className="text-amber-400 font-semibold">{credits.toLocaleString()}</span>
+              <span className="text-amber-400/60 text-sm">credits</span>
             </div>
           )}
+        </div>
 
-          {/* Input area */}
-          <div className="p-4 border-t border-slate-700/50 bg-slate-800/30">
-            {/* Mic error message */}
-            {micError && (
-              <div className="mb-3 p-3 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300 text-sm">
-                ⚠️ {micError}
-              </div>
-            )}
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Chat Area */}
+          <div className="lg:col-span-2">
+            <div className="relative overflow-hidden rounded-2xl bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl">
+              {/* Messages */}
+              <div className="h-[500px] overflow-y-auto p-6 space-y-4">
+                {/* Welcome Screen */}
+                {showWelcome && messages.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-full text-center">
+                    <div className="relative mb-6">
+                      <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full blur-2xl opacity-30 animate-pulse" />
+                      <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
+                        <Bot className="w-12 h-12 text-white" />
+                      </div>
+                    </div>
 
-            <div className="flex items-center gap-3">
-              {/* Mic button */}
-              <button
-                onClick={isListening ? stopListening : startListening}
-                disabled={isSpeaking || step === 'analyzing' || !voiceSupported}
-                className={`p-4 rounded-xl transition-all duration-200 ${
-                  !voiceSupported
-                    ? 'bg-slate-800 cursor-not-allowed opacity-50'
-                    : isListening
-                      ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30'
-                      : 'bg-slate-700 hover:bg-slate-600'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-                title={!voiceSupported
-                  ? (lang === 'tr' ? 'Ses tanıma kullanılamıyor' : 'Voice not available')
-                  : (isListening
-                      ? (lang === 'tr' ? 'Dinlemeyi durdur' : 'Stop listening')
-                      : (lang === 'tr' ? 'Konuşmak için tıkla' : 'Click to speak'))}
-              >
-                {isListening ? (
-                  <MicOff className="w-6 h-6 text-white" />
-                ) : (
-                  <Mic className={`w-6 h-6 ${voiceSupported ? 'text-white' : 'text-slate-500'}`} />
+                    <h2 className="text-2xl font-bold text-white mb-2">
+                      Welcome to AI Concierge
+                    </h2>
+                    <p className="text-slate-400 max-w-md mb-8">
+                      Ask me to analyze any coin, check market conditions, or get trading insights.
+                    </p>
+
+                    {/* Market Overview */}
+                    {marketData && (
+                      <div className="grid grid-cols-3 gap-3 w-full max-w-lg mb-8">
+                        <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                          <p className="text-xs text-slate-400 mb-1">BTC</p>
+                          <p className="text-lg font-bold text-white">${marketData.btcPrice.toLocaleString()}</p>
+                          <p className={cn("text-sm font-medium", marketData.btcChange >= 0 ? "text-emerald-400" : "text-red-400")}>
+                            {marketData.btcChange >= 0 ? '+' : ''}{marketData.btcChange.toFixed(2)}%
+                          </p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                          <p className="text-xs text-slate-400 mb-1">ETH</p>
+                          <p className="text-lg font-bold text-white">${marketData.ethPrice.toLocaleString()}</p>
+                          <p className={cn("text-sm font-medium", marketData.ethChange >= 0 ? "text-emerald-400" : "text-red-400")}>
+                            {marketData.ethChange >= 0 ? '+' : ''}{marketData.ethChange.toFixed(2)}%
+                          </p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                          <p className="text-xs text-slate-400 mb-1">Fear & Greed</p>
+                          <p className="text-lg font-bold text-white">{marketData.fearGreed}</p>
+                          <p className="text-sm text-slate-400">{marketData.fearGreedLabel}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Quick Commands */}
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {quickCommands.map((cmd, i) => (
+                        <QuickCommand
+                          key={i}
+                          icon={cmd.icon}
+                          label={cmd.label}
+                          onClick={() => sendMessage(cmd.command)}
+                          gradient={cmd.gradient}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 )}
-              </button>
 
-              {/* Text input fallback */}
-              <form onSubmit={handleTextSubmit} className="flex-1 flex gap-2">
-                <input
-                  type="text"
-                  value={textInput}
-                  onChange={(e) => setTextInput(e.target.value)}
-                  placeholder={lang === 'tr' ? 'Yazarak yanıtlayın...' : 'Type your response...'}
-                  className="flex-1 px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600/50 text-white placeholder-slate-400 focus:outline-none focus:border-teal-500/50"
-                  disabled={isSpeaking || step === 'analyzing'}
-                />
-                <button
-                  type="submit"
-                  disabled={!textInput.trim() || isSpeaking || step === 'analyzing'}
-                  className="px-4 py-3 rounded-xl bg-teal-500 hover:bg-teal-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                {/* Chat Messages */}
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={cn(
+                      "flex",
+                      msg.role === 'user' ? "justify-end" : "justify-start"
+                    )}
+                  >
+                    <div className={cn(
+                      "max-w-[85%] rounded-2xl px-4 py-3",
+                      msg.role === 'user'
+                        ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white"
+                        : "bg-white/10 backdrop-blur-sm border border-white/10 text-slate-200"
+                    )}>
+                      {msg.role === 'assistant' && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <Bot className="w-4 h-4 text-teal-400" />
+                          <span className="text-xs font-medium text-teal-400">AI Concierge</span>
+                        </div>
+                      )}
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+
+                      {/* Verdict Card */}
+                      {msg.data?.verdict && (
+                        <div className="mt-4 p-4 rounded-xl bg-black/20 border border-white/10">
+                          <div className="flex items-center justify-between mb-3">
+                            <VerdictBadge verdict={msg.data.verdict} score={msg.data.score} />
+                            {msg.data.direction && (
+                              <span className={cn(
+                                "px-3 py-1 rounded-lg text-sm font-medium",
+                                msg.data.direction.toLowerCase() === 'long'
+                                  ? "bg-emerald-500/20 text-emerald-400"
+                                  : "bg-red-500/20 text-red-400"
+                              )}>
+                                {msg.data.direction.toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+
+                          {msg.data.analysisId && (
+                            <Link
+                              href={`/analyze/details/${msg.data.analysisId}`}
+                              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-colors"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              View Full Analysis
+                            </Link>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Chart */}
+                      {msg.data?.chartData && msg.data?.tradePlan && (
+                        <div className="mt-4 rounded-xl overflow-hidden bg-black/20">
+                          <TradePlanChart
+                            symbol="Analysis"
+                            direction={(msg.data.direction?.toLowerCase() || 'long') as 'long' | 'short'}
+                            entries={[{ price: msg.data.tradePlan.entry, percentage: 100 }]}
+                            stopLoss={{ price: msg.data.tradePlan.stopLoss, percentage: 0 }}
+                            takeProfits={msg.data.tradePlan.takeProfits.map((tp, i) => ({
+                              price: tp,
+                              percentage: 0,
+                              riskReward: i + 1,
+                            }))}
+                            currentPrice={msg.data.tradePlan.entry}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Loading */}
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                        <span className="text-sm text-slate-400">Thinking...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Input Area */}
+              <div className="p-4 border-t border-white/10 bg-slate-900/50">
+                {/* Quick Commands (shown after first message) */}
+                {!showWelcome && messages.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {quickCommands.slice(0, 3).map((cmd, i) => (
+                      <button
+                        key={i}
+                        onClick={() => sendMessage(cmd.command)}
+                        className="px-3 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 transition-colors"
+                      >
+                        {cmd.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <form
+                  onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
+                  className="flex items-center gap-3"
                 >
-                  <span className="sr-only">Send</span>
-                  →
-                </button>
-              </form>
+                  <button
+                    type="button"
+                    onClick={toggleListening}
+                    className={cn(
+                      "p-3 rounded-xl transition-all",
+                      isListening
+                        ? "bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse"
+                        : "bg-white/10 text-slate-400 hover:bg-white/20 hover:text-white"
+                    )}
+                  >
+                    {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                  </button>
 
-              {/* Reset button */}
-              <button
-                onClick={resetConversation}
-                className="p-4 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors"
-                title={lang === 'tr' ? 'Yeniden Başla' : 'Start Over'}
-              >
-                <RefreshCw className="w-5 h-5" />
-              </button>
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Ask me anything about trading..."
+                    className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-teal-500/50 focus:bg-white/10 transition-colors"
+                    disabled={isLoading}
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={!input.trim() || isLoading}
+                    className={cn(
+                      "p-3 rounded-xl transition-all",
+                      input.trim() && !isLoading
+                        ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/30 hover:shadow-xl"
+                        : "bg-white/10 text-slate-500 cursor-not-allowed"
+                    )}
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-4">
+            {/* Features Card */}
+            <div className="rounded-2xl bg-slate-900/50 backdrop-blur-xl border border-white/10 p-5">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-amber-400" />
+                What I Can Do
+              </h3>
+              <div className="space-y-3">
+                {[
+                  { icon: BarChart3, label: '7-Step Analysis', desc: 'Full technical analysis' },
+                  { icon: Target, label: 'Trade Plans', desc: 'Entry, SL, TP levels' },
+                  { icon: Brain, label: 'AI Experts', desc: '4 specialized experts' },
+                  { icon: Shield, label: 'Risk Assessment', desc: 'Safety checks' },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500/20 to-emerald-500/20 flex items-center justify-center">
+                      <item.icon className="w-5 h-5 text-teal-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">{item.label}</p>
+                      <p className="text-xs text-slate-400">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Hint */}
-            <p className="mt-3 text-center text-xs text-slate-500">
-              {voiceSupported
-                ? (lang === 'tr'
-                    ? '🎤 Mikrofona tıklayın ve konuşun, veya yazarak yanıtlayın'
-                    : '🎤 Click the microphone and speak, or type your response')
-                : (lang === 'tr'
-                    ? '⌨️ Yazarak yanıtlayın'
-                    : '⌨️ Type your response')}
-            </p>
+            {/* Example Prompts */}
+            <div className="rounded-2xl bg-slate-900/50 backdrop-blur-xl border border-white/10 p-5">
+              <h3 className="text-lg font-semibold text-white mb-4">Try Asking</h3>
+              <div className="space-y-2">
+                {[
+                  'Analyze SOL for day trading',
+                  'What is the RSI indicator?',
+                  'Show me the top 5 coins',
+                  'BTC 4h analysis',
+                ].map((prompt, i) => (
+                  <button
+                    key={i}
+                    onClick={() => sendMessage(prompt)}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                  >
+                    "{prompt}"
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="rounded-2xl bg-gradient-to-br from-teal-500/10 to-emerald-500/10 backdrop-blur-xl border border-teal-500/20 p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-400">Analysis Cost</p>
+                  <p className="text-xl font-bold text-white">25 credits</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-400">
+                Each full analysis uses 25 credits. Questions and help are free!
+              </p>
+            </div>
           </div>
         </div>
       </div>
