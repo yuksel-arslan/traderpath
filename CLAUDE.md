@@ -259,6 +259,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-22 | Email raporu gönderilemiyor - symbol ve takeProfits eksik | Reports sayfasında symbol/analysisId/generatedAt report seviyesindeydi, reportData içine eklendi. RecentAnalyses'ta step5.takeProfits dizisi kullanılmalıydı (takeProfit1/2/3 yok) | `reports/page.tsx`, `RecentAnalyses.tsx` |
 | 2026-01-22 | AI Concierge Türkçe yanıt vermiyor ve cümleler kesiliyor | VOLTRAN synthesis bypass edildi, `generateNaturalResponse()` kullanılıyor. Akıllı dil tespiti eklendi (80+ Türkçe kelime + özel karakterler). Tüm handler'lar detectedLanguage kullanıyor | `concierge.service.ts`, `ai-expert.service.ts` |
 | 2026-01-23 | Railway build error - secret GOOGLE_TRANSLATE_API_KEY not found | Railpack statik analizi `process.env.VAR_NAME` pattern'ini tespit ediyor. `process.env['VAR_NAME']` bracket notation ile bypass edildi | `google-translate.ts`, `google-tts.ts` |
+| 2026-01-24 | Analysis screenshot sadece grafiği yakalıyordu | `handleScreenshot` fonksiyonu `chartRef` yerine `pageRef` kullanacak şekilde düzeltildi - artık tüm analiz içeriği (7 adım, verdict, trade plan) yakalanıyor | `analyze/details/[id]/page.tsx:107-143` |
 
 ---
 

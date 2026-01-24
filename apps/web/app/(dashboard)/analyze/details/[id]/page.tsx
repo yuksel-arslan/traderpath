@@ -103,18 +103,26 @@ export default function AnalysisDetailsPage() {
     fetchAnalysis();
   }, [analysisId]);
 
-  // Screenshot chart
+  // Screenshot full analysis (not just chart)
   const handleScreenshot = async () => {
-    if (!chartRef.current || capturingScreenshot) return;
+    if (!pageRef.current || capturingScreenshot) return;
 
     setCapturingScreenshot(true);
     try {
-      const canvas = await html2canvas(chartRef.current, {
+      const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#ffffff',
         scale: 2,
         logging: false,
         useCORS: true,
         allowTaint: true,
+        windowWidth: 1200,
+        onclone: (clonedDoc) => {
+          // Ensure all content is visible in the clone
+          const clonedElement = clonedDoc.querySelector('[data-export-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+          }
+        },
       });
 
       // Convert to blob for more reliable download
@@ -125,9 +133,9 @@ export default function AnalysisDetailsPage() {
         }
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        const symbol = analysis?.symbol || 'Chart';
+        const symbol = analysis?.symbol || 'Analysis';
         const date = new Date().toISOString().split('T')[0];
-        link.download = `TraderPath_${symbol}_${date}.png`;
+        link.download = `TraderPath_${symbol}_Analysis_${date}.png`;
         link.href = url;
         document.body.appendChild(link);
         link.click();
@@ -789,15 +797,15 @@ plotshape(barstate.islast and not isLong, title="SELL Signal", style=shape.label
                   <button
                     onClick={handleScreenshot}
                     disabled={capturingScreenshot}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 transition disabled:opacity-50"
-                    title="Save chart as image"
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white transition disabled:opacity-50"
+                    title="Save full analysis as image"
                   >
                     {capturingScreenshot ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <Camera className="w-4 h-4" />
                     )}
-                    <span className="hidden sm:inline">Screenshot</span>
+                    <span className="hidden sm:inline">Save Analysis</span>
                   </button>
                 </div>
               </div>
