@@ -7,7 +7,8 @@ import optuna
 from optuna.samplers import TPESampler
 from optuna.pruners import MedianPruner
 import torch
-import pytorch_lightning as pl
+# Use lightning.pytorch instead of pytorch_lightning for compatibility with pytorch-forecasting 1.1.0+
+import lightning.pytorch as pl
 from pytorch_forecasting import TemporalFusionTransformer, TimeSeriesDataSet
 from pytorch_forecasting.data import GroupNormalizer
 from pytorch_forecasting.metrics import QuantileLoss, SMAPE, MAE, MAPE
