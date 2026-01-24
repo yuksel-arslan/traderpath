@@ -221,15 +221,18 @@ class TFTTrainer:
         )
 
         # Dataloaders
+        # Use num_workers=0 in containerized environments (Railway) to avoid shared memory issues
+        # The default /dev/shm in Docker is only 64MB which is insufficient for PyTorch multiprocessing
+        num_workers = 0  # Disable multiprocessing to avoid shm errors
         train_loader = training_dataset.to_dataloader(
             train=True,
             batch_size=self.config.batch_size,
-            num_workers=self.config.num_workers
+            num_workers=num_workers
         )
         val_loader = validation_dataset.to_dataloader(
             train=False,
             batch_size=self.config.batch_size,
-            num_workers=self.config.num_workers
+            num_workers=num_workers
         )
 
         # Build model with best params
