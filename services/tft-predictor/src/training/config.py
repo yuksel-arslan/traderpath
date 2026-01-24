@@ -78,22 +78,22 @@ TRADE_TYPE_CONFIGS: Dict[TradeType, TradeTypeConfig] = {
 
     TradeType.SWING: TradeTypeConfig(
         trade_type=TradeType.SWING,
-        prediction_horizons=[24, 48, 168],  # 1, 2, 7 gün
-        min_encoder_length=72,               # 3 gün minimum history (reduced for memory)
-        max_encoder_length=168,              # 7 gün maximum history (reduced from 504)
+        prediction_horizons=[24, 48],        # 1, 2 gün (removed 7-day to reduce memory)
+        min_encoder_length=48,               # 2 gün minimum history (reduced for memory)
+        max_encoder_length=96,               # 4 gün maximum history (reduced from 168)
         min_prediction_length=24,
-        max_prediction_length=168,
+        max_prediction_length=48,            # Reduced from 168
         min_training_samples=5000,           # Reduced for 1 year of hourly data (~8760 samples)
         data_interval="1h",                  # Saatlik mumlar
-        lookback_days=365,                   # 1 yıl veri (reduced from 2 years)
-        hidden_size_range=(32, 128),         # Reduced for memory efficiency
-        attention_heads_range=(2, 4),        # Reduced for memory
+        lookback_days=365,                   # 1 yıl veri
+        hidden_size_range=(16, 64),          # Reduced for memory efficiency
+        attention_heads_range=(1, 2),        # Reduced for memory
         dropout_range=(0.1, 0.3),
         learning_rate_range=(1e-5, 1e-3),
-        use_orderbook_features=True,
-        use_whale_features=True,
+        use_orderbook_features=False,        # Disabled to reduce features
+        use_whale_features=False,            # Disabled to reduce features
         early_stopping_patience=10,
-        n_walk_forward_splits=5,
+        n_walk_forward_splits=3,             # Reduced from 5
     ),
 
     TradeType.POSITION: TradeTypeConfig(
@@ -132,10 +132,10 @@ class TrainingConfig:
     optuna_timeout_hours: float = 6.0
 
     # Training
-    max_epochs: int = 100
-    batch_size: int = 16  # Reduced from 64 for Railway memory constraints
+    max_epochs: int = 30  # Reduced from 100 for Railway memory/time constraints
+    batch_size: int = 8  # Reduced from 16 for Railway memory constraints
     gradient_clip_val: float = 0.1
-    accumulate_grad_batches: int = 4  # Effective batch size = 16 * 4 = 64
+    accumulate_grad_batches: int = 8  # Effective batch size = 8 * 8 = 64
 
     # Hardware
     use_gpu: bool = True
