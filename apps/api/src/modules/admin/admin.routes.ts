@@ -12,6 +12,9 @@ import os from 'os';
 // Admin emails with access
 const ADMIN_EMAILS = ['contact@yukselarslan.com'];
 
+// Admin API Secret for service-to-service communication
+const ADMIN_API_SECRET = process.env.ADMIN_API_SECRET || 'tft-service-secret-key';
+
 // Admin authentication middleware
 async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
   await authenticate(request, reply);
@@ -22,6 +25,18 @@ async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
       error: { code: 'FORBIDDEN', message: 'Admin access required' },
     });
   }
+}
+
+// Admin authentication middleware that also accepts service secret
+async function requireAdminOrSecret(request: FastifyRequest, reply: FastifyReply) {
+  // Check for admin secret header (service-to-service)
+  const secretHeader = request.headers['x-admin-secret'] as string;
+  if (secretHeader && secretHeader === ADMIN_API_SECRET) {
+    return; // Allow request from TFT service
+  }
+
+  // Fall back to normal admin auth
+  await requireAdmin(request, reply);
 }
 
 export default async function adminRoutes(app: FastifyInstance) {
@@ -1078,8 +1093,9 @@ export default async function adminRoutes(app: FastifyInstance) {
   });
 
   // POST /api/admin/tft/models - Save a trained model to database
+  // Accepts both admin auth and service secret for TFT service integration
   app.post('/tft/models', {
-    preHandler: requireAdmin,
+    preHandler: requireAdminOrSecret,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const body = request.body as {
       name: string;
