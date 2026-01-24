@@ -226,9 +226,8 @@ class TFTTrainer:
         )
 
         # Dataloaders
-        # Use num_workers=0 in containerized environments (Railway) to avoid shared memory issues
-        # The default /dev/shm in Docker is only 64MB which is insufficient for PyTorch multiprocessing
-        num_workers = 0  # Disable multiprocessing to avoid shm errors
+        # Use config.num_workers (4 for GPU, 0 for CPU/Railway)
+        num_workers = self.config.num_workers
         train_loader = training_dataset.to_dataloader(
             train=True,
             batch_size=self.config.batch_size,
@@ -240,21 +239,21 @@ class TFTTrainer:
             num_workers=num_workers
         )
 
-        # Build model with best params (reduced defaults for memory efficiency)
+        # Build model with best params (full quality for GPU training)
         params = self.best_params or {}
 
         self.final_model = TemporalFusionTransformer.from_dataset(
             training_dataset,
             learning_rate=params.get('learning_rate', 0.001),
-            hidden_size=params.get('hidden_size', 16),          # Reduced from 64
-            attention_head_size=params.get('attention_head_size', 1),  # Reduced from 4
+            hidden_size=params.get('hidden_size', 128),
+            attention_head_size=params.get('attention_head_size', 4),
             dropout=params.get('dropout', 0.1),
-            hidden_continuous_size=params.get('hidden_continuous_size', 8),  # Reduced from 32
-            lstm_layers=params.get('lstm_layers', 1),           # Reduced from 2
+            hidden_continuous_size=params.get('hidden_continuous_size', 64),
+            lstm_layers=params.get('lstm_layers', 2),
             output_size=7,
-            loss=QuantileLoss(quantiles=[0.1, 0.5, 0.9]),       # Reduced from 7 quantiles
+            loss=QuantileLoss(quantiles=[0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]),
             reduce_on_plateau_patience=params.get('reduce_on_plateau_patience', 4),
-            logging_metrics=[MAE()],                             # Reduced metrics
+            logging_metrics=[SMAPE(), MAE(), MAPE()],
         )
 
         logger.info(f"Model parameters: {sum(p.numel() for p in self.final_model.parameters()):,}")

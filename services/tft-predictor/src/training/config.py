@@ -78,22 +78,22 @@ TRADE_TYPE_CONFIGS: Dict[TradeType, TradeTypeConfig] = {
 
     TradeType.SWING: TradeTypeConfig(
         trade_type=TradeType.SWING,
-        prediction_horizons=[24, 48],        # 1, 2 gün (removed 7-day to reduce memory)
-        min_encoder_length=48,               # 2 gün minimum history (reduced for memory)
-        max_encoder_length=96,               # 4 gün maximum history (reduced from 168)
+        prediction_horizons=[24, 48, 168],   # 1, 2, 7 gün
+        min_encoder_length=168,              # 7 gün minimum history
+        max_encoder_length=504,              # 21 gün maximum history
         min_prediction_length=24,
-        max_prediction_length=48,            # Reduced from 168
-        min_training_samples=5000,           # Reduced for 1 year of hourly data (~8760 samples)
+        max_prediction_length=168,
+        min_training_samples=10000,          # Google Cloud GPU ile daha fazla veri
         data_interval="1h",                  # Saatlik mumlar
-        lookback_days=365,                   # 1 yıl veri
-        hidden_size_range=(16, 64),          # Reduced for memory efficiency
-        attention_heads_range=(1, 2),        # Reduced for memory
+        lookback_days=730,                   # 2 yıl veri
+        hidden_size_range=(64, 256),         # Full size for GPU training
+        attention_heads_range=(2, 8),
         dropout_range=(0.1, 0.3),
         learning_rate_range=(1e-5, 1e-3),
-        use_orderbook_features=False,        # Disabled to reduce features
-        use_whale_features=False,            # Disabled to reduce features
+        use_orderbook_features=True,
+        use_whale_features=True,
         early_stopping_patience=10,
-        n_walk_forward_splits=3,             # Reduced from 5
+        n_walk_forward_splits=5,
     ),
 
     TradeType.POSITION: TradeTypeConfig(
@@ -131,15 +131,15 @@ class TrainingConfig:
     n_optuna_trials: int = 50
     optuna_timeout_hours: float = 6.0
 
-    # Training
-    max_epochs: int = 30  # Reduced from 100 for Railway memory/time constraints
-    batch_size: int = 8  # Reduced from 16 for Railway memory constraints
+    # Training (optimized for Google Cloud GPU)
+    max_epochs: int = 100
+    batch_size: int = 64
     gradient_clip_val: float = 0.1
-    accumulate_grad_batches: int = 8  # Effective batch size = 8 * 8 = 64
+    accumulate_grad_batches: int = 1  # No accumulation needed with GPU
 
     # Hardware
     use_gpu: bool = True
-    num_workers: int = 0  # Disabled for containerized environments (Railway)
+    num_workers: int = 4  # Enable multiprocessing for GPU environment
 
     # Paths
     model_output_dir: str = "models"
