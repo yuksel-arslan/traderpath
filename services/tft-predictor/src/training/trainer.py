@@ -4,6 +4,7 @@ Tüm bileşenleri birleştiren orchestrator
 """
 
 import asyncio
+import gc
 import pandas as pd
 import numpy as np
 import torch
@@ -109,6 +110,10 @@ class TFTTrainer:
 
         logger.info(f"Toplam {len(self.processed_data):,} sample, "
                    f"{len(self.metadata['time_varying_unknown'])} feature")
+
+        # Clear raw data to free memory
+        self.raw_data = {}
+        gc.collect()
 
         return self.processed_data, self.metadata
 
@@ -263,11 +268,16 @@ class TFTTrainer:
             save_top_k=3
         )
 
+        # Use gradient accumulation to maintain effective batch size while using less memory
+        # Effective batch size = batch_size * accumulate_grad_batches = 16 * 4 = 64
+        accumulate_batches = getattr(self.config, 'accumulate_grad_batches', 4)
+
         trainer = pl.Trainer(
             max_epochs=self.config.max_epochs,
             accelerator='gpu' if self.config.use_gpu and torch.cuda.is_available() else 'cpu',
             devices=1,
             gradient_clip_val=self.config.gradient_clip_val,
+            accumulate_grad_batches=accumulate_batches,
             enable_progress_bar=True,
             callbacks=[
                 pl.callbacks.EarlyStopping(
@@ -280,8 +290,15 @@ class TFTTrainer:
             ],
         )
 
+        # Clear memory before training
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
         # Train
         logger.info("Eğitim başlıyor...")
+        logger.info(f"Batch size: {self.config.batch_size}, Accumulate batches: {accumulate_batches}")
+        logger.info(f"Effective batch size: {self.config.batch_size * accumulate_batches}")
         trainer.fit(self.final_model, train_loader, val_loader)
 
         # Load best model

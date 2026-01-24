@@ -79,15 +79,15 @@ TRADE_TYPE_CONFIGS: Dict[TradeType, TradeTypeConfig] = {
     TradeType.SWING: TradeTypeConfig(
         trade_type=TradeType.SWING,
         prediction_horizons=[24, 48, 168],  # 1, 2, 7 gün
-        min_encoder_length=168,              # 7 gün minimum history
-        max_encoder_length=504,              # 21 gün maximum history
+        min_encoder_length=72,               # 3 gün minimum history (reduced for memory)
+        max_encoder_length=168,              # 7 gün maximum history (reduced from 504)
         min_prediction_length=24,
         max_prediction_length=168,
         min_training_samples=20000,
         data_interval="1h",                  # Saatlik mumlar
-        lookback_days=730,                   # 2 yıl veri
-        hidden_size_range=(64, 256),
-        attention_heads_range=(2, 8),
+        lookback_days=365,                   # 1 yıl veri (reduced from 2 years)
+        hidden_size_range=(32, 128),         # Reduced for memory efficiency
+        attention_heads_range=(2, 4),        # Reduced for memory
         dropout_range=(0.1, 0.3),
         learning_rate_range=(1e-5, 1e-3),
         use_orderbook_features=True,
@@ -133,12 +133,13 @@ class TrainingConfig:
 
     # Training
     max_epochs: int = 100
-    batch_size: int = 64
+    batch_size: int = 16  # Reduced from 64 for Railway memory constraints
     gradient_clip_val: float = 0.1
+    accumulate_grad_batches: int = 4  # Effective batch size = 16 * 4 = 64
 
     # Hardware
     use_gpu: bool = True
-    num_workers: int = 4
+    num_workers: int = 0  # Disabled for containerized environments (Railway)
 
     # Paths
     model_output_dir: str = "models"
