@@ -127,9 +127,7 @@ export default function AnalysisDetailsPage() {
       const date = new Date().toISOString().split('T')[0];
       link.download = `TraderPath_${symbol}_${date}.png`;
       link.href = imageBase64;
-      document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
     } catch (err) {
       console.error('Failed to export PNG:', err);
       alert('Failed to export image');
@@ -166,9 +164,7 @@ export default function AnalysisDetailsPage() {
       const date = new Date().toISOString().split('T')[0];
       link.download = `TraderPath_${symbol}_${date}.jpg`;
       link.href = imageBase64;
-      document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
     } catch (err) {
       console.error('Failed to export JPG:', err);
       alert('Failed to export image');
@@ -207,9 +203,7 @@ export default function AnalysisDetailsPage() {
       const date = new Date().toISOString().split('T')[0];
       link.download = `TraderPath_${symbol}_${date}.jpg`;
       link.href = imageBase64;
-      document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
 
       // Then send via email
       const response = await authFetch('/api/reports/email-screenshot', {
