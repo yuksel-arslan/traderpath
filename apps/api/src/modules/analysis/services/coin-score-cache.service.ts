@@ -1,17 +1,14 @@
 // ===========================================
 // Coin Score Cache Service
-// Periodic scanning of top coins for reliability scores
+// Periodic scanning of top coins using REAL analysis engine
 // ===========================================
 
 import { PrismaClient } from '@prisma/client';
-import { IndicatorsService, OHLCV } from './indicators.service';
+import { analysisEngine } from '../analysis.engine';
+import { getTradeTypeFromInterval } from '../config/trade-config';
 import { smartCoinsService } from './smart-coins.service';
 
 const prisma = new PrismaClient();
-const indicatorsService = new IndicatorsService();
-
-// Binance API base URL
-const BINANCE_BASE_URL = 'https://api.binance.com/api/v3';
 
 // Top coins to scan (prioritized list)
 const TOP_COINS_TO_SCAN = [
@@ -23,8 +20,8 @@ const TOP_COINS_TO_SCAN = [
 // Cache expiry time (2 hours)
 const CACHE_EXPIRY_MS = 2 * 60 * 60 * 1000;
 
-// Rate limiting
-const SCAN_DELAY_MS = 500; // Delay between coin scans
+// Rate limiting between analyses (to avoid API overload)
+const ANALYSIS_DELAY_MS = 5000; // 5 seconds between each coin
 
 export interface CoinScore {
   symbol: string;
@@ -47,226 +44,12 @@ export interface CoinScore {
   expiresAt: Date;
 }
 
-export interface QuickScanResult {
+export interface FullAnalysisResult {
   symbol: string;
   success: boolean;
   score?: CoinScore;
+  analysisId?: string;
   error?: string;
-}
-
-// ===========================================
-// Binance API Helper Functions
-// ===========================================
-
-async function fetchKlines(symbol: string, interval: string = '4h', limit: number = 100): Promise<OHLCV[]> {
-  try {
-    const url = `${BINANCE_BASE_URL}/klines?symbol=${symbol}USDT&interval=${interval}&limit=${limit}`;
-    const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
-
-    if (!response.ok) {
-      throw new Error(`Binance API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.map((candle: any[]) => ({
-      timestamp: candle[0],
-      open: parseFloat(candle[1]),
-      high: parseFloat(candle[2]),
-      low: parseFloat(candle[3]),
-      close: parseFloat(candle[4]),
-      volume: parseFloat(candle[5]),
-    }));
-  } catch (error) {
-    console.error(`[CoinScoreCache] Failed to fetch klines for ${symbol}:`, error);
-    return [];
-  }
-}
-
-async function fetch24hTicker(symbol: string): Promise<{ price: number; priceChange24h: number; volume24h: number; quoteVolume: number } | null> {
-  try {
-    const url = `${BINANCE_BASE_URL}/ticker/24hr?symbol=${symbol}USDT`;
-    const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-    return {
-      price: parseFloat(data.lastPrice),
-      priceChange24h: parseFloat(data.priceChangePercent),
-      volume24h: parseFloat(data.volume),
-      quoteVolume: parseFloat(data.quoteVolume),
-    };
-  } catch (error) {
-    console.error(`[CoinScoreCache] Failed to fetch ticker for ${symbol}:`, error);
-    return null;
-  }
-}
-
-// ===========================================
-// Score Calculation Functions
-// ===========================================
-
-function calculateLiquidityScore(volume24h: number, marketCap: number): number {
-  // Volume/MarketCap ratio - higher is better (more liquid)
-  // Good ratio: > 0.1 (10%), Excellent: > 0.2 (20%)
-  if (marketCap === 0) return 50;
-
-  const ratio = volume24h / marketCap;
-
-  if (ratio >= 0.3) return 100;
-  if (ratio >= 0.2) return 90;
-  if (ratio >= 0.15) return 80;
-  if (ratio >= 0.1) return 70;
-  if (ratio >= 0.05) return 60;
-  if (ratio >= 0.02) return 50;
-  if (ratio >= 0.01) return 40;
-  return 30;
-}
-
-function calculateVolatilityScore(candles: OHLCV[]): number {
-  // ATR-based volatility - lower volatility = higher stability score
-  // For reliability, we want stable coins (lower ATR %)
-  if (candles.length < 14) return 50;
-
-  // Calculate ATR
-  const trueRanges: number[] = [];
-  for (let i = 1; i < candles.length; i++) {
-    const tr = Math.max(
-      candles[i].high - candles[i].low,
-      Math.abs(candles[i].high - candles[i - 1].close),
-      Math.abs(candles[i].low - candles[i - 1].close)
-    );
-    trueRanges.push(tr);
-  }
-
-  const atr = trueRanges.slice(-14).reduce((a, b) => a + b, 0) / 14;
-  const currentPrice = candles[candles.length - 1].close;
-  const atrPercent = (atr / currentPrice) * 100;
-
-  // Lower ATR% = higher score (more stable)
-  if (atrPercent <= 1) return 95;
-  if (atrPercent <= 2) return 85;
-  if (atrPercent <= 3) return 75;
-  if (atrPercent <= 5) return 65;
-  if (atrPercent <= 7) return 55;
-  if (atrPercent <= 10) return 45;
-  return 35;
-}
-
-function calculateTrendScore(candles: OHLCV[]): number {
-  // MA convergence - aligned MAs = strong trend = higher score
-  if (candles.length < 50) return 50;
-
-  const closes = candles.map(c => c.close);
-
-  // Calculate SMAs
-  const sma20 = closes.slice(-20).reduce((a, b) => a + b, 0) / 20;
-  const sma50 = closes.slice(-50).reduce((a, b) => a + b, 0) / 50;
-  const currentPrice = closes[closes.length - 1];
-
-  let score = 50;
-
-  // Price above both MAs = bullish, score boost
-  if (currentPrice > sma20 && currentPrice > sma50) {
-    score += 20;
-  } else if (currentPrice < sma20 && currentPrice < sma50) {
-    score += 15; // Clear bearish trend is also tradeable
-  }
-
-  // MA alignment (20 > 50 = bullish, 20 < 50 = bearish)
-  const maAligned = (sma20 > sma50 && currentPrice > sma20) || (sma20 < sma50 && currentPrice < sma20);
-  if (maAligned) {
-    score += 15;
-  }
-
-  // Trend strength (distance from MAs)
-  const distanceFromSma20 = Math.abs((currentPrice - sma20) / sma20) * 100;
-  if (distanceFromSma20 < 1) {
-    score += 5; // Price near MA - potential breakout
-  } else if (distanceFromSma20 > 10) {
-    score -= 10; // Extended - potential reversion
-  }
-
-  return Math.min(100, Math.max(0, score));
-}
-
-function calculateMomentumScore(candles: OHLCV[]): number {
-  if (candles.length < 26) return 50;
-
-  const closes = candles.map(c => c.close);
-
-  // RSI Calculation
-  const rsiPeriod = 14;
-  const gains: number[] = [];
-  const losses: number[] = [];
-
-  for (let i = 1; i <= rsiPeriod && i < closes.length; i++) {
-    const change = closes[closes.length - i] - closes[closes.length - i - 1];
-    if (change > 0) {
-      gains.push(change);
-      losses.push(0);
-    } else {
-      gains.push(0);
-      losses.push(Math.abs(change));
-    }
-  }
-
-  const avgGain = gains.reduce((a, b) => a + b, 0) / rsiPeriod;
-  const avgLoss = losses.reduce((a, b) => a + b, 0) / rsiPeriod;
-  const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-  const rsi = 100 - (100 / (1 + rs));
-
-  let score = 50;
-
-  // RSI scoring - not too high, not too low
-  if (rsi >= 40 && rsi <= 60) {
-    score += 20; // Neutral RSI - room for movement
-  } else if (rsi >= 30 && rsi <= 70) {
-    score += 10; // Normal range
-  } else if (rsi < 30) {
-    score += 5; // Oversold - potential bounce
-  } else if (rsi > 70) {
-    score -= 5; // Overbought - potential drop
-  }
-
-  // MACD trend confirmation
-  const ema12 = calculateEMA(closes.slice(-26), 12);
-  const ema26 = calculateEMA(closes.slice(-26), 26);
-  const macd = ema12 - ema26;
-  const prevMacd = calculateEMA(closes.slice(-27, -1), 12) - calculateEMA(closes.slice(-27, -1), 26);
-
-  if ((macd > 0 && macd > prevMacd) || (macd < 0 && macd < prevMacd)) {
-    score += 15; // Momentum increasing in trend direction
-  }
-
-  return Math.min(100, Math.max(0, score));
-}
-
-function calculateEMA(data: number[], period: number): number {
-  if (data.length < period) return data[data.length - 1] || 0;
-
-  const multiplier = 2 / (period + 1);
-  let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
-
-  for (let i = period; i < data.length; i++) {
-    ema = (data[i] - ema) * multiplier + ema;
-  }
-
-  return ema;
-}
-
-function determineVerdict(totalScore: number): { verdict: string; direction: string | null } {
-  if (totalScore >= 75) {
-    return { verdict: 'GO', direction: 'LONG' };
-  } else if (totalScore >= 60) {
-    return { verdict: 'CONDITIONAL_GO', direction: 'LONG' };
-  } else if (totalScore >= 45) {
-    return { verdict: 'WAIT', direction: null };
-  } else {
-    return { verdict: 'AVOID', direction: null };
-  }
 }
 
 // ===========================================
@@ -275,47 +58,73 @@ function determineVerdict(totalScore: number): { verdict: string; direction: str
 
 class CoinScoreCacheService {
   /**
-   * Quick scan a single coin
+   * Run FULL analysis for a single coin using analysisEngine
    */
-  async quickScan(symbol: string, interval: string = '4h'): Promise<QuickScanResult> {
+  async runFullAnalysis(symbol: string, interval: string = '4h'): Promise<FullAnalysisResult> {
     try {
-      console.log(`[CoinScoreCache] Scanning ${symbol}...`);
+      console.log(`[CoinScoreCache] Running FULL analysis for ${symbol}...`);
 
-      // Fetch data in parallel
-      const [candles, ticker, marketData] = await Promise.all([
-        fetchKlines(symbol, interval, 100),
-        fetch24hTicker(symbol),
-        this.getMarketData(symbol),
-      ]);
+      const tradeType = getTradeTypeFromInterval(interval);
 
-      if (candles.length < 50 || !ticker) {
-        return { symbol, success: false, error: 'Insufficient data' };
-      }
+      // Step 1: Market Pulse (global market conditions)
+      const marketPulse = await analysisEngine.getMarketPulse();
 
-      // Calculate scores
-      const liquidityScore = calculateLiquidityScore(ticker.quoteVolume, marketData?.marketCap || ticker.quoteVolume * 10);
-      const volatilityScore = calculateVolatilityScore(candles);
-      const trendScore = calculateTrendScore(candles);
-      const momentumScore = calculateMomentumScore(candles);
+      // Step 2: Asset Scanner (coin-specific analysis with 40+ indicators)
+      const assetScan = await analysisEngine.scanAsset(symbol, tradeType);
 
-      // Reliability score (weighted average)
+      // Step 3: Safety Check
+      const safetyCheck = await analysisEngine.safetyCheck(symbol, tradeType);
+
+      // Step 4: Timing Analysis
+      const timing = await analysisEngine.timingAnalysis(symbol, tradeType);
+
+      // Get market data for price info
+      const marketData = await this.getMarketData(symbol);
+
+      // Calculate scores from real analysis results
+      const liquidityScore = this.calculateLiquidityFromAnalysis(assetScan);
+      const volatilityScore = this.calculateVolatilityFromAnalysis(assetScan);
+      const trendScore = this.calculateTrendFromAnalysis(assetScan);
+      const momentumScore = this.calculateMomentumFromAnalysis(assetScan);
+
+      // Use the real analysis score
+      const totalScore = assetScan.overallScore || 50;
+
+      // Reliability score (weighted: real analysis score + component scores)
       const reliabilityScore = Math.round(
-        liquidityScore * 0.25 +
-        volatilityScore * 0.25 +
-        trendScore * 0.25 +
-        momentumScore * 0.25
+        totalScore * 0.4 +           // Real analysis weight
+        liquidityScore * 0.15 +
+        volatilityScore * 0.15 +
+        trendScore * 0.15 +
+        momentumScore * 0.15
       );
 
-      // Total score (same as reliability for now)
-      const totalScore = reliabilityScore;
+      // Get verdict from analysis
+      const verdict = this.determineVerdict(assetScan, safetyCheck, timing);
+      const direction = assetScan.trendDirection === 'bullish' ? 'LONG' :
+                       assetScan.trendDirection === 'bearish' ? 'SHORT' : null;
 
-      // Determine verdict
-      const { verdict, direction } = determineVerdict(totalScore);
-      const confidence = Math.min(10, Math.max(1, Math.round(totalScore / 10)));
+      const confidence = Math.min(10, Math.max(1, Math.round(reliabilityScore / 10)));
+
+      // Save to database
+      const analysisRecord = await prisma.analysis.create({
+        data: {
+          userId: 'system', // System-generated analysis
+          symbol,
+          interval,
+          stepsCompleted: [1, 2, 3, 4],
+          step1Result: marketPulse as any,
+          step2Result: assetScan as any,
+          step3Result: safetyCheck as any,
+          step4Result: timing as any,
+          totalScore: reliabilityScore,
+          creditsSpent: 0, // Platform covers cost
+        },
+      });
 
       const score: CoinScore = {
         symbol,
-        totalScore,
+        totalScore: reliabilityScore,
         reliabilityScore,
         liquidityScore,
         volatilityScore,
@@ -324,27 +133,135 @@ class CoinScoreCacheService {
         verdict,
         direction,
         confidence,
-        price: ticker.price,
-        priceChange24h: ticker.priceChange24h,
-        volume24h: ticker.quoteVolume,
+        price: marketData?.price || assetScan.currentPrice || 0,
+        priceChange24h: marketData?.priceChange24h || 0,
+        volume24h: marketData?.volume24h || 0,
         marketCap: marketData?.marketCap || 0,
-        analysisId: null,
+        analysisId: analysisRecord.id,
         interval,
         scannedAt: new Date(),
         expiresAt: new Date(Date.now() + CACHE_EXPIRY_MS),
       };
 
-      return { symbol, success: true, score };
+      console.log(`[CoinScoreCache] ${symbol} analysis complete. Score: ${reliabilityScore}, Verdict: ${verdict}`);
+
+      return { symbol, success: true, score, analysisId: analysisRecord.id };
     } catch (error) {
-      console.error(`[CoinScoreCache] Error scanning ${symbol}:`, error);
+      console.error(`[CoinScoreCache] Error analyzing ${symbol}:`, error);
       return { symbol, success: false, error: String(error) };
     }
   }
 
   /**
-   * Get market data from CoinGecko (market cap mainly)
+   * Calculate liquidity score from real analysis
    */
-  private async getMarketData(symbol: string): Promise<{ marketCap: number } | null> {
+  private calculateLiquidityFromAnalysis(assetScan: any): number {
+    // Use volume indicators from real analysis
+    const volumeScore = assetScan.indicators?.volume?.relativeVolume || 1;
+
+    if (volumeScore >= 2) return 95;
+    if (volumeScore >= 1.5) return 85;
+    if (volumeScore >= 1.2) return 75;
+    if (volumeScore >= 1) return 65;
+    if (volumeScore >= 0.8) return 55;
+    return 45;
+  }
+
+  /**
+   * Calculate volatility score from real analysis
+   */
+  private calculateVolatilityFromAnalysis(assetScan: any): number {
+    // Use ATR from real analysis
+    const atrPercent = assetScan.indicators?.volatility?.atrPercent || 5;
+
+    // Lower ATR = higher stability score
+    if (atrPercent <= 1) return 95;
+    if (atrPercent <= 2) return 85;
+    if (atrPercent <= 3) return 75;
+    if (atrPercent <= 5) return 65;
+    if (atrPercent <= 7) return 55;
+    if (atrPercent <= 10) return 45;
+    return 35;
+  }
+
+  /**
+   * Calculate trend score from real analysis
+   */
+  private calculateTrendFromAnalysis(assetScan: any): number {
+    let score = 50;
+
+    // Use trend strength from real analysis
+    const trendStrength = assetScan.trendStrength || 50;
+    score = trendStrength;
+
+    // Bonus for aligned timeframes
+    if (assetScan.timeframeAlignment >= 3) {
+      score += 15;
+    }
+
+    // Bonus for clear direction
+    if (assetScan.trendDirection !== 'neutral') {
+      score += 10;
+    }
+
+    return Math.min(100, Math.max(0, score));
+  }
+
+  /**
+   * Calculate momentum score from real analysis
+   */
+  private calculateMomentumFromAnalysis(assetScan: any): number {
+    let score = 50;
+
+    // Use RSI from real analysis
+    const rsi = assetScan.indicators?.momentum?.rsi || 50;
+
+    if (rsi >= 40 && rsi <= 60) {
+      score += 20; // Neutral - room for movement
+    } else if (rsi >= 30 && rsi <= 70) {
+      score += 10;
+    } else if (rsi < 30) {
+      score += 5; // Oversold
+    } else {
+      score -= 5; // Overbought
+    }
+
+    // MACD confirmation
+    const macdSignal = assetScan.indicators?.momentum?.macdSignal;
+    if (macdSignal === 'bullish' || macdSignal === 'bearish') {
+      score += 15;
+    }
+
+    return Math.min(100, Math.max(0, score));
+  }
+
+  /**
+   * Determine verdict from real analysis results
+   */
+  private determineVerdict(assetScan: any, safetyCheck: any, timing: any): string {
+    // Check safety gate
+    if (!safetyCheck?.gate?.canProceed) {
+      return 'AVOID';
+    }
+
+    // Check timing gate
+    if (!timing?.gate?.canProceed) {
+      return 'WAIT';
+    }
+
+    // Use overall score
+    const score = assetScan.overallScore || 50;
+
+    if (score >= 70) return 'GO';
+    if (score >= 55) return 'CONDITIONAL_GO';
+    if (score >= 40) return 'WAIT';
+    return 'AVOID';
+  }
+
+  /**
+   * Get market data from smart coins service
+   */
+  private async getMarketData(symbol: string): Promise<{ price: number; priceChange24h: number; volume24h: number; marketCap: number } | null> {
     try {
       const smartCoins = await smartCoinsService.getSmartCoins();
       const allCoins = [
@@ -357,7 +274,12 @@ class CoinScoreCacheService {
 
       const coin = allCoins.find(c => c.symbol === symbol);
       if (coin) {
-        return { marketCap: coin.marketCap };
+        return {
+          price: coin.price,
+          priceChange24h: coin.priceChange24h,
+          volume24h: coin.volume24h,
+          marketCap: coin.marketCap,
+        };
       }
       return null;
     } catch {
@@ -366,23 +288,24 @@ class CoinScoreCacheService {
   }
 
   /**
-   * Scan all top coins and update cache
+   * Scan all top coins with REAL analysis and update cache
    */
   async scanAllCoins(interval: string = '4h'): Promise<{ success: number; failed: number; results: CoinScore[] }> {
-    console.log(`[CoinScoreCache] Starting scan of ${TOP_COINS_TO_SCAN.length} coins...`);
+    console.log(`[CoinScoreCache] Starting FULL analysis scan of ${TOP_COINS_TO_SCAN.length} coins...`);
+    console.log(`[CoinScoreCache] This will take approximately ${(TOP_COINS_TO_SCAN.length * ANALYSIS_DELAY_MS / 1000 / 60).toFixed(1)} minutes`);
 
     const results: CoinScore[] = [];
     let success = 0;
     let failed = 0;
 
     for (const symbol of TOP_COINS_TO_SCAN) {
-      const result = await this.quickScan(symbol, interval);
+      const result = await this.runFullAnalysis(symbol, interval);
 
       if (result.success && result.score) {
         results.push(result.score);
         success++;
 
-        // Save to database
+        // Save to cache
         try {
           await prisma.coinScoreCache.upsert({
             where: { symbol },
@@ -427,17 +350,21 @@ class CoinScoreCacheService {
             },
           });
         } catch (dbError) {
-          console.error(`[CoinScoreCache] Failed to save ${symbol} to database:`, dbError);
+          console.error(`[CoinScoreCache] Failed to save ${symbol} to cache:`, dbError);
         }
       } else {
         failed++;
+        console.error(`[CoinScoreCache] Failed to analyze ${symbol}: ${result.error}`);
       }
 
-      // Rate limiting
-      await new Promise(resolve => setTimeout(resolve, SCAN_DELAY_MS));
+      // Rate limiting between analyses
+      if (TOP_COINS_TO_SCAN.indexOf(symbol) < TOP_COINS_TO_SCAN.length - 1) {
+        console.log(`[CoinScoreCache] Waiting ${ANALYSIS_DELAY_MS / 1000}s before next analysis...`);
+        await new Promise(resolve => setTimeout(resolve, ANALYSIS_DELAY_MS));
+      }
     }
 
-    console.log(`[CoinScoreCache] Scan complete. Success: ${success}, Failed: ${failed}`);
+    console.log(`[CoinScoreCache] Full scan complete. Success: ${success}, Failed: ${failed}`);
     return { success, failed, results };
   }
 
