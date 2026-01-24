@@ -319,7 +319,7 @@ export default function DashboardPage() {
         fetch(getApiUrl('/api/analysis/platform-stats')),
         authFetch('/api/analysis/statistics'),
         authFetch('/api/analysis/live-prices'),
-        fetch(getApiUrl('/api/analysis/top-coins?limit=5&tradeableOnly=true')),
+        fetch(getApiUrl('/api/analysis/top-coins?limit=5')),
       ]);
 
       let newCredits = 0;
@@ -702,31 +702,31 @@ export default function DashboardPage() {
       </div>
 
       {/* ===== SECTION 2.5: Top Coins by Analysis Accuracy Score ===== */}
-      {topCoins.length > 0 && (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-emerald-900/20 dark:via-slate-800 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700/50">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/10 dark:from-emerald-500/20 via-transparent to-transparent" />
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-emerald-900/20 dark:via-slate-800 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700/50">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/10 dark:from-emerald-500/20 via-transparent to-transparent" />
 
-          <div className="relative z-10 p-5">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                  <TrendingUp className="w-4.5 h-4.5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Top Coins by Score</h2>
-                  <p className="text-xs text-gray-500 dark:text-slate-400">AI-analyzed every 2 hours</p>
-                </div>
+        <div className="relative z-10 p-5">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                <TrendingUp className="w-4.5 h-4.5 text-white" />
               </div>
-              <Link
-                href="/analyze"
-                className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
-              >
-                Analyze now <ChevronRight className="w-3 h-3" />
-              </Link>
+              <div>
+                <h2 className="text-lg font-bold bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Top Coins by Score</h2>
+                <p className="text-xs text-gray-500 dark:text-slate-400">AI-analyzed every 2 hours</p>
+              </div>
             </div>
+            <Link
+              href="/analyze"
+              className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+            >
+              Analyze now <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
 
-            {/* Top Coins Grid */}
+          {/* Top Coins Grid */}
+          {topCoins.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {topCoins.map((coin, index) => {
                 const verdictLower = coin.verdict?.toLowerCase() || '';
@@ -780,9 +780,17 @@ export default function DashboardPage() {
                 );
               })}
             </div>
-          </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-3">
+                <Activity className="w-6 h-6 text-emerald-500 animate-pulse" />
+              </div>
+              <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Scanning market...</p>
+              <p className="text-xs text-gray-500 dark:text-slate-500">Top coins will appear after the next scan cycle</p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* ===== SECTION 3: Performance Chart ===== */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
