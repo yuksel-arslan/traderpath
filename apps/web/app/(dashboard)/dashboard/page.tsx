@@ -204,17 +204,17 @@ function StatCard({
 
   const content = (
     <div className={cn(
-      "relative overflow-hidden rounded-xl p-4 border transition-all",
+      "relative overflow-hidden rounded-xl p-4 border transition-all shadow-sm",
       colorClasses[color],
       href && "hover:scale-[1.02] cursor-pointer"
     )}>
       <div className="flex items-center gap-2 mb-1">
         <Icon className={cn("w-4 h-4", iconColors[color])} />
-        <span className="text-xs text-gray-500 dark:text-slate-400">{label}</span>
+        <span className="text-xs font-medium text-gray-600 dark:text-slate-400">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+      <p className="text-2xl font-bold text-gray-800 dark:text-white">{value}</p>
       {subValue && (
-        <p className="text-xs text-gray-500 dark:text-slate-500 mt-0.5">{subValue}</p>
+        <p className="text-xs text-gray-600 dark:text-slate-500 mt-0.5">{subValue}</p>
       )}
     </div>
   );
@@ -239,7 +239,7 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
   return (
     <Link
       href={`/analyze/details/${trade.id}`}
-      className="flex-shrink-0 w-[200px] bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-3 hover:border-primary/50 transition-colors"
+      className="flex-shrink-0 w-[200px] bg-white dark:bg-slate-800 rounded-xl border border-gray-300 dark:border-slate-700 p-3 hover:border-primary/50 transition-colors shadow-sm"
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -249,7 +249,7 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
             className="w-6 h-6 rounded-full"
             onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON; }}
           />
-          <span className="font-semibold text-gray-900 dark:text-white text-sm">{trade.symbol}</span>
+          <span className="font-bold text-gray-800 dark:text-white text-sm">{trade.symbol}</span>
         </div>
         <span className={cn(
           "px-1.5 py-0.5 rounded text-[10px] font-bold text-white",
@@ -260,7 +260,7 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-slate-400">
+        <div className="flex items-center gap-1 text-xs font-medium text-gray-600 dark:text-slate-400">
           {trade.direction?.toLowerCase() === 'long' ? (
             <TrendingUp className="w-3 h-3 text-green-500" />
           ) : (
@@ -270,7 +270,7 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
         </div>
         <span className={cn(
           "font-bold text-sm",
-          !hasValidPnL ? "text-gray-400 dark:text-slate-500" :
+          !hasValidPnL ? "text-gray-500 dark:text-slate-500" :
           isProfit ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
         )}>
           {hasValidPnL ? `${isProfit ? '+' : ''}${pnlValue!.toFixed(1)}%` : 'N/A'}
@@ -279,7 +279,7 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
 
       {trade.outcome !== 'pending' && (
         <div className={cn(
-          "mt-2 pt-2 border-t flex items-center justify-center gap-1 text-xs font-medium",
+          "mt-2 pt-2 border-t flex items-center justify-center gap-1 text-xs font-semibold",
           trade.outcome === 'correct'
             ? "border-green-200 dark:border-green-500/20 text-green-600 dark:text-green-400"
             : "border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400"
@@ -626,7 +626,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <Loader2 className="w-10 h-10 animate-spin text-emerald-500 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-slate-400">Loading dashboard...</p>
+          <p className="text-gray-600 dark:text-slate-400 font-medium">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -646,9 +646,9 @@ export default function DashboardPage() {
               </div>
             </div>
             <div>
-              <p className="text-xs font-medium text-amber-600 dark:text-slate-400 uppercase tracking-wider">Credits</p>
+              <p className="text-xs font-semibold text-amber-700 dark:text-slate-400 uppercase tracking-wider">Credits</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-gray-900 dark:text-white">{formatCredits(credits)}</span>
+                <span className="text-3xl font-black text-gray-800 dark:text-white">{formatCredits(credits)}</span>
                 {credits < 10 && credits > 0 && (
                   <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-full animate-pulse">
                     Low
@@ -758,7 +758,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h2 className="text-lg font-bold bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Top Coins by Score</h2>
-                <p className="text-xs text-gray-500 dark:text-slate-400">AI-analyzed every 2 hours</p>
+                <p className="text-xs font-medium text-gray-600 dark:text-slate-400">AI-analyzed every 2 hours</p>
               </div>
             </div>
             <Link
@@ -785,14 +785,14 @@ export default function DashboardPage() {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-gray-400 dark:text-slate-500">#{index + 1}</span>
+                        <span className="text-xs font-bold text-gray-500 dark:text-slate-500">#{index + 1}</span>
                         <img
                           src={getCoinIcon(coin.symbol)}
                           alt={coin.symbol}
                           className="w-6 h-6 rounded-full"
                           onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON; }}
                         />
-                        <span className="font-semibold text-gray-900 dark:text-white">{coin.symbol}</span>
+                        <span className="font-bold text-gray-800 dark:text-white">{coin.symbol}</span>
                       </div>
                       <span className={cn(
                         "text-xs font-bold px-1.5 py-0.5 rounded",
@@ -805,19 +805,19 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-end justify-between">
                       <div>
-                        <div className="text-lg font-bold text-gray-900 dark:text-white">
+                        <div className="text-lg font-bold text-gray-800 dark:text-white">
                           {(coin.reliabilityScore ?? coin.totalScore ?? 0).toFixed(0)}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-slate-400">Score</div>
+                        <div className="text-xs font-medium text-gray-600 dark:text-slate-400">Score</div>
                       </div>
                       <div className="text-right">
                         <div className={cn(
-                          "text-sm font-medium",
+                          "text-sm font-semibold",
                           (coin.priceChange24h ?? 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                         )}>
                           {(coin.priceChange24h ?? 0) >= 0 ? '+' : ''}{(coin.priceChange24h ?? 0).toFixed(2)}%
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-slate-400">24h</div>
+                        <div className="text-xs font-medium text-gray-600 dark:text-slate-400">24h</div>
                       </div>
                     </div>
                   </Link>
@@ -827,10 +827,10 @@ export default function DashboardPage() {
           ) : (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-3">
-                <Activity className="w-6 h-6 text-emerald-500 animate-pulse" />
+                <Activity className="w-6 h-6 text-emerald-600 dark:text-emerald-500 animate-pulse" />
               </div>
-              <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Scanning market...</p>
-              <p className="text-xs text-gray-500 dark:text-slate-500">Top coins will appear after the next scan cycle</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-slate-400 mb-1">Scanning market...</p>
+              <p className="text-xs text-gray-600 dark:text-slate-500">Top coins will appear after the next scan cycle</p>
             </div>
           )}
         </div>
@@ -849,7 +849,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h2 className="text-lg font-bold bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Performance</h2>
-                <p className="text-xs text-gray-500 dark:text-slate-400">P/L over time</p>
+                <p className="text-xs font-medium text-gray-600 dark:text-slate-400">P/L over time</p>
               </div>
             </div>
 
