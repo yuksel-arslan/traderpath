@@ -27,7 +27,7 @@ import {
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
 import { cn } from '../../../lib/utils';
-import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost } from '../../../lib/pricing-config';
+import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost, ANALYSIS_BUNDLES } from '../../../lib/pricing-config';
 import { authFetch, getAuthToken, apiBaseUrl } from '../../../lib/api';
 
 // Format credits with full number display (1000087 → 1,000,087)
@@ -374,7 +374,7 @@ export default function PricingPage() {
           <div className="max-w-3xl mx-auto">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {[
-                { Icon: Gem, title: '35 Credits', desc: 'Per analysis', color: 'text-amber-500' },
+                { Icon: Gem, title: `${ANALYSIS_BUNDLES.find(b => !b.comingSoon)?.credits || 25} Credits`, desc: 'Per analysis', color: 'text-amber-500' },
                 { Icon: Search, title: '7-Step Analysis', desc: 'Complete trading analysis', color: 'text-teal-500' },
                 { Icon: Bot, title: 'AI Expert Chat', desc: 'Ask questions anytime', color: 'text-violet-500' },
                 { Icon: FileText, title: 'PDF Reports', desc: 'Download & share', color: 'text-blue-500' },

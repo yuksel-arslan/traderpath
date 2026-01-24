@@ -260,6 +260,8 @@ Kullanıcı Hakları Aktif:
 | 2026-01-22 | AI Concierge Türkçe yanıt vermiyor ve cümleler kesiliyor | VOLTRAN synthesis bypass edildi, `generateNaturalResponse()` kullanılıyor. Akıllı dil tespiti eklendi (80+ Türkçe kelime + özel karakterler). Tüm handler'lar detectedLanguage kullanıyor | `concierge.service.ts`, `ai-expert.service.ts` |
 | 2026-01-23 | Railway build error - secret GOOGLE_TRANSLATE_API_KEY not found | Railpack statik analizi `process.env.VAR_NAME` pattern'ini tespit ediyor. `process.env['VAR_NAME']` bracket notation ile bypass edildi | `google-translate.ts`, `google-tts.ts` |
 | 2026-01-24 | Analysis screenshot sadece grafiği yakalıyordu | `handleScreenshot` fonksiyonu `chartRef` yerine `pageRef` kullanacak şekilde düzeltildi - artık tüm analiz içeriği (7 adım, verdict, trade plan) yakalanıyor | `analyze/details/[id]/page.tsx:107-143` |
+| 2026-01-24 | Pricing sayfasında "35 Credits Per analysis" hardcoded | `ANALYSIS_BUNDLES` import edilip dinamik değer kullanıldı. `pricing-config.ts`'de 35→25 düzeltildi | `pricing/page.tsx`, `pricing-config.ts` |
+| 2026-01-24 | PEPE analizi AI Expert'te desteklenmiyordu (NEAR karışıklığı) | `SUPPORTED_SYMBOLS` listesi genişletildi: meme coins (PEPE, SHIB, WIF, BONK), AI tokens (FET, AGIX, RNDR), DeFi, Gaming ve diğer popüler coinler eklendi | `ai-expert.service.ts:1317-1330` |
 
 ---
 
@@ -805,6 +807,25 @@ Kullanıcı Hakları Aktif:
   - Analysis ve Reports detay sayfalarına eklendi
   - "Send via Email" önce dosyayı indiriyor, sonra email gönderiyor
   - PDF butonu kaldırıldı, screenshot tabanlı export kullanılıyor
+- **Pricing sayfası analiz kredisi düzeltildi**:
+  - "35 Credits Per analysis" → "25 Credits Per analysis" (dinamik)
+  - `ANALYSIS_BUNDLES` import edilerek hardcoded değer kaldırıldı
+  - `pricing-config.ts`'deki bundle kredisi 35→25 olarak güncellendi
+- **AI Expert SUPPORTED_SYMBOLS genişletildi**:
+  - PEPE, SHIB, WIF, BONK (meme coins) eklendi
+  - FET, AGIX, OCEAN, RNDR, TAO, WLD (AI tokens) eklendi
+  - AAVE, MKR, CRV, COMP, SNX, YFI, 1INCH (DeFi) eklendi
+  - SAND, MANA, AXS, GALA, IMX, ENJ (Gaming) eklendi
+  - Concierge SUPPORTED_COINS ile senkronize edildi
+- **AI Concierge Akıllı Cache Entegrasyonu**:
+  - Top 30 coin her 2 saatte ön-hesaplanıyor (CoinScoreCache)
+  - Kullanıcı bu coinleri sorduğunda ÜCRETSİZ cache'den döndürülüyor
+  - Cache'de olmayan coinler için normal analiz akışı (25 kredi)
+  - `getCoinFromCache()` ve `getCachedAnalysisData()` metodları eklendi
+  - `handleAnalysis()` önce cache kontrol ediyor
+  - Response'a `fromCache` ve `cacheExpiresAt` field'ları eklendi
+  - Help mesajları güncellendi (EN/TR) - cache özelliği açıklandı
+  - "Top 5 coins" ve "Hangi coin almalı?" komutları eklendi
 
 ---
 

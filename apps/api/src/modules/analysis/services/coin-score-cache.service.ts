@@ -490,6 +490,94 @@ class CoinScoreCacheService {
       return { totalCoins: 0, freshCoins: 0, staleCoins: 0, lastScanAt: null };
     }
   }
+
+  /**
+   * Get a single coin from cache if fresh
+   * Returns null if coin not in cache or expired
+   */
+  async getCoinFromCache(symbol: string): Promise<CoinScore | null> {
+    try {
+      const coin = await prisma.coinScoreCache.findFirst({
+        where: {
+          symbol: symbol.toUpperCase(),
+          expiresAt: { gt: new Date() },
+        },
+      });
+
+      if (!coin) return null;
+
+      return {
+        symbol: coin.symbol,
+        totalScore: Number(coin.totalScore),
+        reliabilityScore: Number(coin.reliabilityScore),
+        liquidityScore: Number(coin.liquidityScore),
+        volatilityScore: Number(coin.volatilityScore),
+        trendScore: Number(coin.trendScore),
+        momentumScore: Number(coin.momentumScore),
+        verdict: coin.verdict,
+        direction: coin.direction,
+        confidence: Number(coin.confidence),
+        price: Number(coin.price),
+        priceChange24h: Number(coin.priceChange24h),
+        volume24h: Number(coin.volume24h),
+        marketCap: Number(coin.marketCap),
+        analysisId: coin.analysisId,
+        interval: coin.interval,
+        scannedAt: coin.scannedAt,
+        expiresAt: coin.expiresAt,
+      };
+    } catch (error) {
+      console.error(`[CoinScoreCache] Error fetching ${symbol} from cache:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if a coin is in the TOP_COINS_TO_SCAN list
+   */
+  isTopCoin(symbol: string): boolean {
+    return TOP_COINS_TO_SCAN.includes(symbol.toUpperCase());
+  }
+
+  /**
+   * Get full analysis data for a cached coin (fetches from Analysis table)
+   */
+  async getCachedAnalysisData(symbol: string): Promise<{
+    marketPulse: any;
+    assetScan: any;
+    safetyCheck: any;
+    timing: any;
+    tradePlan: any | null;
+  } | null> {
+    try {
+      const cachedCoin = await this.getCoinFromCache(symbol);
+      if (!cachedCoin || !cachedCoin.analysisId) return null;
+
+      const analysis = await prisma.analysis.findUnique({
+        where: { id: cachedCoin.analysisId },
+        select: {
+          step1Result: true,
+          step2Result: true,
+          step3Result: true,
+          step4Result: true,
+          step5Result: true,
+        },
+      });
+
+      if (!analysis) return null;
+
+      return {
+        marketPulse: analysis.step1Result,
+        assetScan: analysis.step2Result,
+        safetyCheck: analysis.step3Result,
+        timing: analysis.step4Result,
+        tradePlan: analysis.step5Result,
+      };
+    } catch (error) {
+      console.error(`[CoinScoreCache] Error fetching analysis data for ${symbol}:`, error);
+      return null;
+    }
+  }
 }
 
 export const coinScoreCacheService = new CoinScoreCacheService();
