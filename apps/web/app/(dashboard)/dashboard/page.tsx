@@ -123,6 +123,25 @@ interface TopCoin {
   priceChange24h: number;
 }
 
+interface PerformanceDay {
+  date: string;
+  realized: number;
+  unrealized: number;
+  total: number;
+  trades: number;
+  cumulative: number;
+}
+
+interface PerformanceData {
+  daily: PerformanceDay[];
+  summary: {
+    totalRealizedPnL: number;
+    totalTrades: number;
+    activeTrades: number;
+    winRate: number;
+  };
+}
+
 // ===========================================
 // Helper Functions
 // ===========================================
@@ -289,6 +308,7 @@ export default function DashboardPage() {
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [recentAnalyses, setRecentAnalyses] = useState<RecentAnalysis[]>([]);
   const [topCoins, setTopCoins] = useState<TopCoin[]>([]);
+  const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const initialLoadDone = useRef(false);
@@ -307,6 +327,7 @@ export default function DashboardPage() {
               setUserStats(data.userStats);
               setRecentAnalyses(data.recentAnalyses);
               setTopCoins(data.topCoins || []);
+              setPerformanceData(data.performanceData || null);
               setLoading(false);
               return;
             }
@@ -314,12 +335,13 @@ export default function DashboardPage() {
         } catch {}
       }
 
-      const [creditsRes, platformRes, statsRes, livePricesRes, topCoinsRes] = await Promise.all([
+      const [creditsRes, platformRes, statsRes, livePricesRes, topCoinsRes, perfHistoryRes] = await Promise.all([
         authFetch('/api/user/credits'),
         fetch(getApiUrl('/api/analysis/platform-stats')),
         authFetch('/api/analysis/statistics'),
         authFetch('/api/analysis/live-prices'),
         fetch(getApiUrl('/api/analysis/top-coins?limit=5')),
+        authFetch('/api/analysis/performance-history?days=30'),
       ]);
 
       let newCredits = 0;
@@ -327,6 +349,7 @@ export default function DashboardPage() {
       let newUserStats = null;
       let newRecentAnalyses: RecentAnalysis[] = [];
       let newTopCoins: TopCoin[] = [];
+      let newPerformanceData: PerformanceData | null = null;
 
       if (creditsRes.ok) {
         const data = await creditsRes.json();
@@ -393,6 +416,12 @@ export default function DashboardPage() {
         setTopCoins(newTopCoins);
       }
 
+      if (perfHistoryRes.ok) {
+        const data = await perfHistoryRes.json();
+        newPerformanceData = data.data || null;
+        setPerformanceData(newPerformanceData);
+      }
+
       // Save to cache
       try {
         sessionStorage.setItem(CACHE_KEY, JSON.stringify({
@@ -402,6 +431,7 @@ export default function DashboardPage() {
             userStats: newUserStats,
             recentAnalyses: newRecentAnalyses,
             topCoins: newTopCoins,
+            performanceData: newPerformanceData,
           },
           timestamp: Date.now(),
         }));
@@ -426,26 +456,104 @@ export default function DashboardPage() {
     return () => clearInterval(refreshInterval);
   }, [fetchData]);
 
-  // Build chart data
+  // Build chart data from performanceData API
   const buildChartData = () => {
+    if (!performanceData?.daily?.length) {
+      // Return empty data structure
+      if (pnlViewMode === 'daily') {
+        const hours: number[] = [];
+        for (let h = 0; h < 24; h += 3) hours.push(h);
+        return hours.map(h => ({
+          name: `${h.toString().padStart(2, '0')}:00`,
+          pnl: 0,
+          positive: 0,
+          negative: 0,
+          count: 0,
+        }));
+      }
+      if (pnlViewMode === 'monthly') {
+        return Array(4).fill(null).map((_, i) => {
+          const d = new Date();
+          d.setDate(d.getDate() - (3 - i) * 7);
+          return {
+            name: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            pnl: 0,
+            positive: 0,
+            negative: 0,
+            count: 0,
+          };
+        });
+      }
+      // Weekly - last 7 days
+      return Array(7).fill(null).map((_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (6 - i));
+        return {
+          name: d.toLocaleDateString('en-US', { weekday: 'short' }),
+          pnl: 0,
+          positive: 0,
+          negative: 0,
+          count: 0,
+        };
+      });
+    }
+
+    const daily = performanceData.daily;
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
 
-    // Hours for daily view (3-hour buckets)
-    const hours: number[] = [];
-    for (let h = 0; h < 24; h += 3) hours.push(h);
+    // Daily view: Today's realized + unrealized (hourly breakdown not available from API, show total)
+    if (pnlViewMode === 'daily') {
+      const todayData = daily.find(d => d.date === todayStr);
+      const hours: number[] = [];
+      for (let h = 0; h < 24; h += 3) hours.push(h);
 
-    // Days for weekly view (last 7 days)
-    const weekDays: string[] = [];
-    const weekDayLabels: string[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      weekDays.push(d.toISOString().split('T')[0]);
-      weekDayLabels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
+      // For daily view, show cumulative realized + current unrealized
+      const currentHour = today.getHours();
+      const currentBucket = Math.floor(currentHour / 3) * 3;
+
+      return hours.map(h => {
+        // Show realized P/L accumulated through the day + unrealized for current bucket
+        const isCurrentOrPast = h <= currentBucket;
+        const pnl = isCurrentOrPast && todayData
+          ? (h === currentBucket ? todayData.total : todayData.realized / 8 * (h / 3 + 1))
+          : 0;
+        return {
+          name: `${h.toString().padStart(2, '0')}:00`,
+          pnl: Number(pnl.toFixed(2)),
+          positive: Math.max(0, pnl),
+          negative: Math.min(0, pnl),
+          count: h === currentBucket && todayData ? todayData.trades : 0,
+        };
+      });
     }
 
-    // Days for monthly view (last 30 days, grouped by week)
+    // Weekly view: Last 7 days with cumulative realized P/L
+    if (pnlViewMode === 'weekly') {
+      const weekDays: string[] = [];
+      const weekDayLabels: string[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        weekDays.push(d.toISOString().split('T')[0]);
+        weekDayLabels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
+      }
+
+      return weekDays.map((day, i) => {
+        const dayData = daily.find(d => d.date === day);
+        const pnl = dayData?.cumulative || 0;
+        return {
+          name: weekDayLabels[i],
+          date: day,
+          pnl,
+          positive: Math.max(0, pnl),
+          negative: Math.min(0, pnl),
+          count: dayData?.trades || 0,
+        };
+      });
+    }
+
+    // Monthly view: Last 4 weeks aggregated
     const monthWeeks: { start: Date; end: Date; label: string }[] = [];
     for (let i = 3; i >= 0; i--) {
       const weekEnd = new Date();
@@ -459,87 +567,23 @@ export default function DashboardPage() {
       });
     }
 
-    const hourlyPnL: Record<number, number[]> = {};
-    hours.forEach(h => { hourlyPnL[h] = []; });
+    return monthWeeks.map((week) => {
+      const weekStartStr = week.start.toISOString().split('T')[0];
+      const weekEndStr = week.end.toISOString().split('T')[0];
 
-    const dailyPnL: Record<string, number[]> = {};
-    weekDays.forEach(day => { dailyPnL[day] = []; });
+      // Sum realized P/L for days in this week
+      const weekData = daily.filter(d => d.date >= weekStartStr && d.date <= weekEndStr);
+      const totalPnl = weekData.reduce((sum, d) => sum + d.realized, 0);
+      const totalTrades = weekData.reduce((sum, d) => sum + d.trades, 0);
 
-    const weeklyPnL: number[][] = [[], [], [], []];
-
-    recentAnalyses
-      .filter(o => o.unrealizedPnL !== undefined && o.createdAt)
-      .forEach(o => {
-        const tradeDate = new Date(o.createdAt);
-        const tradeDateStr = tradeDate.toISOString().split('T')[0];
-        const tradeHour = tradeDate.getHours();
-        const pnl = o.unrealizedPnL || 0;
-
-        // Daily (today's hourly data)
-        if (tradeDateStr === todayStr) {
-          const hourBucket = Math.floor(tradeHour / 3) * 3;
-          if (hourlyPnL[hourBucket] !== undefined) {
-            hourlyPnL[hourBucket].push(pnl);
-          }
-        }
-
-        // Weekly (last 7 days)
-        if (dailyPnL[tradeDateStr]) {
-          dailyPnL[tradeDateStr].push(pnl);
-        }
-
-        // Monthly (last 4 weeks)
-        monthWeeks.forEach((week, idx) => {
-          if (tradeDate >= week.start && tradeDate <= week.end) {
-            weeklyPnL[idx].push(pnl);
-          }
-        });
-      });
-
-    // Build daily chart data (hourly)
-    const dailyChartData = hours.map((h) => {
-      const trades = hourlyPnL[h];
-      const avgPnl = trades.length > 0 ? trades.reduce((sum, v) => sum + v, 0) / trades.length : 0;
-      return {
-        name: `${h.toString().padStart(2, '0')}:00`,
-        hour: h,
-        pnl: avgPnl,
-        positive: Math.max(0, avgPnl),
-        negative: Math.min(0, avgPnl),
-        count: trades.length,
-      };
-    });
-
-    // Build weekly chart data (daily)
-    const weeklyChartData = weekDays.map((day, i) => {
-      const trades = dailyPnL[day];
-      const avgPnl = trades.length > 0 ? trades.reduce((sum, v) => sum + v, 0) / trades.length : 0;
-      return {
-        name: weekDayLabels[i],
-        date: day,
-        pnl: avgPnl,
-        positive: Math.max(0, avgPnl),
-        negative: Math.min(0, avgPnl),
-        count: trades.length,
-      };
-    });
-
-    // Build monthly chart data (weekly)
-    const monthlyChartData = monthWeeks.map((week, i) => {
-      const trades = weeklyPnL[i];
-      const avgPnl = trades.length > 0 ? trades.reduce((sum, v) => sum + v, 0) / trades.length : 0;
       return {
         name: week.label,
-        pnl: avgPnl,
-        positive: Math.max(0, avgPnl),
-        negative: Math.min(0, avgPnl),
-        count: trades.length,
+        pnl: Number(totalPnl.toFixed(2)),
+        positive: Math.max(0, totalPnl),
+        negative: Math.min(0, totalPnl),
+        count: totalTrades,
       };
     });
-
-    if (pnlViewMode === 'daily') return dailyChartData;
-    if (pnlViewMode === 'monthly') return monthlyChartData;
-    return weeklyChartData;
   };
 
   const chartData = buildChartData();
