@@ -1438,6 +1438,120 @@ export async function reportRoutes(fastify: FastifyInstance) {
       }
     }
   );
+
+  // ===========================================
+  // Send analysis screenshot via email
+  // ===========================================
+  interface SendScreenshotEmailBody {
+    analysisId: string;
+    symbol: string;
+    interval: string;
+    screenshot: string; // Base64 data URL
+    score: number;
+    direction: string;
+  }
+
+  fastify.post<{ Body: SendScreenshotEmailBody }>(
+    '/email-screenshot',
+    { preHandler: [authenticate] },
+    async (
+      request: FastifyRequest<{ Body: SendScreenshotEmailBody }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const userId = (request.user as JwtUser).id;
+        const { analysisId, symbol, interval, screenshot, score, direction } = request.body;
+
+        if (!analysisId || !symbol || !screenshot) {
+          return reply.code(400).send({
+            error: { code: 'MISSING_FIELDS', message: 'Missing required fields' },
+          });
+        }
+
+        // Get user info
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { name: true, email: true, isAdmin: true },
+        });
+
+        if (!user || !user.email) {
+          return reply.code(400).send({
+            error: { code: 'NO_EMAIL', message: 'User email not found' },
+          });
+        }
+
+        // Check free email limit for this analysis (admin bypasses)
+        if (!user.isAdmin) {
+          const analysis = await prisma.analysis.findUnique({
+            where: { id: analysisId },
+            select: { emailsSentUsed: true },
+          });
+
+          if (analysis && (analysis.emailsSentUsed || 0) >= FREE_EMAILS_PER_ANALYSIS) {
+            // Check credit balance
+            const creditBalance = await prisma.creditBalance.findUnique({
+              where: { userId },
+            });
+
+            if (!creditBalance || creditBalance.balance < EMAIL_SEND_CREDIT_COST) {
+              return reply.code(402).send({
+                error: {
+                  code: 'INSUFFICIENT_CREDITS',
+                  message: `Requires ${EMAIL_SEND_CREDIT_COST} credits. You have ${creditBalance?.balance || 0} credits.`,
+                },
+              });
+            }
+
+            // Deduct credits
+            await prisma.creditBalance.update({
+              where: { userId },
+              data: {
+                balance: { decrement: EMAIL_SEND_CREDIT_COST },
+                lifetimeSpent: { increment: EMAIL_SEND_CREDIT_COST },
+              },
+            });
+          }
+
+          // Increment email count for this analysis
+          await prisma.analysis.update({
+            where: { id: analysisId },
+            data: { emailsSentUsed: { increment: 1 } },
+          });
+        }
+
+        // Send email with screenshot
+        const result = await emailService.sendAnalysisScreenshot(user.email, user.name || 'Trader', {
+          symbol,
+          interval,
+          score,
+          direction,
+          screenshotBase64: screenshot,
+          generatedAt: new Date().toLocaleString('en-US', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          }),
+        });
+
+        if (!result.success) {
+          return reply.code(500).send({
+            error: { code: 'EMAIL_FAILED', message: 'Failed to send email', details: result.error },
+          });
+        }
+
+        fastify.log.info({ userId, email: user.email, symbol, analysisId }, 'Screenshot email sent');
+
+        return reply.send({
+          success: true,
+          message: `Analysis screenshot sent to ${user.email}`,
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to send screenshot email' },
+        });
+      }
+    }
+  );
 }
 
 // Generate coin icon as base64 SVG (reliable for all email clients)

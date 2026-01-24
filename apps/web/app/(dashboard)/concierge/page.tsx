@@ -108,13 +108,13 @@ function QuickCommand({
       onClick={onClick}
       className={cn(
         "group flex items-center gap-2 px-4 py-2.5 rounded-xl",
-        "bg-gradient-to-r backdrop-blur-sm border border-slate-200 dark:border-white/10",
+        "bg-gradient-to-r backdrop-blur-sm border border-slate-300 dark:border-white/10 shadow-sm",
         "hover:scale-[1.02] hover:shadow-lg transition-all duration-200",
         gradient
       )}
     >
-      <Icon className="w-4 h-4 text-slate-600 dark:text-white/80 group-hover:text-slate-900 dark:group-hover:text-white" />
-      <span className="text-sm font-medium text-slate-700 dark:text-white/90 group-hover:text-slate-900 dark:group-hover:text-white">{label}</span>
+      <Icon className="w-4 h-4 text-slate-700 dark:text-white/80 group-hover:text-slate-900 dark:group-hover:text-white" />
+      <span className="text-sm font-semibold text-slate-800 dark:text-white/90 group-hover:text-slate-900 dark:group-hover:text-white">{label}</span>
     </button>
   );
 }
@@ -124,14 +124,14 @@ function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType
   return (
     <div className={cn(
       "flex items-center gap-3 px-4 py-3 rounded-xl",
-      "bg-slate-100 dark:bg-white/5 backdrop-blur-sm border border-slate-200 dark:border-white/10"
+      "bg-white dark:bg-white/5 backdrop-blur-sm border border-slate-300 dark:border-white/10 shadow-sm"
     )}>
-      <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", color)}>
+      <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shadow-md", color)}>
         <Icon className="w-5 h-5 text-white" />
       </div>
       <div>
-        <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
-        <p className="text-lg font-bold text-slate-900 dark:text-white">{value}</p>
+        <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</p>
+        <p className="text-lg font-bold text-slate-800 dark:text-white">{value}</p>
       </div>
     </div>
   );
@@ -353,11 +353,11 @@ export default function ConciergePage() {
               </div>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
                 AI Concierge
-                <Sparkles className="w-5 h-5 text-amber-500 dark:text-amber-400" />
+                <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Your intelligent trading assistant</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Your intelligent trading assistant</p>
             </div>
           </div>
 
@@ -374,7 +374,7 @@ export default function ConciergePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Chat Area */}
           <div className="lg:col-span-2">
-            <div className="relative overflow-hidden rounded-2xl bg-white/80 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-200 dark:border-white/10 shadow-2xl">
+            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900/50 backdrop-blur-xl border border-slate-300 dark:border-white/10 shadow-xl">
               {/* Messages */}
               <div className="h-[500px] overflow-y-auto p-6 space-y-4">
                 {/* Welcome Screen */}
@@ -387,34 +387,34 @@ export default function ConciergePage() {
                       </div>
                     </div>
 
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
                       Welcome to AI Concierge
                     </h2>
-                    <p className="text-slate-500 dark:text-slate-400 max-w-md mb-8">
+                    <p className="text-slate-600 dark:text-slate-400 max-w-md mb-8">
                       Ask me to analyze any coin, check market conditions, or get trading insights.
                     </p>
 
                     {/* Market Overview */}
                     {marketData && (
                       <div className="grid grid-cols-3 gap-3 w-full max-w-lg mb-8">
-                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">BTC</p>
-                          <p className="text-lg font-bold text-slate-900 dark:text-white">${marketData.btcPrice.toLocaleString()}</p>
-                          <p className={cn("text-sm font-medium", marketData.btcChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
+                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10">
+                          <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">BTC</p>
+                          <p className="text-lg font-bold text-slate-800 dark:text-white">${marketData.btcPrice.toLocaleString()}</p>
+                          <p className={cn("text-sm font-semibold", marketData.btcChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
                             {marketData.btcChange >= 0 ? '+' : ''}{marketData.btcChange.toFixed(2)}%
                           </p>
                         </div>
-                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">ETH</p>
-                          <p className="text-lg font-bold text-slate-900 dark:text-white">${marketData.ethPrice.toLocaleString()}</p>
-                          <p className={cn("text-sm font-medium", marketData.ethChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
+                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10">
+                          <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">ETH</p>
+                          <p className="text-lg font-bold text-slate-800 dark:text-white">${marketData.ethPrice.toLocaleString()}</p>
+                          <p className={cn("text-sm font-semibold", marketData.ethChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
                             {marketData.ethChange >= 0 ? '+' : ''}{marketData.ethChange.toFixed(2)}%
                           </p>
                         </div>
-                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Fear & Greed</p>
-                          <p className="text-lg font-bold text-slate-900 dark:text-white">{marketData.fearGreed}</p>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">{marketData.fearGreedLabel}</p>
+                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10">
+                          <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Fear & Greed</p>
+                          <p className="text-lg font-bold text-slate-800 dark:text-white">{marketData.fearGreed}</p>
+                          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{marketData.fearGreedLabel}</p>
                         </div>
                       </div>
                     )}
@@ -447,27 +447,27 @@ export default function ConciergePage() {
                       "max-w-[85%] rounded-2xl px-4 py-3",
                       msg.role === 'user'
                         ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white"
-                        : "bg-slate-100 dark:bg-white/10 backdrop-blur-sm border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200"
+                        : "bg-white dark:bg-white/10 backdrop-blur-sm border border-slate-300 dark:border-white/10 shadow-sm"
                     )}>
                       {msg.role === 'assistant' && (
                         <div className="flex items-center gap-2 mb-2">
-                          <Bot className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                          <span className="text-xs font-medium text-teal-600 dark:text-teal-400">AI Concierge</span>
+                          <Bot className="w-4 h-4 text-teal-700 dark:text-teal-400" />
+                          <span className="text-xs font-semibold text-teal-700 dark:text-teal-400">AI Concierge</span>
                         </div>
                       )}
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-200">{msg.content}</p>
 
                       {/* Verdict Card */}
                       {msg.data?.verdict && (
-                        <div className="mt-4 p-4 rounded-xl bg-slate-200/50 dark:bg-black/20 border border-slate-300 dark:border-white/10">
+                        <div className="mt-4 p-4 rounded-xl bg-slate-100 dark:bg-black/20 border border-slate-300 dark:border-white/10">
                           <div className="flex items-center justify-between mb-3">
                             <VerdictBadge verdict={msg.data.verdict} score={msg.data.score} />
                             {msg.data.direction && (
                               <span className={cn(
-                                "px-3 py-1 rounded-lg text-sm font-medium",
+                                "px-3 py-1 rounded-lg text-sm font-semibold",
                                 msg.data.direction.toLowerCase() === 'long'
-                                  ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                                  : "bg-red-500/20 text-red-600 dark:text-red-400"
+                                  ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                                  : "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
                               )}>
                                 {msg.data.direction.toUpperCase()}
                               </span>
@@ -477,7 +477,7 @@ export default function ConciergePage() {
                           {msg.data.analysisId && (
                             <Link
                               href={`/analyze/details/${msg.data.analysisId}`}
-                              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-white font-medium transition-colors border border-teal-500/20"
+                              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-teal-100 hover:bg-teal-200 dark:bg-teal-500/10 dark:hover:bg-teal-500/20 text-teal-700 dark:text-white font-semibold transition-colors border border-teal-300 dark:border-teal-500/20"
                             >
                               <ExternalLink className="w-4 h-4" />
                               View Full Analysis
@@ -510,14 +510,14 @@ export default function ConciergePage() {
                 {/* Loading */}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-slate-100 dark:bg-white/10 backdrop-blur-sm border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3">
+                    <div className="bg-white dark:bg-white/10 backdrop-blur-sm border border-slate-300 dark:border-white/10 rounded-2xl px-4 py-3 shadow-sm">
                       <div className="flex items-center gap-2">
                         <div className="flex gap-1">
-                          <div className="w-2 h-2 rounded-full bg-teal-500 dark:bg-teal-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-2 h-2 rounded-full bg-teal-500 dark:bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-2 h-2 rounded-full bg-teal-500 dark:bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                          <div className="w-2 h-2 rounded-full bg-teal-600 dark:bg-teal-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 rounded-full bg-teal-600 dark:bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 rounded-full bg-teal-600 dark:bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
-                        <span className="text-sm text-slate-500 dark:text-slate-400">Thinking...</span>
+                        <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Thinking...</span>
                       </div>
                     </div>
                   </div>
@@ -527,7 +527,7 @@ export default function ConciergePage() {
               </div>
 
               {/* Input Area */}
-              <div className="p-4 border-t border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/50">
+              <div className="p-4 border-t border-slate-300 dark:border-white/10 bg-slate-100/80 dark:bg-slate-900/50">
                 {/* Quick Commands (shown after first message) */}
                 {!showWelcome && messages.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
@@ -535,7 +535,7 @@ export default function ConciergePage() {
                       <button
                         key={i}
                         onClick={() => sendMessage(cmd.command)}
-                        className="px-3 py-1.5 text-xs rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 transition-colors"
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-300 dark:border-white/10 transition-colors shadow-sm"
                       >
                         {cmd.label}
                       </button>
@@ -551,10 +551,10 @@ export default function ConciergePage() {
                     type="button"
                     onClick={toggleListening}
                     className={cn(
-                      "p-3 rounded-xl transition-all",
+                      "p-3 rounded-xl transition-all border",
                       isListening
-                        ? "bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse"
-                        : "bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/20 hover:text-slate-700 dark:hover:text-white"
+                        ? "bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse border-red-400"
+                        : "bg-white dark:bg-white/10 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/20 hover:text-slate-800 dark:hover:text-white border-slate-300 dark:border-white/10"
                     )}
                   >
                     {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
@@ -566,7 +566,7 @@ export default function ConciergePage() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Ask me anything about trading..."
-                    className="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-teal-500/50 focus:ring-2 focus:ring-teal-500/20 transition-colors"
+                    className="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 text-slate-800 dark:text-white placeholder-slate-500 dark:placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition-colors shadow-sm"
                     disabled={isLoading}
                   />
 
@@ -577,7 +577,7 @@ export default function ConciergePage() {
                       "p-3 rounded-xl transition-all",
                       input.trim() && !isLoading
                         ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/30 hover:shadow-xl"
-                        : "bg-slate-100 dark:bg-white/10 text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                        : "bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-transparent"
                     )}
                   >
                     <Send className="w-5 h-5" />
@@ -590,9 +590,9 @@ export default function ConciergePage() {
           {/* Sidebar */}
           <div className="space-y-4">
             {/* Features Card */}
-            <div className="rounded-2xl bg-white/80 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-5">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-500 dark:text-amber-400" />
+            <div className="rounded-2xl bg-white dark:bg-slate-900/50 backdrop-blur-xl border border-slate-300 dark:border-white/10 p-5 shadow-sm">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 What I Can Do
               </h3>
               <div className="space-y-3">
@@ -602,13 +602,13 @@ export default function ConciergePage() {
                   { icon: Brain, label: 'AI Experts', desc: '4 specialized experts' },
                   { icon: Shield, label: 'Risk Assessment', desc: 'Safety checks' },
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500/20 to-emerald-500/20 flex items-center justify-center">
-                      <item.icon className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors border border-slate-200 dark:border-transparent">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500/30 to-emerald-500/30 dark:from-teal-500/20 dark:to-emerald-500/20 flex items-center justify-center">
+                      <item.icon className="w-5 h-5 text-teal-700 dark:text-teal-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-slate-900 dark:text-white">{item.label}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{item.desc}</p>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-white">{item.label}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">{item.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -616,8 +616,8 @@ export default function ConciergePage() {
             </div>
 
             {/* Example Prompts */}
-            <div className="rounded-2xl bg-white/80 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-5">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Try Asking</h3>
+            <div className="rounded-2xl bg-white dark:bg-slate-900/50 backdrop-blur-xl border border-slate-300 dark:border-white/10 p-5 shadow-sm">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Try Asking</h3>
               <div className="space-y-2">
                 {[
                   'Analyze SOL for day trading',
@@ -628,7 +628,7 @@ export default function ConciergePage() {
                   <button
                     key={i}
                     onClick={() => sendMessage(prompt)}
-                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors font-medium"
                   >
                     "{prompt}"
                   </button>
@@ -637,17 +637,17 @@ export default function ConciergePage() {
             </div>
 
             {/* Stats */}
-            <div className="rounded-2xl bg-gradient-to-br from-teal-500/10 to-emerald-500/10 backdrop-blur-xl border border-teal-500/20 p-5">
+            <div className="rounded-2xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-500/10 dark:to-emerald-500/10 backdrop-blur-xl border border-teal-300 dark:border-teal-500/20 p-5 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-teal-500/30">
                   <Zap className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Analysis Cost</p>
-                  <p className="text-xl font-bold text-slate-900 dark:text-white">25 credits</p>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Analysis Cost</p>
+                  <p className="text-xl font-bold text-slate-800 dark:text-white">25 credits</p>
                 </div>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 Each full analysis uses 25 credits. Questions and help are free!
               </p>
             </div>
