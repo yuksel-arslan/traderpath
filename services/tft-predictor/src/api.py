@@ -213,6 +213,47 @@ async def get_supported_symbols():
     }
 
 
+@app.get("/test-api-connection", tags=["System"])
+async def test_api_connection():
+    """Test connection to Node.js API."""
+    import requests as req
+
+    api_url = os.getenv("MAIN_API_URL", "")
+    admin_secret = os.getenv("ADMIN_API_SECRET", "tft-service-secret-key")
+
+    urls_to_try = []
+    if api_url:
+        urls_to_try.append(api_url)
+    urls_to_try.extend([
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "http://host.docker.internal:3001",
+    ])
+
+    results = {}
+    for url in urls_to_try:
+        try:
+            # Try health endpoint first
+            response = req.get(f"{url}/api/health", timeout=3)
+            results[url] = {
+                "status": "connected",
+                "health_status": response.status_code,
+                "response": response.json() if response.status_code == 200 else response.text[:100]
+            }
+        except req.exceptions.ConnectionError:
+            results[url] = {"status": "connection_failed", "error": "Could not connect"}
+        except req.exceptions.Timeout:
+            results[url] = {"status": "timeout", "error": "Connection timed out"}
+        except Exception as e:
+            results[url] = {"status": "error", "error": str(e)}
+
+    return {
+        "admin_secret_set": bool(admin_secret),
+        "main_api_url_env": api_url or "not set",
+        "connection_tests": results
+    }
+
+
 # ============ Training Endpoints ============
 
 @app.get("/train/status", response_model=TrainStatusResponse, tags=["Training"])
@@ -315,60 +356,95 @@ def register_model_with_api(
     metrics: dict
 ) -> bool:
     """Register trained model with Node.js API."""
-    api_url = os.getenv("MAIN_API_URL", "http://localhost:3001")
-    admin_secret = os.getenv("ADMIN_API_SECRET", "")
+    # Try multiple URLs for different environments
+    api_url = os.getenv("MAIN_API_URL", "")
+    admin_secret = os.getenv("ADMIN_API_SECRET", "tft-service-secret-key")
 
-    try:
-        # Calculate file size if file exists
-        file_size = 0
-        path = Path(file_path)
-        if path.exists():
-            file_size = path.stat().st_size
+    # Fallback URLs to try
+    urls_to_try = []
+    if api_url:
+        urls_to_try.append(api_url)
+    urls_to_try.extend([
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "http://host.docker.internal:3001",  # Docker on Mac/Windows
+    ])
 
-        # Data interval based on trade type
-        data_intervals = {"scalp": "15m", "swing": "1h", "position": "4h"}
-        lookback_days = {"scalp": 180, "swing": 730, "position": 1095}
+    logger.info(f"Will try to register model with these URLs: {urls_to_try}")
 
-        payload = {
-            "name": name,
-            "version": version,
-            "tradeType": trade_type,
-            "filePath": file_path,
-            "fileSize": file_size,
-            "symbols": symbols,
-            "epochs": epochs,
-            "batchSize": batch_size,
-            "dataInterval": data_intervals.get(trade_type, "1h"),
-            "lookbackDays": lookback_days.get(trade_type, 365),
-            "validationLoss": metrics.get("validationLoss", 0),
-            "mape": metrics.get("mape", 0),
-            "trainingSamples": metrics.get("trainingSamples", 0),
-            "trainingTime": metrics.get("trainingTime", 0),
-            "description": f"Auto-registered {trade_type} model trained on {len(symbols)} symbols",
-        }
+    # Calculate file size if file exists
+    file_size = 0
+    path = Path(file_path)
+    if path.exists():
+        file_size = path.stat().st_size
 
-        # Make sync HTTP request (we're in a thread)
-        import requests
-        response = requests.post(
-            f"{api_url}/api/admin/tft/models",
-            json=payload,
-            headers={
-                "Content-Type": "application/json",
-                "X-Admin-Secret": admin_secret,
-            },
-            timeout=10
-        )
+    # Data interval based on trade type
+    data_intervals = {"scalp": "15m", "swing": "1h", "position": "4h"}
+    lookback_days = {"scalp": 180, "swing": 730, "position": 1095}
 
-        if response.status_code == 200 or response.status_code == 201:
-            logger.info(f"Model registered successfully: {name}")
-            return True
-        else:
-            logger.warning(f"Failed to register model: {response.status_code} - {response.text}")
-            return False
+    payload = {
+        "name": name,
+        "version": version,
+        "tradeType": trade_type,
+        "filePath": file_path,
+        "fileSize": file_size,
+        "symbols": symbols,
+        "epochs": epochs,
+        "batchSize": batch_size,
+        "dataInterval": data_intervals.get(trade_type, "1h"),
+        "lookbackDays": lookback_days.get(trade_type, 365),
+        "validationLoss": metrics.get("validationLoss", 0),
+        "mape": metrics.get("mape", 0),
+        "trainingSamples": metrics.get("trainingSamples", 0),
+        "trainingTime": metrics.get("trainingTime", 0),
+        "description": f"Auto-registered {trade_type} model trained on {len(symbols)} symbols",
+    }
 
-    except Exception as e:
-        logger.error(f"Failed to register model with API: {e}")
-        return False
+    import requests
+
+    # Try each URL until one works
+    last_error = None
+    for url in urls_to_try:
+        try:
+            logger.info(f"Trying to register model at: {url}/api/admin/tft/models")
+            response = requests.post(
+                f"{url}/api/admin/tft/models",
+                json=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Admin-Secret": admin_secret,
+                },
+                timeout=5  # Shorter timeout to try next URL faster
+            )
+
+            logger.info(f"API response from {url}: {response.status_code}")
+            if response.status_code == 200 or response.status_code == 201:
+                logger.info(f"Model registered successfully: {name}")
+                try:
+                    result = response.json()
+                    logger.info(f"Model ID: {result.get('data', {}).get('id', 'unknown')}")
+                except:
+                    pass
+                return True
+            else:
+                logger.warning(f"Failed at {url}: {response.status_code} - {response.text[:200]}")
+                last_error = f"HTTP {response.status_code}"
+
+        except requests.exceptions.ConnectionError as e:
+            logger.warning(f"Connection error at {url}: {e}")
+            last_error = str(e)
+            continue
+        except requests.exceptions.Timeout as e:
+            logger.warning(f"Timeout at {url}: {e}")
+            last_error = str(e)
+            continue
+        except Exception as e:
+            logger.warning(f"Error at {url}: {e}")
+            last_error = str(e)
+            continue
+
+    logger.error(f"Failed to register model with any URL. Last error: {last_error}")
+    return False
 
 
 def run_training_sync(symbols: List[str], epochs: int, batch_size: int, trade_type: str = "swing"):
@@ -568,6 +644,7 @@ def run_training_sync(symbols: List[str], epochs: int, batch_size: int, trade_ty
 
             # Register model with Node.js API
             training_state["progress"]["logs"].append("Registering model with database...")
+            training_state["progress"]["logs"].append(f"Trying URLs: localhost:3001, 127.0.0.1:3001, host.docker.internal:3001")
             registered = register_model_with_api(
                 name=f"TFT {trade_type.capitalize()} Model",
                 version=model_version,
@@ -579,9 +656,11 @@ def run_training_sync(symbols: List[str], epochs: int, batch_size: int, trade_ty
                 metrics=training_state["metrics"]
             )
             if registered:
-                training_state["progress"]["logs"].append("Model registered in database successfully!")
+                training_state["progress"]["logs"].append("SUCCESS: Model registered in database!")
+                training_state["progress"]["logs"].append("Refresh the page to see the new model.")
             else:
-                training_state["progress"]["logs"].append("Warning: Could not register model in database")
+                training_state["progress"]["logs"].append("ERROR: Could not register model in database")
+                training_state["progress"]["logs"].append("Check if Node.js API is running on port 3001")
 
     except Exception as e:
         error_msg = f"Training failed: {str(e)}"
