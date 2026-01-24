@@ -108,13 +108,23 @@ export default function AnalysisDetailsPage() {
         allowTaint: true,
       });
 
-      // Create download link
-      const link = document.createElement('a');
-      const symbol = analysis?.symbol || 'Chart';
-      const date = new Date().toISOString().split('T')[0];
-      link.download = `TraderPath_${symbol}_${date}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      // Convert to blob for more reliable download
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert('Failed to create image');
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const symbol = analysis?.symbol || 'Chart';
+        const date = new Date().toISOString().split('T')[0];
+        link.download = `TraderPath_${symbol}_${date}.png`;
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 'image/png');
     } catch (err) {
       console.error('Failed to capture screenshot:', err);
       alert('Failed to capture screenshot');
