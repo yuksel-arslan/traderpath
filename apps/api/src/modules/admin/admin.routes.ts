@@ -961,6 +961,147 @@ export default async function adminRoutes(app: FastifyInstance) {
     }
   });
 
+  // ===========================================
+  // Google Cloud Vertex AI Training
+  // ===========================================
+
+  // POST /api/admin/tft/train/cloud - Start cloud training on Vertex AI
+  app.post('/tft/train/cloud', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest<{
+    Body: {
+      symbols: string[];
+      epochs?: number;
+      batchSize?: number;
+      tradeType?: string;
+      machineType?: string;
+      acceleratorType?: string;
+      acceleratorCount?: number;
+    }
+  }>, reply: FastifyReply) => {
+    const {
+      symbols,
+      epochs = 100,
+      batchSize = 64,
+      tradeType = 'swing',
+      machineType = 'n1-standard-8',
+      acceleratorType = 'NVIDIA_TESLA_T4',
+      acceleratorCount = 1,
+    } = request.body;
+
+    if (!symbols || symbols.length === 0) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'NO_SYMBOLS', message: 'At least one symbol is required' },
+      });
+    }
+
+    // Validate trade type
+    const validTradeTypes = ['scalp', 'swing', 'position'];
+    if (!validTradeTypes.includes(tradeType)) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'INVALID_TRADE_TYPE', message: 'Trade type must be: scalp, swing, or position' },
+      });
+    }
+
+    try {
+      const response = await fetch(`${TFT_SERVICE_URL}/train/cloud/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbols,
+          epochs,
+          batch_size: batchSize,
+          trade_type: tradeType,
+          machine_type: machineType,
+          accelerator_type: acceleratorType,
+          accelerator_count: acceleratorCount,
+        }),
+        signal: AbortSignal.timeout(30000), // Longer timeout for cloud ops
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        return reply.status(response.status).send({
+          success: false,
+          error: { code: 'CLOUD_TRAINING_ERROR', message: error.detail || 'Cloud training failed to start' },
+        });
+      }
+
+      const data = await response.json();
+      return reply.send({
+        success: true,
+        data: {
+          message: 'Cloud training started on Google Cloud Vertex AI',
+          job: data.job,
+        },
+      });
+    } catch (error) {
+      return reply.status(503).send({
+        success: false,
+        error: { code: 'TFT_SERVICE_UNAVAILABLE', message: `TFT service unavailable: ${error}` },
+      });
+    }
+  });
+
+  // GET /api/admin/tft/train/cloud/jobs - List cloud training jobs
+  app.get('/tft/train/cloud/jobs', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { limit = '10' } = request.query as { limit?: string };
+
+    try {
+      const response = await fetch(`${TFT_SERVICE_URL}/train/cloud/jobs?limit=${limit}`, {
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`TFT service error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return reply.send({
+        success: true,
+        data: data.data,
+      });
+    } catch (error) {
+      return reply.send({
+        success: false,
+        error: { code: 'SERVICE_ERROR', message: String(error) },
+        data: { jobs: [] },
+      });
+    }
+  });
+
+  // GET /api/admin/tft/train/cloud/status/:jobId - Get cloud training job status
+  app.get('/tft/train/cloud/status/:jobId', {
+    preHandler: requireAdmin,
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { jobId } = request.params as { jobId: string };
+
+    try {
+      const response = await fetch(`${TFT_SERVICE_URL}/train/cloud/status/${encodeURIComponent(jobId)}`, {
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`TFT service error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return reply.send({
+        success: true,
+        data: data.data,
+      });
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'SERVICE_ERROR', message: String(error) },
+      });
+    }
+  });
+
   // POST /api/admin/tft/stop - Stop TFT training
   app.post('/tft/stop', {
     preHandler: requireAdmin,
