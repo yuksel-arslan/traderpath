@@ -20,6 +20,7 @@ import {
   Timer,
   CheckCircle2,
   XCircle,
+  ChevronDown,
 } from 'lucide-react';
 import { CoinIcon } from '../common/CoinIcon';
 import { cn } from '../../lib/utils';
@@ -321,48 +322,41 @@ export function RecentAnalyses() {
 
         {/* Filters Row */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Verdict Filter */}
+          {/* Verdict Filter Dropdown */}
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] text-gray-400 dark:text-slate-500">Verdict:</span>
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5">
-              {VERDICT_FILTERS.map((filter) => (
-                <button
-                  key={filter.value}
-                  onClick={() => setVerdictFilter(filter.value)}
-                  className={cn(
-                    'px-2.5 py-1 text-[10px] font-medium rounded-md transition-all',
-                    verdictFilter === filter.value
-                      ? 'bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-sm'
-                      : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
-                  )}
-                >
-                  {filter.label}
-                </button>
-              ))}
+            <div className="relative">
+              <select
+                value={verdictFilter}
+                onChange={(e) => setVerdictFilter(e.target.value as VerdictFilter)}
+                className="appearance-none bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 text-[11px] font-medium pl-2.5 pr-7 py-1.5 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
+              >
+                {VERDICT_FILTERS.map((filter) => (
+                  <option key={filter.value} value={filter.value}>
+                    {filter.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
             </div>
           </div>
 
-          {/* Outcome Filter */}
+          {/* Outcome Filter Dropdown */}
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] text-gray-400 dark:text-slate-500">Status:</span>
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5">
-              {OUTCOME_FILTERS.map((filter) => (
-                <button
-                  key={filter.value}
-                  onClick={() => setOutcomeFilter(filter.value)}
-                  className={cn(
-                    'px-2.5 py-1 text-[10px] font-medium rounded-md transition-all',
-                    outcomeFilter === filter.value
-                      ? filter.value === 'live' ? 'bg-blue-500 text-white shadow-sm'
-                        : filter.value === 'tp' ? 'bg-green-500 text-white shadow-sm'
-                        : filter.value === 'sl' ? 'bg-red-500 text-white shadow-sm'
-                        : 'bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-sm'
-                      : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
-                  )}
-                >
-                  {filter.label}
-                </button>
-              ))}
+            <div className="relative">
+              <select
+                value={outcomeFilter}
+                onChange={(e) => setOutcomeFilter(e.target.value as OutcomeFilter)}
+                className="appearance-none bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 text-[11px] font-medium pl-2.5 pr-7 py-1.5 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
+              >
+                {OUTCOME_FILTERS.map((filter) => (
+                  <option key={filter.value} value={filter.value}>
+                    {filter.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
             </div>
           </div>
         </div>
