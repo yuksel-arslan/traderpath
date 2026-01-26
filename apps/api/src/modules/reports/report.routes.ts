@@ -65,6 +65,12 @@ interface SendHtmlEmailBody {
   };
 }
 
+interface SendScreenshotEmailBody {
+  analysisId: string;
+  symbol: string;
+  screenshotBase64: string; // Base64 encoded PNG/JPG image (with or without data:image prefix)
+}
+
 // Extract entry price from report data - comprehensive search
 function extractEntryPrice(reportData: Record<string, unknown>): number | null {
   // Try tradePlan first (most accurate)

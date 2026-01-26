@@ -26,6 +26,11 @@ import {
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
 
+// Dynamically import html2canvas
+const html2canvasPromise = typeof window !== 'undefined'
+  ? import('html2canvas').then(mod => mod.default)
+  : Promise.resolve(null);
+
 // Trade type definitions
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
 
@@ -157,7 +162,7 @@ export default function ReportsPage() {
     }
   };
 
-  // Send report via email
+  // Send report via email with screenshot
   const handleSendEmail = async (report: Report) => {
     setSendingEmail(report.id);
     try {
@@ -169,23 +174,128 @@ export default function ReportsPage() {
       }
 
       const data = await response.json();
-      if (!data.success || !data.data.reportData) {
+      if (!data.success || !data.data) {
         throw new Error('Report data not found');
       }
 
-      // Send email - include symbol and other fields from report level
-      const emailResponse = await authFetch('/api/reports/send-html-email', {
+      const reportData = data.data.reportData || {};
+      const tradePlan = reportData.tradePlan || {};
+      const verdict = reportData.verdict || {};
+      const interval = data.data.interval || reportData.interval || '4h';
+      const score = report.score || Number(verdict.overallScore) || 5;
+      const aiSummary = verdict.aiSummary || '';
+
+      // Extract trade plan data
+      const entry = tradePlan.averageEntry || report.entryPrice;
+      const sl = tradePlan.stopLoss?.price || report.stopLoss;
+      const tp1 = tradePlan.takeProfits?.[0]?.price || report.takeProfit1;
+      const tp2 = tradePlan.takeProfits?.[1]?.price || report.takeProfit2;
+      const tp3 = tradePlan.takeProfits?.[2]?.price || report.takeProfit3;
+
+      const isLong = (report.direction || 'long') === 'long';
+      const normalizedVerdict = normalizeVerdict(report.verdict);
+      const verdictConf = VERDICT_CONFIG[normalizedVerdict] || VERDICT_CONFIG.wait;
+      const formatPrice = (p: number | undefined) => p ? (p >= 1 ? `$${p.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : `$${p.toFixed(6)}`) : 'N/A';
+
+      // Create off-screen element for capture
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.top = '-9999px';
+      container.style.left = '-9999px';
+      container.style.width = '600px';
+      container.style.padding = '24px';
+      container.style.backgroundColor = '#0f172a';
+      container.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      container.style.color = 'white';
+
+      container.innerHTML = `
+        <div style="background: linear-gradient(135deg, #14b8a6 0%, #0f172a 50%, #ef4444 100%); padding: 16px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px; font-weight: bold;">
+            Trader<span style="color: #fef3c7;">Path</span>
+          </h1>
+          <p style="margin: 4px 0 0; color: rgba(255,255,255,0.8); font-size: 11px;">AI-Powered Trading Analysis</p>
+        </div>
+
+        <div style="background: #1e293b; padding: 20px; border-radius: 0 0 12px 12px;">
+          <!-- Symbol & Direction -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #334155;">
+            <div>
+              <h2 style="margin: 0; font-size: 22px; font-weight: bold;">${report.symbol}/USDT</h2>
+              <span style="display: inline-block; margin-top: 6px; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; background: ${isLong ? 'rgba(20,184,166,0.2)' : 'rgba(239,68,68,0.2)'}; color: ${isLong ? '#14b8a6' : '#ef4444'};">
+                ${isLong ? '▲ LONG' : '▼ SHORT'}
+              </span>
+              <span style="display: inline-block; margin-left: 8px; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; background: ${normalizedVerdict === 'go' ? 'rgba(34,197,94,0.2)' : normalizedVerdict === 'avoid' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)'}; color: ${normalizedVerdict === 'go' ? '#22c55e' : normalizedVerdict === 'avoid' ? '#ef4444' : '#f59e0b'};">
+                ${verdictConf.label}
+              </span>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 32px; font-weight: bold; color: ${score * 10 >= 70 ? '#14b8a6' : score * 10 >= 50 ? '#f59e0b' : '#ef4444'};">${(score * 10).toFixed(0)}/100</div>
+              <div style="font-size: 11px; color: #94a3b8;">Analysis Score</div>
+            </div>
+          </div>
+
+          <!-- Trade Plan -->
+          <div style="background: #0f172a; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+            <h3 style="margin: 0 0 12px; font-size: 14px; color: #94a3b8; text-transform: uppercase;">Trade Plan</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr style="text-align: center;">
+                <td style="padding: 8px; background: #334155; border-radius: 6px 0 0 0;"><span style="color: #94a3b8; font-size: 10px; display: block;">Entry</span><span style="color: #22d3ee; font-weight: 600;">${formatPrice(entry)}</span></td>
+                <td style="padding: 8px; background: #334155;"><span style="color: #94a3b8; font-size: 10px; display: block;">Stop Loss</span><span style="color: #ef4444; font-weight: 600;">${formatPrice(sl)}</span></td>
+                <td style="padding: 8px; background: #334155;"><span style="color: #94a3b8; font-size: 10px; display: block;">TP1</span><span style="color: #22c55e; font-weight: 600;">${formatPrice(tp1)}</span></td>
+                <td style="padding: 8px; background: #334155;"><span style="color: #94a3b8; font-size: 10px; display: block;">TP2</span><span style="color: #22c55e; font-weight: 600;">${formatPrice(tp2)}</span></td>
+                <td style="padding: 8px; background: #334155; border-radius: 0 6px 0 0;"><span style="color: #94a3b8; font-size: 10px; display: block;">TP3</span><span style="color: #22c55e; font-weight: 600;">${formatPrice(tp3)}</span></td>
+              </tr>
+            </table>
+          </div>
+
+          ${aiSummary ? `
+          <div style="background: #0f172a; border-radius: 8px; padding: 16px;">
+            <h3 style="margin: 0 0 8px; font-size: 14px; color: #94a3b8; text-transform: uppercase;">AI Summary</h3>
+            <p style="margin: 0; font-size: 13px; color: #cbd5e1; line-height: 1.5;">${String(aiSummary).substring(0, 300)}${String(aiSummary).length > 300 ? '...' : ''}</p>
+          </div>
+          ` : ''}
+
+          <!-- Footer -->
+          <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #334155; text-align: center;">
+            <span style="font-size: 11px; color: #64748b;">${interval.toUpperCase()} Timeframe | ${new Date(report.generatedAt).toLocaleString()}</span>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(container);
+
+      // Wait for render
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Get html2canvas
+      const html2canvas = await html2canvasPromise;
+      if (!html2canvas) throw new Error('Screenshot library not available');
+
+      // Capture
+      const canvas = await html2canvas(container, {
+        backgroundColor: '#0f172a',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+
+      // Cleanup
+      document.body.removeChild(container);
+
+      // Convert to base64
+      const screenshotBase64 = canvas.toDataURL('image/png');
+
+      // Send email with screenshot
+      const emailResponse = await authFetch('/api/reports/email-screenshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          reportId: report.id,
-          reportData: {
-            ...data.data.reportData,
-            symbol: data.data.symbol || report.symbol, // Ensure symbol is included
-            analysisId: data.data.analysisId || report.analysisId,
-            generatedAt: data.data.generatedAt || report.generatedAt,
-            aiExpertComment: data.data.aiExpertComment,
-          },
+          analysisId: report.analysisId || report.id,
+          symbol: report.symbol,
+          interval,
+          screenshot: screenshotBase64,
+          score,
+          direction: report.direction || 'long',
         }),
       });
 
@@ -194,7 +304,7 @@ export default function ReportsPage() {
         throw new Error(errData.error?.message || 'Failed to send email');
       }
 
-      alert('Report sent to your email successfully!');
+      alert('Analysis screenshot sent to your email!');
     } catch (error) {
       console.error('Failed to send email:', error);
       alert(error instanceof Error ? error.message : 'Failed to send email');
