@@ -162,6 +162,53 @@ function formatCredits(num: number): string {
   return num.toLocaleString('en-US');
 }
 
+// Calculate coin-based P/L from analyses
+interface CoinPnL {
+  symbol: string;
+  totalPnL: number;
+  trades: number;
+  winRate: number;
+  avgPnL: number;
+}
+
+function calculateCoinPnL(analyses: RecentAnalysis[]): CoinPnL[] {
+  const coinMap = new Map<string, { pnls: number[]; wins: number; total: number }>();
+
+  for (const analysis of analyses) {
+    if (analysis.outcome === 'pending') continue; // Only include closed trades
+
+    const existing = coinMap.get(analysis.symbol) || { pnls: [], wins: 0, total: 0 };
+
+    // Calculate P/L based on outcome
+    const pnl = analysis.unrealizedPnL ?? 0;
+    existing.pnls.push(pnl);
+    existing.total += 1;
+    if (analysis.outcome === 'correct') {
+      existing.wins += 1;
+    }
+
+    coinMap.set(analysis.symbol, existing);
+  }
+
+  const result: CoinPnL[] = [];
+  for (const [symbol, data] of coinMap) {
+    const totalPnL = data.pnls.reduce((sum, p) => sum + p, 0);
+    const avgPnL = data.pnls.length > 0 ? totalPnL / data.pnls.length : 0;
+    const winRate = data.total > 0 ? (data.wins / data.total) * 100 : 0;
+
+    result.push({
+      symbol,
+      totalPnL,
+      trades: data.total,
+      winRate,
+      avgPnL,
+    });
+  }
+
+  // Sort by total trades descending
+  return result.sort((a, b) => b.trades - a.trades);
+}
+
 // ===========================================
 // Helper Components
 // ===========================================
@@ -697,7 +744,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ===== SECTION 2: Statistics Grid ===== */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         <StatCard
           icon={Target}
           label="Platform Accuracy"
@@ -711,6 +758,15 @@ export default function DashboardPage() {
           value={formatNumber(platformStats?.platform?.totalAnalyses || 0)}
           subValue={`${formatNumber(platformStats?.platform?.weeklyAnalyses || 0)} this week`}
           color="purple"
+        />
+        <StatCard
+          icon={performanceData?.summary?.totalRealizedPnL && performanceData.summary.totalRealizedPnL >= 0 ? TrendingUp : TrendingDown}
+          label="Total P/L"
+          value={performanceData?.summary?.totalRealizedPnL !== undefined
+            ? `${performanceData.summary.totalRealizedPnL >= 0 ? '+' : ''}${performanceData.summary.totalRealizedPnL.toFixed(1)}%`
+            : '—'}
+          subValue={performanceData?.summary?.totalTrades ? `${performanceData.summary.totalTrades} closed trades` : 'No closed trades'}
+          color={performanceData?.summary?.totalRealizedPnL && performanceData.summary.totalRealizedPnL >= 0 ? 'green' : 'red'}
         />
         <StatCard
           icon={Users}
@@ -745,96 +801,129 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* ===== SECTION 2.5: Top Coins by Analysis Accuracy Score ===== */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-emerald-900/20 dark:via-slate-800 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700/50">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/10 dark:from-emerald-500/20 via-transparent to-transparent" />
+      {/* ===== SECTION 2.5: My Performance Summary ===== */}
+      {userStats && userStats.totalAnalyses > 0 && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
 
-        <div className="relative z-10 p-5">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                <TrendingUp className="w-4.5 h-4.5 text-white" />
+          <div className="relative z-10 p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                <Award className="w-4.5 h-4.5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-bold bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Top Coins by Score</h2>
-                <p className="text-xs font-medium text-gray-600 dark:text-slate-400">AI-analyzed every 2 hours</p>
+                <h2 className="text-lg font-bold bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">My Performance</h2>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Your trading statistics</p>
               </div>
             </div>
-            <Link
-              href="/analyze"
-              className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
-            >
-              Analyze now <ChevronRight className="w-3 h-3" />
-            </Link>
+
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-200 dark:border-white/10">
+                <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Total</div>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-3 text-center border border-blue-200/50 dark:border-blue-500/20">
+                <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Active</div>
+              </div>
+              <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-200 dark:border-white/10">
+                <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Closed</div>
+              </div>
+              <div className="bg-green-50 dark:bg-green-500/10 rounded-xl p-3 text-center border border-green-200/50 dark:border-green-500/20">
+                <div className="text-xl font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">TP Hit</div>
+              </div>
+              <div className="bg-red-50 dark:bg-red-500/10 rounded-xl p-3 text-center border border-red-200/50 dark:border-red-500/20">
+                <div className="text-xl font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
+                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">SL Hit</div>
+              </div>
+            </div>
+
+            {/* Performance Message */}
+            <div className={cn(
+              "mt-4 text-center text-xs font-medium p-3 rounded-xl border",
+              userStats.verifiedAnalyses === 0
+                ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-500/20"
+                : userStats.accuracy >= 70
+                ? "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-500/20"
+                : userStats.accuracy >= 50
+                ? "bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-200/50 dark:border-yellow-500/20"
+                : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-500/20"
+            )}>
+              {userStats.verifiedAnalyses === 0
+                ? "Trades are still active. Results will update when TP/SL is hit."
+                : userStats.accuracy >= 70
+                ? "Excellent performance! Your analysis accuracy is outstanding."
+                : userStats.accuracy >= 50
+                ? "Good progress! Keep improving your analysis skills."
+                : "Consider reviewing your analysis approach for better results."}
+            </div>
+
+            {/* Coin-based P/L Table */}
+            {(() => {
+              const coinPnLData = calculateCoinPnL(recentAnalyses);
+              if (coinPnLData.length === 0) return null;
+              return (
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    P/L by Coin
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-xs text-gray-500 dark:text-slate-400 border-b border-gray-200 dark:border-slate-700">
+                          <th className="text-left py-2 font-medium">Coin</th>
+                          <th className="text-center py-2 font-medium">Trades</th>
+                          <th className="text-center py-2 font-medium">Win Rate</th>
+                          <th className="text-right py-2 font-medium">Total P/L</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {coinPnLData.slice(0, 5).map((coin) => (
+                          <tr key={coin.symbol} className="border-b border-gray-100 dark:border-slate-800 last:border-0">
+                            <td className="py-2">
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={getCoinIcon(coin.symbol)}
+                                  alt={coin.symbol}
+                                  className="w-5 h-5 rounded-full"
+                                  onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON; }}
+                                />
+                                <span className="font-medium text-gray-800 dark:text-white">{coin.symbol}</span>
+                              </div>
+                            </td>
+                            <td className="text-center py-2 text-gray-600 dark:text-slate-400">{coin.trades}</td>
+                            <td className="text-center py-2">
+                              <span className={cn(
+                                "font-medium",
+                                coin.winRate >= 60 ? "text-green-600 dark:text-green-400" :
+                                coin.winRate >= 40 ? "text-yellow-600 dark:text-yellow-400" :
+                                "text-red-600 dark:text-red-400"
+                              )}>
+                                {coin.winRate.toFixed(0)}%
+                              </span>
+                            </td>
+                            <td className="text-right py-2">
+                              <span className={cn(
+                                "font-bold",
+                                coin.totalPnL >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                              )}>
+                                {coin.totalPnL >= 0 ? '+' : ''}{coin.totalPnL.toFixed(1)}%
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
-
-          {/* Top Coins Grid */}
-          {topCoins.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              {topCoins.map((coin, index) => {
-                const verdictLower = coin.verdict?.toLowerCase() || '';
-                const isGo = verdictLower === 'go' || verdictLower === 'go!';
-                const isConditional = verdictLower.includes('conditional');
-
-                return (
-                  <Link
-                    key={coin.symbol}
-                    href={`/analyze?symbol=${coin.symbol}`}
-                    className="group p-3 rounded-xl bg-white/60 dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-lg transition-all"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-500 dark:text-slate-500">#{index + 1}</span>
-                        <img
-                          src={getCoinIcon(coin.symbol)}
-                          alt={coin.symbol}
-                          className="w-6 h-6 rounded-full"
-                          onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON; }}
-                        />
-                        <span className="font-bold text-gray-800 dark:text-white">{coin.symbol}</span>
-                      </div>
-                      <span className={cn(
-                        "text-xs font-bold px-1.5 py-0.5 rounded",
-                        isGo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                        isConditional ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
-                        "bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400"
-                      )}>
-                        {isGo ? 'GO' : isConditional ? 'COND' : coin.verdict?.toUpperCase()?.slice(0, 4)}
-                      </span>
-                    </div>
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <div className="text-lg font-bold text-gray-800 dark:text-white">
-                          {(coin.reliabilityScore ?? coin.totalScore ?? 0).toFixed(0)}
-                        </div>
-                        <div className="text-xs font-medium text-gray-600 dark:text-slate-400">Score</div>
-                      </div>
-                      <div className="text-right">
-                        <div className={cn(
-                          "text-sm font-semibold",
-                          (coin.priceChange24h ?? 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                        )}>
-                          {(coin.priceChange24h ?? 0) >= 0 ? '+' : ''}{(coin.priceChange24h ?? 0).toFixed(2)}%
-                        </div>
-                        <div className="text-xs font-medium text-gray-600 dark:text-slate-400">24h</div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-3">
-                <Activity className="w-6 h-6 text-emerald-600 dark:text-emerald-500 animate-pulse" />
-              </div>
-              <p className="text-sm font-medium text-gray-700 dark:text-slate-400 mb-1">Scanning market...</p>
-              <p className="text-xs text-gray-600 dark:text-slate-500">Top coins will appear after the next scan cycle</p>
-            </div>
-          )}
         </div>
-      </div>
+      )}
 
       {/* ===== SECTION 3: Performance Chart ===== */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
@@ -958,67 +1047,96 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ===== SECTION 5: My Performance Summary ===== */}
-      {userStats && userStats.totalAnalyses > 0 && (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
+      {/* ===== SECTION 5: Top Coins by Score ===== */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-emerald-900/20 dark:via-slate-800 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700/50">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/10 dark:from-emerald-500/20 via-transparent to-transparent" />
 
-          <div className="relative z-10 p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                <Award className="w-4.5 h-4.5 text-white" />
+        <div className="relative z-10 p-5">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                <TrendingUp className="w-4.5 h-4.5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-bold bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">My Performance</h2>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Your trading statistics</p>
+                <h2 className="text-lg font-bold bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Top Coins by Score</h2>
+                <p className="text-xs font-medium text-gray-600 dark:text-slate-400">Scan on demand</p>
               </div>
             </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-200 dark:border-white/10">
-                <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Total</div>
-              </div>
-              <div className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-3 text-center border border-blue-200/50 dark:border-blue-500/20">
-                <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Active</div>
-              </div>
-              <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-200 dark:border-white/10">
-                <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Closed</div>
-              </div>
-              <div className="bg-green-50 dark:bg-green-500/10 rounded-xl p-3 text-center border border-green-200/50 dark:border-green-500/20">
-                <div className="text-xl font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">TP Hit</div>
-              </div>
-              <div className="bg-red-50 dark:bg-red-500/10 rounded-xl p-3 text-center border border-red-200/50 dark:border-red-500/20">
-                <div className="text-xl font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">SL Hit</div>
-              </div>
-            </div>
-
-            {/* Performance Message */}
-            <div className={cn(
-              "mt-4 text-center text-xs font-medium p-3 rounded-xl border",
-              userStats.verifiedAnalyses === 0
-                ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-500/20"
-                : userStats.accuracy >= 70
-                ? "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-500/20"
-                : userStats.accuracy >= 50
-                ? "bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-200/50 dark:border-yellow-500/20"
-                : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-500/20"
-            )}>
-              {userStats.verifiedAnalyses === 0
-                ? "Trades are still active. Results will update when TP/SL is hit."
-                : userStats.accuracy >= 70
-                ? "Excellent performance! Your analysis accuracy is outstanding."
-                : userStats.accuracy >= 50
-                ? "Good progress! Keep improving your analysis skills."
-                : "Consider reviewing your analysis approach for better results."}
-            </div>
+            <Link
+              href="/analyze"
+              className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+            >
+              Analyze now <ChevronRight className="w-3 h-3" />
+            </Link>
           </div>
+
+          {/* Top Coins Grid */}
+          {topCoins.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {topCoins.map((coin, index) => {
+                const verdictLower = coin.verdict?.toLowerCase() || '';
+                const isGo = verdictLower === 'go' || verdictLower === 'go!';
+                const isConditional = verdictLower.includes('conditional');
+
+                return (
+                  <Link
+                    key={coin.symbol}
+                    href={`/analyze?symbol=${coin.symbol}`}
+                    className="group p-3 rounded-xl bg-white/60 dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-lg transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-500 dark:text-slate-500">#{index + 1}</span>
+                        <img
+                          src={getCoinIcon(coin.symbol)}
+                          alt={coin.symbol}
+                          className="w-6 h-6 rounded-full"
+                          onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON; }}
+                        />
+                        <span className="font-bold text-gray-800 dark:text-white">{coin.symbol}</span>
+                      </div>
+                      <span className={cn(
+                        "text-xs font-bold px-1.5 py-0.5 rounded",
+                        isGo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                        isConditional ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                        "bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400"
+                      )}>
+                        {isGo ? 'GO' : isConditional ? 'COND' : coin.verdict?.toUpperCase()?.slice(0, 4)}
+                      </span>
+                    </div>
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <div className="text-lg font-bold text-gray-800 dark:text-white">
+                          {(coin.reliabilityScore ?? coin.totalScore ?? 0).toFixed(0)}
+                        </div>
+                        <div className="text-xs font-medium text-gray-600 dark:text-slate-400">Score</div>
+                      </div>
+                      <div className="text-right">
+                        <div className={cn(
+                          "text-sm font-semibold",
+                          (coin.priceChange24h ?? 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                        )}>
+                          {(coin.priceChange24h ?? 0) >= 0 ? '+' : ''}{(coin.priceChange24h ?? 0).toFixed(2)}%
+                        </div>
+                        <div className="text-xs font-medium text-gray-600 dark:text-slate-400">24h</div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-3">
+                <Activity className="w-6 h-6 text-emerald-600 dark:text-emerald-500 animate-pulse" />
+              </div>
+              <p className="text-sm font-medium text-gray-700 dark:text-slate-400 mb-1">No cached coins</p>
+              <p className="text-xs text-gray-600 dark:text-slate-500">Use Analyze page to scan coins on demand</p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Empty State for New Users */}
       {(!userStats || userStats.totalAnalyses === 0) && (
