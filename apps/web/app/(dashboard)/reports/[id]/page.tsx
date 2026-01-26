@@ -38,6 +38,7 @@ interface ReportData {
   symbol: string;
   generatedAt: string;
   analysisId: string;
+  interval?: string; // Timeframe interval (e.g., '4h', '1d')
   tradeType?: 'scalping' | 'dayTrade' | 'swing'; // Trade type for chart interval
   marketPulse: {
     btcDominance: number;
@@ -240,6 +241,7 @@ export default function ReportViewPage() {
         body: JSON.stringify({
           analysisId: report.analysisId,
           symbol: report.symbol,
+          interval: report.interval || '4h',
           screenshot: imageBase64,
           score: report.verdict?.overallScore ? report.verdict.overallScore * 10 : 0,
           direction: report.tradePlan?.direction || 'long',
@@ -249,6 +251,10 @@ export default function ReportViewPage() {
       if (response.ok) {
         setEmailSent(true);
         setTimeout(() => setEmailSent(false), 3000);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Email send failed:', response.status, errorData);
+        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
       }
     } catch (err) {
       console.error('Failed to send email:', err);
@@ -558,6 +564,7 @@ export default function ReportViewPage() {
                   support={report.assetScan?.levels?.support}
                   resistance={report.assetScan?.levels?.resistance}
                   tradeType={report.tradeType}
+                  analysisTime={report.generatedAt}
                 />
               </div>
             </div>

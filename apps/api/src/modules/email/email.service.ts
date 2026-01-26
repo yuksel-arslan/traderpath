@@ -1468,7 +1468,7 @@ TraderPath - Professional Trading Analysis
     return { success: result.success, error: result.error };
   }
   /**
-   * Send analysis screenshot via email
+   * Send analysis screenshot via email (embedded inline)
    */
   async sendAnalysisScreenshot(
     email: string,
@@ -1483,13 +1483,14 @@ TraderPath - Professional Trading Analysis
     }
   ): Promise<{ success: boolean; error?: string }> {
     const isLong = data.direction?.toLowerCase() === 'long';
-    const directionColor = isLong ? '#22c55e' : '#ef4444';
-    const directionText = isLong ? 'BULLISH' : 'BEARISH';
+    const directionColor = isLong ? '#14b8a6' : '#ef4444';
+    const directionText = isLong ? 'LONG' : 'SHORT';
     const directionIcon = isLong ? '▲' : '▼';
+    const scorePercent = Math.round(data.score * 10);
+    const scoreColor = scorePercent >= 70 ? '#14b8a6' : scorePercent >= 50 ? '#f59e0b' : '#ef4444';
 
     // Extract just the base64 part (remove data:image/png;base64, prefix)
     const base64Data = data.screenshotBase64.replace(/^data:image\/\w+;base64,/, '');
-    const fileName = `TraderPath_${data.symbol}_${data.interval}_${new Date().toISOString().split('T')[0]}.png`;
 
     const html = `
 <!DOCTYPE html>
@@ -1497,96 +1498,60 @@ TraderPath - Professional Trading Analysis
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TraderPath Analysis Screenshot</title>
+  <title>TraderPath Analysis - ${data.symbol}</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
+<body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 20px;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        <table width="650" cellpadding="0" cellspacing="0" style="background: #1e293b; border-radius: 16px; overflow: hidden; border: 1px solid #334155;">
 
-          <!-- Header with gradient -->
+          <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #dc2626 0%, #f59e0b 50%, #22c55e 100%); padding: 30px; text-align: center;">
-              <h1 style="margin: 0; color: white; font-size: 32px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                Trade<span style="color: #fef3c7;">Path</span>
+            <td style="background: linear-gradient(135deg, #14b8a6 0%, #0f172a 50%, #ef4444 100%); padding: 20px; text-align: center;">
+              <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
+                Trader<span style="color: #fef3c7;">Path</span>
               </h1>
-              <p style="margin: 8px 0 0; color: rgba(255,255,255,0.95); font-size: 14px; letter-spacing: 1px;">
-                From Charts to Clarity
+              <p style="margin: 6px 0 0; color: rgba(255,255,255,0.8); font-size: 12px; letter-spacing: 1px;">
+                AI-Powered Trading Analysis
               </p>
             </td>
           </tr>
 
-          <!-- Content -->
+          <!-- Analysis Info Bar -->
           <tr>
-            <td style="padding: 35px;">
-              <p style="color: #475569; font-size: 16px; margin: 0 0 25px; line-height: 1.6;">
-                Hello <strong style="color: #1e293b;">${userName}</strong>,
-              </p>
-
-              <p style="color: #64748b; font-size: 15px; margin: 0 0 30px; line-height: 1.6;">
-                Your <strong style="color: #1e293b;">${data.symbol}/USDT</strong> analysis screenshot is attached to this email.
-              </p>
-
-              <!-- Summary Card -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; margin-bottom: 25px;">
+            <td style="background: #0f172a; padding: 15px 20px; border-bottom: 1px solid #334155;">
+              <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="padding: 25px;">
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td width="50%" style="vertical-align: top;">
-                          <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Analyzed</p>
-                          <p style="margin: 0; color: #1e293b; font-size: 24px; font-weight: bold;">${data.symbol}/USDT</p>
-                          <p style="margin: 8px 0 0; color: #64748b; font-size: 13px;">${data.interval} timeframe</p>
-                        </td>
-                        <td width="50%" style="text-align: right; vertical-align: top;">
-                          <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Direction</p>
-                          <p style="margin: 0; color: ${directionColor}; font-size: 20px; font-weight: bold;">
-                            ${directionIcon} ${directionText}
-                          </p>
-                          <p style="margin: 8px 0 0; color: #1e293b; font-size: 18px; font-weight: bold;">Score: ${Math.round(data.score * 10)}/100</p>
-                        </td>
-                      </tr>
-                    </table>
+                  <td style="color: white; font-size: 20px; font-weight: bold;">
+                    ${data.symbol}/USDT
+                    <span style="font-size: 12px; color: ${directionColor}; margin-left: 10px; padding: 4px 8px; background: ${isLong ? 'rgba(20, 184, 166, 0.2)' : 'rgba(239, 68, 68, 0.2)'}; border-radius: 4px;">
+                      ${directionIcon} ${directionText}
+                    </span>
+                  </td>
+                  <td style="text-align: right;">
+                    <span style="color: ${scoreColor}; font-size: 24px; font-weight: bold;">${scorePercent}/100</span>
+                    <span style="color: #94a3b8; font-size: 11px; display: block;">Score</span>
                   </td>
                 </tr>
               </table>
+            </td>
+          </tr>
 
-              <!-- Attachment Notice -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background: #f0fdf4; border-radius: 12px; border: 1px solid #bbf7d0; margin-bottom: 25px;">
-                <tr>
-                  <td style="padding: 20px;">
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td width="40" style="vertical-align: top;">
-                          <div style="width: 36px; height: 36px; background: #22c55e; border-radius: 8px; text-align: center; line-height: 36px;">
-                            <span style="color: white; font-size: 18px;">📷</span>
-                          </div>
-                        </td>
-                        <td style="padding-left: 15px;">
-                          <p style="margin: 0 0 4px; color: #166534; font-weight: 600; font-size: 15px;">Screenshot Attached</p>
-                          <p style="margin: 0; color: #15803d; font-size: 13px;">${fileName}</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Footer Note -->
-              <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 30px 0 0; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-                Generated on ${data.generatedAt}
-              </p>
+          <!-- Screenshot (Embedded Inline) -->
+          <tr>
+            <td style="padding: 0;">
+              <img src="cid:analysis-screenshot" alt="${data.symbol} Analysis" style="width: 100%; height: auto; display: block;" />
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
-              <p style="color: #64748b; font-size: 13px; margin: 0 0 10px; font-weight: 600;">
-                TraderPath - Professional Trading Analysis
+            <td style="background: #0f172a; padding: 15px 20px; text-align: center; border-top: 1px solid #334155;">
+              <p style="color: #64748b; font-size: 11px; margin: 0;">
+                ${data.interval.toUpperCase()} Timeframe | Generated on ${data.generatedAt}
               </p>
-              <p style="color: #cbd5e1; font-size: 10px; margin: 0;">
+              <p style="color: #475569; font-size: 10px; margin: 8px 0 0;">
                 This is not investment advice. Do your own research before trading.
               </p>
             </td>
@@ -1600,37 +1565,31 @@ TraderPath - Professional Trading Analysis
     `.trim();
 
     const text = `
-TraderPath Analysis Screenshot
-==============================
+TraderPath Analysis - ${data.symbol}/USDT
+==========================================
 
-Hello ${userName},
-
-Your ${data.symbol}/USDT analysis screenshot is attached to this email.
-
-SUMMARY:
-- Symbol: ${data.symbol}/USDT
-- Timeframe: ${data.interval}
-- Direction: ${directionText}
-- Score: ${Math.round(data.score * 10)}/100
-
-Screenshot file: ${fileName}
+Direction: ${directionText}
+Score: ${scorePercent}/100
+Timeframe: ${data.interval}
 
 Generated on ${data.generatedAt}
 
 ---
-TraderPath - Professional Trading Analysis
+TraderPath - AI-Powered Trading Analysis
 This is not investment advice. Do your own research before trading.
     `.trim();
 
     const result = await this.sendEmail({
       to: email,
-      subject: `📷 ${data.symbol}/USDT Analysis Screenshot - TraderPath`,
+      subject: `${data.symbol}/USDT ${directionText} - ${scorePercent}/100 Score | TraderPath`,
       html,
       text,
       attachments: [
         {
-          filename: fileName,
+          filename: `TraderPath_${data.symbol}_${data.interval}.png`,
           content: base64Data,
+          encoding: 'base64',
+          cid: 'analysis-screenshot', // Content-ID for inline embedding
         },
       ],
     });

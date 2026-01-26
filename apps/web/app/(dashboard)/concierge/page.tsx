@@ -500,6 +500,7 @@ export default function ConciergePage() {
                               riskReward: i + 1,
                             }))}
                             currentPrice={msg.data.tradePlan.entry}
+                            analysisTime={msg.timestamp}
                           />
                         </div>
                       )}

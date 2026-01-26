@@ -66,6 +66,7 @@ interface TradePlanChartProps {
   onChartReady?: () => void; // Callback when chart is fully rendered with data
   chartId?: string; // Optional custom ID for the chart container (default: 'trade-plan-chart')
   tradeType?: 'scalping' | 'dayTrade' | 'swing'; // Trade type to determine chart interval
+  analysisTime?: string | Date; // When the analysis was created (for marker placement)
 }
 
 // Get Binance interval based on trade type
@@ -102,6 +103,7 @@ export function TradePlanChart({
   onChartReady,
   chartId = 'trade-plan-chart',
   tradeType = 'dayTrade',
+  analysisTime,
 }: TradePlanChartProps) {
   const { interval: chartInterval, label: intervalLabel } = getChartInterval(tradeType);
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -109,7 +111,7 @@ export function TradePlanChart({
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
   const isDisposedRef = useRef(false);
-  const lastCandleTimeRef = useRef<Time | null>(null);
+  const analysisMarkerTimeRef = useRef<Time | null>(null); // Time of candle closest to analysis creation
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -282,11 +284,11 @@ export function TradePlanChart({
       }
     });
 
-    // Add analysis marker on the last candle (shows when analysis was made)
-    if (lastCandleTimeRef.current && !isDisposedRef.current) {
+    // Add analysis marker on the candle when analysis was created
+    if (analysisMarkerTimeRef.current && !isDisposedRef.current) {
       try {
         const marker: SeriesMarker<Time> = {
-          time: lastCandleTimeRef.current,
+          time: analysisMarkerTimeRef.current,
           position: 'aboveBar',
           color: '#a855f7', // Purple - distinct from entry/SL/TP colors
           shape: 'circle',
@@ -394,9 +396,27 @@ export function TradePlanChart({
         close: parseFloat(k[4] as unknown as string),
       }));
 
-      // Store last candle time for analysis marker
+      // Find the candle closest to analysis time for marker placement
       if (candleData.length > 0) {
-        lastCandleTimeRef.current = candleData[candleData.length - 1].time;
+        if (analysisTime) {
+          // Convert analysis time to unix timestamp (seconds)
+          const analysisTimestamp = new Date(analysisTime).getTime() / 1000;
+
+          // Find the candle with time closest to (but not after) analysis time
+          let closestCandle = candleData[0];
+          for (const candle of candleData) {
+            const candleTime = candle.time as number;
+            if (candleTime <= analysisTimestamp) {
+              closestCandle = candle;
+            } else {
+              break; // Candles are sorted, so we can stop here
+            }
+          }
+          analysisMarkerTimeRef.current = closestCandle.time;
+        } else {
+          // No analysis time provided - use last candle (for new/live analysis)
+          analysisMarkerTimeRef.current = candleData[candleData.length - 1].time;
+        }
       }
 
       // Guard chart operations with try-catch in case of disposal
