@@ -96,6 +96,16 @@ type DateFilter = 'all' | 'today' | 'week' | 'month';
 // Verdict filter options
 type VerdictFilter = 'all' | 'go' | 'conditional_go' | 'wait' | 'avoid';
 
+// Outcome filter options
+type OutcomeFilter = 'all' | 'live' | 'tp' | 'sl';
+
+const OUTCOME_FILTERS: { value: OutcomeFilter; label: string; color: string }[] = [
+  { value: 'all', label: 'All', color: 'text-slate-600 dark:text-slate-300' },
+  { value: 'live', label: 'LIVE', color: 'text-blue-500' },
+  { value: 'tp', label: 'TP HIT', color: 'text-teal-500' },
+  { value: 'sl', label: 'SL HIT', color: 'text-red-500' },
+];
+
 export default function ReportsPage() {
   const router = useRouter();
   const [reports, setReports] = useState<Report[]>([]);
@@ -104,6 +114,7 @@ export default function ReportsPage() {
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [tradeTypeFilter, setTradeTypeFilter] = useState<TradeType | 'all'>('all');
   const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>('all');
+  const [outcomeFilter, setOutcomeFilter] = useState<OutcomeFilter>('all');
   const [pagination, setPagination] = useState({ total: 0, limit: 20, offset: 0 });
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
 
@@ -333,14 +344,37 @@ Could you share your risk assessment and recommendations based on this analysis?
     return normalized === verdictFilter;
   };
 
+  // Outcome filter helper
+  const matchesOutcomeFilter = (report: Report): boolean => {
+    if (outcomeFilter === 'all') return true;
+    const isActive = !report.outcome || report.outcome === 'pending';
+    if (outcomeFilter === 'live') return isActive;
+    if (outcomeFilter === 'tp') return report.outcome === 'correct';
+    if (outcomeFilter === 'sl') return report.outcome === 'incorrect';
+    return true;
+  };
+
   const filteredReports = reports
     .filter(r =>
       r.symbol.toLowerCase().includes(searchQuery.toLowerCase()) &&
       isInDateRange(r.generatedAt) &&
       (tradeTypeFilter === 'all' || r.tradeType === tradeTypeFilter) &&
-      matchesVerdictFilter(r.verdict)
+      matchesVerdictFilter(r.verdict) &&
+      matchesOutcomeFilter(r)
     )
     .sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime());
+
+  // Check if any filter is active
+  const hasActiveFilters = searchQuery || dateFilter !== 'all' || tradeTypeFilter !== 'all' || verdictFilter !== 'all' || outcomeFilter !== 'all';
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery('');
+    setDateFilter('all');
+    setTradeTypeFilter('all');
+    setVerdictFilter('all');
+    setOutcomeFilter('all');
+  };
 
   return (
     <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-6">
@@ -479,11 +513,39 @@ Could you share your risk assessment and recommendations based on this analysis?
           ))}
         </div>
 
+        {/* Outcome Filter - Pill Style */}
+        <div className="flex bg-white dark:bg-slate-900/50 rounded-xl p-1 border border-slate-200 dark:border-white/10">
+          {OUTCOME_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setOutcomeFilter(f.value)}
+              className={cn(
+                "px-4 py-2 text-xs font-medium rounded-lg transition-all duration-300",
+                outcomeFilter === f.value
+                  ? "bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-lg shadow-teal-500/25"
+                  : cn("hover:bg-slate-100 dark:hover:bg-white/5", f.color)
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         {/* Results Count Badge */}
         <div className="ml-auto hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
           <span className="text-xs text-slate-500 dark:text-slate-400">Showing</span>
-          <span className="text-sm font-bold text-slate-900 dark:text-white">{filteredReports.length}</span>
+          <span className="text-sm font-bold text-slate-900 dark:text-white">
+            {hasActiveFilters ? `${filteredReports.length}/${reports.length}` : filteredReports.length}
+          </span>
           <span className="text-xs text-slate-500 dark:text-slate-400">reports</span>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="ml-2 text-xs text-teal-500 hover:text-teal-600 dark:hover:text-teal-400 font-medium"
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
@@ -509,18 +571,32 @@ Could you share your risk assessment and recommendations based on this analysis?
                 <FileText className="w-10 h-10 text-teal-500" />
               </div>
             </div>
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">No Reports Yet</h3>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">
+              {hasActiveFilters ? 'No Matching Reports' : 'No Reports Yet'}
+            </h3>
             <p className="text-slate-600 dark:text-slate-400 mb-6 max-w-md mx-auto">
-              Create your first analysis report to start tracking your trades and building your performance history.
+              {hasActiveFilters
+                ? 'No reports match your current filters. Try adjusting your search criteria.'
+                : 'Create your first analysis report to start tracking your trades and building your performance history.'}
             </p>
-            <button
-              onClick={() => router.push('/analyze')}
-              className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-red-400 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-teal-500/25 transition-all duration-300"
-            >
-              <Zap className="w-5 h-5" />
-              Start Analysis
-              <span className="group-hover:translate-x-1 transition-transform">→</span>
-            </button>
+            {hasActiveFilters ? (
+              <button
+                onClick={clearFilters}
+                className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-red-400 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-teal-500/25 transition-all duration-300"
+              >
+                Clear Filters
+                <span className="group-hover:translate-x-1 transition-transform">→</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => router.push('/analyze')}
+                className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-red-400 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-teal-500/25 transition-all duration-300"
+              >
+                <Zap className="w-5 h-5" />
+                Start Analysis
+                <span className="group-hover:translate-x-1 transition-transform">→</span>
+              </button>
+            )}
           </div>
         </div>
       ) : (
