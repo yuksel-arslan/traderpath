@@ -924,17 +924,6 @@ plotshape(barstate.islast and not isLong, title="SELL Signal", style=shape.label
                               <div className="text-xs text-gray-400">Smaller Size</div>
                             </div>
                           </button>
-                          <div className="border-t border-gray-200 dark:border-slate-700" />
-                          <button
-                            onClick={handleSendEmail}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-                          >
-                            <Mail className="w-4 h-4 text-amber-500" />
-                            <div>
-                              <div>Send via Email</div>
-                              <div className="text-xs text-gray-400">Download + Email</div>
-                            </div>
-                          </button>
                         </div>
                       </>
                     )}
@@ -967,7 +956,7 @@ plotshape(barstate.islast and not isLong, title="SELL Signal", style=shape.label
           {/* Footer - Copyright */}
           <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-700">
             <p className="text-center text-xs text-gray-500 dark:text-slate-400">
-              © 2025 <span className="font-semibold bg-gradient-to-r from-teal-500 to-coral-500 bg-clip-text text-transparent">TraderPath</span>. All rights reserved.
+              © 2025 <span className="font-semibold bg-gradient-to-r from-teal to-coral bg-clip-text text-transparent">TraderPath</span>. All rights reserved.
             </p>
             <p className="text-center text-xs text-gray-400 dark:text-slate-500 mt-1">
               Trading involves risk. Not financial advice.
