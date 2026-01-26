@@ -22,6 +22,7 @@ import {
   Calendar,
   Mail,
   Loader2,
+  ChevronDown,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
@@ -416,79 +417,62 @@ Could you share your risk assessment and recommendations based on this analysis?
         </div>
 
         {/* Trade Type Filter - Pill Style */}
-        <div className="flex bg-white dark:bg-slate-900/50 rounded-xl p-1 border border-slate-200 dark:border-white/10">
-          <button
-            onClick={() => setTradeTypeFilter('all')}
-            className={cn(
-              "px-4 py-2 text-xs font-medium rounded-lg transition-all duration-300",
-              tradeTypeFilter === 'all'
-                ? "bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-lg shadow-teal-500/25"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
-            )}
-          >
-            All
-          </button>
-          {(Object.keys(TRADE_TYPE_CONFIG) as TradeType[]).map((type) => {
-            const config = TRADE_TYPE_CONFIG[type];
-            const Icon = config.icon;
-            return (
-              <button
-                key={type}
-                onClick={() => setTradeTypeFilter(type)}
-                className={cn(
-                  "flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg transition-all duration-300",
-                  tradeTypeFilter === type
-                    ? "bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-lg shadow-teal-500/25"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
-                )}
-              >
-                <Icon className="w-3 h-3" />
-                {config.label}
-              </button>
-            );
-          })}
+        {/* Trade Type Filter Dropdown */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 dark:text-slate-400">Type:</span>
+          <div className="relative">
+            <select
+              value={tradeTypeFilter}
+              onChange={(e) => setTradeTypeFilter(e.target.value as TradeType | 'all')}
+              className="appearance-none bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-slate-200 dark:border-white/10 focus:ring-2 focus:ring-teal-500 cursor-pointer"
+            >
+              <option value="all">All</option>
+              {(Object.keys(TRADE_TYPE_CONFIG) as TradeType[]).map((type) => (
+                <option key={type} value={type}>
+                  {TRADE_TYPE_CONFIG[type].label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+          </div>
         </div>
 
-        {/* Verdict Filter - Pill Style */}
-        <div className="flex bg-white dark:bg-slate-900/50 rounded-xl p-1 border border-slate-200 dark:border-white/10">
-          {[
-            { value: 'all', label: 'All' },
-            { value: 'go', label: 'GO' },
-            { value: 'conditional_go', label: 'COND' },
-            { value: 'wait', label: 'WAIT' },
-            { value: 'avoid', label: 'AVOID' },
-          ].map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setVerdictFilter(f.value as VerdictFilter)}
-              className={cn(
-                "px-4 py-2 text-xs font-medium rounded-lg transition-all duration-300",
-                verdictFilter === f.value
-                  ? "bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-lg shadow-teal-500/25"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
-              )}
+        {/* Verdict Filter Dropdown */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 dark:text-slate-400">Verdict:</span>
+          <div className="relative">
+            <select
+              value={verdictFilter}
+              onChange={(e) => setVerdictFilter(e.target.value as VerdictFilter)}
+              className="appearance-none bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-slate-200 dark:border-white/10 focus:ring-2 focus:ring-teal-500 cursor-pointer"
             >
-              {f.label}
-            </button>
-          ))}
+              <option value="all">All</option>
+              <option value="go">GO</option>
+              <option value="conditional_go">COND</option>
+              <option value="wait">WAIT</option>
+              <option value="avoid">AVOID</option>
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+          </div>
         </div>
 
-        {/* Outcome Filter - Pill Style */}
-        <div className="flex bg-white dark:bg-slate-900/50 rounded-xl p-1 border border-slate-200 dark:border-white/10">
-          {OUTCOME_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setOutcomeFilter(f.value)}
-              className={cn(
-                "px-4 py-2 text-xs font-medium rounded-lg transition-all duration-300",
-                outcomeFilter === f.value
-                  ? "bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-lg shadow-teal-500/25"
-                  : cn("hover:bg-slate-100 dark:hover:bg-white/5", f.color)
-              )}
+        {/* Outcome Filter Dropdown */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 dark:text-slate-400">Status:</span>
+          <div className="relative">
+            <select
+              value={outcomeFilter}
+              onChange={(e) => setOutcomeFilter(e.target.value as OutcomeFilter)}
+              className="appearance-none bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-slate-200 dark:border-white/10 focus:ring-2 focus:ring-teal-500 cursor-pointer"
             >
-              {f.label}
-            </button>
-          ))}
+              {OUTCOME_FILTERS.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+          </div>
         </div>
 
         {/* Results Count Badge */}
