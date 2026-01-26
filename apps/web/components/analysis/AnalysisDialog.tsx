@@ -18,13 +18,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Loader2,
-  ChevronRight,
-  Play,
-  TrendingUp,
-  Download,
-  Mail,
   ArrowLeft,
-  Zap,
   Eye,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -127,14 +121,8 @@ export function AnalysisDialog({
   const [results, setResults] = useState<Record<number, any>>({});
   const [error, setError] = useState<string | null>(null);
   const [reportSaved, setReportSaved] = useState(false);
-  const [savedAnalysisId, setSavedAnalysisId] = useState<string | null>(null);
   const saveAttemptedRef = useRef(false);
 
-  // Email state
-  const [showEmailInput, setShowEmailInput] = useState(false);
-  const [email, setEmail] = useState('');
-  const [emailSending, setEmailSending] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
 
   // Initialize mode from localStorage
   useEffect(() => {
@@ -161,10 +149,7 @@ export function AnalysisDialog({
       setResults({});
       setError(null);
       setReportSaved(false);
-      setSavedAnalysisId(null);
       saveAttemptedRef.current = false;
-      setShowEmailInput(false);
-      setEmailSent(false);
     }
   }, [isOpen]);
 
@@ -230,7 +215,6 @@ export function AnalysisDialog({
 
       if (response.ok) {
         setReportSaved(true);
-        setSavedAnalysisId(reportAnalysisId);
       }
     } catch (error) {
       console.error('Failed to auto-save report:', error);
@@ -316,24 +300,6 @@ export function AnalysisDialog({
       setError(err instanceof Error ? err.message : 'Full analysis failed');
     } finally {
       setIsRunning(false);
-    }
-  };
-
-  // Handle email send (placeholder - would need backend implementation)
-  const handleSendEmail = async () => {
-    if (!email || !savedAnalysisId) return;
-
-    setEmailSending(true);
-    try {
-      // This would call a backend endpoint to send the report via email
-      // For now, just simulate success
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setEmailSent(true);
-      setShowEmailInput(false);
-    } catch (error) {
-      console.error('Failed to send email:', error);
-    } finally {
-      setEmailSending(false);
     }
   };
 
@@ -646,65 +612,23 @@ export function AnalysisDialog({
                 </button>
               </div>
 
-              {/* Save/Email Actions */}
+              {/* Analysis Completed Message */}
               {reportSaved && (
-                <div className="border-t pt-4 space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-green-500">
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-center gap-2 text-green-500 mb-3">
+                    <CheckCircle className="w-5 h-5" />
+                    <span className="font-semibold">Analysis completed!</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground text-center mb-4">
+                    Your analysis has been saved. View it in Recent Analyses below.
+                  </p>
+                  <button
+                    onClick={onClose}
+                    className="w-full px-4 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg font-medium hover:opacity-90 transition flex items-center justify-center gap-2"
+                  >
                     <CheckCircle className="w-4 h-4" />
-                    <span>Report saved successfully</span>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={onClose}
-                      className="flex-1 sm:flex-none px-4 py-2 border rounded-lg font-medium hover:bg-muted transition flex items-center justify-center gap-2"
-                    >
-                      <TrendingUp className="w-4 h-4" />
-                      View in Reports
-                    </button>
-
-                    {!showEmailInput && !emailSent && (
-                      <button
-                        onClick={() => setShowEmailInput(true)}
-                        className="flex-1 sm:flex-none px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition flex items-center justify-center gap-2"
-                      >
-                        <Mail className="w-4 h-4" />
-                        Email Report
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Email Input */}
-                  {showEmailInput && (
-                    <div className="flex gap-2">
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Enter your email..."
-                        className="flex-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                      />
-                      <button
-                        onClick={handleSendEmail}
-                        disabled={!email || emailSending}
-                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 flex items-center gap-2"
-                      >
-                        {emailSending ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Mail className="w-4 h-4" />
-                        )}
-                        Send
-                      </button>
-                    </div>
-                  )}
-
-                  {emailSent && (
-                    <div className="flex items-center gap-2 text-sm text-green-500">
-                      <CheckCircle className="w-4 h-4" />
-                      <span>Report sent to {email}</span>
-                    </div>
-                  )}
+                    Done
+                  </button>
                 </div>
               )}
             </div>

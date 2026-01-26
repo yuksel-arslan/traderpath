@@ -827,6 +827,14 @@ Kullanıcı Hakları Aktif:
   - Help mesajları güncellendi (EN/TR) - cache özelliği açıklandı
   - "Top 5 coins" ve "Hangi coin almalı?" komutları eklendi
 
+### 2026-01-26
+- **Analiz tamamlama UI'ı sadeleştirildi**:
+  - "View in Reports" ve "Email Reports" butonları kaldırıldı
+  - Sadece "Analysis completed!" mesajı gösteriliyor
+  - "Done" butonu modal'ı kapatıp Recent Analyses'a scroll ediyor
+  - Recent Analyses bölümüne `id="recent-analyses"` eklendi (smooth scroll için)
+  - Kullanılmayan email state'leri ve import'lar temizlendi
+
 ---
 
 ## 🤖 Claude Code Talimatları
