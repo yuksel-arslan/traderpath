@@ -1471,7 +1471,7 @@ TraderPath - Professional Trading Analysis
     return { success: result.success, error: result.error };
   }
   /**
-   * Send analysis screenshot via email (embedded inline as base64 data URL)
+   * Send analysis screenshot via email (as attachment only - no inline data URL)
    */
   async sendAnalysisScreenshot(
     email: string,
@@ -1492,13 +1492,7 @@ TraderPath - Professional Trading Analysis
     const scorePercent = Math.round(data.score * 10);
     const scoreColor = scorePercent >= 70 ? '#14b8a6' : scorePercent >= 50 ? '#f59e0b' : '#ef4444';
 
-    // Ensure we have a proper data URL for inline embedding
-    let imageDataUrl = data.screenshotBase64;
-    if (!imageDataUrl.startsWith('data:')) {
-      imageDataUrl = `data:image/png;base64,${imageDataUrl}`;
-    }
-
-    // Extract just the base64 part for attachment
+    // Extract just the base64 part for attachment (remove data URL prefix)
     const base64Data = data.screenshotBase64.replace(/^data:image\/\w+;base64,/, '');
 
     const html = `
@@ -1547,10 +1541,15 @@ TraderPath - Professional Trading Analysis
             </td>
           </tr>
 
-          <!-- Screenshot (Embedded Inline as base64 data URL) -->
+          <!-- Screenshot Notice -->
           <tr>
-            <td style="padding: 0;">
-              <img src="${imageDataUrl}" alt="${data.symbol} Analysis" style="width: 100%; height: auto; display: block;" />
+            <td style="background: #1e293b; padding: 30px 20px; text-align: center;">
+              <p style="color: #94a3b8; font-size: 14px; margin: 0 0 15px;">
+                Full analysis screenshot attached below
+              </p>
+              <p style="color: #64748b; font-size: 12px; margin: 0;">
+                Open the attachment to view your complete ${data.symbol}/USDT analysis with chart and trade plan
+              </p>
             </td>
           </tr>
 
@@ -1580,6 +1579,8 @@ TraderPath Analysis - ${data.symbol}/USDT
 Direction: ${directionText}
 Score: ${scorePercent}/100
 Timeframe: ${data.interval}
+
+Full analysis screenshot attached to this email.
 
 Generated on ${data.generatedAt}
 

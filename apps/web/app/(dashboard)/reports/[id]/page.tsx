@@ -244,7 +244,7 @@ export default function ReportViewPage() {
 
       const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#ffffff',
-        scale: 2,
+        scale: 1.5, // Reduced from 2 to keep file size reasonable for email
         logging: false,
         useCORS: true,
         allowTaint: true,
@@ -257,7 +257,7 @@ export default function ReportViewPage() {
         },
       });
 
-      const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.80); // Reduced quality for smaller file size
 
       // Send via email
       const response = await authFetch('/api/reports/email-screenshot', {
