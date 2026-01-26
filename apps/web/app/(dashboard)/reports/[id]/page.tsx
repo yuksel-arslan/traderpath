@@ -203,6 +203,7 @@ export default function ReportViewPage() {
   const [emailSent, setEmailSent] = useState(false);
   const [autoEmailInProgress, setAutoEmailInProgress] = useState(false);
   const [autoEmailDone, setAutoEmailDone] = useState(false);
+  const [reportMeta, setReportMeta] = useState<{ analysisId: string; interval?: string } | null>(null);
   const autoEmailTriggered = useRef(false);
   const chartRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
@@ -217,6 +218,10 @@ export default function ReportViewPage() {
         const data = await response.json();
         if (data.success && data.data.reportData) {
           setReport(data.data.reportData);
+          setReportMeta({
+            analysisId: data.data.analysisId || reportId,
+            interval: data.data.interval || data.data.reportData?.interval,
+          });
           setAiExpertComment(data.data.aiExpertComment || null);
         } else {
           throw new Error('Report data not found');
@@ -233,7 +238,7 @@ export default function ReportViewPage() {
 
   // Auto-email handler for ?email=true parameter
   const handleAutoEmail = useCallback(async () => {
-    if (!pageRef.current || !report || autoEmailTriggered.current) return;
+    if (!pageRef.current || !report || !reportMeta || autoEmailTriggered.current) return;
 
     autoEmailTriggered.current = true;
     setAutoEmailInProgress(true);
@@ -264,9 +269,9 @@ export default function ReportViewPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          analysisId: report.analysisId,
+          analysisId: reportMeta.analysisId,
           symbol: report.symbol,
-          interval: report.interval || '4h',
+          interval: reportMeta.interval || report.interval || '4h',
           screenshot: imageBase64,
           score: report.verdict?.overallScore ? report.verdict.overallScore * 10 : 0,
           direction: report.tradePlan?.direction || 'long',
@@ -291,15 +296,15 @@ export default function ReportViewPage() {
       alert('Failed to send email. Please try again.');
       setAutoEmailInProgress(false);
     }
-  }, [report, router]);
+  }, [report, reportMeta, router]);
 
   // Trigger auto-email when report is loaded and email=true parameter is present
   useEffect(() => {
     const shouldAutoEmail = searchParams.get('email') === 'true';
-    if (shouldAutoEmail && report && !loading && !autoEmailTriggered.current) {
+    if (shouldAutoEmail && report && reportMeta && !loading && !autoEmailTriggered.current) {
       handleAutoEmail();
     }
-  }, [searchParams, report, loading, handleAutoEmail]);
+  }, [searchParams, report, reportMeta, loading, handleAutoEmail]);
 
   // Export as PNG
   const handleExportPNG = async () => {
