@@ -13,6 +13,9 @@ interface EmailOptions {
   attachments?: Array<{
     filename: string;
     content: string; // Base64 encoded content
+    encoding?: string; // 'base64'
+    cid?: string; // Content-ID for inline embedding (src="cid:xxx")
+    content_type?: string; // MIME type e.g., 'image/png'
   }>;
 }
 
@@ -1468,7 +1471,7 @@ TraderPath - Professional Trading Analysis
     return { success: result.success, error: result.error };
   }
   /**
-   * Send analysis screenshot via email (embedded inline)
+   * Send analysis screenshot via email (embedded inline as base64 data URL)
    */
   async sendAnalysisScreenshot(
     email: string,
@@ -1489,7 +1492,13 @@ TraderPath - Professional Trading Analysis
     const scorePercent = Math.round(data.score * 10);
     const scoreColor = scorePercent >= 70 ? '#14b8a6' : scorePercent >= 50 ? '#f59e0b' : '#ef4444';
 
-    // Extract just the base64 part (remove data:image/png;base64, prefix)
+    // Ensure we have a proper data URL for inline embedding
+    let imageDataUrl = data.screenshotBase64;
+    if (!imageDataUrl.startsWith('data:')) {
+      imageDataUrl = `data:image/png;base64,${imageDataUrl}`;
+    }
+
+    // Extract just the base64 part for attachment
     const base64Data = data.screenshotBase64.replace(/^data:image\/\w+;base64,/, '');
 
     const html = `
@@ -1538,10 +1547,10 @@ TraderPath - Professional Trading Analysis
             </td>
           </tr>
 
-          <!-- Screenshot (Embedded Inline) -->
+          <!-- Screenshot (Embedded Inline as base64 data URL) -->
           <tr>
             <td style="padding: 0;">
-              <img src="cid:analysis-screenshot" alt="${data.symbol} Analysis" style="width: 100%; height: auto; display: block;" />
+              <img src="${imageDataUrl}" alt="${data.symbol} Analysis" style="width: 100%; height: auto; display: block;" />
             </td>
           </tr>
 
@@ -1589,7 +1598,7 @@ This is not investment advice. Do your own research before trading.
           filename: `TraderPath_${data.symbol}_${data.interval}.png`,
           content: base64Data,
           encoding: 'base64',
-          cid: 'analysis-screenshot', // Content-ID for inline embedding
+          content_type: 'image/png',
         },
       ],
     });
