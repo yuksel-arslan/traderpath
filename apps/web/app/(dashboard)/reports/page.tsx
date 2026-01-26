@@ -852,15 +852,10 @@ Could you share your risk assessment and recommendations based on this analysis?
                   {/* Email Button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); handleSendEmail(report); }}
-                    disabled={sendingEmail === report.id}
-                    className="p-2 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition disabled:opacity-50"
+                    className="p-2 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition"
                     title="Send Email"
                   >
-                    {sendingEmail === report.id ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Mail className="w-5 h-5" />
-                    )}
+                    <Mail className="w-5 h-5" />
                   </button>
                   {/* Delete Button */}
                   <button
