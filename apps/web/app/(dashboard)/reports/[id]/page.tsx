@@ -34,6 +34,105 @@ import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../lib/coin-icons';
 import { TradePlanChart } from '../../../../components/analysis/TradePlanChart';
 import { authFetch } from '../../../../lib/api';
 
+// Expert icons and colors for AI Expert comment parsing
+const EXPERT_CONFIG: Record<string, { emoji: string; color: string; name: string }> = {
+  'ARIA': { emoji: '📊', color: 'text-blue-600 dark:text-blue-400', name: 'ARIA - Technical Analysis' },
+  'ORACLE': { emoji: '🐋', color: 'text-purple-600 dark:text-purple-400', name: 'ORACLE - Whale Tracking' },
+  'SENTINEL': { emoji: '🛡️', color: 'text-red-600 dark:text-red-400', name: 'SENTINEL - Risk Detection' },
+  'NEXUS': { emoji: '⚖️', color: 'text-amber-600 dark:text-amber-400', name: 'NEXUS - Risk Assessment' },
+  'VOLTRAN': { emoji: '🤖', color: 'text-teal-600 dark:text-teal-400', name: 'VOLTRAN - Unified Analysis' },
+};
+
+// Parse and render AI Expert comment with proper formatting
+function renderAIExpertComment(comment: string) {
+  // Remove [PANEL_HEADER] line
+  let cleaned = comment.replace(/\[PANEL_HEADER\][^\n]*/g, '');
+
+  // Extract verdict line
+  const verdictMatch = cleaned.match(/\[(GO|CONDITIONAL[_ ]GO|WAIT|AVOID)\][^\n]*/i);
+  let verdict = null;
+  if (verdictMatch) {
+    verdict = verdictMatch[0];
+    cleaned = cleaned.replace(verdict, '');
+  }
+
+  // Parse expert sections
+  const sections: { expert: string; content: string }[] = [];
+  const expertRegex = /\[EXPERT:(\w+)\]\s*([^\[]*)/g;
+  let match;
+  while ((match = expertRegex.exec(cleaned)) !== null) {
+    const expertName = match[1].toUpperCase();
+    const content = match[2].trim();
+    if (content) {
+      sections.push({ expert: expertName, content });
+    }
+  }
+
+  // Parse VOLTRAN section
+  const voltranMatch = cleaned.match(/\[VOLTRAN\]\s*([^\[]*)/);
+  let voltranContent = null;
+  if (voltranMatch) {
+    voltranContent = voltranMatch[1].trim();
+  }
+
+  // Get verdict color
+  const getVerdictColor = (v: string) => {
+    if (v.includes('GO') && !v.includes('CONDITIONAL')) return 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border-green-300 dark:border-green-500/30';
+    if (v.includes('CONDITIONAL')) return 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-yellow-500/30';
+    if (v.includes('WAIT')) return 'bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-300 dark:border-orange-500/30';
+    return 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-300 dark:border-red-500/30';
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Verdict Badge */}
+      {verdict && (
+        <div className={cn('inline-block px-3 py-1.5 rounded-lg font-semibold text-sm border', getVerdictColor(verdict))}>
+          {verdict.replace(/\[|\]/g, '').replace(/_/g, ' ')}
+        </div>
+      )}
+
+      {/* Expert Sections */}
+      {sections.length > 0 && (
+        <div className="space-y-3">
+          {sections.map((section, idx) => {
+            const config = EXPERT_CONFIG[section.expert] || { emoji: '💡', color: 'text-gray-600', name: section.expert };
+            return (
+              <div key={idx} className="flex gap-3">
+                <div className="text-lg flex-shrink-0">{config.emoji}</div>
+                <div className="flex-1">
+                  <div className={cn('text-xs font-semibold mb-1', config.color)}>{config.name}</div>
+                  <p className="text-sm text-gray-700 dark:text-slate-300 leading-relaxed">{section.content}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* VOLTRAN Summary */}
+      {voltranContent && (
+        <div className="mt-4 pt-4 border-t border-amber-200 dark:border-amber-500/20">
+          <div className="flex gap-3">
+            <div className="text-lg flex-shrink-0">🤖</div>
+            <div className="flex-1">
+              <div className="text-xs font-semibold mb-1 text-teal-600 dark:text-teal-400">VOLTRAN - Final Synthesis</div>
+              <p className="text-sm text-gray-700 dark:text-slate-300 leading-relaxed font-medium">{voltranContent}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fallback if no sections parsed */}
+      {sections.length === 0 && !voltranContent && !verdict && (
+        <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+          {comment}
+        </p>
+      )}
+    </div>
+  );
+}
+
 interface ReportData {
   symbol: string;
   generatedAt: string;
@@ -578,15 +677,13 @@ export default function ReportViewPage() {
                   <Bot className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-amber-700 dark:text-amber-400">AI Expert Review</h3>
-                  <p className="text-xs text-amber-600 dark:text-amber-500">NEXUS Risk Assessment</p>
+                  <h3 className="font-semibold text-amber-700 dark:text-amber-400">AI Expert Panel Review</h3>
+                  <p className="text-xs text-amber-600 dark:text-amber-500">4 AI Experts + VOLTRAN Synthesis</p>
                 </div>
               </div>
 
               <div className="bg-white dark:bg-slate-800/50 rounded-lg p-4 border border-amber-200 dark:border-amber-500/20">
-                <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                  {aiExpertComment}
-                </p>
+                {renderAIExpertComment(aiExpertComment)}
               </div>
             </div>
           )}

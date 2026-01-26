@@ -114,6 +114,7 @@ export function TradePlanChart({
   const analysisMarkerTimeRef = useRef<Time | null>(null); // Time of candle closest to analysis creation
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [livePrice, setLivePrice] = useState<number | null>(null); // Live price from latest candle
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -243,15 +244,18 @@ export function TradePlanChart({
       }
     };
 
-    // Current price line
-    addPriceLine({
-      price: currentPrice,
-      color: '#3b82f6',
-      lineWidth: 2,
-      lineStyle: LineStyle.Solid,
-      axisLabelVisible: true,
-      title: 'Current',
-    });
+    // Current price line - use live price from latest candle if available
+    const displayPrice = livePrice || currentPrice;
+    if (displayPrice > 0) {
+      addPriceLine({
+        price: displayPrice,
+        color: '#3b82f6',
+        lineWidth: 2,
+        lineStyle: LineStyle.Solid,
+        axisLabelVisible: true,
+        title: 'Current',
+      });
+    }
 
     // Calculate average entry for prominent marker
     const avgEntryPrice = entries?.length > 0
@@ -351,7 +355,7 @@ export function TradePlanChart({
       });
     });
 
-  }, [loading, entries, stopLoss, takeProfits, currentPrice, support, resistance]);
+  }, [loading, entries, stopLoss, takeProfits, currentPrice, livePrice, support, resistance]);
 
   const fetchKlineData = async (
     sym: string,
@@ -417,6 +421,12 @@ export function TradePlanChart({
           // No analysis time provided - use last candle (for new/live analysis)
           analysisMarkerTimeRef.current = candleData[candleData.length - 1].time;
         }
+      }
+
+      // Update live price from last candle's close
+      if (candleData.length > 0) {
+        const lastCandle = candleData[candleData.length - 1];
+        setLivePrice(lastCandle.close);
       }
 
       // Guard chart operations with try-catch in case of disposal
