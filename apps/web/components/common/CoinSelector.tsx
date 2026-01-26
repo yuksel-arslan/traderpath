@@ -295,11 +295,17 @@ export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
 
   const handleDialogClose = () => {
     setShowAnalysisDialog(false);
+    // Scroll to Recent Analyses section
+    setTimeout(() => {
+      const recentAnalysesSection = document.getElementById('recent-analyses');
+      if (recentAnalysesSection) {
+        recentAnalysesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   };
 
   const handleAnalysisComplete = () => {
-    // Optionally navigate to reports page after completion
-    // router.push('/reports');
+    // Analysis complete - dialog will close and scroll to Recent Analyses
   };
 
   const handleCancelAnalysis = () => {

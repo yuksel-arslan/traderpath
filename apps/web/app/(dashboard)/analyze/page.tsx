@@ -463,7 +463,7 @@ export default function AnalyzePage() {
           </div>
 
           {/* Recent Analyses - Full Width */}
-          <div className="col-span-12 relative z-10">
+          <div id="recent-analyses" className="col-span-12 relative z-10">
             <GlassCard className="p-3 sm:p-4 md:p-6">
               <RecentAnalyses />
             </GlassCard>
