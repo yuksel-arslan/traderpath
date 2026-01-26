@@ -868,6 +868,12 @@ Kullanıcı Hakları Aktif:
   - Expert tag'leri (ARIA, ORACLE, SENTINEL, NEXUS) emoji ve renklerle gösteriliyor
   - VOLTRAN synthesis ayrı bölümde gösteriliyor
   - Verdict badge'leri uygun renklerde gösteriliyor
+- **Email'de tam sayfa screenshot gönderiliyor**:
+  - RecentAnalyses ve Reports email butonları detay sayfasına `?email=true` ile yönlendiriyor
+  - Detay sayfasında otomatik screenshot capture ve email gönderimi
+  - Tam analiz sayfası (7 adım + Trade Plan Chart) email'e ekleniyor
+  - Loading overlay ile kullanıcıya geri bildirim
+  - Başarılı gönderimde otomatik geri yönlendirme
 
 ---
 
