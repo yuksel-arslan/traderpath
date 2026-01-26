@@ -222,6 +222,10 @@ export default function AnalysisDetailsPage() {
       if (response.ok) {
         setEmailSent(true);
         setTimeout(() => setEmailSent(false), 3000);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Email send failed:', response.status, errorData);
+        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
       }
     } catch (err) {
       console.error('Failed to send email:', err);
