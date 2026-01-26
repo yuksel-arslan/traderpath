@@ -405,6 +405,19 @@ async function startOutcomeTracker() {
     }
   }, 30 * 1000); // 30 seconds
 
+  // Run historical outcome check every 10 minutes to catch missed SL/TP hits
+  // This uses Binance Klines API to check all candles since analysis creation
+  setInterval(async () => {
+    try {
+      const historicalResult = await checkAllHistoricalOutcomes();
+      if (historicalResult.tpHits > 0 || historicalResult.slHits > 0) {
+        logger.info(historicalResult, 'Historical outcome check: TP/SL hits detected');
+      }
+    } catch (error) {
+      logger.error(error, 'Historical outcome check failed');
+    }
+  }, 10 * 60 * 1000); // 10 minutes
+
   // Run expired outcome calculation every 5 minutes
   setInterval(async () => {
     try {
