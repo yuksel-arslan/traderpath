@@ -264,6 +264,8 @@ Kullanıcı Hakları Aktif:
 | 2026-01-24 | PEPE analizi AI Expert'te desteklenmiyordu (NEAR karışıklığı) | `SUPPORTED_SYMBOLS` listesi genişletildi: meme coins (PEPE, SHIB, WIF, BONK), AI tokens (FET, AGIX, RNDR), DeFi, Gaming ve diğer popüler coinler eklendi | `ai-expert.service.ts:1317-1330` |
 | 2026-01-26 | Analysis marker her zaman son mum üzerinde görünüyordu | `analysisTime` prop eklendi TradePlanChart'a - tarihsel analizlerde marker analiz zamanına en yakın mum üzerine konumlandırılıyor | `TradePlanChart.tsx`, `details/[id]/page.tsx`, `reports/[id]/page.tsx` |
 | 2026-01-26 | SL hit olan analizler outcome güncellenmiyordu | `checkAllHistoricalOutcomes()` sadece startup'ta çalışıyordu, şimdi her 10 dakikada bir çalışıyor. Binance Klines API ile tarihsel mum verileri kontrol edilerek kaçırılan SL/TP hit'ler yakalanıyor | `index.ts:392-406` |
+| 2026-01-26 | Grafikteki "Current" çizgisi eski fiyatı gösteriyordu | `livePrice` state eklendi - son mumun close fiyatı kullanılıyor. Prop'tan gelen stale fiyat yerine canlı fiyat gösteriliyor | `TradePlanChart.tsx:116,249-258,358` |
+| 2026-01-26 | AI Expert yorumları raw tag'lerle gösteriliyordu | `renderAIExpertComment` parser fonksiyonu eklendi - [EXPERT:ARIA], [VOLTRAN] vb. tag'ler emoji ve renklerle düzgün formatlaniyor | `reports/[id]/page.tsx:36-104` |
 
 ---
 
@@ -857,6 +859,15 @@ Kullanıcı Hakları Aktif:
   - `checkAllHistoricalOutcomes()` artık sadece startup'ta değil, her 10 dakikada bir çalışıyor
   - Binance Klines API ile tarihsel mum verileri kontrol ediliyor
   - Anlık fiyat kontrolünün kaçırdığı SL/TP hit'ler yakalanıyor
+- **Grafikteki "Current" çizgisi canlı fiyatı gösteriyor**:
+  - `livePrice` state eklendi TradePlanChart'a
+  - Son mumun close fiyatı kullanılarak güncel fiyat gösteriliyor
+  - Prop'tan gelen stale fiyat yerine Binance'den alınan canlı fiyat
+- **AI Expert yorumları düzgün formatlanıyor**:
+  - `renderAIExpertComment` parser fonksiyonu eklendi
+  - Expert tag'leri (ARIA, ORACLE, SENTINEL, NEXUS) emoji ve renklerle gösteriliyor
+  - VOLTRAN synthesis ayrı bölümde gösteriliyor
+  - Verdict badge'leri uygun renklerde gösteriliyor
 
 ---
 
