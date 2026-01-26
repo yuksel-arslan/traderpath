@@ -791,11 +791,13 @@ export default function ReportViewPage() {
             </div>
           )}
 
-          {/* Export Info */}
+          {/* Footer - Copyright */}
           <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-700">
-            <p className="text-center text-xs text-gray-500 dark:text-slate-400 flex items-center justify-center gap-2">
-              <Download className="w-3 h-3" />
-              Use "Export" to download as PNG/JPG or send via email
+            <p className="text-center text-xs text-gray-500 dark:text-slate-400">
+              © 2025 <span className="font-semibold bg-gradient-to-r from-teal-500 to-coral-500 bg-clip-text text-transparent">TraderPath</span>. All rights reserved.
+            </p>
+            <p className="text-center text-xs text-gray-400 dark:text-slate-500 mt-1">
+              Trading involves risk. Not financial advice.
             </p>
           </div>
 
