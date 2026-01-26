@@ -858,6 +858,7 @@ plotshape(barstate.islast and not isLong, title="SELL Signal", style=shape.label
                   resistance={step2.levels?.resistance}
                   tradeType={getTradeType(analysis.interval)}
                   chartId="trade-plan-chart"
+                  analysisTime={analysis.createdAt}
                 />
               </div>
             </div>
