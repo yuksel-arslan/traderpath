@@ -262,6 +262,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-24 | Analysis screenshot sadece grafiği yakalıyordu | `handleScreenshot` fonksiyonu `chartRef` yerine `pageRef` kullanacak şekilde düzeltildi - artık tüm analiz içeriği (7 adım, verdict, trade plan) yakalanıyor | `analyze/details/[id]/page.tsx:107-143` |
 | 2026-01-24 | Pricing sayfasında "35 Credits Per analysis" hardcoded | `ANALYSIS_BUNDLES` import edilip dinamik değer kullanıldı. `pricing-config.ts`'de 35→25 düzeltildi | `pricing/page.tsx`, `pricing-config.ts` |
 | 2026-01-24 | PEPE analizi AI Expert'te desteklenmiyordu (NEAR karışıklığı) | `SUPPORTED_SYMBOLS` listesi genişletildi: meme coins (PEPE, SHIB, WIF, BONK), AI tokens (FET, AGIX, RNDR), DeFi, Gaming ve diğer popüler coinler eklendi | `ai-expert.service.ts:1317-1330` |
+| 2026-01-26 | Analysis marker her zaman son mum üzerinde görünüyordu | `analysisTime` prop eklendi TradePlanChart'a - tarihsel analizlerde marker analiz zamanına en yakın mum üzerine konumlandırılıyor | `TradePlanChart.tsx`, `details/[id]/page.tsx`, `reports/[id]/page.tsx` |
 
 ---
 
@@ -834,6 +835,23 @@ Kullanıcı Hakları Aktif:
   - "Done" butonu modal'ı kapatıp Recent Analyses'a scroll ediyor
   - Recent Analyses bölümüne `id="recent-analyses"` eklendi (smooth scroll için)
   - Kullanılmayan email state'leri ve import'lar temizlendi
+- **Email send error handling eklendi**:
+  - analyze/details ve reports sayfalarına email gönderim hatası için alert eklendi
+  - reports sayfasına eksik interval parametresi eklendi
+- **Recent Analyses listesi Reports formatına güncellendi**:
+  - LONG/SHORT direction badge'leri eklendi
+  - Verdict badge'leri (GO/COND/WAIT/AVOID) eklendi
+  - Trade type badge'leri (Scalping/Day Trade/Swing) eklendi
+  - TP HIT/SL HIT/LIVE köşe ribbon'ları eklendi
+  - Score, P/L, TP progress stat kutuları eklendi
+  - Details, AI Expert, Email, Delete action butonları eklendi
+- **Email screenshot inline embed olarak gönderiliyor**:
+  - Attachment yerine CID ile inline embed
+  - Gmail ve diğer email client'larda doğrudan görüntüleniyor
+- **Analysis marker tarihsel analizlerde doğru mum üzerine konumlandırılıyor**:
+  - `analysisTime` prop eklendi TradePlanChart'a
+  - Analiz zamanına en yakın mum bulunup marker o mum üzerine ekleniyor
+  - analyze/details, reports ve concierge sayfaları güncellendi
 
 ---
 
