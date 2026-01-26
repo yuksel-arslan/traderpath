@@ -469,30 +469,6 @@ export default function AnalyzePage() {
             </GlassCard>
           </div>
         </div>
-
-        {/* Bottom Marquee - Reverse Direction */}
-        <div className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r from-slate-100/80 via-white/80 to-slate-100/80 dark:from-slate-900/80 dark:via-slate-800/80 dark:to-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-white/10 mt-4 sm:mt-8">
-          <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 via-transparent to-red-500/5" />
-          <div className="flex animate-marquee-reverse py-2 sm:py-3">
-            {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
-              <div key={i} className="flex items-center gap-2 sm:gap-4 px-4 sm:px-8">
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <div className={cn(
-                    "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full",
-                    item.positive ? "bg-emerald-500" : "bg-rose-500"
-                  )} />
-                  <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200">{item.symbol}</span>
-                </div>
-                <span className={cn(
-                  "text-xs sm:text-sm font-medium",
-                  item.positive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
-                )}>
-                  {item.change}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

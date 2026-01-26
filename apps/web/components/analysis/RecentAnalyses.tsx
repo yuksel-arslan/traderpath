@@ -75,12 +75,23 @@ const VERDICT_FILTERS: { value: VerdictFilter; label: string; color: string }[] 
   { value: 'avoid', label: 'AVOID', color: 'text-red-500' },
 ];
 
+// Outcome filter types
+type OutcomeFilter = 'all' | 'live' | 'tp' | 'sl';
+
+const OUTCOME_FILTERS: { value: OutcomeFilter; label: string; color: string }[] = [
+  { value: 'all', label: 'All', color: 'text-gray-600 dark:text-slate-300' },
+  { value: 'live', label: 'LIVE', color: 'text-blue-500' },
+  { value: 'tp', label: 'TP HIT', color: 'text-green-500' },
+  { value: 'sl', label: 'SL HIT', color: 'text-red-500' },
+];
+
 export function RecentAnalyses() {
   const router = useRouter();
   const [analyses, setAnalyses] = useState<RecentAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>('all');
+  const [outcomeFilter, setOutcomeFilter] = useState<OutcomeFilter>('all');
   const [actionLoading, setActionLoading] = useState<{ id: string; action: string } | null>(null);
 
   useEffect(() => {
@@ -354,9 +365,20 @@ export function RecentAnalyses() {
   }
 
   // Filter analyses by verdict
-  const filteredAnalyses = verdictFilter === 'all'
-    ? analyses
-    : analyses.filter(a => a.verdict === verdictFilter);
+  // Apply both verdict and outcome filters
+  const filteredAnalyses = analyses.filter(a => {
+    // Verdict filter
+    if (verdictFilter !== 'all' && a.verdict !== verdictFilter) return false;
+
+    // Outcome filter
+    if (outcomeFilter !== 'all') {
+      if (outcomeFilter === 'live' && (a.outcome === 'correct' || a.outcome === 'incorrect')) return false;
+      if (outcomeFilter === 'tp' && a.outcome !== 'correct') return false;
+      if (outcomeFilter === 'sl' && a.outcome !== 'incorrect') return false;
+    }
+
+    return true;
+  });
 
   return (
     <div>
@@ -366,7 +388,7 @@ export function RecentAnalyses() {
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
             Recent Analyses
             <span className="text-xs font-normal text-gray-500 dark:text-slate-400 ml-1">
-              ({filteredAnalyses.length}{verdictFilter !== 'all' ? `/${analyses.length}` : ''})
+              ({filteredAnalyses.length}{(verdictFilter !== 'all' || outcomeFilter !== 'all') ? `/${analyses.length}` : ''})
             </span>
           </h3>
           <button
@@ -377,39 +399,66 @@ export function RecentAnalyses() {
           </button>
         </div>
 
-        {/* Verdict Filter */}
-        <div className="flex items-center gap-1.5">
-          <Filter className="w-3.5 h-3.5 text-gray-400 dark:text-slate-500" />
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5">
-            {VERDICT_FILTERS.map((filter) => (
-              <button
-                key={filter.value}
-                onClick={() => setVerdictFilter(filter.value)}
-                className={cn(
-                  'px-2.5 py-1 text-[10px] font-medium rounded-md transition-all',
-                  verdictFilter === filter.value
-                    ? 'bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-sm'
-                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
-                )}
-              >
-                {filter.label}
-              </button>
-            ))}
+        {/* Filters Row */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Verdict Filter */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-gray-400 dark:text-slate-500">Verdict:</span>
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5">
+              {VERDICT_FILTERS.map((filter) => (
+                <button
+                  key={filter.value}
+                  onClick={() => setVerdictFilter(filter.value)}
+                  className={cn(
+                    'px-2.5 py-1 text-[10px] font-medium rounded-md transition-all',
+                    verdictFilter === filter.value
+                      ? 'bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-sm'
+                      : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                  )}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Outcome Filter */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-gray-400 dark:text-slate-500">Status:</span>
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5">
+              {OUTCOME_FILTERS.map((filter) => (
+                <button
+                  key={filter.value}
+                  onClick={() => setOutcomeFilter(filter.value)}
+                  className={cn(
+                    'px-2.5 py-1 text-[10px] font-medium rounded-md transition-all',
+                    outcomeFilter === filter.value
+                      ? filter.value === 'live' ? 'bg-blue-500 text-white shadow-sm'
+                        : filter.value === 'tp' ? 'bg-green-500 text-white shadow-sm'
+                        : filter.value === 'sl' ? 'bg-red-500 text-white shadow-sm'
+                        : 'bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-sm'
+                      : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                  )}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {filteredAnalyses.length === 0 && verdictFilter !== 'all' ? (
+      {filteredAnalyses.length === 0 && (verdictFilter !== 'all' || outcomeFilter !== 'all') ? (
         <div className="text-center py-6">
           <Filter className="w-6 h-6 mx-auto mb-2 text-muted-foreground opacity-50" />
           <p className="text-xs text-muted-foreground">
-            No {verdictFilter.replace('_', ' ').toUpperCase()} analyses found
+            No matching analyses found
           </p>
           <button
-            onClick={() => setVerdictFilter('all')}
+            onClick={() => { setVerdictFilter('all'); setOutcomeFilter('all'); }}
             className="text-xs text-primary hover:underline mt-1"
           >
-            Clear filter
+            Clear filters
           </button>
         </div>
       ) : (
