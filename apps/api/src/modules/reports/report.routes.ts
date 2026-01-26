@@ -1468,9 +1468,9 @@ export async function reportRoutes(fastify: FastifyInstance) {
         const userId = (request.user as JwtUser).id;
         const { analysisId, symbol, interval, screenshot, score, direction } = request.body;
 
-        if (!analysisId || !symbol || !screenshot) {
+        if (!symbol || !screenshot) {
           return reply.code(400).send({
-            error: { code: 'MISSING_FIELDS', message: 'Missing required fields' },
+            error: { code: 'MISSING_FIELDS', message: 'Missing required fields (symbol, screenshot)' },
           });
         }
 
@@ -1487,7 +1487,8 @@ export async function reportRoutes(fastify: FastifyInstance) {
         }
 
         // Check free email limit for this analysis (admin bypasses)
-        if (!user.isAdmin) {
+        // Only check if analysisId is provided
+        if (!user.isAdmin && analysisId) {
           const analysis = await prisma.analysis.findUnique({
             where: { id: analysisId },
             select: { emailsSentUsed: true },
@@ -1518,11 +1519,17 @@ export async function reportRoutes(fastify: FastifyInstance) {
             });
           }
 
-          // Increment email count for this analysis
-          await prisma.analysis.update({
-            where: { id: analysisId },
-            data: { emailsSentUsed: { increment: 1 } },
-          });
+          // Increment email count for this analysis (if it exists)
+          if (analysisId) {
+            try {
+              await prisma.analysis.update({
+                where: { id: analysisId },
+                data: { emailsSentUsed: { increment: 1 } },
+              });
+            } catch {
+              // Analysis might not exist, continue anyway
+            }
+          }
         }
 
         // Send email with screenshot
