@@ -38,6 +38,7 @@ interface ReportData {
   symbol: string;
   generatedAt: string;
   analysisId: string;
+  interval?: string; // Timeframe interval (e.g., '4h', '1d')
   tradeType?: 'scalping' | 'dayTrade' | 'swing'; // Trade type for chart interval
   marketPulse: {
     btcDominance: number;
