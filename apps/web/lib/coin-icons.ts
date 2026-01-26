@@ -126,11 +126,22 @@ export function getCoinIconUrl(symbol: string, size: 'small' | 'large' = 'small'
   return `https://www.cryptocompare.com/media/37746238/${upperSymbol.toLowerCase()}.png`;
 }
 
-// Alternative simpler approach using CryptoIcons repo
+// Get coin icon URL - uses CoinGecko CDN with fallback
 export function getCoinIcon(symbol: string): string {
   const upperSymbol = symbol.toUpperCase();
-  // Using cryptocurrency-icons CDN (more reliable)
-  return `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${upperSymbol.toLowerCase()}.png`;
+  const coinId = COIN_ID_MAP[upperSymbol];
+
+  // If we have CoinGecko mapping, use their CDN (more complete)
+  if (coinId) {
+    const imageId = getCoinGeckoImageId(coinId);
+    if (imageId > 1) {
+      // CoinGecko CDN with known image ID
+      return `https://assets.coingecko.com/coins/images/${imageId}/small/${coinId}.png`;
+    }
+  }
+
+  // Fallback: CryptoCompare (has more coins including meme coins)
+  return `https://www.cryptocompare.com/media/37746238/${upperSymbol.toLowerCase()}.png`;
 }
 
 // Fallback icon URL when coin icon is not found
@@ -168,8 +179,28 @@ function getCoinGeckoImageId(coinId: string): number {
     'bonk': 28600,
     'render-token': 5690,
     'fetch-ai': 5681,
+    'axie-infinity': 13029,
+    'bittensor': 28452,
+    'the-sandbox': 12129,
+    'decentraland': 1152,
+    'gala': 12493,
+    'enjincoin': 1102,
+    'chiliz': 8318,
+    'curve-dao-token': 12124,
+    'aave': 12645,
+    'maker': 1518,
+    'havven': 3449,
+    'compound-governance-token': 10775,
+    'yearn-finance': 11849,
+    'sushi': 12271,
+    'immutable-x': 17233,
+    'worldcoin-wld': 31069,
+    'singularitynet': 2138,
+    'tron': 1094,
+    'the-open-network': 17980,
+    'internet-computer': 14495,
   };
-  return idMap[coinId] || 1;
+  return idMap[coinId] || 0;
 }
 
 // Get coin name from symbol
