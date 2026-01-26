@@ -263,6 +263,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-24 | Pricing sayfasında "35 Credits Per analysis" hardcoded | `ANALYSIS_BUNDLES` import edilip dinamik değer kullanıldı. `pricing-config.ts`'de 35→25 düzeltildi | `pricing/page.tsx`, `pricing-config.ts` |
 | 2026-01-24 | PEPE analizi AI Expert'te desteklenmiyordu (NEAR karışıklığı) | `SUPPORTED_SYMBOLS` listesi genişletildi: meme coins (PEPE, SHIB, WIF, BONK), AI tokens (FET, AGIX, RNDR), DeFi, Gaming ve diğer popüler coinler eklendi | `ai-expert.service.ts:1317-1330` |
 | 2026-01-26 | Analysis marker her zaman son mum üzerinde görünüyordu | `analysisTime` prop eklendi TradePlanChart'a - tarihsel analizlerde marker analiz zamanına en yakın mum üzerine konumlandırılıyor | `TradePlanChart.tsx`, `details/[id]/page.tsx`, `reports/[id]/page.tsx` |
+| 2026-01-26 | SL hit olan analizler outcome güncellenmiyordu | `checkAllHistoricalOutcomes()` sadece startup'ta çalışıyordu, şimdi her 10 dakikada bir çalışıyor. Binance Klines API ile tarihsel mum verileri kontrol edilerek kaçırılan SL/TP hit'ler yakalanıyor | `index.ts:392-406` |
 
 ---
 
@@ -852,6 +853,10 @@ Kullanıcı Hakları Aktif:
   - `analysisTime` prop eklendi TradePlanChart'a
   - Analiz zamanına en yakın mum bulunup marker o mum üzerine ekleniyor
   - analyze/details, reports ve concierge sayfaları güncellendi
+- **Historical outcome checker periyodik çalıştırma eklendi**:
+  - `checkAllHistoricalOutcomes()` artık sadece startup'ta değil, her 10 dakikada bir çalışıyor
+  - Binance Klines API ile tarihsel mum verileri kontrol ediliyor
+  - Anlık fiyat kontrolünün kaçırdığı SL/TP hit'ler yakalanıyor
 
 ---
 
