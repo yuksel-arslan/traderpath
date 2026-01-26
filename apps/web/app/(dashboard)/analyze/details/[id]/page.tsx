@@ -5,8 +5,8 @@
 // Shows analysis data directly (without report)
 // ===========================================
 
-import { useEffect, useState, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -64,6 +64,7 @@ function formatPrice(price: number): string {
 export default function AnalysisDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const analysisId = params.id as string;
   const chartRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
@@ -75,6 +76,9 @@ export default function AnalysisDetailsPage() {
   const [exporting, setExporting] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [scriptCopied, setScriptCopied] = useState(false);
+  const [autoEmailInProgress, setAutoEmailInProgress] = useState(false);
+  const [autoEmailDone, setAutoEmailDone] = useState(false);
+  const autoEmailTriggered = useRef(false);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -98,6 +102,76 @@ export default function AnalysisDetailsPage() {
 
     fetchAnalysis();
   }, [analysisId]);
+
+  // Auto-email handler for ?email=true parameter
+  const handleAutoEmail = useCallback(async () => {
+    if (!pageRef.current || !analysis || autoEmailTriggered.current) return;
+
+    autoEmailTriggered.current = true;
+    setAutoEmailInProgress(true);
+
+    try {
+      // Wait for chart to render
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const canvas = await html2canvas(pageRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: 1200,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-export-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+          }
+        },
+      });
+
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
+
+      // Send via email
+      const response = await authFetch('/api/reports/email-screenshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          analysisId: analysis.id,
+          symbol: analysis.symbol,
+          interval: analysis.interval,
+          screenshot: imageBase64,
+          score: analysis.totalScore,
+          direction: analysis.step5Result?.direction || analysis.step7Result?.direction || 'long',
+        }),
+      });
+
+      if (response.ok) {
+        setAutoEmailDone(true);
+        setEmailSent(true);
+        // Redirect back to analyze page after showing success
+        setTimeout(() => {
+          router.push('/analyze#recent-analyses');
+        }, 2000);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Auto email send failed:', response.status, errorData);
+        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
+        setAutoEmailInProgress(false);
+      }
+    } catch (err) {
+      console.error('Failed to auto send email:', err);
+      alert('Failed to send email. Please try again.');
+      setAutoEmailInProgress(false);
+    }
+  }, [analysis, router]);
+
+  // Trigger auto-email when analysis is loaded and email=true parameter is present
+  useEffect(() => {
+    const shouldAutoEmail = searchParams.get('email') === 'true';
+    if (shouldAutoEmail && analysis && !loading && !autoEmailTriggered.current) {
+      handleAutoEmail();
+    }
+  }, [searchParams, analysis, loading, handleAutoEmail]);
 
   // Export as PNG
   const handleExportPNG = async () => {
@@ -521,6 +595,7 @@ plotshape(barstate.islast and not isLong, title="SELL Signal", style=shape.label
     );
   }
 
+
   // Extract data from steps
   const step1 = analysis.step1Result || {};
   const step2 = analysis.step2Result || {};
@@ -562,9 +637,33 @@ plotshape(barstate.islast and not isLong, title="SELL Signal", style=shape.label
   const tp3 = step5.takeProfits?.[2]?.price || step5.takeProfit3;
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-200px)] p-4">
-      <div className="w-full max-w-4xl">
-        {/* Back Button */}
+    <>
+      {/* Auto-email overlay - shows on top of page content */}
+      {autoEmailInProgress && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl text-center max-w-md mx-4">
+            {autoEmailDone ? (
+              <>
+                <div className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <Check className="w-8 h-8 text-green-500" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Email Sent!</h2>
+                <p className="text-gray-500 dark:text-slate-400">Your analysis screenshot has been sent to your email. Redirecting...</p>
+              </>
+            ) : (
+              <>
+                <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-teal-500" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Sending Email...</h2>
+                <p className="text-gray-500 dark:text-slate-400">Capturing full analysis screenshot and sending to your email...</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-center min-h-[calc(100vh-200px)] p-4">
+        <div className="w-full max-w-4xl">
+          {/* Back Button */}
         <Link href="/analyze" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4">
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Analyze</span>
@@ -873,6 +972,7 @@ plotshape(barstate.islast and not isLong, title="SELL Signal", style=shape.label
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
