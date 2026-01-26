@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Clock,
@@ -25,6 +25,12 @@ import { CoinIcon } from '../common/CoinIcon';
 import { cn } from '../../lib/utils';
 import { getAuthToken, getApiUrl, authFetch } from '../../lib/api';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+// Dynamically import html2canvas
+const html2canvasPromise = typeof window !== 'undefined'
+  ? import('html2canvas').then(mod => mod.default)
+  : Promise.resolve(null);
 
 // Trade type definitions
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
@@ -204,100 +210,14 @@ export function RecentAnalyses() {
     }
   };
 
-  // Send email
+  // Send email - redirects to details page for full screenshot capture
   const handleEmail = async (e: React.MouseEvent, analysis: RecentAnalysis) => {
     e.preventDefault();
     e.stopPropagation();
-    setActionLoading({ id: analysis.id, action: 'email' });
 
-    try {
-      // Fetch full analysis data
-      const response = await authFetch(`/api/analysis/${analysis.id}`);
-      if (!response.ok) throw new Error('Failed to fetch analysis');
-
-      const data = await response.json();
-      if (!data.success || !data.data) throw new Error('Analysis not found');
-
-      const analysisData = data.data;
-      const step1 = analysisData.step1Result || {};
-      const step2 = analysisData.step2Result || {};
-      const step3 = analysisData.step3Result || {};
-      const step4 = analysisData.step4Result || {};
-      const step5 = analysisData.step5Result || {};
-      const step6 = analysisData.step6Result || {};
-      const step7 = analysisData.step7Result || {};
-
-      // Build report data for email
-      const reportData = {
-        symbol: analysis.symbol,
-        generatedAt: analysis.createdAt,
-        analysisId: analysis.id,
-        interval: analysisData.interval || '4h',
-        marketPulse: {
-          btcDominance: step1.btcDominance,
-          fearGreedIndex: step1.fearGreedIndex,
-          fearGreedLabel: step1.fearGreedLabel,
-          trend: step1.trend || { direction: 'neutral', strength: 0 },
-        },
-        assetScan: {
-          currentPrice: step2.currentPrice || analysis.currentPrice,
-          priceChange24h: step2.priceChange24h || 0,
-          indicators: step2.indicators || { rsi: 50, macd: { histogram: 0 } },
-          levels: step2.levels,
-        },
-        safetyCheck: {
-          riskLevel: step3.riskLevel,
-          manipulation: step3.manipulation || { pumpDumpRisk: 'low' },
-          whaleActivity: step3.whaleActivity || { bias: 'neutral' },
-        },
-        timing: {
-          tradeNow: step4.tradeNow,
-          reason: step4.reason,
-        },
-        tradePlan: {
-          direction: step5.direction || analysis.direction,
-          averageEntry: step5.averageEntry || step5.entryPrice || analysis.entryPrice,
-          stopLoss: { price: step5.stopLoss?.price || step5.stopLoss || analysis.stopLoss },
-          takeProfits: step5.takeProfits || [
-            { price: analysis.takeProfit1 },
-            { price: analysis.takeProfit2 },
-            { price: analysis.takeProfit3 },
-          ].filter(tp => tp.price),
-          riskReward: step5.riskReward || 2,
-        },
-        trapCheck: {
-          traps: step6.traps || { bullTrap: false, bearTrap: false, fakeoutRisk: 'low' },
-        },
-        verdict: {
-          action: step7.action || step7.verdict || 'N/A',
-          overallScore: Number(analysisData.totalScore) || step7.overallScore || 0,
-          aiSummary: step7.aiSummary || step7.summary,
-        },
-        indicatorDetails: step2.indicatorDetails || step3.indicatorDetails,
-      };
-
-      // Send email
-      const emailResponse = await authFetch('/api/reports/send-html-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reportId: analysis.id,
-          reportData,
-        }),
-      });
-
-      if (!emailResponse.ok) {
-        const errData = await emailResponse.json();
-        throw new Error(errData.error?.message || 'Failed to send email');
-      }
-
-      alert('Email sent successfully!');
-    } catch (err) {
-      console.error('Failed to send email:', err);
-      alert(err instanceof Error ? err.message : 'Failed to send email');
-    } finally {
-      setActionLoading(null);
-    }
+    // Redirect to details page with email=true parameter
+    // The details page will capture the full screenshot and send the email
+    router.push(`/analyze/details/${analysis.id}?email=true`);
   };
 
   // Delete analysis

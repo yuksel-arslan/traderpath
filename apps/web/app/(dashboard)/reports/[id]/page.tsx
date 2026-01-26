@@ -5,8 +5,8 @@
 // All 7 analysis steps + AI Expert Review
 // ===========================================
 
-import { useEffect, useState, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import html2canvas from 'html2canvas';
 import {
@@ -191,6 +191,7 @@ function formatPrice(price: number): string {
 export default function ReportViewPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const reportId = params.id as string;
 
   const [report, setReport] = useState<ReportData | null>(null);
@@ -200,6 +201,9 @@ export default function ReportViewPage() {
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [autoEmailInProgress, setAutoEmailInProgress] = useState(false);
+  const [autoEmailDone, setAutoEmailDone] = useState(false);
+  const autoEmailTriggered = useRef(false);
   const chartRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
 
@@ -226,6 +230,76 @@ export default function ReportViewPage() {
 
     fetchReport();
   }, [reportId, router]);
+
+  // Auto-email handler for ?email=true parameter
+  const handleAutoEmail = useCallback(async () => {
+    if (!pageRef.current || !report || autoEmailTriggered.current) return;
+
+    autoEmailTriggered.current = true;
+    setAutoEmailInProgress(true);
+
+    try {
+      // Wait for chart to render
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const canvas = await html2canvas(pageRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: 1200,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-export-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+          }
+        },
+      });
+
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
+
+      // Send via email
+      const response = await authFetch('/api/reports/email-screenshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          analysisId: report.analysisId,
+          symbol: report.symbol,
+          interval: report.interval || '4h',
+          screenshot: imageBase64,
+          score: report.verdict?.overallScore ? report.verdict.overallScore * 10 : 0,
+          direction: report.tradePlan?.direction || 'long',
+        }),
+      });
+
+      if (response.ok) {
+        setAutoEmailDone(true);
+        setEmailSent(true);
+        // Redirect back to reports page after showing success
+        setTimeout(() => {
+          router.push('/reports');
+        }, 2000);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Auto email send failed:', response.status, errorData);
+        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
+        setAutoEmailInProgress(false);
+      }
+    } catch (err) {
+      console.error('Failed to auto send email:', err);
+      alert('Failed to send email. Please try again.');
+      setAutoEmailInProgress(false);
+    }
+  }, [report, router]);
+
+  // Trigger auto-email when report is loaded and email=true parameter is present
+  useEffect(() => {
+    const shouldAutoEmail = searchParams.get('email') === 'true';
+    if (shouldAutoEmail && report && !loading && !autoEmailTriggered.current) {
+      handleAutoEmail();
+    }
+  }, [searchParams, report, loading, handleAutoEmail]);
 
   // Export as PNG
   const handleExportPNG = async () => {
@@ -408,19 +482,43 @@ export default function ReportViewPage() {
   const macdDesc = (report.assetScan?.indicators?.macd?.histogram || 0) > 0 ? 'Bullish crossover forming' : 'Bearish momentum';
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-200px)] p-4">
-      <div className="w-full max-w-4xl">
-        {/* Back Button */}
-        <Link href="/reports" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4">
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Reports</span>
-        </Link>
+    <>
+      {/* Auto-email overlay - shows on top of page content */}
+      {autoEmailInProgress && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl text-center max-w-md mx-4">
+            {autoEmailDone ? (
+              <>
+                <div className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <Check className="w-8 h-8 text-green-500" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Email Sent!</h2>
+                <p className="text-gray-500 dark:text-slate-400">Your report screenshot has been sent to your email. Redirecting...</p>
+              </>
+            ) : (
+              <>
+                <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-teal-500" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Sending Email...</h2>
+                <p className="text-gray-500 dark:text-slate-400">Capturing full report screenshot and sending to your email...</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
-        {/* Main Card */}
-        <div
-          ref={pageRef}
-          data-export-container
-          className="bg-white dark:bg-slate-800/80 rounded-2xl p-4 sm:p-6 shadow-xl border border-gray-200 dark:border-transparent">
+      <div className="flex items-center justify-center min-h-[calc(100vh-200px)] p-4">
+        <div className="w-full max-w-4xl">
+          {/* Back Button */}
+          <Link href="/reports" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Reports</span>
+          </Link>
+
+          {/* Main Card */}
+          <div
+            ref={pageRef}
+            data-export-container
+            className="bg-white dark:bg-slate-800/80 rounded-2xl p-4 sm:p-6 shadow-xl border border-gray-200 dark:border-transparent">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
@@ -698,6 +796,7 @@ export default function ReportViewPage() {
 
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

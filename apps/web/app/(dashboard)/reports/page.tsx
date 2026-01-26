@@ -116,7 +116,6 @@ export default function ReportsPage() {
   const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>('all');
   const [outcomeFilter, setOutcomeFilter] = useState<OutcomeFilter>('all');
   const [pagination, setPagination] = useState({ total: 0, limit: 20, offset: 0 });
-  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
 
   const fetchReports = async () => {
     setIsLoading(true);
@@ -157,50 +156,11 @@ export default function ReportsPage() {
     }
   };
 
-  // Send report via email
-  const handleSendEmail = async (report: Report) => {
-    setSendingEmail(report.id);
-    try {
-      // Fetch full report data
-      const response = await authFetch(`/api/reports/${report.id}`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch report');
-      }
-
-      const data = await response.json();
-      if (!data.success || !data.data.reportData) {
-        throw new Error('Report data not found');
-      }
-
-      // Send email - include symbol and other fields from report level
-      const emailResponse = await authFetch('/api/reports/send-html-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reportId: report.id,
-          reportData: {
-            ...data.data.reportData,
-            symbol: data.data.symbol || report.symbol, // Ensure symbol is included
-            analysisId: data.data.analysisId || report.analysisId,
-            generatedAt: data.data.generatedAt || report.generatedAt,
-            aiExpertComment: data.data.aiExpertComment,
-          },
-        }),
-      });
-
-      if (!emailResponse.ok) {
-        const errData = await emailResponse.json();
-        throw new Error(errData.error?.message || 'Failed to send email');
-      }
-
-      alert('Report sent to your email successfully!');
-    } catch (error) {
-      console.error('Failed to send email:', error);
-      alert(error instanceof Error ? error.message : 'Failed to send email');
-    } finally {
-      setSendingEmail(null);
-    }
+  // Send report via email - redirects to report details page for full screenshot
+  const handleSendEmail = (report: Report) => {
+    // Redirect to report details page with email=true parameter
+    // The details page will capture the full screenshot and send the email
+    router.push(`/reports/${report.id}?email=true`);
   };
 
   // Navigate to AI Expert with report context
@@ -892,15 +852,10 @@ Could you share your risk assessment and recommendations based on this analysis?
                   {/* Email Button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); handleSendEmail(report); }}
-                    disabled={sendingEmail === report.id}
-                    className="p-2 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition disabled:opacity-50"
+                    className="p-2 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition"
                     title="Send Email"
                   >
-                    {sendingEmail === report.id ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Mail className="w-5 h-5" />
-                    )}
+                    <Mail className="w-5 h-5" />
                   </button>
                   {/* Delete Button */}
                   <button
