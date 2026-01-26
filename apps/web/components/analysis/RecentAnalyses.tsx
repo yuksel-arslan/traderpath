@@ -11,12 +11,15 @@ import {
   Zap,
   Activity,
   Calendar,
-  List,
-  LayoutGrid,
-  ChevronRight,
   Mail,
   Loader2,
   Filter,
+  Eye,
+  Bot,
+  Trash2,
+  Timer,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { CoinIcon } from '../common/CoinIcon';
 import { cn } from '../../lib/utils';
@@ -27,8 +30,8 @@ import Link from 'next/link';
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
 
 const TRADE_TYPE_CONFIG: Record<TradeType, { label: string; icon: typeof Zap; color: string }> = {
-  scalping: { label: 'Scalp', icon: Zap, color: 'purple' },
-  dayTrade: { label: 'Day', icon: Activity, color: 'blue' },
+  scalping: { label: 'Scalping', icon: Zap, color: 'teal' },
+  dayTrade: { label: 'Day Trade', icon: Activity, color: 'slate' },
   swing: { label: 'Swing', icon: Calendar, color: 'amber' },
 };
 
@@ -55,14 +58,12 @@ interface RecentAnalysis {
   expiresAt?: string;
 }
 
-const verdictConfig = {
-  go: { label: 'GO', color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/30' },
-  conditional_go: { label: 'COND', color: 'text-yellow-500', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
-  wait: { label: 'WAIT', color: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/30' },
-  avoid: { label: 'AVOID', color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/30' },
+const VERDICT_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
+  go: { label: 'GO', bg: 'bg-green-500/20', text: 'text-green-600 dark:text-green-400' },
+  conditional_go: { label: 'COND', bg: 'bg-yellow-500/20', text: 'text-yellow-600 dark:text-yellow-400' },
+  wait: { label: 'WAIT', bg: 'bg-orange-500/20', text: 'text-orange-600 dark:text-orange-400' },
+  avoid: { label: 'AVOID', bg: 'bg-red-500/20', text: 'text-red-600 dark:text-red-400' },
 };
-
-type ViewMode = 'list' | 'card';
 
 type VerdictFilter = 'all' | 'go' | 'conditional_go' | 'wait' | 'avoid';
 
@@ -79,7 +80,6 @@ export function RecentAnalyses() {
   const [analyses, setAnalyses] = useState<RecentAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>('all');
   const [actionLoading, setActionLoading] = useState<{ id: string; action: string } | null>(null);
 
@@ -221,7 +221,7 @@ export function RecentAnalyses() {
         symbol: analysis.symbol,
         generatedAt: analysis.createdAt,
         analysisId: analysis.id,
-        interval: analysisData.interval || '4h', // e.g., '15m', '1h', '4h', '1d'
+        interval: analysisData.interval || '4h',
         marketPulse: {
           btcDominance: step1.btcDominance,
           fearGreedIndex: step1.fearGreedIndex,
@@ -262,7 +262,6 @@ export function RecentAnalyses() {
           overallScore: Number(analysisData.totalScore) || step7.overallScore || 0,
           aiSummary: step7.aiSummary || step7.summary,
         },
-        // Full 40+ Indicator Details
         indicatorDetails: step2.indicatorDetails || step3.indicatorDetails,
       };
 
@@ -288,6 +287,35 @@ export function RecentAnalyses() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  // Delete analysis
+  const handleDelete = async (e: React.MouseEvent, analysisId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this analysis?')) return;
+
+    setActionLoading({ id: analysisId, action: 'delete' });
+    try {
+      const response = await authFetch(`/api/analysis/${analysisId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setAnalyses(analyses.filter(a => a.id !== analysisId));
+      }
+    } catch (error) {
+      console.error('Failed to delete analysis:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Navigate to AI Expert
+  const handleAskAIExpert = async (e: React.MouseEvent, analysis: RecentAnalysis) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(`/ai-expert/nexus?analysisId=${analysis.id}`);
   };
 
   if (loading) {
@@ -332,7 +360,7 @@ export function RecentAnalyses() {
 
   return (
     <div>
-      {/* Header with filter and view toggle */}
+      {/* Header with filter */}
       <div className="flex flex-col gap-2 mb-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -341,30 +369,12 @@ export function RecentAnalyses() {
               ({filteredAnalyses.length}{verdictFilter !== 'all' ? `/${analyses.length}` : ''})
             </span>
           </h3>
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5">
-            <button
-              onClick={() => setViewMode('list')}
-              className={cn(
-                'p-1.5 rounded transition-all',
-                viewMode === 'list'
-                  ? 'bg-white dark:bg-slate-700 shadow-sm'
-                  : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
-              )}
-            >
-              <List className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setViewMode('card')}
-              className={cn(
-                'p-1.5 rounded transition-all',
-                viewMode === 'card'
-                  ? 'bg-white dark:bg-slate-700 shadow-sm'
-                  : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
-              )}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <button
+            onClick={() => fetchAnalyses()}
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+          >
+            <RefreshCw className="w-4 h-4 text-gray-500" />
+          </button>
         </div>
 
         {/* Verdict Filter */}
@@ -402,300 +412,257 @@ export function RecentAnalyses() {
             Clear filter
           </button>
         </div>
-      ) : viewMode === 'list' ? (
-        <ListView
-          analyses={filteredAnalyses}
-          actionLoading={actionLoading}
-          onEmail={handleEmail}
-        />
       ) : (
-        <CardView
-          analyses={filteredAnalyses}
-          actionLoading={actionLoading}
-          onEmail={handleEmail}
-        />
-      )}
-    </div>
-  );
-}
+        <div className="space-y-3 max-h-[500px] overflow-y-auto">
+          {filteredAnalyses.map((analysis) => {
+            const isActive = analysis.expiresAt && new Date(analysis.expiresAt) > new Date() && analysis.outcome !== 'correct' && analysis.outcome !== 'incorrect';
+            const isLoading = actionLoading?.id === analysis.id;
+            const verdictConfig = VERDICT_CONFIG[analysis.verdict] || VERDICT_CONFIG.wait;
+            const tradeTypeConfig = analysis.tradeType ? TRADE_TYPE_CONFIG[analysis.tradeType] : null;
 
-interface ViewProps {
-  analyses: RecentAnalysis[];
-  actionLoading: { id: string; action: string } | null;
-  onEmail: (e: React.MouseEvent, analysis: RecentAnalysis) => void;
-}
+            // Calculate TP progress
+            const tpProgress = analysis.tpProgress ?? (() => {
+              if (analysis.outcome === 'correct') return 100;
+              if (analysis.entryPrice && analysis.currentPrice && analysis.takeProfit1) {
+                const isLong = analysis.direction === 'long';
+                const totalDistance = isLong
+                  ? (analysis.takeProfit1 - analysis.entryPrice)
+                  : (analysis.entryPrice - analysis.takeProfit1);
+                const coveredDistance = isLong
+                  ? (analysis.currentPrice - analysis.entryPrice)
+                  : (analysis.entryPrice - analysis.currentPrice);
+                return totalDistance !== 0
+                  ? Math.min(100, Math.max(0, (coveredDistance / totalDistance) * 100))
+                  : 0;
+              }
+              return null;
+            })();
 
-// Compact List View
-function ListView({ analyses, actionLoading, onEmail }: ViewProps) {
-  return (
-    <div className="space-y-1 max-h-[400px] overflow-y-auto">
-      {analyses.map((analysis) => {
-        const config = verdictConfig[analysis.verdict] || verdictConfig.wait;
-        const isActive = analysis.expiresAt && new Date(analysis.expiresAt) > new Date() && analysis.outcome !== 'correct' && analysis.outcome !== 'incorrect';
-        const isLoading = actionLoading?.id === analysis.id;
-
-        return (
-          <div
-            key={analysis.id}
-            className={cn(
-              "flex items-center gap-2 p-2 rounded-lg transition-all hover:bg-gray-100 dark:hover:bg-slate-700/50 group",
-              analysis.outcome === 'correct' && "bg-green-500/5",
-              analysis.outcome === 'incorrect' && "bg-red-500/5"
-            )}
-          >
-            {/* Main clickable area */}
-            <Link
-              href={`/analyze/details/${analysis.id}`}
-              className="flex items-center gap-2 flex-1 min-w-0"
-            >
-              {/* Coin Icon */}
-              <CoinIcon symbol={analysis.symbol} size={28} className="shrink-0" />
-
-              {/* Symbol + Direction */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-medium text-sm text-gray-900 dark:text-white">{analysis.symbol}</span>
-                  {analysis.direction && (
-                    <span className={cn(
-                      "flex items-center text-[10px]",
-                      analysis.direction === 'long' ? "text-green-500" : "text-red-500"
-                    )}>
-                      {analysis.direction === 'long' ? (
-                        <TrendingUp className="w-3 h-3" />
-                      ) : (
-                        <TrendingDown className="w-3 h-3" />
-                      )}
-                    </span>
-                  )}
-                  {analysis.tradeType && TRADE_TYPE_CONFIG[analysis.tradeType] && (
-                    <span className={cn(
-                      "text-[9px] px-1 py-0.5 rounded",
-                      TRADE_TYPE_CONFIG[analysis.tradeType].color === 'purple' && "bg-purple-500/10 text-purple-500",
-                      TRADE_TYPE_CONFIG[analysis.tradeType].color === 'blue' && "bg-blue-500/10 text-blue-500",
-                      TRADE_TYPE_CONFIG[analysis.tradeType].color === 'amber' && "bg-amber-500/10 text-amber-500"
-                    )}>
-                      {TRADE_TYPE_CONFIG[analysis.tradeType].label}
-                    </span>
-                  )}
-                  {isActive && analysis.hasTradePlan && (
-                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
-                  )}
-                </div>
-                <span className="text-[10px] text-gray-500 dark:text-slate-400">{analysis.createdAt}</span>
-              </div>
-
-              {/* Score */}
-              <div className={cn(
-                "text-xs font-bold px-1.5 py-0.5 rounded",
-                analysis.score !== null && analysis.score >= 7 ? "text-green-600 dark:text-green-400" :
-                analysis.score !== null && analysis.score >= 5 ? "text-yellow-600 dark:text-yellow-400" :
-                analysis.score !== null ? "text-red-600 dark:text-red-400" : "text-gray-500 dark:text-slate-400"
-              )}>
-                {analysis.score !== null ? `${(analysis.score * 10).toFixed(0)}%` : '—'}
-              </div>
-
-              {/* Verdict Badge */}
-              <span className={cn(
-                "text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0",
-                config.bg, config.color
-              )}>
-                {config.label}
-              </span>
-
-              {/* Arrow */}
-              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-slate-300 shrink-0" />
-            </Link>
-
-            {/* Email button only */}
-            <button
-              onClick={(e) => onEmail(e, analysis)}
-              disabled={isLoading}
-              className="p-1.5 rounded hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition shrink-0"
-              title="Send Email"
-            >
-              {isLoading && actionLoading?.action === 'email' ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Mail className="w-3.5 h-3.5" />
-              )}
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// Card View
-function CardView({ analyses, actionLoading, onEmail }: ViewProps) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto">
-      {analyses.map((analysis) => {
-        const config = verdictConfig[analysis.verdict] || verdictConfig.wait;
-        const isActive = analysis.expiresAt && new Date(analysis.expiresAt) > new Date() && analysis.outcome !== 'correct' && analysis.outcome !== 'incorrect';
-        const isLoading = actionLoading?.id === analysis.id;
-
-        // Calculate TP progress
-        const tpProgress = analysis.tpProgress ?? (() => {
-          if (analysis.outcome === 'correct') return 100;
-          if (analysis.entryPrice && analysis.currentPrice && analysis.takeProfit1) {
-            const isLong = analysis.direction === 'long';
-            const maxTarget = analysis.takeProfit3 || analysis.takeProfit2 || analysis.takeProfit1;
-            const totalDistance = isLong
-              ? (maxTarget - analysis.entryPrice)
-              : (analysis.entryPrice - maxTarget);
-            const coveredDistance = isLong
-              ? (analysis.currentPrice - analysis.entryPrice)
-              : (analysis.entryPrice - analysis.currentPrice);
-            return totalDistance !== 0
-              ? Math.min(100, Math.max(0, (coveredDistance / totalDistance) * 100))
-              : 0;
-          }
-          return null;
-        })();
-
-        return (
-          <div
-            key={analysis.id}
-            className={cn(
-              "block p-3 rounded-lg border transition-all hover:border-gray-300 dark:hover:border-slate-600 hover:shadow-sm",
-              "bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700",
-              analysis.outcome === 'correct' && "border-green-500/30 bg-green-500/5",
-              analysis.outcome === 'incorrect' && "border-red-500/30 bg-red-500/5"
-            )}
-          >
-            {/* Top: Symbol + Verdict (clickable) */}
-            <Link href={`/analyze/details/${analysis.id}`} className="block">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <CoinIcon symbol={analysis.symbol} size={32} className="shrink-0" />
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-sm text-gray-900 dark:text-white">{analysis.symbol}</span>
-                      {analysis.direction && (
-                        <span className={cn(
-                          "flex items-center gap-0.5 text-[10px] font-medium px-1 py-0.5 rounded",
-                          analysis.direction === 'long'
-                            ? "bg-green-500/10 text-green-500"
-                            : "bg-red-500/10 text-red-500"
-                        )}>
-                          {analysis.direction === 'long' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                          {analysis.direction.toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[10px] text-gray-500 dark:text-slate-400">{analysis.createdAt}</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end gap-1">
-                  <span className={cn(
-                    "text-[10px] font-bold px-2 py-0.5 rounded",
-                    config.bg, config.color
-                  )}>
-                    {config.label}
-                  </span>
-                  {isActive && analysis.hasTradePlan && (
-                    <span className="flex items-center gap-1 text-[9px] text-blue-500">
-                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping" />
-                      LIVE
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Stats Row */}
-              <div className="flex items-center gap-2 text-xs mb-2">
-                {/* Score */}
-                <div className={cn(
-                  "px-2 py-1 rounded",
-                  analysis.score !== null && analysis.score >= 7 ? "bg-green-100 dark:bg-green-500/20" :
-                  analysis.score !== null && analysis.score >= 5 ? "bg-yellow-100 dark:bg-yellow-500/20" :
-                  analysis.score !== null ? "bg-red-100 dark:bg-red-500/20" : "bg-gray-100 dark:bg-slate-700/50"
-                )}>
-                  <span className="text-[9px] text-gray-500 dark:text-slate-400 block">Score</span>
-                  <span className={cn(
-                    "font-bold",
-                    analysis.score !== null && analysis.score >= 7 ? "text-green-600 dark:text-green-400" :
-                    analysis.score !== null && analysis.score >= 5 ? "text-yellow-600 dark:text-yellow-400" :
-                    analysis.score !== null ? "text-red-600 dark:text-red-400" : "text-gray-500 dark:text-slate-400"
-                  )}>
-                    {analysis.score !== null ? `${(analysis.score * 10).toFixed(0)}%` : '—'}
-                  </span>
-                </div>
-
-                {/* P/L */}
-                {analysis.unrealizedPnL !== undefined && (
-                  <div className={cn(
-                    "px-2 py-1 rounded",
-                    analysis.unrealizedPnL >= 0
-                      ? "bg-green-100 dark:bg-green-500/20"
-                      : "bg-red-100 dark:bg-red-500/20"
-                  )}>
-                    <span className="text-[9px] text-gray-500 dark:text-slate-400 block">P/L</span>
-                    <span className={cn(
-                      "font-bold",
-                      analysis.unrealizedPnL >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                    )}>
-                      {analysis.unrealizedPnL >= 0 ? '+' : ''}{(analysis.unrealizedPnL ?? 0).toFixed(1)}%
-                    </span>
-                  </div>
+            return (
+              <div
+                key={analysis.id}
+                className={cn(
+                  "relative border-2 rounded-xl p-3 sm:p-4 hover:shadow-lg transition overflow-hidden bg-white dark:bg-transparent",
+                  analysis.outcome === 'correct' && "border-teal-500/50",
+                  analysis.outcome === 'incorrect' && "border-red-500/50",
+                  isActive && "border-teal-500/30",
+                  !analysis.outcome && !isActive && "border-gray-200 dark:border-slate-700"
                 )}
-
-                {/* TP Progress */}
-                {analysis.takeProfit1 && tpProgress !== null && (
-                  <div className={cn(
-                    "px-2 py-1 rounded",
-                    analysis.outcome === 'correct' ? "bg-green-200 dark:bg-green-500/30" :
-                    analysis.outcome === 'incorrect' ? "bg-red-200 dark:bg-red-500/30" :
-                    "bg-blue-100 dark:bg-blue-500/20"
-                  )}>
-                    <span className="text-[9px] text-gray-500 dark:text-slate-400 flex items-center gap-0.5">
-                      <Target className="w-2.5 h-2.5" />
-                      {analysis.outcome === 'correct' ? 'TP!' : analysis.outcome === 'incorrect' ? 'SL' : 'TP'}
-                    </span>
-                    <span className={cn(
-                      "font-bold",
-                      analysis.outcome === 'correct' ? "text-green-600 dark:text-green-300" :
-                      analysis.outcome === 'incorrect' ? "text-red-600 dark:text-red-300" :
-                      "text-blue-600 dark:text-blue-400"
-                    )}>
-                      {(tpProgress ?? 0).toFixed(0)}%
-                    </span>
-                  </div>
-                )}
-
-                {/* Trade Type */}
-                {analysis.tradeType && TRADE_TYPE_CONFIG[analysis.tradeType] && (
-                  <div className="ml-auto flex items-center gap-1 text-[10px] text-gray-500 dark:text-slate-400">
-                    {(() => {
-                      const Icon = TRADE_TYPE_CONFIG[analysis.tradeType!].icon;
-                      return <Icon className="w-3 h-3" />;
-                    })()}
-                    {TRADE_TYPE_CONFIG[analysis.tradeType].label}
-                  </div>
-                )}
-              </div>
-            </Link>
-
-            {/* Email button only */}
-            <div className="flex items-center justify-center pt-2 border-t border-gray-200 dark:border-slate-700">
-              <button
-                onClick={(e) => onEmail(e, analysis)}
-                disabled={isLoading}
-                className="flex items-center justify-center gap-1.5 py-1.5 px-4 rounded text-[11px] font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 transition"
+                style={{
+                  background: analysis.outcome === 'correct'
+                    ? `linear-gradient(to right, rgba(20, 184, 166, 0.05), rgba(20, 184, 166, 0.15))`
+                    : analysis.outcome === 'incorrect'
+                    ? `linear-gradient(to right, rgba(251, 146, 60, 0.05), rgba(251, 146, 60, 0.15))`
+                    : isActive
+                    ? `linear-gradient(to right, rgba(20, 184, 166, 0.02), rgba(20, 184, 166, 0.08))`
+                    : undefined
+                }}
               >
-                {isLoading && actionLoading?.action === 'email' ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Mail className="w-3.5 h-3.5" />
+                {/* Status Corner Ribbon */}
+                {isActive && (
+                  <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden">
+                    <div className="absolute top-2 -right-4 w-20 text-center py-0.5 bg-teal-500 text-white text-[9px] font-bold rotate-45 shadow-sm">
+                      LIVE
+                    </div>
+                  </div>
                 )}
-                Send Email
-              </button>
-            </div>
-          </div>
-        );
-      })}
+                {analysis.outcome === 'correct' && (
+                  <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden">
+                    <div className="absolute top-2 -right-4 w-20 text-center py-0.5 bg-teal-500 text-white text-[9px] font-bold rotate-45 shadow-sm">
+                      TP HIT
+                    </div>
+                  </div>
+                )}
+                {analysis.outcome === 'incorrect' && (
+                  <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden">
+                    <div className="absolute top-2 -right-4 w-20 text-center py-0.5 bg-red-500 text-white text-[9px] font-bold rotate-45 shadow-sm">
+                      SL HIT
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  {/* Analysis Info - Clickable */}
+                  <Link href={`/analyze/details/${analysis.id}`} className="flex items-center gap-3 min-w-0 flex-1">
+                    <CoinIcon symbol={analysis.symbol} size={40} className="shrink-0" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h3 className="font-semibold text-base">{analysis.symbol}</h3>
+                        {analysis.direction && (
+                          <span className={cn(
+                            "px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-0.5",
+                            analysis.direction === 'long'
+                              ? "bg-teal-500/10 text-teal-600 dark:text-teal-400"
+                              : "bg-red-500/10 text-red-600 dark:text-red-400"
+                          )}>
+                            {analysis.direction === 'long' ? (
+                              <TrendingUp className="w-3 h-3" />
+                            ) : (
+                              <TrendingDown className="w-3 h-3" />
+                            )}
+                            {analysis.direction.toUpperCase()}
+                          </span>
+                        )}
+                        {/* Verdict Badge */}
+                        <span className={cn(
+                          "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                          verdictConfig.bg, verdictConfig.text
+                        )}>
+                          {verdictConfig.label}
+                        </span>
+                        {/* Trade Type Badge */}
+                        {tradeTypeConfig && (
+                          <span className={cn(
+                            "px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-0.5",
+                            tradeTypeConfig.color === 'teal' && "bg-teal-500/10 text-teal-600 dark:text-teal-400",
+                            tradeTypeConfig.color === 'slate' && "bg-slate-500/10 text-slate-600 dark:text-slate-400",
+                            tradeTypeConfig.color === 'amber' && "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                          )}>
+                            <tradeTypeConfig.icon className="w-3 h-3" />
+                            {tradeTypeConfig.label}
+                          </span>
+                        )}
+                        {/* Outcome badges */}
+                        {analysis.outcome === 'correct' && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center gap-0.5">
+                            <CheckCircle2 className="w-3 h-3" />
+                            TP HIT
+                          </span>
+                        )}
+                        {analysis.outcome === 'incorrect' && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/20 text-red-600 dark:text-red-400 flex items-center gap-0.5">
+                            <XCircle className="w-3 h-3" />
+                            SL HIT
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">{analysis.createdAt}</p>
+                    </div>
+                  </Link>
+
+                  {/* Stats */}
+                  <div className="flex items-center gap-1 px-2 py-1.5 bg-slate-100 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-transparent flex-wrap justify-center">
+                    {/* Score */}
+                    <div className={cn(
+                      "text-center px-2 py-1 rounded-lg min-w-[45px]",
+                      analysis.score !== null && analysis.score >= 7 ? "bg-teal-100 dark:bg-teal-500/20" :
+                      analysis.score !== null && analysis.score >= 5 ? "bg-amber-100 dark:bg-amber-500/20" :
+                      analysis.score !== null ? "bg-red-100 dark:bg-red-500/20" : "bg-gray-100 dark:bg-slate-700/50"
+                    )}>
+                      <div className="text-[9px] text-slate-500 dark:text-muted-foreground">Score</div>
+                      <div className={cn(
+                        "font-bold text-xs",
+                        analysis.score !== null && analysis.score >= 7 ? "text-teal-600 dark:text-teal-400" :
+                        analysis.score !== null && analysis.score >= 5 ? "text-amber-600 dark:text-amber-400" :
+                        analysis.score !== null ? "text-red-600 dark:text-red-400" : "text-gray-500"
+                      )}>
+                        {analysis.score !== null ? `${(analysis.score * 10).toFixed(0)}%` : '—'}
+                      </div>
+                    </div>
+
+                    {analysis.unrealizedPnL !== undefined && (
+                      <>
+                        <div className="text-slate-300 dark:text-muted-foreground/30">|</div>
+                        {/* P/L */}
+                        <div className={cn(
+                          "text-center px-2 py-1 rounded-lg min-w-[50px]",
+                          analysis.unrealizedPnL >= 0
+                            ? "bg-teal-100 dark:bg-teal-500/20"
+                            : "bg-red-100 dark:bg-red-500/20"
+                        )}>
+                          <div className="text-[9px] text-slate-500 dark:text-muted-foreground">P/L</div>
+                          <div className={cn(
+                            "font-bold text-xs",
+                            analysis.unrealizedPnL >= 0 ? "text-teal-600 dark:text-teal-400" : "text-red-600 dark:text-red-400"
+                          )}>
+                            {analysis.unrealizedPnL >= 0 ? '+' : ''}{analysis.unrealizedPnL.toFixed(2)}%
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* TP Progress */}
+                    {analysis.takeProfit1 && tpProgress !== null && (
+                      <>
+                        <div className="text-slate-300 dark:text-muted-foreground/30">|</div>
+                        <div className={cn(
+                          "text-center px-2 py-1 rounded-lg min-w-[45px]",
+                          analysis.outcome === 'correct' ? "bg-teal-200 dark:bg-teal-500/30" :
+                          analysis.outcome === 'incorrect' ? "bg-red-200 dark:bg-red-500/30" :
+                          tpProgress >= 80 ? "bg-teal-100 dark:bg-teal-500/20" :
+                          tpProgress >= 50 ? "bg-amber-100 dark:bg-amber-500/20" :
+                          "bg-slate-100 dark:bg-slate-500/20"
+                        )}>
+                          <div className="text-[9px] text-slate-500 dark:text-muted-foreground flex items-center justify-center gap-0.5">
+                            <Target className="w-2.5 h-2.5" />
+                            TP
+                          </div>
+                          <div className={cn(
+                            "font-bold text-xs",
+                            analysis.outcome === 'correct' ? "text-teal-600 dark:text-teal-300" :
+                            analysis.outcome === 'incorrect' ? "text-red-600 dark:text-red-300" :
+                            tpProgress >= 80 ? "text-teal-600 dark:text-teal-400" :
+                            tpProgress >= 50 ? "text-amber-600 dark:text-amber-400" :
+                            "text-slate-600 dark:text-slate-400"
+                          )}>
+                            {tpProgress.toFixed(0)}%
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 shrink-0 justify-center lg:justify-end">
+                    {/* Details Button */}
+                    <Link
+                      href={`/analyze/details/${analysis.id}`}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-teal-100 dark:bg-teal-500/10 hover:bg-teal-200 dark:hover:bg-teal-500/20 text-teal-600 dark:text-teal-500 transition"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span className="text-xs font-medium hidden sm:inline">Details</span>
+                    </Link>
+                    {/* AI Expert Button */}
+                    <button
+                      onClick={(e) => handleAskAIExpert(e, analysis)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-100 dark:bg-red-500/10 hover:bg-red-200 dark:hover:bg-red-500/20 text-red-600 dark:text-red-500 transition"
+                    >
+                      <Bot className="w-3.5 h-3.5" />
+                      <span className="text-xs font-medium hidden sm:inline">AI Expert</span>
+                    </button>
+                    {/* Email Button */}
+                    <button
+                      onClick={(e) => handleEmail(e, analysis)}
+                      disabled={isLoading && actionLoading?.action === 'email'}
+                      className="p-1.5 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition disabled:opacity-50"
+                      title="Send Email"
+                    >
+                      {isLoading && actionLoading?.action === 'email' ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Mail className="w-4 h-4" />
+                      )}
+                    </button>
+                    {/* Delete Button */}
+                    <button
+                      onClick={(e) => handleDelete(e, analysis.id)}
+                      disabled={isLoading && actionLoading?.action === 'delete'}
+                      className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/10 text-red-500 transition disabled:opacity-50"
+                      title="Delete"
+                    >
+                      {isLoading && actionLoading?.action === 'delete' ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
