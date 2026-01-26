@@ -783,7 +783,7 @@ export default function ReportViewPage() {
           {/* Footer - Copyright */}
           <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-700">
             <p className="text-center text-xs text-gray-500 dark:text-slate-400">
-              © 2025 <span className="font-semibold bg-gradient-to-r from-teal to-coral bg-clip-text text-transparent">TraderPath</span>. All rights reserved.
+              © 2025 <span className="font-semibold text-teal-500">TraderPath</span>. All rights reserved.
             </p>
             <p className="text-center text-xs text-gray-400 dark:text-slate-500 mt-1">
               Trading involves risk. Not financial advice.
