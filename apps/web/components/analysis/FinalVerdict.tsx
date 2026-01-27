@@ -194,7 +194,7 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
     sections.push('[STEP 2] ASSET SCANNER');
     if (assetScanner) {
       if (assetScanner.currentPrice) sections.push(`- Current Price: $${assetScanner.currentPrice.toLocaleString()}`);
-      if (assetScanner.priceChange24h !== undefined) sections.push(`- 24h Change: ${assetScanner.priceChange24h.toFixed(2)}%`);
+      if (typeof assetScanner.priceChange24h === 'number') sections.push(`- 24h Change: ${assetScanner.priceChange24h.toFixed(2)}%`);
       if (assetScanner.indicators?.rsi) sections.push(`- RSI: ${assetScanner.indicators.rsi.toFixed(0)}`);
       if (assetScanner.indicators?.macd) {
         const macdSignal = (assetScanner.indicators.macd.histogram || 0) >= 0 ? 'BULLISH' : 'BEARISH';
@@ -271,10 +271,10 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
         sections.push('');
         sections.push('[ADVANCED RISK METRICS]');
         if (am.volumeSpike) sections.push(`- VOLUME SPIKE DETECTED: ${am.volumeSpikeFactor?.toFixed(1)}x normal - caution!`);
-        if (am.relativeVolume !== undefined) sections.push(`- Relative Volume: ${am.relativeVolume.toFixed(2)}x average`);
+        if (typeof am.relativeVolume === 'number') sections.push(`- Relative Volume: ${am.relativeVolume.toFixed(2)}x average`);
         if (am.pvtTrend) sections.push(`- PVT Trend: ${am.pvtTrend.toUpperCase()} (momentum: ${((am.pvtMomentum || 0) * 100).toFixed(2)}%)`);
-        if (am.historicalVolatility !== undefined) sections.push(`- Historical Volatility: ${am.historicalVolatility.toFixed(0)}% annualized`);
-        if (am.liquidityScore !== undefined) sections.push(`- Liquidity Score: ${am.liquidityScore.toFixed(0)}/100`);
+        if (typeof am.historicalVolatility === 'number') sections.push(`- Historical Volatility: ${am.historicalVolatility.toFixed(0)}% annualized`);
+        if (typeof am.liquidityScore === 'number') sections.push(`- Liquidity Score: ${am.liquidityScore.toFixed(0)}/100`);
       }
 
       // Safety Check Indicator Details

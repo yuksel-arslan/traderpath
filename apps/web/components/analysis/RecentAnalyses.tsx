@@ -523,7 +523,7 @@ export function RecentAnalyses() {
                       </div>
                     </div>
 
-                    {analysis.unrealizedPnL !== undefined && (
+                    {typeof analysis.unrealizedPnL === 'number' && (
                       <>
                         <div className="text-slate-300 dark:text-muted-foreground/30">|</div>
                         {/* P/L */}
@@ -545,7 +545,7 @@ export function RecentAnalyses() {
                     )}
 
                     {/* TP Progress */}
-                    {analysis.takeProfit1 && tpProgress !== null && (
+                    {analysis.takeProfit1 && typeof tpProgress === 'number' && (
                       <>
                         <div className="text-slate-300 dark:text-muted-foreground/30">|</div>
                         <div className={cn(
