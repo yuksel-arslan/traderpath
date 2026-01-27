@@ -13,13 +13,13 @@ interface TraderPathLogoProps {
 }
 
 const sizes = {
-  sm: { icon: 42, text: 'text-xl', tagline: 'text-[11px]' },
-  md: { icon: 48, text: 'text-2xl', tagline: 'text-xs' },
-  lg: { icon: 60, text: 'text-3xl', tagline: 'text-sm' },
-  xl: { icon: 84, text: 'text-4xl', tagline: 'text-base' },
+  sm: { container: 42, star: 24, text: 'text-xl', tagline: 'text-[11px]' },
+  md: { container: 48, star: 28, text: 'text-2xl', tagline: 'text-xs' },
+  lg: { container: 60, star: 36, text: 'text-3xl', tagline: 'text-sm' },
+  xl: { container: 84, star: 52, text: 'text-4xl', tagline: 'text-base' },
 };
 
-// 4-Pointed Star Logo Icon - Matches the brand star with 3D depth effect
+// Pure Star SVG without container - for export
 export function StarLogo({
   size,
   uniqueId,
@@ -131,6 +131,50 @@ export function StarLogo({
   );
 }
 
+// Star with morphing amorphous container - like BILGE's logo style
+function StarWithMorphContainer({
+  containerSize,
+  starSize,
+  uniqueId,
+  animated = true
+}: {
+  containerSize: number;
+  starSize: number;
+  uniqueId: string;
+  animated?: boolean;
+}) {
+  return (
+    <div
+      className="relative flex-shrink-0"
+      style={{ width: containerSize, height: containerSize }}
+    >
+      {/* Outer morphing glow ring */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'linear-gradient(135deg, #2DD4BF, #14B8A6, #F87171, #EF5A6F)',
+          borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%',
+          boxShadow: '0 0 15px rgba(45, 212, 191, 0.5), 0 0 30px rgba(248, 113, 113, 0.3)',
+          animation: animated ? 'morph 8s ease-in-out infinite' : 'none',
+        }}
+      />
+
+      {/* Inner dark background */}
+      <div
+        className="absolute flex items-center justify-center bg-[#0a0f1a]"
+        style={{
+          inset: '3px',
+          borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%',
+          animation: animated ? 'morph 8s ease-in-out infinite' : 'none',
+        }}
+      >
+        {/* Star inside */}
+        <StarLogo size={starSize} uniqueId={uniqueId} animated={false} />
+      </div>
+    </div>
+  );
+}
+
 export function TraderPathLogo({
   size = 'md',
   showText = true,
@@ -144,8 +188,13 @@ export function TraderPathLogo({
 
   const LogoContent = (
     <div className={`flex items-center gap-2 ${className}`}>
-      {/* Logo Icon - 4-Pointed Star */}
-      <StarLogo size={s.icon} uniqueId={uniqueId} animated={animated} />
+      {/* Logo Icon - Star with morphing container */}
+      <StarWithMorphContainer
+        containerSize={s.container}
+        starSize={s.star}
+        uniqueId={uniqueId}
+        animated={animated}
+      />
 
       {/* Logo Text */}
       {showText && (
