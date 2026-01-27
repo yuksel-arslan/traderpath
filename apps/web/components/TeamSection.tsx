@@ -3,7 +3,6 @@
 import { motion } from 'framer-motion';
 import { ExternalLink, Sparkles, Code2, Shield, Zap } from 'lucide-react';
 import Link from 'next/link';
-import { StarLogo } from './common/TraderPathLogo';
 
 interface TeamSectionProps {
   isDark?: boolean;
@@ -112,9 +111,9 @@ export function TeamSection({ isDark = true }: TeamSectionProps) {
                     <motion.div
                       whileHover={{ scale: 1.05, rotate: 5 }}
                       className="w-24 h-24 rounded-2xl flex items-center justify-center relative overflow-hidden ring-4 ring-cyan-500/20"
-                      style={{ background: 'linear-gradient(135deg, #0D1421, #1a2332)', boxShadow: '0 10px 40px rgba(64, 224, 208, 0.4)' }}
+                      style={{ background: 'linear-gradient(135deg, #40E0D0, #00CED1)', boxShadow: '0 10px 40px rgba(64, 224, 208, 0.4)' }}
                     >
-                      <StarLogo size={56} uniqueId="team-bilge" animated={true} />
+                      <span className="text-4xl text-white">&#9672;</span>
                     </motion.div>
                   )}
                 </div>
