@@ -54,6 +54,7 @@ import {
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
+import { LanguageSelector } from '../../components/common/LanguageSelector';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../lib/coin-icons';
 import { ANALYSIS_BUNDLES } from '../../lib/pricing-config';
 
@@ -1609,7 +1610,8 @@ export default function LandingPage() {
 
           {/* Right side buttons */}
           <div className="flex items-center gap-1 sm:gap-3">
-            <div className="hidden sm:block">
+            <div className="hidden sm:flex items-center gap-1">
+              <LanguageSelector compact />
               <ThemeToggle />
             </div>
             <Link
@@ -1669,7 +1671,10 @@ export default function LandingPage() {
                 >
                   Sign In
                 </Link>
-                <ThemeToggle />
+                <div className="flex items-center gap-2">
+                  <LanguageSelector />
+                  <ThemeToggle />
+                </div>
               </div>
             </nav>
           </div>
