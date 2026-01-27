@@ -473,38 +473,6 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-accent/50">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <p className="text-3xl md:text-4xl font-bold gradient-text">
-                <CountUp end={50000} suffix="+" duration={2500} />
-              </p>
-              <p className="text-muted-foreground">Analyses Completed</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl md:text-4xl font-bold gradient-text">
-                <CountUp end={12000} suffix="+" duration={2500} />
-              </p>
-              <p className="text-muted-foreground">Active Traders</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl md:text-4xl font-bold gradient-text">
-                <CountUp end={87} suffix="%" duration={2000} />
-              </p>
-              <p className="text-muted-foreground">Accuracy Rate</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl md:text-4xl font-bold gradient-text">
-                24/7
-              </p>
-              <p className="text-muted-foreground">Market Monitoring</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Values Section */}
       <section className="py-16 sm:py-20 relative overflow-hidden">
         {/* Decorative elements */}
