@@ -1108,6 +1108,8 @@ Explain the key risks and what conditions would need to change before trading th
           id: true,
           totalScore: true,
           outcome: true,
+          outcomePrice: true,
+          outcomeAt: true,
           step5Result: true, // tradePlan
           step7Result: true, // verdict
           createdAt: true,
@@ -1157,21 +1159,52 @@ Explain the key risks and what conditions would need to change before trading th
       // SL hits (incorrect predictions)
       const slHits = closedAnalyses.filter(a => a.outcome === 'sl_hit').length;
 
-      // Calculate Total P/L % based on outcomes
-      // Average estimated returns: TP1=+3%, TP2=+6%, TP3=+10%, SL=-2%
-      const tp1Hits = closedAnalyses.filter(a => a.outcome === 'tp1_hit').length;
-      const tp2Hits = closedAnalyses.filter(a => a.outcome === 'tp2_hit').length;
-      const tp3Hits = closedAnalyses.filter(a => a.outcome === 'tp3_hit').length;
-      const totalPnL = closedCount > 0
-        ? Number(((tp1Hits * 3 + tp2Hits * 6 + tp3Hits * 10 - slHits * 2) / closedCount).toFixed(1))
-        : 0;
+      // Calculate REAL Total P/L % using entry price and outcome price
+      let totalPnLSum = 0;
+      let validPnLCount = 0;
+      closedAnalyses.forEach(a => {
+        const step5 = a.step5Result as Record<string, unknown> | null;
+        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
+        const outcomePrice = a.outcomePrice ? Number(a.outcomePrice) : 0;
+        const direction = ((step5?.direction as string) || 'long').toLowerCase();
 
-      // Daily closed analyses for "Past 24h" metric
-      const dailyClosedAnalyses = closedAnalyses.filter(a => a.createdAt >= oneDayAgo);
-      const dailyTpHits = dailyClosedAnalyses.filter(a =>
-        a.outcome === 'tp1_hit' || a.outcome === 'tp2_hit' || a.outcome === 'tp3_hit'
-      ).length;
-      const dailySlHits = dailyClosedAnalyses.filter(a => a.outcome === 'sl_hit').length;
+        if (entryPrice > 0 && outcomePrice > 0) {
+          let pnl = 0;
+          if (direction === 'short') {
+            pnl = ((entryPrice - outcomePrice) / entryPrice) * 100;
+          } else {
+            pnl = ((outcomePrice - entryPrice) / entryPrice) * 100;
+          }
+          totalPnLSum += pnl;
+          validPnLCount++;
+        }
+      });
+      const totalPnL = validPnLCount > 0 ? Number(totalPnLSum.toFixed(1)) : 0;
+
+      // Daily closed analyses for "Past 24h" metric (using outcomeAt)
+      const dailyClosedAnalyses = closedAnalyses.filter(a =>
+        a.outcomeAt && new Date(a.outcomeAt) >= oneDayAgo
+      );
+      let dailyPnLSum = 0;
+      let dailyValidCount = 0;
+      dailyClosedAnalyses.forEach(a => {
+        const step5 = a.step5Result as Record<string, unknown> | null;
+        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
+        const outcomePrice = a.outcomePrice ? Number(a.outcomePrice) : 0;
+        const direction = ((step5?.direction as string) || 'long').toLowerCase();
+
+        if (entryPrice > 0 && outcomePrice > 0) {
+          let pnl = 0;
+          if (direction === 'short') {
+            pnl = ((entryPrice - outcomePrice) / entryPrice) * 100;
+          } else {
+            pnl = ((outcomePrice - entryPrice) / entryPrice) * 100;
+          }
+          dailyPnLSum += pnl;
+          dailyValidCount++;
+        }
+      });
+      const dailyPnL = dailyValidCount > 0 ? Number(dailyPnLSum.toFixed(1)) : 0;
       const dailyClosedCount = dailyClosedAnalyses.length;
 
       // Platform accuracy = TP hits / closed * 100
@@ -1243,8 +1276,7 @@ Explain the key risks and what conditions would need to change before trading th
           daily: {
             analyses: dailyAnalyses,
             closedCount: dailyClosedCount,
-            tpHits: dailyTpHits,
-            slHits: dailySlHits,
+            pnl: dailyPnL,
           },
           goSignalRate: {
             rate: goAccuracy,

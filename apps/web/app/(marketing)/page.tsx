@@ -111,8 +111,7 @@ function StatsBoxes() {
     totalAnalyses: number;
     accuracy: number;
     totalPnL: number;
-    dailyTpHits: number;
-    dailySlHits: number;
+    dailyPnL: number;
     dailyClosedCount: number;
     closedCount: number;
   } | null>(null);
@@ -150,8 +149,7 @@ function StatsBoxes() {
             totalAnalyses: data.data.platform.totalAnalyses || 0,
             accuracy: data.data.accuracy.overall || 0,
             totalPnL: data.data.accuracy.totalPnL || 0,
-            dailyTpHits: data.data.daily?.tpHits || 0,
-            dailySlHits: data.data.daily?.slHits || 0,
+            dailyPnL: data.data.daily?.pnl || 0,
             dailyClosedCount: data.data.daily?.closedCount || 0,
             closedCount: data.data.accuracy.closedCount || 0,
           });
@@ -207,21 +205,25 @@ function StatsBoxes() {
         <div className={`text-2xl md:text-3xl font-bold mb-1 ${metrics.totalPnL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
           {metrics.closedCount > 0 ? `${metrics.totalPnL >= 0 ? '+' : ''}${metrics.totalPnL}%` : '—'}
         </div>
-        <p className="text-xs text-muted-foreground">Total P/L %</p>
+        <p className="text-xs text-muted-foreground">Total P/L</p>
+        {metrics.closedCount > 0 && (
+          <p className="text-[10px] text-muted-foreground/70 mt-0.5">{metrics.closedCount} closed trades</p>
+        )}
       </div>
 
       {/* Past 24h */}
       <div className="p-4 bg-card/50 backdrop-blur border rounded-xl text-center">
-        <div className="text-2xl md:text-3xl font-bold text-blue-500 mb-1">
-          {metrics.dailyClosedCount > 0 ? (
-            <span className="flex items-center justify-center gap-1">
-              <span className="text-emerald-500">{metrics.dailyTpHits}</span>
-              <span className="text-muted-foreground text-lg">/</span>
-              <span className="text-red-500">{metrics.dailySlHits}</span>
-            </span>
-          ) : '—'}
+        <div className={`text-2xl md:text-3xl font-bold mb-1 ${
+          metrics.dailyClosedCount > 0
+            ? (metrics.dailyPnL >= 0 ? 'text-emerald-500' : 'text-red-500')
+            : 'text-muted-foreground'
+        }`}>
+          {metrics.dailyClosedCount > 0 ? `${metrics.dailyPnL >= 0 ? '+' : ''}${metrics.dailyPnL}%` : '—'}
         </div>
-        <p className="text-xs text-muted-foreground">Past 24h (TP/SL)</p>
+        <p className="text-xs text-muted-foreground">Past 24h</p>
+        {metrics.dailyClosedCount > 0 && (
+          <p className="text-[10px] text-muted-foreground/70 mt-0.5">{metrics.dailyClosedCount} trades</p>
+        )}
       </div>
     </div>
   );
