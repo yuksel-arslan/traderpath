@@ -94,53 +94,96 @@ function AboutPlatformMetrics() {
     closedCount: number;
     totalUsers: number;
   } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io'}/api/analysis/platform-stats`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success) {
-            setMetrics({
-              totalAnalyses: data.data.platform.totalAnalyses,
-              accuracy: data.data.accuracy.overall,
-              goSignalRate: data.data.goSignalRate.rate,
-              closedCount: data.data.accuracy.closedCount,
-              totalUsers: data.data.platform.totalUsers,
+        const apiUrls = [
+          process.env.NEXT_PUBLIC_API_URL,
+          'https://api.traderpath.io',
+          'https://traderpath-api-production.up.railway.app'
+        ].filter(Boolean);
+
+        let data = null;
+        for (const baseUrl of apiUrls) {
+          try {
+            const res = await fetch(`${baseUrl}/api/analysis/platform-stats`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' },
+              cache: 'no-store'
             });
+            if (res.ok) {
+              data = await res.json();
+              if (data.success) break;
+            }
+          } catch {
+            continue;
           }
+        }
+
+        if (data?.success) {
+          setMetrics({
+            totalAnalyses: data.data.platform.totalAnalyses || 0,
+            accuracy: data.data.accuracy.overall || 0,
+            goSignalRate: data.data.goSignalRate.rate || 0,
+            closedCount: data.data.accuracy.closedCount || 0,
+            totalUsers: data.data.platform.totalUsers || 0,
+          });
         }
       } catch {
         // Silently fail
+      } finally {
+        setLoading(false);
       }
     };
     fetchMetrics();
   }, []);
 
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl animate-pulse">
+            <div className="h-8 bg-muted rounded w-1/2 mx-auto mb-2"></div>
+            <div className="h-4 bg-muted rounded w-3/4 mx-auto"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!metrics) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Unable to load metrics</p>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
       <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
         <div className="text-2xl md:text-4xl font-bold text-primary mb-2">
-          {metrics ? metrics.totalAnalyses.toLocaleString() : '—'}
+          {metrics.totalAnalyses.toLocaleString()}
         </div>
         <p className="text-xs md:text-sm text-muted-foreground">Total Analyses</p>
       </div>
       <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
         <div className="text-2xl md:text-4xl font-bold text-emerald-500 mb-2">
-          {metrics && metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—'}
+          {metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—'}
         </div>
         <p className="text-xs md:text-sm text-muted-foreground">Accuracy Rate</p>
       </div>
       <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
         <div className="text-2xl md:text-4xl font-bold text-amber-500 mb-2">
-          {metrics && metrics.goSignalRate > 0 ? `${metrics.goSignalRate}%` : '—'}
+          {metrics.closedCount > 0 && metrics.goSignalRate > 0 ? `${metrics.goSignalRate}%` : '—'}
         </div>
         <p className="text-xs md:text-sm text-muted-foreground">GO Signal Success</p>
       </div>
       <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
         <div className="text-2xl md:text-4xl font-bold text-blue-500 mb-2">
-          {metrics ? metrics.totalUsers.toLocaleString() : '—'}
+          {metrics.totalUsers.toLocaleString()}
         </div>
         <p className="text-xs md:text-sm text-muted-foreground">Registered Traders</p>
       </div>
