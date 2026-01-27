@@ -20,6 +20,10 @@ import {
   Heart,
   Eye,
   Crown,
+  Code2,
+  Lightbulb,
+  Rocket,
+  RefreshCw,
 } from 'lucide-react';
 import { TeamSection } from '../../../components/TeamSection';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -73,12 +77,12 @@ const VALUES = [
 ];
 
 const MILESTONES = [
-  { year: '2023 Q1', event: 'TraderPath founded', icon: Sparkles, color: 'from-blue-500 to-cyan-500' },
-  { year: '2023 Q3', event: 'Beta launch with 1,000 users', icon: Users, color: 'from-purple-500 to-pink-500' },
-  { year: '2023 Q4', event: 'Manipulation detection engine released', icon: Shield, color: 'from-green-500 to-emerald-500' },
-  { year: '2024 Q1', event: '10,000+ active traders', icon: TrendingUp, color: 'from-amber-500 to-orange-500' },
-  { year: '2024 Q2', event: 'AI-powered insights integration', icon: Brain, color: 'from-pink-500 to-rose-500' },
-  { year: '2024 Q4', event: '50,000+ analyses completed', icon: Award, color: 'from-emerald-500 to-teal-500' },
+  { year: '2016', event: 'Started no-code journey with AppSheet, building professional workflow applications', icon: Code2, color: 'from-blue-500 to-cyan-500' },
+  { year: 'Late 2024', event: 'AI revolution sparked the vision for professional web applications', icon: Lightbulb, color: 'from-purple-500 to-pink-500' },
+  { year: 'Early 2025', event: '10 months experimenting with ChatGPT, Google AI Studio & Grok for AI price prediction', icon: Brain, color: 'from-amber-500 to-orange-500' },
+  { year: 'Late 2025', event: 'Strategic pivot: from training models to leveraging ready AI with staged analysis', icon: RefreshCw, color: 'from-green-500 to-emerald-500' },
+  { year: 'Nov 2025', event: 'TraderPath born with Claude Chat & Code - 7-step crypto analysis platform', icon: Sparkles, color: 'from-pink-500 to-rose-500' },
+  { year: 'Jan 2026', event: 'TraderPath nearing completion with 40+ indicators & AI Expert Panel', icon: Rocket, color: 'from-emerald-500 to-teal-500' },
 ];
 
 // CountUp Animation Component
@@ -315,11 +319,14 @@ export default function AboutPage() {
             <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-teal-600 dark:from-purple-300 dark:via-pink-300 dark:to-teal-300 bg-clip-text text-transparent">Our Story</span>
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2 gradient-text-logo-animate">
-            Empowering Traders with Intelligent Analysis
+            From Construction Sites to Code
           </h1>
           <p className="text-base sm:text-xl text-muted-foreground mb-8 sm:mb-12 max-w-3xl mx-auto px-2">
-            TraderPath was born from a simple idea: trading decisions should be based on
-            comprehensive analysis, not gut feelings or FOMO. We&apos;re here to level the playing field.
+            After 44 years of construction engineering across 4 continents, I discovered no-code tools in 2016.
+            When AI emerged in 2024, I saw the opportunity to build something meaningful. After 10 months of
+            experimentation, TraderPath was born with Claude — a platform that brings institutional-grade
+            crypto analysis to everyone. In parallel, I&apos;m also building <span className="text-amber-500 font-medium">SmartCon360</span> (AI-powered
+            Construction Management) and <span className="text-green-500 font-medium">FutballAI</span> (Football Analytics Platform).
           </p>
 
           {/* Founder Logo */}
@@ -484,13 +491,13 @@ export default function AboutPage() {
           <div className="text-center mb-12">
             <span className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-cyan-500 text-sm font-medium mb-4">
               <Activity className="w-4 h-4" />
-              Our Journey
+              The Journey
             </span>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-              Milestones That Define Us
+              A Decade of Learning, Months of Building
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              From a simple idea to a platform trusted by thousands of traders worldwide.
+              From no-code experiments to AI-powered trading analysis — a journey of persistence and pivots.
             </p>
           </div>
 
