@@ -195,7 +195,7 @@ const FAQS = [
   },
   {
     question: 'How accurate is the analysis?',
-    answer: 'Our backtesting shows an 87% accuracy rate on trade direction predictions. However, we always recommend using our analysis as one input in your trading decisions, not as financial advice.',
+    answer: 'Our accuracy is calculated from verified trade outcomes (TP hits vs SL hits) and displayed transparently in our Platform Metrics section. We always recommend using our analysis as one input in your trading decisions, not as financial advice.',
   },
   {
     question: 'What cryptocurrencies can I analyze?',
@@ -1676,38 +1676,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-accent/50">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <p className="text-3xl md:text-4xl font-bold gradient-text">
-                <CountUp end={50000} suffix="+" duration={2500} />
-              </p>
-              <p className="text-muted-foreground">Analyses Completed</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl md:text-4xl font-bold gradient-text">
-                <CountUp end={12000} suffix="+" duration={2500} />
-              </p>
-              <p className="text-muted-foreground">Active Traders</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl md:text-4xl font-bold gradient-text">
-                <CountUp end={87} suffix="%" duration={2000} />
-              </p>
-              <p className="text-muted-foreground">Accuracy Rate</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl md:text-4xl font-bold gradient-text">
-                24/7
-              </p>
-              <p className="text-muted-foreground">Market Monitoring</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Features Section with 7-Step Analysis + AI Experts */}
       <FeaturesSection />
 
@@ -1954,7 +1922,7 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Users className="w-5 h-5" />
-              <span className="text-sm font-medium">12,000+ Active Traders</span>
+              <span className="text-sm font-medium">Growing Community</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Activity className="w-5 h-5" />

@@ -148,60 +148,6 @@ function AboutPlatformMetrics() {
   );
 }
 
-// CountUp Animation Component
-function CountUp({ end, suffix = '', duration = 2000 }: { end: number; suffix?: string; duration?: number }) {
-  const [count, setCount] = useState(0);
-  const [hasAnimated, setHasAnimated] = useState(false);
-  const ref = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !hasAnimated) {
-          setHasAnimated(true);
-          const startTime = Date.now();
-          const animate = () => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const easeOut = 1 - Math.pow(1 - progress, 3);
-            setCount(Math.floor(easeOut * end));
-            if (progress < 1) {
-              requestAnimationFrame(animate);
-            } else {
-              setCount(end);
-            }
-          };
-          requestAnimationFrame(animate);
-        }
-      },
-      { threshold: 0.5 }
-    );
-
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
-
-    return () => observer.disconnect();
-  }, [end, duration, hasAnimated]);
-
-  const formatDisplay = (): string => {
-    if (end >= 1000) {
-      const kValue = count / 1000;
-      if (count >= end) {
-        return Math.round(kValue) + 'K';
-      }
-      return kValue.toFixed(1).replace(/\.0$/, '') + 'K';
-    }
-    return count.toString();
-  };
-
-  return (
-    <span ref={ref}>
-      {formatDisplay()}{suffix}
-    </span>
-  );
-}
-
 export default function AboutPage() {
   const [livePrices, setLivePrices] = useState<LivePrice[]>([]);
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
@@ -449,7 +395,7 @@ export default function AboutPage() {
                 {[
                   { icon: Brain, label: 'AI-Powered', value: 'Analysis', color: 'text-blue-500', bg: 'bg-blue-500/10' },
                   { icon: Globe, label: 'Real-time', value: 'Data', color: 'text-green-500', bg: 'bg-green-500/10' },
-                  { icon: TrendingUp, label: '87%', value: 'Accuracy', color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                  { icon: TrendingUp, label: 'Verified', value: 'Results', color: 'text-amber-500', bg: 'bg-amber-500/10' },
                   { icon: Zap, label: '< 60s', value: 'Analysis', color: 'text-purple-500', bg: 'bg-purple-500/10' },
                 ].map((stat, index) => {
                   const Icon = stat.icon;
@@ -464,38 +410,6 @@ export default function AboutPage() {
                   );
                 })}
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-16 bg-accent/50">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <p className="text-3xl md:text-4xl font-bold gradient-text">
-                <CountUp end={50000} suffix="+" duration={2500} />
-              </p>
-              <p className="text-muted-foreground">Analyses Completed</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl md:text-4xl font-bold gradient-text">
-                <CountUp end={12000} suffix="+" duration={2500} />
-              </p>
-              <p className="text-muted-foreground">Active Traders</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl md:text-4xl font-bold gradient-text">
-                <CountUp end={87} suffix="%" duration={2000} />
-              </p>
-              <p className="text-muted-foreground">Accuracy Rate</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl md:text-4xl font-bold gradient-text">
-                24/7
-              </p>
-              <p className="text-muted-foreground">Market Monitoring</p>
             </div>
           </div>
         </div>
@@ -634,7 +548,7 @@ export default function AboutPage() {
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Users className="w-5 h-5" />
-              <span className="text-sm font-medium">12,000+ Active Traders</span>
+              <span className="text-sm font-medium">Growing Community</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Activity className="w-5 h-5" />
