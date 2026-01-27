@@ -325,7 +325,8 @@ export default function AboutPage() {
             After 44 years of construction engineering across 4 continents, I discovered no-code tools in 2016.
             When AI emerged in 2024, I saw the opportunity to build something meaningful. After 10 months of
             experimentation, TraderPath was born with Claude — a platform that brings institutional-grade
-            crypto analysis to everyone.
+            crypto analysis to everyone. In parallel, I&apos;m also building <span className="text-amber-500 font-medium">SmartCon360</span> (AI-powered
+            Construction Management) and <span className="text-green-500 font-medium">FutballAI</span> (Football Analytics Platform).
           </p>
 
           {/* Founder Logo */}
