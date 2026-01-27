@@ -6,19 +6,20 @@ import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 
 const FEATURED_POST = {
-  title: 'Understanding Market Manipulation: How Our AI Detects Pump & Dump Schemes',
-  excerpt: 'Learn how TraderPath\'s advanced algorithms identify manipulation patterns and protect traders from common market traps.',
-  author: 'Alex Chen',
-  date: 'January 24, 2026',
-  readTime: '8 min read',
-  category: 'Technology',
-  image: '/images/blog/manipulation-detection.jpg',
+  slug: 'crypto-market-outlook-q1-2026',
+  title: 'Crypto Market Outlook: Q1 2026 Predictions',
+  excerpt: 'Our AI models and macroeconomic analysis reveal significant opportunities and risks for the next three months. Bitcoin consolidation, altcoin season indicators, and macro factors to monitor.',
+  author: 'Marcus Johnson',
+  date: 'January 20, 2026',
+  readTime: '10 min read',
+  category: 'Market Analysis',
 };
 
 const BLOG_POSTS = [
   {
+    slug: '7-step-analysis-framework',
     title: 'The 7-Step Analysis Framework: A Deep Dive',
-    excerpt: 'Discover how our comprehensive analysis system evaluates market conditions, technical indicators, and risk factors.',
+    excerpt: 'Success in crypto markets demands a systematic approach. Learn how TraderPath\'s 7-Step Analysis Framework transforms every trading decision into a data-driven process.',
     author: 'Sarah Kim',
     date: 'January 22, 2026',
     readTime: '6 min read',
@@ -26,17 +27,9 @@ const BLOG_POSTS = [
     icon: BookOpen,
   },
   {
-    title: 'Crypto Market Outlook: Q1 2026 Predictions',
-    excerpt: 'Our AI experts analyze current market trends and provide insights for the upcoming quarter.',
-    author: 'Marcus Johnson',
-    date: 'January 20, 2026',
-    readTime: '10 min read',
-    category: 'Market Analysis',
-    icon: TrendingUp,
-  },
-  {
+    slug: 'risk-management-strategies-volatile-markets',
     title: 'Risk Management Strategies for Volatile Markets',
-    excerpt: 'Essential risk management techniques every crypto trader should implement to protect their portfolio.',
+    excerpt: 'Volatility is the defining characteristic of crypto markets. Master these risk management strategies to protect and grow your capital.',
     author: 'Elena Rodriguez',
     date: 'January 18, 2026',
     readTime: '7 min read',
@@ -44,8 +37,9 @@ const BLOG_POSTS = [
     icon: Shield,
   },
   {
+    slug: 'ai-transforming-cryptocurrency-trading',
     title: 'How AI is Transforming Cryptocurrency Trading',
-    excerpt: 'Exploring the role of artificial intelligence in modern trading analysis and decision-making.',
+    excerpt: 'AI has evolved from a buzzword to an essential trading tool. Here\'s how AI is revolutionizing crypto trading and why traditional approaches are becoming obsolete.',
     author: 'Sarah Kim',
     date: 'January 15, 2026',
     readTime: '9 min read',
@@ -53,8 +47,9 @@ const BLOG_POSTS = [
     icon: Brain,
   },
   {
+    slug: 'understanding-support-resistance-levels',
     title: 'Understanding Support and Resistance Levels',
-    excerpt: 'A beginner\'s guide to identifying key price levels and using them in your trading strategy.',
+    excerpt: 'Support and resistance are the most fundamental concepts in technical analysis. Master these levels and understand where prices are likely to reverse or break through.',
     author: 'Alex Chen',
     date: 'January 12, 2026',
     readTime: '5 min read',
@@ -62,8 +57,9 @@ const BLOG_POSTS = [
     icon: TrendingUp,
   },
   {
+    slug: 'ai-concierge-personal-trading-assistant',
     title: 'New Feature: AI Concierge - Your Personal Trading Assistant',
-    excerpt: 'Introducing our latest feature that lets you analyze markets using natural language commands.',
+    excerpt: 'Introducing AI Concierge, TraderPath\'s most intuitive feature yet. Analyze markets, get trade ideas, and manage alerts using natural language.',
     author: 'Marcus Johnson',
     date: 'January 10, 2026',
     readTime: '4 min read',
@@ -183,10 +179,13 @@ export default function BlogPage() {
                     {FEATURED_POST.readTime}
                   </span>
                 </div>
-                <button className="inline-flex items-center gap-2 text-primary font-semibold hover:gap-3 transition-all">
+                <Link
+                  href={`/blog/${FEATURED_POST.slug}`}
+                  className="inline-flex items-center gap-2 text-primary font-semibold hover:gap-3 transition-all"
+                >
                   Read Article
                   <ChevronRight className="w-5 h-5" />
-                </button>
+                </Link>
               </div>
             </div>
           </div>
@@ -199,35 +198,38 @@ export default function BlogPage() {
             {BLOG_POSTS.map((post, index) => {
               const Icon = post.icon;
               return (
-                <article
+                <Link
                   key={index}
-                  className="bg-card border rounded-xl p-6 hover:border-primary/50 transition group"
+                  href={`/blog/${post.slug}`}
+                  className="block"
                 >
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-primary" />
+                  <article className="bg-card border rounded-xl p-6 hover:border-primary/50 transition group h-full">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <Icon className="w-5 h-5 text-primary" />
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {post.category}
+                      </span>
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                      {post.category}
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2 group-hover:text-primary transition">
-                    {post.title}
-                  </h3>
-                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
-                    {post.excerpt}
-                  </p>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <User className="w-3 h-3" />
-                      {post.author}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {post.readTime}
-                    </span>
-                  </div>
-                </article>
+                    <h3 className="text-lg font-semibold mb-2 group-hover:text-primary transition">
+                      {post.title}
+                    </h3>
+                    <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+                      {post.excerpt}
+                    </p>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        {post.author}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {post.readTime}
+                      </span>
+                    </div>
+                  </article>
+                </Link>
               );
             })}
           </div>
@@ -269,7 +271,7 @@ export default function BlogPage() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-muted-foreground text-sm">
-              © 2026 TraderPath. All rights reserved.
+              © 2025 <span className="text-red-500 font-semibold">Trader</span><span className="text-green-500 font-semibold">Path</span>. All rights reserved.
             </p>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <Link href="/privacy" className="hover:text-foreground transition">
