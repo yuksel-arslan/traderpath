@@ -355,6 +355,14 @@ export default function AnalyzePage() {
     }
   }, []);
 
+  // Scroll to top coins section
+  const scrollToTopCoins = useCallback(() => {
+    const topCoinsSection = document.getElementById('top-coins-section');
+    if (topCoinsSection) {
+      topCoinsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
+
   // Start paid scan (300 credits)
   const startTopCoinsScan = async () => {
     setTopCoinsScanning(true);
@@ -368,9 +376,13 @@ export default function AnalyzePage() {
       const data = await res.json();
       if (data.success) {
         // Poll for results after scan starts
-        setTimeout(() => {
-          fetchTopCoins();
+        setTimeout(async () => {
+          await fetchTopCoins();
           setTopCoinsScanning(false);
+          // Auto-scroll to top coins section after scan completes
+          setTimeout(() => {
+            scrollToTopCoins();
+          }, 100);
         }, 5000);
       } else {
         setScanError(data.message || 'Failed to start scan');
@@ -507,7 +519,7 @@ export default function AnalyzePage() {
           </div>
 
           {/* Top 5 Coins - Full Width */}
-          <div className="col-span-12">
+          <div id="top-coins-section" className="col-span-12">
             <GlassCard className="p-3 sm:p-4 md:p-6">
               <div className="space-y-3 sm:space-y-4">
                 <div className="flex items-center justify-between">
