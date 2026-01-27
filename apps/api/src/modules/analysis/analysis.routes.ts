@@ -1098,6 +1098,7 @@ Explain the key risks and what conditions would need to change before trading th
     try {
       const db = prisma;
       const now = Date.now();
+      const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
       const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
       const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
 
@@ -1116,6 +1117,7 @@ Explain the key risks and what conditions would need to change before trading th
       // Basic counts
       const totalUsers = await db.user.count();
       const totalAnalyses = analyses.length;
+      const dailyAnalyses = analyses.filter(a => a.createdAt >= oneDayAgo).length;
       const weeklyAnalyses = analyses.filter(a => a.createdAt >= sevenDaysAgo).length;
       const monthlyAnalyses = analyses.filter(a => a.createdAt >= thirtyDaysAgo).length;
 
@@ -1154,6 +1156,23 @@ Explain the key risks and what conditions would need to change before trading th
 
       // SL hits (incorrect predictions)
       const slHits = closedAnalyses.filter(a => a.outcome === 'sl_hit').length;
+
+      // Calculate Total P/L % based on outcomes
+      // Average estimated returns: TP1=+3%, TP2=+6%, TP3=+10%, SL=-2%
+      const tp1Hits = closedAnalyses.filter(a => a.outcome === 'tp1_hit').length;
+      const tp2Hits = closedAnalyses.filter(a => a.outcome === 'tp2_hit').length;
+      const tp3Hits = closedAnalyses.filter(a => a.outcome === 'tp3_hit').length;
+      const totalPnL = closedCount > 0
+        ? Number(((tp1Hits * 3 + tp2Hits * 6 + tp3Hits * 10 - slHits * 2) / closedCount).toFixed(1))
+        : 0;
+
+      // Daily closed analyses for "Past 24h" metric
+      const dailyClosedAnalyses = closedAnalyses.filter(a => a.createdAt >= oneDayAgo);
+      const dailyTpHits = dailyClosedAnalyses.filter(a =>
+        a.outcome === 'tp1_hit' || a.outcome === 'tp2_hit' || a.outcome === 'tp3_hit'
+      ).length;
+      const dailySlHits = dailyClosedAnalyses.filter(a => a.outcome === 'sl_hit').length;
+      const dailyClosedCount = dailyClosedAnalyses.length;
 
       // Platform accuracy = TP hits / closed * 100
       const platformAccuracy = closedCount > 0
@@ -1205,6 +1224,7 @@ Explain the key risks and what conditions would need to change before trading th
           platform: {
             totalUsers,
             totalAnalyses,
+            dailyAnalyses,
             weeklyAnalyses,
             monthlyAnalyses,
             platformSince,
@@ -1215,9 +1235,16 @@ Explain the key risks and what conditions would need to change before trading th
             closedCount,
             tpHits,
             slHits,
+            totalPnL,
             lastUpdated: new Date().toISOString(),
             methodology: closedCount > 0 ? 'outcome-verified' : 'score-based',
             sampleSize: closedCount > 0 ? closedCount : scores.length,
+          },
+          daily: {
+            analyses: dailyAnalyses,
+            closedCount: dailyClosedCount,
+            tpHits: dailyTpHits,
+            slHits: dailySlHits,
           },
           goSignalRate: {
             rate: goAccuracy,
