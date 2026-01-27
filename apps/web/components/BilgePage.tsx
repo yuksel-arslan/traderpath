@@ -20,6 +20,9 @@ import {
   Database,
   Brain,
   ArrowLeft,
+  Cloud,
+  Server,
+  Search,
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════
@@ -114,8 +117,11 @@ export function BilgePage() {
     { name: 'Python 3.11+', icon: Code2 },
     { name: 'React / Next.js', icon: Globe },
     { name: 'Node.js', icon: Cpu },
-    { name: 'PostgreSQL', icon: Database },
+    { name: 'Neon PostgreSQL', icon: Database },
+    { name: 'RAG', icon: Search },
     { name: 'AI / ML', icon: Brain },
+    { name: 'Vercel', icon: Cloud, category: 'Frontend Host' },
+    { name: 'Railway', icon: Server, category: 'Backend Host' },
   ];
 
   return (

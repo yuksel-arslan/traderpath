@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { ExternalLink, Sparkles, Code2, Shield, Zap } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface TeamSectionProps {
   isDark?: boolean;
@@ -30,6 +31,46 @@ const cardVariants = {
   },
 };
 
+// BILGE Diamond Symbol Component
+function BilgeDiamondLogo() {
+  return (
+    <motion.div
+      whileHover={{ scale: 1.05 }}
+      className="relative w-24 h-24"
+    >
+      {/* Outer morphing glow ring */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'linear-gradient(135deg, #40E0D0, #00CED1, #48D1CC)',
+          borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%',
+          boxShadow: '0 0 20px rgba(64, 224, 208, 0.5), 0 0 40px rgba(64, 224, 208, 0.3)',
+          animation: 'morph 8s ease-in-out infinite',
+        }}
+      />
+      {/* Inner dark background with diamond symbol */}
+      <div
+        className="absolute flex items-center justify-center bg-[#0D1421]"
+        style={{
+          inset: '3px',
+          borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%',
+          animation: 'morph 8s ease-in-out infinite',
+        }}
+      >
+        <span
+          className="text-4xl"
+          style={{
+            color: '#40E0D0',
+            textShadow: '0 0 10px rgba(64, 224, 208, 0.8), 0 0 20px rgba(64, 224, 208, 0.5)',
+          }}
+        >
+          ◈
+        </span>
+      </div>
+    </motion.div>
+  );
+}
+
 export function TeamSection({ isDark = true }: TeamSectionProps) {
   const team = [
     {
@@ -37,6 +78,7 @@ export function TeamSection({ isDark = true }: TeamSectionProps) {
       role: 'Founder & Product Visionary',
       description: '44 years of construction engineering across 4 continents. Now building digital products.',
       isHuman: true,
+      photo: '/images/yuksel-arslan.jpg',
       links: {
         linkedin: 'https://linkedin.com/in/yukselarslan',
         website: 'https://yukselarslan.com',
@@ -84,7 +126,7 @@ export function TeamSection({ isDark = true }: TeamSectionProps) {
 
           {/* Team Grid */}
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {team.map((member, index) => (
+            {team.map((member) => (
               <motion.div
                 key={member.name}
                 variants={cardVariants}
@@ -101,20 +143,18 @@ export function TeamSection({ isDark = true }: TeamSectionProps) {
                 {/* Avatar */}
                 <div className="flex justify-center mb-6">
                   {member.isHuman ? (
-                    <div
-                      className="w-24 h-24 rounded-2xl flex items-center justify-center text-4xl font-bold text-amber-500 ring-4 ring-amber-500/20"
-                      style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0.1))', border: '2px solid rgba(245, 158, 11, 0.3)' }}
-                    >
-                      YA
+                    <div className="relative w-24 h-24 rounded-2xl overflow-hidden ring-4 ring-amber-500/30 shadow-lg">
+                      <Image
+                        src={member.photo || '/images/yuksel-arslan.jpg'}
+                        alt={member.name}
+                        fill
+                        className="object-cover object-top"
+                        sizes="96px"
+                        priority
+                      />
                     </div>
                   ) : (
-                    <motion.div
-                      whileHover={{ scale: 1.05, rotate: 5 }}
-                      className="w-24 h-24 rounded-2xl flex items-center justify-center relative overflow-hidden ring-4 ring-cyan-500/20"
-                      style={{ background: 'linear-gradient(135deg, #40E0D0, #00CED1)', boxShadow: '0 10px 40px rgba(64, 224, 208, 0.4)' }}
-                    >
-                      <span className="text-4xl text-white">&#9672;</span>
-                    </motion.div>
+                    <BilgeDiamondLogo />
                   )}
                 </div>
 
