@@ -305,6 +305,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-20 | Mobile App Icon: Dark mode versiyonları | 512x512, dark bg (#0D1421), scale 2.0, rounded corners (96px), glow efekti |
 | 2026-01-20 | Mobile App Icon: Alternatif renk düzeni | Yeşil-kırmızı-yeşil-kırmızı (çapraz) vs orijinal (2 yeşil + 2 kırmızı) |
 | 2026-01-20 | PDF Rapor: Gerçek candlestick grafik | Son 50 mum OHLCV verisiyle SVG candlestick chart - yeşil/kırmızı mumlar, entry/SL/TP seviyeleri |
+| 2026-01-27 | Testimonials → Platform Metrics | Sahte yorumlar yerine gerçek API verileri - şeffaflık ve güvenilirlik |
 
 ---
 
@@ -874,6 +875,16 @@ Kullanıcı Hakları Aktif:
   - Tam analiz sayfası (7 adım + Trade Plan Chart) email'e ekleniyor
   - Loading overlay ile kullanıcıya geri bildirim
   - Başarılı gönderimde otomatik geri yönlendirme
+
+### 2026-01-27
+- **Sahte testimonial'lar kaldırıldı - Gerçek metrikler eklendi**:
+  - Landing page: 3 sahte kullanıcı yorumu (Alex M., Sarah K., Michael R.) kaldırıldı
+  - About page: 8 sahte Twitter testimonial'ı (sahte @handle'lar ve sahte tweet URL'leri) kaldırıldı
+  - Yeni `PlatformMetrics` komponenti: API'den gerçek platform verisi çekiyor
+  - Gösterilen metrikler: Toplam Analiz, Platform Accuracy (%), GO Signal Success (%), Registered Traders
+  - "Real Results, Real Data" başlığı ile şeffaflık vurgusu
+  - Veri kaynağı: `/api/analysis/platform-stats` endpoint'i (Analysis tablosundan)
+  - Güncellenen dosyalar: `apps/web/app/(marketing)/page.tsx`, `apps/web/app/(marketing)/about/page.tsx`
 
 ---
 

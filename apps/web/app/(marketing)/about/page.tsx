@@ -85,72 +85,68 @@ const MILESTONES = [
   { year: 'Jan 2026', event: 'TraderPath nearing completion with 40+ indicators & AI Expert Panel', icon: Rocket, color: 'from-emerald-500 to-teal-500' },
 ];
 
-const TESTIMONIALS = [
-  {
-    name: 'CryptoMaverickX',
-    handle: '@CryptoMaverickX',
-    avatar: 'CM',
-    text: 'Just tried @TraderPathIO for the first time. The 7-step analysis is insane. Caught a manipulation signal on SOL that saved me from a 15% dump. This is what retail traders needed.',
-    tweetUrl: 'https://x.com/CryptoMaverickX/status/1884567890123456789',
-    color: 'from-blue-500 to-cyan-500',
-  },
-  {
-    name: 'AlgoTraderSarah',
-    handle: '@AlgoTraderSarah',
-    avatar: 'AS',
-    text: 'Been trading for 6 years. Never seen an analysis tool this comprehensive. 40+ indicators synthesized into actionable insights. @TraderPathIO is a game changer.',
-    tweetUrl: 'https://x.com/AlgoTraderSarah/status/1884567890123456790',
-    color: 'from-purple-500 to-pink-500',
-  },
-  {
-    name: 'DeFi_Hunter',
-    handle: '@DeFi_Hunter',
-    avatar: 'DH',
-    text: 'The AI Expert Panel on @TraderPathIO just explained why my BTC long was risky with 4 different perspectives. ARIA, NEXUS, ORACLE, SENTINEL - like having a trading desk in your pocket.',
-    tweetUrl: 'https://x.com/DeFi_Hunter/status/1884567890123456791',
-    color: 'from-amber-500 to-orange-500',
-  },
-  {
-    name: 'BlockchainBeto',
-    handle: '@BlockchainBeto',
-    avatar: 'BB',
-    text: 'Finally a platform that tells me WHEN not to trade. @TraderPathIO Safety Check detected whale accumulation before the pump. Patience paid off. +47% on ETH.',
-    tweetUrl: 'https://x.com/BlockchainBeto/status/1884567890123456792',
-    color: 'from-green-500 to-emerald-500',
-  },
-  {
-    name: 'TradingTomoko',
-    handle: '@TradingTomoko',
-    avatar: 'TT',
-    text: 'As a Japanese trader, I love that @TraderPathIO supports multiple languages. The analysis quality is institutional-grade. No more guessing, just data-driven decisions.',
-    tweetUrl: 'https://x.com/TradingTomoko/status/1884567890123456793',
-    color: 'from-pink-500 to-rose-500',
-  },
-  {
-    name: 'WhaleWatcherMike',
-    handle: '@WhaleWatcherMike',
-    avatar: 'WM',
-    text: 'The tokenomics analysis on @TraderPathIO caught a massive unlock event I completely missed. Avoided a 20% drop on AVAX. This tool pays for itself.',
-    tweetUrl: 'https://x.com/WhaleWatcherMike/status/1884567890123456794',
-    color: 'from-teal-500 to-cyan-500',
-  },
-  {
-    name: 'ScalpingQueen',
-    handle: '@ScalpingQueen',
-    avatar: 'SQ',
-    text: 'Scalping with @TraderPathIO is different. The timing module tells me exactly when momentum is shifting. 8 winning trades in a row on 15m BTC. My win rate went from 54% to 73%.',
-    tweetUrl: 'https://x.com/ScalpingQueen/status/1884567890123456795',
-    color: 'from-violet-500 to-purple-500',
-  },
-  {
-    name: 'HODLer_Carlos',
-    handle: '@HODLer_Carlos',
-    avatar: 'HC',
-    text: 'Not just for day traders. @TraderPathIO swing analysis helped me time my DCA entries perfectly. The market pulse feature is pure gold for long-term investors.',
-    tweetUrl: 'https://x.com/HODLer_Carlos/status/1884567890123456796',
-    color: 'from-amber-500 to-yellow-500',
-  },
-];
+// Platform metrics component for about page
+function AboutPlatformMetrics() {
+  const [metrics, setMetrics] = useState<{
+    totalAnalyses: number;
+    accuracy: number;
+    goSignalRate: number;
+    closedCount: number;
+    totalUsers: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io'}/api/analysis/platform-stats`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setMetrics({
+              totalAnalyses: data.data.platform.totalAnalyses,
+              accuracy: data.data.accuracy.overall,
+              goSignalRate: data.data.goSignalRate.rate,
+              closedCount: data.data.accuracy.closedCount,
+              totalUsers: data.data.platform.totalUsers,
+            });
+          }
+        }
+      } catch {
+        // Silently fail
+      }
+    };
+    fetchMetrics();
+  }, []);
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+      <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className="text-2xl md:text-4xl font-bold text-primary mb-2">
+          {metrics ? metrics.totalAnalyses.toLocaleString() : '—'}
+        </div>
+        <p className="text-xs md:text-sm text-muted-foreground">Total Analyses</p>
+      </div>
+      <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className="text-2xl md:text-4xl font-bold text-emerald-500 mb-2">
+          {metrics && metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—'}
+        </div>
+        <p className="text-xs md:text-sm text-muted-foreground">Accuracy Rate</p>
+      </div>
+      <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className="text-2xl md:text-4xl font-bold text-amber-500 mb-2">
+          {metrics && metrics.goSignalRate > 0 ? `${metrics.goSignalRate}%` : '—'}
+        </div>
+        <p className="text-xs md:text-sm text-muted-foreground">GO Signal Success</p>
+      </div>
+      <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className="text-2xl md:text-4xl font-bold text-blue-500 mb-2">
+          {metrics ? metrics.totalUsers.toLocaleString() : '—'}
+        </div>
+        <p className="text-xs md:text-sm text-muted-foreground">Registered Traders</p>
+      </div>
+    </div>
+  );
+}
 
 // CountUp Animation Component
 function CountUp({ end, suffix = '', duration = 2000 }: { end: number; suffix?: string; duration?: number }) {
@@ -545,106 +541,36 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
+      {/* Platform Performance Section */}
       <section className="py-16 sm:py-20 relative overflow-hidden">
         {/* Decorative elements */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
 
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-12">
-            <span className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-500 text-sm font-medium mb-4">
-              <Users className="w-4 h-4" />
-              Community
+            <span className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-sm font-medium mb-4">
+              <TrendingUp className="w-4 h-4" />
+              Live Performance
             </span>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-              What Traders Are Saying
+              Real Results, Real Data
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Real feedback from traders using TraderPath to make smarter decisions.
+              We believe in transparency over testimonials. Here are our verified platform metrics.
+            </p>
+          </div>
+
+          <AboutPlatformMetrics />
+
+          <div className="mt-8 text-center">
+            <p className="text-xs text-muted-foreground">
+              Metrics update in real-time based on verified trade outcomes (TP/SL hits).
+              <br />
+              No fake reviews. No fabricated testimonials. Just honest performance data.
             </p>
           </div>
         </div>
-
-        {/* Marquee Row 1 - Left to Right */}
-        <div className="relative mb-6 overflow-hidden">
-          <div className="flex gap-6 animate-marquee-left">
-            {[...TESTIMONIALS, ...TESTIMONIALS].map((testimonial, index) => (
-              <a
-                key={index}
-                href={testimonial.tweetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-shrink-0 w-[400px] p-6 bg-card/50 backdrop-blur border rounded-xl hover:border-blue-500/50 hover:shadow-xl transition-all group"
-              >
-                <div className="flex items-start gap-4 mb-4">
-                  <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${testimonial.color} flex items-center justify-center text-white font-bold text-sm`}>
-                    {testimonial.avatar}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold">{testimonial.name}</p>
-                    <p className="text-sm text-blue-500">{testimonial.handle}</p>
-                  </div>
-                  <svg className="w-5 h-5 text-blue-500 group-hover:scale-110 transition" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                  </svg>
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">{testimonial.text}</p>
-              </a>
-            ))}
-          </div>
-        </div>
-
-        {/* Marquee Row 2 - Right to Left */}
-        <div className="relative overflow-hidden">
-          <div className="flex gap-6 animate-marquee-right">
-            {[...TESTIMONIALS.slice(4), ...TESTIMONIALS.slice(0, 4), ...TESTIMONIALS.slice(4), ...TESTIMONIALS.slice(0, 4)].map((testimonial, index) => (
-              <a
-                key={index}
-                href={testimonial.tweetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-shrink-0 w-[400px] p-6 bg-card/50 backdrop-blur border rounded-xl hover:border-blue-500/50 hover:shadow-xl transition-all group"
-              >
-                <div className="flex items-start gap-4 mb-4">
-                  <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${testimonial.color} flex items-center justify-center text-white font-bold text-sm`}>
-                    {testimonial.avatar}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold">{testimonial.name}</p>
-                    <p className="text-sm text-blue-500">{testimonial.handle}</p>
-                  </div>
-                  <svg className="w-5 h-5 text-blue-500 group-hover:scale-110 transition" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                  </svg>
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">{testimonial.text}</p>
-              </a>
-            ))}
-          </div>
-        </div>
-
-        {/* CSS for marquee animation */}
-        <style jsx>{`
-          @keyframes marquee-left {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-          }
-          @keyframes marquee-right {
-            0% { transform: translateX(-50%); }
-            100% { transform: translateX(0); }
-          }
-          .animate-marquee-left {
-            animation: marquee-left 40s linear infinite;
-          }
-          .animate-marquee-right {
-            animation: marquee-right 40s linear infinite;
-          }
-          .animate-marquee-left:hover,
-          .animate-marquee-right:hover {
-            animation-play-state: paused;
-          }
-        `}</style>
       </section>
 
       {/* Team Section */}
