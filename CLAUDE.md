@@ -885,6 +885,14 @@ Kullanıcı Hakları Aktif:
   - "Real Results, Real Data" başlığı ile şeffaflık vurgusu
   - Veri kaynağı: `/api/analysis/platform-stats` endpoint'i (Analysis tablosundan)
   - Güncellenen dosyalar: `apps/web/app/(marketing)/page.tsx`, `apps/web/app/(marketing)/about/page.tsx`
+- **Top 5 High-Probability Coins özelliği eklendi** (300 kredi):
+  - Analyze sayfasına "Top 5 High-Probability Coins" kartı eklendi
+  - Cache'den top 5 coin gösteriliyor (FREE) veya "Scan Now" ile 300 krediye taze tarama
+  - Her coin kartında: Sıralama, Symbol, Verdict badge, Score, 24h değişim, Direction
+  - Coin kartına tıklayınca analiz detay sayfasına yönlendirme
+  - AI Concierge quick command güncellendi: "Top 5 Coins (300 Cr)"
+  - Intent detection güncellendi: "highest probability", "give me top coins" → ücretli tarama tetikler
+  - Güncellenen dosyalar: `apps/web/app/(dashboard)/analyze/page.tsx`, `apps/web/app/(dashboard)/concierge/page.tsx`, `apps/api/src/modules/concierge/concierge.service.ts`
 
 ---
 
