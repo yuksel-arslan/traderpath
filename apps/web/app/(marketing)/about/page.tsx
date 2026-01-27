@@ -388,6 +388,53 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* Team Section */}
+      <TeamSection />
+
+      {/* Timeline Section */}
+      <section className="py-16 sm:py-20 relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-rose-500/10 rounded-full blur-3xl" />
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="text-center mb-12">
+            <span className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-cyan-500 text-sm font-medium mb-4">
+              <Activity className="w-4 h-4" />
+              The Journey
+            </span>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
+              A Decade of Learning, Months of Building
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              From no-code experiments to AI-powered trading analysis — a journey of persistence and pivots.
+            </p>
+          </div>
+
+          <div className="max-w-3xl mx-auto">
+            <div className="relative">
+              {/* Vertical line */}
+              <div className="absolute left-6 sm:left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 via-purple-500 to-emerald-500" />
+
+              {MILESTONES.map((milestone, index) => {
+                const Icon = milestone.icon;
+                return (
+                  <div key={index} className="relative pl-16 sm:pl-20 pb-10 last:pb-0">
+                    <div className={`absolute left-0 w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br ${milestone.color} rounded-xl flex items-center justify-center shadow-lg`}>
+                      <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                    </div>
+                    <div className="bg-card/50 backdrop-blur border rounded-xl p-4 hover:border-primary/30 hover:shadow-lg transition">
+                      <p className="text-sm text-muted-foreground mb-1">{milestone.year}</p>
+                      <p className="font-semibold gradient-text-logo-animate">{milestone.event}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Mission Section */}
       <section className="py-16 sm:py-20 bg-gradient-to-b from-accent/50 via-accent/30 to-transparent relative overflow-hidden">
         {/* Decorative elements */}
@@ -526,53 +573,6 @@ export default function AboutPage() {
               <br />
               No fake reviews. No fabricated testimonials. Just honest performance data.
             </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Team Section */}
-      <TeamSection />
-
-      {/* Timeline Section */}
-      <section className="py-16 sm:py-20 relative overflow-hidden">
-        {/* Decorative elements */}
-        <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-rose-500/10 rounded-full blur-3xl" />
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center mb-12">
-            <span className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-cyan-500 text-sm font-medium mb-4">
-              <Activity className="w-4 h-4" />
-              The Journey
-            </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-              A Decade of Learning, Months of Building
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              From no-code experiments to AI-powered trading analysis — a journey of persistence and pivots.
-            </p>
-          </div>
-
-          <div className="max-w-3xl mx-auto">
-            <div className="relative">
-              {/* Vertical line */}
-              <div className="absolute left-6 sm:left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 via-purple-500 to-emerald-500" />
-
-              {MILESTONES.map((milestone, index) => {
-                const Icon = milestone.icon;
-                return (
-                  <div key={index} className="relative pl-16 sm:pl-20 pb-10 last:pb-0">
-                    <div className={`absolute left-0 w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br ${milestone.color} rounded-xl flex items-center justify-center shadow-lg`}>
-                      <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-                    </div>
-                    <div className="bg-card/50 backdrop-blur border rounded-xl p-4 hover:border-primary/30 hover:shadow-lg transition">
-                      <p className="text-sm text-muted-foreground mb-1">{milestone.year}</p>
-                      <p className="font-semibold gradient-text-logo-animate">{milestone.event}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
         </div>
       </section>
