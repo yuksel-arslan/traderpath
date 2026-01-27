@@ -510,30 +510,31 @@ export default function AnalyzePage() {
           <div className="col-span-12">
             <GlassCard className="p-3 sm:p-4 md:p-6">
               <div className="space-y-3 sm:space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                   <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" />
-                    Top 5 High-Probability Coins
+                    <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 flex-shrink-0" />
+                    <span className="truncate">Top 5 High-Probability Coins</span>
                   </h3>
                   <button
                     onClick={startTopCoinsScan}
                     disabled={topCoinsScanning}
                     className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                      "flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
                       "bg-gradient-to-r from-amber-500 to-orange-500 text-white",
                       "hover:from-amber-600 hover:to-orange-600 hover:shadow-lg hover:shadow-amber-500/30",
-                      "disabled:opacity-50 disabled:cursor-not-allowed"
+                      "disabled:opacity-50 disabled:cursor-not-allowed",
+                      "w-full sm:w-auto flex-shrink-0"
                     )}
                   >
                     {topCoinsScanning ? (
                       <>
                         <RefreshCw className="w-3 h-3 animate-spin" />
-                        Scanning...
+                        <span>Scanning...</span>
                       </>
                     ) : (
                       <>
                         <RefreshCw className="w-3 h-3" />
-                        Scan Now (300 Credits)
+                        <span className="whitespace-nowrap">Scan Now (300 Cr)</span>
                       </>
                     )}
                   </button>
@@ -546,13 +547,13 @@ export default function AnalyzePage() {
                 )}
 
                 {topCoinsLoading ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
                     {[...Array(5)].map((_, i) => (
-                      <div key={i} className="h-24 bg-slate-100 dark:bg-slate-800/50 rounded-xl animate-pulse" />
+                      <div key={i} className="h-28 sm:h-32 bg-slate-100 dark:bg-slate-800/50 rounded-xl animate-pulse" />
                     ))}
                   </div>
                 ) : topCoins.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
                     {topCoins.map((coin, index) => {
                       const verdictColor = {
                         'GO': 'from-emerald-500 to-green-600',
@@ -571,7 +572,7 @@ export default function AnalyzePage() {
                       return (
                         <div
                           key={coin.symbol}
-                          className="relative p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-white/20 dark:border-white/10 hover:shadow-lg transition-all cursor-pointer"
+                          className="relative p-2 sm:p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-white/20 dark:border-white/10 hover:shadow-lg transition-all cursor-pointer min-w-0"
                           onClick={() => {
                             if (coin.analysisId) {
                               window.location.href = `/analyze/details/${coin.analysisId}`;
@@ -579,41 +580,41 @@ export default function AnalyzePage() {
                           }}
                         >
                           {/* Rank Badge */}
-                          <div className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold shadow-lg z-10">
+                          <div className="absolute -top-1.5 -left-1.5 sm:-top-2 sm:-left-2 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[10px] sm:text-xs font-bold shadow-lg z-10">
                             {index + 1}
                           </div>
 
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <CoinIcon symbol={coin.symbol} size={24} />
-                              <span className="text-sm font-bold text-slate-900 dark:text-white">{coin.symbol}</span>
+                          <div className="flex items-center justify-between mb-1.5 sm:mb-2 gap-1">
+                            <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+                              <CoinIcon symbol={coin.symbol} size={20} className="flex-shrink-0" />
+                              <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">{coin.symbol}</span>
                             </div>
                             <span className={cn(
-                              "px-2 py-0.5 rounded text-[10px] font-bold text-white bg-gradient-to-r",
+                              "px-1.5 sm:px-2 py-0.5 rounded text-[8px] sm:text-[10px] font-bold text-white bg-gradient-to-r flex-shrink-0",
                               verdictColor
                             )}>
                               {verdictLabel}
                             </span>
                           </div>
 
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-xs">
+                          <div className="space-y-0.5 sm:space-y-1">
+                            <div className="flex items-center justify-between text-[10px] sm:text-xs">
                               <span className="text-slate-500 dark:text-slate-400">Score</span>
-                              <span className="font-semibold text-slate-700 dark:text-slate-200">{coin.reliabilityScore}/100</span>
+                              <span className="font-semibold text-slate-700 dark:text-slate-200 tabular-nums">{coin.reliabilityScore}</span>
                             </div>
-                            <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center justify-between text-[10px] sm:text-xs">
                               <span className="text-slate-500 dark:text-slate-400">24h</span>
                               <span className={cn(
-                                "font-semibold flex items-center gap-0.5",
+                                "font-semibold flex items-center gap-0.5 tabular-nums",
                                 coin.priceChange24h >= 0 ? "text-emerald-500" : "text-red-500"
                               )}>
-                                {coin.priceChange24h >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                                {coin.priceChange24h >= 0 ? '+' : ''}{coin.priceChange24h.toFixed(2)}%
+                                {coin.priceChange24h >= 0 ? <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" /> : <TrendingDown className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />}
+                                <span>{coin.priceChange24h >= 0 ? '+' : ''}{coin.priceChange24h.toFixed(1)}%</span>
                               </span>
                             </div>
                             {coin.direction && (
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-500 dark:text-slate-400">Direction</span>
+                              <div className="flex items-center justify-between text-[10px] sm:text-xs">
+                                <span className="text-slate-500 dark:text-slate-400">Dir</span>
                                 <span className={cn(
                                   "font-semibold",
                                   coin.direction === 'LONG' ? "text-emerald-500" : "text-red-500"
@@ -624,18 +625,18 @@ export default function AnalyzePage() {
                             )}
                           </div>
 
-                          <div className="mt-2 flex items-center justify-end">
-                            <ArrowRight className="w-3 h-3 text-slate-400" />
+                          <div className="mt-1.5 sm:mt-2 flex items-center justify-end">
+                            <ArrowRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400" />
                           </div>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-                    <Crown className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">No cached data available</p>
-                    <p className="text-xs mt-1">Click "Scan Now" to analyze top 30 coins and get the top 5 highest probability coins (300 credits)</p>
+                  <div className="text-center py-6 sm:py-8 text-slate-500 dark:text-slate-400">
+                    <Crown className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 opacity-30" />
+                    <p className="text-xs sm:text-sm">No cached data available</p>
+                    <p className="text-[10px] sm:text-xs mt-1 px-4">Click "Scan Now" to analyze top 30 coins (300 credits)</p>
                   </div>
                 )}
               </div>
