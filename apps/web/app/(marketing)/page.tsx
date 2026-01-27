@@ -639,138 +639,127 @@ function FeaturesSection() {
 
   return (
     <>
-      {/* Feature 1: Discover Top Trading Opportunities */}
-      <section id="features" className="py-20 bg-gradient-to-b from-emerald-500/5 via-teal-500/5 to-transparent relative overflow-hidden">
-        {/* Decorative elements */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center mb-12">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 rounded-full text-emerald-500 text-sm font-medium mb-4 backdrop-blur-sm">
-              <TrendingUp className="w-4 h-4" />
-              Smart Discovery
+      {/* Feature 1: AI-Powered Market Scanner */}
+      <section id="features" className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-4">
+            <span className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-sm font-medium mb-4">
+              <Search className="w-4 h-4" />
+              Feature 1
             </span>
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">
-              <span className="gradient-text-logo-animate">Find Your Next</span>
-              <br />
-              <span className="text-foreground">Winning Trade</span>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
+              AI-Powered Market Scanner
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+            <p className="text-muted-foreground max-w-2xl mx-auto">
               Ask our AI to scan the entire market and discover the highest-scoring trading opportunities based on 40+ technical indicators.
             </p>
           </div>
-
           <div className="max-w-5xl mx-auto">
-            {/* Main Feature Card */}
-            <div className="relative p-8 bg-gradient-to-br from-card via-card to-emerald-500/5 border border-emerald-500/20 rounded-2xl backdrop-blur-sm mb-6">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/20 to-transparent rounded-bl-full" />
-
-              <div className="flex flex-col lg:flex-row gap-8 items-center">
-                {/* Left: Visual */}
-                <div className="flex-shrink-0 w-full lg:w-auto">
-                  <div className="relative">
-                    {/* Mock leaderboard */}
-                    <div className="w-full lg:w-72 bg-background/80 backdrop-blur border rounded-xl p-4 space-y-3">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                        <span className="font-medium">Top Opportunities</span>
-                        <span className="text-emerald-500">Live Scan</span>
-                      </div>
-                      {[
-                        { rank: 1, coin: 'BTC', score: 87, verdict: 'GO', color: 'emerald' },
-                        { rank: 2, coin: 'SOL', score: 82, verdict: 'GO', color: 'emerald' },
-                        { rank: 3, coin: 'ETH', score: 76, verdict: 'COND', color: 'amber' },
-                        { rank: 4, coin: 'LINK', score: 71, verdict: 'COND', color: 'amber' },
-                        { rank: 5, coin: 'AVAX', score: 68, verdict: 'WAIT', color: 'orange' },
-                      ].map((item) => (
-                        <div key={item.rank} className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
-                          <span className="w-5 h-5 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white">
-                            {item.rank}
-                          </span>
-                          <span className="font-medium flex-1">{item.coin}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold">{item.score}/100</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                              item.color === 'emerald' ? 'bg-emerald-500/20 text-emerald-500' :
-                              item.color === 'amber' ? 'bg-amber-500/20 text-amber-500' :
-                              'bg-orange-500/20 text-orange-500'
-                            }`}>
-                              {item.verdict}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {/* Glow effect */}
-                    <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-xl blur-xl -z-10" />
+            {/* Top Row - Main Scanner Card + Stats */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+              {/* Scanner Visual */}
+              <div className="lg:col-span-2 p-5 bg-card border rounded-lg hover:border-emerald-500/50 hover:shadow-lg transition">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center">
+                    <Radar className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold gradient-text-logo-animate">Market Scan Results</h3>
+                    <p className="text-xs text-muted-foreground">Top opportunities ranked by reliability score</p>
                   </div>
                 </div>
+                <div className="space-y-2">
+                  {[
+                    { rank: 1, coin: 'BTC', score: 87, verdict: 'GO', color: 'emerald' },
+                    { rank: 2, coin: 'SOL', score: 82, verdict: 'GO', color: 'emerald' },
+                    { rank: 3, coin: 'ETH', score: 76, verdict: 'COND', color: 'amber' },
+                    { rank: 4, coin: 'LINK', score: 71, verdict: 'COND', color: 'amber' },
+                    { rank: 5, coin: 'AVAX', score: 68, verdict: 'WAIT', color: 'orange' },
+                  ].map((item) => (
+                    <div key={item.rank} className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
+                      <span className="w-5 h-5 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white">
+                        {item.rank}
+                      </span>
+                      <span className="font-medium flex-1">{item.coin}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold">{item.score}/100</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                          item.color === 'emerald' ? 'bg-emerald-500/20 text-emerald-500' :
+                          item.color === 'amber' ? 'bg-amber-500/20 text-amber-500' :
+                          'bg-orange-500/20 text-orange-500'
+                        }`}>
+                          {item.verdict}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-                {/* Right: Content */}
-                <div className="flex-1 space-y-6">
-                  <div>
-                    <h3 className="text-2xl font-bold mb-2">AI-Powered Market Scanner</h3>
-                    <p className="text-muted-foreground">
-                      Just ask: <span className="text-emerald-500 font-medium">&quot;Which coin should I trade?&quot;</span> or <span className="text-emerald-500 font-medium">&quot;Show top 5 coins&quot;</span> and our AI will analyze 30+ cryptocurrencies instantly.
-                    </p>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
+                <div className="p-4 bg-card border rounded-lg hover:border-emerald-500/50 transition">
+                  <div className="flex items-center gap-2 mb-1">
+                    <BarChart3 className="w-4 h-4 text-purple-500" />
+                    <span className="text-2xl font-bold">40+</span>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 bg-muted/30 rounded-lg border border-transparent hover:border-emerald-500/30 transition">
-                      <div className="flex items-center gap-2 mb-1">
-                        <BarChart3 className="w-4 h-4 text-purple-500" />
-                        <span className="font-semibold">40+</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">Technical Indicators</span>
-                    </div>
-                    <div className="p-3 bg-muted/30 rounded-lg border border-transparent hover:border-emerald-500/30 transition">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Activity className="w-4 h-4 text-blue-500" />
-                        <span className="font-semibold">30+</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">Coins Analyzed</span>
-                    </div>
-                    <div className="p-3 bg-muted/30 rounded-lg border border-transparent hover:border-emerald-500/30 transition">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Zap className="w-4 h-4 text-amber-500" />
-                        <span className="font-semibold">60s</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">Full Scan Time</span>
-                    </div>
-                    <div className="p-3 bg-muted/30 rounded-lg border border-transparent hover:border-emerald-500/30 transition">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Target className="w-4 h-4 text-emerald-500" />
-                        <span className="font-semibold">7</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">Analysis Steps</span>
-                    </div>
+                  <span className="text-xs text-muted-foreground">Technical Indicators</span>
+                </div>
+                <div className="p-4 bg-card border rounded-lg hover:border-emerald-500/50 transition">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Activity className="w-4 h-4 text-blue-500" />
+                    <span className="text-2xl font-bold">30+</span>
                   </div>
+                  <span className="text-xs text-muted-foreground">Coins Analyzed</span>
+                </div>
+                <div className="p-4 bg-card border rounded-lg hover:border-emerald-500/50 transition">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Zap className="w-4 h-4 text-amber-500" />
+                    <span className="text-2xl font-bold">60s</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">Full Scan Time</span>
+                </div>
+                <div className="p-4 bg-card border rounded-lg hover:border-emerald-500/50 transition">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Target className="w-4 h-4 text-emerald-500" />
+                    <span className="text-2xl font-bold">7</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">Analysis Steps</span>
                 </div>
               </div>
             </div>
 
-            {/* Bottom Features */}
+            {/* Bottom Features Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-5 bg-card/50 backdrop-blur border rounded-xl hover:border-emerald-500/30 transition group">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition">
-                  <CheckCircle className="w-5 h-5 text-emerald-500" />
+              <div className="p-5 bg-card border rounded-lg hover:border-emerald-500/50 hover:shadow-lg transition cursor-pointer group">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
+                    <CheckCircle className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <span className="text-xs font-medium text-emerald-500">Scoring</span>
                 </div>
-                <h4 className="font-semibold mb-1">Reliability Score</h4>
-                <p className="text-sm text-muted-foreground">Each coin gets a score based on liquidity, volatility, trend strength, and momentum factors.</p>
+                <h3 className="font-semibold mb-1 gradient-text-logo-animate">Reliability Score</h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">Each coin gets a score based on liquidity, volatility, trend strength, and momentum.</p>
               </div>
-              <div className="p-5 bg-card/50 backdrop-blur border rounded-xl hover:border-emerald-500/30 transition group">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition">
-                  <Sparkles className="w-5 h-5 text-emerald-500" />
+              <div className="p-5 bg-card border rounded-lg hover:border-emerald-500/50 hover:shadow-lg transition cursor-pointer group">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
+                    <Sparkles className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <span className="text-xs font-medium text-emerald-500">Signals</span>
                 </div>
-                <h4 className="font-semibold mb-1">Trade Signals</h4>
-                <p className="text-sm text-muted-foreground">Clear GO, CONDITIONAL, or WAIT verdicts help you decide which opportunities to pursue.</p>
+                <h3 className="font-semibold mb-1 gradient-text-logo-animate">Trade Signals</h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">Clear GO, CONDITIONAL, or WAIT verdicts help you decide which opportunities to pursue.</p>
               </div>
-              <div className="p-5 bg-card/50 backdrop-blur border rounded-xl hover:border-emerald-500/30 transition group">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition">
-                  <MessageCircle className="w-5 h-5 text-emerald-500" />
+              <div className="p-5 bg-card border rounded-lg hover:border-emerald-500/50 hover:shadow-lg transition cursor-pointer group">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
+                    <MessageCircle className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <span className="text-xs font-medium text-emerald-500">Input</span>
                 </div>
-                <h4 className="font-semibold mb-1">Natural Language</h4>
-                <p className="text-sm text-muted-foreground">Ask in plain English or Turkish. Our AI understands context and delivers instant results.</p>
+                <h3 className="font-semibold mb-1 gradient-text-logo-animate">Natural Language</h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">Ask in plain English or Turkish. Our AI understands context and delivers instant results.</p>
               </div>
             </div>
           </div>
@@ -1712,6 +1701,24 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Platform Metrics - Real Data (moved here from below) */}
+      <section className="py-20 bg-gradient-to-b from-transparent to-emerald-500/5">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
+              Real Results, Real Data
+            </h2>
+            <p className="text-muted-foreground">
+              Transparent metrics from our platform - no fake reviews, just verified performance
+            </p>
+          </div>
+          <PlatformMetrics />
+          <p className="text-center text-xs text-muted-foreground mt-8">
+            Data updates in real-time from verified trade outcomes. We believe in transparency over testimonials.
+          </p>
+        </div>
+      </section>
+
       {/* Features Section with 7-Step Analysis + AI Experts */}
       <FeaturesSection />
 
@@ -1965,24 +1972,6 @@ export default function LandingPage() {
               <span className="text-sm font-medium">99.9% Uptime</span>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Platform Metrics - Real Data */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-              Real Results, Real Data
-            </h2>
-            <p className="text-muted-foreground">
-              Transparent metrics from our platform - no fake reviews, just verified performance
-            </p>
-          </div>
-          <PlatformMetrics />
-          <p className="text-center text-xs text-muted-foreground mt-8">
-            Data updates in real-time from verified trade outcomes. We believe in transparency over testimonials.
-          </p>
         </div>
       </section>
 

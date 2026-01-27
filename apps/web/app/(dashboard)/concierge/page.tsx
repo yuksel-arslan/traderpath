@@ -6,6 +6,7 @@
 // ===========================================
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Bot,
   Mic,
@@ -163,6 +164,7 @@ function VerdictBadge({ verdict, score }: { verdict: string; score?: number }) {
 }
 
 export default function ConciergePage() {
+  const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -304,6 +306,13 @@ export default function ConciergePage() {
 
       if (data.creditsRemaining !== undefined) {
         setCredits(data.creditsRemaining);
+      }
+
+      // Handle scan confirmation - redirect to analyze page after a delay
+      if (data.intent === 'SCAN_CONFIRM' && data.success) {
+        setTimeout(() => {
+          router.push('/analyze?scanComplete=true');
+        }, 3000); // 3 second delay to show the confirmation message
       }
     } catch (error) {
       const errorMessage: ChatMessage = {
