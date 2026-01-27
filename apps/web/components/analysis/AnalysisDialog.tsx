@@ -3,9 +3,10 @@
 // ===========================================
 // Analysis Dialog - Popup-based Analysis Flow
 // Guides user through entire analysis process
+// Corporate Design with TraderPath Branding
 // ===========================================
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useId } from 'react';
 import {
   X,
   GraduationCap,
@@ -20,11 +21,17 @@ import {
   Loader2,
   ArrowLeft,
   Eye,
+  Sparkles,
+  Zap,
+  ArrowRight,
+  Brain,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getAuthToken, getApiUrl } from '../../lib/api';
 import { CREDIT_COSTS } from '@traderpath/types';
 import { CoinIcon } from '../common/CoinIcon';
+import { StarLogo } from '../common/TraderPathLogo';
 
 // Import analysis components
 import { MarketPulse } from './MarketPulse';
@@ -108,6 +115,8 @@ export function AnalysisDialog({
 }: AnalysisDialogProps) {
   // Derive trade type from timeframe
   const tradeType = TIMEFRAME_TO_TRADE_TYPE[timeframe];
+  const uniqueId = useId();
+
   // Dialog state
   const [dialogStep, setDialogStep] = useState<DialogStep>('mode-select');
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('educational');
@@ -319,24 +328,79 @@ export function AnalysisDialog({
   const isGo = verdictAction.toLowerCase().includes('go') && !verdictAction.toLowerCase().includes('wait') && !verdictAction.toLowerCase().includes('avoid');
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm isolate">
-      <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col relative z-[101]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 isolate">
+      {/* Backdrop with blur */}
+      <div
+        className="absolute inset-0 bg-[#030712]/80 backdrop-blur-md"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-white/10 bg-[#0a0f1a] animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+        {/* Animated background gradient orbs */}
+        <div className="absolute inset-0 overflow-hidden rounded-2xl sm:rounded-3xl pointer-events-none">
+          <div
+            className="absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-30"
+            style={{
+              background: 'radial-gradient(circle, #2DD4BF 0%, transparent 70%)',
+              animation: 'float 6s ease-in-out infinite',
+            }}
+          />
+          <div
+            className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full blur-3xl opacity-30"
+            style={{
+              background: 'radial-gradient(circle, #F87171 0%, transparent 70%)',
+              animation: 'float 8s ease-in-out infinite reverse',
+            }}
+          />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+        <div className="relative flex items-center justify-between p-4 sm:p-5 border-b border-white/10">
           <div className="flex items-center gap-3">
             {dialogStep !== 'mode-select' && (
               <button
                 onClick={() => setDialogStep('mode-select')}
                 disabled={isRunning}
-                className="p-1.5 hover:bg-muted rounded-lg transition disabled:opacity-50"
+                className="p-1.5 hover:bg-white/10 rounded-lg transition disabled:opacity-50"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowLeft className="w-4 h-4 text-slate-400" />
               </button>
             )}
-            <CoinIcon symbol={symbol} size={32} />
+            <div className="relative w-10 h-10 sm:w-12 sm:h-12">
+              {/* Morphing glow ring */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: 'linear-gradient(135deg, #2DD4BF, #14B8A6, #F87171, #EF5A6F)',
+                  borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%',
+                  boxShadow: '0 0 15px rgba(45, 212, 191, 0.4)',
+                  animation: 'morph 8s ease-in-out infinite',
+                }}
+              />
+              <div
+                className="absolute flex items-center justify-center bg-[#0a0f1a]"
+                style={{
+                  inset: '2px',
+                  borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%',
+                  animation: 'morph 8s ease-in-out infinite',
+                }}
+              >
+                <CoinIcon symbol={symbol} size={24} />
+              </div>
+            </div>
             <div>
-              <h2 className="font-semibold text-lg">{symbol}/USDT Analysis</h2>
-              <p className="text-sm text-muted-foreground">
+              <h2
+                className="font-bold text-base sm:text-lg"
+                style={{
+                  background: 'linear-gradient(135deg, #7FFFD4, #2DD4BF, #F87171)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                {symbol}/USDT Analysis
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400">
                 {coinName} - {TRADE_TYPE_LABELS[tradeType]}
               </p>
             </div>
@@ -344,20 +408,55 @@ export function AnalysisDialog({
           <button
             onClick={onClose}
             disabled={isRunning}
-            className="p-2 hover:bg-muted rounded-lg transition disabled:opacity-50"
+            className="p-2 hover:bg-white/10 rounded-lg transition disabled:opacity-50"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 text-slate-400" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="relative flex-1 overflow-y-auto p-5 sm:p-6">
           {/* Step 1: Mode Selection */}
           {dialogStep === 'mode-select' && (
             <div className="space-y-6">
+              {/* Header with Logo */}
               <div className="text-center">
-                <h3 className="text-xl font-bold mb-2">Choose Analysis Mode</h3>
-                <p className="text-muted-foreground">
+                <div className="flex justify-center mb-4">
+                  <div className="relative w-16 h-16">
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        background: 'linear-gradient(135deg, #2DD4BF, #14B8A6, #F87171, #EF5A6F)',
+                        borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%',
+                        boxShadow: '0 0 20px rgba(45, 212, 191, 0.4), 0 0 40px rgba(248, 113, 113, 0.2)',
+                        animation: 'morph 8s ease-in-out infinite',
+                      }}
+                    />
+                    <div
+                      className="absolute flex items-center justify-center bg-[#0a0f1a]"
+                      style={{
+                        inset: '3px',
+                        borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%',
+                        animation: 'morph 8s ease-in-out infinite',
+                      }}
+                    >
+                      <StarLogo size={32} uniqueId={`analysis-${uniqueId}`} animated={false} />
+                    </div>
+                  </div>
+                </div>
+                <h3
+                  className="text-2xl sm:text-3xl font-bold mb-2"
+                  style={{
+                    background: 'linear-gradient(135deg, #7FFFD4, #2DD4BF, #F87171, #EF5A6F)',
+                    backgroundSize: '200% 200%',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    animation: 'gradient-shift 4s ease infinite',
+                  }}
+                >
+                  Choose Analysis Mode
+                </h3>
+                <p className="text-slate-400 text-sm">
                   {isFirstTimeUser
                     ? "First time? We recommend Educational mode to learn how our analysis works."
                     : "How would you like to run your analysis?"}
@@ -369,79 +468,181 @@ export function AnalysisDialog({
                 {/* Educational Mode */}
                 <button
                   onClick={() => handleModeSelect('educational')}
-                  className={cn(
-                    'p-5 rounded-xl border-2 text-left transition-all hover:shadow-lg',
+                  className={`relative group p-5 rounded-2xl text-left transition-all duration-300 overflow-hidden ${
                     analysisMode === 'educational'
-                      ? 'border-blue-500 bg-blue-500/10'
-                      : 'border-border hover:border-blue-500/50'
-                  )}
+                      ? 'ring-2 ring-[#2DD4BF]'
+                      : 'hover:scale-[1.02]'
+                  }`}
+                  style={{
+                    background: analysisMode === 'educational'
+                      ? 'linear-gradient(135deg, rgba(45, 212, 191, 0.2), rgba(20, 184, 166, 0.1))'
+                      : 'linear-gradient(135deg, rgba(45, 212, 191, 0.1), rgba(20, 184, 166, 0.05))',
+                    border: '1px solid rgba(45, 212, 191, 0.3)',
+                  }}
                 >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={cn(
-                      'w-10 h-10 rounded-lg flex items-center justify-center',
-                      analysisMode === 'educational' ? 'bg-blue-500 text-white' : 'bg-muted'
-                    )}>
-                      <GraduationCap className="w-5 h-5" />
+                  {/* Hover glow effect */}
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{
+                      background: 'radial-gradient(circle at center, rgba(45, 212, 191, 0.2) 0%, transparent 70%)',
+                    }}
+                  />
+
+                  <div className="relative z-10">
+                    {/* Badge */}
+                    {isFirstTimeUser && (
+                      <div
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold mb-3"
+                        style={{
+                          background: 'linear-gradient(135deg, #2DD4BF, #14B8A6)',
+                          color: 'white',
+                          boxShadow: '0 0 15px rgba(45, 212, 191, 0.4)',
+                        }}
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        RECOMMENDED
+                      </div>
+                    )}
+
+                    {/* Icon */}
+                    <div className="relative mb-4">
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center"
+                        style={{
+                          background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                          boxShadow: '0 8px 30px rgba(45, 212, 191, 0.4)',
+                        }}
+                      >
+                        <Brain className="w-6 h-6 text-white" />
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold">Educational</h4>
-                      {isFirstTimeUser && (
-                        <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">Recommended</span>
-                      )}
-                    </div>
+
+                    {/* Title */}
+                    <h4 className="text-lg font-bold text-white mb-2">Educational</h4>
+
+                    {/* Description */}
+                    <p className="text-slate-400 text-sm mb-4">
+                      Watch each of the 7 analysis steps run in sequence. Perfect for learning how our AI evaluates trades.
+                    </p>
+
+                    {/* Features */}
+                    <ul className="space-y-2">
+                      <li className="flex items-center gap-2 text-xs text-slate-300">
+                        <div className="w-5 h-5 rounded-md bg-[#2DD4BF]/20 flex items-center justify-center">
+                          <Eye className="w-3 h-3 text-[#2DD4BF]" />
+                        </div>
+                        Step-by-step visualization
+                      </li>
+                      <li className="flex items-center gap-2 text-xs text-slate-300">
+                        <div className="w-5 h-5 rounded-md bg-[#2DD4BF]/20 flex items-center justify-center">
+                          <GraduationCap className="w-3 h-3 text-[#2DD4BF]" />
+                        </div>
+                        Learn as you go
+                      </li>
+                    </ul>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Watch each of the 7 analysis steps run in sequence. Perfect for learning how our AI evaluates trades.
-                  </p>
                 </button>
 
                 {/* Quick Mode */}
                 <button
                   onClick={() => handleModeSelect('quick')}
-                  className={cn(
-                    'p-5 rounded-xl border-2 text-left transition-all hover:shadow-lg',
+                  className={`relative group p-5 rounded-2xl text-left transition-all duration-300 overflow-hidden ${
                     analysisMode === 'quick'
-                      ? 'border-amber-500 bg-amber-500/10'
-                      : 'border-border hover:border-amber-500/50'
-                  )}
+                      ? 'ring-2 ring-[#F87171]'
+                      : 'hover:scale-[1.02]'
+                  }`}
+                  style={{
+                    background: analysisMode === 'quick'
+                      ? 'linear-gradient(135deg, rgba(248, 113, 113, 0.2), rgba(239, 90, 111, 0.1))'
+                      : 'linear-gradient(135deg, rgba(248, 113, 113, 0.1), rgba(239, 90, 111, 0.05))',
+                    border: '1px solid rgba(248, 113, 113, 0.3)',
+                  }}
                 >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={cn(
-                      'w-10 h-10 rounded-lg flex items-center justify-center',
-                      analysisMode === 'quick' ? 'bg-amber-500 text-white' : 'bg-muted'
-                    )}>
-                      <Rocket className="w-5 h-5" />
+                  {/* Hover glow effect */}
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{
+                      background: 'radial-gradient(circle at center, rgba(248, 113, 113, 0.2) 0%, transparent 70%)',
+                    }}
+                  />
+
+                  <div className="relative z-10">
+                    {/* Badge */}
+                    {!isFirstTimeUser && (
+                      <div
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold mb-3"
+                        style={{
+                          background: 'linear-gradient(135deg, #F87171, #EF5A6F)',
+                          color: 'white',
+                          boxShadow: '0 0 15px rgba(248, 113, 113, 0.4)',
+                        }}
+                      >
+                        <Zap className="w-3 h-3" />
+                        FAST
+                      </div>
+                    )}
+
+                    {/* Icon */}
+                    <div className="relative mb-4">
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center"
+                        style={{
+                          background: 'linear-gradient(135deg, #F87171, #DC2626)',
+                          boxShadow: '0 8px 30px rgba(248, 113, 113, 0.4)',
+                        }}
+                      >
+                        <Rocket className="w-6 h-6 text-white" />
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold">Quick</h4>
-                      {!isFirstTimeUser && (
-                        <span className="text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full">Fast</span>
-                      )}
-                    </div>
+
+                    {/* Title */}
+                    <h4 className="text-lg font-bold text-white mb-2">Quick</h4>
+
+                    {/* Description */}
+                    <p className="text-slate-400 text-sm mb-4">
+                      Get instant results. All 7 steps run at once and you jump straight to the Final Verdict.
+                    </p>
+
+                    {/* Features */}
+                    <ul className="space-y-2">
+                      <li className="flex items-center gap-2 text-xs text-slate-300">
+                        <div className="w-5 h-5 rounded-md bg-[#F87171]/20 flex items-center justify-center">
+                          <Zap className="w-3 h-3 text-[#F87171]" />
+                        </div>
+                        Instant results
+                      </li>
+                      <li className="flex items-center gap-2 text-xs text-slate-300">
+                        <div className="w-5 h-5 rounded-md bg-[#F87171]/20 flex items-center justify-center">
+                          <TrendingUp className="w-3 h-3 text-[#F87171]" />
+                        </div>
+                        Jump to verdict
+                      </li>
+                    </ul>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Get instant results. All 7 steps run at once and you jump straight to the Final Verdict.
-                  </p>
                 </button>
               </div>
 
-              {/* What We Analyze */}
-              <div className="bg-muted/30 rounded-lg p-4">
-                <h4 className="font-medium mb-3 flex items-center gap-2 text-sm">
-                  <Eye className="w-4 h-4" />
+              {/* 7-Step Analysis Process */}
+              <div
+                className="rounded-xl p-4"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                }}
+              >
+                <h4 className="font-medium mb-3 flex items-center gap-2 text-sm text-slate-300">
+                  <Eye className="w-4 h-4 text-[#2DD4BF]" />
                   7-Step Analysis Process
                 </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {STEPS.slice(0, 4).map((step) => (
-                    <div key={step.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {STEPS.map((step) => (
+                    <div
+                      key={step.id}
+                      className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg"
+                      style={{ background: 'rgba(255, 255, 255, 0.05)' }}
+                    >
                       <step.icon className={cn('w-3.5 h-3.5', colorClasses[step.color as keyof typeof colorClasses].text)} />
-                      <span>{step.name}</span>
-                    </div>
-                  ))}
-                  {STEPS.slice(4).map((step) => (
-                    <div key={step.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <step.icon className={cn('w-3.5 h-3.5', colorClasses[step.color as keyof typeof colorClasses].text)} />
-                      <span>{step.name}</span>
+                      <span className="text-slate-300">{step.name}</span>
                     </div>
                   ))}
                 </div>
@@ -450,24 +651,28 @@ export function AnalysisDialog({
               {/* Start Button */}
               <button
                 onClick={handleStartAnalysis}
-                className={cn(
-                  'w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-3 transition-all hover:shadow-lg hover:scale-[1.02]',
-                  analysisMode === 'educational'
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white'
-                    : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
-                )}
+                className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-3 transition-all hover:scale-[1.02] group"
+                style={{
+                  background: analysisMode === 'educational'
+                    ? 'linear-gradient(135deg, #2DD4BF, #0D9488)'
+                    : 'linear-gradient(135deg, #F87171, #DC2626)',
+                  boxShadow: analysisMode === 'educational'
+                    ? '0 10px 40px rgba(45, 212, 191, 0.4)'
+                    : '0 10px 40px rgba(248, 113, 113, 0.4)',
+                }}
               >
                 {analysisMode === 'educational' ? (
                   <>
-                    <GraduationCap className="w-5 h-5" />
-                    <span>Start Educational Analysis</span>
+                    <Brain className="w-5 h-5 text-white" />
+                    <span className="text-white">Start Educational Analysis</span>
                   </>
                 ) : (
                   <>
-                    <Rocket className="w-5 h-5" />
-                    <span>Run Quick Analysis</span>
+                    <Rocket className="w-5 h-5 text-white" />
+                    <span className="text-white">Run Quick Analysis</span>
                   </>
                 )}
+                <ArrowRight className="w-4 h-4 text-white transition-transform group-hover:translate-x-1" />
               </button>
             </div>
           )}
@@ -476,7 +681,13 @@ export function AnalysisDialog({
           {dialogStep === 'analyzing' && (
             <div className="space-y-6">
               {/* Progress */}
-              <div className="bg-muted/30 rounded-lg p-4">
+              <div
+                className="rounded-xl p-4"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                }}
+              >
                 <AnalysisProgressBar
                   completedSteps={completedSteps}
                   activeStep={activeStep}
@@ -489,32 +700,68 @@ export function AnalysisDialog({
               </div>
 
               {/* Current Step */}
-              <div className={cn('rounded-lg p-5 border', colors.bg, colors.border)}>
+              <div
+                className="rounded-xl p-5"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(45, 212, 191, 0.1), rgba(248, 113, 113, 0.05))',
+                  border: '1px solid rgba(45, 212, 191, 0.2)',
+                }}
+              >
                 <div className="flex items-center gap-4 mb-4">
-                  <div className={cn('w-12 h-12 rounded-lg flex items-center justify-center bg-background/50', colors.text)}>
-                    <currentStep.icon className="w-6 h-6" />
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(135deg, #2DD4BF, #14B8A6)',
+                      boxShadow: '0 8px 30px rgba(45, 212, 191, 0.3)',
+                    }}
+                  >
+                    <currentStep.icon className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <div className="text-sm text-muted-foreground">Step {activeStep} of 7</div>
-                    <h3 className="text-lg font-bold">{currentStep.name}</h3>
+                    <div className="text-sm text-slate-400">Step {activeStep} of 7</div>
+                    <h3
+                      className="text-lg font-bold"
+                      style={{
+                        background: 'linear-gradient(135deg, #7FFFD4, #2DD4BF)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }}
+                    >
+                      {currentStep.name}
+                    </h3>
                   </div>
                   {isRunning && activeStep === completedSteps.length + 1 && (
-                    <Loader2 className="w-5 h-5 animate-spin ml-auto text-muted-foreground" />
+                    <div className="ml-auto">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center"
+                        style={{
+                          background: 'linear-gradient(135deg, #2DD4BF, #14B8A6)',
+                        }}
+                      >
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      </div>
+                    </div>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground">{currentStep.shortDesc}</p>
+                <p className="text-sm text-slate-400">{currentStep.shortDesc}</p>
               </div>
 
               {/* Error Display */}
               {error && (
-                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-                  <span>{error}</span>
+                <div
+                  className="p-4 rounded-xl flex items-center gap-2"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(248, 113, 113, 0.15), rgba(239, 90, 111, 0.1))',
+                    border: '1px solid rgba(248, 113, 113, 0.3)',
+                  }}
+                >
+                  <AlertTriangle className="w-5 h-5 flex-shrink-0 text-[#F87171]" />
+                  <span className="text-[#FCA5A5] text-sm">{error}</span>
                 </div>
               )}
 
               {analysisMode === 'educational' && (
-                <p className="text-center text-sm text-muted-foreground">
+                <p className="text-center text-sm text-slate-400">
                   Analyzing {symbol}... This takes about 30 seconds.
                 </p>
               )}
@@ -525,7 +772,13 @@ export function AnalysisDialog({
           {dialogStep === 'results' && (
             <div className="space-y-5">
               {/* Progress */}
-              <div className="bg-muted/30 rounded-lg p-3">
+              <div
+                className="rounded-xl p-3"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                }}
+              >
                 <AnalysisProgressBar
                   completedSteps={completedSteps}
                   activeStep={activeStep}
@@ -538,22 +791,56 @@ export function AnalysisDialog({
               </div>
 
               {/* Current Step Result */}
-              <div className={cn('rounded-lg border overflow-hidden', colors.border)}>
-                <div className={cn('p-4 border-b', colors.bg)}>
+              <div
+                className="rounded-xl overflow-hidden"
+                style={{
+                  border: '1px solid rgba(45, 212, 191, 0.2)',
+                }}
+              >
+                <div
+                  className="p-4"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(45, 212, 191, 0.1), rgba(20, 184, 166, 0.05))',
+                    borderBottom: '1px solid rgba(45, 212, 191, 0.2)',
+                  }}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center bg-background/50', colors.text)}>
-                        <currentStep.icon className="w-5 h-5" />
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center"
+                        style={{
+                          background: 'linear-gradient(135deg, #2DD4BF, #14B8A6)',
+                        }}
+                      >
+                        <currentStep.icon className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <div className="text-xs text-muted-foreground">Step {activeStep} of 7</div>
-                        <h3 className="font-semibold">{currentStep.name}</h3>
+                        <div className="text-xs text-slate-400">Step {activeStep} of 7</div>
+                        <h3
+                          className="font-semibold"
+                          style={{
+                            background: 'linear-gradient(135deg, #7FFFD4, #2DD4BF)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                          }}
+                        >
+                          {currentStep.name}
+                        </h3>
                       </div>
                     </div>
-                    <span className="px-2 py-1 bg-green-500 text-white text-xs rounded-full">Complete</span>
+                    <span
+                      className="px-3 py-1 text-xs font-bold rounded-full"
+                      style={{
+                        background: 'linear-gradient(135deg, #22C55E, #16A34A)',
+                        color: 'white',
+                        boxShadow: '0 0 15px rgba(34, 197, 94, 0.3)',
+                      }}
+                    >
+                      Complete
+                    </span>
                   </div>
                 </div>
-                <div className="p-4 max-h-[300px] overflow-y-auto">
+                <div className="p-4 max-h-[300px] overflow-y-auto bg-[#0a0f1a]">
                   {activeStep === 1 && <MarketPulse data={results[1]} />}
                   {activeStep === 2 && <AssetScanner data={results[2]} symbol={symbol} />}
                   {activeStep === 3 && <SafetyCheck data={results[3]} symbol={symbol} />}
@@ -563,10 +850,16 @@ export function AnalysisDialog({
                     results[6] ? (
                       <TradePlan data={results[6]} symbol={symbol} />
                     ) : (
-                      <div className="p-4 bg-muted/30 rounded-lg text-center">
-                        <AlertTriangle className="w-6 h-6 mx-auto mb-2 text-amber-500" />
-                        <p className="font-medium text-sm">No Trade Plan Generated</p>
-                        <p className="text-xs text-muted-foreground">
+                      <div
+                        className="p-4 rounded-xl text-center"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.05))',
+                          border: '1px solid rgba(251, 191, 36, 0.2)',
+                        }}
+                      >
+                        <AlertTriangle className="w-6 h-6 mx-auto mb-2 text-amber-400" />
+                        <p className="font-medium text-sm text-white">No Trade Plan Generated</p>
+                        <p className="text-xs text-slate-400">
                           Trade plans are only generated for GO signals.
                         </p>
                       </div>
@@ -581,23 +874,31 @@ export function AnalysisDialog({
                 <button
                   onClick={() => setActiveStep(Math.max(1, activeStep - 1))}
                   disabled={activeStep === 1}
-                  className="px-3 py-2 text-sm border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="px-4 py-2 text-sm rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: activeStep === 1 ? 'rgba(255, 255, 255, 0.3)' : 'white',
+                  }}
                 >
                   Previous
                 </button>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5">
                   {STEPS.map((step) => (
                     <button
                       key={step.id}
                       onClick={() => handleViewStep(step.id)}
-                      className={cn(
-                        'w-8 h-8 rounded-full text-xs font-medium transition',
-                        activeStep === step.id
-                          ? 'bg-primary text-primary-foreground'
+                      className="w-8 h-8 rounded-full text-xs font-medium transition"
+                      style={{
+                        background: activeStep === step.id
+                          ? 'linear-gradient(135deg, #2DD4BF, #14B8A6)'
                           : completedSteps.includes(step.id)
-                          ? 'bg-muted hover:bg-muted/80'
-                          : 'bg-muted/50 cursor-not-allowed'
-                      )}
+                          ? 'rgba(45, 212, 191, 0.2)'
+                          : 'rgba(255, 255, 255, 0.05)',
+                        color: activeStep === step.id ? 'white' : completedSteps.includes(step.id) ? '#2DD4BF' : 'rgba(255, 255, 255, 0.3)',
+                        boxShadow: activeStep === step.id ? '0 0 15px rgba(45, 212, 191, 0.4)' : 'none',
+                        cursor: completedSteps.includes(step.id) ? 'pointer' : 'not-allowed',
+                      }}
                     >
                       {step.id}
                     </button>
@@ -606,7 +907,12 @@ export function AnalysisDialog({
                 <button
                   onClick={() => setActiveStep(Math.min(7, activeStep + 1))}
                   disabled={activeStep === 7}
-                  className="px-3 py-2 text-sm border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="px-4 py-2 text-sm rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: activeStep === 7 ? 'rgba(255, 255, 255, 0.3)' : 'white',
+                  }}
                 >
                   Next
                 </button>
@@ -614,17 +920,28 @@ export function AnalysisDialog({
 
               {/* Analysis Completed Message */}
               {reportSaved && (
-                <div className="border-t pt-4">
-                  <div className="flex items-center justify-center gap-2 text-green-500 mb-3">
+                <div
+                  className="rounded-xl p-5"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.05))',
+                    border: '1px solid rgba(34, 197, 94, 0.2)',
+                  }}
+                >
+                  <div className="flex items-center justify-center gap-2 text-[#22C55E] mb-3">
                     <CheckCircle className="w-5 h-5" />
                     <span className="font-semibold">Analysis completed!</span>
                   </div>
-                  <p className="text-sm text-muted-foreground text-center mb-4">
+                  <p className="text-sm text-slate-400 text-center mb-4">
                     Your analysis has been saved. View it in Recent Analyses below.
                   </p>
                   <button
                     onClick={onClose}
-                    className="w-full px-4 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg font-medium hover:opacity-90 transition flex items-center justify-center gap-2"
+                    className="w-full px-4 py-3 rounded-xl font-medium transition flex items-center justify-center gap-2 hover:scale-[1.02]"
+                    style={{
+                      background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                      color: 'white',
+                      boxShadow: '0 10px 40px rgba(45, 212, 191, 0.4)',
+                    }}
                   >
                     <CheckCircle className="w-4 h-4" />
                     Done
@@ -637,32 +954,59 @@ export function AnalysisDialog({
 
         {/* Footer - Verdict Summary (only in results) */}
         {dialogStep === 'results' && verdict && (
-          <div className={cn(
-            'p-4 border-t',
-            isGo ? 'bg-green-500/10' : 'bg-amber-500/10'
-          )}>
+          <div
+            className="relative p-4"
+            style={{
+              background: isGo
+                ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))'
+                : 'linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1))',
+              borderTop: `1px solid ${isGo ? 'rgba(34, 197, 94, 0.3)' : 'rgba(251, 191, 36, 0.3)'}`,
+            }}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={cn(
-                  'w-10 h-10 rounded-full flex items-center justify-center',
-                  isGo ? 'bg-green-500 text-white' : 'bg-amber-500 text-white'
-                )}>
-                  {isGo ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{
+                    background: isGo
+                      ? 'linear-gradient(135deg, #22C55E, #16A34A)'
+                      : 'linear-gradient(135deg, #FBBF24, #F59E0B)',
+                    boxShadow: isGo
+                      ? '0 8px 30px rgba(34, 197, 94, 0.4)'
+                      : '0 8px 30px rgba(251, 191, 36, 0.4)',
+                  }}
+                >
+                  {isGo ? <CheckCircle className="w-5 h-5 text-white" /> : <AlertTriangle className="w-5 h-5 text-white" />}
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">Final Verdict</div>
-                  <div className={cn(
-                    'font-bold text-lg',
-                    isGo ? 'text-green-500' : 'text-amber-500'
-                  )}>
+                  <div className="text-sm text-slate-400">Final Verdict</div>
+                  <div
+                    className="font-bold text-lg"
+                    style={{
+                      background: isGo
+                        ? 'linear-gradient(135deg, #22C55E, #4ADE80)'
+                        : 'linear-gradient(135deg, #FBBF24, #FCD34D)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                    }}
+                  >
                     {verdictAction}
                   </div>
                 </div>
               </div>
               {verdict.overallScore !== undefined && (
                 <div className="text-right">
-                  <div className="text-sm text-muted-foreground">Score</div>
-                  <div className="font-bold text-lg">{(verdict.overallScore * 10).toFixed(0)}%</div>
+                  <div className="text-sm text-slate-400">Score</div>
+                  <div
+                    className="font-bold text-lg"
+                    style={{
+                      background: 'linear-gradient(135deg, #7FFFD4, #2DD4BF)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                    }}
+                  >
+                    {(verdict.overallScore * 10).toFixed(0)}%
+                  </div>
                 </div>
               )}
             </div>

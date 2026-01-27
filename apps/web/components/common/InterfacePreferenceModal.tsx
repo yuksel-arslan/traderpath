@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Bot,
@@ -13,8 +13,13 @@ import {
   Loader2,
   Mic,
   Volume2,
+  ArrowRight,
+  TrendingUp,
+  Shield,
+  Brain,
 } from 'lucide-react';
 import { authFetch } from '@/lib/api';
+import { StarLogo } from './TraderPathLogo';
 
 interface InterfacePreferenceModalProps {
   isOpen: boolean;
@@ -29,13 +34,13 @@ export function InterfacePreferenceModal({
 }: InterfacePreferenceModalProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState<'ui' | 'concierge' | null>(null);
+  const uniqueId = useId();
 
   if (!isOpen) return null;
 
   const handleSelect = async (preference: 'ui' | 'concierge') => {
     setIsLoading(preference);
     try {
-      // Save preference to backend
       const response = await authFetch('/api/user/preference', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -44,14 +49,11 @@ export function InterfacePreferenceModal({
 
       if (response.ok) {
         onSelect(preference);
-
-        // Navigate based on selection
         if (preference === 'concierge') {
           router.push('/concierge');
         } else {
           router.push('/analyze');
         }
-
         onClose();
       }
     } catch (error) {
@@ -62,209 +64,297 @@ export function InterfacePreferenceModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-      {/* Backdrop */}
+      {/* Backdrop with blur */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-[#030712]/80 backdrop-blur-md"
         onClick={onClose}
       />
 
-      {/* Modal - scrollable on mobile */}
-      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl">
-        {/* Header */}
-        <div className="relative px-4 sm:px-8 pt-6 sm:pt-8 pb-4 sm:pb-6 bg-gradient-to-br from-teal-500/10 via-transparent to-coral-500/10">
-          <div className="absolute top-0 right-0 w-32 h-32 sm:w-64 sm:h-64 bg-gradient-to-br from-teal-500/20 to-transparent rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-48 sm:h-48 bg-gradient-to-tr from-coral-500/20 to-transparent rounded-full blur-3xl" />
+      {/* Modal */}
+      <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl sm:rounded-3xl shadow-2xl border border-white/10 bg-[#0a0f1a]">
+        {/* Animated background gradient orbs */}
+        <div className="absolute inset-0 overflow-hidden rounded-2xl sm:rounded-3xl pointer-events-none">
+          <div
+            className="absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-30"
+            style={{
+              background: 'radial-gradient(circle, #2DD4BF 0%, transparent 70%)',
+              animation: 'float 6s ease-in-out infinite',
+            }}
+          />
+          <div
+            className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full blur-3xl opacity-30"
+            style={{
+              background: 'radial-gradient(circle, #F87171 0%, transparent 70%)',
+              animation: 'float 8s ease-in-out infinite reverse',
+            }}
+          />
+        </div>
 
-          <div className="relative text-center">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-teal-500" />
-              <span className="text-xs sm:text-sm font-medium text-teal-600 dark:text-teal-400">
-                Welcome to TraderPath!
-              </span>
+        {/* Header */}
+        <div className="relative px-6 sm:px-10 pt-8 sm:pt-10 pb-6 text-center">
+          {/* Logo with morphing container */}
+          <div className="flex justify-center mb-6">
+            <div className="relative w-20 h-20 sm:w-24 sm:h-24">
+              {/* Outer morphing glow ring */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: 'linear-gradient(135deg, #2DD4BF, #14B8A6, #F87171, #EF5A6F)',
+                  borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%',
+                  boxShadow: '0 0 30px rgba(45, 212, 191, 0.5), 0 0 60px rgba(248, 113, 113, 0.3)',
+                  animation: 'morph 8s ease-in-out infinite',
+                }}
+              />
+              {/* Inner dark background */}
+              <div
+                className="absolute flex items-center justify-center bg-[#0a0f1a]"
+                style={{
+                  inset: '4px',
+                  borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%',
+                  animation: 'morph 8s ease-in-out infinite',
+                }}
+              >
+                <StarLogo size={48} uniqueId={`modal-${uniqueId}`} animated={false} />
+              </div>
             </div>
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-2">
-              Choose Your Experience
-            </h2>
-            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
-              Tap to select and continue instantly
-            </p>
           </div>
+
+          {/* Title */}
+          <h2
+            className="text-3xl sm:text-4xl font-bold mb-3"
+            style={{
+              background: 'linear-gradient(135deg, #7FFFD4, #2DD4BF, #F87171, #EF5A6F)',
+              backgroundSize: '200% 200%',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              animation: 'gradient-shift 4s ease infinite',
+            }}
+          >
+            Welcome to TraderPath
+          </h2>
+          <p className="text-slate-400 text-sm sm:text-base">
+            Choose your preferred trading analysis experience
+          </p>
         </div>
 
         {/* Options */}
-        <div className="px-4 sm:px-8 py-4 sm:py-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+        <div className="px-6 sm:px-10 py-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+
             {/* AI Concierge Option */}
             <button
               onClick={() => handleSelect('concierge')}
               disabled={isLoading !== null}
-              className={`relative group p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 text-left transition-all ${
+              className={`relative group p-6 sm:p-8 rounded-2xl text-left transition-all duration-300 overflow-hidden ${
                 isLoading === 'concierge'
-                  ? 'border-teal-500 bg-teal-500/10 ring-2 sm:ring-4 ring-teal-500/20'
-                  : 'border-slate-200 dark:border-slate-700 hover:border-teal-500 hover:bg-teal-500/5 active:scale-[0.98]'
-              } ${isLoading !== null && isLoading !== 'concierge' ? 'opacity-50' : ''}`}
+                  ? 'ring-2 ring-[#2DD4BF]'
+                  : 'hover:scale-[1.02]'
+              } ${isLoading !== null && isLoading !== 'concierge' ? 'opacity-40' : ''}`}
+              style={{
+                background: 'linear-gradient(135deg, rgba(45, 212, 191, 0.15), rgba(20, 184, 166, 0.05))',
+                border: '1px solid rgba(45, 212, 191, 0.3)',
+              }}
             >
-              {/* Loading/Selected indicator */}
+              {/* Hover glow effect */}
+              <div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                style={{
+                  background: 'radial-gradient(circle at center, rgba(45, 212, 191, 0.2) 0%, transparent 70%)',
+                }}
+              />
+
+              {/* Loading indicator */}
               {isLoading === 'concierge' && (
-                <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-5 h-5 sm:w-6 sm:h-6 bg-teal-500 rounded-full flex items-center justify-center">
-                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 text-white animate-spin" />
+                <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#2DD4BF] flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 text-white animate-spin" />
                 </div>
               )}
 
-              {/* Badge */}
-              <div className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 bg-gradient-to-r from-teal-500 to-teal-600 text-white text-[10px] sm:text-xs font-bold rounded-full mb-3 sm:mb-4">
-                <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                RECOMMENDED
-              </div>
-
-              {/* Icon with Voice Animation */}
-              <div className="relative mb-3 sm:mb-4">
-                {/* Animated rings */}
-                <div className="absolute inset-0 w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-teal-500/20 animate-ping opacity-75" style={{ animationDuration: '2s' }} />
-                <div className="absolute inset-[-4px] sm:inset-[-6px] w-[52px] h-[52px] sm:w-[68px] sm:h-[68px] rounded-2xl sm:rounded-3xl border-2 border-teal-500/30 animate-pulse" />
-
-                {/* Main icon */}
-                <div className="relative w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-teal-500/30">
-                  <Bot className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
+              <div className="relative z-10">
+                {/* Badge */}
+                <div
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold mb-5"
+                  style={{
+                    background: 'linear-gradient(135deg, #2DD4BF, #14B8A6)',
+                    color: 'white',
+                    boxShadow: '0 0 20px rgba(45, 212, 191, 0.4)',
+                  }}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  RECOMMENDED
                 </div>
 
-                {/* Sound wave visualization */}
-                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-end gap-0.5 h-3 sm:h-4">
-                  {[...Array(5)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="w-0.5 sm:w-1 bg-gradient-to-t from-teal-500 to-cyan-400 rounded-full animate-soundwave"
-                      style={{
-                        animationDelay: `${i * 0.1}s`,
-                        animationDuration: `${0.4 + i * 0.1}s`,
-                      }}
-                    />
-                  ))}
+                {/* Icon */}
+                <div className="relative mb-5">
+                  <div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                      boxShadow: '0 10px 40px rgba(45, 212, 191, 0.4)',
+                    }}
+                  >
+                    <Brain className="w-8 h-8 text-white" />
+                  </div>
+                  {/* Animated pulse ring */}
+                  <div
+                    className="absolute inset-0 w-16 h-16 rounded-2xl border-2 border-[#2DD4BF]/50 animate-ping"
+                    style={{ animationDuration: '2s' }}
+                  />
                 </div>
-              </div>
 
-              {/* Title */}
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-1 sm:mb-2">
-                AI Concierge
-              </h3>
+                {/* Title */}
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
+                  AI Concierge
+                </h3>
 
-              {/* Description */}
-              <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm mb-3 sm:mb-4">
-                Chat with AI. Just type &quot;How is BTC?&quot;
-              </p>
-
-              {/* Features - hidden on very small screens */}
-              <ul className="space-y-1.5 sm:space-y-2 hidden sm:block">
-                <li className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                  <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500 flex-shrink-0" />
-                  Natural language questions
-                </li>
-                <li className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                  <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500 flex-shrink-0" />
-                  One message analysis
-                </li>
-                <li className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                  <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500 flex-shrink-0 animate-pulse" />
-                  <span className="flex items-center gap-1">
-                    Voice commands
-                    <Volume2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-teal-400" />
-                  </span>
-                </li>
-              </ul>
-
-              {/* Example */}
-              <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-slate-100 dark:bg-slate-800 rounded-lg sm:rounded-xl">
-                <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mb-0.5 sm:mb-1">
-                  Example:
+                {/* Description */}
+                <p className="text-slate-400 text-sm mb-5">
+                  Natural language trading assistant. Just ask and get instant analysis.
                 </p>
-                <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
-                  &quot;Analyze ETH on 4h&quot;
-                </p>
-              </div>
 
-              {/* Tap hint */}
-              <div className="mt-3 sm:mt-4 flex items-center justify-center gap-1 text-teal-500">
-                <Check className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="text-[10px] sm:text-xs font-medium">Tap to select</span>
+                {/* Features */}
+                <ul className="space-y-3 mb-5">
+                  <li className="flex items-center gap-3 text-sm text-slate-300">
+                    <div className="w-6 h-6 rounded-lg bg-[#2DD4BF]/20 flex items-center justify-center">
+                      <MessageSquare className="w-3.5 h-3.5 text-[#2DD4BF]" />
+                    </div>
+                    &quot;How is BTC doing?&quot;
+                  </li>
+                  <li className="flex items-center gap-3 text-sm text-slate-300">
+                    <div className="w-6 h-6 rounded-lg bg-[#2DD4BF]/20 flex items-center justify-center">
+                      <Mic className="w-3.5 h-3.5 text-[#2DD4BF]" />
+                    </div>
+                    Voice commands supported
+                  </li>
+                  <li className="flex items-center gap-3 text-sm text-slate-300">
+                    <div className="w-6 h-6 rounded-lg bg-[#2DD4BF]/20 flex items-center justify-center">
+                      <Zap className="w-3.5 h-3.5 text-[#2DD4BF]" />
+                    </div>
+                    Instant AI-powered insights
+                  </li>
+                </ul>
+
+                {/* CTA */}
+                <div
+                  className="flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white transition-all group-hover:gap-3"
+                  style={{
+                    background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                  }}
+                >
+                  <span>Start Chatting</span>
+                  <ArrowRight className="w-4 h-4" />
+                </div>
               </div>
             </button>
 
-            {/* Classic UI Option */}
+            {/* Classic Interface Option */}
             <button
               onClick={() => handleSelect('ui')}
               disabled={isLoading !== null}
-              className={`relative group p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 text-left transition-all ${
+              className={`relative group p-6 sm:p-8 rounded-2xl text-left transition-all duration-300 overflow-hidden ${
                 isLoading === 'ui'
-                  ? 'border-slate-500 bg-slate-500/10 ring-2 sm:ring-4 ring-slate-500/20'
-                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-500 hover:bg-slate-500/5 active:scale-[0.98]'
-              } ${isLoading !== null && isLoading !== 'ui' ? 'opacity-50' : ''}`}
+                  ? 'ring-2 ring-[#F87171]'
+                  : 'hover:scale-[1.02]'
+              } ${isLoading !== null && isLoading !== 'ui' ? 'opacity-40' : ''}`}
+              style={{
+                background: 'linear-gradient(135deg, rgba(248, 113, 113, 0.15), rgba(239, 90, 111, 0.05))',
+                border: '1px solid rgba(248, 113, 113, 0.3)',
+              }}
             >
-              {/* Loading/Selected indicator */}
+              {/* Hover glow effect */}
+              <div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                style={{
+                  background: 'radial-gradient(circle at center, rgba(248, 113, 113, 0.2) 0%, transparent 70%)',
+                }}
+              />
+
+              {/* Loading indicator */}
               {isLoading === 'ui' && (
-                <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-5 h-5 sm:w-6 sm:h-6 bg-slate-500 rounded-full flex items-center justify-center">
-                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 text-white animate-spin" />
+                <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#F87171] flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 text-white animate-spin" />
                 </div>
               )}
 
-              {/* Badge */}
-              <div className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] sm:text-xs font-bold rounded-full mb-3 sm:mb-4">
-                CLASSIC
-              </div>
+              <div className="relative z-10">
+                {/* Badge */}
+                <div
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold mb-5"
+                  style={{
+                    background: 'rgba(248, 113, 113, 0.2)',
+                    color: '#FCA5A5',
+                    border: '1px solid rgba(248, 113, 113, 0.3)',
+                  }}
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  FULL CONTROL
+                </div>
 
-              {/* Icon */}
-              <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
-                <LayoutDashboard className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
-              </div>
+                {/* Icon */}
+                <div className="relative mb-5">
+                  <div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(135deg, #F87171, #DC2626)',
+                      boxShadow: '0 10px 40px rgba(248, 113, 113, 0.4)',
+                    }}
+                  >
+                    <LayoutDashboard className="w-8 h-8 text-white" />
+                  </div>
+                </div>
 
-              {/* Title */}
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-1 sm:mb-2">
-                Classic Interface
-              </h3>
+                {/* Title */}
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
+                  Classic Interface
+                </h3>
 
-              {/* Description */}
-              <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm mb-3 sm:mb-4">
-                Step-by-step forms with full control.
-              </p>
-
-              {/* Features - hidden on very small screens */}
-              <ul className="space-y-1.5 sm:space-y-2 hidden sm:block">
-                <li className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                  <MousePointer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 flex-shrink-0" />
-                  Detailed control panel
-                </li>
-                <li className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                  <LayoutDashboard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 flex-shrink-0" />
-                  All charts and indicators
-                </li>
-                <li className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                  <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 flex-shrink-0" />
-                  7-step analysis
-                </li>
-              </ul>
-
-              {/* Example */}
-              <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-slate-100 dark:bg-slate-800 rounded-lg sm:rounded-xl">
-                <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mb-0.5 sm:mb-1">
-                  Flow:
+                {/* Description */}
+                <p className="text-slate-400 text-sm mb-5">
+                  Step-by-step analysis with full control over every parameter.
                 </p>
-                <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Coin → Timeframe → Analyze
-                </p>
-              </div>
 
-              {/* Tap hint */}
-              <div className="mt-3 sm:mt-4 flex items-center justify-center gap-1 text-slate-500">
-                <Check className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="text-[10px] sm:text-xs font-medium">Tap to select</span>
+                {/* Features */}
+                <ul className="space-y-3 mb-5">
+                  <li className="flex items-center gap-3 text-sm text-slate-300">
+                    <div className="w-6 h-6 rounded-lg bg-[#F87171]/20 flex items-center justify-center">
+                      <TrendingUp className="w-3.5 h-3.5 text-[#F87171]" />
+                    </div>
+                    40+ technical indicators
+                  </li>
+                  <li className="flex items-center gap-3 text-sm text-slate-300">
+                    <div className="w-6 h-6 rounded-lg bg-[#F87171]/20 flex items-center justify-center">
+                      <MousePointer className="w-3.5 h-3.5 text-[#F87171]" />
+                    </div>
+                    Detailed control panel
+                  </li>
+                  <li className="flex items-center gap-3 text-sm text-slate-300">
+                    <div className="w-6 h-6 rounded-lg bg-[#F87171]/20 flex items-center justify-center">
+                      <Check className="w-3.5 h-3.5 text-[#F87171]" />
+                    </div>
+                    7-step comprehensive analysis
+                  </li>
+                </ul>
+
+                {/* CTA */}
+                <div
+                  className="flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white transition-all group-hover:gap-3"
+                  style={{
+                    background: 'linear-gradient(135deg, #F87171, #DC2626)',
+                  }}
+                >
+                  <span>Open Dashboard</span>
+                  <ArrowRight className="w-4 h-4" />
+                </div>
               </div>
             </button>
           </div>
         </div>
 
-        {/* Footer - simplified */}
-        <div className="px-4 sm:px-8 py-3 sm:py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700">
-          <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 text-center">
-            You can change your preference anytime in settings
+        {/* Footer */}
+        <div className="px-6 sm:px-10 py-4 border-t border-white/10 text-center">
+          <p className="text-xs text-slate-500">
+            You can change your preference anytime in{' '}
+            <span className="text-[#2DD4BF]">Settings</span>
           </p>
         </div>
       </div>
