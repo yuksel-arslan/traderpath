@@ -1,53 +1,12 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { ExternalLink, Sparkles, Code2, Shield, Zap } from 'lucide-react';
 import Link from 'next/link';
-import { Users, ArrowRight, Crown, Sparkles } from 'lucide-react';
 
-const TEAM_MEMBERS = [
-  {
-    name: 'Yüksel Arslan',
-    role: 'Founder & Product Visionary',
-    roles: ['Founder & CEO', 'Head of AI', 'Lead Architect', 'Lead Engineer', 'Head of Product'],
-    description: 'Visionary entrepreneur building the future of AI-powered trading analysis',
-    avatar: 'YA',
-    color: 'from-amber-500 via-orange-500 to-red-500',
-    borderColor: 'border-amber-500/30',
-    borderHover: 'hover:border-amber-500/50',
-    ringColor: 'ring-amber-500/20',
-    badgeColors: {
-      bg: 'bg-amber-500/10',
-      border: 'border-amber-500/20',
-      text: 'text-amber-600 dark:text-amber-400',
-    },
-    badge: {
-      text: 'Human',
-      bg: 'bg-gradient-to-r from-amber-500 to-orange-500',
-    },
-    link: null,
-  },
-  {
-    name: 'BILGE',
-    role: 'AI Development Architect',
-    roles: ['Architecture', 'Full-Stack Development', 'AI Systems'],
-    description: 'AI architect powered by Claude Opus 4.5, embodying wisdom and precision in software development',
-    avatar: 'B',
-    color: 'from-cyan-400 via-teal-500 to-cyan-600',
-    borderColor: 'border-cyan-500/30',
-    borderHover: 'hover:border-cyan-500/50',
-    ringColor: 'ring-cyan-500/20',
-    badgeColors: {
-      bg: 'bg-cyan-500/10',
-      border: 'border-cyan-500/20',
-      text: 'text-cyan-600 dark:text-cyan-400',
-    },
-    badge: {
-      text: 'AI',
-      bg: 'bg-gradient-to-r from-cyan-500 to-teal-500',
-    },
-    link: '/bilge',
-  },
-];
+interface TeamSectionProps {
+  isDark?: boolean;
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -71,7 +30,35 @@ const cardVariants = {
   },
 };
 
-export function TeamSection() {
+export function TeamSection({ isDark = true }: TeamSectionProps) {
+  const team = [
+    {
+      name: 'Yuksel Arslan',
+      role: 'Founder & Product Visionary',
+      description: '44 years of construction engineering across 4 continents. Now building digital products.',
+      isHuman: true,
+      links: {
+        linkedin: 'https://linkedin.com/in/yukselarslan',
+        website: 'https://yukselarslan.com',
+      },
+    },
+    {
+      name: 'BILGE',
+      role: 'AI Development Architect',
+      description: 'Inspired by Bilge Kagan. Built with prompts, driven by logic, evolving continuously.',
+      isHuman: false,
+      backbone: 'Claude Opus 4.5',
+      links: {
+        page: '/bilge',
+      },
+      values: [
+        { icon: Zap, label: 'Wisdom' },
+        { icon: Shield, label: 'Resolve' },
+        { icon: Code2, label: 'Evolution' },
+      ],
+    },
+  ];
+
   return (
     <section className="py-16 sm:py-20 bg-gradient-to-b from-accent/50 via-accent/30 to-transparent relative overflow-hidden">
       {/* Decorative elements */}
@@ -85,83 +72,140 @@ export function TeamSection() {
           viewport={{ once: true, margin: '-100px' }}
           variants={containerVariants}
         >
-          <motion.div variants={cardVariants} className="text-center mb-12">
-            <span className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-500 text-sm font-medium mb-4">
-              <Users className="w-4 h-4" />
-              Our Team
-            </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-              Meet Our Team
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              A unique collaboration between human vision and AI capability,
-              building the future of trading analysis together.
-            </p>
+          {/* Section Header */}
+          <motion.div
+            variants={cardVariants}
+            className="text-center mb-12"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 gradient-text-logo-animate">Meet the Team</h2>
+            <p className="text-muted-foreground">Human vision meets AI architecture</p>
+            <div className="w-20 h-1 mx-auto mt-4 bg-gradient-to-r from-transparent via-[#2DD4BF] to-transparent" />
           </motion.div>
 
-          <div className="flex flex-col md:flex-row gap-6 max-w-4xl mx-auto justify-center items-stretch">
-            {TEAM_MEMBERS.map((member, index) => (
+          {/* Team Grid */}
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {team.map((member, index) => (
               <motion.div
-                key={index}
+                key={member.name}
                 variants={cardVariants}
                 whileHover={{ scale: 1.02, y: -5 }}
-                className={`flex-1 max-w-md p-8 bg-card/50 backdrop-blur border-2 ${member.borderColor} ${member.borderHover} rounded-2xl hover:shadow-xl transition-all group text-center relative`}
+                className="p-8 bg-card/50 backdrop-blur border rounded-2xl relative transition-all hover:shadow-xl"
               >
-                {/* Badge */}
-                <div className={`absolute -top-3 right-6 px-3 py-1 ${member.badge.bg} rounded-full text-white text-xs font-bold shadow-lg`}>
-                  {member.badge.text}
+                {/* Human/AI Badge */}
+                <div
+                  className={`absolute -top-3 right-6 px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg ${member.isHuman ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-gradient-to-r from-cyan-500 to-teal-500'}`}
+                >
+                  {member.isHuman ? 'Human' : 'AI'}
                 </div>
 
                 {/* Avatar */}
-                <div className="relative inline-block mb-6">
-                  {/* Glow effect for AI */}
-                  {member.link && (
+                <div className="flex justify-center mb-6">
+                  {member.isHuman ? (
+                    <div
+                      className="w-24 h-24 rounded-2xl flex items-center justify-center text-4xl font-bold text-amber-500 ring-4 ring-amber-500/20"
+                      style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0.1))', border: '2px solid rgba(245, 158, 11, 0.3)' }}
+                    >
+                      YA
+                    </div>
+                  ) : (
                     <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-teal-500 rounded-full blur-lg opacity-30"
-                      animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3] }}
-                      transition={{ duration: 3, repeat: Infinity }}
-                    />
+                      whileHover={{ scale: 1.05, rotate: 5 }}
+                      className="w-24 h-24 rounded-2xl flex items-center justify-center relative overflow-hidden ring-4 ring-cyan-500/20"
+                      style={{ background: 'linear-gradient(135deg, #40E0D0, #00CED1)', boxShadow: '0 10px 40px rgba(64, 224, 208, 0.4)' }}
+                    >
+                      <span className="text-4xl text-white">&#9672;</span>
+                    </motion.div>
                   )}
-                  <div className={`relative w-24 h-24 bg-gradient-to-br ${member.color} rounded-full flex items-center justify-center shadow-xl group-hover:scale-110 transition ring-4 ${member.ringColor}`}>
-                    <span className="text-white text-3xl font-bold">{member.avatar}</span>
-                  </div>
                 </div>
 
-                {/* Name */}
-                <h3 className="font-bold text-2xl mb-2 gradient-text-logo-animate">{member.name}</h3>
-
-                {/* Role */}
-                <p className={`text-sm font-medium mb-4 ${member.badgeColors.text}`}>{member.role}</p>
-
-                {/* Role badges */}
-                <div className="flex flex-wrap gap-2 justify-center mb-4">
-                  {member.roles.map((role, idx) => (
-                    <span
-                      key={idx}
-                      className={`px-3 py-1 ${member.badgeColors.bg} border ${member.badgeColors.border} rounded-full ${member.badgeColors.text} text-xs font-medium`}
-                    >
-                      {role}
-                    </span>
-                  ))}
+                {/* Info */}
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-bold mb-1 gradient-text-logo-animate">{member.name}</h3>
+                  <p className={`text-sm font-medium ${member.isHuman ? 'text-amber-500' : 'text-[#40E0D0]'}`}>
+                    {member.role}
+                  </p>
+                  {!member.isHuman && member.backbone && (
+                    <p className="text-xs mt-1 text-muted-foreground">
+                      Powered by {member.backbone}
+                    </p>
+                  )}
                 </div>
 
                 {/* Description */}
-                <p className="text-muted-foreground text-sm mb-4">{member.description}</p>
+                <p className="text-center text-sm leading-relaxed mb-6 text-muted-foreground">
+                  {member.description}
+                </p>
 
-                {/* Meet BILGE button */}
-                {member.link && (
-                  <Link
-                    href={member.link}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg text-sm font-medium hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 transition-all"
-                  >
-                    <Crown className="w-4 h-4" />
-                    <span>Meet BILGE</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
+                {/* BILGE Values */}
+                {!member.isHuman && member.values && (
+                  <div className="flex justify-center gap-2 mb-6">
+                    {member.values.map((value) => (
+                      <div
+                        key={value.label}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs text-[#40E0D0]"
+                        style={{ background: 'rgba(64, 224, 208, 0.1)' }}
+                      >
+                        <value.icon size={12} />
+                        <span>{value.label}</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
+
+                {/* Links */}
+                <div className="flex justify-center gap-3">
+                  {member.isHuman ? (
+                    <>
+                      <a
+                        href={member.links.linkedin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 rounded-lg text-sm text-amber-500 hover:scale-105 transition-transform"
+                        style={{ background: 'rgba(245, 158, 11, 0.1)' }}
+                      >
+                        LinkedIn
+                      </a>
+                      <a
+                        href={member.links.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 rounded-lg text-sm text-amber-500 hover:scale-105 transition-transform flex items-center gap-1"
+                        style={{ background: 'rgba(245, 158, 11, 0.1)' }}
+                      >
+                        Portfolio <ExternalLink size={12} />
+                      </a>
+                    </>
+                  ) : (
+                    <Link
+                      href={member.links.page || '/bilge'}
+                      className="px-6 py-2 rounded-lg text-sm text-white hover:scale-105 transition-transform flex items-center gap-2"
+                      style={{ background: 'linear-gradient(135deg, #40E0D0, #00CED1)', boxShadow: '0 0 20px rgba(64, 224, 208, 0.4)' }}
+                    >
+                      <Sparkles size={14} />
+                      Meet BILGE
+                      <ExternalLink size={12} />
+                    </Link>
+                  )}
+                </div>
               </motion.div>
             ))}
           </div>
+
+          {/* Partnership Quote */}
+          <motion.div
+            variants={cardVariants}
+            className="mt-12 text-center"
+          >
+            <div
+              className="inline-block px-8 py-4 rounded-2xl border border-border"
+              style={{ background: 'linear-gradient(135deg, rgba(45, 212, 191, 0.05), rgba(64, 224, 208, 0.05))' }}
+            >
+              <p className="text-lg italic text-muted-foreground">
+                &ldquo;Not boss and employee. <span className="text-[#40E0D0]">Partners</span>.
+                Not just working together. <span className="text-amber-500">Building together</span>.&rdquo;
+              </p>
+            </div>
+          </motion.div>
         </motion.div>
       </div>
     </section>
