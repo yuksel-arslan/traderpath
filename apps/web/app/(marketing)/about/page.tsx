@@ -19,7 +19,9 @@ import {
   Award,
   Heart,
   Eye,
+  Crown,
 } from 'lucide-react';
+import { TeamSection } from '../../../components/TeamSection';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
@@ -33,27 +35,6 @@ interface LivePrice {
   change: string;
   up: boolean;
 }
-
-const TEAM = [
-  {
-    name: 'Yüksel Arslan',
-    role: 'Founder & CEO',
-    roles: ['Founder & CEO', 'Head of AI', 'Lead Architect', 'Lead Engineer', 'Head of Product'],
-    description: 'Visionary entrepreneur building the future of AI-powered trading analysis',
-    avatar: 'YA',
-    color: 'from-amber-500 via-orange-500 to-red-500',
-    featured: true,
-  },
-  {
-    name: 'Claude',
-    role: 'Design & Engineering',
-    roles: ['Design & Engineering'],
-    description: 'AI assistant powering development through Chat + Code collaboration',
-    avatar: 'AI',
-    color: 'from-purple-500 via-blue-500 to-cyan-500',
-    featured: false,
-  },
-];
 
 const VALUES = [
   {
@@ -485,62 +466,7 @@ export default function AboutPage() {
       </section>
 
       {/* Team Section */}
-      <section className="py-16 sm:py-20 bg-gradient-to-b from-accent/50 via-accent/30 to-transparent relative overflow-hidden">
-        {/* Decorative elements */}
-        <div className="absolute top-20 right-10 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 left-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center mb-12">
-            <span className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-500 text-sm font-medium mb-4">
-              <Users className="w-4 h-4" />
-              Our Team
-            </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-              Meet Our Team
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              A unique collaboration between human vision and AI capability,
-              building the future of trading analysis together.
-            </p>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-6 max-w-4xl mx-auto justify-center items-stretch">
-            {/* Yüksel Arslan - Featured Card */}
-            <div className="flex-1 max-w-md p-8 bg-card/50 backdrop-blur border-2 border-amber-500/30 rounded-2xl hover:border-amber-500/50 hover:shadow-xl transition group text-center">
-              <div className={`w-24 h-24 bg-gradient-to-br ${TEAM[0].color} rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl group-hover:scale-110 transition ring-4 ring-amber-500/20`}>
-                <span className="text-white text-3xl font-bold">{TEAM[0].avatar}</span>
-              </div>
-              <h3 className="font-bold text-2xl mb-3 gradient-text-logo-animate">{TEAM[0].name}</h3>
-              <div className="flex flex-wrap gap-2 justify-center mb-4">
-                {TEAM[0].roles.map((role, idx) => (
-                  <span key={idx} className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-600 dark:text-amber-400 text-xs font-medium">
-                    {role}
-                  </span>
-                ))}
-              </div>
-              <p className="text-muted-foreground">{TEAM[0].description}</p>
-            </div>
-
-            {/* Claude - AI Card */}
-            <div className="flex-1 max-w-md p-8 bg-card/50 backdrop-blur border-2 border-purple-500/30 rounded-2xl hover:border-purple-500/50 hover:shadow-xl transition group text-center">
-              <div className={`w-24 h-24 bg-gradient-to-br ${TEAM[1].color} rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl group-hover:scale-110 transition ring-4 ring-purple-500/20`}>
-                <span className="text-white text-3xl font-bold">{TEAM[1].avatar}</span>
-              </div>
-              <h3 className="font-bold text-2xl mb-3 gradient-text-logo-animate">{TEAM[1].name}</h3>
-              <div className="flex flex-wrap gap-2 justify-center mb-4">
-                <span className="px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-600 dark:text-purple-400 text-xs font-medium">
-                  {TEAM[1].role}
-                </span>
-                <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-600 dark:text-blue-400 text-xs font-medium">
-                  Chat + Code
-                </span>
-              </div>
-              <p className="text-muted-foreground">{TEAM[1].description}</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <TeamSection />
 
       {/* Timeline Section */}
       <section className="py-16 sm:py-20 relative overflow-hidden">
@@ -684,6 +610,15 @@ export default function AboutPage() {
             <p className="text-muted-foreground text-sm">
               © 2025 TraderPath. All rights reserved.
             </p>
+            <Link
+              href="/bilge"
+              className="group inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border border-cyan-500/30 rounded-full hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10 transition-all"
+            >
+              <Crown className="w-4 h-4 text-cyan-500 group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-medium bg-gradient-to-r from-cyan-500 to-teal-500 bg-clip-text text-transparent">
+                Architected by BILGE
+              </span>
+            </Link>
             <p className="text-muted-foreground text-sm">
               Trading involves risk. Not financial advice.
             </p>

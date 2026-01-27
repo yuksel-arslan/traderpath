@@ -48,6 +48,7 @@ import {
   Search,
   Coins,
   Gift,
+  Crown,
   Mic
 } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -2068,6 +2069,15 @@ export default function LandingPage() {
             <p className="text-muted-foreground text-sm">
               © 2025 TraderPath. All rights reserved.
             </p>
+            <Link
+              href="/bilge"
+              className="group inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border border-cyan-500/30 rounded-full hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10 transition-all"
+            >
+              <Crown className="w-4 h-4 text-cyan-500 group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-medium bg-gradient-to-r from-cyan-500 to-teal-500 bg-clip-text text-transparent">
+                Architected by BILGE
+              </span>
+            </Link>
             <p className="text-muted-foreground text-sm">
               Trading involves risk. Not financial advice.
             </p>
