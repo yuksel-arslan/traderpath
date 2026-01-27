@@ -105,26 +105,83 @@ const FEATURES = [
   },
 ];
 
-const TESTIMONIALS = [
-  {
-    name: 'Alex M.',
-    role: 'Day Trader',
-    content: 'TraderPath helped me avoid 3 manipulation traps in just one week. The Safety Check feature is incredible.',
-    rating: 5,
-  },
-  {
-    name: 'Sarah K.',
-    role: 'Crypto Investor',
-    content: 'Finally, an analysis tool that explains WHY I should or shouldn\'t enter a trade. Game changer!',
-    rating: 5,
-  },
-  {
-    name: 'Michael R.',
-    role: 'Swing Trader',
-    content: 'The 7-step analysis gives me confidence in my trading decisions. Worth every credit.',
-    rating: 5,
-  },
-];
+// Platform metrics component - shows real data instead of fake testimonials
+function PlatformMetrics() {
+  const [metrics, setMetrics] = useState<{
+    totalAnalyses: number;
+    accuracy: number;
+    goSignalRate: number;
+    closedCount: number;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io'}/api/analysis/platform-stats`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setMetrics({
+              totalAnalyses: data.data.platform.totalAnalyses,
+              accuracy: data.data.accuracy.overall,
+              goSignalRate: data.data.goSignalRate.rate,
+              closedCount: data.data.accuracy.closedCount,
+            });
+          }
+        }
+      } catch {
+        // Silently fail - will show placeholder
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMetrics();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="p-6 bg-card border rounded-lg animate-pulse">
+            <div className="h-8 bg-muted rounded w-1/2 mb-2"></div>
+            <div className="h-4 bg-muted rounded w-3/4"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="p-6 bg-card border rounded-lg text-center">
+        <div className="text-4xl font-bold text-primary mb-2">
+          {metrics ? metrics.totalAnalyses.toLocaleString() : '—'}
+        </div>
+        <p className="text-muted-foreground">Total Analyses Completed</p>
+        <p className="text-xs text-muted-foreground mt-2">Real-time platform data</p>
+      </div>
+      <div className="p-6 bg-card border rounded-lg text-center">
+        <div className="text-4xl font-bold text-emerald-500 mb-2">
+          {metrics && metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—'}
+        </div>
+        <p className="text-muted-foreground">Platform Accuracy</p>
+        <p className="text-xs text-muted-foreground mt-2">
+          {metrics && metrics.closedCount > 0
+            ? `Based on ${metrics.closedCount} verified trades`
+            : 'Awaiting verified trade outcomes'}
+        </p>
+      </div>
+      <div className="p-6 bg-card border rounded-lg text-center">
+        <div className="text-4xl font-bold text-amber-500 mb-2">
+          {metrics && metrics.goSignalRate > 0 ? `${metrics.goSignalRate}%` : '—'}
+        </div>
+        <p className="text-muted-foreground">GO Signal Success Rate</p>
+        <p className="text-xs text-muted-foreground mt-2">TP hit vs SL hit ratio</p>
+      </div>
+    </div>
+  );
+}
 
 
 const FAQS = [
@@ -1907,33 +1964,21 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Platform Metrics - Real Data */}
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-              Trusted by Traders Worldwide
+              Real Results, Real Data
             </h2>
             <p className="text-muted-foreground">
-              See what our users have to say about TraderPath
+              Transparent metrics from our platform - no fake reviews, just verified performance
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((testimonial, index) => (
-              <div key={index} className="p-6 bg-card border rounded-lg">
-                <div className="flex gap-1 mb-4">
-                  {Array.from({ length: testimonial.rating }).map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-amber-500 text-amber-500" />
-                  ))}
-                </div>
-                <p className="text-muted-foreground mb-4">&ldquo;{testimonial.content}&rdquo;</p>
-                <div>
-                  <p className="font-semibold">{testimonial.name}</p>
-                  <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <PlatformMetrics />
+          <p className="text-center text-xs text-muted-foreground mt-8">
+            Data updates in real-time from verified trade outcomes. We believe in transparency over testimonials.
+          </p>
         </div>
       </section>
 
