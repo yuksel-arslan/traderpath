@@ -112,9 +112,8 @@ function StatsBoxes() {
     totalAnalyses: number;
     accuracy: number;
     totalPnL: number;
-    dailyPnL: number;
-    dailyClosedCount: number;
     closedCount: number;
+    daysSinceStart: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -146,13 +145,19 @@ function StatsBoxes() {
         }
 
         if (data?.success) {
+          // Calculate days since platform start
+          const platformSince = data.data.platform.platformSince;
+          const startDate = platformSince ? new Date(platformSince) : new Date();
+          const today = new Date();
+          const diffTime = Math.abs(today.getTime() - startDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
           setMetrics({
             totalAnalyses: data.data.platform.totalAnalyses || 0,
             accuracy: data.data.accuracy.overall || 0,
             totalPnL: data.data.accuracy.totalPnL || 0,
-            dailyPnL: data.data.daily?.pnl || 0,
-            dailyClosedCount: data.data.daily?.closedCount || 0,
             closedCount: data.data.accuracy.closedCount || 0,
+            daysSinceStart: diffDays || 1,
           });
         } else {
           setError(true);
@@ -183,6 +188,11 @@ function StatsBoxes() {
     return null;
   }
 
+  // Calculate analyses per day
+  const analysesPerDay = metrics.daysSinceStart > 0
+    ? (metrics.totalAnalyses / metrics.daysSinceStart).toFixed(1)
+    : '0';
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
       {/* Total Analyses */}
@@ -212,19 +222,13 @@ function StatsBoxes() {
         )}
       </div>
 
-      {/* Past 24h */}
+      {/* Days Elapsed */}
       <div className="p-4 bg-card/50 backdrop-blur border rounded-xl text-center">
-        <div className={`text-2xl md:text-3xl font-bold mb-1 ${
-          metrics.dailyClosedCount > 0
-            ? (metrics.dailyPnL >= 0 ? 'text-emerald-500' : 'text-red-500')
-            : 'text-muted-foreground'
-        }`}>
-          {metrics.dailyClosedCount > 0 ? `${metrics.dailyPnL >= 0 ? '+' : ''}${metrics.dailyPnL}%` : '—'}
+        <div className="text-2xl md:text-3xl font-bold text-blue-500 mb-1">
+          {metrics.daysSinceStart}
         </div>
-        <p className="text-xs text-muted-foreground">Past 24h</p>
-        {metrics.dailyClosedCount > 0 && (
-          <p className="text-[10px] text-muted-foreground/70 mt-0.5">{metrics.dailyClosedCount} trades</p>
-        )}
+        <p className="text-xs text-muted-foreground">Days Elapsed</p>
+        <p className="text-[10px] text-muted-foreground/70 mt-0.5">{analysesPerDay} analyses/day</p>
       </div>
     </div>
   );
