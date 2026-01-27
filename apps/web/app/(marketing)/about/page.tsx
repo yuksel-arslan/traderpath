@@ -328,10 +328,10 @@ export default function AboutPage() {
             <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-teal-600 dark:from-purple-300 dark:via-pink-300 dark:to-teal-300 bg-clip-text text-transparent">Our Story</span>
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2 gradient-text-logo-animate">
-            From Construction Sites to Code
+            From Construction to Code
           </h1>
           <p className="text-base sm:text-xl text-muted-foreground mb-8 sm:mb-12 max-w-3xl mx-auto px-2">
-            After 44 years of construction engineering across 4 continents, I discovered no-code tools in 2016.
+            After 44 years of construction engineering across 4 continents, I discovered no-code tools and AI World.
             When AI emerged in 2024, I saw the opportunity to build something meaningful. After 10 months of
             experimentation, with Claude I built TraderPath — a platform that brings institutional-grade
             crypto analysis to everyone. In parallel, I&apos;m also building <span className="text-amber-500 font-medium">SmartCon360</span> (AI-powered
