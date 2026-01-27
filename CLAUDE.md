@@ -893,6 +893,10 @@ Kullanıcı Hakları Aktif:
   - AI Concierge quick command güncellendi: "Top 5 Coins (300 Cr)"
   - Intent detection güncellendi: "highest probability", "give me top coins" → ücretli tarama tetikler
   - Güncellenen dosyalar: `apps/web/app/(dashboard)/analyze/page.tsx`, `apps/web/app/(dashboard)/concierge/page.tsx`, `apps/api/src/modules/concierge/concierge.service.ts`
+- **Tarama sonrası otomatik scroll eklendi**:
+  - "Scan Now" butonu ile Top 5 tarama yapıldığında, tarama bitince otomatik olarak Top 5 Coins bölümüne smooth scroll yapılıyor
+  - `id="top-coins-section"` div'e eklendi
+  - `scrollToTopCoins()` callback fonksiyonu eklendi
 
 ---
 
