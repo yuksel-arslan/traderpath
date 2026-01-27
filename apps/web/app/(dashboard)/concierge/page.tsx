@@ -6,6 +6,7 @@
 // ===========================================
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Bot,
   Mic,
@@ -26,6 +27,8 @@ import {
   Brain,
   Shield,
   LineChart,
+  CheckCircle2,
+  Crown,
 } from 'lucide-react';
 import { authFetch, getApiUrl } from '@/lib/api';
 import Link from 'next/link';
@@ -49,6 +52,7 @@ interface ChatMessage {
     score?: number;
     analysisId?: string;
     direction?: string;
+    scanComplete?: boolean;
     chartData?: Array<{ time: number; open: number; high: number; low: number; close: number }>;
     tradePlan?: {
       entry: number;
@@ -163,6 +167,7 @@ function VerdictBadge({ verdict, score }: { verdict: string; score?: number }) {
 }
 
 export default function ConciergePage() {
+  const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -170,9 +175,12 @@ export default function ConciergePage() {
   const [credits, setCredits] = useState<number | null>(null);
   const [marketData, setMarketData] = useState<MarketData | null>(null);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [scanInProgress, setScanInProgress] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+  const scanPollRef = useRef<NodeJS.Timeout | null>(null);
+  const scanStartTimeRef = useRef<number>(0);
 
   // Fetch market data
   useEffect(() => {
@@ -258,6 +266,82 @@ export default function ConciergePage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (scanPollRef.current) {
+        clearInterval(scanPollRef.current);
+      }
+    };
+  }, []);
+
+  // Poll for scan results
+  const startScanPolling = useCallback(() => {
+    setScanInProgress(true);
+    scanStartTimeRef.current = Date.now();
+
+    // Clear any existing poll
+    if (scanPollRef.current) {
+      clearInterval(scanPollRef.current);
+    }
+
+    // Poll every 10 seconds for up to 5 minutes
+    scanPollRef.current = setInterval(async () => {
+      const elapsedMs = Date.now() - scanStartTimeRef.current;
+      const elapsedMinutes = elapsedMs / 60000;
+
+      // Stop polling after 5 minutes
+      if (elapsedMinutes > 5) {
+        if (scanPollRef.current) {
+          clearInterval(scanPollRef.current);
+          scanPollRef.current = null;
+        }
+        setScanInProgress(false);
+        return;
+      }
+
+      try {
+        const res = await authFetch('/api/analysis/top-coins?limit=5&tradeableOnly=true');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.data && data.data.length > 0) {
+            // Check if the scan data is fresh (scanned after we started polling)
+            const latestScan = new Date(data.data[0].scannedAt).getTime();
+            if (latestScan > scanStartTimeRef.current) {
+              // Scan complete! Stop polling
+              if (scanPollRef.current) {
+                clearInterval(scanPollRef.current);
+                scanPollRef.current = null;
+              }
+              setScanInProgress(false);
+
+              // Add completion message with results
+              const topCoins = data.data.slice(0, 5);
+              const coinList = topCoins.map((coin: any, i: number) => {
+                const emoji = coin.verdict === 'GO' ? '🟢' : coin.verdict === 'CONDITIONAL_GO' ? '🟡' : '🟠';
+                return `${i + 1}. ${emoji} **${coin.symbol}** - Score: ${coin.reliabilityScore}/100`;
+              }).join('\n');
+
+              const completionMessage: ChatMessage = {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `✅ **Scan Complete!**\n\n**Top 5 High-Probability Coins:**\n${coinList}\n\n👆 Click the button below to view detailed analysis.`,
+                timestamp: new Date(),
+                data: {
+                  scanComplete: true,
+                },
+              };
+
+              setMessages(prev => [...prev, completionMessage]);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error polling for scan results:', error);
+      }
+    }, 10000); // Poll every 10 seconds
+  }, []);
+
   // Send message
   const sendMessage = async (text?: string) => {
     const messageText = text || input.trim();
@@ -304,6 +388,11 @@ export default function ConciergePage() {
 
       if (data.creditsRemaining !== undefined) {
         setCredits(data.creditsRemaining);
+      }
+
+      // Start polling if a scan was initiated
+      if (data.intent === 'TOP_COINS_SCAN' && data.success && data.creditsSpent > 0) {
+        startScanPolling();
       }
     } catch (error) {
       const errorMessage: ChatMessage = {
@@ -504,6 +593,20 @@ export default function ConciergePage() {
                           />
                         </div>
                       )}
+
+                      {/* Scan Complete - View Results Button */}
+                      {msg.data?.scanComplete && (
+                        <div className="mt-4">
+                          <button
+                            onClick={() => router.push('/analyze')}
+                            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold transition-all shadow-lg hover:shadow-amber-500/30"
+                          >
+                            <Crown className="w-5 h-5" />
+                            View Top 5 Coins on Analyze Page
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -519,6 +622,21 @@ export default function ConciergePage() {
                           <div className="w-2 h-2 rounded-full bg-teal-600 dark:bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
                         <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Thinking...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Scan in Progress */}
+                {scanInProgress && !isLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 backdrop-blur-sm border border-amber-200 dark:border-amber-500/20 rounded-2xl px-4 py-3 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <RefreshCw className="w-4 h-4 text-amber-600 dark:text-amber-400 animate-spin" />
+                        <div>
+                          <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Scanning top 30 coins...</span>
+                          <p className="text-xs text-amber-600/70 dark:text-amber-400/70 mt-0.5">Results will appear automatically when ready</p>
+                        </div>
                       </div>
                     </div>
                   </div>
