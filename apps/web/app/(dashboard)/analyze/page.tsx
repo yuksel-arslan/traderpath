@@ -42,6 +42,11 @@ const CoinSelector = dynamic(
   { ssr: false, loading: () => <div className="h-20 bg-muted/30 rounded-lg animate-pulse" /> }
 );
 
+const CoinIcon = dynamic(
+  () => import('../../../components/common/CoinIcon').then(mod => ({ default: mod.CoinIcon })),
+  { ssr: false, loading: () => <div className="w-8 h-8 rounded-full bg-muted/30 animate-pulse" /> }
+);
+
 const TradeTypeSelector = dynamic(
   () => import('../../../components/analysis/TradeTypeSelector').then(mod => ({ default: mod.TradeTypeSelector })),
   { ssr: false, loading: () => <div className="h-10 bg-muted/30 rounded-lg animate-pulse" /> }
@@ -574,12 +579,15 @@ export default function AnalyzePage() {
                           }}
                         >
                           {/* Rank Badge */}
-                          <div className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">
+                          <div className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold shadow-lg z-10">
                             {index + 1}
                           </div>
 
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-bold text-slate-900 dark:text-white">{coin.symbol}</span>
+                            <div className="flex items-center gap-2">
+                              <CoinIcon symbol={coin.symbol} size={24} />
+                              <span className="text-sm font-bold text-slate-900 dark:text-white">{coin.symbol}</span>
+                            </div>
                             <span className={cn(
                               "px-2 py-0.5 rounded text-[10px] font-bold text-white bg-gradient-to-r",
                               verdictColor
