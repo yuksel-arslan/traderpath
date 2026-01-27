@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { ExternalLink, Sparkles, Code2, Shield, Zap } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
+import YukselLogo from './YukselLogo';
 
 interface TeamSectionProps {
   isDark?: boolean;
@@ -143,16 +143,7 @@ export function TeamSection({ isDark = true }: TeamSectionProps) {
                 {/* Avatar */}
                 <div className="flex justify-center mb-6">
                   {member.isHuman ? (
-                    <div className="relative w-24 h-24 rounded-2xl overflow-hidden ring-4 ring-amber-500/30 shadow-lg">
-                      <Image
-                        src={member.photo || '/images/yuksel-arslan.jpg'}
-                        alt={member.name}
-                        fill
-                        className="object-cover object-top"
-                        sizes="96px"
-                        priority
-                      />
-                    </div>
+                    <YukselLogo size={96} showName={false} variant="combined" isDark={isDark} />
                   ) : (
                     <BilgeDiamondLogo />
                   )}
