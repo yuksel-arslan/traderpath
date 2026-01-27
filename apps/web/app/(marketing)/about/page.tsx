@@ -25,6 +25,7 @@ import { TeamSection } from '../../../components/TeamSection';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
+import YukselLogo from '../../../components/YukselLogo';
 
 // Coins to display in the ticker
 const TICKER_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX'];
@@ -316,10 +317,15 @@ export default function AboutPage() {
           <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2 gradient-text-logo-animate">
             Empowering Traders with Intelligent Analysis
           </h1>
-          <p className="text-base sm:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-3xl mx-auto px-2">
+          <p className="text-base sm:text-xl text-muted-foreground mb-8 sm:mb-12 max-w-3xl mx-auto px-2">
             TraderPath was born from a simple idea: trading decisions should be based on
             comprehensive analysis, not gut feelings or FOMO. We&apos;re here to level the playing field.
           </p>
+
+          {/* Founder Logo */}
+          <div className="flex justify-center">
+            <YukselLogo size={160} variant="combined" showName={true} />
+          </div>
         </div>
       </section>
 
