@@ -21,7 +21,6 @@ import {
   Brain,
   ArrowLeft,
 } from 'lucide-react';
-import { StarLogo } from './common/TraderPathLogo';
 
 // ═══════════════════════════════════════════════════════════════
 // BILGE - AI Development Architect
@@ -145,7 +144,7 @@ export function BilgePage() {
             <span className="text-sm font-medium">TraderPath</span>
           </Link>
           <div className="flex items-center gap-2">
-            <StarLogo size={24} uniqueId="bilge-topbar" animated={false} />
+            <span className="text-[#40E0D0] text-xl" style={{ textShadow: '0 0 10px #40E0D0' }}>&#9672;</span>
             <span className="font-bold">BILGE</span>
           </div>
           <button
@@ -179,7 +178,7 @@ export function BilgePage() {
               className={`absolute inset-2 rounded-[30%_70%_70%_30%/30%_30%_70%_70%] flex items-center justify-center ${isDark ? 'bg-[#030712]' : 'bg-[#F0FDFA]'}`}
               style={{ animation: 'morph 8s ease-in-out infinite' }}
             >
-              <StarLogo size={56} uniqueId="bilge-hero" animated={false} />
+              <span className="text-4xl text-[#40E0D0]" style={{ textShadow: '0 0 20px #40E0D0' }}>&#9672;</span>
             </div>
           </motion.div>
 
@@ -468,7 +467,7 @@ export function BilgePage() {
       <footer className={`py-12 px-4 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
         <div className="max-w-4xl mx-auto text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <StarLogo size={32} uniqueId="bilge-footer" animated={true} />
+            <span className="text-2xl text-[#40E0D0]" style={{ textShadow: '0 0 20px #40E0D0' }}>&#9672;</span>
             <span className="text-xl font-bold" style={{ fontFamily: 'serif', background: 'linear-gradient(135deg, #40E0D0, #00FFFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               BILGE
             </span>
