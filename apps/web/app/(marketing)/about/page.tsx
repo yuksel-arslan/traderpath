@@ -92,50 +92,55 @@ function CountUp({ end, suffix = '', duration = 2000 }: { end: number; suffix?: 
   const ref = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !hasAnimated) {
-          setHasAnimated(true);
-          const startTime = Date.now();
-          const animate = () => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const easeOut = 1 - Math.pow(1 - progress, 3);
-            setCount(Math.floor(easeOut * end));
-            if (progress < 1) {
-              requestAnimationFrame(animate);
-            } else {
-              setCount(end);
-            }
-          };
-          requestAnimationFrame(animate);
+    const fetchMetrics = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io'}/api/analysis/platform-stats`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setMetrics({
+              totalAnalyses: data.data.platform.totalAnalyses,
+              accuracy: data.data.accuracy.overall,
+              goSignalRate: data.data.goSignalRate.rate,
+              closedCount: data.data.accuracy.closedCount,
+              totalUsers: data.data.platform.totalUsers,
+            });
+          }
         }
-      },
-      { threshold: 0.5 }
-    );
-
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
-
-    return () => observer.disconnect();
-  }, [end, duration, hasAnimated]);
-
-  const formatDisplay = (): string => {
-    if (end >= 1000) {
-      const kValue = count / 1000;
-      if (count >= end) {
-        return Math.round(kValue) + 'K';
+      } catch {
+        // Silently fail
       }
-      return kValue.toFixed(1).replace(/\.0$/, '') + 'K';
-    }
-    return count.toString();
-  };
+    };
+    fetchMetrics();
+  }, []);
 
   return (
-    <span ref={ref}>
-      {formatDisplay()}{suffix}
-    </span>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+      <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className="text-2xl md:text-4xl font-bold text-primary mb-2">
+          {metrics ? metrics.totalAnalyses.toLocaleString() : '—'}
+        </div>
+        <p className="text-xs md:text-sm text-muted-foreground">Total Analyses</p>
+      </div>
+      <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className="text-2xl md:text-4xl font-bold text-emerald-500 mb-2">
+          {metrics && metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—'}
+        </div>
+        <p className="text-xs md:text-sm text-muted-foreground">Accuracy Rate</p>
+      </div>
+      <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className="text-2xl md:text-4xl font-bold text-amber-500 mb-2">
+          {metrics && metrics.goSignalRate > 0 ? `${metrics.goSignalRate}%` : '—'}
+        </div>
+        <p className="text-xs md:text-sm text-muted-foreground">GO Signal Success</p>
+      </div>
+      <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className="text-2xl md:text-4xl font-bold text-blue-500 mb-2">
+          {metrics ? metrics.totalUsers.toLocaleString() : '—'}
+        </div>
+        <p className="text-xs md:text-sm text-muted-foreground">Registered Traders</p>
+      </div>
+    </div>
   );
 }
 
@@ -319,10 +324,10 @@ export default function AboutPage() {
             <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-teal-600 dark:from-purple-300 dark:via-pink-300 dark:to-teal-300 bg-clip-text text-transparent">Our Story</span>
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2 gradient-text-logo-animate">
-            From Construction Sites to Code
+            From Construction to Code
           </h1>
           <p className="text-base sm:text-xl text-muted-foreground mb-8 sm:mb-12 max-w-3xl mx-auto px-2">
-            After 44 years of construction engineering across 4 continents, I discovered no-code tools in 2016.
+            After 44 years of construction engineering across 4 continents, I discovered no-code tools and AI World.
             When AI emerged in 2024, I saw the opportunity to build something meaningful. After 10 months of
             experimentation, with Claude I built TraderPath — a platform that brings institutional-grade
             crypto analysis to everyone. In parallel, I&apos;m also building <span className="text-amber-500 font-medium">SmartCon360</span> (AI-powered
@@ -386,7 +391,7 @@ export default function AboutPage() {
                 {[
                   { icon: Brain, label: 'AI-Powered', value: 'Analysis', color: 'text-blue-500', bg: 'bg-blue-500/10' },
                   { icon: Globe, label: 'Real-time', value: 'Data', color: 'text-green-500', bg: 'bg-green-500/10' },
-                  { icon: TrendingUp, label: '87%', value: 'Accuracy', color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                  { icon: TrendingUp, label: 'Verified', value: 'Results', color: 'text-amber-500', bg: 'bg-amber-500/10' },
                   { icon: Zap, label: '< 60s', value: 'Analysis', color: 'text-purple-500', bg: 'bg-purple-500/10' },
                 ].map((stat, index) => {
                   const Icon = stat.icon;
@@ -507,7 +512,7 @@ export default function AboutPage() {
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Users className="w-5 h-5" />
-              <span className="text-sm font-medium">12,000+ Active Traders</span>
+              <span className="text-sm font-medium">Growing Community</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Activity className="w-5 h-5" />
