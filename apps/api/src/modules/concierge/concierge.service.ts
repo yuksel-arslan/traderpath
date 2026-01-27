@@ -190,7 +190,7 @@ function detectIntent(message: string): {
     return { intent: 'TOP_COINS_BY_SCORE', symbol: String(Math.min(20, Math.max(1, count))) };
   }
 
-  // TOP_COINS_SCAN intent - start paid scan
+  // TOP_COINS_SCAN intent - start paid scan (300 credits)
   if (
     lower.includes('taramayı başlat') ||
     lower.includes('tarama başlat') ||
@@ -200,7 +200,13 @@ function detectIntent(message: string): {
     lower.includes('top 30 tara') ||
     lower.includes('scan top 30') ||
     lower.includes('scan 30') ||
-    lower.includes('taramaya başla')
+    lower.includes('taramaya başla') ||
+    lower.includes('highest probability') ||
+    lower.includes('en yüksek olasılık') ||
+    lower.includes('en yüksek ihtimal') ||
+    (lower.includes('give me') && lower.includes('top') && lower.includes('coin')) ||
+    (lower.includes('ver bana') && lower.includes('coin')) ||
+    (lower.includes('söyle') && lower.includes('coin'))
   ) {
     return { intent: 'TOP_COINS_SCAN' };
   }

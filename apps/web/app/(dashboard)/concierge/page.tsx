@@ -333,7 +333,7 @@ export default function ConciergePage() {
   const quickCommands = [
     { icon: TrendingUp, label: 'Analyze BTC', command: 'Analyze BTC 4h', gradient: 'from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30' },
     { icon: Activity, label: 'Analyze ETH', command: 'Analyze ETH 4h', gradient: 'from-blue-500/20 to-indigo-500/20 hover:from-blue-500/30 hover:to-indigo-500/30' },
-    { icon: Target, label: 'Top Coins', command: 'Show top 5 coins by score', gradient: 'from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30' },
+    { icon: Target, label: 'Top 5 Coins (300 Cr)', command: 'Give me top 5 highest probability coins', gradient: 'from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30' },
     { icon: Brain, label: 'Help', command: 'What can you do?', gradient: 'from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30' },
   ];
 
