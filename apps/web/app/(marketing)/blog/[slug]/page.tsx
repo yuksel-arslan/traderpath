@@ -496,7 +496,6 @@ export default function BlogArticlePage() {
               <ul className="space-y-2 text-muted-foreground">
                 <li><Link href="/about" className="hover:text-foreground transition">About</Link></li>
                 <li><Link href="/blog" className="hover:text-foreground transition">Blog</Link></li>
-                <li><Link href="/careers" className="hover:text-foreground transition">Careers</Link></li>
               </ul>
             </div>
             <div>
