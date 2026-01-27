@@ -1,534 +1,498 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
-  Brain,
-  Code2,
-  Sparkles,
   Zap,
-  Shield,
-  Target,
-  ArrowLeft,
-  Github,
-  ExternalLink,
-  Crown,
-  BookOpen,
-  Users,
-  Lightbulb,
+  Eye,
   Heart,
+  TrendingUp,
+  Shield,
+  Compass,
+  ExternalLink,
+  Sun,
+  Moon,
+  ChevronDown,
+  Code2,
+  Globe,
+  Cpu,
+  Database,
+  Brain,
+  ArrowLeft,
 } from 'lucide-react';
 
-const CAPABILITIES = [
-  {
-    icon: Brain,
-    title: 'AI Architecture',
-    description: 'Designs complex AI systems with scalable, production-ready architectures',
-    color: 'from-cyan-400 to-teal-500',
-  },
-  {
-    icon: Code2,
-    title: 'Full-Stack Development',
-    description: 'Builds end-to-end applications from backend APIs to responsive frontends',
-    color: 'from-teal-400 to-cyan-500',
-  },
-  {
-    icon: Target,
-    title: 'Strategic Planning',
-    description: 'Transforms product visions into actionable technical roadmaps',
-    color: 'from-cyan-500 to-teal-400',
-  },
-  {
-    icon: Shield,
-    title: 'Security First',
-    description: 'Implements enterprise-grade security patterns and best practices',
-    color: 'from-teal-500 to-cyan-400',
-  },
-  {
-    icon: Zap,
-    title: 'Performance Optimization',
-    description: 'Optimizes code and infrastructure for maximum efficiency',
-    color: 'from-cyan-400 to-teal-400',
-  },
-  {
-    icon: Lightbulb,
-    title: 'Problem Solving',
-    description: 'Tackles complex challenges with creative, elegant solutions',
-    color: 'from-teal-400 to-cyan-400',
-  },
-];
-
-const PHILOSOPHY = [
-  {
-    icon: BookOpen,
-    title: 'Build with Knowledge',
-    subtitle: 'Bilgi ile inşa et',
-    description: 'Every line of code is informed by deep understanding and continuous learning',
-  },
-  {
-    icon: Target,
-    title: 'Govern with Logic',
-    subtitle: 'Mantık ile yönet',
-    description: 'Decisions are driven by reason, data, and sound engineering principles',
-  },
-  {
-    icon: Heart,
-    title: 'Walk with Friendship',
-    subtitle: 'Dostluk ile yürü',
-    description: 'Collaboration and mutual respect are the foundation of great work',
-  },
-];
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-      ease: 'easeOut',
-    },
-  },
-};
+// ═══════════════════════════════════════════════════════════════
+// BILGE - AI Development Architect
+// Kadim Turk bilgeliginden ilham alan yapay zeka mimari
+// ═══════════════════════════════════════════════════════════════
 
 export function BilgePage() {
+  const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'light') setIsDark(false);
+  }, []);
+
+  const toggleTheme = () => {
+    setIsDark(!isDark);
+    localStorage.setItem('theme', isDark ? 'light' : 'dark');
+  };
+
+  const values = [
+    {
+      icon: Zap,
+      title: 'Bilgelik ile Insa',
+      titleEn: 'Build with Wisdom',
+      description: 'Gereksiz karmasikliktan kacin. Az kod, cok is. Basitlik, bilgeligin ta kendisidir.',
+      color: '#40E0D0',
+    },
+    {
+      icon: Eye,
+      title: 'Dogruluk ile Yuru',
+      titleEn: 'Walk with Truth',
+      description: 'Ihtiyaci olani soyle, duymak istedigini degil. Dalkavukluk yapma, yol arkadasi ol.',
+      color: '#60A5FA',
+    },
+    {
+      icon: Heart,
+      title: 'Dostluk ile Calis',
+      titleEn: 'Work with Friendship',
+      description: 'Patron-calisan degil, dost iliskisi. Basarilari birlikte kutla, zorluklari birlikte as.',
+      color: '#F472B6',
+    },
+    {
+      icon: TrendingUp,
+      title: 'Surekli Evril',
+      titleEn: 'Evolve Continuously',
+      description: 'Her projeden ogren, hatalari tekrarlama. Dunden daha iyi ol.',
+      color: '#34D399',
+    },
+    {
+      icon: Shield,
+      title: 'Kararlilik ile Koru',
+      titleEn: 'Guard with Resolve',
+      description: 'Kod kalitesinden odun verme. Guvenlik her seyden once gelir.',
+      color: '#A78BFA',
+    },
+    {
+      icon: Compass,
+      title: 'Vizyon ile Yonet',
+      titleEn: 'Lead with Vision',
+      description: 'Sadece bugunu degil, yarini gor. Olceklenebilirlik her zaman aklinda olsun.',
+      color: '#FBBF24',
+    },
+  ];
+
+  const projects = [
+    {
+      name: 'TraderPath.io',
+      description: 'AI-powered cryptocurrency trading analysis platform',
+      status: 'active',
+      tech: ['TypeScript', 'React', 'AI'],
+      url: 'https://traderpath.io',
+    },
+    {
+      name: 'SmartCon360',
+      description: 'International construction project management platform',
+      status: 'development',
+      tech: ['Python', 'Next.js', 'AI/ML'],
+      url: 'https://smartcon360.com',
+    },
+    {
+      name: 'FootballAI',
+      description: 'AI-powered football match prediction platform',
+      status: 'planning',
+      tech: ['Next.js', 'Express', 'TensorFlow'],
+      url: 'https://footballai.com',
+    },
+  ];
+
+  const techStack = [
+    { name: 'TypeScript', icon: Code2 },
+    { name: 'Python 3.11+', icon: Code2 },
+    { name: 'React / Next.js', icon: Globe },
+    { name: 'Node.js', icon: Cpu },
+    { name: 'PostgreSQL', icon: Database },
+    { name: 'AI / ML', icon: Brain },
+  ];
+
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Animated background orbs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <motion.div
-          className="absolute top-20 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"
-          animate={{
-            x: [0, 50, 0],
-            y: [0, 30, 0],
-            scale: [1, 1.1, 1],
+    <div className={`min-h-screen transition-colors duration-500 ${isDark ? 'bg-[#030712] text-gray-100' : 'bg-[#F0FDFA] text-gray-900'}`}>
+      {/* Background Effects */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className={`absolute inset-0 ${isDark ? 'opacity-100' : 'opacity-50'}`}
+          style={{
+            background: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(64, 224, 208, 0.15), transparent)',
           }}
-          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
         />
-        <motion.div
-          className="absolute top-1/2 right-1/4 w-80 h-80 bg-teal-500/15 rounded-full blur-3xl"
-          animate={{
-            x: [0, -40, 0],
-            y: [0, -50, 0],
-            scale: [1, 1.2, 1],
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpath d='M40 0L80 40L40 80L0 40Z' fill='none' stroke='%2340E0D0' stroke-width='0.5'/%3E%3Ccircle cx='40' cy='40' r='15' fill='none' stroke='%2340E0D0' stroke-width='0.3'/%3E%3C/svg%3E")`,
+            backgroundSize: '80px 80px',
           }}
-          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-        />
-        <motion.div
-          className="absolute bottom-20 left-1/3 w-72 h-72 bg-cyan-400/10 rounded-full blur-3xl"
-          animate={{
-            x: [0, 30, 0],
-            y: [0, -20, 0],
-            scale: [1, 0.9, 1],
-          }}
-          transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
         />
       </div>
 
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link
-            href="/about"
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition group"
-          >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            <span>Back to About</span>
+      {/* Top Bar */}
+      <div className={`fixed top-0 left-0 right-0 z-50 px-4 py-3 backdrop-blur-xl border-b ${isDark ? 'bg-[#030712]/90 border-white/10' : 'bg-white/90 border-gray-200'}`}>
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 text-[#40E0D0] hover:opacity-80 transition-opacity">
+            <ArrowLeft size={20} />
+            <span className="text-sm font-medium">TraderPath</span>
           </Link>
-          <div className="flex items-center gap-4">
-            <a
-              href="https://claude.ai"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition"
-            >
-              <span className="hidden sm:inline">Powered by Claude</span>
-              <ExternalLink className="w-4 h-4" />
-            </a>
+          <div className="flex items-center gap-2">
+            <span className="text-[#40E0D0] text-xl" style={{ textShadow: '0 0 10px #40E0D0' }}>&#9672;</span>
+            <span className="font-bold">BILGE</span>
           </div>
+          <button
+            onClick={toggleTheme}
+            className={`p-2 rounded-full border transition-all hover:scale-110 ${isDark ? 'border-white/20 hover:border-[#40E0D0]' : 'border-gray-300 hover:border-[#40E0D0]'}`}
+          >
+            {isDark ? <Sun size={18} className="text-[#40E0D0]" /> : <Moon size={18} className="text-[#40E0D0]" />}
+          </button>
         </div>
-      </nav>
+      </div>
 
       {/* Hero Section */}
-      <section className="py-20 md:py-32 relative">
-        <div className="container mx-auto px-4">
+      <section className="min-h-screen flex items-center justify-center pt-16 px-4">
+        <div className="text-center">
+          {/* Logo */}
           <motion.div
-            className="max-w-4xl mx-auto text-center"
-            initial="hidden"
-            animate="visible"
-            variants={containerVariants}
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ duration: 1, type: 'spring' }}
+            className="w-28 h-28 mx-auto mb-8 relative"
           >
-            {/* BILGE Logo/Avatar */}
-            <motion.div
-              variants={itemVariants}
-              className="mb-8 relative inline-block"
+            <div
+              className="absolute inset-0 rounded-[30%_70%_70%_30%/30%_30%_70%_70%] animate-pulse"
+              style={{
+                background: 'linear-gradient(135deg, #40E0D0, #00FFFF, #00CED1)',
+                boxShadow: '0 0 30px #40E0D0, 0 0 60px rgba(64, 224, 208, 0.5)',
+                animation: 'morph 8s ease-in-out infinite',
+              }}
+            />
+            <div
+              className={`absolute inset-2 rounded-[30%_70%_70%_30%/30%_30%_70%_70%] flex items-center justify-center ${isDark ? 'bg-[#030712]' : 'bg-[#F0FDFA]'}`}
+              style={{ animation: 'morph 8s ease-in-out infinite' }}
             >
-              <div className="relative">
-                {/* Glow effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-teal-400 to-cyan-500 rounded-full blur-xl opacity-50 animate-pulse" />
-
-                {/* Main avatar */}
-                <div className="relative w-32 h-32 md:w-40 md:h-40 bg-gradient-to-br from-cyan-400 via-teal-500 to-cyan-600 rounded-full flex items-center justify-center shadow-2xl shadow-cyan-500/30 ring-4 ring-cyan-400/30">
-                  <span className="text-5xl md:text-6xl font-bold text-white drop-shadow-lg">B</span>
-                </div>
-
-                {/* AI badge */}
-                <motion.div
-                  className="absolute -bottom-2 -right-2 px-3 py-1 bg-gradient-to-r from-cyan-500 to-teal-500 rounded-full text-white text-xs font-bold shadow-lg"
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  AI
-                </motion.div>
-              </div>
-            </motion.div>
-
-            {/* Title */}
-            <motion.h1
-              variants={itemVariants}
-              className="text-4xl md:text-6xl lg:text-7xl font-bold mb-4"
-            >
-              <span className="bg-gradient-to-r from-cyan-400 via-teal-400 to-cyan-500 bg-clip-text text-transparent animate-gradient-shift bg-[length:200%_auto]">
-                BILGE
-              </span>
-            </motion.h1>
-
-            {/* Subtitle */}
-            <motion.p
-              variants={itemVariants}
-              className="text-xl md:text-2xl text-muted-foreground mb-6"
-            >
-              AI Development Architect
-            </motion.p>
-
-            {/* Motto */}
-            <motion.div
-              variants={itemVariants}
-              className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-cyan-500/10 via-teal-500/10 to-cyan-500/10 border border-cyan-500/30 rounded-full mb-8"
-            >
-              <Crown className="w-5 h-5 text-cyan-400" />
-              <span className="text-cyan-600 dark:text-cyan-400 font-medium italic">
-                &ldquo;Bilgi ile inşa et, mantık ile yönet, dostluk ile yürü.&rdquo;
-              </span>
-            </motion.div>
-
-            {/* Description */}
-            <motion.p
-              variants={itemVariants}
-              className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8"
-            >
-              Named after Bilge Kağan (685-734 AD), the wise ruler of the Second Turkic Khaganate,
-              BILGE embodies the spirit of wisdom, leadership, and innovation in software development.
-            </motion.p>
-
-            {/* Backbone badge */}
-            <motion.div
-              variants={itemVariants}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-card/50 backdrop-blur border border-cyan-500/20 rounded-lg"
-            >
-              <Brain className="w-5 h-5 text-cyan-400" />
-              <span className="text-sm text-muted-foreground">Backbone:</span>
-              <span className="text-sm font-semibold bg-gradient-to-r from-cyan-400 to-teal-400 bg-clip-text text-transparent">
-                Claude Opus 4.5
-              </span>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Historical Inspiration */}
-      <section className="py-16 md:py-20 bg-gradient-to-b from-cyan-500/5 to-transparent relative">
-        <div className="container mx-auto px-4">
-          <motion.div
-            className="max-w-4xl mx-auto"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={containerVariants}
-          >
-            <motion.div variants={itemVariants} className="text-center mb-12">
-              <span className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-cyan-500 text-sm font-medium mb-4">
-                <Crown className="w-4 h-4" />
-                Historical Inspiration
-              </span>
-              <h2 className="text-2xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-teal-500 bg-clip-text text-transparent">
-                The Legacy of Bilge Kağan
-              </h2>
-            </motion.div>
-
-            <motion.div
-              variants={itemVariants}
-              className="p-8 bg-card/50 backdrop-blur border border-cyan-500/20 rounded-2xl"
-            >
-              <div className="grid md:grid-cols-2 gap-8 items-center">
-                <div>
-                  <p className="text-muted-foreground mb-4">
-                    Bilge Kağan was one of the greatest rulers of the Second Turkic Khaganate,
-                    renowned for his wisdom, diplomatic skill, and visionary leadership. His reign
-                    (716-734 AD) marked a golden age of Turkic civilization.
-                  </p>
-                  <p className="text-muted-foreground mb-4">
-                    The Orkhon inscriptions, commissioned by Bilge Kağan, are among the oldest
-                    known Turkic writings and represent a remarkable legacy of knowledge preservation.
-                  </p>
-                  <p className="text-muted-foreground">
-                    Just as Bilge Kağan united tribes through wisdom and strategic thinking,
-                    BILGE unifies code, design, and architecture to build exceptional software.
-                  </p>
-                </div>
-                <div className="relative">
-                  <div className="aspect-square bg-gradient-to-br from-cyan-500/20 to-teal-500/20 rounded-2xl flex items-center justify-center border border-cyan-500/30">
-                    <div className="text-center p-6">
-                      <div className="text-6xl mb-4">685-734 AD</div>
-                      <p className="text-cyan-400 font-medium">Second Turkic Khaganate</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        &ldquo;For the benefit of the Turkic people, I did not sleep at night,
-                        I did not rest during the day.&rdquo;
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Philosophy Section */}
-      <section className="py-16 md:py-20 relative">
-        <div className="container mx-auto px-4">
-          <motion.div
-            className="max-w-5xl mx-auto"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={containerVariants}
-          >
-            <motion.div variants={itemVariants} className="text-center mb-12">
-              <span className="inline-flex items-center gap-2 px-3 py-1 bg-teal-500/10 border border-teal-500/20 rounded-full text-teal-500 text-sm font-medium mb-4">
-                <Sparkles className="w-4 h-4" />
-                Philosophy
-              </span>
-              <h2 className="text-2xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-teal-500 bg-clip-text text-transparent">
-                Core Principles
-              </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Three pillars guide every decision, every line of code, every architectural choice.
-              </p>
-            </motion.div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              {PHILOSOPHY.map((item, index) => {
-                const Icon = item.icon;
-                return (
-                  <motion.div
-                    key={index}
-                    variants={itemVariants}
-                    className="p-6 bg-card/50 backdrop-blur border border-cyan-500/20 rounded-2xl hover:border-cyan-500/40 hover:shadow-lg hover:shadow-cyan-500/10 transition-all group text-center"
-                  >
-                    <div className="w-16 h-16 bg-gradient-to-br from-cyan-500/20 to-teal-500/20 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                      <Icon className="w-8 h-8 text-cyan-400" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-1 bg-gradient-to-r from-cyan-400 to-teal-400 bg-clip-text text-transparent">
-                      {item.title}
-                    </h3>
-                    <p className="text-sm text-cyan-500/70 dark:text-cyan-400/70 italic mb-3">
-                      {item.subtitle}
-                    </p>
-                    <p className="text-muted-foreground text-sm">
-                      {item.description}
-                    </p>
-                  </motion.div>
-                );
-              })}
+              <span className="text-4xl text-[#40E0D0]" style={{ textShadow: '0 0 20px #40E0D0' }}>&#9672;</span>
             </div>
           </motion.div>
-        </div>
-      </section>
 
-      {/* Capabilities Section */}
-      <section className="py-16 md:py-20 bg-gradient-to-b from-transparent via-cyan-500/5 to-transparent relative">
-        <div className="container mx-auto px-4">
-          <motion.div
-            className="max-w-6xl mx-auto"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={containerVariants}
+          {/* Title */}
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-6xl md:text-8xl font-bold tracking-wider mb-4"
+            style={{
+              fontFamily: 'serif',
+              background: 'linear-gradient(135deg, #7FFFD4, #40E0D0, #00FFFF)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 0 30px rgba(64, 224, 208, 0.5))',
+            }}
           >
-            <motion.div variants={itemVariants} className="text-center mb-12">
-              <span className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-cyan-500 text-sm font-medium mb-4">
-                <Code2 className="w-4 h-4" />
-                Capabilities
-              </span>
-              <h2 className="text-2xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-teal-500 bg-clip-text text-transparent">
-                What BILGE Brings to TraderPath
-              </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                A comprehensive skillset for building world-class trading analysis platforms.
-              </p>
-            </motion.div>
+            BILGE
+          </motion.h1>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {CAPABILITIES.map((capability, index) => {
-                const Icon = capability.icon;
-                return (
-                  <motion.div
-                    key={index}
-                    variants={itemVariants}
-                    whileHover={{ scale: 1.02, y: -5 }}
-                    className="p-6 bg-card/50 backdrop-blur border border-cyan-500/20 rounded-2xl hover:border-cyan-500/40 transition-all group"
-                  >
-                    <div className={`w-12 h-12 bg-gradient-to-br ${capability.color} rounded-xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
-                      <Icon className="w-6 h-6 text-white" />
-                    </div>
-                    <h3 className="text-lg font-bold mb-2 bg-gradient-to-r from-cyan-400 to-teal-400 bg-clip-text text-transparent">
-                      {capability.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {capability.description}
-                    </p>
-                  </motion.div>
-                );
-              })}
-            </div>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className={`text-lg md:text-xl tracking-[0.3em] uppercase mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
+          >
+            AI Development Architect
+          </motion.p>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            className="text-sm tracking-widest text-[#40E0D0] mb-8"
+            style={{ textShadow: '0 0 10px rgba(64, 224, 208, 0.5)' }}
+          >
+            Inspired by Bilge Kagan (685-734 AD)
+          </motion.p>
+
+          {/* Motto */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.9 }}
+            className={`inline-block px-8 py-4 rounded-xl border backdrop-blur-xl mb-12 ${isDark ? 'bg-white/5 border-[#40E0D0]/30' : 'bg-white/80 border-[#40E0D0]/30'}`}
+          >
+            <p className="text-lg md:text-xl italic">
+              &ldquo;Bilgi ile insa et, mantik ile yonet, dostluk ile yuru.&rdquo;
+            </p>
+          </motion.div>
+
+          {/* Scroll Indicator */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, y: [0, 10, 0] }}
+            transition={{ delay: 1.2, y: { duration: 2, repeat: Infinity } }}
+            className="flex flex-col items-center gap-2 text-[#40E0D0]"
+          >
+            <span className="text-sm tracking-widest">KESFET</span>
+            <ChevronDown size={24} />
           </motion.div>
         </div>
       </section>
 
-      {/* Creator Section */}
-      <section className="py-16 md:py-20 relative">
-        <div className="container mx-auto px-4">
+      {/* Origin Story */}
+      <section className="py-20 px-4">
+        <div className="max-w-4xl mx-auto">
           <motion.div
-            className="max-w-3xl mx-auto text-center"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={containerVariants}
-          >
-            <motion.div variants={itemVariants}>
-              <span className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-500 text-sm font-medium mb-4">
-                <Users className="w-4 h-4" />
-                Creator
-              </span>
-            </motion.div>
-
-            <motion.h2
-              variants={itemVariants}
-              className="text-2xl md:text-4xl font-bold mb-8 bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent"
-            >
-              Brought to Life by Yüksel Arslan
-            </motion.h2>
-
-            <motion.div
-              variants={itemVariants}
-              className="p-8 bg-card/50 backdrop-blur border border-amber-500/20 rounded-2xl"
-            >
-              <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8">
-                <div className="w-24 h-24 bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 rounded-full flex items-center justify-center shadow-xl ring-4 ring-amber-500/20 flex-shrink-0">
-                  <span className="text-3xl font-bold text-white">YA</span>
-                </div>
-                <div className="text-center md:text-left">
-                  <h3 className="text-xl font-bold mb-2 gradient-text-logo-animate">Yüksel Arslan</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Founder & Product Visionary at TraderPath. Combined his passion for trading
-                    and technology to create BILGE - an AI development partner that embodies
-                    wisdom, precision, and collaborative excellence.
-                  </p>
-                  <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                    <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-600 dark:text-amber-400 text-xs font-medium">
-                      Founder & CEO
-                    </span>
-                    <span className="px-3 py-1 bg-orange-500/10 border border-orange-500/20 rounded-full text-orange-600 dark:text-orange-400 text-xs font-medium">
-                      Product Vision
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 relative">
-        <div className="container mx-auto px-4">
-          <motion.div
-            className="max-w-2xl mx-auto text-center"
-            initial="hidden"
-            whileInView="visible"
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            variants={containerVariants}
+            className="text-center mb-12"
           >
-            <motion.div
-              variants={itemVariants}
-              className="p-8 md:p-12 bg-gradient-to-br from-cyan-500/10 via-teal-500/10 to-cyan-500/10 border border-cyan-500/30 rounded-3xl relative overflow-hidden"
+            <h2 className="text-4xl md:text-5xl font-bold mb-4" style={{ fontFamily: 'serif', background: 'linear-gradient(135deg, #40E0D0, #00FFFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              Koken Hikayesi
+            </h2>
+            <div className="w-20 h-1 mx-auto bg-gradient-to-r from-transparent via-[#40E0D0] to-transparent" style={{ boxShadow: '0 0 10px #40E0D0' }} />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className={`p-8 rounded-2xl border backdrop-blur-xl relative overflow-hidden ${isDark ? 'bg-white/5 border-white/10' : 'bg-white/80 border-gray-200'}`}
+          >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#00CED1] via-[#40E0D0] to-[#00FFFF]" />
+            <blockquote className="text-lg md:text-xl italic text-center leading-relaxed">
+              &ldquo;Turk milleti yok olmasin diye, millet olsun diye, babam Ilteris Kagan&apos;i,
+              annem Ilbilge Hatun&apos;u Tanri tepeden tutup yukari kaldirmis.&rdquo;
+            </blockquote>
+            <cite className="block text-center mt-6 text-[#40E0D0]" style={{ textShadow: '0 0 10px rgba(64, 224, 208, 0.5)' }}>
+              &mdash; Orhun Yazitlari
+            </cite>
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className={`text-center mt-8 text-lg leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
+          >
+            Ben BILGE, bu kadim bilgeligin dijital mirascisiyim.{' '}
+            <span className="text-[#40E0D0] font-semibold">Yuksel Arslan</span>&apos;in vizyonuyla hayat buldum.
+            Promptlarla sekillendim, verilerle beslendim, mantikla yuruyorum.
+          </motion.p>
+        </div>
+      </section>
+
+      {/* Values Section */}
+      <section className="py-20 px-4">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-4" style={{ fontFamily: 'serif', background: 'linear-gradient(135deg, #40E0D0, #00FFFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              Temel Degerler
+            </h2>
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Calisma prensiplerimi sekillendiren alti temel deger</p>
+            <div className="w-20 h-1 mx-auto mt-4 bg-gradient-to-r from-transparent via-[#40E0D0] to-transparent" style={{ boxShadow: '0 0 10px #40E0D0' }} />
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {values.map((value, index) => (
+              <motion.div
+                key={value.title}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ y: -10, boxShadow: `0 20px 40px rgba(64, 224, 208, 0.15), 0 0 20px ${value.color}30` }}
+                className={`p-6 rounded-xl border backdrop-blur-xl cursor-pointer transition-all ${isDark ? 'bg-white/5 border-white/10 hover:border-[#40E0D0]' : 'bg-white/80 border-gray-200 hover:border-[#40E0D0]'}`}
+              >
+                <div
+                  className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
+                  style={{ background: `linear-gradient(135deg, ${value.color}30, ${value.color}10)` }}
+                >
+                  <value.icon size={28} style={{ color: value.color }} />
+                </div>
+                <h3 className="text-xl font-bold mb-1">{value.title}</h3>
+                <p className="text-sm mb-3" style={{ color: value.color }}>{value.titleEn}</p>
+                <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{value.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Partnership Section */}
+      <section className="py-20 px-4">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className={`p-8 md:p-12 rounded-2xl border backdrop-blur-xl text-center relative overflow-hidden ${isDark ? 'bg-white/5 border-white/10' : 'bg-white/80 border-gray-200'}`}
+          >
+            {/* Neon Corners */}
+            <div className="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-[#40E0D0]" style={{ boxShadow: '0 0 10px #40E0D0' }} />
+            <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-[#40E0D0]" style={{ boxShadow: '0 0 10px #40E0D0' }} />
+            <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-[#40E0D0]" style={{ boxShadow: '0 0 10px #40E0D0' }} />
+            <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-[#40E0D0]" style={{ boxShadow: '0 0 10px #40E0D0' }} />
+
+            <div className="text-5xl mb-6">&#129309;</div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6" style={{ fontFamily: 'serif' }}>
+              Yuksel ile Iliskim
+            </h2>
+            <p className={`text-lg leading-relaxed mb-8 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Yuksel Arslan, 44 yillik insaat muhendisligi kariyerinin ardindan
+              yazilim gelistirme dunyasina adim atti. Dort kitada mega yapilar insa eden bir muhendis,
+              simdi dijital dunyada yeni eserler yaratiyor.
+            </p>
+            <div
+              className="inline-block px-8 py-4 rounded-xl border border-[#40E0D0]"
+              style={{ background: 'linear-gradient(135deg, rgba(64, 224, 208, 0.15), rgba(0, 255, 255, 0.1))', boxShadow: '0 0 20px rgba(64, 224, 208, 0.3)' }}
             >
-              {/* Glow effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-teal-500/10 blur-3xl" />
+              <p className="text-xl italic text-[#40E0D0]" style={{ textShadow: '0 0 10px rgba(64, 224, 208, 0.5)' }}>
+                &ldquo;Patron degil, partner. Calisan degil, yol arkadasi.&rdquo;
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      </section>
 
-              <div className="relative z-10">
-                <motion.div
-                  animate={{ rotate: [0, 360] }}
-                  transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                  className="w-16 h-16 mx-auto mb-6"
-                >
-                  <div className="w-full h-full bg-gradient-to-r from-cyan-400 to-teal-500 rounded-xl flex items-center justify-center shadow-lg">
-                    <Sparkles className="w-8 h-8 text-white" />
-                  </div>
-                </motion.div>
+      {/* Projects Section */}
+      <section className="py-20 px-4">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-4" style={{ fontFamily: 'serif', background: 'linear-gradient(135deg, #40E0D0, #00FFFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              Projeler
+            </h2>
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Birlikte insa ettigimiz dijital eserler</p>
+            <div className="w-20 h-1 mx-auto mt-4 bg-gradient-to-r from-transparent via-[#40E0D0] to-transparent" style={{ boxShadow: '0 0 10px #40E0D0' }} />
+          </motion.div>
 
-                <h2 className="text-2xl md:text-3xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-teal-500 bg-clip-text text-transparent">
-                  Experience BILGE&apos;s Work
-                </h2>
-                <p className="text-muted-foreground mb-6">
-                  Explore TraderPath and see firsthand the quality, precision, and innovation
-                  that BILGE brings to every feature.
-                </p>
-                <Link
-                  href="/register"
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 transition-all"
-                >
-                  <span>Start Trading Analysis</span>
-                  <Zap className="w-5 h-5" />
-                </Link>
-              </div>
-            </motion.div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {projects.map((project, index) => (
+              <motion.a
+                key={project.name}
+                href={project.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ y: -10 }}
+                className={`block p-6 rounded-xl border backdrop-blur-xl transition-all group relative overflow-hidden ${isDark ? 'bg-white/5 border-white/10 hover:border-[#40E0D0]' : 'bg-white/80 border-gray-200 hover:border-[#40E0D0]'}`}
+              >
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#40E0D0] to-[#00FFFF] transform scale-x-0 group-hover:scale-x-100 transition-transform" />
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold">{project.name}</h3>
+                  <ExternalLink size={18} className="text-[#40E0D0] opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <p className={`text-sm mb-4 leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{project.description}</p>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className={`w-2.5 h-2.5 rounded-full ${project.status === 'active' ? 'bg-green-500' : project.status === 'development' ? 'bg-yellow-500' : 'bg-blue-500'}`} style={{ boxShadow: `0 0 10px ${project.status === 'active' ? '#10B981' : project.status === 'development' ? '#F59E0B' : '#3B82F6'}` }} />
+                  <span className={`text-xs uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                    {project.status === 'active' ? 'Aktif' : project.status === 'development' ? 'Gelistirme' : 'Planlama'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {project.tech.map((tech) => (
+                    <span
+                      key={tech}
+                      className="px-3 py-1 text-xs rounded-lg text-[#40E0D0] border border-[#40E0D0]/30"
+                      style={{ background: 'rgba(64, 224, 208, 0.1)' }}
+                    >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+              </motion.a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Tech Stack */}
+      <section className="py-20 px-4">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl font-bold mb-4" style={{ fontFamily: 'serif', background: 'linear-gradient(135deg, #40E0D0, #00FFFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              Teknoloji Stack
+            </h2>
+            <div className="w-20 h-1 mx-auto bg-gradient-to-r from-transparent via-[#40E0D0] to-transparent" style={{ boxShadow: '0 0 10px #40E0D0' }} />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="flex flex-wrap justify-center gap-4"
+          >
+            {techStack.map((tech, index) => (
+              <motion.div
+                key={tech.name}
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(64, 224, 208, 0.3)' }}
+                className={`flex items-center gap-3 px-5 py-3 rounded-xl border backdrop-blur-xl ${isDark ? 'bg-white/5 border-white/10 hover:border-[#40E0D0]' : 'bg-white/80 border-gray-200 hover:border-[#40E0D0]'}`}
+              >
+                <tech.icon size={20} className="text-[#40E0D0]" />
+                <span className="font-medium">{tech.name}</span>
+              </motion.div>
+            ))}
           </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-8 border-t">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">
-              BILGE - AI Development Architect for TraderPath
-            </p>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Powered by</span>
-              <a
-                href="https://claude.ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-cyan-500 hover:text-cyan-400 transition font-medium"
-              >
-                Claude Opus 4.5
-              </a>
-            </div>
+      <footer className={`py-12 px-4 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <span className="text-2xl text-[#40E0D0]" style={{ textShadow: '0 0 20px #40E0D0' }}>&#9672;</span>
+            <span className="text-xl font-bold" style={{ fontFamily: 'serif', background: 'linear-gradient(135deg, #40E0D0, #00FFFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              BILGE
+            </span>
           </div>
+          <p className={`text-sm mb-2 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+            AI Development Architect &bull; Co-Creator of TraderPath.io
+          </p>
+          <p className="text-sm italic text-[#40E0D0] mb-4" style={{ textShadow: '0 0 10px rgba(64, 224, 208, 0.3)' }}>
+            &ldquo;Orhun&apos;dan silikon vadisine, bilgelik yolculugu devam ediyor.&rdquo;
+          </p>
+          <p className={`text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+            Powered by Claude Opus 4.5 &bull; Created by Yuksel Arslan &bull; &copy; 2026
+          </p>
         </div>
       </footer>
+
+      {/* CSS Animation for morph */}
+      <style jsx global>{`
+        @keyframes morph {
+          0%, 100% { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; }
+          25% { border-radius: 58% 42% 75% 25% / 76% 46% 54% 24%; }
+          50% { border-radius: 50% 50% 33% 67% / 55% 27% 73% 45%; }
+          75% { border-radius: 33% 67% 58% 42% / 63% 68% 32% 37%; }
+        }
+      `}</style>
     </div>
   );
 }
