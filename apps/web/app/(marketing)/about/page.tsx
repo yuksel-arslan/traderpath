@@ -36,32 +36,22 @@ interface LivePrice {
 
 const TEAM = [
   {
-    name: 'Alex Chen',
+    name: 'Yüksel Arslan',
     role: 'Founder & CEO',
-    description: 'Former quant trader with 10+ years in crypto markets',
-    avatar: 'AC',
-    color: 'from-blue-500 to-cyan-500',
+    roles: ['Founder & CEO', 'Head of AI', 'Lead Architect', 'Lead Engineer', 'Head of Product'],
+    description: 'Visionary entrepreneur building the future of AI-powered trading analysis',
+    avatar: 'YA',
+    color: 'from-amber-500 via-orange-500 to-red-500',
+    featured: true,
   },
   {
-    name: 'Sarah Kim',
-    role: 'Head of AI',
-    description: 'ML researcher specializing in financial forecasting',
-    avatar: 'SK',
-    color: 'from-purple-500 to-pink-500',
-  },
-  {
-    name: 'Marcus Johnson',
-    role: 'Lead Engineer',
-    description: 'Full-stack developer with blockchain expertise',
-    avatar: 'MJ',
-    color: 'from-green-500 to-emerald-500',
-  },
-  {
-    name: 'Elena Rodriguez',
-    role: 'Head of Product',
-    description: 'Product strategist focused on trader experience',
-    avatar: 'ER',
-    color: 'from-orange-500 to-amber-500',
+    name: 'Claude',
+    role: 'Design & Engineering',
+    roles: ['Design & Engineering'],
+    description: 'AI assistant powering development through Chat + Code collaboration',
+    avatar: 'AI',
+    color: 'from-purple-500 via-blue-500 to-cyan-500',
+    featured: false,
   },
 ];
 
@@ -498,7 +488,7 @@ export default function AboutPage() {
       <section className="py-16 sm:py-20 bg-gradient-to-b from-accent/50 via-accent/30 to-transparent relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute top-20 right-10 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 left-10 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 left-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
 
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-12">
@@ -507,28 +497,47 @@ export default function AboutPage() {
               Our Team
             </span>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-              Meet the People Behind TraderPath
+              Meet Our Team
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              A diverse group of traders, engineers, and researchers united by a passion
-              for making trading more accessible and informed.
+              A unique collaboration between human vision and AI capability,
+              building the future of trading analysis together.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-5xl mx-auto">
-            {TEAM.map((member, index) => (
-              <div
-                key={index}
-                className="p-6 bg-card/50 backdrop-blur border rounded-xl hover:border-primary/30 hover:shadow-xl transition group text-center"
-              >
-                <div className={`w-20 h-20 bg-gradient-to-br ${member.color} rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition`}>
-                  <span className="text-white text-2xl font-bold">{member.avatar}</span>
-                </div>
-                <h3 className="font-bold text-lg gradient-text-logo-animate">{member.name}</h3>
-                <p className="text-primary text-sm font-medium mb-2">{member.role}</p>
-                <p className="text-sm text-muted-foreground">{member.description}</p>
+          <div className="flex flex-col md:flex-row gap-6 max-w-4xl mx-auto justify-center items-stretch">
+            {/* Yüksel Arslan - Featured Card */}
+            <div className="flex-1 max-w-md p-8 bg-card/50 backdrop-blur border-2 border-amber-500/30 rounded-2xl hover:border-amber-500/50 hover:shadow-xl transition group text-center">
+              <div className={`w-24 h-24 bg-gradient-to-br ${TEAM[0].color} rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl group-hover:scale-110 transition ring-4 ring-amber-500/20`}>
+                <span className="text-white text-3xl font-bold">{TEAM[0].avatar}</span>
               </div>
-            ))}
+              <h3 className="font-bold text-2xl mb-3 gradient-text-logo-animate">{TEAM[0].name}</h3>
+              <div className="flex flex-wrap gap-2 justify-center mb-4">
+                {TEAM[0].roles.map((role, idx) => (
+                  <span key={idx} className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-600 dark:text-amber-400 text-xs font-medium">
+                    {role}
+                  </span>
+                ))}
+              </div>
+              <p className="text-muted-foreground">{TEAM[0].description}</p>
+            </div>
+
+            {/* Claude - AI Card */}
+            <div className="flex-1 max-w-md p-8 bg-card/50 backdrop-blur border-2 border-purple-500/30 rounded-2xl hover:border-purple-500/50 hover:shadow-xl transition group text-center">
+              <div className={`w-24 h-24 bg-gradient-to-br ${TEAM[1].color} rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl group-hover:scale-110 transition ring-4 ring-purple-500/20`}>
+                <span className="text-white text-3xl font-bold">{TEAM[1].avatar}</span>
+              </div>
+              <h3 className="font-bold text-2xl mb-3 gradient-text-logo-animate">{TEAM[1].name}</h3>
+              <div className="flex flex-wrap gap-2 justify-center mb-4">
+                <span className="px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-600 dark:text-purple-400 text-xs font-medium">
+                  {TEAM[1].role}
+                </span>
+                <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-600 dark:text-blue-400 text-xs font-medium">
+                  Chat + Code
+                </span>
+              </div>
+              <p className="text-muted-foreground">{TEAM[1].description}</p>
+            </div>
           </div>
         </div>
       </section>
