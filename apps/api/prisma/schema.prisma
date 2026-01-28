@@ -415,6 +415,7 @@ model Analysis {
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   symbol         String   @db.VarChar(20)
   interval       String   @default("4h") @db.VarChar(10)
+  method         String   @default("classic") @db.VarChar(20) // 'classic' or 'mlis_pro'
 
   stepsCompleted Int[]    @default([]) @map("steps_completed")
 
