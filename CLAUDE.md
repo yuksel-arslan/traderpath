@@ -910,6 +910,19 @@ Kullanıcı Hakları Aktif:
   - `handleScanConfirm`: Onay gelince 300 kredi çekilip tarama başlatılıyor
   - Frontend: Onay sonrası 3 saniye bekleyip `/analyze` sayfasına yönlendirme
 
+### 2026-01-28
+- **Landing page'e canlı Performance grafiği eklendi**:
+  - Yeni public API endpoint: `GET /api/analysis/platform-performance-history`
+  - Platform genelindeki son 30 günlük kümülatif P/L verisi döndürüyor
+  - Kimlik doğrulama gerektirmiyor (public endpoint)
+  - `PlatformPerformanceChart` bileşeni oluşturuldu
+  - Dashboard'daki Performance grafiğinin landing page versiyonu
+  - Recharts lazy-loaded (SSR devre dışı, performans için)
+  - İstatistik kutularının üstünde görüntüleniyor
+  - Tooltip ile günlük detay gösterimi
+  - Toplam P/L yüzdesi ve kapanan trade sayısı gösteriliyor
+  - Veri kaynağı: Analysis tablosundan verified trade outcomes (TP/SL hits)
+
 ---
 
 ## 🤖 Claude Code Talimatları
