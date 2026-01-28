@@ -1624,7 +1624,616 @@ export class IndicatorsService {
     if (upperName === 'WHALE_ACTIVITY') return this.calculateWhaleActivity(data);
     if (upperName === 'SPOOFING_DETECTION') return this.calculateSpoofingDetection(data);
 
+    // Candlestick pattern detection
+    if (upperName === 'CANDLESTICK_PATTERNS') return this.detectCandlestickPatterns(data);
+
     this.logger.warn(`Unknown indicator: ${name}`);
     return null;
   }
+
+  // ==========================================================================
+  // CANDLESTICK PATTERN DETECTION
+  // ==========================================================================
+
+  /**
+   * Detect all candlestick patterns in the data
+   * Returns array of detected patterns with their significance
+   */
+  detectCandlestickPatterns(data: OHLCV[]): IndicatorResult {
+    if (data.length < 5) {
+      return {
+        name: 'CANDLESTICK_PATTERNS',
+        value: 0,
+        signal: 'neutral',
+        strength: 0,
+        metadata: { patterns: [], summary: 'Insufficient data' }
+      };
+    }
+
+    const patterns: CandlestickPattern[] = [];
+    const lastCandles = data.slice(-10); // Analyze last 10 candles
+
+    // Single candle patterns (check last 3 candles)
+    for (let i = Math.max(0, lastCandles.length - 3); i < lastCandles.length; i++) {
+      const candle = lastCandles[i];
+      const prevCandle = i > 0 ? lastCandles[i - 1] : null;
+      const candleIndex = data.length - (lastCandles.length - i);
+
+      // Doji
+      const doji = this.isDoji(candle);
+      if (doji) {
+        patterns.push({
+          name: 'Doji',
+          type: 'reversal',
+          direction: 'neutral',
+          significance: 'medium',
+          candleIndex,
+          description: 'Indecision - potential trend reversal'
+        });
+      }
+
+      // Hammer (bullish reversal at bottom)
+      if (this.isHammer(candle)) {
+        patterns.push({
+          name: 'Hammer',
+          type: 'reversal',
+          direction: 'bullish',
+          significance: 'high',
+          candleIndex,
+          description: 'Bullish reversal signal at support'
+        });
+      }
+
+      // Inverted Hammer
+      if (this.isInvertedHammer(candle)) {
+        patterns.push({
+          name: 'Inverted Hammer',
+          type: 'reversal',
+          direction: 'bullish',
+          significance: 'medium',
+          candleIndex,
+          description: 'Potential bullish reversal'
+        });
+      }
+
+      // Shooting Star (bearish reversal at top)
+      if (this.isShootingStar(candle, prevCandle)) {
+        patterns.push({
+          name: 'Shooting Star',
+          type: 'reversal',
+          direction: 'bearish',
+          significance: 'high',
+          candleIndex,
+          description: 'Bearish reversal signal at resistance'
+        });
+      }
+
+      // Hanging Man (bearish at top)
+      if (this.isHangingMan(candle, prevCandle)) {
+        patterns.push({
+          name: 'Hanging Man',
+          type: 'reversal',
+          direction: 'bearish',
+          significance: 'medium',
+          candleIndex,
+          description: 'Potential bearish reversal at top'
+        });
+      }
+
+      // Marubozu (strong trend continuation)
+      const marubozu = this.isMarubozu(candle);
+      if (marubozu) {
+        patterns.push({
+          name: marubozu === 'bullish' ? 'Bullish Marubozu' : 'Bearish Marubozu',
+          type: 'continuation',
+          direction: marubozu,
+          significance: 'high',
+          candleIndex,
+          description: `Strong ${marubozu} momentum`
+        });
+      }
+
+      // Spinning Top
+      if (this.isSpinningTop(candle)) {
+        patterns.push({
+          name: 'Spinning Top',
+          type: 'reversal',
+          direction: 'neutral',
+          significance: 'low',
+          candleIndex,
+          description: 'Market indecision'
+        });
+      }
+    }
+
+    // Two candle patterns (check last 4 pairs)
+    for (let i = Math.max(1, lastCandles.length - 4); i < lastCandles.length; i++) {
+      const current = lastCandles[i];
+      const prev = lastCandles[i - 1];
+      const candleIndex = data.length - (lastCandles.length - i);
+
+      // Bullish Engulfing
+      if (this.isBullishEngulfing(current, prev)) {
+        patterns.push({
+          name: 'Bullish Engulfing',
+          type: 'reversal',
+          direction: 'bullish',
+          significance: 'high',
+          candleIndex,
+          description: 'Strong bullish reversal - buyers overwhelm sellers'
+        });
+      }
+
+      // Bearish Engulfing
+      if (this.isBearishEngulfing(current, prev)) {
+        patterns.push({
+          name: 'Bearish Engulfing',
+          type: 'reversal',
+          direction: 'bearish',
+          significance: 'high',
+          candleIndex,
+          description: 'Strong bearish reversal - sellers overwhelm buyers'
+        });
+      }
+
+      // Bullish Harami
+      if (this.isBullishHarami(current, prev)) {
+        patterns.push({
+          name: 'Bullish Harami',
+          type: 'reversal',
+          direction: 'bullish',
+          significance: 'medium',
+          candleIndex,
+          description: 'Potential bullish reversal - selling pressure weakening'
+        });
+      }
+
+      // Bearish Harami
+      if (this.isBearishHarami(current, prev)) {
+        patterns.push({
+          name: 'Bearish Harami',
+          type: 'reversal',
+          direction: 'bearish',
+          significance: 'medium',
+          candleIndex,
+          description: 'Potential bearish reversal - buying pressure weakening'
+        });
+      }
+
+      // Tweezer Bottom
+      if (this.isTweezerBottom(current, prev)) {
+        patterns.push({
+          name: 'Tweezer Bottom',
+          type: 'reversal',
+          direction: 'bullish',
+          significance: 'medium',
+          candleIndex,
+          description: 'Double bottom support confirmation'
+        });
+      }
+
+      // Tweezer Top
+      if (this.isTweezerTop(current, prev)) {
+        patterns.push({
+          name: 'Tweezer Top',
+          type: 'reversal',
+          direction: 'bearish',
+          significance: 'medium',
+          candleIndex,
+          description: 'Double top resistance confirmation'
+        });
+      }
+
+      // Piercing Line
+      if (this.isPiercingLine(current, prev)) {
+        patterns.push({
+          name: 'Piercing Line',
+          type: 'reversal',
+          direction: 'bullish',
+          significance: 'medium',
+          candleIndex,
+          description: 'Bullish reversal - strong buying into weakness'
+        });
+      }
+
+      // Dark Cloud Cover
+      if (this.isDarkCloudCover(current, prev)) {
+        patterns.push({
+          name: 'Dark Cloud Cover',
+          type: 'reversal',
+          direction: 'bearish',
+          significance: 'medium',
+          candleIndex,
+          description: 'Bearish reversal - strong selling into strength'
+        });
+      }
+    }
+
+    // Three candle patterns (check last 3 triplets)
+    for (let i = Math.max(2, lastCandles.length - 3); i < lastCandles.length; i++) {
+      const current = lastCandles[i];
+      const middle = lastCandles[i - 1];
+      const first = lastCandles[i - 2];
+      const candleIndex = data.length - (lastCandles.length - i);
+
+      // Morning Star (bullish reversal)
+      if (this.isMorningStar(first, middle, current)) {
+        patterns.push({
+          name: 'Morning Star',
+          type: 'reversal',
+          direction: 'bullish',
+          significance: 'high',
+          candleIndex,
+          description: 'Strong bullish reversal pattern'
+        });
+      }
+
+      // Evening Star (bearish reversal)
+      if (this.isEveningStar(first, middle, current)) {
+        patterns.push({
+          name: 'Evening Star',
+          type: 'reversal',
+          direction: 'bearish',
+          significance: 'high',
+          candleIndex,
+          description: 'Strong bearish reversal pattern'
+        });
+      }
+
+      // Three White Soldiers
+      if (this.isThreeWhiteSoldiers(first, middle, current)) {
+        patterns.push({
+          name: 'Three White Soldiers',
+          type: 'continuation',
+          direction: 'bullish',
+          significance: 'high',
+          candleIndex,
+          description: 'Strong bullish continuation'
+        });
+      }
+
+      // Three Black Crows
+      if (this.isThreeBlackCrows(first, middle, current)) {
+        patterns.push({
+          name: 'Three Black Crows',
+          type: 'continuation',
+          direction: 'bearish',
+          significance: 'high',
+          candleIndex,
+          description: 'Strong bearish continuation'
+        });
+      }
+    }
+
+    // Calculate overall signal
+    let bullishScore = 0;
+    let bearishScore = 0;
+    const significanceWeights = { high: 3, medium: 2, low: 1 };
+
+    patterns.forEach(p => {
+      const weight = significanceWeights[p.significance];
+      if (p.direction === 'bullish') bullishScore += weight;
+      if (p.direction === 'bearish') bearishScore += weight;
+    });
+
+    const totalScore = bullishScore + bearishScore;
+    let signal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+    let strength = 0;
+
+    if (totalScore > 0) {
+      if (bullishScore > bearishScore * 1.5) {
+        signal = 'bullish';
+        strength = Math.min(100, (bullishScore / totalScore) * 100);
+      } else if (bearishScore > bullishScore * 1.5) {
+        signal = 'bearish';
+        strength = Math.min(100, (bearishScore / totalScore) * 100);
+      } else {
+        strength = 50;
+      }
+    }
+
+    return {
+      name: 'CANDLESTICK_PATTERNS',
+      value: patterns.length,
+      signal,
+      strength,
+      metadata: {
+        patterns,
+        bullishScore,
+        bearishScore,
+        summary: this.generatePatternSummary(patterns)
+      }
+    };
+  }
+
+  // ---- Single Candle Pattern Helpers ----
+
+  private getCandleBody(candle: OHLCV): number {
+    return Math.abs(candle.close - candle.open);
+  }
+
+  private getCandleRange(candle: OHLCV): number {
+    return candle.high - candle.low;
+  }
+
+  private getUpperShadow(candle: OHLCV): number {
+    return candle.high - Math.max(candle.open, candle.close);
+  }
+
+  private getLowerShadow(candle: OHLCV): number {
+    return Math.min(candle.open, candle.close) - candle.low;
+  }
+
+  private isBullishCandle(candle: OHLCV): boolean {
+    return candle.close > candle.open;
+  }
+
+  private isBearishCandle(candle: OHLCV): boolean {
+    return candle.close < candle.open;
+  }
+
+  private isDoji(candle: OHLCV): boolean {
+    const body = this.getCandleBody(candle);
+    const range = this.getCandleRange(candle);
+    return range > 0 && body / range < 0.1; // Body is less than 10% of range
+  }
+
+  private isHammer(candle: OHLCV): boolean {
+    const body = this.getCandleBody(candle);
+    const range = this.getCandleRange(candle);
+    const lowerShadow = this.getLowerShadow(candle);
+    const upperShadow = this.getUpperShadow(candle);
+
+    return (
+      range > 0 &&
+      body / range >= 0.1 && body / range <= 0.35 && // Small body
+      lowerShadow >= body * 2 && // Long lower shadow
+      upperShadow <= body * 0.5 // Small upper shadow
+    );
+  }
+
+  private isInvertedHammer(candle: OHLCV): boolean {
+    const body = this.getCandleBody(candle);
+    const range = this.getCandleRange(candle);
+    const lowerShadow = this.getLowerShadow(candle);
+    const upperShadow = this.getUpperShadow(candle);
+
+    return (
+      range > 0 &&
+      body / range >= 0.1 && body / range <= 0.35 &&
+      upperShadow >= body * 2 &&
+      lowerShadow <= body * 0.5
+    );
+  }
+
+  private isShootingStar(candle: OHLCV, prevCandle: OHLCV | null): boolean {
+    if (!prevCandle) return false;
+
+    const body = this.getCandleBody(candle);
+    const range = this.getCandleRange(candle);
+    const upperShadow = this.getUpperShadow(candle);
+    const lowerShadow = this.getLowerShadow(candle);
+
+    // Must be after an uptrend (prev candle bullish)
+    const afterUptrend = this.isBullishCandle(prevCandle);
+
+    return (
+      afterUptrend &&
+      range > 0 &&
+      body / range >= 0.1 && body / range <= 0.35 &&
+      upperShadow >= body * 2 &&
+      lowerShadow <= body * 0.5
+    );
+  }
+
+  private isHangingMan(candle: OHLCV, prevCandle: OHLCV | null): boolean {
+    if (!prevCandle) return false;
+
+    // Same shape as hammer but after uptrend
+    const afterUptrend = this.isBullishCandle(prevCandle);
+    return afterUptrend && this.isHammer(candle);
+  }
+
+  private isMarubozu(candle: OHLCV): 'bullish' | 'bearish' | null {
+    const body = this.getCandleBody(candle);
+    const range = this.getCandleRange(candle);
+    const upperShadow = this.getUpperShadow(candle);
+    const lowerShadow = this.getLowerShadow(candle);
+
+    // Body must be at least 95% of range
+    if (range === 0 || body / range < 0.95) return null;
+    if (upperShadow > range * 0.03 || lowerShadow > range * 0.03) return null;
+
+    return this.isBullishCandle(candle) ? 'bullish' : 'bearish';
+  }
+
+  private isSpinningTop(candle: OHLCV): boolean {
+    const body = this.getCandleBody(candle);
+    const range = this.getCandleRange(candle);
+    const upperShadow = this.getUpperShadow(candle);
+    const lowerShadow = this.getLowerShadow(candle);
+
+    return (
+      range > 0 &&
+      body / range >= 0.1 && body / range <= 0.3 &&
+      upperShadow >= body * 0.5 &&
+      lowerShadow >= body * 0.5
+    );
+  }
+
+  // ---- Two Candle Pattern Helpers ----
+
+  private isBullishEngulfing(current: OHLCV, prev: OHLCV): boolean {
+    return (
+      this.isBearishCandle(prev) &&
+      this.isBullishCandle(current) &&
+      current.open < prev.close &&
+      current.close > prev.open &&
+      this.getCandleBody(current) > this.getCandleBody(prev) * 1.1
+    );
+  }
+
+  private isBearishEngulfing(current: OHLCV, prev: OHLCV): boolean {
+    return (
+      this.isBullishCandle(prev) &&
+      this.isBearishCandle(current) &&
+      current.open > prev.close &&
+      current.close < prev.open &&
+      this.getCandleBody(current) > this.getCandleBody(prev) * 1.1
+    );
+  }
+
+  private isBullishHarami(current: OHLCV, prev: OHLCV): boolean {
+    return (
+      this.isBearishCandle(prev) &&
+      this.isBullishCandle(current) &&
+      current.open > prev.close &&
+      current.close < prev.open &&
+      this.getCandleBody(current) < this.getCandleBody(prev) * 0.5
+    );
+  }
+
+  private isBearishHarami(current: OHLCV, prev: OHLCV): boolean {
+    return (
+      this.isBullishCandle(prev) &&
+      this.isBearishCandle(current) &&
+      current.open < prev.close &&
+      current.close > prev.open &&
+      this.getCandleBody(current) < this.getCandleBody(prev) * 0.5
+    );
+  }
+
+  private isTweezerBottom(current: OHLCV, prev: OHLCV): boolean {
+    const tolerance = this.getCandleRange(current) * 0.05;
+    return (
+      this.isBearishCandle(prev) &&
+      this.isBullishCandle(current) &&
+      Math.abs(current.low - prev.low) <= tolerance
+    );
+  }
+
+  private isTweezerTop(current: OHLCV, prev: OHLCV): boolean {
+    const tolerance = this.getCandleRange(current) * 0.05;
+    return (
+      this.isBullishCandle(prev) &&
+      this.isBearishCandle(current) &&
+      Math.abs(current.high - prev.high) <= tolerance
+    );
+  }
+
+  private isPiercingLine(current: OHLCV, prev: OHLCV): boolean {
+    const prevBody = this.getCandleBody(prev);
+    const midpoint = prev.close + prevBody / 2;
+
+    return (
+      this.isBearishCandle(prev) &&
+      this.isBullishCandle(current) &&
+      current.open < prev.low &&
+      current.close > midpoint &&
+      current.close < prev.open
+    );
+  }
+
+  private isDarkCloudCover(current: OHLCV, prev: OHLCV): boolean {
+    const prevBody = this.getCandleBody(prev);
+    const midpoint = prev.open + prevBody / 2;
+
+    return (
+      this.isBullishCandle(prev) &&
+      this.isBearishCandle(current) &&
+      current.open > prev.high &&
+      current.close < midpoint &&
+      current.close > prev.open
+    );
+  }
+
+  // ---- Three Candle Pattern Helpers ----
+
+  private isMorningStar(first: OHLCV, middle: OHLCV, current: OHLCV): boolean {
+    const firstBody = this.getCandleBody(first);
+    const middleBody = this.getCandleBody(middle);
+    const currentBody = this.getCandleBody(current);
+
+    return (
+      this.isBearishCandle(first) &&
+      middleBody < firstBody * 0.3 && // Small middle body
+      this.isBullishCandle(current) &&
+      currentBody > firstBody * 0.5 &&
+      current.close > (first.open + first.close) / 2 // Closes above midpoint of first
+    );
+  }
+
+  private isEveningStar(first: OHLCV, middle: OHLCV, current: OHLCV): boolean {
+    const firstBody = this.getCandleBody(first);
+    const middleBody = this.getCandleBody(middle);
+    const currentBody = this.getCandleBody(current);
+
+    return (
+      this.isBullishCandle(first) &&
+      middleBody < firstBody * 0.3 &&
+      this.isBearishCandle(current) &&
+      currentBody > firstBody * 0.5 &&
+      current.close < (first.open + first.close) / 2
+    );
+  }
+
+  private isThreeWhiteSoldiers(first: OHLCV, middle: OHLCV, current: OHLCV): boolean {
+    return (
+      this.isBullishCandle(first) &&
+      this.isBullishCandle(middle) &&
+      this.isBullishCandle(current) &&
+      middle.open > first.open && middle.close > first.close &&
+      current.open > middle.open && current.close > middle.close &&
+      this.getUpperShadow(first) < this.getCandleBody(first) * 0.3 &&
+      this.getUpperShadow(middle) < this.getCandleBody(middle) * 0.3 &&
+      this.getUpperShadow(current) < this.getCandleBody(current) * 0.3
+    );
+  }
+
+  private isThreeBlackCrows(first: OHLCV, middle: OHLCV, current: OHLCV): boolean {
+    return (
+      this.isBearishCandle(first) &&
+      this.isBearishCandle(middle) &&
+      this.isBearishCandle(current) &&
+      middle.open < first.open && middle.close < first.close &&
+      current.open < middle.open && current.close < middle.close &&
+      this.getLowerShadow(first) < this.getCandleBody(first) * 0.3 &&
+      this.getLowerShadow(middle) < this.getCandleBody(middle) * 0.3 &&
+      this.getLowerShadow(current) < this.getCandleBody(current) * 0.3
+    );
+  }
+
+  private generatePatternSummary(patterns: CandlestickPattern[]): string {
+    if (patterns.length === 0) return 'No significant candlestick patterns detected';
+
+    const highSignificance = patterns.filter(p => p.significance === 'high');
+    const bullish = patterns.filter(p => p.direction === 'bullish');
+    const bearish = patterns.filter(p => p.direction === 'bearish');
+
+    const parts: string[] = [];
+
+    if (highSignificance.length > 0) {
+      parts.push(`${highSignificance.length} high-significance pattern(s): ${highSignificance.map(p => p.name).join(', ')}`);
+    }
+
+    if (bullish.length > bearish.length) {
+      parts.push(`Bullish bias (${bullish.length} bullish vs ${bearish.length} bearish patterns)`);
+    } else if (bearish.length > bullish.length) {
+      parts.push(`Bearish bias (${bearish.length} bearish vs ${bullish.length} bullish patterns)`);
+    } else if (bullish.length > 0) {
+      parts.push('Mixed signals - equal bullish and bearish patterns');
+    }
+
+    return parts.join('. ') || `${patterns.length} pattern(s) detected`;
+  }
+}
+
+// Candlestick pattern interface
+interface CandlestickPattern {
+  name: string;
+  type: 'reversal' | 'continuation';
+  direction: 'bullish' | 'bearish' | 'neutral';
+  significance: 'high' | 'medium' | 'low';
+  candleIndex: number;
+  description: string;
 }

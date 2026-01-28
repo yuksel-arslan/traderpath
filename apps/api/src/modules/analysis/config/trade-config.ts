@@ -390,6 +390,16 @@ export const INDICATORS = {
       weight: 0.85
     }),
   },
+
+  // PATTERN INDICATORS (Candlestick patterns)
+  pattern: {
+    CANDLESTICK_PATTERNS: (): IndicatorConfig => ({
+      name: 'CANDLESTICK_PATTERNS',
+      category: 'pattern',
+      params: {},
+      weight: 0.9  // High weight - patterns are crucial for timing
+    }),
+  },
 } as const;
 
 // ============================================================================
@@ -478,8 +488,9 @@ const SCALPING_CONFIG: TradeTypeConfig = {
         INDICATORS.trend.MACD(12, 26, 9),
         INDICATORS.trend.SUPERTREND(7, 2),
         INDICATORS.volatility.KELTNER(20, 10, 1.5),
+        INDICATORS.pattern.CANDLESTICK_PATTERNS(),  // Candlestick pattern confirmation
       ],
-      aiPromptFocus: 'Identify optimal entry point with tight stop-loss for scalping',
+      aiPromptFocus: 'Identify optimal entry point with tight stop-loss for scalping. Use candlestick patterns for entry confirmation',
     },
     // Step 5: Trade Plan
     {
@@ -627,8 +638,9 @@ const DAY_TRADE_CONFIG: TradeTypeConfig = {
         INDICATORS.trend.SUPERTREND(10, 3),
         INDICATORS.momentum.CCI(20),
         INDICATORS.momentum.WILLIAMS_R(14),
+        INDICATORS.pattern.CANDLESTICK_PATTERNS(),  // Candlestick pattern confirmation
       ],
-      aiPromptFocus: 'Identify optimal intraday entry with momentum confirmation',
+      aiPromptFocus: 'Identify optimal intraday entry with momentum and candlestick pattern confirmation',
     },
     // Step 5: Trade Plan
     {
@@ -783,8 +795,9 @@ const SWING_CONFIG: TradeTypeConfig = {
         INDICATORS.trend.SUPERTREND(10, 3),
         INDICATORS.momentum.TSI(25, 13, 13),
         INDICATORS.momentum.ULTIMATE(7, 14, 28),
+        INDICATORS.pattern.CANDLESTICK_PATTERNS(),  // Candlestick pattern confirmation
       ],
-      aiPromptFocus: 'Find optimal swing entry at support/resistance with trend confirmation',
+      aiPromptFocus: 'Find optimal swing entry at support/resistance with trend and candlestick pattern confirmation',
     },
     // Step 5: Trade Plan
     {
