@@ -1098,6 +1098,7 @@ Explain the key risks and what conditions would need to change before trading th
     try {
       const db = prisma;
       const now = Date.now();
+      const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
       const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
       const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
 
@@ -1107,6 +1108,8 @@ Explain the key risks and what conditions would need to change before trading th
           id: true,
           totalScore: true,
           outcome: true,
+          outcomePrice: true,
+          outcomeAt: true,
           step5Result: true, // tradePlan
           step7Result: true, // verdict
           createdAt: true,
@@ -1116,6 +1119,7 @@ Explain the key risks and what conditions would need to change before trading th
       // Basic counts
       const totalUsers = await db.user.count();
       const totalAnalyses = analyses.length;
+      const dailyAnalyses = analyses.filter(a => a.createdAt >= oneDayAgo).length;
       const weeklyAnalyses = analyses.filter(a => a.createdAt >= sevenDaysAgo).length;
       const monthlyAnalyses = analyses.filter(a => a.createdAt >= thirtyDaysAgo).length;
 
@@ -1154,6 +1158,54 @@ Explain the key risks and what conditions would need to change before trading th
 
       // SL hits (incorrect predictions)
       const slHits = closedAnalyses.filter(a => a.outcome === 'sl_hit').length;
+
+      // Calculate REAL Total P/L % using entry price and outcome price
+      let totalPnLSum = 0;
+      let validPnLCount = 0;
+      closedAnalyses.forEach(a => {
+        const step5 = a.step5Result as Record<string, unknown> | null;
+        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
+        const outcomePrice = a.outcomePrice ? Number(a.outcomePrice) : 0;
+        const direction = ((step5?.direction as string) || 'long').toLowerCase();
+
+        if (entryPrice > 0 && outcomePrice > 0) {
+          let pnl = 0;
+          if (direction === 'short') {
+            pnl = ((entryPrice - outcomePrice) / entryPrice) * 100;
+          } else {
+            pnl = ((outcomePrice - entryPrice) / entryPrice) * 100;
+          }
+          totalPnLSum += pnl;
+          validPnLCount++;
+        }
+      });
+      const totalPnL = validPnLCount > 0 ? Number(totalPnLSum.toFixed(1)) : 0;
+
+      // Daily closed analyses for "Past 24h" metric (using outcomeAt)
+      const dailyClosedAnalyses = closedAnalyses.filter(a =>
+        a.outcomeAt && new Date(a.outcomeAt) >= oneDayAgo
+      );
+      let dailyPnLSum = 0;
+      let dailyValidCount = 0;
+      dailyClosedAnalyses.forEach(a => {
+        const step5 = a.step5Result as Record<string, unknown> | null;
+        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
+        const outcomePrice = a.outcomePrice ? Number(a.outcomePrice) : 0;
+        const direction = ((step5?.direction as string) || 'long').toLowerCase();
+
+        if (entryPrice > 0 && outcomePrice > 0) {
+          let pnl = 0;
+          if (direction === 'short') {
+            pnl = ((entryPrice - outcomePrice) / entryPrice) * 100;
+          } else {
+            pnl = ((outcomePrice - entryPrice) / entryPrice) * 100;
+          }
+          dailyPnLSum += pnl;
+          dailyValidCount++;
+        }
+      });
+      const dailyPnL = dailyValidCount > 0 ? Number(dailyPnLSum.toFixed(1)) : 0;
+      const dailyClosedCount = dailyClosedAnalyses.length;
 
       // Platform accuracy = TP hits / closed * 100
       const platformAccuracy = closedCount > 0
@@ -1205,6 +1257,7 @@ Explain the key risks and what conditions would need to change before trading th
           platform: {
             totalUsers,
             totalAnalyses,
+            dailyAnalyses,
             weeklyAnalyses,
             monthlyAnalyses,
             platformSince,
@@ -1215,9 +1268,15 @@ Explain the key risks and what conditions would need to change before trading th
             closedCount,
             tpHits,
             slHits,
+            totalPnL,
             lastUpdated: new Date().toISOString(),
             methodology: closedCount > 0 ? 'outcome-verified' : 'score-based',
             sampleSize: closedCount > 0 ? closedCount : scores.length,
+          },
+          daily: {
+            analyses: dailyAnalyses,
+            closedCount: dailyClosedCount,
+            pnl: dailyPnL,
           },
           goSignalRate: {
             rate: goAccuracy,

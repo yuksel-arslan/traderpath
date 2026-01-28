@@ -85,58 +85,105 @@ const MILESTONES = [
   { year: 'Jan 2026', event: 'TraderPath nearing completion with 40+ indicators & AI Expert Panel', icon: Rocket, color: 'from-emerald-500 to-teal-500' },
 ];
 
-// CountUp Animation Component
-function CountUp({ end, suffix = '', duration = 2000 }: { end: number; suffix?: string; duration?: number }) {
-  const [count, setCount] = useState(0);
-  const [hasAnimated, setHasAnimated] = useState(false);
-  const ref = useRef<HTMLSpanElement>(null);
+// Platform metrics component for about page
+function AboutPlatformMetrics() {
+  const [metrics, setMetrics] = useState<{
+    totalAnalyses: number;
+    accuracy: number;
+    goSignalRate: number;
+    closedCount: number;
+    totalUsers: number;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io'}/api/analysis/platform-stats`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success) {
-            setMetrics({
-              totalAnalyses: data.data.platform.totalAnalyses,
-              accuracy: data.data.accuracy.overall,
-              goSignalRate: data.data.goSignalRate.rate,
-              closedCount: data.data.accuracy.closedCount,
-              totalUsers: data.data.platform.totalUsers,
+        const apiUrls = [
+          process.env.NEXT_PUBLIC_API_URL,
+          'https://api.traderpath.io',
+          'https://traderpath-api-production.up.railway.app'
+        ].filter(Boolean);
+
+        let data = null;
+        for (const baseUrl of apiUrls) {
+          try {
+            const res = await fetch(`${baseUrl}/api/analysis/platform-stats`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' },
+              cache: 'no-store'
             });
+            if (res.ok) {
+              data = await res.json();
+              if (data.success) break;
+            }
+          } catch {
+            continue;
           }
+        }
+
+        if (data?.success) {
+          setMetrics({
+            totalAnalyses: data.data.platform.totalAnalyses || 0,
+            accuracy: data.data.accuracy.overall || 0,
+            goSignalRate: data.data.goSignalRate.rate || 0,
+            closedCount: data.data.accuracy.closedCount || 0,
+            totalUsers: data.data.platform.totalUsers || 0,
+          });
         }
       } catch {
         // Silently fail
+      } finally {
+        setLoading(false);
       }
     };
     fetchMetrics();
   }, []);
 
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl animate-pulse">
+            <div className="h-8 bg-muted rounded w-1/2 mx-auto mb-2"></div>
+            <div className="h-4 bg-muted rounded w-3/4 mx-auto"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!metrics) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Unable to load metrics</p>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
       <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
         <div className="text-2xl md:text-4xl font-bold text-primary mb-2">
-          {metrics ? metrics.totalAnalyses.toLocaleString() : '—'}
+          {metrics.totalAnalyses.toLocaleString()}
         </div>
         <p className="text-xs md:text-sm text-muted-foreground">Total Analyses</p>
       </div>
       <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
         <div className="text-2xl md:text-4xl font-bold text-emerald-500 mb-2">
-          {metrics && metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—'}
+          {metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—'}
         </div>
         <p className="text-xs md:text-sm text-muted-foreground">Accuracy Rate</p>
       </div>
       <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
         <div className="text-2xl md:text-4xl font-bold text-amber-500 mb-2">
-          {metrics && metrics.goSignalRate > 0 ? `${metrics.goSignalRate}%` : '—'}
+          {metrics.closedCount > 0 && metrics.goSignalRate > 0 ? `${metrics.goSignalRate}%` : '—'}
         </div>
         <p className="text-xs md:text-sm text-muted-foreground">GO Signal Success</p>
       </div>
       <div className="p-4 md:p-6 bg-card/50 backdrop-blur border rounded-xl text-center">
         <div className="text-2xl md:text-4xl font-bold text-blue-500 mb-2">
-          {metrics ? metrics.totalUsers.toLocaleString() : '—'}
+          {metrics.totalUsers.toLocaleString()}
         </div>
         <p className="text-xs md:text-sm text-muted-foreground">Registered Traders</p>
       </div>
@@ -341,6 +388,53 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* Team Section */}
+      <TeamSection />
+
+      {/* Timeline Section */}
+      <section className="py-16 sm:py-20 relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-rose-500/10 rounded-full blur-3xl" />
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="text-center mb-12">
+            <span className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-cyan-500 text-sm font-medium mb-4">
+              <Activity className="w-4 h-4" />
+              The Journey
+            </span>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
+              A Decade of Learning, Months of Building
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              From no-code experiments to AI-powered trading analysis — a journey of persistence and pivots.
+            </p>
+          </div>
+
+          <div className="max-w-3xl mx-auto">
+            <div className="relative">
+              {/* Vertical line */}
+              <div className="absolute left-6 sm:left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 via-purple-500 to-emerald-500" />
+
+              {MILESTONES.map((milestone, index) => {
+                const Icon = milestone.icon;
+                return (
+                  <div key={index} className="relative pl-16 sm:pl-20 pb-10 last:pb-0">
+                    <div className={`absolute left-0 w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br ${milestone.color} rounded-xl flex items-center justify-center shadow-lg`}>
+                      <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                    </div>
+                    <div className="bg-card/50 backdrop-blur border rounded-xl p-4 hover:border-primary/30 hover:shadow-lg transition">
+                      <p className="text-sm text-muted-foreground mb-1">{milestone.year}</p>
+                      <p className="font-semibold gradient-text-logo-animate">{milestone.event}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Mission Section */}
       <section className="py-16 sm:py-20 bg-gradient-to-b from-accent/50 via-accent/30 to-transparent relative overflow-hidden">
         {/* Decorative elements */}
@@ -451,49 +545,34 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Team Section */}
-      <TeamSection />
-
-      {/* Timeline Section */}
+      {/* Platform Performance Section */}
       <section className="py-16 sm:py-20 relative overflow-hidden">
         {/* Decorative elements */}
-        <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-rose-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
 
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-12">
-            <span className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-cyan-500 text-sm font-medium mb-4">
-              <Activity className="w-4 h-4" />
-              The Journey
+            <span className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-sm font-medium mb-4">
+              <TrendingUp className="w-4 h-4" />
+              Live Performance
             </span>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-              A Decade of Learning, Months of Building
+              Real Results, Real Data
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              From no-code experiments to AI-powered trading analysis — a journey of persistence and pivots.
+              We believe in transparency over testimonials. Here are our verified platform metrics.
             </p>
           </div>
 
-          <div className="max-w-3xl mx-auto">
-            <div className="relative">
-              {/* Vertical line */}
-              <div className="absolute left-6 sm:left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 via-purple-500 to-emerald-500" />
+          <AboutPlatformMetrics />
 
-              {MILESTONES.map((milestone, index) => {
-                const Icon = milestone.icon;
-                return (
-                  <div key={index} className="relative pl-16 sm:pl-20 pb-10 last:pb-0">
-                    <div className={`absolute left-0 w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br ${milestone.color} rounded-xl flex items-center justify-center shadow-lg`}>
-                      <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-                    </div>
-                    <div className="bg-card/50 backdrop-blur border rounded-xl p-4 hover:border-primary/30 hover:shadow-lg transition">
-                      <p className="text-sm text-muted-foreground mb-1">{milestone.year}</p>
-                      <p className="font-semibold gradient-text-logo-animate">{milestone.event}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <div className="mt-8 text-center">
+            <p className="text-xs text-muted-foreground">
+              Metrics update in real-time based on verified trade outcomes (TP/SL hits).
+              <br />
+              No fake reviews. No fabricated testimonials. Just honest performance data.
+            </p>
           </div>
         </div>
       </section>

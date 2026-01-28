@@ -54,6 +54,7 @@ import {
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
+import { LanguageSelector } from '../../components/common/LanguageSelector';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../lib/coin-icons';
 import { ANALYSIS_BUNDLES } from '../../lib/pricing-config';
 
@@ -106,32 +107,63 @@ const FEATURES = [
 ];
 
 // Platform metrics component - shows real data instead of fake testimonials
-function PlatformMetrics() {
+function StatsBoxes() {
   const [metrics, setMetrics] = useState<{
     totalAnalyses: number;
     accuracy: number;
-    goSignalRate: number;
+    totalPnL: number;
     closedCount: number;
+    daysSinceStart: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io'}/api/analysis/platform-stats`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success) {
-            setMetrics({
-              totalAnalyses: data.data.platform.totalAnalyses,
-              accuracy: data.data.accuracy.overall,
-              goSignalRate: data.data.goSignalRate.rate,
-              closedCount: data.data.accuracy.closedCount,
+        const apiUrls = [
+          process.env.NEXT_PUBLIC_API_URL,
+          'https://api.traderpath.io',
+          'https://traderpath-api-production.up.railway.app'
+        ].filter(Boolean);
+
+        let data = null;
+        for (const baseUrl of apiUrls) {
+          try {
+            const res = await fetch(`${baseUrl}/api/analysis/platform-stats`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' },
+              cache: 'no-store'
             });
+            if (res.ok) {
+              data = await res.json();
+              if (data.success) break;
+            }
+          } catch {
+            continue;
           }
         }
+
+        if (data?.success) {
+          // Calculate days since platform start
+          const platformSince = data.data.platform.platformSince;
+          const startDate = platformSince ? new Date(platformSince) : new Date();
+          const today = new Date();
+          const diffTime = Math.abs(today.getTime() - startDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          setMetrics({
+            totalAnalyses: data.data.platform.totalAnalyses || 0,
+            accuracy: data.data.accuracy.overall || 0,
+            totalPnL: data.data.accuracy.totalPnL || 0,
+            closedCount: data.data.accuracy.closedCount || 0,
+            daysSinceStart: diffDays || 1,
+          });
+        } else {
+          setError(true);
+        }
       } catch {
-        // Silently fail - will show placeholder
+        setError(true);
       } finally {
         setLoading(false);
       }
@@ -141,43 +173,62 @@ function PlatformMetrics() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="p-6 bg-card border rounded-lg animate-pulse">
-            <div className="h-8 bg-muted rounded w-1/2 mb-2"></div>
-            <div className="h-4 bg-muted rounded w-3/4"></div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="p-4 bg-card/50 backdrop-blur border rounded-xl animate-pulse">
+            <div className="h-8 bg-muted rounded w-1/2 mx-auto mb-2"></div>
+            <div className="h-4 bg-muted rounded w-3/4 mx-auto"></div>
           </div>
         ))}
       </div>
     );
   }
 
+  if (error || !metrics) {
+    return null;
+  }
+
+  // Calculate analyses per day
+  const analysesPerDay = metrics.daysSinceStart > 0
+    ? (metrics.totalAnalyses / metrics.daysSinceStart).toFixed(1)
+    : '0';
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="p-6 bg-card border rounded-lg text-center">
-        <div className="text-4xl font-bold text-primary mb-2">
-          {metrics ? metrics.totalAnalyses.toLocaleString() : '—'}
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      {/* Total Analyses */}
+      <div className="p-4 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className="text-2xl md:text-3xl font-bold text-primary mb-1">
+          {metrics.totalAnalyses.toLocaleString()}
         </div>
-        <p className="text-muted-foreground">Total Analyses Completed</p>
-        <p className="text-xs text-muted-foreground mt-2">Real-time platform data</p>
+        <p className="text-xs text-muted-foreground">Total Analyses</p>
       </div>
-      <div className="p-6 bg-card border rounded-lg text-center">
-        <div className="text-4xl font-bold text-emerald-500 mb-2">
-          {metrics && metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—'}
+
+      {/* Platform Accuracy */}
+      <div className="p-4 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className="text-2xl md:text-3xl font-bold text-emerald-500 mb-1">
+          {metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—'}
         </div>
-        <p className="text-muted-foreground">Platform Accuracy</p>
-        <p className="text-xs text-muted-foreground mt-2">
-          {metrics && metrics.closedCount > 0
-            ? `Based on ${metrics.closedCount} verified trades`
-            : 'Awaiting verified trade outcomes'}
-        </p>
+        <p className="text-xs text-muted-foreground">Platform Accuracy</p>
       </div>
-      <div className="p-6 bg-card border rounded-lg text-center">
-        <div className="text-4xl font-bold text-amber-500 mb-2">
-          {metrics && metrics.goSignalRate > 0 ? `${metrics.goSignalRate}%` : '—'}
+
+      {/* Total P/L % */}
+      <div className="p-4 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className={`text-2xl md:text-3xl font-bold mb-1 ${metrics.totalPnL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+          {metrics.closedCount > 0 ? `${metrics.totalPnL >= 0 ? '+' : ''}${metrics.totalPnL}%` : '—'}
         </div>
-        <p className="text-muted-foreground">GO Signal Success Rate</p>
-        <p className="text-xs text-muted-foreground mt-2">TP hit vs SL hit ratio</p>
+        <p className="text-xs text-muted-foreground">Total P/L</p>
+        {metrics.closedCount > 0 && (
+          <p className="text-[10px] text-muted-foreground/70 mt-0.5">{metrics.closedCount} closed trades</p>
+        )}
+      </div>
+
+      {/* Days Elapsed */}
+      <div className="p-4 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className="text-2xl md:text-3xl font-bold text-blue-500 mb-1">
+          {metrics.daysSinceStart}
+        </div>
+        <p className="text-xs text-muted-foreground">Days Elapsed</p>
+        <p className="text-[10px] text-muted-foreground/70 mt-0.5">{analysesPerDay} analyses/day</p>
       </div>
     </div>
   );
@@ -603,138 +654,127 @@ function FeaturesSection() {
 
   return (
     <>
-      {/* Feature 1: Discover Top Trading Opportunities */}
-      <section id="features" className="py-20 bg-gradient-to-b from-emerald-500/5 via-teal-500/5 to-transparent relative overflow-hidden">
-        {/* Decorative elements */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center mb-12">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 rounded-full text-emerald-500 text-sm font-medium mb-4 backdrop-blur-sm">
-              <TrendingUp className="w-4 h-4" />
-              Smart Discovery
+      {/* Feature 1: AI-Powered Market Scanner */}
+      <section id="features" className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-4">
+            <span className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-sm font-medium mb-4">
+              <Search className="w-4 h-4" />
+              Feature 1
             </span>
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">
-              <span className="gradient-text-logo-animate">Find Your Next</span>
-              <br />
-              <span className="text-foreground">Winning Trade</span>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
+              AI-Powered Market Scanner
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+            <p className="text-muted-foreground max-w-2xl mx-auto">
               Ask our AI to scan the entire market and discover the highest-scoring trading opportunities based on 40+ technical indicators.
             </p>
           </div>
-
           <div className="max-w-5xl mx-auto">
-            {/* Main Feature Card */}
-            <div className="relative p-8 bg-gradient-to-br from-card via-card to-emerald-500/5 border border-emerald-500/20 rounded-2xl backdrop-blur-sm mb-6">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/20 to-transparent rounded-bl-full" />
-
-              <div className="flex flex-col lg:flex-row gap-8 items-center">
-                {/* Left: Visual */}
-                <div className="flex-shrink-0 w-full lg:w-auto">
-                  <div className="relative">
-                    {/* Mock leaderboard */}
-                    <div className="w-full lg:w-72 bg-background/80 backdrop-blur border rounded-xl p-4 space-y-3">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                        <span className="font-medium">Top Opportunities</span>
-                        <span className="text-emerald-500">Live Scan</span>
-                      </div>
-                      {[
-                        { rank: 1, coin: 'BTC', score: 87, verdict: 'GO', color: 'emerald' },
-                        { rank: 2, coin: 'SOL', score: 82, verdict: 'GO', color: 'emerald' },
-                        { rank: 3, coin: 'ETH', score: 76, verdict: 'COND', color: 'amber' },
-                        { rank: 4, coin: 'LINK', score: 71, verdict: 'COND', color: 'amber' },
-                        { rank: 5, coin: 'AVAX', score: 68, verdict: 'WAIT', color: 'orange' },
-                      ].map((item) => (
-                        <div key={item.rank} className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
-                          <span className="w-5 h-5 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white">
-                            {item.rank}
-                          </span>
-                          <span className="font-medium flex-1">{item.coin}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold">{item.score}/100</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                              item.color === 'emerald' ? 'bg-emerald-500/20 text-emerald-500' :
-                              item.color === 'amber' ? 'bg-amber-500/20 text-amber-500' :
-                              'bg-orange-500/20 text-orange-500'
-                            }`}>
-                              {item.verdict}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {/* Glow effect */}
-                    <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-xl blur-xl -z-10" />
+            {/* Top Row - Main Scanner Card + Stats */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+              {/* Scanner Visual */}
+              <div className="lg:col-span-2 p-5 bg-card border rounded-lg hover:border-emerald-500/50 hover:shadow-lg transition">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center">
+                    <Radar className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold gradient-text-logo-animate">Market Scan Results</h3>
+                    <p className="text-xs text-muted-foreground">Top opportunities ranked by reliability score</p>
                   </div>
                 </div>
+                <div className="space-y-2">
+                  {[
+                    { rank: 1, coin: 'BTC', score: 87, verdict: 'GO', color: 'emerald' },
+                    { rank: 2, coin: 'SOL', score: 82, verdict: 'GO', color: 'emerald' },
+                    { rank: 3, coin: 'ETH', score: 76, verdict: 'COND', color: 'amber' },
+                    { rank: 4, coin: 'LINK', score: 71, verdict: 'COND', color: 'amber' },
+                    { rank: 5, coin: 'AVAX', score: 68, verdict: 'WAIT', color: 'orange' },
+                  ].map((item) => (
+                    <div key={item.rank} className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
+                      <span className="w-5 h-5 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white">
+                        {item.rank}
+                      </span>
+                      <span className="font-medium flex-1">{item.coin}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold">{item.score}/100</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                          item.color === 'emerald' ? 'bg-emerald-500/20 text-emerald-500' :
+                          item.color === 'amber' ? 'bg-amber-500/20 text-amber-500' :
+                          'bg-orange-500/20 text-orange-500'
+                        }`}>
+                          {item.verdict}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-                {/* Right: Content */}
-                <div className="flex-1 space-y-6">
-                  <div>
-                    <h3 className="text-2xl font-bold mb-2">AI-Powered Market Scanner</h3>
-                    <p className="text-muted-foreground">
-                      Just ask: <span className="text-emerald-500 font-medium">&quot;Which coin should I trade?&quot;</span> or <span className="text-emerald-500 font-medium">&quot;Show top 5 coins&quot;</span> and our AI will analyze 30+ cryptocurrencies instantly.
-                    </p>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
+                <div className="p-4 bg-card border rounded-lg hover:border-emerald-500/50 transition">
+                  <div className="flex items-center gap-2 mb-1">
+                    <BarChart3 className="w-4 h-4 text-purple-500" />
+                    <span className="text-2xl font-bold">40+</span>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 bg-muted/30 rounded-lg border border-transparent hover:border-emerald-500/30 transition">
-                      <div className="flex items-center gap-2 mb-1">
-                        <BarChart3 className="w-4 h-4 text-purple-500" />
-                        <span className="font-semibold">40+</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">Technical Indicators</span>
-                    </div>
-                    <div className="p-3 bg-muted/30 rounded-lg border border-transparent hover:border-emerald-500/30 transition">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Activity className="w-4 h-4 text-blue-500" />
-                        <span className="font-semibold">30+</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">Coins Analyzed</span>
-                    </div>
-                    <div className="p-3 bg-muted/30 rounded-lg border border-transparent hover:border-emerald-500/30 transition">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Zap className="w-4 h-4 text-amber-500" />
-                        <span className="font-semibold">60s</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">Full Scan Time</span>
-                    </div>
-                    <div className="p-3 bg-muted/30 rounded-lg border border-transparent hover:border-emerald-500/30 transition">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Target className="w-4 h-4 text-emerald-500" />
-                        <span className="font-semibold">7</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">Analysis Steps</span>
-                    </div>
+                  <span className="text-xs text-muted-foreground">Technical Indicators</span>
+                </div>
+                <div className="p-4 bg-card border rounded-lg hover:border-emerald-500/50 transition">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Activity className="w-4 h-4 text-blue-500" />
+                    <span className="text-2xl font-bold">30+</span>
                   </div>
+                  <span className="text-xs text-muted-foreground">Coins Analyzed</span>
+                </div>
+                <div className="p-4 bg-card border rounded-lg hover:border-emerald-500/50 transition">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Zap className="w-4 h-4 text-amber-500" />
+                    <span className="text-2xl font-bold">60s</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">Full Scan Time</span>
+                </div>
+                <div className="p-4 bg-card border rounded-lg hover:border-emerald-500/50 transition">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Target className="w-4 h-4 text-emerald-500" />
+                    <span className="text-2xl font-bold">7</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">Analysis Steps</span>
                 </div>
               </div>
             </div>
 
-            {/* Bottom Features */}
+            {/* Bottom Features Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-5 bg-card/50 backdrop-blur border rounded-xl hover:border-emerald-500/30 transition group">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition">
-                  <CheckCircle className="w-5 h-5 text-emerald-500" />
+              <div className="p-5 bg-card border rounded-lg hover:border-emerald-500/50 hover:shadow-lg transition cursor-pointer group">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
+                    <CheckCircle className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <span className="text-xs font-medium text-emerald-500">Scoring</span>
                 </div>
-                <h4 className="font-semibold mb-1">Reliability Score</h4>
-                <p className="text-sm text-muted-foreground">Each coin gets a score based on liquidity, volatility, trend strength, and momentum factors.</p>
+                <h3 className="font-semibold mb-1 gradient-text-logo-animate">Reliability Score</h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">Each coin gets a score based on liquidity, volatility, trend strength, and momentum.</p>
               </div>
-              <div className="p-5 bg-card/50 backdrop-blur border rounded-xl hover:border-emerald-500/30 transition group">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition">
-                  <Sparkles className="w-5 h-5 text-emerald-500" />
+              <div className="p-5 bg-card border rounded-lg hover:border-emerald-500/50 hover:shadow-lg transition cursor-pointer group">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
+                    <Sparkles className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <span className="text-xs font-medium text-emerald-500">Signals</span>
                 </div>
-                <h4 className="font-semibold mb-1">Trade Signals</h4>
-                <p className="text-sm text-muted-foreground">Clear GO, CONDITIONAL, or WAIT verdicts help you decide which opportunities to pursue.</p>
+                <h3 className="font-semibold mb-1 gradient-text-logo-animate">Trade Signals</h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">Clear GO, CONDITIONAL, or WAIT verdicts help you decide which opportunities to pursue.</p>
               </div>
-              <div className="p-5 bg-card/50 backdrop-blur border rounded-xl hover:border-emerald-500/30 transition group">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition">
-                  <MessageCircle className="w-5 h-5 text-emerald-500" />
+              <div className="p-5 bg-card border rounded-lg hover:border-emerald-500/50 hover:shadow-lg transition cursor-pointer group">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
+                    <MessageCircle className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <span className="text-xs font-medium text-emerald-500">Input</span>
                 </div>
-                <h4 className="font-semibold mb-1">Natural Language</h4>
-                <p className="text-sm text-muted-foreground">Ask in plain English or Turkish. Our AI understands context and delivers instant results.</p>
+                <h3 className="font-semibold mb-1 gradient-text-logo-animate">Natural Language</h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">Ask in plain English or Turkish. Our AI understands context and delivers instant results.</p>
               </div>
             </div>
           </div>
@@ -1563,7 +1603,8 @@ export default function LandingPage() {
 
           {/* Right side buttons */}
           <div className="flex items-center gap-1 sm:gap-3">
-            <div className="hidden sm:block">
+            <div className="hidden sm:flex items-center gap-1">
+              <LanguageSelector compact />
               <ThemeToggle />
             </div>
             <Link
@@ -1623,7 +1664,10 @@ export default function LandingPage() {
                 >
                   Sign In
                 </Link>
-                <ThemeToggle />
+                <div className="flex items-center gap-2">
+                  <LanguageSelector />
+                  <ThemeToggle />
+                </div>
               </div>
             </nav>
           </div>
@@ -1673,6 +1717,13 @@ export default function LandingPage() {
           <p className="text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
             Get 25 free credits on signup. No credit card required.
           </p>
+        </div>
+      </section>
+
+      {/* Stats Boxes - Above Features */}
+      <section className="py-8 md:py-12">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <StatsBoxes />
         </div>
       </section>
 
@@ -1929,24 +1980,6 @@ export default function LandingPage() {
               <span className="text-sm font-medium">99.9% Uptime</span>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Platform Metrics - Real Data */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-              Real Results, Real Data
-            </h2>
-            <p className="text-muted-foreground">
-              Transparent metrics from our platform - no fake reviews, just verified performance
-            </p>
-          </div>
-          <PlatformMetrics />
-          <p className="text-center text-xs text-muted-foreground mt-8">
-            Data updates in real-time from verified trade outcomes. We believe in transparency over testimonials.
-          </p>
         </div>
       </section>
 
