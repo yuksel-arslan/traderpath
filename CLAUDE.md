@@ -269,6 +269,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-28 | Landing page P/L Dashboard ile uyuşmuyordu (119.9% vs 120.7%) | `platform-performance-history` endpoint'i artık `allTimeTotalPnL` döndürüyor - 30 günlük filtre all-time toplamı etkilemiyordu | `analysis.routes.ts:1395-1414`, `LandingPerformanceChart.tsx:34,167-168,216-220` |
 | 2026-01-28 | Login sayfası dark/light mode uyumsuzluğu - sol panel her zaman koyu | Sol marketing paneli artık tema tercihini takip ediyor. Light/dark mode'a uygun renkler kullanılıyor | `apps/web/app/(auth)/layout.tsx` |
 | 2026-01-28 | Top 5 Coins "Scan Now" butonu çalışmıyordu - analiz yapılmıyordu | 1) Yeni API endpoint eklendi: `POST /api/analysis/top-coins/scan` (300 kredi), 2) Frontend concierge yerine dedicated endpoint kullanıyor, 3) Doğru polling ile progress gösterimi (2-3 dakika), 4) Status endpoint eklendi: `GET /api/analysis/top-coins/status` | `analysis.routes.ts:4758-4850`, `analyze/page.tsx:368-454` |
+| 2026-01-28 | Dil seçimi sadece landing page'de çalışıyordu, Settings'teki çalışmıyordu | Settings'teki dil seçici kaldırıldı (sadece backend için kullanılıyordu, UI çevirmiyordu). Google Translate-based LanguageSelector tüm dashboard sayfalarına eklendi (header + mobile menu) | `settings/page.tsx`, `layout.tsx:31,361,486-492` |
 
 ---
 
@@ -960,6 +961,13 @@ Kullanıcı Hakları Aktif:
   - Streak milestone'larında özel kutlama (7, 14, 21, 28, 30 gün)
   - Lucky Spin sonrası kutlama (jackpot için özel)
   - Quiz doğru cevapta kutlama (+5 kredi)
+- **Dil seçimi birleştirildi ve tüm sayfalarda çalışır hale getirildi**:
+  - Settings'teki dil seçici kaldırıldı (sadece backend özelliklerini etkiliyordu, UI çevirmiyordu)
+  - Google Translate-based LanguageSelector tüm dashboard sayfalarına eklendi
+  - Header'da (masaüstü) ThemeToggle yanında gösteriliyor
+  - Mobile menüde ayrı bölümde gösteriliyor
+  - 8 dil destekleniyor: English, Türkçe, Deutsch, Español, Italiano, Français, 中文, 日本語
+  - Dosyalar: `settings/page.tsx`, `layout.tsx`
 
 ---
 
