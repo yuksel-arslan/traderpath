@@ -1325,11 +1325,10 @@ Explain the key risks and what conditions would need to change before trading th
       const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
       startDate.setHours(0, 0, 0, 0);
 
-      // Get all closed analyses with outcomes in the date range
-      const closedAnalyses = await prisma.analysis.findMany({
+      // Get ALL closed analyses (for all-time total)
+      const allClosedAnalyses = await prisma.analysis.findMany({
         where: {
           outcome: { in: ['tp1_hit', 'tp2_hit', 'tp3_hit', 'sl_hit'] },
-          outcomeAt: { gte: startDate }
         },
         select: {
           outcome: true,
@@ -1339,6 +1338,11 @@ Explain the key risks and what conditions would need to change before trading th
         },
         orderBy: { outcomeAt: 'asc' }
       });
+
+      // Filter for period-specific data
+      const closedAnalyses = allClosedAnalyses.filter(a =>
+        a.outcomeAt && a.outcomeAt >= startDate
+      );
 
       // Initialize daily data structure
       const dailyData: Record<string, { realized: number; trades: number }> = {};
@@ -1384,9 +1388,30 @@ Explain the key risks and what conditions would need to change before trading th
         };
       });
 
-      // Summary stats
+      // Summary stats (period-filtered)
       const totalRealizedPnL = Number(cumulativePnL.toFixed(2));
       const totalTrades = closedAnalyses.length;
+
+      // Calculate ALL-TIME total P/L (same formula as platform-stats)
+      let allTimePnLSum = 0;
+      allClosedAnalyses.forEach(analysis => {
+        const step5 = analysis.step5Result as Record<string, unknown> | null;
+        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
+        const outcomePrice = analysis.outcomePrice ? Number(analysis.outcomePrice) : 0;
+        const direction = ((step5?.direction as string) || 'long').toLowerCase();
+
+        if (entryPrice > 0 && outcomePrice > 0) {
+          let pnl = 0;
+          if (direction === 'short') {
+            pnl = ((entryPrice - outcomePrice) / entryPrice) * 100;
+          } else {
+            pnl = ((outcomePrice - entryPrice) / entryPrice) * 100;
+          }
+          allTimePnLSum += pnl;
+        }
+      });
+      const allTimeTotalPnL = Number(allTimePnLSum.toFixed(1));
+      const allTimeTotalTrades = allClosedAnalyses.length;
 
       return reply.send({
         success: true,
@@ -1396,6 +1421,9 @@ Explain the key risks and what conditions would need to change before trading th
             totalRealizedPnL,
             totalTrades,
             period: days,
+            // All-time totals (same as platform-stats)
+            allTimeTotalPnL,
+            allTimeTotalTrades,
           }
         }
       });

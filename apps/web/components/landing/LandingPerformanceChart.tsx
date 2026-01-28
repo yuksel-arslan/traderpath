@@ -31,6 +31,7 @@ export default function LandingPerformanceChart() {
   const [rawData, setRawData] = useState<DailyData[]>([]);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [totalPnL, setTotalPnL] = useState(0);
+  const [allTimePnL, setAllTimePnL] = useState(0); // All-time total (same as platform-stats)
   const [totalTrades, setTotalTrades] = useState(0);
   const [loading, setLoading] = useState(true);
   const [hasChartData, setHasChartData] = useState(false);
@@ -163,7 +164,9 @@ export default function LandingPerformanceChart() {
             if (data.success && data.data?.daily?.length > 0) {
               setRawData(data.data.daily);
               setTotalPnL(data.data.summary.totalRealizedPnL || 0);
-              setTotalTrades(data.data.summary.totalTrades || 0);
+              // Use all-time total for display (same as platform-stats)
+              setAllTimePnL(data.data.summary.allTimeTotalPnL || data.data.summary.totalRealizedPnL || 0);
+              setTotalTrades(data.data.summary.allTimeTotalTrades || data.data.summary.totalTrades || 0);
               setHasChartData(true);
               setLoading(false);
               return;
@@ -186,6 +189,7 @@ export default function LandingPerformanceChart() {
             const data = await res.json();
             if (data.success && data.data?.accuracy) {
               setTotalPnL(data.data.accuracy.totalPnL || 0);
+              setAllTimePnL(data.data.accuracy.totalPnL || 0);
               setTotalTrades(data.data.accuracy.closedCount || 0);
               setHasChartData(false);
               setLoading(false);
@@ -209,7 +213,11 @@ export default function LandingPerformanceChart() {
     }
   }, [rawData, viewMode]);
 
-  const periodPnL = hasChartData ? calculatePeriodPnL(rawData, viewMode) : totalPnL;
+  // For monthly view, show all-time P/L to match dashboard
+  // For daily/weekly, show period-specific P/L
+  const periodPnL = hasChartData
+    ? (viewMode === 'monthly' ? allTimePnL : calculatePeriodPnL(rawData, viewMode))
+    : allTimePnL;
 
   if (loading) {
     return (
@@ -242,7 +250,7 @@ export default function LandingPerformanceChart() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
-              {totalPnL >= 0 ? (
+              {allTimePnL >= 0 ? (
                 <TrendingUp className="w-6 h-6 text-emerald-500" />
               ) : (
                 <TrendingDown className="w-6 h-6 text-red-500" />
@@ -255,11 +263,11 @@ export default function LandingPerformanceChart() {
           </div>
           <div className="flex items-center gap-4">
             <div className={`px-4 py-2 rounded-xl font-bold text-xl ${
-              totalPnL >= 0
+              allTimePnL >= 0
                 ? 'bg-emerald-500/20 text-emerald-500'
                 : 'bg-red-500/20 text-red-500'
             }`}>
-              {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(1)}%
+              {allTimePnL >= 0 ? '+' : ''}{allTimePnL.toFixed(1)}%
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold">{totalTrades}</div>
@@ -285,7 +293,7 @@ export default function LandingPerformanceChart() {
           <div>
             <h3 className="font-bold">Platform Performance</h3>
             <p className="text-xs text-muted-foreground">
-              {viewMode === 'daily' ? 'Today' : viewMode === 'weekly' ? 'Last 7 days' : 'Last 30 days'} P/L
+              {viewMode === 'daily' ? 'Today' : viewMode === 'weekly' ? 'Last 7 days' : 'All-time'} P/L
             </p>
           </div>
         </div>
@@ -321,7 +329,7 @@ export default function LandingPerformanceChart() {
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              Month
+              All
             </button>
           </div>
 
