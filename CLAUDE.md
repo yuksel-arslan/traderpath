@@ -306,6 +306,8 @@ Kullanıcı Hakları Aktif:
 | 2026-01-20 | Mobile App Icon: Alternatif renk düzeni | Yeşil-kırmızı-yeşil-kırmızı (çapraz) vs orijinal (2 yeşil + 2 kırmızı) |
 | 2026-01-20 | PDF Rapor: Gerçek candlestick grafik | Son 50 mum OHLCV verisiyle SVG candlestick chart - yeşil/kırmızı mumlar, entry/SL/TP seviyeleri |
 | 2026-01-27 | Testimonials → Platform Metrics | Sahte yorumlar yerine gerçek API verileri - şeffaflık ve güvenilirlik |
+| 2026-01-27 | Feature 1 → AI-Powered Market Scanner | 7-Step Analysis Suite formatında, "Find Your Next Winning Trade" yerine |
+| 2026-01-27 | Real Results section Hero altına taşındı | Metrikler daha erken görünsün |
 
 ---
 
@@ -897,6 +899,16 @@ Kullanıcı Hakları Aktif:
   - "Scan Now" butonu ile Top 5 tarama yapıldığında, tarama bitince otomatik olarak Top 5 Coins bölümüne smooth scroll yapılıyor
   - `id="top-coins-section"` div'e eklendi
   - `scrollToTopCoins()` callback fonksiyonu eklendi
+- **Landing page yeniden düzenlendi**:
+  - "Real Results, Real Data" bölümü Hero section'ın (60 Seconds) altına taşındı
+  - Feature 1 başlığı "AI-Powered Market Scanner" olarak güncellendi (7-Step format)
+  - "Find Your Next Winning Trade" başlığı kaldırıldı
+- **AI Concierge tarama onay akışı eklendi**:
+  - `SCAN_CONFIRM` intent: Onay kelimeleri (evet, yes, tamam, onaylıyorum, ok, vb.)
+  - `SCAN_DECLINE` intent: Red kelimeleri (hayır, no, iptal, cancel, vb.)
+  - `handleTopCoinsByScore`: Cache yoksa "Onaylıyor musunuz?" / "Do you confirm?" soruluyor
+  - `handleScanConfirm`: Onay gelince 300 kredi çekilip tarama başlatılıyor
+  - Frontend: Onay sonrası 3 saniye bekleyip `/analyze` sayfasına yönlendirme
 
 ---
 

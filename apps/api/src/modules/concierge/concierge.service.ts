@@ -758,6 +758,23 @@ class ConciergeService {
         case 'TOP_COINS_SCAN':
           return await this.handleTopCoinsScan(userId, creditBalance, detectedLanguage);
 
+        case 'SCAN_CONFIRM':
+          // User confirmed the scan - trigger it
+          return await this.handleScanConfirm(userId, creditBalance, detectedLanguage);
+
+        case 'SCAN_DECLINE':
+          // User declined the scan
+          return {
+            success: true,
+            intent: 'SCAN_DECLINE',
+            message: detectedLanguage === 'tr'
+              ? '👍 Tamam, taramayı iptal ettim. Başka bir konuda yardımcı olabilir miyim?'
+              : '👍 Okay, scan cancelled. Is there anything else I can help you with?',
+            creditsSpent: 0,
+            creditsRemaining: creditBalance,
+            detectedLanguage,
+          };
+
         case 'ANALYSIS':
           return await this.handleAnalysis(userId, symbol!, interval || '4h', detectedLanguage, creditBalance);
 
@@ -2154,30 +2171,26 @@ Or visit /scheduled to delete.`,
         };
       }
 
-      // No cache or too old - offer to scan
+      // No cache or too old - ask for confirmation
       const offerMessage = language === 'tr'
         ? `📊 **Top 30 Coin Taraması**
 
 Sizin için hacim olarak ilk 30 coini analiz edip, analiz doğruluk skoruna göre sıralayabilirim.
 
-💰 **Fiyatlandırma:**
-- Normal fiyat: 750 kredi (30 × 25)
-- Size özel: **300 kredi** (%60 indirim!)
+💰 Bunun için sizden **300 kredi** tahsil etmem gerekiyor.
 
-⏱️ Tarama yaklaşık 3-5 dakika sürer.
+⏱️ Tarama yaklaşık 3-5 dakika sürer, tamamlandığında sizi ilgili sayfaya yönlendireceğim.
 
-Devam etmek için "taramayı başlat" veya "scan now" yazın.`
+**Onaylıyor musunuz?** (Evet / Hayır)`
         : `📊 **Top 30 Coins Scan**
 
 I can analyze the top 30 coins by volume and rank them by reliability score.
 
-💰 **Pricing:**
-- Normal price: 750 credits (30 × 25)
-- Special offer: **300 credits** (60% off!)
+💰 This will cost **300 credits**.
 
-⏱️ Scan takes approximately 3-5 minutes.
+⏱️ Scan takes approximately 3-5 minutes. I will redirect you to the results page when complete.
 
-Type "start scan" or "taramayı başlat" to continue.`;
+**Do you confirm?** (Yes / No)`;
 
       return {
         success: true,
@@ -2282,6 +2295,92 @@ Type "top coins" to see results when complete.`;
       return {
         success: false,
         intent: 'TOP_COINS_SCAN',
+        message: language === 'tr'
+          ? 'Tarama başlatılamadı. Lütfen tekrar deneyin.'
+          : 'Failed to start scan. Please try again.',
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Handle scan confirmation - user confirmed they want to pay 300 credits
+   */
+  private async handleScanConfirm(
+    userId: string,
+    creditBalance: number,
+    language: string
+  ): Promise<ConciergeResponse> {
+    const SCAN_COST = 300;
+
+    // Check credits
+    if (creditBalance < SCAN_COST) {
+      return {
+        success: false,
+        intent: 'SCAN_CONFIRM',
+        message: language === 'tr'
+          ? `Yetersiz kredi. Top 30 coin taraması için ${SCAN_COST} kredi gerekli, bakiyeniz: ${creditBalance}`
+          : `Insufficient credits. Top 30 coins scan requires ${SCAN_COST} credits, you have: ${creditBalance}`,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: 'INSUFFICIENT_CREDITS',
+      };
+    }
+
+    try {
+      // Charge credits
+      const chargeResult = await creditService.charge(userId, SCAN_COST, 'top_coins_scan', {
+        description: 'Top 30 coins analysis scan',
+      });
+
+      if (!chargeResult.success) {
+        return {
+          success: false,
+          intent: 'SCAN_CONFIRM',
+          message: language === 'tr'
+            ? 'Kredi çekimi başarısız oldu. Lütfen tekrar deneyin.'
+            : 'Credit charge failed. Please try again.',
+          creditsSpent: 0,
+          creditsRemaining: creditBalance,
+          error: 'CHARGE_FAILED',
+        };
+      }
+
+      // Confirmation message
+      const confirmMessage = language === 'tr'
+        ? `✅ **${SCAN_COST} kredi tahsil edildi.**
+
+🔄 Analizi başlatıyorum... Tamamlandığında sizi ilgili sayfaya yönlendireceğim.
+
+⏱️ Bu işlem 3-5 dakika sürebilir.`
+        : `✅ **${SCAN_COST} credits charged.**
+
+🔄 Starting analysis... I will redirect you to the results page when complete.
+
+⏱️ This may take 3-5 minutes.`;
+
+      // Start scan in background (don't await)
+      coinScoreCacheService.scanAllCoins('4h').then(result => {
+        console.log(`[Concierge] Top coins scan complete: ${result.success} success, ${result.failed} failed`);
+      }).catch(err => {
+        console.error('[Concierge] Top coins scan error:', err);
+      });
+
+      return {
+        success: true,
+        intent: 'SCAN_CONFIRM',
+        message: confirmMessage,
+        creditsSpent: SCAN_COST,
+        creditsRemaining: chargeResult.newBalance,
+        detectedLanguage: language,
+      };
+    } catch (error) {
+      console.error('[Concierge] Scan confirm error:', error);
+      return {
+        success: false,
+        intent: 'SCAN_CONFIRM',
         message: language === 'tr'
           ? 'Tarama başlatılamadı. Lütfen tekrar deneyin.'
           : 'Failed to start scan. Please try again.',
