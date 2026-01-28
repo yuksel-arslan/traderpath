@@ -28,6 +28,7 @@ import {
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
 import { InterfacePreferenceModal } from '../../components/common/InterfacePreferenceModal';
+import { LanguageSelector } from '../../components/common/LanguageSelector';
 import { cn } from '../../lib/utils';
 import { authFetch, clearAuthToken } from '../../lib/api';
 
@@ -357,6 +358,7 @@ export default function DashboardLayout({
                 )}
               </div>
 
+              <LanguageSelector compact />
               <ThemeToggle variant="icon" />
 
               {/* User Menu */}
@@ -481,6 +483,13 @@ export default function DashboardLayout({
                     {item.name}
                   </Link>
                 ))}
+                {/* Language Selector in Mobile Menu */}
+                <div className="px-3 py-2.5 border-t border-border mt-2 pt-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Language</span>
+                    <LanguageSelector />
+                  </div>
+                </div>
               </div>
             </nav>
           )}
