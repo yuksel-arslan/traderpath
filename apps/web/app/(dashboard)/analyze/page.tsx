@@ -290,9 +290,13 @@ function FeatureBadge({ icon: Icon, text }: { icon: React.ElementType; text: str
   );
 }
 
+// Analysis method type
+type AnalysisMethod = 'classic' | 'mlis_pro';
+
 export default function AnalyzePage() {
   const [stats, setStats] = useState<AnalysisStats | null>(null);
   const [timeframe, setTimeframe] = useState<Timeframe>('4h');
+  const [analysisMethod, setAnalysisMethod] = useState<AnalysisMethod>('classic');
   const [chartSymbol, setChartSymbol] = useState('BINANCE:BTCUSDT');
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [showChart, setShowChart] = useState(false);
@@ -735,21 +739,114 @@ export default function AnalyzePage() {
             </GlassCard>
           </div>
 
-          {/* Timeframe Selection - Full Width */}
+          {/* Timeframe & Method Selection - Full Width */}
           <div className="col-span-12">
             <GlassCard className="p-3 sm:p-4 md:p-6">
-              <div className="space-y-3 sm:space-y-4">
-                <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500" />
-                  Select Timeframe
-                </h3>
-                <TradeTypeSelector
-                  value={timeframe}
-                  onChange={(tf) => setTimeframe(tf)}
-                  variant="tabs"
-                  showCreditCost
-                  className="w-full"
-                />
+              <div className="space-y-4 sm:space-y-6">
+                {/* Timeframe Selection */}
+                <div className="space-y-3">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500" />
+                    Select Timeframe
+                  </h3>
+                  <TradeTypeSelector
+                    value={timeframe}
+                    onChange={(tf) => setTimeframe(tf)}
+                    variant="tabs"
+                    showCreditCost
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Analysis Method Selection */}
+                <div className="space-y-3">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Brain className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
+                    Analysis Method
+                  </h3>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {/* Classic Method */}
+                    <button
+                      onClick={() => setAnalysisMethod('classic')}
+                      className={cn(
+                        "flex-1 relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-300",
+                        "hover:shadow-lg",
+                        analysisMethod === 'classic'
+                          ? "border-teal-500 bg-teal-50/50 dark:bg-teal-500/10 shadow-teal-500/20"
+                          : "border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 hover:border-teal-300 dark:hover:border-teal-700"
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={cn(
+                          "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
+                          analysisMethod === 'classic'
+                            ? "border-teal-500 bg-teal-500"
+                            : "border-slate-300 dark:border-slate-600"
+                        )}>
+                          {analysisMethod === 'classic' && (
+                            <div className="w-2 h-2 rounded-full bg-white" />
+                          )}
+                        </div>
+                        <div className="text-left">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm text-slate-900 dark:text-white">Classic (7-Step)</span>
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            Full 7-step analysis with 40+ indicators, trade plan, and AI expert insights
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* MLIS Pro Method */}
+                    <button
+                      onClick={() => setAnalysisMethod('mlis_pro')}
+                      className={cn(
+                        "flex-1 relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-300",
+                        "hover:shadow-lg",
+                        analysisMethod === 'mlis_pro'
+                          ? "border-violet-500 bg-violet-50/50 dark:bg-violet-500/10 shadow-violet-500/20"
+                          : "border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 hover:border-violet-300 dark:hover:border-violet-700"
+                      )}
+                    >
+                      {/* NEW Badge */}
+                      <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-[10px] font-bold rounded-full shadow-lg animate-pulse">
+                        NEW
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className={cn(
+                          "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
+                          analysisMethod === 'mlis_pro'
+                            ? "border-violet-500 bg-violet-500"
+                            : "border-slate-300 dark:border-slate-600"
+                        )}>
+                          {analysisMethod === 'mlis_pro' && (
+                            <div className="w-2 h-2 rounded-full bg-white" />
+                          )}
+                        </div>
+                        <div className="text-left">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm text-slate-900 dark:text-white">MLIS Pro</span>
+                            <Sparkles className="w-3.5 h-3.5 text-violet-500" />
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            Multi-Layer Intelligence: Technical, Momentum, Volatility, Volume & Sentiment layers
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Method Info Tooltip */}
+                  {analysisMethod === 'mlis_pro' && (
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-violet-50/50 dark:bg-violet-500/10 border border-violet-200/50 dark:border-violet-500/20">
+                      <Sparkles className="w-4 h-4 text-violet-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-violet-700 dark:text-violet-300">
+                        <strong>MLIS Pro</strong> uses 5-layer analysis: Technical (EMA, MACD, ADX), Momentum (RSI, StochRSI, CCI), Volatility (ATR, Bollinger), Volume (OBV, CMF), and Sentiment (Fear &amp; Greed). Returns a confidence score and clear recommendation.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </GlassCard>
           </div>
@@ -762,7 +859,7 @@ export default function AnalyzePage() {
                   <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
                   Select Coin to Analyze
                 </h3>
-                <CoinSelector timeframe={timeframe} />
+                <CoinSelector timeframe={timeframe} analysisMethod={analysisMethod} />
               </div>
             </GlassCard>
           </div>

@@ -16,6 +16,7 @@ import { economicCalendarService } from './services/economic-calendar.service';
 import { getCautionRate, calculateCautionOutcomes, calculateExpiredOutcomes } from '../reports/outcome.service';
 import { prisma } from '../../core/database';
 import { coinScoreCacheService, CoinScore } from './services/coin-score-cache.service';
+import { analyzeMLIS, MLISResult } from './services/mlis.service';
 
 // User type from JWT
 interface JwtUser {
@@ -466,11 +467,15 @@ Warn about potential traps and give protective advice.`;
    * POST /api/analysis/full
    * Full Analysis Bundle (15 credits)
    */
+  // Analysis method schema
+  const analysisMethodSchema = z.enum(['classic', 'mlis_pro']).optional().default('classic');
+
   const fullAnalysisSchema = z.object({
     symbol: z.string().toUpperCase(),
     accountSize: z.number().optional().default(10000),
     interval: intervalSchema,
     tradeType: tradeTypeSchema.optional(),
+    method: analysisMethodSchema,
   });
 
   app.post('/full', {
@@ -497,6 +502,91 @@ Warn about potential traps and give protective advice.`;
     }
 
     try {
+      // Check if MLIS Pro method is requested
+      if (body.method === 'mlis_pro') {
+        // Run MLIS Pro analysis
+        const mlisResult = await analyzeMLIS(body.symbol, interval);
+
+        // Save MLIS analysis to database with adapted format
+        const savedAnalysis = await prisma.analysis.create({
+          data: {
+            userId,
+            symbol: body.symbol,
+            interval: interval,
+            stepsCompleted: [1, 2, 3, 4, 5, 6, 7], // Mark all steps as completed
+            step1Result: { mlis: true, layer: 'technical', score: mlisResult.layers.technical.score } as object,
+            step2Result: { mlis: true, layer: 'momentum', score: mlisResult.layers.momentum.score } as object,
+            step3Result: { mlis: true, layer: 'volatility', score: mlisResult.layers.volatility.score } as object,
+            step4Result: { mlis: true, layer: 'volume', score: mlisResult.layers.volume.score } as object,
+            step5Result: { mlis: true, layer: 'sentiment', score: mlisResult.layers.sentiment?.score || 50 } as object,
+            step6Result: { mlis: true, layer: 'onchain', score: mlisResult.layers.onchain?.score || 50 } as object,
+            step7Result: {
+              mlis: true,
+              overallScore: mlisResult.overallScore,
+              confidence: mlisResult.confidence,
+              recommendation: mlisResult.recommendation,
+              direction: mlisResult.direction,
+              riskLevel: mlisResult.riskLevel,
+              volatilityRegime: mlisResult.volatilityRegime,
+              keySignals: mlisResult.keySignals,
+              riskFactors: mlisResult.riskFactors,
+              verdict: mlisResult.recommendation === 'STRONG_BUY' || mlisResult.recommendation === 'BUY' ? 'go' :
+                       mlisResult.recommendation === 'HOLD' ? 'wait' : 'avoid',
+            } as object,
+            totalScore: mlisResult.overallScore / 10, // Convert 0-100 to 0-10 scale
+            creditsSpent: cost,
+          },
+        });
+
+        // Check for daily analysis bonus
+        await creditService.checkDailyAnalysisBonus(userId);
+
+        // Trade type completion bonus
+        const tradeTypeBonus = tradeType === 'scalping' ? 3 : tradeType === 'dayTrade' ? 2 : 1;
+        await creditService.add(
+          userId,
+          tradeTypeBonus,
+          'BONUS',
+          'trade_type_completion_bonus',
+          {
+            tradeType,
+            symbol: body.symbol,
+            analysisId: savedAnalysis.id,
+          }
+        );
+
+        // Return MLIS result
+        return reply.send({
+          success: true,
+          data: {
+            analysisId: savedAnalysis.id,
+            method: 'mlis_pro',
+            symbol: body.symbol,
+            interval,
+            tradeType,
+            ...mlisResult,
+            // Add compatibility fields for existing UI
+            step1Result: { mlis: true, score: mlisResult.layers.technical.score },
+            step2Result: { mlis: true, score: mlisResult.layers.momentum.score },
+            step3Result: { mlis: true, score: mlisResult.layers.volatility.score },
+            step4Result: { mlis: true, score: mlisResult.layers.volume.score },
+            step5Result: { mlis: true, score: mlisResult.layers.sentiment?.score || 50 },
+            step6Result: { mlis: true, score: mlisResult.layers.onchain?.score || 50 },
+            step7Result: {
+              overallScore: mlisResult.overallScore / 10,
+              verdict: mlisResult.recommendation === 'STRONG_BUY' || mlisResult.recommendation === 'BUY' ? 'go' :
+                       mlisResult.recommendation === 'HOLD' ? 'wait' : 'avoid',
+              recommendation: mlisResult.recommendation,
+              direction: mlisResult.direction,
+            },
+            tradePlan: null, // MLIS doesn't generate trade plans
+            creditsUsed: cost,
+            bonusCredits: tradeTypeBonus,
+          },
+        });
+      }
+
+      // Classic 7-step analysis
       // Step 1-5: Run all prerequisite analysis steps in parallel
       // All steps use trade type specific timeframes and indicators
       const [marketPulse, assetScan, safetyCheck, timing, trapCheck] = await Promise.all([
