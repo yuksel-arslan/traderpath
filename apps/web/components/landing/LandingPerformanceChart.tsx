@@ -293,7 +293,7 @@ export default function LandingPerformanceChart() {
           <div>
             <h3 className="font-bold">Platform Performance</h3>
             <p className="text-xs text-muted-foreground">
-              {viewMode === 'daily' ? 'Today' : viewMode === 'weekly' ? 'Last 7 days' : 'All-time'} P/L
+              Total P/L • Chart: {viewMode === 'daily' ? 'Today' : viewMode === 'weekly' ? 'Week' : 'All'}
             </p>
           </div>
         </div>
@@ -333,13 +333,13 @@ export default function LandingPerformanceChart() {
             </button>
           </div>
 
-          {/* P/L Badge */}
+          {/* P/L Badge - Always shows all-time total */}
           <div className={`px-2.5 py-1 rounded-lg font-bold text-sm ${
-            periodPnL >= 0
+            allTimePnL >= 0
               ? 'bg-emerald-500/20 text-emerald-500'
               : 'bg-red-500/20 text-red-500'
           }`}>
-            {periodPnL >= 0 ? '+' : ''}{periodPnL.toFixed(1)}%
+            {allTimePnL >= 0 ? '+' : ''}{allTimePnL.toFixed(1)}%
           </div>
         </div>
       </div>
