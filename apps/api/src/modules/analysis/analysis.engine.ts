@@ -4315,26 +4315,20 @@ export const analysisEngine = {
       safetyAdjusted: false,
     };
 
-    // Take profit levels (R:R based)
+    // Take profit levels (R:R based) - only 2 TPs at 1.5R and 2.5R
     const riskAmount = Math.abs(averageEntry - stopPrice);
     const takeProfits: TradePlanResult['takeProfits'] = [
       {
         price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 1.5 : averageEntry - riskAmount * 1.5),
-        percentage: 30,
+        percentage: 50,
         reason: '1.5R - First take profit',
         source: '1.5R calculation',
       },
       {
         price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 2.5 : averageEntry - riskAmount * 2.5),
-        percentage: 40,
+        percentage: 50,
         reason: '2.5R - Main target',
         source: '2.5R calculation',
-      },
-      {
-        price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 4 : averageEntry - riskAmount * 4),
-        percentage: 30,
-        reason: '4R - Extended target',
-        source: '4R calculation',
       },
     ];
 
@@ -5226,7 +5220,7 @@ export const analysisEngine = {
     const riskAmount = Math.abs(averageEntry - stopPrice);
 
     if (direction === 'long') {
-      // TP1: First resistance or 1.5R
+      // TP1: First resistance or 1.5R (50% of position)
       const tp1FromResistance = assetScan.levels.resistance[0];
       const tp1From15R = averageEntry + (riskAmount * 1.5);
       const tp1 = tp1FromResistance && tp1FromResistance > averageEntry
@@ -5234,13 +5228,13 @@ export const analysisEngine = {
         : tp1From15R;
       takeProfits.push({
         price: roundPrice(tp1),
-        percentage: 40,
+        percentage: 50,
         reason: '1.5R or first resistance',
         source: tp1FromResistance ? 'Asset Scanner resistance' : '1.5R calculation'
       });
       sources.targets.push(tp1FromResistance ? 'Asset Scanner resistance 1' : '1.5R');
 
-      // TP2: Second resistance or 2.5R
+      // TP2: Second resistance or 2.5R (50% of position)
       const tp2FromResistance = assetScan.levels.resistance[1];
       const tp2From25R = averageEntry + (riskAmount * 2.5);
       const tp2 = tp2FromResistance && tp2FromResistance > tp1
@@ -5248,22 +5242,14 @@ export const analysisEngine = {
         : tp2From25R;
       takeProfits.push({
         price: roundPrice(tp2),
-        percentage: 35,
+        percentage: 50,
         reason: '2.5R or second resistance',
         source: tp2FromResistance ? 'Asset Scanner resistance' : '2.5R calculation'
       });
       sources.targets.push(tp2FromResistance ? 'Asset Scanner resistance 2' : '2.5R');
-
-      // TP3: 4R extended target
-      takeProfits.push({
-        price: roundPrice(averageEntry + (riskAmount * 4)),
-        percentage: 25,
-        reason: '4R extended target',
-        source: '4R calculation'
-      });
-      sources.targets.push('4R extended');
     } else {
       // Short direction - use support levels
+      // TP1: First support or 1.5R (50% of position)
       const tp1FromSupport = assetScan.levels.support[0];
       const tp1From15R = averageEntry - (riskAmount * 1.5);
       const tp1 = tp1FromSupport && tp1FromSupport < averageEntry
@@ -5271,12 +5257,13 @@ export const analysisEngine = {
         : tp1From15R;
       takeProfits.push({
         price: roundPrice(tp1),
-        percentage: 40,
+        percentage: 50,
         reason: '1.5R or first support',
         source: tp1FromSupport ? 'Asset Scanner support' : '1.5R calculation'
       });
       sources.targets.push(tp1FromSupport ? 'Asset Scanner support 1' : '1.5R');
 
+      // TP2: Second support or 2.5R (50% of position)
       const tp2FromSupport = assetScan.levels.support[1];
       const tp2From25R = averageEntry - (riskAmount * 2.5);
       const tp2 = tp2FromSupport && tp2FromSupport < tp1
@@ -5284,19 +5271,11 @@ export const analysisEngine = {
         : tp2From25R;
       takeProfits.push({
         price: roundPrice(tp2),
-        percentage: 35,
+        percentage: 50,
         reason: '2.5R or second support',
         source: tp2FromSupport ? 'Asset Scanner support' : '2.5R calculation'
       });
       sources.targets.push(tp2FromSupport ? 'Asset Scanner support 2' : '2.5R');
-
-      takeProfits.push({
-        price: roundPrice(averageEntry - (riskAmount * 4)),
-        percentage: 25,
-        reason: '4R extended target',
-        source: '4R calculation'
-      });
-      sources.targets.push('4R extended');
     }
 
     // ===== RISK/REWARD CALCULATION =====

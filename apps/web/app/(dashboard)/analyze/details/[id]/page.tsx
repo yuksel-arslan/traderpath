@@ -381,11 +381,10 @@ export default function AnalysisDetailsPage() {
 
   const macdDesc = (step2.indicators?.macd?.histogram || 0) > 0 ? 'Bullish crossover' : 'Bearish momentum';
 
-  // Trade plan data
+  // Trade plan data (only 2 TPs: TP1 and TP2)
   const stopLossPrice = step5.stopLoss?.price || step5.stopLoss;
   const tp1 = step5.takeProfits?.[0]?.price || step5.takeProfit1;
   const tp2 = step5.takeProfits?.[1]?.price || step5.takeProfit2;
-  const tp3 = step5.takeProfits?.[2]?.price || step5.takeProfit3;
 
   return (
     <>
@@ -657,7 +656,7 @@ export default function AnalysisDetailsPage() {
                   direction={direction as 'long' | 'short'}
                   entries={[{ price: entryPrice, percentage: 100 }]}
                   stopLoss={{ price: stopLossPrice || 0, percentage: 0 }}
-                  takeProfits={[tp1, tp2, tp3].filter(Boolean).map((tp, i) => ({
+                  takeProfits={[tp1, tp2].filter(Boolean).map((tp, i) => ({
                     price: tp,
                     percentage: 0,
                     riskReward: step5.riskReward || (i + 1),

@@ -200,7 +200,7 @@ export function ResultCard({ data, compact = false }: ResultCardProps) {
       </div>
 
       {/* Additional TP levels */}
-      {(data.takeProfit2 || data.takeProfit3) && (
+      {data.takeProfit2 && (
         <div className="px-4 pb-2">
           <button
             onClick={() => setExpanded(!expanded)}
@@ -217,24 +217,14 @@ export function ResultCard({ data, compact = false }: ResultCardProps) {
             )}
           </button>
 
-          {expanded && (
-            <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-              {data.takeProfit2 && (
-                <div className="bg-emerald-500/5 rounded-lg p-2 text-center">
-                  <span className="text-xs text-slate-500">TP2</span>
-                  <p className="font-medium text-emerald-500">
-                    {formatPrice(data.takeProfit2)}
-                  </p>
-                </div>
-              )}
-              {data.takeProfit3 && (
-                <div className="bg-emerald-500/5 rounded-lg p-2 text-center">
-                  <span className="text-xs text-slate-500">TP3</span>
-                  <p className="font-medium text-emerald-500">
-                    {formatPrice(data.takeProfit3)}
-                  </p>
-                </div>
-              )}
+          {expanded && data.takeProfit2 && (
+            <div className="mt-2 text-sm">
+              <div className="bg-emerald-500/5 rounded-lg p-2 text-center">
+                <span className="text-xs text-slate-500">TP2</span>
+                <p className="font-medium text-emerald-500">
+                  {formatPrice(data.takeProfit2)}
+                </p>
+              </div>
             </div>
           )}
         </div>
