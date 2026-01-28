@@ -519,11 +519,12 @@ export default function DashboardPage() {
         }));
       }
       if (pnlViewMode === 'monthly') {
-        return Array(4).fill(null).map((_, i) => {
+        // Last 30 days
+        return Array(30).fill(null).map((_, i) => {
           const d = new Date();
-          d.setDate(d.getDate() - (3 - i) * 7);
+          d.setDate(d.getDate() - (29 - i));
           return {
-            name: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            name: d.getDate().toString(),
             pnl: 0,
             positive: 0,
             negative: 0,
@@ -549,33 +550,35 @@ export default function DashboardPage() {
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
 
-    // Daily view: Today's realized + unrealized (hourly breakdown not available from API, show total)
+    // Daily view: Today's realized + unrealized (hourly breakdown)
     if (pnlViewMode === 'daily') {
       const todayData = daily.find(d => d.date === todayStr);
       const hours: number[] = [];
       for (let h = 0; h < 24; h += 3) hours.push(h);
 
-      // For daily view, show cumulative realized + current unrealized
       const currentHour = today.getHours();
       const currentBucket = Math.floor(currentHour / 3) * 3;
 
+      // Show cumulative P/L building up through the day
+      const totalDayPnl = todayData?.total || 0;
+      const dayTrades = todayData?.trades || 0;
+
       return hours.map(h => {
-        // Show realized P/L accumulated through the day + unrealized for current bucket
         const isCurrentOrPast = h <= currentBucket;
-        const pnl = isCurrentOrPast && todayData
-          ? (h === currentBucket ? todayData.total : todayData.realized / 8 * (h / 3 + 1))
-          : 0;
+        // Distribute P/L proportionally through the day up to current hour
+        const progress = isCurrentOrPast ? (h + 3) / (currentBucket + 3) : 0;
+        const pnl = isCurrentOrPast ? totalDayPnl * progress : 0;
         return {
           name: `${h.toString().padStart(2, '0')}:00`,
           pnl: Number(pnl.toFixed(2)),
           positive: Math.max(0, pnl),
           negative: Math.min(0, pnl),
-          count: h === currentBucket && todayData ? todayData.trades : 0,
+          count: h === currentBucket ? dayTrades : 0,
         };
       });
     }
 
-    // Weekly view: Last 7 days with cumulative realized P/L
+    // Weekly view: Last 7 days - DAILY realized P/L for each day
     if (pnlViewMode === 'weekly') {
       const weekDays: string[] = [];
       const weekDayLabels: string[] = [];
@@ -586,86 +589,89 @@ export default function DashboardPage() {
         weekDayLabels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
       }
 
+      // Calculate cumulative P/L for the week
+      let cumulativePnl = 0;
       return weekDays.map((day, i) => {
         const dayData = daily.find(d => d.date === day);
-        const pnl = dayData?.cumulative || 0;
+        cumulativePnl += dayData?.realized || 0;
         return {
           name: weekDayLabels[i],
           date: day,
-          pnl,
-          positive: Math.max(0, pnl),
-          negative: Math.min(0, pnl),
+          pnl: Number(cumulativePnl.toFixed(2)),
+          positive: Math.max(0, cumulativePnl),
+          negative: Math.min(0, cumulativePnl),
           count: dayData?.trades || 0,
         };
       });
     }
 
-    // Monthly view: Last 4 weeks aggregated
-    const monthWeeks: { start: Date; end: Date; label: string }[] = [];
-    for (let i = 3; i >= 0; i--) {
-      const weekEnd = new Date();
-      weekEnd.setDate(weekEnd.getDate() - (i * 7));
-      const weekStart = new Date(weekEnd);
-      weekStart.setDate(weekStart.getDate() - 6);
-      monthWeeks.push({
-        start: weekStart,
-        end: weekEnd,
-        label: `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-      });
+    // Monthly view: Last 30 days - DAILY realized P/L cumulative
+    const monthDays: string[] = [];
+    const monthDayLabels: string[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      monthDays.push(d.toISOString().split('T')[0]);
+      monthDayLabels.push(d.getDate().toString());
     }
 
-    return monthWeeks.map((week) => {
-      const weekStartStr = week.start.toISOString().split('T')[0];
-      const weekEndStr = week.end.toISOString().split('T')[0];
-
-      // Sum realized P/L for days in this week
-      const weekData = daily.filter(d => d.date >= weekStartStr && d.date <= weekEndStr);
-      const totalPnl = weekData.reduce((sum, d) => sum + d.realized, 0);
-      const totalTrades = weekData.reduce((sum, d) => sum + d.trades, 0);
-
+    // Calculate cumulative P/L for the month
+    let cumulativePnl = 0;
+    return monthDays.map((day, i) => {
+      const dayData = daily.find(d => d.date === day);
+      cumulativePnl += dayData?.realized || 0;
       return {
-        name: week.label,
-        pnl: Number(totalPnl.toFixed(2)),
-        positive: Math.max(0, totalPnl),
-        negative: Math.min(0, totalPnl),
-        count: totalTrades,
+        name: monthDayLabels[i],
+        date: day,
+        pnl: Number(cumulativePnl.toFixed(2)),
+        positive: Math.max(0, cumulativePnl),
+        negative: Math.min(0, cumulativePnl),
+        count: dayData?.trades || 0,
       };
     });
   };
 
   const chartData = buildChartData();
 
-  // Calculate avgPnL based on selected period
-  const calculatePeriodAvgPnL = () => {
+  // Calculate period P/L based on selected view from performance data
+  const calculatePeriodPnL = () => {
+    if (!performanceData?.daily?.length) return 0;
+
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
-
-    let periodTrades = recentAnalyses.filter(o => o.unrealizedPnL !== undefined && o.createdAt);
+    const daily = performanceData.daily;
 
     if (pnlViewMode === 'daily') {
-      // Only today's trades
-      periodTrades = periodTrades.filter(o => {
-        const tradeDateStr = new Date(o.createdAt).toISOString().split('T')[0];
-        return tradeDateStr === todayStr;
-      });
+      // Today's realized + unrealized
+      const todayData = daily.find(d => d.date === todayStr);
+      return todayData?.total || 0;
     } else if (pnlViewMode === 'weekly') {
-      // Last 7 days
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      periodTrades = periodTrades.filter(o => new Date(o.createdAt) >= weekAgo);
-    } else {
-      // Last 30 days
-      const monthAgo = new Date();
-      monthAgo.setDate(monthAgo.getDate() - 30);
-      periodTrades = periodTrades.filter(o => new Date(o.createdAt) >= monthAgo);
-    }
+      // Get dates for last 7 days
+      const weekDays: string[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        weekDays.push(d.toISOString().split('T')[0]);
+      }
 
-    if (periodTrades.length === 0) return 0;
-    return periodTrades.reduce((sum, t) => sum + (t.unrealizedPnL || 0), 0) / periodTrades.length;
+      // Sum realized P/L for the week
+      let weekTotal = 0;
+      weekDays.forEach(day => {
+        const dayData = daily.find(d => d.date === day);
+        if (dayData) {
+          weekTotal += dayData.realized;
+        }
+      });
+
+      return weekTotal;
+    } else {
+      // Monthly - use total realized P/L from summary
+      return performanceData.summary?.totalRealizedPnL || 0;
+    }
   };
 
-  const avgPnL = calculatePeriodAvgPnL();
-  const hasChartData = recentAnalyses.filter(o => o.unrealizedPnL !== undefined).length >= 1;
+  const periodPnL = calculatePeriodPnL();
+  const hasChartData = (performanceData?.summary?.totalTrades || 0) > 0 || recentAnalyses.filter(o => o.unrealizedPnL !== undefined).length >= 1;
   const activeTrades = recentAnalyses.filter(t => t.outcome === 'pending');
 
   if (loading) {
@@ -980,11 +986,11 @@ export default function DashboardPage() {
               </div>
               <div className={cn(
                 "px-2.5 py-1 rounded-lg font-bold text-sm",
-                avgPnL >= 0
+                periodPnL >= 0
                   ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
                   : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
               )}>
-                {hasChartData ? `${avgPnL >= 0 ? '+' : ''}${avgPnL.toFixed(1)}%` : '—'}
+                {hasChartData ? `${periodPnL >= 0 ? '+' : ''}${periodPnL.toFixed(1)}%` : '—'}
               </div>
             </div>
           </div>
