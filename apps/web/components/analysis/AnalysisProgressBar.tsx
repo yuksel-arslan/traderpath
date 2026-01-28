@@ -1,7 +1,8 @@
 'use client';
 
 // ===========================================
-// Sophisticated 7-Step Analysis Progress Bar
+// Sophisticated Analysis Progress Bar
+// Supports both 7-Step Classic and 5-Layer MLIS
 // Premium design with animations
 // ===========================================
 
@@ -16,10 +17,12 @@ import {
   CheckCircle,
   Check,
   Lock,
+  Zap,
+  Activity,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-interface Step {
+export interface Step {
   id: number;
   name: string;
   shortName: string;
@@ -28,8 +31,8 @@ interface Step {
   gradient: string;
 }
 
-// Step order: Trap Check (5) before Trade Plan (6) - decision before plan
-const STEPS: Step[] = [
+// Classic 7-Step Analysis
+export const CLASSIC_STEPS: Step[] = [
   { id: 1, name: 'Market Pulse', shortName: 'Market', icon: TrendingUp, color: 'blue', gradient: 'from-blue-500 to-blue-600' },
   { id: 2, name: 'Asset Scanner', shortName: 'Scanner', icon: BarChart3, color: 'cyan', gradient: 'from-cyan-500 to-cyan-600' },
   { id: 3, name: 'Safety Check', shortName: 'Safety', icon: Shield, color: 'amber', gradient: 'from-amber-500 to-amber-600' },
@@ -39,6 +42,18 @@ const STEPS: Step[] = [
   { id: 7, name: 'Final Verdict', shortName: 'Verdict', icon: CheckCircle, color: 'emerald', gradient: 'from-emerald-500 to-emerald-600' },
 ];
 
+// MLIS 5-Layer Analysis
+export const MLIS_STEPS: Step[] = [
+  { id: 1, name: 'Technical', shortName: 'Tech', icon: TrendingUp, color: 'blue', gradient: 'from-blue-500 to-blue-600' },
+  { id: 2, name: 'Momentum', shortName: 'Mom', icon: Zap, color: 'emerald', gradient: 'from-emerald-500 to-emerald-600' },
+  { id: 3, name: 'Volatility', shortName: 'Vol', icon: Activity, color: 'orange', gradient: 'from-orange-500 to-orange-600' },
+  { id: 4, name: 'Volume', shortName: 'Vol', icon: BarChart3, color: 'cyan', gradient: 'from-cyan-500 to-cyan-600' },
+  { id: 5, name: 'Verdict', shortName: 'Verdict', icon: CheckCircle, color: 'purple', gradient: 'from-purple-500 to-purple-600' },
+];
+
+// Keep STEPS for backward compatibility
+const STEPS = CLASSIC_STEPS;
+
 interface AnalysisProgressBarProps {
   completedSteps?: number[];
   activeStep?: number;
@@ -47,6 +62,7 @@ interface AnalysisProgressBarProps {
   size?: 'sm' | 'md' | 'lg';
   showLabels?: boolean;
   animated?: boolean;
+  steps?: Step[];  // Custom steps for MLIS or other modes
 }
 
 export function AnalysisProgressBar({
@@ -57,20 +73,22 @@ export function AnalysisProgressBar({
   size = 'md',
   showLabels = true,
   animated = true,
+  steps = CLASSIC_STEPS,  // Default to classic 7 steps
 }: AnalysisProgressBarProps) {
   const [animatedStep, setAnimatedStep] = useState(0);
+  const totalSteps = steps.length;
 
   // Animate through steps when running
   useEffect(() => {
     if (isRunning && animated) {
       const interval = setInterval(() => {
-        setAnimatedStep((prev) => (prev >= 7 ? 1 : prev + 1));
+        setAnimatedStep((prev) => (prev >= totalSteps ? 1 : prev + 1));
       }, 800);
       return () => clearInterval(interval);
     } else {
       setAnimatedStep(activeStep);
     }
-  }, [isRunning, activeStep, animated]);
+  }, [isRunning, activeStep, animated, totalSteps]);
 
   const sizeClasses = {
     sm: { circle: 'w-8 h-8', icon: 'w-4 h-4', text: 'text-[9px]', gap: 'gap-1' },
@@ -88,7 +106,7 @@ export function AnalysisProgressBar({
   };
 
   const progressPercentage = completedSteps.length > 0
-    ? ((completedSteps.length) / 7) * 100
+    ? ((completedSteps.length) / totalSteps) * 100
     : 0;
 
   return (
@@ -111,7 +129,7 @@ export function AnalysisProgressBar({
 
         {/* Steps */}
         <div className="relative flex items-center justify-between">
-          {STEPS.map((step, index) => {
+          {steps.map((step, index) => {
             const state = getStepState(step.id);
             const Icon = step.icon;
             const isClickable = state === 'completed' && onStepClick;
@@ -212,7 +230,7 @@ export function AnalysisProgressBar({
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-gradient-to-r from-emerald-400 to-cyan-500" />
           <span className="text-gray-500 dark:text-slate-400">
-            {completedSteps.length}/7 Complete
+            {completedSteps.length}/{totalSteps} Complete
           </span>
         </div>
         {progressPercentage > 0 && progressPercentage < 100 && (
@@ -249,13 +267,15 @@ export function AnalysisProgressBar({
 export function AnalysisProgressBarCompact({
   completedSteps = [],
   activeStep = 0,
+  steps = CLASSIC_STEPS,
 }: {
   completedSteps?: number[];
   activeStep?: number;
+  steps?: Step[];
 }) {
   return (
     <div className="flex items-center gap-1">
-      {STEPS.map((step) => {
+      {steps.map((step) => {
         const isCompleted = completedSteps.includes(step.id);
         const isActive = step.id === activeStep;
 
