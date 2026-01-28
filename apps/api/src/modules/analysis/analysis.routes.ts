@@ -4756,6 +4756,100 @@ Explain the key risks and what conditions would need to change before trading th
   });
 
   /**
+   * POST /api/analysis/top-coins/scan
+   * Start a paid scan of top 30 coins (300 credits)
+   * Returns scan status and estimated completion time
+   */
+  app.post('/top-coins/scan', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const SCAN_COST = 300;
+    const COINS_TO_SCAN = 30;
+    const SECONDS_PER_COIN = 5;
+
+    try {
+      const user = getUser(request);
+      const userId = user.id;
+
+      // Check credit balance
+      const balanceResult = await creditService.getBalance(userId);
+      if (balanceResult.balance < SCAN_COST) {
+        return reply.status(402).send({
+          success: false,
+          error: {
+            code: 'INSUFFICIENT_CREDITS',
+            message: `Insufficient credits. Scan requires ${SCAN_COST} credits, you have ${balanceResult.balance}`,
+          },
+          creditsRequired: SCAN_COST,
+          creditsAvailable: balanceResult.balance,
+        });
+      }
+
+      // Charge credits
+      const chargeResult = await creditService.charge(userId, SCAN_COST, 'top_coins_scan', {
+        description: 'Top 30 coins analysis scan',
+      });
+
+      if (!chargeResult.success) {
+        return reply.status(402).send({
+          success: false,
+          error: { code: 'CHARGE_FAILED', message: 'Failed to charge credits' },
+        });
+      }
+
+      // Start scan in background (don't await)
+      coinScoreCacheService.scanAllCoins('4h').then((result) => {
+        console.log(`[TopCoins] Paid scan complete for user ${userId}. Success: ${result.success}, Failed: ${result.failed}`);
+      }).catch((error) => {
+        console.error(`[TopCoins] Paid scan failed for user ${userId}:`, error);
+      });
+
+      const estimatedMinutes = Math.ceil((COINS_TO_SCAN * SECONDS_PER_COIN) / 60);
+
+      return reply.send({
+        success: true,
+        data: {
+          message: `Scan started. Analyzing ${COINS_TO_SCAN} coins...`,
+          estimatedMinutes,
+          coinsToScan: COINS_TO_SCAN,
+          creditsCharged: SCAN_COST,
+          creditsRemaining: chargeResult.newBalance,
+        },
+      });
+    } catch (error) {
+      console.error('Paid scan error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'SCAN_ERROR', message: 'Failed to start scan' },
+      });
+    }
+  });
+
+  /**
+   * GET /api/analysis/top-coins/status
+   * Check the status of the coin score cache
+   */
+  app.get('/top-coins/status', async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const stats = await coinScoreCacheService.getCacheStats();
+      const isStale = await coinScoreCacheService.isCacheStale();
+
+      return reply.send({
+        success: true,
+        data: {
+          ...stats,
+          isStale,
+          isScanning: stats.freshCoins < 30 && !isStale, // Rough estimate
+        },
+      });
+    } catch (error) {
+      console.error('Cache status error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'STATUS_ERROR', message: 'Failed to get cache status' },
+      });
+    }
+  });
+
+  /**
    * GET /api/analysis/performance-history
    * Returns daily realized P/L for chart visualization
    * - Weekly/Monthly view: Uses outcomeAt date for realized P/L

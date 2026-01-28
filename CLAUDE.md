@@ -268,6 +268,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-26 | AI Expert yorumları raw tag'lerle gösteriliyordu | `renderAIExpertComment` parser fonksiyonu eklendi - [EXPERT:ARIA], [VOLTRAN] vb. tag'ler emoji ve renklerle düzgün formatlaniyor | `reports/[id]/page.tsx:36-104` |
 | 2026-01-28 | Landing page P/L Dashboard ile uyuşmuyordu (119.9% vs 120.7%) | `platform-performance-history` endpoint'i artık `allTimeTotalPnL` döndürüyor - 30 günlük filtre all-time toplamı etkilemiyordu | `analysis.routes.ts:1395-1414`, `LandingPerformanceChart.tsx:34,167-168,216-220` |
 | 2026-01-28 | Login sayfası dark/light mode uyumsuzluğu - sol panel her zaman koyu | Sol marketing paneli artık tema tercihini takip ediyor. Light/dark mode'a uygun renkler kullanılıyor | `apps/web/app/(auth)/layout.tsx` |
+| 2026-01-28 | Top 5 Coins "Scan Now" butonu çalışmıyordu - analiz yapılmıyordu | 1) Yeni API endpoint eklendi: `POST /api/analysis/top-coins/scan` (300 kredi), 2) Frontend concierge yerine dedicated endpoint kullanıyor, 3) Doğru polling ile progress gösterimi (2-3 dakika), 4) Status endpoint eklendi: `GET /api/analysis/top-coins/status` | `analysis.routes.ts:4758-4850`, `analyze/page.tsx:368-454` |
 
 ---
 
