@@ -1313,6 +1313,102 @@ Explain the key risks and what conditions would need to change before trading th
   });
 
   /**
+   * GET /api/analysis/platform-performance-history
+   * Platform-wide performance history for landing page chart (public)
+   * Returns daily cumulative P/L from all closed analyses
+   */
+  app.get('/platform-performance-history', async (request: FastifyRequest<{ Querystring: { days?: string } }>, reply: FastifyReply) => {
+    try {
+      const query = request.query;
+      const days = Math.min(90, Math.max(7, parseInt(query.days || '30', 10)));
+      const now = new Date();
+      const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+      startDate.setHours(0, 0, 0, 0);
+
+      // Get all closed analyses with outcomes in the date range
+      const closedAnalyses = await prisma.analysis.findMany({
+        where: {
+          outcome: { in: ['tp1_hit', 'tp2_hit', 'tp3_hit', 'sl_hit'] },
+          outcomeAt: { gte: startDate }
+        },
+        select: {
+          outcome: true,
+          outcomeAt: true,
+          outcomePrice: true,
+          step5Result: true,
+        },
+        orderBy: { outcomeAt: 'asc' }
+      });
+
+      // Initialize daily data structure
+      const dailyData: Record<string, { realized: number; trades: number }> = {};
+      for (let i = 0; i < days; i++) {
+        const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        const dateStr = d.toISOString().split('T')[0];
+        dailyData[dateStr] = { realized: 0, trades: 0 };
+      }
+
+      // Calculate P/L for each closed trade and assign to outcomeAt date
+      closedAnalyses.forEach(analysis => {
+        if (!analysis.outcomeAt) return;
+        const dateStr = analysis.outcomeAt.toISOString().split('T')[0];
+        if (!dailyData[dateStr]) return;
+
+        const step5 = analysis.step5Result as Record<string, unknown> | null;
+        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
+        const outcomePrice = analysis.outcomePrice ? Number(analysis.outcomePrice) : 0;
+        const direction = ((step5?.direction as string) || 'long').toLowerCase();
+
+        if (entryPrice > 0 && outcomePrice > 0) {
+          let pnl = 0;
+          if (direction === 'short') {
+            pnl = ((entryPrice - outcomePrice) / entryPrice) * 100;
+          } else {
+            pnl = ((outcomePrice - entryPrice) / entryPrice) * 100;
+          }
+          dailyData[dateStr].realized += pnl;
+          dailyData[dateStr].trades++;
+        }
+      });
+
+      // Convert to array and calculate cumulative P/L
+      const sortedDates = Object.keys(dailyData).sort();
+      let cumulativePnL = 0;
+      const daily = sortedDates.map(date => {
+        cumulativePnL += dailyData[date].realized;
+        return {
+          date,
+          realized: Number(dailyData[date].realized.toFixed(2)),
+          trades: dailyData[date].trades,
+          cumulative: Number(cumulativePnL.toFixed(2)),
+        };
+      });
+
+      // Summary stats
+      const totalRealizedPnL = Number(cumulativePnL.toFixed(2));
+      const totalTrades = closedAnalyses.length;
+
+      return reply.send({
+        success: true,
+        data: {
+          daily,
+          summary: {
+            totalRealizedPnL,
+            totalTrades,
+            period: days,
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Platform performance history error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'PLATFORM_PERFORMANCE_ERROR', message: 'Failed to fetch platform performance history' }
+      });
+    }
+  });
+
+  /**
    * GET /api/analysis/statistics
    * User's analysis statistics for dashboard
    * All data calculated from ANALYSIS table (not reports)

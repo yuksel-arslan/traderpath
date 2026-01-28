@@ -57,6 +57,13 @@ import { TraderPathLogo } from '../../components/common/TraderPathLogo';
 import { LanguageSelector } from '../../components/common/LanguageSelector';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../lib/coin-icons';
 import { ANALYSIS_BUNDLES } from '../../lib/pricing-config';
+import dynamic from 'next/dynamic';
+
+// Lazy load the performance chart component
+const LandingPerformanceChart = dynamic(
+  () => import('../../components/landing/LandingPerformanceChart'),
+  { ssr: false, loading: () => <div className="h-48 animate-pulse bg-muted/30 rounded-lg" /> }
+);
 
 // Coins to display in the ticker
 const TICKER_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX'];
@@ -233,7 +240,6 @@ function StatsBoxes() {
     </div>
   );
 }
-
 
 const FAQS = [
   {
@@ -1720,9 +1726,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Stats Boxes - Above Features */}
+      {/* Performance Chart & Stats Boxes - Above Features */}
       <section className="py-8 md:py-12">
-        <div className="container mx-auto px-4 max-w-4xl">
+        <div className="container mx-auto px-4 max-w-4xl space-y-6">
+          <LandingPerformanceChart />
           <StatsBoxes />
         </div>
       </section>
