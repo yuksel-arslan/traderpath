@@ -300,6 +300,8 @@ export default function AnalyzePage() {
   const [topCoinsLoading, setTopCoinsLoading] = useState(false);
   const [topCoinsScanning, setTopCoinsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [scanProgress, setScanProgress] = useState<{ current: number; total: number } | null>(null);
+  const scanPollRef = useRef<NodeJS.Timeout | null>(null);
 
   // Detect theme
   useEffect(() => {
@@ -363,35 +365,91 @@ export default function AnalyzePage() {
     }
   }, []);
 
-  // Start paid scan (300 credits)
+  // Cleanup poll on unmount
+  useEffect(() => {
+    return () => {
+      if (scanPollRef.current) {
+        clearInterval(scanPollRef.current);
+      }
+    };
+  }, []);
+
+  // Start paid scan (300 credits) with proper polling
   const startTopCoinsScan = async () => {
     setTopCoinsScanning(true);
     setScanError(null);
+    setScanProgress({ current: 0, total: 30 });
+
     try {
-      const res = await authFetch('/api/concierge/chat', {
+      // Use the dedicated scan endpoint
+      const res = await authFetch('/api/analysis/top-coins/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: 'start scan' }),
       });
       const data = await res.json();
-      if (data.success) {
-        // Poll for results after scan starts
-        setTimeout(async () => {
-          await fetchTopCoins();
-          setTopCoinsScanning(false);
-          // Auto-scroll to top coins section after scan completes
-          setTimeout(() => {
-            scrollToTopCoins();
-          }, 100);
-        }, 5000);
-      } else {
-        setScanError(data.message || 'Failed to start scan');
+
+      if (!data.success) {
+        setScanError(data.error?.message || 'Failed to start scan');
         setTopCoinsScanning(false);
+        setScanProgress(null);
+        return;
       }
+
+      // Start polling for results
+      let previousCount = 0;
+      let pollCount = 0;
+      const maxPolls = 60; // 60 polls × 5 seconds = 5 minutes max
+
+      scanPollRef.current = setInterval(async () => {
+        pollCount++;
+
+        try {
+          // Get current cache status
+          const statusRes = await authFetch('/api/analysis/top-coins/status');
+          const statusData = await statusRes.json();
+
+          if (statusData.success) {
+            const freshCoins = statusData.data?.freshCoins || 0;
+            setScanProgress({ current: freshCoins, total: 30 });
+
+            // If we have results and count is stable, scan might be done
+            if (freshCoins >= 5) {
+              // Fetch top coins to display
+              await fetchTopCoins();
+
+              // If count hasn't changed in 2 polls, scan is likely done
+              if (freshCoins === previousCount || freshCoins >= 25) {
+                clearInterval(scanPollRef.current!);
+                scanPollRef.current = null;
+                setTopCoinsScanning(false);
+                setScanProgress(null);
+                scrollToTopCoins();
+                return;
+              }
+            }
+
+            previousCount = freshCoins;
+          }
+        } catch (pollError) {
+          console.error('Poll error:', pollError);
+        }
+
+        // Stop polling after max time
+        if (pollCount >= maxPolls) {
+          clearInterval(scanPollRef.current!);
+          scanPollRef.current = null;
+          setTopCoinsScanning(false);
+          setScanProgress(null);
+          await fetchTopCoins();
+          scrollToTopCoins();
+        }
+      }, 5000); // Poll every 5 seconds
+
     } catch (error) {
       console.error('Failed to start scan:', error);
       setScanError('Failed to start scan. Please try again.');
       setTopCoinsScanning(false);
+      setScanProgress(null);
     }
   };
 
@@ -541,7 +599,11 @@ export default function AnalyzePage() {
                     {topCoinsScanning ? (
                       <>
                         <RefreshCw className="w-3 h-3 animate-spin" />
-                        <span>Scanning...</span>
+                        <span>
+                          {scanProgress
+                            ? `Scanning ${scanProgress.current}/${scanProgress.total}...`
+                            : 'Starting...'}
+                        </span>
                       </>
                     ) : (
                       <>
@@ -555,6 +617,24 @@ export default function AnalyzePage() {
                 {scanError && (
                   <div className="text-xs text-red-500 bg-red-50 dark:bg-red-500/10 px-3 py-2 rounded-lg">
                     {scanError}
+                  </div>
+                )}
+
+                {topCoinsScanning && scanProgress && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                      <span>Analyzing coins...</span>
+                      <span>{Math.round((scanProgress.current / scanProgress.total) * 100)}%</span>
+                    </div>
+                    <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
+                        style={{ width: `${(scanProgress.current / scanProgress.total) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center">
+                      This may take 2-3 minutes. Results will appear as coins are analyzed.
+                    </p>
                   </div>
                 )}
 
