@@ -7,7 +7,7 @@ import { randomUUID } from 'crypto';
 import { config } from '../../core/config';
 import { callGeminiWithRetry } from '../../core/gemini';
 import { contractSecurityService } from '../security/contract-security.service';
-import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig } from './config/trade-config';
+import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig, getMaxStopLossPercent, getMaxTakeProfitPercent } from './config/trade-config';
 import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/indicator-interpreter.service';
 import { IndicatorAnalysis } from '@traderpath/types';
 import { IndicatorsService, OHLCV, IndicatorResult } from './services/indicators.service';
@@ -5047,63 +5047,150 @@ export const analysisEngine = {
       targets: []
     };
 
-    // ===== ENTRY LEVELS (from Timing + Asset Scanner) =====
+    // ===== ENTRY LEVELS (based on Support/Resistance) =====
+    // Key principle: Entry should be at key support/resistance levels
+    // LONG: Enter near support (buy low)
+    // SHORT: Enter near resistance (sell high)
     const entries: TradePlanResult['entries'] = [];
-
-    // Primary entry from Timing's optimal entry
-    if (timing.optimalEntry) {
-      entries.push({
-        price: roundPrice(timing.optimalEntry),
-        percentage: 50,
-        type: 'limit',
-        source: 'Timing optimal entry'
-      });
-      sources.entries.push('Timing optimal entry');
-    } else {
-      entries.push({
-        price: roundPrice(currentPrice),
-        percentage: 50,
-        type: 'limit',
-        source: 'Current price'
-      });
-      sources.entries.push('Current price');
-    }
-
-    // Secondary entries from Timing's entry zones
-    if (timing.entryZones && timing.entryZones.length > 0) {
-      const sortedZones = [...timing.entryZones].sort((a, b) => b.quality - a.quality);
-      const bestZone = sortedZones[0];
-      if (bestZone) {
-        const zoneEntry = direction === 'long' ? bestZone.priceLow : bestZone.priceHigh;
-        entries.push({
-          price: roundPrice(zoneEntry),
-          percentage: 30,
-          type: 'limit',
-          source: 'Timing entry zone'
-        });
-        sources.entries.push('Timing entry zone');
-      }
-    }
-
-    // Third entry from support/resistance levels
     const supportLevel = assetScan.levels.support[0];
+    const supportLevel2 = assetScan.levels.support[1];
     const resistanceLevel = assetScan.levels.resistance[0];
-    if (direction === 'long' && supportLevel !== undefined) {
-      entries.push({
-        price: roundPrice(supportLevel),
-        percentage: 20,
-        type: 'stop_limit',
-        source: 'Asset Scanner support'
-      });
-      sources.entries.push('Asset Scanner support');
-    } else if (direction === 'short' && resistanceLevel !== undefined) {
-      entries.push({
-        price: roundPrice(resistanceLevel),
-        percentage: 20,
-        type: 'stop_limit',
-        source: 'Asset Scanner resistance'
-      });
-      sources.entries.push('Asset Scanner resistance');
+    const resistanceLevel2 = assetScan.levels.resistance[1];
+    const atrForEntry = assetScan.indicators.atr || currentPrice * 0.02;
+
+    // Proximity threshold: price is "near" a level if within 1 ATR
+    const isNearLevel = (price: number, level: number) => Math.abs(price - level) <= atrForEntry;
+
+    if (direction === 'long') {
+      // LONG: Primary entry at support level
+      if (supportLevel !== undefined) {
+        // Check if current price is near support (good entry) or above support (wait for pullback)
+        const priceNearSupport = isNearLevel(currentPrice, supportLevel);
+
+        if (priceNearSupport) {
+          // Price is at support - enter now
+          entries.push({
+            price: roundPrice(currentPrice),
+            percentage: 70,
+            type: 'limit',
+            source: 'Current price at support zone'
+          });
+          sources.entries.push('Current price at support');
+        } else if (currentPrice > supportLevel) {
+          // Price above support - use support as limit order entry (wait for pullback)
+          entries.push({
+            price: roundPrice(supportLevel),
+            percentage: 70,
+            type: 'limit',
+            source: 'Support level (wait for pullback)'
+          });
+          sources.entries.push('Support level entry');
+        } else {
+          // Price below support (breakdown) - use current price
+          entries.push({
+            price: roundPrice(currentPrice),
+            percentage: 70,
+            type: 'limit',
+            source: 'Current price'
+          });
+          sources.entries.push('Current price');
+        }
+
+        // Secondary entry at second support if available
+        if (supportLevel2 !== undefined && supportLevel2 < supportLevel) {
+          entries.push({
+            price: roundPrice(supportLevel2),
+            percentage: 30,
+            type: 'limit',
+            source: 'Second support level (DCA)'
+          });
+          sources.entries.push('Second support DCA');
+        } else {
+          // Fallback: slightly below primary entry
+          const dcaEntry = entries[0].price * 0.98;
+          entries.push({
+            price: roundPrice(dcaEntry),
+            percentage: 30,
+            type: 'limit',
+            source: 'DCA entry (-2%)'
+          });
+          sources.entries.push('DCA entry');
+        }
+      } else {
+        // No support level found - use current price
+        entries.push({
+          price: roundPrice(currentPrice),
+          percentage: 100,
+          type: 'limit',
+          source: 'Current price (no support level)'
+        });
+        sources.entries.push('Current price');
+      }
+    } else {
+      // SHORT: Primary entry at resistance level
+      if (resistanceLevel !== undefined) {
+        // Check if current price is near resistance (good entry) or below resistance (wait for rally)
+        const priceNearResistance = isNearLevel(currentPrice, resistanceLevel);
+
+        if (priceNearResistance) {
+          // Price is at resistance - enter now
+          entries.push({
+            price: roundPrice(currentPrice),
+            percentage: 70,
+            type: 'limit',
+            source: 'Current price at resistance zone'
+          });
+          sources.entries.push('Current price at resistance');
+        } else if (currentPrice < resistanceLevel) {
+          // Price below resistance - use resistance as limit order entry (wait for rally)
+          entries.push({
+            price: roundPrice(resistanceLevel),
+            percentage: 70,
+            type: 'limit',
+            source: 'Resistance level (wait for rally)'
+          });
+          sources.entries.push('Resistance level entry');
+        } else {
+          // Price above resistance (breakout) - use current price
+          entries.push({
+            price: roundPrice(currentPrice),
+            percentage: 70,
+            type: 'limit',
+            source: 'Current price'
+          });
+          sources.entries.push('Current price');
+        }
+
+        // Secondary entry at second resistance if available
+        if (resistanceLevel2 !== undefined && resistanceLevel2 > resistanceLevel) {
+          entries.push({
+            price: roundPrice(resistanceLevel2),
+            percentage: 30,
+            type: 'limit',
+            source: 'Second resistance level (DCA)'
+          });
+          sources.entries.push('Second resistance DCA');
+        } else {
+          // Fallback: slightly above primary entry
+          const dcaEntry = entries[0].price * 1.02;
+          entries.push({
+            price: roundPrice(dcaEntry),
+            percentage: 30,
+            type: 'limit',
+            source: 'DCA entry (+2%)'
+          });
+          sources.entries.push('DCA entry');
+        }
+      } else {
+        // No resistance level found - use current price
+        entries.push({
+          price: roundPrice(currentPrice),
+          percentage: 100,
+          type: 'limit',
+          source: 'Current price (no resistance level)'
+        });
+        sources.entries.push('Current price');
+      }
     }
 
     // Normalize percentages if needed
@@ -5116,6 +5203,10 @@ export const analysisEngine = {
     const averageEntry = roundPrice(
       entries.reduce((sum, e) => sum + e.price * (e.percentage / 100), 0)
     );
+
+    // Check if current price is far from entry (need to wait)
+    const entryDistancePercent = Math.abs((currentPrice - averageEntry) / averageEntry * 100);
+    const needsToWaitForEntry = entryDistancePercent > 1; // More than 1% away from entry
 
     // ===== STOP LOSS (from Safety Check + ATR + Trap Check) =====
     const atr = assetScan.indicators.atr;
@@ -5219,6 +5310,25 @@ export const analysisEngine = {
       }
     }
 
+    // ===== MAXIMUM STOP LOSS DISTANCE (cap at 10% to prevent unrealistic stops) =====
+    const maxStopPercent = 10; // Maximum 10% stop loss for any trade type
+    const maxStopDistanceLong = averageEntry * (maxStopPercent / 100);
+    const maxStopDistanceShort = averageEntry * (maxStopPercent / 100);
+
+    if (direction === 'long') {
+      const maxAllowedStopPrice = averageEntry - maxStopDistanceLong;
+      if (stopPrice < maxAllowedStopPrice) {
+        stopPrice = maxAllowedStopPrice;
+        sources.stopLoss.push(`Maximum ${maxStopPercent}% stop distance applied`);
+      }
+    } else {
+      const maxAllowedStopPrice = averageEntry + maxStopDistanceShort;
+      if (stopPrice > maxAllowedStopPrice) {
+        stopPrice = maxAllowedStopPrice;
+        sources.stopLoss.push(`Maximum ${maxStopPercent}% stop distance applied`);
+      }
+    }
+
     const stopPercentage = Math.abs((stopPrice - averageEntry) / averageEntry * 100);
 
     // ===== TAKE PROFIT (from Asset Scanner levels) =====
@@ -5234,7 +5344,7 @@ export const analysisEngine = {
         : tp1From15R;
       takeProfits.push({
         price: roundPrice(tp1),
-        percentage: 40,
+        percentage: 60,
         reason: '1.5R or first resistance',
         source: tp1FromResistance ? 'Asset Scanner resistance' : '1.5R calculation'
       });
@@ -5248,20 +5358,11 @@ export const analysisEngine = {
         : tp2From25R;
       takeProfits.push({
         price: roundPrice(tp2),
-        percentage: 35,
+        percentage: 40,
         reason: '2.5R or second resistance',
         source: tp2FromResistance ? 'Asset Scanner resistance' : '2.5R calculation'
       });
       sources.targets.push(tp2FromResistance ? 'Asset Scanner resistance 2' : '2.5R');
-
-      // TP3: 4R extended target
-      takeProfits.push({
-        price: roundPrice(averageEntry + (riskAmount * 4)),
-        percentage: 25,
-        reason: '4R extended target',
-        source: '4R calculation'
-      });
-      sources.targets.push('4R extended');
     } else {
       // Short direction - use support levels
       const tp1FromSupport = assetScan.levels.support[0];
@@ -5271,7 +5372,7 @@ export const analysisEngine = {
         : tp1From15R;
       takeProfits.push({
         price: roundPrice(tp1),
-        percentage: 40,
+        percentage: 60,
         reason: '1.5R or first support',
         source: tp1FromSupport ? 'Asset Scanner support' : '1.5R calculation'
       });
@@ -5284,20 +5385,26 @@ export const analysisEngine = {
         : tp2From25R;
       takeProfits.push({
         price: roundPrice(tp2),
-        percentage: 35,
+        percentage: 40,
         reason: '2.5R or second support',
         source: tp2FromSupport ? 'Asset Scanner support' : '2.5R calculation'
       });
       sources.targets.push(tp2FromSupport ? 'Asset Scanner support 2' : '2.5R');
-
-      takeProfits.push({
-        price: roundPrice(averageEntry - (riskAmount * 4)),
-        percentage: 25,
-        reason: '4R extended target',
-        source: '4R calculation'
-      });
-      sources.targets.push('4R extended');
     }
+
+    // ===== MAXIMUM TAKE PROFIT DISTANCE (cap at 20% to prevent unrealistic targets) =====
+    const maxTPPercent = 20; // Maximum 20% take profit for any trade type
+    takeProfits.forEach(tp => {
+      const tpDistance = Math.abs((tp.price - averageEntry) / averageEntry * 100);
+      if (tpDistance > maxTPPercent) {
+        if (direction === 'long') {
+          tp.price = roundPrice(averageEntry * (1 + maxTPPercent / 100));
+        } else {
+          tp.price = roundPrice(averageEntry * (1 - maxTPPercent / 100));
+        }
+        tp.reason += ` (capped at ${maxTPPercent}%)`;
+      }
+    });
 
     // ===== RISK/REWARD CALCULATION =====
     const avgTP = takeProfits.reduce(
