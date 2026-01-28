@@ -160,7 +160,28 @@ function detectIntent(message: string): {
     return { intent: 'CONVERSATIONAL' };
   }
 
-  // TOP_COINS_BY_SCORE intent - top reliable/tradeable coins
+  // TOP_COINS_SCAN intent - start paid scan (300 credits) - CHECK FIRST (paid feature priority)
+  if (
+    lower.includes('taramayı başlat') ||
+    lower.includes('tarama başlat') ||
+    lower.includes('scan now') ||
+    lower.includes('start scan') ||
+    lower.includes('30 coin tara') ||
+    lower.includes('top 30 tara') ||
+    lower.includes('scan top 30') ||
+    lower.includes('scan 30') ||
+    lower.includes('taramaya başla') ||
+    lower.includes('highest probability') ||
+    lower.includes('en yüksek olasılık') ||
+    lower.includes('en yüksek ihtimal') ||
+    (lower.includes('give me') && lower.includes('top') && lower.includes('coin')) ||
+    (lower.includes('ver bana') && lower.includes('coin')) ||
+    (lower.includes('söyle') && lower.includes('coin'))
+  ) {
+    return { intent: 'TOP_COINS_SCAN' };
+  }
+
+  // TOP_COINS_BY_SCORE intent - show cached top coins (free)
   if (
     lower.includes('en yüksek skor') ||
     lower.includes('en yüksek puan') ||
@@ -188,51 +209,6 @@ function detectIntent(message: string): {
     const countMatch = lower.match(/(\d+)/);
     const count = countMatch ? parseInt(countMatch[1], 10) : 5;
     return { intent: 'TOP_COINS_BY_SCORE', symbol: String(Math.min(20, Math.max(1, count))) };
-  }
-
-  // TOP_COINS_SCAN intent - start paid scan (300 credits) - explicit scan commands
-  if (
-    lower.includes('taramayı başlat') ||
-    lower.includes('tarama başlat') ||
-    lower.includes('scan now') ||
-    lower.includes('start scan') ||
-    lower.includes('30 coin tara') ||
-    lower.includes('top 30 tara') ||
-    lower.includes('scan top 30') ||
-    lower.includes('scan 30') ||
-    lower.includes('taramaya başla') ||
-    lower.includes('highest probability') ||
-    lower.includes('en yüksek olasılık') ||
-    lower.includes('en yüksek ihtimal') ||
-    (lower.includes('give me') && lower.includes('top') && lower.includes('coin')) ||
-    (lower.includes('ver bana') && lower.includes('coin')) ||
-    (lower.includes('söyle') && lower.includes('coin'))
-  ) {
-    return { intent: 'TOP_COINS_SCAN' };
-  }
-
-  // SCAN_CONFIRM intent - user confirms the scan after being asked
-  const confirmationWords = [
-    // Turkish
-    'evet', 'onaylıyorum', 'onay', 'tamam', 'kabul', 'olur', 'başlat', 'devam', 'tamamdır', 'başla',
-    // English
-    'yes', 'confirm', 'ok', 'okay', 'sure', 'proceed', 'do it', 'go ahead', 'approved', 'start'
-  ];
-  if (confirmationWords.some(word => lower === word || lower === word + '!') ||
-      lower.match(/^(evet|yes|ok|tamam|olur|kabul|onay)[\s!.]*$/i)) {
-    return { intent: 'SCAN_CONFIRM' };
-  }
-
-  // SCAN_DECLINE intent - user declines the scan
-  const declineWords = [
-    // Turkish
-    'hayır', 'yok', 'istemiyorum', 'vazgeç', 'iptal', 'olmaz', 'gerek yok', 'reddet',
-    // English
-    'no', 'nope', 'cancel', 'decline', 'skip', 'never mind', 'no thanks', 'not now'
-  ];
-  if (declineWords.some(word => lower === word || lower === word + '!') ||
-      lower.match(/^(hayır|no|nope|cancel|iptal)[\s!.]*$/i)) {
-    return { intent: 'SCAN_DECLINE' };
   }
 
   // Help intent - expanded patterns

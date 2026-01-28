@@ -54,6 +54,7 @@ import {
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
+import { LanguageSelector } from '../../components/common/LanguageSelector';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../lib/coin-icons';
 import { ANALYSIS_BUNDLES } from '../../lib/pricing-config';
 
@@ -106,13 +107,13 @@ const FEATURES = [
 ];
 
 // Platform metrics component - shows real data instead of fake testimonials
-function PlatformMetrics() {
+function StatsBoxes() {
   const [metrics, setMetrics] = useState<{
     totalAnalyses: number;
     accuracy: number;
-    goSignalRate: number;
+    totalPnL: number;
     closedCount: number;
-    totalUsers: number;
+    daysSinceStart: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -120,7 +121,6 @@ function PlatformMetrics() {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        // Try multiple API URLs for different environments
         const apiUrls = [
           process.env.NEXT_PUBLIC_API_URL,
           'https://api.traderpath.io',
@@ -145,12 +145,19 @@ function PlatformMetrics() {
         }
 
         if (data?.success) {
+          // Calculate days since platform start
+          const platformSince = data.data.platform.platformSince;
+          const startDate = platformSince ? new Date(platformSince) : new Date();
+          const today = new Date();
+          const diffTime = Math.abs(today.getTime() - startDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
           setMetrics({
             totalAnalyses: data.data.platform.totalAnalyses || 0,
             accuracy: data.data.accuracy.overall || 0,
-            goSignalRate: data.data.goSignalRate.rate || 0,
+            totalPnL: data.data.accuracy.totalPnL || 0,
             closedCount: data.data.accuracy.closedCount || 0,
-            totalUsers: data.data.platform.totalUsers || 0,
+            daysSinceStart: diffDays || 1,
           });
         } else {
           setError(true);
@@ -166,9 +173,9 @@ function PlatformMetrics() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="p-4 md:p-6 bg-card border rounded-lg animate-pulse">
+          <div key={i} className="p-4 bg-card/50 backdrop-blur border rounded-xl animate-pulse">
             <div className="h-8 bg-muted rounded w-1/2 mx-auto mb-2"></div>
             <div className="h-4 bg-muted rounded w-3/4 mx-auto"></div>
           </div>
@@ -178,42 +185,50 @@ function PlatformMetrics() {
   }
 
   if (error || !metrics) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">Unable to load platform metrics. Please try again later.</p>
-      </div>
-    );
+    return null;
   }
 
+  // Calculate analyses per day
+  const analysesPerDay = metrics.daysSinceStart > 0
+    ? (metrics.totalAnalyses / metrics.daysSinceStart).toFixed(1)
+    : '0';
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-      <div className="p-4 md:p-6 bg-card border rounded-lg text-center">
-        <div className="text-2xl md:text-4xl font-bold text-primary mb-2">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      {/* Total Analyses */}
+      <div className="p-4 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className="text-2xl md:text-3xl font-bold text-primary mb-1">
           {metrics.totalAnalyses.toLocaleString()}
         </div>
-        <p className="text-xs md:text-sm text-muted-foreground">Total Analyses</p>
+        <p className="text-xs text-muted-foreground">Total Analyses</p>
       </div>
-      <div className="p-4 md:p-6 bg-card border rounded-lg text-center">
-        <div className="text-2xl md:text-4xl font-bold text-emerald-500 mb-2">
+
+      {/* Platform Accuracy */}
+      <div className="p-4 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className="text-2xl md:text-3xl font-bold text-emerald-500 mb-1">
           {metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—'}
         </div>
-        <p className="text-xs md:text-sm text-muted-foreground">Platform Accuracy</p>
-        <p className="text-[10px] md:text-xs text-muted-foreground/70 mt-1">
-          {metrics.closedCount > 0 ? `${metrics.closedCount} verified` : 'Awaiting outcomes'}
-        </p>
+        <p className="text-xs text-muted-foreground">Platform Accuracy</p>
       </div>
-      <div className="p-4 md:p-6 bg-card border rounded-lg text-center">
-        <div className="text-2xl md:text-4xl font-bold text-amber-500 mb-2">
-          {metrics.closedCount > 0 && metrics.goSignalRate > 0 ? `${metrics.goSignalRate}%` : '—'}
+
+      {/* Total P/L % */}
+      <div className="p-4 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className={`text-2xl md:text-3xl font-bold mb-1 ${metrics.totalPnL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+          {metrics.closedCount > 0 ? `${metrics.totalPnL >= 0 ? '+' : ''}${metrics.totalPnL}%` : '—'}
         </div>
-        <p className="text-xs md:text-sm text-muted-foreground">GO Signal Success</p>
-        <p className="text-[10px] md:text-xs text-muted-foreground/70 mt-1">TP vs SL ratio</p>
+        <p className="text-xs text-muted-foreground">Total P/L</p>
+        {metrics.closedCount > 0 && (
+          <p className="text-[10px] text-muted-foreground/70 mt-0.5">{metrics.closedCount} closed trades</p>
+        )}
       </div>
-      <div className="p-4 md:p-6 bg-card border rounded-lg text-center">
-        <div className="text-2xl md:text-4xl font-bold text-blue-500 mb-2">
-          {metrics.totalUsers.toLocaleString()}
+
+      {/* Days Elapsed */}
+      <div className="p-4 bg-card/50 backdrop-blur border rounded-xl text-center">
+        <div className="text-2xl md:text-3xl font-bold text-blue-500 mb-1">
+          {metrics.daysSinceStart}
         </div>
-        <p className="text-xs md:text-sm text-muted-foreground">Registered Traders</p>
+        <p className="text-xs text-muted-foreground">Days Elapsed</p>
+        <p className="text-[10px] text-muted-foreground/70 mt-0.5">{analysesPerDay} analyses/day</p>
       </div>
     </div>
   );
@@ -1588,7 +1603,8 @@ export default function LandingPage() {
 
           {/* Right side buttons */}
           <div className="flex items-center gap-1 sm:gap-3">
-            <div className="hidden sm:block">
+            <div className="hidden sm:flex items-center gap-1">
+              <LanguageSelector compact />
               <ThemeToggle />
             </div>
             <Link
@@ -1648,7 +1664,10 @@ export default function LandingPage() {
                 >
                   Sign In
                 </Link>
-                <ThemeToggle />
+                <div className="flex items-center gap-2">
+                  <LanguageSelector />
+                  <ThemeToggle />
+                </div>
               </div>
             </nav>
           </div>
@@ -1701,21 +1720,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Platform Metrics - Real Data (moved here from below) */}
-      <section className="py-20 bg-gradient-to-b from-transparent to-emerald-500/5">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-              Real Results, Real Data
-            </h2>
-            <p className="text-muted-foreground">
-              Transparent metrics from our platform - no fake reviews, just verified performance
-            </p>
-          </div>
-          <PlatformMetrics />
-          <p className="text-center text-xs text-muted-foreground mt-8">
-            Data updates in real-time from verified trade outcomes. We believe in transparency over testimonials.
-          </p>
+      {/* Stats Boxes - Above Features */}
+      <section className="py-8 md:py-12">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <StatsBoxes />
         </div>
       </section>
 
