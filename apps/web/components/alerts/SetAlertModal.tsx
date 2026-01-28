@@ -76,7 +76,6 @@ export function SetAlertModal({ isOpen, onClose, tradePlan }: SetAlertModalProps
     sl: true,
     tp1: true,
     tp2: tradePlan.takeProfits.length >= 2,
-    tp3: tradePlan.takeProfits.length >= 3,
   });
 
   const createAlertsMutation = useMutation({
@@ -87,7 +86,6 @@ export function SetAlertModal({ isOpen, onClose, tradePlan }: SetAlertModalProps
       const takeProfits: number[] = [];
       if (selectedAlerts.tp1 && tradePlan.takeProfits[0]) takeProfits.push(tradePlan.takeProfits[0]);
       if (selectedAlerts.tp2 && tradePlan.takeProfits[1]) takeProfits.push(tradePlan.takeProfits[1]);
-      if (selectedAlerts.tp3 && tradePlan.takeProfits[2]) takeProfits.push(tradePlan.takeProfits[2]);
 
       const response = await fetch(getApiUrl('/api/alerts/trade-plan'), {
         method: 'POST',

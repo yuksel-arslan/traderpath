@@ -25,7 +25,6 @@ interface TradePlan {
   stopLoss: number;
   takeProfit1: number;
   takeProfit2?: number;
-  takeProfit3?: number;
   direction: 'long' | 'short';
 }
 
@@ -1717,7 +1716,6 @@ Total: ${alerts.length} alerts active`;
           stopLoss: Number(step5.stopLoss?.price) || 0,
           takeProfit1: Number(step5.takeProfits?.[0]?.price) || 0,
           takeProfit2: step5.takeProfits?.[1]?.price ? Number(step5.takeProfits[1].price) : undefined,
-          takeProfit3: step5.takeProfits?.[2]?.price ? Number(step5.takeProfits[2].price) : undefined,
           direction: step5.direction || 'long',
         };
       }

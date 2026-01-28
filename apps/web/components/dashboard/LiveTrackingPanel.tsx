@@ -18,7 +18,7 @@ import Link from 'next/link';
 import { getAuthToken, getApiUrl } from '../../lib/api';
 
 interface TakeProfit {
-  level: 'TP1' | 'TP2' | 'TP3';
+  level: 'TP1' | 'TP2';
   price: number;
   distance: number;
   hit: boolean;
@@ -39,7 +39,7 @@ interface LiveTrade {
   };
   takeProfits: TakeProfit[];
   status: 'active' | 'tp_hit' | 'sl_hit' | 'expired';
-  hitLevel?: 'TP1' | 'TP2' | 'TP3' | 'SL';
+  hitLevel?: 'TP1' | 'TP2' | 'SL';
   unrealizedPnL: number;
   analysisDate: string;
   expiresAt: string;

@@ -417,7 +417,6 @@ function generateTradePlanSvgChart(
   const sl = tp.stopLoss?.price || 0;
   const tp1 = tp.takeProfits?.[0]?.price || 0;
   const tp2 = tp.takeProfits?.[1]?.price || 0;
-  const tp3 = tp.takeProfits?.[2]?.price || 0;
   const current = as?.currentPrice || entry;
   const isLong = tp.direction === 'long';
 
@@ -426,7 +425,7 @@ function generateTradePlanSvgChart(
   const hasCandles = candles.length > 0;
 
   // Calculate price range (include candles if available)
-  const tradeLevelPrices = [entry, sl, tp1, tp2, tp3, current].filter(p => p > 0);
+  const tradeLevelPrices = [entry, sl, tp1, tp2, current].filter(p => p > 0);
   const candleHighs = candles.map(c => c.high);
   const candleLows = candles.map(c => c.low);
   const allPrices = [...tradeLevelPrices, ...candleHighs, ...candleLows].filter(p => p > 0);
@@ -515,9 +514,9 @@ function generateTradePlanSvgChart(
     `);
   }
 
-  // Take Profit lines
-  const tpColors = ['#3b82f6', '#8b5cf6', '#a855f7'];
-  const tpPrices = [tp1, tp2, tp3];
+  // Take Profit lines (only TP1 and TP2)
+  const tpColors = ['#3b82f6', '#8b5cf6'];
+  const tpPrices = [tp1, tp2];
   tpPrices.forEach((price, i) => {
     if (price > 0) {
       const y = priceToY(price);
