@@ -972,6 +972,7 @@ Explain the key risks and what conditions would need to change before trading th
           id: true,
           symbol: true,
           interval: true,
+          method: true, // 'classic' or 'mlis_pro'
           totalScore: true,
           step5Result: true, // tradePlan
           step7Result: true, // verdict
@@ -1120,6 +1121,7 @@ Explain the key risks and what conditions would need to change before trading th
           id: a.id,
           symbol: a.symbol,
           interval: a.interval,
+          method: a.method || 'classic', // Analysis method: 'classic' or 'mlis_pro'
           totalScore: finalScore,
           direction,
           entryPrice,

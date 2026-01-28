@@ -49,7 +49,8 @@ import {
   Coins,
   Gift,
   Crown,
-  Mic
+  Mic,
+  Layers
 } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
@@ -1196,6 +1197,124 @@ function FeaturesSection() {
               <p className="text-sm text-muted-foreground">
                 <span className="font-semibold text-amber-500">Coming Soon:</span> TFT Analysis will be available as an enhanced analysis option for <span className="font-semibold">{ANALYSIS_BUNDLES.find(b => b.comingSoon)?.credits || 50} credits</span>.
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature 8: MLIS Pro - Multi-Layer Intelligence System */}
+      <section className="py-20 bg-gradient-to-b from-violet-500/5 via-purple-500/5 to-transparent">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <span className="inline-flex items-center gap-2 px-3 py-1 bg-violet-500/10 border border-violet-500/20 rounded-full text-violet-500 text-sm font-medium mb-4">
+              <Layers className="w-4 h-4" />
+              Feature 8
+            </span>
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold gradient-text-logo-animate">MLIS Pro Analysis</h2>
+              <span className="text-xs bg-gradient-to-r from-violet-500 to-purple-500 text-white px-3 py-1 rounded-full font-medium animate-pulse">NEW</span>
+            </div>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Multi-Layer Intelligence System - Advanced 5-layer analysis combining technical indicators, momentum, volatility, volume, and market sentiment for comprehensive market insights.
+            </p>
+          </div>
+          <div className="max-w-5xl mx-auto">
+            {/* MLIS Layers Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+              {/* Technical Layer */}
+              <div className="p-5 bg-card border-2 border-blue-500/30 rounded-xl text-center hover:border-blue-500/60 hover:shadow-lg hover:shadow-blue-500/10 transition group">
+                <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition">
+                  <LineChart className="w-6 h-6 text-blue-500" />
+                </div>
+                <h3 className="font-bold text-sm mb-1 text-blue-500">Technical</h3>
+                <p className="text-xs text-muted-foreground">EMA, MACD, ADX trend analysis</p>
+              </div>
+              {/* Momentum Layer */}
+              <div className="p-5 bg-card border-2 border-emerald-500/30 rounded-xl text-center hover:border-emerald-500/60 hover:shadow-lg hover:shadow-emerald-500/10 transition group">
+                <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition">
+                  <Zap className="w-6 h-6 text-emerald-500" />
+                </div>
+                <h3 className="font-bold text-sm mb-1 text-emerald-500">Momentum</h3>
+                <p className="text-xs text-muted-foreground">RSI, StochRSI, CCI signals</p>
+              </div>
+              {/* Volatility Layer */}
+              <div className="p-5 bg-card border-2 border-orange-500/30 rounded-xl text-center hover:border-orange-500/60 hover:shadow-lg hover:shadow-orange-500/10 transition group">
+                <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition">
+                  <Activity className="w-6 h-6 text-orange-500" />
+                </div>
+                <h3 className="font-bold text-sm mb-1 text-orange-500">Volatility</h3>
+                <p className="text-xs text-muted-foreground">ATR, Bollinger assessment</p>
+              </div>
+              {/* Volume Layer */}
+              <div className="p-5 bg-card border-2 border-cyan-500/30 rounded-xl text-center hover:border-cyan-500/60 hover:shadow-lg hover:shadow-cyan-500/10 transition group">
+                <div className="w-12 h-12 bg-cyan-500/10 rounded-xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition">
+                  <BarChart3 className="w-6 h-6 text-cyan-500" />
+                </div>
+                <h3 className="font-bold text-sm mb-1 text-cyan-500">Volume</h3>
+                <p className="text-xs text-muted-foreground">OBV, CMF flow analysis</p>
+              </div>
+              {/* Sentiment Layer */}
+              <div className="p-5 bg-card border-2 border-pink-500/30 rounded-xl text-center hover:border-pink-500/60 hover:shadow-lg hover:shadow-pink-500/10 transition group">
+                <div className="w-12 h-12 bg-pink-500/10 rounded-xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition">
+                  <Brain className="w-6 h-6 text-pink-500" />
+                </div>
+                <h3 className="font-bold text-sm mb-1 text-pink-500">Sentiment</h3>
+                <p className="text-xs text-muted-foreground">Fear & Greed index</p>
+              </div>
+            </div>
+
+            {/* MLIS vs Classic Comparison */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Classic Analysis */}
+              <div className="p-6 bg-card border rounded-xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-teal-500/10 rounded-lg flex items-center justify-center">
+                    <Target className="w-5 h-5 text-teal-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold gradient-text-logo-animate">Classic 7-Step</h3>
+                    <p className="text-xs text-muted-foreground">Full analysis with trade plan</p>
+                  </div>
+                </div>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-teal-500" /> 40+ technical indicators</li>
+                  <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-teal-500" /> Entry, SL, TP levels</li>
+                  <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-teal-500" /> 4 AI Expert insights</li>
+                  <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-teal-500" /> GO/WAIT/AVOID verdict</li>
+                </ul>
+              </div>
+              {/* MLIS Pro */}
+              <div className="p-6 bg-gradient-to-br from-violet-500/10 to-purple-500/10 border-2 border-violet-500/30 rounded-xl relative overflow-hidden">
+                <div className="absolute top-2 right-2 text-xs bg-violet-500 text-white px-2 py-0.5 rounded-full font-medium">NEW</div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-violet-500/20 rounded-lg flex items-center justify-center">
+                    <Layers className="w-5 h-5 text-violet-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-violet-400">MLIS Pro</h3>
+                    <p className="text-xs text-muted-foreground">5-layer intelligence</p>
+                  </div>
+                </div>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-violet-500" /> 5-layer signal analysis</li>
+                  <li className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-violet-500" /> Confidence scoring</li>
+                  <li className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-violet-500" /> Risk level assessment</li>
+                  <li className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-violet-500" /> Clear BUY/SELL/HOLD</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div className="mt-8 text-center">
+              <p className="text-sm text-muted-foreground mb-4">
+                Choose your analysis method when starting a new analysis. Both methods cost <span className="font-semibold text-violet-500">25 credits</span>.
+              </p>
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-lg font-semibold hover:opacity-90 transition"
+              >
+                Try MLIS Pro Now <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
           </div>
         </div>

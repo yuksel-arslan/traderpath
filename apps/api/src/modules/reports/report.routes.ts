@@ -300,6 +300,11 @@ export async function reportRoutes(fastify: FastifyInstance) {
             analysisId: true,
             aiExpertComment: true,
             isPublic: true,
+            analysis: {
+              select: {
+                method: true,
+              },
+            },
           },
           orderBy: { generatedAt: 'desc' },
           take: Math.min(parseInt(limit), 50),
@@ -330,6 +335,11 @@ export async function reportRoutes(fastify: FastifyInstance) {
             analysisId: true,
             aiExpertComment: true,
             isPublic: true,
+            analysis: {
+              select: {
+                method: true,
+              },
+            },
           },
           orderBy: { generatedAt: 'desc' },
           take: 10, // Limit sample reports
@@ -412,6 +422,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
             score: report.score,
             direction: report.direction,
             tradeType,
+            method: (report as any).analysis?.method || 'classic', // Analysis method: 'classic' or 'mlis_pro'
             generatedAt: report.generatedAt,
             expiresAt: report.expiresAt,
             downloadCount: report.downloadCount,

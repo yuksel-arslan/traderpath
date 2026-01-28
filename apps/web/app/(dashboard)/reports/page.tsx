@@ -23,6 +23,7 @@ import {
   Mail,
   Loader2,
   ChevronDown,
+  Layers,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
@@ -53,6 +54,8 @@ function normalizeVerdict(verdict: string): string {
   return 'wait';
 }
 
+type AnalysisMethod = 'classic' | 'mlis_pro';
+
 interface Report {
   id: string;
   symbol: string;
@@ -60,6 +63,7 @@ interface Report {
   score: number;
   direction: string | null;
   tradeType?: TradeType;
+  method?: AnalysisMethod;
   generatedAt: string;
   expiresAt: string;
   downloadCount: number;
@@ -678,6 +682,13 @@ Could you share your risk assessment and recommendations based on this analysis?
                           </span>
                         );
                       })()}
+                      {/* Analysis Method Badge - MLIS Pro */}
+                      {report.method === 'mlis_pro' && (
+                        <span className="px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30">
+                          <Layers className="w-3 h-3" />
+                          MLIS
+                        </span>
+                      )}
                       {/* Outcome Status Badge - Teal/Red */}
                       {report.outcome === 'correct' && (
                         <span className="px-2 py-0.5 rounded text-xs font-medium bg-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center gap-1">
