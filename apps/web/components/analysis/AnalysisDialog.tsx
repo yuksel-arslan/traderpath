@@ -64,12 +64,16 @@ const TIMEFRAME_TO_TRADE_TYPE: Record<Timeframe, TradeType> = {
   '1W': 'swing',
 };
 
+// Analysis method type
+type AnalysisMethod = 'classic' | 'mlis_pro';
+
 interface AnalysisDialogProps {
   isOpen: boolean;
   onClose: () => void;
   symbol: string;
   coinName: string;
   timeframe: Timeframe;
+  analysisMethod?: AnalysisMethod;
   onComplete?: () => void;
 }
 
@@ -112,6 +116,7 @@ export function AnalysisDialog({
   symbol,
   coinName,
   timeframe,
+  analysisMethod = 'classic',
   onComplete,
 }: AnalysisDialogProps) {
   // Derive trade type from timeframe
@@ -251,7 +256,7 @@ export function AnalysisDialog({
       const response = await fetch(getApiUrl('/api/analysis/full'), {
         method: 'POST',
         headers,
-        body: JSON.stringify({ symbol, accountSize: 10000, interval: timeframe, tradeType }),
+        body: JSON.stringify({ symbol, accountSize: 10000, interval: timeframe, tradeType, method: analysisMethod }),
       });
 
       const responseText = await response.text();

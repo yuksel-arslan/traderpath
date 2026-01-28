@@ -3,6 +3,7 @@
 export type IntentType =
   | 'QUICK_ANALYSIS'      // "BTC nasıl?", "ETH'ye gireyim mi?"
   | 'SPECIFIC_ANALYSIS'   // "BTC scalp analizi", "ETH 1h analiz"
+  | 'MLIS_ANALYSIS'       // "BTC mlis analizi", "ETH mlis pro"
   | 'MULTI_ANALYSIS'      // "Top 5 coin analiz et", "Favori coinlerim"
   | 'TOP_COINS_BY_SCORE'  // "En yüksek skorlu coinler", "Top 5 güvenilir coin"
   | 'EXPERT_ASK'          // "RSI nedir?", "MACD nasıl çalışır?"
@@ -61,6 +62,29 @@ export interface QuickAnalysisResult {
   creditsSpent: number;
 }
 
+export interface MLISAnalysisResult {
+  symbol: string;
+  interval: string;
+  method: 'mlis_pro';
+  recommendation: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
+  direction: 'LONG' | 'SHORT' | 'NEUTRAL';
+  overallScore: number;
+  confidence: number;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
+  volatilityRegime: 'LOW' | 'NORMAL' | 'HIGH' | 'EXTREME';
+  layers: {
+    technical: { score: number; signals: string[] };
+    momentum: { score: number; signals: string[] };
+    volatility: { score: number; signals: string[] };
+    volume: { score: number; signals: string[] };
+    sentiment?: { score: number; signals: string[] };
+  };
+  keySignals: string[];
+  riskFactors: string[];
+  analysisId: string;
+  creditsSpent: number;
+}
+
 export interface ExpertAskResult {
   expertId: string;
   expertName: string;
@@ -112,6 +136,7 @@ export interface TopCoinsResult {
 export type ConciergeResultData =
   | QuickAnalysisResult
   | QuickAnalysisResult[]   // Multi-analysis
+  | MLISAnalysisResult      // MLIS Pro analysis
   | ExpertAskResult
   | AlertSetResult
   | StatusResult

@@ -778,6 +778,9 @@ class ConciergeService {
         case 'ANALYSIS':
           return await this.handleAnalysis(userId, symbol!, interval || '4h', detectedLanguage, creditBalance);
 
+        case 'MLIS_ANALYSIS':
+          return await this.handleMLISAnalysis(userId, symbol!, interval || '4h', detectedLanguage, creditBalance);
+
         case 'ANALYSIS_NEEDS_CLARIFICATION':
           return this.handleAnalysisClarification(symbol!, detectedLanguage, creditBalance);
 
@@ -2493,6 +2496,162 @@ ${synthesis}`;
         creditsSpent: 0,
         creditsRemaining: creditBalance,
         error: error instanceof Error ? error.message : 'Analysis failed',
+      };
+    }
+  }
+
+  /**
+   * Handle MLIS Pro analysis request
+   * Multi-Layer Intelligence System analysis
+   */
+  private async handleMLISAnalysis(
+    userId: string,
+    symbol: string,
+    interval: string,
+    language: string,
+    creditBalance: number
+  ): Promise<ConciergeResponse> {
+    const ANALYSIS_COST = 25;
+    const upperSymbol = symbol.toUpperCase();
+    const isTurkish = language === 'tr';
+
+    // Check credits
+    if (creditBalance < ANALYSIS_COST) {
+      return {
+        success: false,
+        intent: 'MLIS_ANALYSIS',
+        message: isTurkish
+          ? `Yetersiz kredi. MLIS Pro analizi için ${ANALYSIS_COST} kredi gerekli, bakiyeniz: ${creditBalance}`
+          : `Insufficient credits. MLIS Pro analysis requires ${ANALYSIS_COST} credits, you have: ${creditBalance}`,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: 'INSUFFICIENT_CREDITS',
+      };
+    }
+
+    try {
+      // Import MLIS service dynamically to avoid circular imports
+      const { analyzeMLIS } = await import('../analysis/services/mlis.service');
+
+      console.log(`[Concierge] MLIS Analysis request: symbol=${upperSymbol}, interval=${interval}, language=${language}`);
+
+      // Run MLIS analysis
+      const mlisResult = await analyzeMLIS(upperSymbol, interval);
+
+      // Charge credits
+      await creditService.charge(userId, ANALYSIS_COST, 'mlis_analysis', {
+        symbol: upperSymbol,
+        interval,
+      });
+
+      // Save to database
+      const savedAnalysis = await prisma.analysis.create({
+        data: {
+          userId,
+          symbol: upperSymbol,
+          interval: interval,
+          stepsCompleted: [1, 2, 3, 4, 5, 6, 7],
+          step1Result: { mlis: true, layer: 'technical', score: mlisResult.layers.technical.score } as object,
+          step2Result: { mlis: true, layer: 'momentum', score: mlisResult.layers.momentum.score } as object,
+          step3Result: { mlis: true, layer: 'volatility', score: mlisResult.layers.volatility.score } as object,
+          step4Result: { mlis: true, layer: 'volume', score: mlisResult.layers.volume.score } as object,
+          step5Result: { mlis: true, layer: 'sentiment', score: mlisResult.layers.sentiment?.score || 50 } as object,
+          step6Result: { mlis: true, layer: 'onchain', score: mlisResult.layers.onchain?.score || 50 } as object,
+          step7Result: {
+            mlis: true,
+            overallScore: mlisResult.overallScore,
+            confidence: mlisResult.confidence,
+            recommendation: mlisResult.recommendation,
+            direction: mlisResult.direction,
+            verdict: mlisResult.recommendation === 'STRONG_BUY' || mlisResult.recommendation === 'BUY' ? 'go' :
+                     mlisResult.recommendation === 'HOLD' ? 'wait' : 'avoid',
+          } as object,
+          totalScore: mlisResult.overallScore / 10,
+          creditsSpent: ANALYSIS_COST,
+        },
+      });
+
+      // Build response message
+      const recommendationLabel = {
+        'STRONG_BUY': isTurkish ? 'GÜÇLÜ AL' : 'STRONG BUY',
+        'BUY': isTurkish ? 'AL' : 'BUY',
+        'HOLD': isTurkish ? 'TUT/BEKLE' : 'HOLD',
+        'SELL': isTurkish ? 'SAT' : 'SELL',
+        'STRONG_SELL': isTurkish ? 'GÜÇLÜ SAT' : 'STRONG SELL',
+      }[mlisResult.recommendation] || mlisResult.recommendation;
+
+      const directionEmoji = mlisResult.direction === 'LONG' ? '🟢' : mlisResult.direction === 'SHORT' ? '🔴' : '⚪';
+
+      const analysisMessage = isTurkish
+        ? `🧠 ${upperSymbol} MLIS Pro Analizi (${interval.toUpperCase()})
+
+${directionEmoji} Tavsiye: ${recommendationLabel}
+📊 Skor: ${mlisResult.overallScore}/100
+🎯 Güven: ${mlisResult.confidence}%
+⚡ Yön: ${mlisResult.direction}
+⚠️ Risk: ${mlisResult.riskLevel}
+
+📈 Katman Skorları:
+• Teknik: ${mlisResult.layers.technical.score}/100
+• Momentum: ${mlisResult.layers.momentum.score}/100
+• Volatilite: ${mlisResult.layers.volatility.score}/100
+• Hacim: ${mlisResult.layers.volume.score}/100
+
+🔑 Temel Sinyaller:
+${mlisResult.keySignals.slice(0, 3).map(s => `• ${s}`).join('\n')}`
+
+        : `🧠 ${upperSymbol} MLIS Pro Analysis (${interval.toUpperCase()})
+
+${directionEmoji} Recommendation: ${recommendationLabel}
+📊 Score: ${mlisResult.overallScore}/100
+🎯 Confidence: ${mlisResult.confidence}%
+⚡ Direction: ${mlisResult.direction}
+⚠️ Risk: ${mlisResult.riskLevel}
+
+📈 Layer Scores:
+• Technical: ${mlisResult.layers.technical.score}/100
+• Momentum: ${mlisResult.layers.momentum.score}/100
+• Volatility: ${mlisResult.layers.volatility.score}/100
+• Volume: ${mlisResult.layers.volume.score}/100
+
+🔑 Key Signals:
+${mlisResult.keySignals.slice(0, 3).map(s => `• ${s}`).join('\n')}`;
+
+      const newBalance = creditBalance - ANALYSIS_COST;
+
+      return {
+        success: true,
+        intent: 'MLIS_ANALYSIS',
+        message: analysisMessage,
+        creditsSpent: ANALYSIS_COST,
+        creditsRemaining: newBalance,
+        analysisId: savedAnalysis.id,
+        verdict: mlisResult.recommendation === 'STRONG_BUY' || mlisResult.recommendation === 'BUY' ? 'go' :
+                 mlisResult.recommendation === 'HOLD' ? 'wait' : 'avoid',
+        score: mlisResult.overallScore / 10,
+        detectedLanguage: language,
+        mlisResult: {
+          recommendation: mlisResult.recommendation,
+          direction: mlisResult.direction,
+          confidence: mlisResult.confidence,
+          riskLevel: mlisResult.riskLevel,
+          layers: mlisResult.layers,
+          keySignals: mlisResult.keySignals,
+          riskFactors: mlisResult.riskFactors,
+        },
+      };
+
+    } catch (error) {
+      console.error('MLIS Analysis error:', error);
+      return {
+        success: false,
+        intent: 'MLIS_ANALYSIS',
+        message: isTurkish
+          ? 'MLIS analizi sırasında hata oluştu. Lütfen tekrar deneyin.'
+          : 'Error during MLIS analysis. Please try again.',
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: error instanceof Error ? error.message : 'MLIS Analysis failed',
       };
     }
   }
