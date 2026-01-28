@@ -266,6 +266,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-26 | SL hit olan analizler outcome güncellenmiyordu | `checkAllHistoricalOutcomes()` sadece startup'ta çalışıyordu, şimdi her 10 dakikada bir çalışıyor. Binance Klines API ile tarihsel mum verileri kontrol edilerek kaçırılan SL/TP hit'ler yakalanıyor | `index.ts:392-406` |
 | 2026-01-26 | Grafikteki "Current" çizgisi eski fiyatı gösteriyordu | `livePrice` state eklendi - son mumun close fiyatı kullanılıyor. Prop'tan gelen stale fiyat yerine canlı fiyat gösteriliyor | `TradePlanChart.tsx:116,249-258,358` |
 | 2026-01-26 | AI Expert yorumları raw tag'lerle gösteriliyordu | `renderAIExpertComment` parser fonksiyonu eklendi - [EXPERT:ARIA], [VOLTRAN] vb. tag'ler emoji ve renklerle düzgün formatlaniyor | `reports/[id]/page.tsx:36-104` |
+| 2026-01-28 | Landing page P/L Dashboard ile uyuşmuyordu (119.9% vs 120.7%) | `platform-performance-history` endpoint'i artık `allTimeTotalPnL` döndürüyor - 30 günlük filtre all-time toplamı etkilemiyordu | `analysis.routes.ts:1395-1414`, `LandingPerformanceChart.tsx:34,167-168,216-220` |
 
 ---
 
@@ -922,6 +923,11 @@ Kullanıcı Hakları Aktif:
   - Tooltip ile günlük detay gösterimi
   - Toplam P/L yüzdesi ve kapanan trade sayısı gösteriliyor
   - Veri kaynağı: Analysis tablosundan verified trade outcomes (TP/SL hits)
+- **Landing page P/L Dashboard ile senkronize edildi**:
+  - `platform-performance-history` endpoint'i artık `allTimeTotalPnL` ve `allTimeTotalTrades` döndürüyor
+  - Landing page "All" görünümünde all-time toplam P/L gösteriyor (dashboard ile aynı)
+  - View mode seçenekleri: Today, Week, All (önceden Month idi)
+  - Period-specific ve all-time veriler ayrı hesaplanıyor
 
 ---
 
