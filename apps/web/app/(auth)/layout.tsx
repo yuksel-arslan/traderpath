@@ -3,36 +3,36 @@
 import Link from 'next/link';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
-import { Shield, Target, Clock, Brain, CheckCircle, Sparkles, TrendingUp, BarChart3 } from 'lucide-react';
+import { Shield, Target, Clock, Brain, CheckCircle } from 'lucide-react';
 
 const FEATURES = [
   {
     icon: Brain,
     title: 'AI-Powered Analysis',
     description: '40+ indicators analyzed by AI',
-    color: 'text-purple-400',
-    bg: 'bg-purple-500/20',
+    color: 'text-purple-600 dark:text-purple-400',
+    bg: 'bg-purple-500/10 dark:bg-purple-500/20',
   },
   {
     icon: Shield,
     title: 'Safety First',
     description: 'Detect manipulation & traps',
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-500/20',
+    color: 'text-emerald-600 dark:text-emerald-400',
+    bg: 'bg-emerald-500/10 dark:bg-emerald-500/20',
   },
   {
     icon: Target,
     title: 'Precise Trade Plans',
     description: 'Entry, stop-loss & take-profit',
-    color: 'text-blue-400',
-    bg: 'bg-blue-500/20',
+    color: 'text-blue-600 dark:text-blue-400',
+    bg: 'bg-blue-500/10 dark:bg-blue-500/20',
   },
   {
     icon: Clock,
     title: 'Perfect Timing',
     description: 'Know when to enter & exit',
-    color: 'text-amber-400',
-    bg: 'bg-amber-500/20',
+    color: 'text-amber-600 dark:text-amber-400',
+    bg: 'bg-amber-500/10 dark:bg-amber-500/20',
   },
 ];
 
@@ -43,23 +43,27 @@ export default function AuthLayout({
 }) {
   return (
     <div className="min-h-screen flex">
-      {/* Left Side - Marketing (hidden on mobile) */}
-      <div className="hidden lg:flex lg:w-[50%] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-20">
+      {/* Left Side - Marketing (hidden on mobile) - Now theme-aware */}
+      <div className="hidden lg:flex lg:w-[50%] bg-gradient-to-br from-slate-100 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative overflow-hidden">
+        {/* Background Pattern - Theme aware */}
+        <div className="absolute inset-0 opacity-30 dark:opacity-20">
           <div
             className="absolute inset-0"
             style={{
-              backgroundImage: `radial-gradient(circle at 2px 2px, rgba(255,255,255,0.1) 1px, transparent 0)`,
+              backgroundImage: `radial-gradient(circle at 2px 2px, var(--dot-color) 1px, transparent 0)`,
               backgroundSize: '24px 24px',
             }}
           />
+          <style jsx>{`
+            :global(:root) { --dot-color: rgba(100, 116, 139, 0.3); }
+            :global(.dark) { --dot-color: rgba(255, 255, 255, 0.1); }
+          `}</style>
         </div>
 
-        {/* Gradient Orbs - More prominent */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-teal-500/30 rounded-full blur-[100px]" />
-        <div className="absolute bottom-0 right-0 w-80 h-80 bg-coral-500/30 rounded-full blur-[100px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-purple-500/20 rounded-full blur-[80px]" />
+        {/* Gradient Orbs - Theme aware */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-teal-500/20 dark:bg-teal-500/30 rounded-full blur-[100px]" />
+        <div className="absolute bottom-0 right-0 w-80 h-80 bg-coral-500/20 dark:bg-coral-500/30 rounded-full blur-[100px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-[80px]" />
 
         {/* Content - Centered */}
         <div className="relative z-10 flex flex-col items-center justify-center w-full px-12 py-8">
@@ -69,55 +73,55 @@ export default function AuthLayout({
               <TraderPathLogo size="lg" showText={false} />
             </Link>
             <h2 className="text-4xl font-bold">
-              <span className="bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-600 dark:from-teal-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
                 TraderPath
               </span>
             </h2>
-            <p className="text-slate-400 mt-2 text-sm tracking-wide">From Charts to Clarity</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm tracking-wide">From Charts to Clarity</p>
           </div>
 
           {/* Motto */}
-          <p className="text-center text-slate-300 leading-relaxed max-w-sm mb-8">
+          <p className="text-center text-slate-600 dark:text-slate-300 leading-relaxed max-w-sm mb-8">
             Make smarter trading decisions with AI-powered analysis. Our 7-step system analyzes
-            40+ indicators to give you clear <span className="text-emerald-400 font-semibold">GO</span> or <span className="text-red-400 font-semibold">NO-GO</span> signals.
+            40+ indicators to give you clear <span className="text-emerald-600 dark:text-emerald-400 font-semibold">GO</span> or <span className="text-red-500 dark:text-red-400 font-semibold">NO-GO</span> signals.
           </p>
 
-          {/* Features - Compact Grid */}
+          {/* Features - Compact Grid - Theme aware */}
           <div className="grid grid-cols-2 gap-3 mb-8 w-full max-w-md">
             {FEATURES.map((feature, index) => (
-              <div key={index} className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group">
+              <div key={index} className="flex items-start gap-3 p-3 rounded-xl bg-slate-200/50 dark:bg-white/5 border border-slate-300/50 dark:border-white/10 hover:bg-slate-200/80 dark:hover:bg-white/10 hover:border-slate-400/50 dark:hover:border-white/20 transition-all group">
                 <div className={`flex-shrink-0 w-10 h-10 rounded-lg ${feature.bg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                   <feature.icon className={`w-5 h-5 ${feature.color}`} />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-white text-sm">{feature.title}</h3>
-                  <p className="text-slate-400 text-xs mt-0.5">{feature.description}</p>
+                  <h3 className="font-semibold text-slate-800 dark:text-white text-sm">{feature.title}</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">{feature.description}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Stats */}
-          <div className="flex items-center gap-8 pt-6 border-t border-white/10 w-full max-w-md justify-center">
+          {/* Stats - Theme aware */}
+          <div className="flex items-center gap-8 pt-6 border-t border-slate-300/50 dark:border-white/10 w-full max-w-md justify-center">
             <div className="text-center">
-              <div className="text-3xl font-bold text-white">40+</div>
-              <div className="text-xs text-slate-400 mt-1">Indicators</div>
+              <div className="text-3xl font-bold text-slate-800 dark:text-white">40+</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Indicators</div>
             </div>
-            <div className="w-px h-10 bg-white/10" />
+            <div className="w-px h-10 bg-slate-300/50 dark:bg-white/10" />
             <div className="text-center">
-              <div className="text-3xl font-bold text-white">7</div>
-              <div className="text-xs text-slate-400 mt-1">Analysis Steps</div>
+              <div className="text-3xl font-bold text-slate-800 dark:text-white">7</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Analysis Steps</div>
             </div>
-            <div className="w-px h-10 bg-white/10" />
+            <div className="w-px h-10 bg-slate-300/50 dark:bg-white/10" />
             <div className="text-center">
-              <div className="text-3xl font-bold bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">AI</div>
-              <div className="text-xs text-slate-400 mt-1">Powered</div>
+              <div className="text-3xl font-bold bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-400 dark:to-emerald-400 bg-clip-text text-transparent">AI</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Powered</div>
             </div>
           </div>
 
-          {/* Trust Badge */}
-          <div className="mt-6 flex items-center gap-2 text-slate-400 text-sm">
-            <CheckCircle className="w-4 h-4 text-emerald-400" />
+          {/* Trust Badge - Theme aware */}
+          <div className="mt-6 flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm">
+            <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <span>Trusted by traders worldwide</span>
           </div>
         </div>

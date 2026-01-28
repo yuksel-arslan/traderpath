@@ -21,6 +21,7 @@ import {
   Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useCreditNotification } from '../../../contexts/CreditNotificationContext';
 import {
   LEVEL_THRESHOLDS,
   STREAK_MILESTONES,
@@ -74,6 +75,8 @@ export default function RewardsPage() {
   const [currentQuiz] = useState(QUIZ_POOL[Math.floor(Math.random() * QUIZ_POOL.length)]);
   const [copied, setCopied] = useState(false);
 
+  const { showCelebration, notifyCreditAddition } = useCreditNotification();
+
   // Calculate level info
   const userXp = MOCK_USER.xp;
   const currentLevelInfo = LEVEL_THRESHOLDS.filter(l => l.xp <= userXp).pop() || LEVEL_THRESHOLDS[0];
@@ -83,11 +86,27 @@ export default function RewardsPage() {
     : 100;
 
   const handleClaimLogin = () => {
+    const newStreakDays = dailyState.streak.days + 1;
+    const isStreakMilestone = [7, 14, 21, 28, 30].includes(newStreakDays);
+    const streakBonus = isStreakMilestone ? (newStreakDays >= 30 ? 100 : newStreakDays >= 28 ? 50 : newStreakDays >= 21 ? 30 : newStreakDays >= 14 ? 20 : 10) : 0;
+    const totalCredits = 3 + streakBonus;
+
     setDailyState(prev => ({
       ...prev,
       login: { claimed: true, credits: 3 },
-      streak: { ...prev.streak, days: prev.streak.days + 1 },
+      streak: { ...prev.streak, days: newStreakDays },
     }));
+
+    // Show celebration for daily login
+    showCelebration({
+      credits: totalCredits,
+      reason: isStreakMilestone ? 'streak_bonus' : 'daily_login',
+      streakDays: newStreakDays,
+      title: isStreakMilestone ? `${newStreakDays}-Day Streak!` : 'Daily Login Bonus!',
+      subtitle: isStreakMilestone
+        ? `Amazing! You've earned a ${newStreakDays}-day streak bonus!`
+        : 'Welcome back! Here\'s your daily reward.',
+    });
   };
 
   const handleSpin = () => {
@@ -110,6 +129,17 @@ export default function RewardsPage() {
         spin: { used: true, result },
       }));
       setIsSpinning(false);
+
+      // Show celebration for spin (jackpot for 10 or more)
+      const isJackpot = result >= 10;
+      showCelebration({
+        credits: result,
+        reason: isJackpot ? 'spin_jackpot' : 'daily_login',
+        title: isJackpot ? 'JACKPOT!' : `You Won ${result} Credits!`,
+        subtitle: isJackpot
+          ? 'Incredible! You hit the jackpot on the lucky spin!'
+          : 'Nice spin! Credits have been added to your account.',
+      });
     }, 2000);
   };
 
@@ -128,6 +158,18 @@ export default function RewardsPage() {
       ...prev,
       quiz: { completed: true },
     }));
+
+    // Show celebration for correct quiz answer
+    if (isCorrect) {
+      setTimeout(() => {
+        showCelebration({
+          credits: 5,
+          reason: 'quiz_correct',
+          title: 'Correct Answer!',
+          subtitle: 'Great job! You nailed the daily quiz!',
+        });
+      }, 500);
+    }
   };
 
   const handleCopyReferral = () => {

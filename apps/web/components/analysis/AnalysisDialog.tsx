@@ -30,6 +30,7 @@ import {
 import { cn } from '../../lib/utils';
 import { getAuthToken, getApiUrl } from '../../lib/api';
 import { CREDIT_COSTS } from '@traderpath/types';
+import { useCreditNotification } from '../../contexts/CreditNotificationContext';
 import { CoinIcon } from '../common/CoinIcon';
 import { StarLogo } from '../common/TraderPathLogo';
 
@@ -116,6 +117,7 @@ export function AnalysisDialog({
   // Derive trade type from timeframe
   const tradeType = TIMEFRAME_TO_TRADE_TYPE[timeframe];
   const uniqueId = useId();
+  const { notifyCreditDeduction, showCelebration, notifyInsufficientCredits } = useCreditNotification();
 
   // Dialog state
   const [dialogStep, setDialogStep] = useState<DialogStep>('mode-select');
@@ -263,12 +265,29 @@ export function AnalysisDialog({
 
       if (!response.ok) {
         if (response.status === 402) {
+          notifyInsufficientCredits(25, data.data?.currentBalance || 0);
           throw new Error('Insufficient credits (25 required). Please purchase more credits.');
         }
         throw new Error(data.error?.message || 'Full analysis failed');
       }
 
       const analysisData = data.data;
+
+      // Show credit deduction notification
+      if (data.creditsSpent && data.remainingCredits !== undefined) {
+        notifyCreditDeduction(data.creditsSpent, 'analysis', data.remainingCredits);
+      }
+
+      // Show celebration for trade type bonus (Scalping: +3, Day Trade: +2, Swing: +1)
+      const tradeTypeBonus = tradeType === 'scalping' ? 3 : tradeType === 'dayTrade' ? 2 : 1;
+      setTimeout(() => {
+        showCelebration({
+          credits: tradeTypeBonus,
+          reason: 'trade_type_bonus',
+          title: 'Analysis Bonus!',
+          subtitle: `You earned a ${TRADE_TYPE_LABELS[tradeType]} completion bonus!`,
+        });
+      }, 1500); // Delay so user sees credit deduction first
       const steps = analysisData.steps;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
