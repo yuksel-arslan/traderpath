@@ -27,6 +27,9 @@ import {
 // NEW: Economic Calendar import
 import { economicCalendarService, EconomicEvent } from './services/economic-calendar.service';
 
+// NEW: MLIS (Multi-Layer Intelligence System) import
+import { MLISService, MLISConfig, MLISResult, getMLISService, analyzeMLIS } from './services/mlis.service';
+
 // ===========================================
 // RAG Gate Evaluation with Gemini
 // ===========================================
@@ -5547,6 +5550,80 @@ export const analysisEngine = {
       timing,
       trapCheck
     }, tradePlan, 'dayTrade');
+  },
+
+  // =========================================
+  // MLIS Pro Analysis Method
+  // Multi-Layer Intelligence System
+  // =========================================
+
+  /**
+   * Analyze with specified method (classic 7-step or MLIS Pro)
+   *
+   * @param symbol - Trading pair symbol (e.g., 'BTC', 'BTCUSDT')
+   * @param timeframe - Analysis timeframe ('5m', '15m', '1h', '4h', '1d', '1W')
+   * @param method - Analysis method ('classic' for 7-step, 'mlis_pro' for MLIS)
+   * @param options - Additional options for MLIS analysis
+   * @returns Analysis result (varies by method)
+   */
+  async analyzeWithMethod(
+    symbol: string,
+    timeframe: string,
+    method: 'classic' | 'mlis_pro' = 'classic',
+    options?: {
+      includeOnchain?: boolean;
+      includeSentiment?: boolean;
+      confidenceThreshold?: number;
+    }
+  ): Promise<any> {
+    if (method === 'mlis_pro') {
+      const config: MLISConfig = {
+        symbol,
+        timeframe,
+        includeOnchain: options?.includeOnchain ?? true,
+        includeSentiment: options?.includeSentiment ?? true,
+        confidenceThreshold: options?.confidenceThreshold ?? 0.65,
+      };
+      return analyzeMLIS(symbol, timeframe, config);
+    }
+
+    // Mevcut classic analysis - run the full 7-step analysis
+    // Note: For classic analysis, caller should use the individual step methods
+    // This is a convenience wrapper that returns just the asset scan for quick analysis
+    const tradeType = this.getTradeTypeFromTimeframe(timeframe);
+    return this.getAssetScan(symbol, tradeType);
+  },
+
+  /**
+   * Get MLIS service instance for advanced usage
+   */
+  getMLISService(): MLISService {
+    return getMLISService();
+  },
+
+  /**
+   * Quick MLIS analysis (convenience method)
+   */
+  async quickMLISAnalysis(symbol: string, timeframe: string): Promise<MLISResult> {
+    return analyzeMLIS(symbol, timeframe);
+  },
+
+  /**
+   * Helper: Map timeframe to trade type
+   */
+  getTradeTypeFromTimeframe(timeframe: string): TradeType {
+    const mapping: Record<string, TradeType> = {
+      '5m': 'scalp',
+      '15m': 'scalp',
+      '30m': 'dayTrade',
+      '1h': 'dayTrade',
+      '2h': 'dayTrade',
+      '4h': 'dayTrade',
+      '1d': 'swing',
+      '1D': 'swing',
+      '1W': 'swing',
+    };
+    return mapping[timeframe] || 'dayTrade';
   },
 };
 
