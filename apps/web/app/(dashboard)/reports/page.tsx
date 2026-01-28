@@ -107,6 +107,18 @@ const OUTCOME_FILTERS: { value: OutcomeFilter; label: string; color: string }[] 
   { value: 'sl', label: 'SL HIT', color: 'text-red-500' },
 ];
 
+// Sort options
+type SortOption = 'time_desc' | 'time_asc' | 'pnl_desc' | 'pnl_asc' | 'score_desc' | 'score_asc';
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'time_desc', label: 'Newest' },
+  { value: 'time_asc', label: 'Oldest' },
+  { value: 'pnl_desc', label: 'P/L ↓' },
+  { value: 'pnl_asc', label: 'P/L ↑' },
+  { value: 'score_desc', label: 'Score ↓' },
+  { value: 'score_asc', label: 'Score ↑' },
+];
+
 export default function ReportsPage() {
   const router = useRouter();
   const [reports, setReports] = useState<Report[]>([]);
@@ -116,6 +128,7 @@ export default function ReportsPage() {
   const [tradeTypeFilter, setTradeTypeFilter] = useState<TradeType | 'all'>('all');
   const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>('all');
   const [outcomeFilter, setOutcomeFilter] = useState<OutcomeFilter>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('time_desc');
   const [pagination, setPagination] = useState({ total: 0, limit: 20, offset: 0 });
 
   const fetchReports = async () => {
@@ -323,7 +336,24 @@ Could you share your risk assessment and recommendations based on this analysis?
       matchesVerdictFilter(r.verdict) &&
       matchesOutcomeFilter(r)
     )
-    .sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime());
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'time_desc':
+          return new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime();
+        case 'time_asc':
+          return new Date(a.generatedAt).getTime() - new Date(b.generatedAt).getTime();
+        case 'pnl_desc':
+          return (b.unrealizedPnL ?? -Infinity) - (a.unrealizedPnL ?? -Infinity);
+        case 'pnl_asc':
+          return (a.unrealizedPnL ?? Infinity) - (b.unrealizedPnL ?? Infinity);
+        case 'score_desc':
+          return (b.score ?? -Infinity) - (a.score ?? -Infinity);
+        case 'score_asc':
+          return (a.score ?? Infinity) - (b.score ?? Infinity);
+        default:
+          return 0;
+      }
+    });
 
   // Check if any filter is active
   const hasActiveFilters = searchQuery || dateFilter !== 'all' || tradeTypeFilter !== 'all' || verdictFilter !== 'all' || outcomeFilter !== 'all';
@@ -468,6 +498,25 @@ Could you share your risk assessment and recommendations based on this analysis?
               {OUTCOME_FILTERS.map((f) => (
                 <option key={f.value} value={f.value}>
                   {f.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+          </div>
+        </div>
+
+        {/* Sort Dropdown */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 dark:text-slate-400">Sort:</span>
+          <div className="relative">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="appearance-none bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-slate-200 dark:border-white/10 focus:ring-2 focus:ring-teal-500 cursor-pointer"
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>

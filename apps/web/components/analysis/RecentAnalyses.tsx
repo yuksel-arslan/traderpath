@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   XCircle,
   ChevronDown,
+  ArrowUpDown,
 } from 'lucide-react';
 import { CoinIcon } from '../common/CoinIcon';
 import { cn } from '../../lib/utils';
@@ -92,6 +93,18 @@ const OUTCOME_FILTERS: { value: OutcomeFilter; label: string; color: string }[] 
   { value: 'sl', label: 'SL HIT', color: 'text-red-500' },
 ];
 
+// Sort options
+type SortOption = 'time_desc' | 'time_asc' | 'pnl_desc' | 'pnl_asc' | 'score_desc' | 'score_asc';
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'time_desc', label: 'Newest' },
+  { value: 'time_asc', label: 'Oldest' },
+  { value: 'pnl_desc', label: 'P/L ↓' },
+  { value: 'pnl_asc', label: 'P/L ↑' },
+  { value: 'score_desc', label: 'Score ↓' },
+  { value: 'score_asc', label: 'Score ↑' },
+];
+
 export function RecentAnalyses() {
   const router = useRouter();
   const [analyses, setAnalyses] = useState<RecentAnalysis[]>([]);
@@ -99,6 +112,7 @@ export function RecentAnalyses() {
   const [error, setError] = useState<string | null>(null);
   const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>('all');
   const [outcomeFilter, setOutcomeFilter] = useState<OutcomeFilter>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('time_desc');
   const [actionLoading, setActionLoading] = useState<{ id: string; action: string } | null>(null);
 
   useEffect(() => {
@@ -301,6 +315,26 @@ export function RecentAnalyses() {
     return true;
   });
 
+  // Sort analyses
+  const sortedAnalyses = [...filteredAnalyses].sort((a, b) => {
+    switch (sortBy) {
+      case 'time_desc':
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      case 'time_asc':
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      case 'pnl_desc':
+        return (b.unrealizedPnL ?? -Infinity) - (a.unrealizedPnL ?? -Infinity);
+      case 'pnl_asc':
+        return (a.unrealizedPnL ?? Infinity) - (b.unrealizedPnL ?? Infinity);
+      case 'score_desc':
+        return (b.score ?? -Infinity) - (a.score ?? -Infinity);
+      case 'score_asc':
+        return (a.score ?? Infinity) - (b.score ?? Infinity);
+      default:
+        return 0;
+    }
+  });
+
   return (
     <div>
       {/* Header with filter */}
@@ -309,7 +343,7 @@ export function RecentAnalyses() {
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
             Recent Analyses
             <span className="text-xs font-normal text-gray-500 dark:text-slate-400 ml-1">
-              ({filteredAnalyses.length}{(verdictFilter !== 'all' || outcomeFilter !== 'all') ? `/${analyses.length}` : ''})
+              ({sortedAnalyses.length}{(verdictFilter !== 'all' || outcomeFilter !== 'all') ? `/${analyses.length}` : ''})
             </span>
           </h3>
           <button
@@ -359,10 +393,29 @@ export function RecentAnalyses() {
               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
             </div>
           </div>
+
+          {/* Sort Dropdown */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-gray-400 dark:text-slate-500">Sort:</span>
+            <div className="relative">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                className="appearance-none bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 text-[11px] font-medium pl-2.5 pr-7 py-1.5 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
         </div>
       </div>
 
-      {filteredAnalyses.length === 0 && (verdictFilter !== 'all' || outcomeFilter !== 'all') ? (
+      {sortedAnalyses.length === 0 && (verdictFilter !== 'all' || outcomeFilter !== 'all') ? (
         <div className="text-center py-6">
           <Filter className="w-6 h-6 mx-auto mb-2 text-muted-foreground opacity-50" />
           <p className="text-xs text-muted-foreground">
@@ -377,7 +430,7 @@ export function RecentAnalyses() {
         </div>
       ) : (
         <div className="space-y-3 max-h-[500px] overflow-y-auto">
-          {filteredAnalyses.map((analysis) => {
+          {sortedAnalyses.map((analysis) => {
             const isActive = analysis.expiresAt && new Date(analysis.expiresAt) > new Date() && analysis.outcome !== 'correct' && analysis.outcome !== 'incorrect';
             const isLoading = actionLoading?.id === analysis.id;
             const verdictConfig = VERDICT_CONFIG[analysis.verdict] || VERDICT_CONFIG.wait;
