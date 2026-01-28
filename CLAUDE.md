@@ -267,6 +267,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-26 | Grafikteki "Current" çizgisi eski fiyatı gösteriyordu | `livePrice` state eklendi - son mumun close fiyatı kullanılıyor. Prop'tan gelen stale fiyat yerine canlı fiyat gösteriliyor | `TradePlanChart.tsx:116,249-258,358` |
 | 2026-01-26 | AI Expert yorumları raw tag'lerle gösteriliyordu | `renderAIExpertComment` parser fonksiyonu eklendi - [EXPERT:ARIA], [VOLTRAN] vb. tag'ler emoji ve renklerle düzgün formatlaniyor | `reports/[id]/page.tsx:36-104` |
 | 2026-01-28 | Landing page P/L Dashboard ile uyuşmuyordu (119.9% vs 120.7%) | `platform-performance-history` endpoint'i artık `allTimeTotalPnL` döndürüyor - 30 günlük filtre all-time toplamı etkilemiyordu | `analysis.routes.ts:1395-1414`, `LandingPerformanceChart.tsx:34,167-168,216-220` |
+| 2026-01-28 | Login sayfası dark/light mode uyumsuzluğu - sol panel her zaman koyu | Sol marketing paneli artık tema tercihini takip ediyor. Light/dark mode'a uygun renkler kullanılıyor | `apps/web/app/(auth)/layout.tsx` |
 
 ---
 
@@ -309,6 +310,9 @@ Kullanıcı Hakları Aktif:
 | 2026-01-27 | Testimonials → Platform Metrics | Sahte yorumlar yerine gerçek API verileri - şeffaflık ve güvenilirlik |
 | 2026-01-27 | Feature 1 → AI-Powered Market Scanner | 7-Step Analysis Suite formatında, "Find Your Next Winning Trade" yerine |
 | 2026-01-27 | Real Results section Hero altına taşındı | Metrikler daha erken görünsün |
+| 2026-01-28 | Kutlama Modal: Confetti ve balon animasyonları | Kullanıcı ödül kazandığında mutlu etme - gamification |
+| 2026-01-28 | Kredi Bildirimi: Toast notification sistemi | Kredi harcama/kazanma anında kullanıcıyı bilgilendirme |
+| 2026-01-28 | Login sayfası: Tema uyumlu marketing paneli | Sol panel artık light/dark mode'a uygun görünüyor |
 
 ---
 
@@ -928,6 +932,33 @@ Kullanıcı Hakları Aktif:
   - Landing page "All" görünümünde all-time toplam P/L gösteriyor (dashboard ile aynı)
   - View mode seçenekleri: Today, Week, All (önceden Month idi)
   - Period-specific ve all-time veriler ayrı hesaplanıyor
+- **Login sayfası dark/light mode uyumu düzeltildi**:
+  - Sol marketing paneli artık tema tercihini takip ediyor
+  - Light mode'da açık renkler, dark mode'da koyu renkler kullanılıyor
+  - Feature kartları, istatistikler ve trust badge'ler tema uyumlu
+  - Dosya: `apps/web/app/(auth)/layout.tsx`
+- **Kutlama Bildirimleri Sistemi eklendi**:
+  - Yeni bileşen: `apps/web/components/modals/CelebrationModal.tsx`
+  - Confetti, balon ve yıldız animasyonları
+  - 10 farklı kutlama türü: daily_login, streak_bonus, spin_jackpot, quiz_correct, achievement_unlocked, level_up, trade_type_bonus, referral_bonus, first_analysis, analysis_milestone
+  - Otomatik 5 saniye sonra kapanma
+  - Her tür için özel renk gradient'i ve ikon
+- **Kredi Bildirim Sistemi eklendi**:
+  - Yeni context: `apps/web/contexts/CreditNotificationContext.tsx`
+  - `notifyCreditDeduction`: Kredi harcandığında toast bildirimi (miktar + kalan bakiye)
+  - `notifyCreditAddition`: Kredi kazanıldığında toast bildirimi
+  - `showCelebration`: Kutlama modal'ı gösterme
+  - `notifyInsufficientCredits`: Yetersiz kredi uyarısı + "Buy Credits" butonu
+  - providers.tsx'e `CreditNotificationProvider` eklendi
+- **Analiz tamamlandığında kredi bildirimi**:
+  - AnalysisDialog'da kredi harcama bildirimi gösteriliyor
+  - Trade type bonus için kutlama modal'ı gösteriliyor (Scalping: +3, Day Trade: +2, Swing: +1)
+  - Yetersiz kredi durumunda özel hata mesajı ve yönlendirme
+- **Rewards sayfası kutlama entegrasyonu**:
+  - Daily Login claim edildiğinde kutlama modal'ı
+  - Streak milestone'larında özel kutlama (7, 14, 21, 28, 30 gün)
+  - Lucky Spin sonrası kutlama (jackpot için özel)
+  - Quiz doğru cevapta kutlama (+5 kredi)
 
 ---
 

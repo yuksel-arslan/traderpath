@@ -235,6 +235,21 @@ module.exports = {
           '0%': { backgroundPosition: '200% 0' },
           '100%': { backgroundPosition: '-200% 0' },
         },
+        // Celebration animations
+        'confetti-fall': {
+          '0%': { transform: 'translateY(0) rotate(0deg)', opacity: '1' },
+          '100%': { transform: 'translateY(100vh) rotate(720deg)', opacity: '0' },
+        },
+        'balloon-rise': {
+          '0%': { transform: 'translateY(0) rotate(-5deg)', opacity: '0' },
+          '10%': { opacity: '1' },
+          '50%': { transform: 'translateY(-50vh) rotate(5deg)' },
+          '100%': { transform: 'translateY(-120vh) rotate(-5deg)', opacity: '0' },
+        },
+        'celebration-pulse': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.6' },
+          '50%': { transform: 'scale(1.2)', opacity: '1' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -268,6 +283,10 @@ module.exports = {
         'soundwave-slow': 'soundwave-slow 0.8s ease-in-out infinite',
         'voice-pulse': 'voice-pulse 1.5s ease-out infinite',
         'shimmer': 'shimmer 3s ease-in-out infinite',
+        // Celebration animations
+        'confetti-fall': 'confetti-fall 4s linear forwards',
+        'balloon-rise': 'balloon-rise 6s ease-out forwards',
+        'celebration-pulse': 'celebration-pulse 2s ease-in-out infinite',
       },
       boxShadow: {
         'glow-teal': '0 0 30px rgba(45, 212, 168, 0.4), 0 0 60px rgba(20, 184, 166, 0.2)',
