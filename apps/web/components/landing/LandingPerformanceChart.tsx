@@ -18,14 +18,6 @@ interface ChartDataPoint {
   trades: number;
 }
 
-interface TooltipPayload {
-  payload: {
-    name: string;
-    pnl: number;
-    trades: number;
-  };
-}
-
 export default function LandingPerformanceChart() {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [totalPnL, setTotalPnL] = useState(0);
@@ -149,9 +141,16 @@ export default function LandingPerformanceChart() {
             </defs>
             <ReferenceLine y={0} stroke="#64748b" strokeWidth={1} strokeOpacity={0.3} />
             <Tooltip
-              content={({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) => {
+              contentStyle={{
+                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '10px 14px',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+              }}
+              content={({ active, payload }) => {
                 if (!active || !payload || !payload[0]) return null;
-                const data = payload[0].payload;
+                const data = payload[0].payload as ChartDataPoint;
                 const pnl = data.pnl;
                 const isPos = pnl >= 0;
                 return (
