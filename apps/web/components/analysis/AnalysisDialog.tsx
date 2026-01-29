@@ -26,6 +26,9 @@ import {
   ArrowRight,
   Brain,
   TrendingUp,
+  Activity,
+  BarChart3,
+  Layers,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getAuthToken, getApiUrl } from '../../lib/api';
@@ -42,7 +45,164 @@ import { TimingAnalysis } from './TimingAnalysis';
 import { TradePlan } from './TradePlan';
 import { TrapCheck } from './TrapCheck';
 import { FinalVerdict } from './FinalVerdict';
-import { AnalysisProgressBar } from './AnalysisProgressBar';
+import { AnalysisProgressBar, MLIS_STEPS as MLIS_PROGRESS_STEPS } from './AnalysisProgressBar';
+
+// MLIS Layer Result Component
+interface MLISLayerData {
+  name?: string;
+  score?: number;
+  signal?: string;
+  weight?: number;
+  indicators?: Record<string, unknown>;
+  mlis?: boolean;
+}
+
+function MLISLayerResult({ data, layerName }: { data: MLISLayerData; layerName: string }) {
+  const score = data?.score ?? 50;
+  const signal = data?.signal || 'NEUTRAL';
+  const indicators = data?.indicators || {};
+
+  const getSignalColor = (sig: string) => {
+    const s = sig.toUpperCase();
+    if (s === 'BULLISH' || s === 'BUY') return 'text-green-400';
+    if (s === 'BEARISH' || s === 'SELL') return 'text-red-400';
+    return 'text-amber-400';
+  };
+
+  const getScoreColor = (s: number) => {
+    if (s >= 70) return 'text-green-400';
+    if (s >= 50) return 'text-amber-400';
+    return 'text-red-400';
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Score and Signal */}
+      <div className="flex items-center justify-between p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
+        <div>
+          <div className="text-xs text-slate-400 mb-1">{layerName} Layer Score</div>
+          <div className={cn("text-2xl font-bold", getScoreColor(score))}>
+            {score.toFixed(0)}/100
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-xs text-slate-400 mb-1">Signal</div>
+          <div className={cn("text-lg font-bold", getSignalColor(signal))}>
+            {signal}
+          </div>
+        </div>
+      </div>
+
+      {/* Indicators Summary */}
+      {Object.keys(indicators).length > 0 && (
+        <div className="space-y-2">
+          <div className="text-xs text-slate-400 font-medium">Key Indicators</div>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(indicators).slice(0, 6).map(([key, value]) => (
+              <div
+                key={key}
+                className="px-3 py-2 rounded-lg bg-white/5 border border-white/10"
+              >
+                <div className="text-xs text-slate-500">{key}</div>
+                <div className="text-sm text-white font-medium">
+                  {typeof value === 'number' ? value.toFixed(2) : String(value)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// MLIS Verdict Result Component
+interface MLISVerdictData {
+  overallScore?: number;
+  confidence?: number;
+  recommendation?: string;
+  direction?: string;
+  riskLevel?: string;
+  keySignals?: string[];
+  riskFactors?: string[];
+  verdict?: string;
+}
+
+function MLISVerdictResult({ data, symbol }: { data: MLISVerdictData; symbol: string }) {
+  const score = data?.overallScore ? data.overallScore * 10 : 50; // Convert back to 0-100
+  const confidence = data?.confidence ?? 50;
+  const recommendation = data?.recommendation || 'HOLD';
+  const direction = data?.direction || 'NEUTRAL';
+  const riskLevel = data?.riskLevel || 'MEDIUM';
+  const keySignals = data?.keySignals || [];
+  const riskFactors = data?.riskFactors || [];
+
+  const getRecommendationColor = (rec: string) => {
+    if (rec === 'STRONG_BUY' || rec === 'BUY') return { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30' };
+    if (rec === 'STRONG_SELL' || rec === 'SELL') return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' };
+    return { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' };
+  };
+
+  const colors = getRecommendationColor(recommendation);
+
+  return (
+    <div className="space-y-4">
+      {/* Recommendation Badge */}
+      <div className={cn("p-4 rounded-xl text-center", colors.bg, `border ${colors.border}`)}>
+        <div className="text-xs text-slate-400 mb-2">MLIS Recommendation for {symbol}</div>
+        <div className={cn("text-3xl font-bold mb-2", colors.text)}>
+          {recommendation.replace('_', ' ')}
+        </div>
+        <div className="flex items-center justify-center gap-4 text-sm">
+          <span className="text-slate-400">Direction: <span className="text-white font-medium">{direction}</span></span>
+          <span className="text-slate-400">Risk: <span className="text-white font-medium">{riskLevel}</span></span>
+        </div>
+      </div>
+
+      {/* Scores */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+          <div className="text-xs text-slate-400">Overall Score</div>
+          <div className="text-xl font-bold text-purple-400">{score.toFixed(0)}%</div>
+        </div>
+        <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+          <div className="text-xs text-slate-400">Confidence</div>
+          <div className="text-xl font-bold text-blue-400">{confidence.toFixed(0)}%</div>
+        </div>
+      </div>
+
+      {/* Key Signals */}
+      {keySignals.length > 0 && (
+        <div>
+          <div className="text-xs text-slate-400 font-medium mb-2">Key Signals</div>
+          <div className="space-y-1">
+            {keySignals.slice(0, 4).map((signal, idx) => (
+              <div key={idx} className="flex items-center gap-2 text-sm text-slate-300">
+                <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
+                {signal}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Risk Factors */}
+      {riskFactors.length > 0 && (
+        <div>
+          <div className="text-xs text-slate-400 font-medium mb-2">Risk Factors</div>
+          <div className="space-y-1">
+            {riskFactors.slice(0, 3).map((factor, idx) => (
+              <div key={idx} className="flex items-center gap-2 text-sm text-slate-300">
+                <AlertTriangle className="w-3 h-3 text-amber-400 flex-shrink-0" />
+                {factor}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 type Timeframe = '5m' | '15m' | '30m' | '1h' | '2h' | '4h' | '1d' | '1W';
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
@@ -83,8 +243,8 @@ const TRADE_TYPE_LABELS: Record<TradeType, string> = {
   swing: 'Swing Trade',
 };
 
-// Step definitions
-const STEPS = [
+// Classic 7-Step definitions
+const CLASSIC_STEPS = [
   { id: 1, name: 'Market Pulse', icon: Globe, color: 'blue', shortDesc: 'Overall market analysis' },
   { id: 2, name: 'Asset Scanner', icon: Target, color: 'cyan', shortDesc: 'Technical analysis' },
   { id: 3, name: 'Safety Check', icon: Shield, color: 'orange', shortDesc: 'Risk assessment' },
@@ -94,6 +254,18 @@ const STEPS = [
   { id: 7, name: 'Final Verdict', icon: CheckCircle, color: 'green', shortDesc: 'GO/NO-GO decision' },
 ];
 
+// MLIS 5-Layer definitions
+const MLIS_LAYERS = [
+  { id: 1, name: 'Technical', icon: TrendingUp, color: 'blue', shortDesc: 'EMA, MACD, ADX trend analysis' },
+  { id: 2, name: 'Momentum', icon: Zap, color: 'emerald', shortDesc: 'RSI, StochRSI, CCI signals' },
+  { id: 3, name: 'Volatility', icon: Activity, color: 'orange', shortDesc: 'ATR, Bollinger assessment' },
+  { id: 4, name: 'Volume', icon: BarChart3, color: 'cyan', shortDesc: 'OBV, CMF flow analysis' },
+  { id: 5, name: 'Verdict', icon: CheckCircle, color: 'green', shortDesc: 'Final recommendation' },
+];
+
+// Keep STEPS as alias for classic (for backward compatibility)
+const STEPS = CLASSIC_STEPS;
+
 const colorClasses = {
   blue: { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-500' },
   cyan: { bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', text: 'text-cyan-500' },
@@ -102,6 +274,7 @@ const colorClasses = {
   indigo: { bg: 'bg-indigo-500/10', border: 'border-indigo-500/30', text: 'text-indigo-500' },
   red: { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-500' },
   green: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-500' },
+  emerald: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', text: 'text-emerald-500' },
 };
 
 // localStorage keys
@@ -182,9 +355,13 @@ export function AnalysisDialog({
     };
   }, []);
 
-  // Save report to database
+  // Save report to database (supports both Classic 7-step and MLIS 5-layer)
   const saveReportToDatabase = useCallback(async () => {
-    if (completedSteps.length !== 7 || saveAttemptedRef.current || reportSaved) return;
+    // Determine expected steps based on method
+    const isMLISMethod = analysisMethod === 'mlis_pro' || results[1]?.mlis === true;
+    const expectedSteps = isMLISMethod ? 5 : 7;
+
+    if (completedSteps.length !== expectedSteps || saveAttemptedRef.current || reportSaved) return;
 
     saveAttemptedRef.current = true;
 
@@ -192,14 +369,28 @@ export function AnalysisDialog({
       const token = await getAuthToken();
       if (!token) return;
 
-      const verdict = results[7] as { action?: string; verdict?: string; overallScore?: number; analysisId?: string } | undefined;
-      const tradePlan = results[6] as { direction?: string } | null;
+      // Get verdict from different step based on method
+      const verdictStep = isMLISMethod ? 5 : 7;
+      const verdict = results[verdictStep] as { action?: string; verdict?: string; overallScore?: number; analysisId?: string; recommendation?: string; direction?: string } | undefined;
+      const tradePlan = isMLISMethod ? null : (results[6] as { direction?: string } | null);
       const reportAnalysisId = verdict?.analysisId || crypto.randomUUID();
 
-      const reportData = {
+      // Build report data based on method
+      const reportData = isMLISMethod ? {
         symbol,
         generatedAt: new Date().toISOString(),
         analysisId: reportAnalysisId,
+        method: 'mlis_pro',
+        technical: results[1],
+        momentum: results[2],
+        volatility: results[3],
+        volume: results[4],
+        verdict: results[5],
+      } : {
+        symbol,
+        generatedAt: new Date().toISOString(),
+        analysisId: reportAnalysisId,
+        method: 'classic',
         marketPulse: results[1],
         assetScan: results[2],
         safetyCheck: results[3],
@@ -207,7 +398,6 @@ export function AnalysisDialog({
         trapCheck: results[5],
         tradePlan: results[6],
         verdict: results[7],
-        // Full 40+ Indicator Details
         indicatorDetails: (results[2] as { indicatorDetails?: unknown })?.indicatorDetails || (results[3] as { indicatorDetails?: unknown })?.indicatorDetails,
       };
 
@@ -221,11 +411,12 @@ export function AnalysisDialog({
           symbol,
           analysisId: reportAnalysisId,
           reportData: { ...reportData, tradeType },
-          verdict: verdict?.action || verdict?.verdict || 'N/A',
+          verdict: verdict?.action || verdict?.verdict || verdict?.recommendation || 'N/A',
           score: verdict?.overallScore || 0,
-          direction: tradePlan?.direction || null,
+          direction: tradePlan?.direction || verdict?.direction || null,
           interval: timeframe,
           tradeType,
+          method: isMLISMethod ? 'mlis_pro' : 'classic',
         }),
       });
 
@@ -235,14 +426,16 @@ export function AnalysisDialog({
     } catch (error) {
       console.error('Failed to auto-save report:', error);
     }
-  }, [completedSteps.length, results, symbol, reportSaved, tradeType, timeframe]);
+  }, [completedSteps.length, results, symbol, reportSaved, tradeType, timeframe, analysisMethod]);
 
-  // Auto-save when complete
+  // Auto-save when complete (supports both 7-step and 5-layer)
   useEffect(() => {
-    if (completedSteps.length === 7 && !saveAttemptedRef.current) {
+    const isMLISMethod = analysisMethod === 'mlis_pro' || results[1]?.mlis === true;
+    const expectedSteps = isMLISMethod ? 5 : 7;
+    if (completedSteps.length === expectedSteps && !saveAttemptedRef.current) {
       saveReportToDatabase();
     }
-  }, [completedSteps.length, saveReportToDatabase]);
+  }, [completedSteps.length, saveReportToDatabase, analysisMethod, results]);
 
   // Run full analysis
   const handleStartAnalysis = async () => {
@@ -293,28 +486,59 @@ export function AnalysisDialog({
           subtitle: `You earned a ${TRADE_TYPE_LABELS[tradeType]} completion bonus!`,
         });
       }, 1500); // Delay so user sees credit deduction first
-      const steps = analysisData.steps;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const allResults: Record<number, any> = {
-        1: steps.marketPulse,
-        2: steps.assetScan,
-        3: steps.safetyCheck,
-        4: steps.timing,
-        5: steps.trapCheck,
-        6: steps.tradePlan,
-        7: { ...steps.verdict, preliminaryVerdict: steps.preliminaryVerdict },
-      };
+      let allResults: Record<number, any> = {};
+      let totalSteps = 7;
+
+      // Handle MLIS Pro vs Classic differently
+      if (analysisMethod === 'mlis_pro' || analysisData.method === 'mlis_pro') {
+        // MLIS Pro: 5 layers
+        totalSteps = 5;
+        const layers = analysisData.layers || {};
+        allResults = {
+          1: { name: 'Technical', ...layers.technical, mlis: true },
+          2: { name: 'Momentum', ...layers.momentum, mlis: true },
+          3: { name: 'Volatility', ...layers.volatility, mlis: true },
+          4: { name: 'Volume', ...layers.volume, mlis: true },
+          5: {
+            name: 'Verdict',
+            mlis: true,
+            overallScore: analysisData.overallScore / 10, // Convert to 0-10 scale
+            confidence: analysisData.confidence,
+            recommendation: analysisData.recommendation,
+            direction: analysisData.direction,
+            riskLevel: analysisData.riskLevel,
+            keySignals: analysisData.keySignals,
+            riskFactors: analysisData.riskFactors,
+            verdict: analysisData.recommendation === 'STRONG_BUY' || analysisData.recommendation === 'BUY' ? 'go' :
+                     analysisData.recommendation === 'HOLD' ? 'wait' : 'avoid',
+          },
+        };
+      } else {
+        // Classic 7-step analysis
+        const steps = analysisData.steps;
+        allResults = {
+          1: steps.marketPulse,
+          2: steps.assetScan,
+          3: steps.safetyCheck,
+          4: steps.timing,
+          5: steps.trapCheck,
+          6: steps.tradePlan,
+          7: { ...steps.verdict, preliminaryVerdict: steps.preliminaryVerdict },
+        };
+      }
 
       if (analysisMode === 'quick') {
         // Quick mode: instant results
-        setCompletedSteps([1, 2, 3, 4, 5, 6, 7]);
+        const completedIds = Array.from({ length: totalSteps }, (_, i) => i + 1);
+        setCompletedSteps(completedIds);
         setResults(allResults);
-        setActiveStep(7);
+        setActiveStep(totalSteps);
         setDialogStep('results');
       } else {
         // Educational mode: animate through steps
-        for (let stepId = 1; stepId <= 7; stepId++) {
+        for (let stepId = 1; stepId <= totalSteps; stepId++) {
           setActiveStep(stepId);
           await new Promise((resolve) => setTimeout(resolve, 300));
           setCompletedSteps((prev) => [...prev, stepId]);
@@ -345,11 +569,21 @@ export function AnalysisDialog({
 
   if (!isOpen) return null;
 
-  const currentStep = STEPS[activeStep - 1];
+  // Determine if this is MLIS based on method or results
+  const isMLIS = analysisMethod === 'mlis_pro' || results[1]?.mlis === true;
+  const activeSteps = isMLIS ? MLIS_LAYERS : CLASSIC_STEPS;
+  const totalStepsCount = activeSteps.length;
+  const currentStep = activeSteps[activeStep - 1] || activeSteps[0];
   const colors = colorClasses[currentStep.color as keyof typeof colorClasses];
-  const verdict = results[7] as { action?: string; verdict?: string; overallScore?: number } | undefined;
-  const verdictAction = verdict?.action || verdict?.verdict || '';
-  const isGo = verdictAction.toLowerCase().includes('go') && !verdictAction.toLowerCase().includes('wait') && !verdictAction.toLowerCase().includes('avoid');
+
+  // Get verdict based on method
+  const verdictStep = isMLIS ? results[5] : results[7];
+  const verdict = verdictStep as { action?: string; verdict?: string; overallScore?: number; recommendation?: string } | undefined;
+  // Handle verdict action for both Classic and MLIS
+  const verdictAction = verdict?.action || verdict?.verdict || verdict?.recommendation || '';
+  const normalizedVerdict = verdictAction.toLowerCase().replace('_', ' ');
+  const isGo = (normalizedVerdict.includes('go') || normalizedVerdict.includes('buy') || normalizedVerdict.includes('strong buy'))
+    && !normalizedVerdict.includes('wait') && !normalizedVerdict.includes('avoid') && !normalizedVerdict.includes('sell');
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 isolate">
@@ -646,30 +880,58 @@ export function AnalysisDialog({
                 </button>
               </div>
 
-              {/* 7-Step Analysis Process */}
+              {/* Analysis Process - Different for Classic vs MLIS */}
               <div
                 className="rounded-xl p-4"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: analysisMethod === 'mlis_pro'
+                    ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(99, 102, 241, 0.05))'
+                    : 'rgba(255, 255, 255, 0.03)',
+                  border: analysisMethod === 'mlis_pro'
+                    ? '1px solid rgba(139, 92, 246, 0.3)'
+                    : '1px solid rgba(255, 255, 255, 0.08)',
                 }}
               >
-                <h4 className="font-medium mb-3 flex items-center gap-2 text-sm text-slate-300">
-                  <Eye className="w-4 h-4 text-[#2DD4BF]" />
-                  7-Step Analysis Process
-                </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {STEPS.map((step) => (
-                    <div
-                      key={step.id}
-                      className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg"
-                      style={{ background: 'rgba(255, 255, 255, 0.05)' }}
-                    >
-                      <step.icon className={cn('w-3.5 h-3.5', colorClasses[step.color as keyof typeof colorClasses].text)} />
-                      <span className="text-slate-300">{step.name}</span>
+                {analysisMethod === 'mlis_pro' ? (
+                  <>
+                    <h4 className="font-medium mb-3 flex items-center gap-2 text-sm text-slate-300">
+                      <Layers className="w-4 h-4 text-purple-400" />
+                      5-Layer MLIS Pro Analysis
+                      <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/20 text-purple-400 rounded-full font-bold">NEW</span>
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      {MLIS_LAYERS.map((layer) => (
+                        <div
+                          key={layer.id}
+                          className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg"
+                          style={{ background: 'rgba(139, 92, 246, 0.1)' }}
+                        >
+                          <layer.icon className={cn('w-3.5 h-3.5', colorClasses[layer.color as keyof typeof colorClasses].text)} />
+                          <span className="text-slate-300">{layer.name}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </>
+                ) : (
+                  <>
+                    <h4 className="font-medium mb-3 flex items-center gap-2 text-sm text-slate-300">
+                      <Eye className="w-4 h-4 text-[#2DD4BF]" />
+                      7-Step Analysis Process
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {STEPS.map((step) => (
+                        <div
+                          key={step.id}
+                          className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg"
+                          style={{ background: 'rgba(255, 255, 255, 0.05)' }}
+                        >
+                          <step.icon className={cn('w-3.5 h-3.5', colorClasses[step.color as keyof typeof colorClasses].text)} />
+                          <span className="text-slate-300">{step.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Start Button */}
@@ -720,6 +982,7 @@ export function AnalysisDialog({
                   size="sm"
                   showLabels={false}
                   animated={true}
+                  steps={isMLIS ? MLIS_PROGRESS_STEPS : undefined}
                 />
               </div>
 
@@ -727,26 +990,38 @@ export function AnalysisDialog({
               <div
                 className="rounded-xl p-5"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(45, 212, 191, 0.1), rgba(248, 113, 113, 0.05))',
-                  border: '1px solid rgba(45, 212, 191, 0.2)',
+                  background: isMLIS
+                    ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(99, 102, 241, 0.05))'
+                    : 'linear-gradient(135deg, rgba(45, 212, 191, 0.1), rgba(248, 113, 113, 0.05))',
+                  border: isMLIS
+                    ? '1px solid rgba(139, 92, 246, 0.2)'
+                    : '1px solid rgba(45, 212, 191, 0.2)',
                 }}
               >
                 <div className="flex items-center gap-4 mb-4">
                   <div
                     className="w-12 h-12 rounded-xl flex items-center justify-center"
                     style={{
-                      background: 'linear-gradient(135deg, #2DD4BF, #14B8A6)',
-                      boxShadow: '0 8px 30px rgba(45, 212, 191, 0.3)',
+                      background: isMLIS
+                        ? 'linear-gradient(135deg, #A78BFA, #8B5CF6)'
+                        : 'linear-gradient(135deg, #2DD4BF, #14B8A6)',
+                      boxShadow: isMLIS
+                        ? '0 8px 30px rgba(139, 92, 246, 0.3)'
+                        : '0 8px 30px rgba(45, 212, 191, 0.3)',
                     }}
                   >
                     <currentStep.icon className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <div className="text-sm text-slate-400">Step {activeStep} of 7</div>
+                    <div className="text-sm text-slate-400">
+                      {isMLIS ? `Layer ${activeStep} of ${totalStepsCount}` : `Step ${activeStep} of ${totalStepsCount}`}
+                    </div>
                     <h3
                       className="text-lg font-bold"
                       style={{
-                        background: 'linear-gradient(135deg, #7FFFD4, #2DD4BF)',
+                        background: isMLIS
+                          ? 'linear-gradient(135deg, #C4B5FD, #A78BFA)'
+                          : 'linear-gradient(135deg, #7FFFD4, #2DD4BF)',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
                       }}
@@ -759,7 +1034,9 @@ export function AnalysisDialog({
                       <div
                         className="w-8 h-8 rounded-full flex items-center justify-center"
                         style={{
-                          background: 'linear-gradient(135deg, #2DD4BF, #14B8A6)',
+                          background: isMLIS
+                            ? 'linear-gradient(135deg, #A78BFA, #8B5CF6)'
+                            : 'linear-gradient(135deg, #2DD4BF, #14B8A6)',
                         }}
                       >
                         <Loader2 className="w-4 h-4 animate-spin text-white" />
@@ -811,6 +1088,7 @@ export function AnalysisDialog({
                   size="sm"
                   showLabels={false}
                   animated={false}
+                  steps={isMLIS ? MLIS_PROGRESS_STEPS : undefined}
                 />
               </div>
 
@@ -839,11 +1117,15 @@ export function AnalysisDialog({
                         <currentStep.icon className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <div className="text-xs text-slate-400">Step {activeStep} of 7</div>
+                        <div className="text-xs text-slate-400">
+                          {isMLIS ? `Layer ${activeStep} of ${totalStepsCount}` : `Step ${activeStep} of ${totalStepsCount}`}
+                        </div>
                         <h3
                           className="font-semibold"
                           style={{
-                            background: 'linear-gradient(135deg, #7FFFD4, #2DD4BF)',
+                            background: isMLIS
+                              ? 'linear-gradient(135deg, #A78BFA, #8B5CF6)'
+                              : 'linear-gradient(135deg, #7FFFD4, #2DD4BF)',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                           }}
@@ -865,31 +1147,45 @@ export function AnalysisDialog({
                   </div>
                 </div>
                 <div className="p-4 max-h-[300px] overflow-y-auto bg-[#0a0f1a]">
-                  {activeStep === 1 && <MarketPulse data={results[1]} />}
-                  {activeStep === 2 && <AssetScanner data={results[2]} symbol={symbol} />}
-                  {activeStep === 3 && <SafetyCheck data={results[3]} symbol={symbol} />}
-                  {activeStep === 4 && <TimingAnalysis data={results[4]} symbol={symbol} />}
-                  {activeStep === 5 && <TrapCheck data={results[5]} symbol={symbol} />}
-                  {activeStep === 6 && (
-                    results[6] ? (
-                      <TradePlan data={results[6]} symbol={symbol} />
-                    ) : (
-                      <div
-                        className="p-4 rounded-xl text-center"
-                        style={{
-                          background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.05))',
-                          border: '1px solid rgba(251, 191, 36, 0.2)',
-                        }}
-                      >
-                        <AlertTriangle className="w-6 h-6 mx-auto mb-2 text-amber-400" />
-                        <p className="font-medium text-sm text-white">No Trade Plan Generated</p>
-                        <p className="text-xs text-slate-400">
-                          Trade plans are only generated for GO signals.
-                        </p>
-                      </div>
-                    )
+                  {isMLIS ? (
+                    // MLIS Layer Results
+                    <>
+                      {activeStep === 1 && <MLISLayerResult data={results[1]} layerName="Technical" />}
+                      {activeStep === 2 && <MLISLayerResult data={results[2]} layerName="Momentum" />}
+                      {activeStep === 3 && <MLISLayerResult data={results[3]} layerName="Volatility" />}
+                      {activeStep === 4 && <MLISLayerResult data={results[4]} layerName="Volume" />}
+                      {activeStep === 5 && <MLISVerdictResult data={results[5]} symbol={symbol} />}
+                    </>
+                  ) : (
+                    // Classic 7-Step Results
+                    <>
+                      {activeStep === 1 && <MarketPulse data={results[1]} />}
+                      {activeStep === 2 && <AssetScanner data={results[2]} symbol={symbol} />}
+                      {activeStep === 3 && <SafetyCheck data={results[3]} symbol={symbol} />}
+                      {activeStep === 4 && <TimingAnalysis data={results[4]} symbol={symbol} />}
+                      {activeStep === 5 && <TrapCheck data={results[5]} symbol={symbol} />}
+                      {activeStep === 6 && (
+                        results[6] ? (
+                          <TradePlan data={results[6]} symbol={symbol} />
+                        ) : (
+                          <div
+                            className="p-4 rounded-xl text-center"
+                            style={{
+                              background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.05))',
+                              border: '1px solid rgba(251, 191, 36, 0.2)',
+                            }}
+                          >
+                            <AlertTriangle className="w-6 h-6 mx-auto mb-2 text-amber-400" />
+                            <p className="font-medium text-sm text-white">No Trade Plan Generated</p>
+                            <p className="text-xs text-slate-400">
+                              Trade plans are only generated for GO signals.
+                            </p>
+                          </div>
+                        )
+                      )}
+                      {activeStep === 7 && <FinalVerdict data={results[7]} symbol={symbol} allResults={results} />}
+                    </>
                   )}
-                  {activeStep === 7 && <FinalVerdict data={results[7]} symbol={symbol} allResults={results} />}
                 </div>
               </div>
 
@@ -908,19 +1204,27 @@ export function AnalysisDialog({
                   Previous
                 </button>
                 <div className="flex gap-1.5">
-                  {STEPS.map((step) => (
+                  {activeSteps.map((step) => (
                     <button
                       key={step.id}
                       onClick={() => handleViewStep(step.id)}
                       className="w-8 h-8 rounded-full text-xs font-medium transition"
                       style={{
                         background: activeStep === step.id
-                          ? 'linear-gradient(135deg, #2DD4BF, #14B8A6)'
+                          ? isMLIS
+                            ? 'linear-gradient(135deg, #A78BFA, #8B5CF6)'
+                            : 'linear-gradient(135deg, #2DD4BF, #14B8A6)'
                           : completedSteps.includes(step.id)
-                          ? 'rgba(45, 212, 191, 0.2)'
+                          ? isMLIS ? 'rgba(139, 92, 246, 0.2)' : 'rgba(45, 212, 191, 0.2)'
                           : 'rgba(255, 255, 255, 0.05)',
-                        color: activeStep === step.id ? 'white' : completedSteps.includes(step.id) ? '#2DD4BF' : 'rgba(255, 255, 255, 0.3)',
-                        boxShadow: activeStep === step.id ? '0 0 15px rgba(45, 212, 191, 0.4)' : 'none',
+                        color: activeStep === step.id
+                          ? 'white'
+                          : completedSteps.includes(step.id)
+                          ? isMLIS ? '#A78BFA' : '#2DD4BF'
+                          : 'rgba(255, 255, 255, 0.3)',
+                        boxShadow: activeStep === step.id
+                          ? isMLIS ? '0 0 15px rgba(139, 92, 246, 0.4)' : '0 0 15px rgba(45, 212, 191, 0.4)'
+                          : 'none',
                         cursor: completedSteps.includes(step.id) ? 'pointer' : 'not-allowed',
                       }}
                     >
@@ -929,13 +1233,13 @@ export function AnalysisDialog({
                   ))}
                 </div>
                 <button
-                  onClick={() => setActiveStep(Math.min(7, activeStep + 1))}
-                  disabled={activeStep === 7}
+                  onClick={() => setActiveStep(Math.min(totalStepsCount, activeStep + 1))}
+                  disabled={activeStep === totalStepsCount}
                   className="px-4 py-2 text-sm rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
                   style={{
                     background: 'rgba(255, 255, 255, 0.05)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
-                    color: activeStep === 7 ? 'rgba(255, 255, 255, 0.3)' : 'white',
+                    color: activeStep === totalStepsCount ? 'rgba(255, 255, 255, 0.3)' : 'white',
                   }}
                 >
                   Next
