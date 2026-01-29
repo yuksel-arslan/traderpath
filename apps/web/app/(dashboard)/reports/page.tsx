@@ -122,8 +122,11 @@ export default function ReportsPage() {
   const [outcomeFilter, setOutcomeFilter] = useState<OutcomeFilter>('all');
   const [pagination, setPagination] = useState({ total: 0, limit: 20, offset: 0 });
 
+  const [error, setError] = useState<string | null>(null);
+
   const fetchReports = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const response = await authFetch(`/api/reports?limit=${pagination.limit}&offset=${pagination.offset}`);
 
@@ -132,10 +135,16 @@ export default function ReportsPage() {
         if (data.success) {
           setReports(data.data.reports);
           setPagination(data.data.pagination);
+        } else {
+          setError('Failed to load reports. Please try again.');
         }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setError(errorData?.error?.message || 'Failed to load reports. Please refresh the page.');
       }
     } catch (error) {
       console.error('Failed to fetch reports:', error);
+      setError('Connection error. Please check your internet connection.');
     } finally {
       setIsLoading(false);
     }
@@ -498,7 +507,24 @@ Could you share your risk assessment and recommendations based on this analysis?
       </div>
 
       {/* Reports List */}
-      {isLoading ? (
+      {error ? (
+        <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-red-50 dark:bg-red-900/20 p-8 text-center">
+          <div className="relative z-10">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
+              <XCircle className="w-6 h-6 text-red-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-2">Error Loading Reports</h3>
+            <p className="text-red-600 dark:text-red-300 mb-4">{error}</p>
+            <button
+              onClick={() => fetchReports()}
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition"
+            >
+              <RefreshCw className="w-4 h-4 inline mr-2" />
+              Try Again
+            </button>
+          </div>
+        </div>
+      ) : isLoading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
           <div className="relative">
             <div className="absolute inset-0 bg-teal-500/30 rounded-full blur-xl animate-pulse" />

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Globe, ChevronDown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Globe, ChevronDown, Loader2 } from 'lucide-react';
 
 const LANGUAGES = [
   { code: 'en', name: 'English', flag: '🇺🇸' },
@@ -34,9 +35,11 @@ interface LanguageSelectorProps {
 }
 
 export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isChanging, setIsChanging] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load Google Translate script
@@ -93,9 +96,12 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
     }
   }, []);
 
-  const handleLanguageChange = (lang: typeof LANGUAGES[0]) => {
+  const handleLanguageChange = async (lang: typeof LANGUAGES[0]) => {
+    if (isChanging) return;
+
     setSelectedLang(lang);
     setIsOpen(false);
+    setIsChanging(true);
 
     // Set cookie for Google Translate
     const domain = window.location.hostname;
@@ -110,18 +116,43 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
         const langLink = frameDoc.querySelector(`a[lang="${lang.code}"]`) as HTMLAnchorElement;
         if (langLink) {
           langLink.click();
+          setIsChanging(false);
           return;
         }
       }
     }
 
-    // Fallback: reload to apply translation
-    if (lang.code !== 'en') {
-      window.location.reload();
-    } else {
-      // Reset to English
-      document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      document.cookie = `googtrans=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    // Fallback: Use Next.js router refresh instead of hard reload
+    // This prevents blank page issues during navigation
+    try {
+      if (lang.code === 'en') {
+        // Reset to English - clear cookies first
+        document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        document.cookie = `googtrans=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      }
+
+      // Small delay to ensure cookies are set before refresh
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Use router refresh for smoother transition
+      router.refresh();
+
+      // Fallback to reload after a short delay if translation didn't apply
+      setTimeout(() => {
+        // Check if translation was applied by looking for translated content
+        const isTranslated = document.documentElement.classList.contains('translated-ltr') ||
+                            document.documentElement.classList.contains('translated-rtl');
+
+        // If changing from English and not yet translated, do a soft reload
+        if (lang.code !== 'en' && !isTranslated) {
+          window.location.href = window.location.href;
+        }
+        setIsChanging(false);
+      }, 500);
+    } catch (error) {
+      console.error('Language change error:', error);
+      setIsChanging(false);
+      // Last resort: hard reload
       window.location.reload();
     }
   };
@@ -134,13 +165,18 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
       {/* Custom dropdown */}
       <div ref={dropdownRef} className="relative">
         <button
-          onClick={() => setIsOpen(!isOpen)}
-          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition ${
+          onClick={() => !isChanging && setIsOpen(!isOpen)}
+          disabled={isChanging}
+          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition disabled:opacity-50 disabled:cursor-not-allowed ${
             compact ? 'text-sm' : ''
           }`}
           aria-label="Select language"
         >
-          <Globe className={compact ? 'w-4 h-4' : 'w-4 h-4'} />
+          {isChanging ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Globe className={compact ? 'w-4 h-4' : 'w-4 h-4'} />
+          )}
           <span className={compact ? 'hidden sm:inline' : ''}>{selectedLang.flag}</span>
           <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
