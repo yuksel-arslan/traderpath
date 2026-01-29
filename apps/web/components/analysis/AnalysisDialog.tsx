@@ -518,35 +518,49 @@ export function AnalysisDialog({
         // MLIS Pro: 5 layers
         totalSteps = 5;
         const layers = analysisData.layers || {};
+
+        // Default layer structure for safety
+        const defaultLayer = { score: 50, confidence: 0, signals: [], weight: 0 };
+
+        // Get recommendation with fallback
+        const recommendation = analysisData.recommendation || 'HOLD';
+        const overallScore = Number(analysisData.overallScore) || 50;
+
         allResults = {
-          1: { name: 'Technical', ...layers.technical, mlis: true },
-          2: { name: 'Momentum', ...layers.momentum, mlis: true },
-          3: { name: 'Volatility', ...layers.volatility, mlis: true },
-          4: { name: 'Volume', ...layers.volume, mlis: true },
+          1: { name: 'Technical', ...defaultLayer, ...layers.technical, mlis: true },
+          2: { name: 'Momentum', ...defaultLayer, ...layers.momentum, mlis: true },
+          3: { name: 'Volatility', ...defaultLayer, ...layers.volatility, mlis: true },
+          4: { name: 'Volume', ...defaultLayer, ...layers.volume, mlis: true },
           5: {
             name: 'Verdict',
             mlis: true,
-            overallScore: analysisData.overallScore / 10, // Convert to 0-10 scale
-            confidence: analysisData.confidence,
-            recommendation: analysisData.recommendation,
-            direction: analysisData.direction,
-            riskLevel: analysisData.riskLevel,
-            keySignals: analysisData.keySignals,
-            riskFactors: analysisData.riskFactors,
-            verdict: analysisData.recommendation === 'STRONG_BUY' || analysisData.recommendation === 'BUY' ? 'go' :
-                     analysisData.recommendation === 'HOLD' ? 'wait' : 'avoid',
+            overallScore: overallScore / 10, // Convert to 0-10 scale
+            confidence: analysisData.confidence || 50,
+            recommendation: recommendation,
+            direction: analysisData.direction || 'NEUTRAL',
+            riskLevel: analysisData.riskLevel || 'MEDIUM',
+            keySignals: analysisData.keySignals || [],
+            riskFactors: analysisData.riskFactors || [],
+            verdict: recommendation === 'STRONG_BUY' || recommendation === 'BUY' ? 'go' :
+                     recommendation === 'HOLD' ? 'wait' : 'avoid',
           },
         };
       } else {
         // Classic 7-step analysis
-        const steps = analysisData.steps;
+        const steps = analysisData.steps || {};
+
+        // Validate that we have the expected steps
+        if (!steps.verdict) {
+          throw new Error('Invalid analysis response: missing verdict');
+        }
+
         allResults = {
-          1: steps.marketPulse,
-          2: steps.assetScan,
-          3: steps.safetyCheck,
-          4: steps.timing,
-          5: steps.trapCheck,
-          6: steps.tradePlan,
+          1: steps.marketPulse || {},
+          2: steps.assetScan || {},
+          3: steps.safetyCheck || {},
+          4: steps.timing || {},
+          5: steps.trapCheck || {},
+          6: steps.tradePlan || {},
           7: { ...steps.verdict, preliminaryVerdict: steps.preliminaryVerdict },
         };
       }

@@ -33,6 +33,7 @@ import { cn } from '../../../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../../lib/coin-icons';
 import { TradePlanChart } from '../../../../../components/analysis/TradePlanChart';
 import { TradeDecisionVisual } from '../../../../../components/analysis/TradeDecisionVisual';
+import { StarLogo } from '../../../../../components/common/TraderPathLogo';
 import { authFetch } from '../../../../../lib/api';
 
 interface AnalysisData {
@@ -498,6 +499,25 @@ export default function AnalysisDetailsPage() {
   const mlisKeySignals = isMLIS ? step5.keySignals : [];
   const mlisRiskFactors = isMLIS ? step5.riskFactors : [];
 
+  // Determine verdict for display
+  const getVerdict = () => {
+    if (isMLIS) {
+      if (mlisRecommendation === 'STRONG_BUY' || mlisRecommendation === 'BUY') return 'GO';
+      if (mlisRecommendation === 'HOLD') return 'WAIT';
+      if (mlisRecommendation === 'SELL' || mlisRecommendation === 'STRONG_SELL') return 'AVOID';
+      return 'WAIT';
+    }
+    // Classic analysis
+    const classicScore = Number(step7.overallScore) || 0;
+    if (step7.verdict) return step7.verdict.toUpperCase();
+    if (classicScore >= 7) return 'GO';
+    if (classicScore >= 5) return 'COND';
+    if (classicScore >= 3) return 'WAIT';
+    return 'AVOID';
+  };
+  const verdict = getVerdict();
+  const isAvoidOrWait = verdict === 'AVOID' || verdict === 'WAIT';
+
   // Status labels - different for MLIS vs Classic
   let marketStatus, assetStatus, safetyStatus, timingStatus;
 
@@ -608,14 +628,9 @@ export default function AnalysisDetailsPage() {
           {/* Export Header - TraderPath Branding (visible in export) */}
           <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-slate-700">
             <div className="flex items-center gap-2">
-              {/* TraderPath Logo */}
-              <svg width="32" height="32" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
-                <rect x="60" y="60" width="180" height="180" rx="20" className="fill-green-500" />
-                <rect x="272" y="60" width="180" height="180" rx="20" className="fill-red-500" />
-                <rect x="60" y="272" width="180" height="180" rx="20" className="fill-red-500" />
-                <rect x="272" y="272" width="180" height="180" rx="20" className="fill-green-500" />
-              </svg>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">TraderPath</span>
+              {/* TraderPath Logo - Star */}
+              <StarLogo size={32} uniqueId="export-header" animated={false} />
+              <span className="text-lg font-bold bg-gradient-to-r from-teal-500 via-emerald-400 to-coral-500 bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(135deg, #14B8A6, #2DD4BF, #F87171, #EF5A6F)' }}>TraderPath</span>
             </div>
             <span className="text-xs text-gray-500 dark:text-slate-400">traderpath.io</span>
           </div>
@@ -652,12 +667,25 @@ export default function AnalysisDetailsPage() {
               </div>
             </div>
             <div className="flex items-center gap-3 justify-between sm:justify-end">
+              {/* Show verdict badge - AVOID/WAIT takes priority over direction */}
               <div className={cn(
                 "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold",
-                isLong ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400" : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                verdict === 'GO' ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400" :
+                verdict === 'COND' ? "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400" :
+                verdict === 'WAIT' ? "bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400" :
+                verdict === 'AVOID' ? "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400" :
+                (isLong ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400" : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400")
               )}>
-                {isLong ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                {isLong ? 'BULLISH' : 'BEARISH'}
+                {verdict === 'GO' ? <TrendingUp className="w-4 h-4" /> :
+                 verdict === 'AVOID' ? <AlertTriangle className="w-4 h-4" /> :
+                 verdict === 'WAIT' ? <Clock className="w-4 h-4" /> :
+                 verdict === 'COND' ? <Target className="w-4 h-4" /> :
+                 (isLong ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />)}
+                {verdict === 'GO' ? 'GO' :
+                 verdict === 'COND' ? 'CONDITIONAL' :
+                 verdict === 'WAIT' ? 'WAIT' :
+                 verdict === 'AVOID' ? 'AVOID' :
+                 (isLong ? 'BULLISH' : 'BEARISH')}
               </div>
               <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{score}/100</div>
             </div>
