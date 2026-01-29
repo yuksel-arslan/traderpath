@@ -5005,13 +5005,21 @@ Explain the key risks and what conditions would need to change before trading th
     try {
       const stats = await coinScoreCacheService.getCacheStats();
       const isStale = await coinScoreCacheService.isCacheStale();
+      const scanSession = coinScoreCacheService.getScanSession();
 
       return reply.send({
         success: true,
         data: {
           ...stats,
           isStale,
-          isScanning: stats.freshCoins < 30 && !isStale, // Rough estimate
+          // Use actual scan session state instead of rough estimate
+          isScanning: scanSession.isScanning,
+          scanProgress: {
+            coinsAnalyzed: scanSession.coinsAnalyzed,
+            totalCoins: scanSession.totalCoins,
+            lastAnalyzedCoin: scanSession.lastAnalyzedCoin,
+            startedAt: scanSession.startedAt,
+          },
         },
       });
     } catch (error) {
