@@ -75,6 +75,43 @@ export interface FullAnalysisResult {
 // ===========================================
 
 class CoinScoreCacheService {
+  private systemUserId: string | null = null;
+
+  /**
+   * Get or create a system user ID for platform-generated analyses
+   */
+  private async getSystemUserId(): Promise<string> {
+    if (this.systemUserId) return this.systemUserId;
+
+    try {
+      // Try to find an admin user first
+      const adminUser = await prisma.user.findFirst({
+        where: { isAdmin: true },
+        select: { id: true },
+      });
+
+      if (adminUser) {
+        this.systemUserId = adminUser.id;
+        return adminUser.id;
+      }
+
+      // If no admin, find any user
+      const anyUser = await prisma.user.findFirst({
+        select: { id: true },
+      });
+
+      if (anyUser) {
+        this.systemUserId = anyUser.id;
+        return anyUser.id;
+      }
+
+      throw new Error('No users found in the database');
+    } catch (error) {
+      console.error('[CoinScoreCache] Error getting system user ID:', error);
+      throw error;
+    }
+  }
+
   /**
    * Run FULL analysis for a single coin using analysisEngine
    */
@@ -124,10 +161,13 @@ class CoinScoreCacheService {
 
       const confidence = Math.min(10, Math.max(1, Math.round(reliabilityScore / 10)));
 
+      // Get system user ID for platform-generated analyses
+      const systemUserId = await this.getSystemUserId();
+
       // Save to database
       const analysisRecord = await prisma.analysis.create({
         data: {
-          userId: 'system', // System-generated analysis
+          userId: systemUserId, // Use admin/system user ID
           symbol,
           interval,
           method: 'classic', // Explicitly set method for system scans

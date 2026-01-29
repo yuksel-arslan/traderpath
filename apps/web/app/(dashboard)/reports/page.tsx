@@ -66,7 +66,7 @@ interface Report {
   method?: AnalysisMethod;
   generatedAt: string;
   expiresAt: string;
-  downloadCount: number;
+  downloadCount?: number;
   // Live tracking fields
   outcome?: 'correct' | 'incorrect' | 'pending' | null;
   entryPrice?: number;
@@ -81,12 +81,33 @@ interface Report {
   aiExpertComment?: string | null;
   // Sample report flag (admin's public reports)
   isSample?: boolean;
+  // For analysis history compatibility
+  interval?: string;
+  hasTradePlan?: boolean;
+  creditsSpent?: number;
+  createdAt?: string;
 }
 
-interface ReportsResponse {
+interface AnalysisHistoryResponse {
   success: boolean;
   data: {
-    reports: Report[];
+    analyses: Array<{
+      id: string;
+      symbol: string;
+      interval: string;
+      totalScore: number | null;
+      verdict: string;
+      hasTradePlan: boolean;
+      direction: string | null;
+      entryPrice: number | null;
+      stopLoss: number | null;
+      takeProfit1: number | null;
+      takeProfit2: number | null;
+      takeProfit3: number | null;
+      creditsSpent: number;
+      createdAt: string;
+      expiresAt: string | null;
+    }>;
     pagination: {
       total: number;
       limit: number;
@@ -128,22 +149,43 @@ export default function ReportsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await authFetch(`/api/reports?limit=${pagination.limit}&offset=${pagination.offset}`);
+      // Fetch from analysis history instead of reports
+      const response = await authFetch(`/api/analysis/history?limit=${pagination.limit}&offset=${pagination.offset}`);
 
       if (response.ok) {
-        const data: ReportsResponse = await response.json();
+        const data: AnalysisHistoryResponse = await response.json();
         if (data.success) {
-          setReports(data.data.reports);
+          // Transform analysis data to Report format
+          const transformedReports: Report[] = data.data.analyses.map(analysis => ({
+            id: analysis.id,
+            symbol: analysis.symbol,
+            verdict: analysis.verdict || 'N/A',
+            score: analysis.totalScore ? Number(analysis.totalScore) / 10 : 0, // Convert to 0-10 scale
+            direction: analysis.direction,
+            interval: analysis.interval,
+            hasTradePlan: analysis.hasTradePlan,
+            entryPrice: analysis.entryPrice || undefined,
+            stopLoss: analysis.stopLoss || undefined,
+            takeProfit1: analysis.takeProfit1 || undefined,
+            takeProfit2: analysis.takeProfit2 || undefined,
+            takeProfit3: analysis.takeProfit3 || undefined,
+            creditsSpent: analysis.creditsSpent,
+            generatedAt: analysis.createdAt,
+            expiresAt: analysis.expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            analysisId: analysis.id, // Analysis ID is the same as report ID in this case
+            createdAt: analysis.createdAt,
+          }));
+          setReports(transformedReports);
           setPagination(data.data.pagination);
         } else {
-          setError('Failed to load reports. Please try again.');
+          setError('Failed to load analyses. Please try again.');
         }
       } else {
         const errorData = await response.json().catch(() => ({}));
-        setError(errorData?.error?.message || 'Failed to load reports. Please refresh the page.');
+        setError(errorData?.error?.message || 'Failed to load analyses. Please refresh the page.');
       }
     } catch (error) {
-      console.error('Failed to fetch reports:', error);
+      console.error('Failed to fetch analyses:', error);
       setError('Connection error. Please check your internet connection.');
     } finally {
       setIsLoading(false);
@@ -155,26 +197,29 @@ export default function ReportsPage() {
   }, [pagination.offset]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this report?')) return;
+    if (!confirm('Are you sure you want to delete this analysis?')) return;
 
     try {
-      const response = await authFetch(`/api/reports/${id}`, {
+      // Delete from analysis table
+      const response = await authFetch(`/api/analysis/${id}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         setReports(reports.filter(r => r.id !== id));
+      } else {
+        console.error('Failed to delete analysis');
       }
     } catch (error) {
-      console.error('Failed to delete report:', error);
+      console.error('Failed to delete analysis:', error);
     }
   };
 
-  // Send report via email - redirects to report details page for full screenshot
+  // Send report via email - redirects to analysis details page for full screenshot
   const handleSendEmail = (report: Report) => {
-    // Redirect to report details page with email=true parameter
+    // Redirect to analysis details page with email=true parameter
     // The details page will capture the full screenshot and send the email
-    router.push(`/reports/${report.id}?email=true`);
+    router.push(`/analyze/details/${report.id}?email=true`);
   };
 
   // Navigate to AI Expert with report context
@@ -185,47 +230,56 @@ export default function ReportsPage() {
     }
 
     try {
-      // Fetch full report data to build context
-      const response = await authFetch(`/api/reports/${report.id}`);
+      // Fetch full analysis data
+      const response = await authFetch(`/api/analysis/${report.analysisId}`);
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.data.reportData) {
-          const reportData = data.data.reportData;
+        if (data.success && data.data) {
+          const analysis = data.data;
+
+          // Extract step results
+          const step1 = analysis.step1Result || {};
+          const step2 = analysis.step2Result || {};
+          const step3 = analysis.step3Result || {};
+          const step4 = analysis.step4Result || {};
+          const step5 = analysis.step5Result || {};
+          const step6 = analysis.step6Result || {};
+          const step7 = analysis.step7Result || {};
 
           // Build comprehensive context
           const contextMessage = `I would like your expert opinion on this analysis:
 
 [${report.symbol}/USDT ANALYSIS SUMMARY]
-Date: ${reportData.generatedAt || report.generatedAt}
+Date: ${report.generatedAt}
 Score: ${(report.score * 10).toFixed(0)}/100
 Direction: ${report.direction?.toUpperCase() || 'N/A'}
 
 [STEP 1: Market Pulse]
-Fear & Greed: ${reportData.marketPulse?.fearGreedIndex || 'N/A'} (${reportData.marketPulse?.fearGreedLabel || 'N/A'})
-BTC Dominance: ${reportData.marketPulse?.btcDominance?.toFixed(1) || 'N/A'}%
+Fear & Greed: ${step1.fearGreedIndex || 'N/A'} (${step1.fearGreedLabel || 'N/A'})
+BTC Dominance: ${step1.btcDominance?.toFixed?.(1) || step1.btcDominance || 'N/A'}%
 
 [STEP 2: Asset Scanner]
-Price: $${reportData.assetScan?.currentPrice || 'N/A'}
-RSI: ${reportData.assetScan?.indicators?.rsi?.toFixed(0) || 'N/A'}
+Price: $${step2.currentPrice || 'N/A'}
+RSI: ${step2.indicators?.rsi?.toFixed?.(0) || step2.indicators?.rsi || 'N/A'}
 
 [STEP 3: Safety Check]
-Risk Level: ${reportData.safetyCheck?.riskLevel || 'N/A'}
+Risk Level: ${step3.riskLevel || 'N/A'}
 
 [STEP 4: Timing]
-Trade Now: ${reportData.timing?.tradeNow ? 'Yes' : 'No'}
+Trade Now: ${step4.tradeNow ? 'Yes' : 'No'}
 
 [STEP 5: Trade Plan]
-Entry: $${reportData.tradePlan?.averageEntry || report.entryPrice || 'N/A'}
-Stop Loss: $${reportData.tradePlan?.stopLoss?.price || report.stopLoss || 'N/A'}
-Take Profit: $${reportData.tradePlan?.takeProfits?.[0]?.price || report.takeProfit1 || 'N/A'}
+Entry: $${step5.averageEntry || report.entryPrice || 'N/A'}
+Stop Loss: $${step5.stopLoss?.price || report.stopLoss || 'N/A'}
+Take Profit: $${step5.takeProfits?.[0]?.price || report.takeProfit1 || 'N/A'}
 
 [STEP 6: Trap Check]
-Bull Trap: ${reportData.trapCheck?.traps?.bullTrap ? 'Yes' : 'No'}
-Bear Trap: ${reportData.trapCheck?.traps?.bearTrap ? 'Yes' : 'No'}
+Bull Trap: ${step6.traps?.bullTrap ? 'Yes' : 'No'}
+Bear Trap: ${step6.traps?.bearTrap ? 'Yes' : 'No'}
 
 [STEP 7: Final Verdict]
-Decision: ${reportData.verdict?.action || report.verdict}
+Decision: ${step7.verdict?.action || report.verdict}
 
 Could you share your risk assessment and recommendations based on this analysis?`;
 
@@ -852,7 +906,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-center sm:justify-end">
                   {/* Details Button */}
                   <button
-                    onClick={() => router.push(`/reports/${report.id}`)}
+                    onClick={() => router.push(`/analyze/details/${report.id}`)}
                     className="flex items-center gap-2 px-3 py-2 rounded-lg bg-teal-100 dark:bg-teal-500/10 hover:bg-teal-200 dark:hover:bg-teal-500/20 text-teal-600 dark:text-teal-500 transition"
                     title="View Details"
                   >
