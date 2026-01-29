@@ -1,8 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import Image from 'next/image';
-import { getCoinIcon, FALLBACK_COIN_ICON } from '../../lib/coin-icons';
+import { getLocalCoinIcon, getCoinColor } from '../../lib/coin-icons-cache';
 
 interface CoinIconProps {
   symbol: string;
@@ -10,45 +8,29 @@ interface CoinIconProps {
   className?: string;
 }
 
+/**
+ * CoinIcon component - uses local SVG generation
+ * No external API calls, fully offline capable, instant loading
+ */
 export function CoinIcon({ symbol, size = 32, className = '' }: CoinIconProps) {
-  const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  const iconUrl = getCoinIcon(symbol);
-
-  if (error) {
-    // Fallback to colored circle with symbol initials
-    return (
-      <div
-        className={`rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold ${className}`}
-        style={{ width: size, height: size, fontSize: size * 0.4 }}
-      >
-        {symbol.slice(0, 2).toUpperCase()}
-      </div>
-    );
-  }
+  const iconUrl = getLocalCoinIcon(symbol);
 
   return (
     <div className={`relative ${className}`} style={{ width: size, height: size }}>
-      {loading && (
-        <div
-          className="absolute inset-0 rounded-full bg-slate-700 animate-pulse"
-          style={{ width: size, height: size }}
-        />
-      )}
-      <Image
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
         src={iconUrl}
         alt={`${symbol} icon`}
         width={size}
         height={size}
-        className={`rounded-full ${loading ? 'opacity-0' : 'opacity-100'} transition-opacity`}
-        onLoad={() => setLoading(false)}
-        onError={() => {
-          setError(true);
-          setLoading(false);
-        }}
-        loading="lazy" // Lazy load images for better performance
+        className="rounded-full"
+        style={{ width: size, height: size }}
       />
     </div>
   );
 }
+
+/**
+ * Get coin brand colors for use in other components
+ */
+export { getCoinColor };
