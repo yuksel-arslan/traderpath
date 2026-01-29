@@ -277,6 +277,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-29 | Verdict AVOID olduğunda BULLISH gösteriliyordu | `getVerdict()` fonksiyonu eklendi, GO/COND/WAIT/AVOID badge'leri doğru renk ve ikonla gösteriliyor | `details/[id]/page.tsx` |
 | 2026-01-29 | Scan Now dual method yapısı nedeniyle hata veriyordu | 1) `coin-score-cache.service.ts`'de `method: 'classic'` açıkça set ediliyor, 2) System scan'ler Classic metod kullanıyor | `coin-score-cache.service.ts:115` |
 | 2026-01-29 | MLIS Pro analiz tamamlandığında layers undefined olabiliyordu | 1) Default layer değerleri eklendi, 2) Null/undefined için fallback'ler, 3) Classic analiz için steps validasyonu | `AnalysisDialog.tsx:520-566` |
+| 2026-01-29 | Top 5 Coins "Scan Now" cache'den gelen veriyi yanlış işliyordu | Backend `{ coins, cacheInfo }` döndürüyordu ama frontend tüm objeyi `topCoins` array'ine set ediyordu. `data.data.coins` olarak düzeltildi | `analyze/page.tsx:354` |
 
 ---
 

@@ -351,7 +351,8 @@ export default function AnalyzePage() {
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.data) {
-          setTopCoins(data.data);
+          // Backend returns { coins, cacheInfo }, extract coins array
+          setTopCoins(data.data.coins || []);
         }
       }
     } catch (error) {
