@@ -197,15 +197,17 @@ function ScoreGauge({
   label?: string;
   showPercentage?: boolean;
 }) {
+  // Ensure score is a valid number
+  const safeScore = typeof score === 'number' && !isNaN(score) ? score : 0;
   const [animatedScore, setAnimatedScore] = useState(0);
 
   useEffect(() => {
     // Animate the score on mount
     const timer = setTimeout(() => {
-      setAnimatedScore(score);
+      setAnimatedScore(safeScore);
     }, 100);
     return () => clearTimeout(timer);
-  }, [score]);
+  }, [safeScore]);
 
   const percentage = (animatedScore / maxScore) * 100;
 
@@ -221,7 +223,7 @@ function ScoreGauge({
 
   // Color based on score
   const getColor = () => {
-    const normalizedScore = (score / maxScore) * 10;
+    const normalizedScore = (safeScore / maxScore) * 10;
     if (normalizedScore >= 7) return { stroke: '#22c55e', glow: 'rgba(34, 197, 94, 0.5)', text: 'text-green-400' };
     if (normalizedScore >= 5) return { stroke: '#eab308', glow: 'rgba(234, 179, 8, 0.5)', text: 'text-yellow-400' };
     return { stroke: '#ef4444', glow: 'rgba(239, 68, 68, 0.5)', text: 'text-red-400' };
