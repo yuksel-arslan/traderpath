@@ -1082,6 +1082,24 @@ Kullanıcı Hakları Aktif:
   - Classic analiz steps için null/undefined kontrolleri eklendi
   - Verdict hesaplamasında overallScore için Number() dönüşümü eklendi
   - Dosyalar: `coin-score-cache.service.ts`, `AnalysisDialog.tsx`
+- **Top 5 Coins tarama tamamlandığında bildirim eklendi**:
+  - CelebrationModal'a `scan_complete` reason'ı eklendi
+  - Tarama tamamlandığında celebration modal gösteriliyor
+  - Toast bildiriminde "View All Results" butonu eklendi
+  - Son tarama zamanı Top 5 bölümünde gösteriliyor
+  - Dosyalar: `CelebrationModal.tsx`, `analyze/page.tsx`
+- **Top Coins sayfası oluşturuldu (/top-coins)**:
+  - Tüm taranan coinlerin listesi (30 coin)
+  - Filtreler: Verdict (GO/COND/WAIT/AVOID), Method (Classic/MLIS), Direction (LONG/SHORT)
+  - Sıralama: Score, 24h Change, Price, Symbol
+  - Search ile coin arama
+  - Her coin için detaylı kart (method badge, verdict, score, direction)
+  - Cache bilgisi ve son tarama zamanı gösterimi
+  - Glassmorphism ve gradient orbs tasarımı
+  - Dosya: `apps/web/app/(dashboard)/top-coins/page.tsx`
+- **Sidebar'a Top Coins linki eklendi**:
+  - Crown ikonu ile Analyze'dan sonra eklendi
+  - Dosya: `apps/web/app/(dashboard)/layout.tsx`
 
 ---
 
