@@ -410,10 +410,9 @@ export default function AnalyzePage() {
         return;
       }
 
-      // Start polling for results
-      let previousCount = 0;
+      // Start polling for results using scan session progress
       let pollCount = 0;
-      const maxPolls = 60; // 60 polls × 5 seconds = 5 minutes max
+      const maxPolls = 120; // 120 polls × 5 seconds = 10 minutes max (scan takes ~6-8 mins)
 
       scanPollRef.current = setInterval(async () => {
         pollCount++;
@@ -423,28 +422,35 @@ export default function AnalyzePage() {
           const statusData = await statusRes.json();
 
           if (statusData.success) {
-            const freshCoins = statusData.data?.freshCoins || 0;
-            setScanProgress({ current: freshCoins, total: 30 });
+            const scanProgress = statusData.data?.scanProgress;
+            const isScanning = statusData.data?.isScanning;
+            const coinsAnalyzed = scanProgress?.coinsAnalyzed || 0;
+            const totalCoins = scanProgress?.totalCoins || 30;
 
-            if (freshCoins >= 5) {
+            // Update progress using actual scan session data
+            setScanProgress({ current: coinsAnalyzed, total: totalCoins });
+
+            // Fetch results periodically (every 5 coins analyzed)
+            if (coinsAnalyzed >= 5 && coinsAnalyzed % 5 === 0) {
               await fetchTopCoins(scanMethod);
-
-              if (freshCoins === previousCount || freshCoins >= 25) {
-                clearInterval(scanPollRef.current!);
-                scanPollRef.current = null;
-                setTopCoinsScanning(false);
-                setScanProgress(null);
-                scrollToTopCoins();
-                return;
-              }
             }
 
-            previousCount = freshCoins;
+            // Check if scan is complete (not scanning anymore OR all coins analyzed)
+            if (!isScanning && coinsAnalyzed > 0) {
+              clearInterval(scanPollRef.current!);
+              scanPollRef.current = null;
+              setTopCoinsScanning(false);
+              setScanProgress(null);
+              await fetchTopCoins(scanMethod);
+              scrollToTopCoins();
+              return;
+            }
           }
         } catch (pollError) {
           console.error('Poll error:', pollError);
         }
 
+        // Timeout after max polls
         if (pollCount >= maxPolls) {
           clearInterval(scanPollRef.current!);
           scanPollRef.current = null;
