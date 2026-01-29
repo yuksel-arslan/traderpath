@@ -26,6 +26,7 @@ import {
   Crown,
   RefreshCw,
   ArrowRight,
+  Layers,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
@@ -44,7 +45,7 @@ const CoinSelector = dynamic(
 
 const CoinIcon = dynamic(
   () => import('../../../components/common/CoinIcon').then(mod => ({ default: mod.CoinIcon })),
-  { ssr: false, loading: () => <div className="w-8 h-8 rounded-full bg-muted/30 animate-pulse" /> }
+  { ssr: false, loading: () => <div className="w-6 h-6 rounded-full bg-muted/30 animate-pulse" /> }
 );
 
 const TradeTypeSelector = dynamic(
@@ -76,7 +77,13 @@ interface TopCoin {
   analysisId: string | null;
   scannedAt: string;
   expiresAt: string;
+  method?: 'classic' | 'mlis_pro';
+  // MLIS specific fields
+  recommendation?: string;
+  confidence?: number;
 }
+
+type ScanMethod = 'classic' | 'mlis_pro';
 
 // Marquee ticker data
 const MARQUEE_ITEMS = [
@@ -300,9 +307,12 @@ export default function AnalyzePage() {
   const [chartSymbol, setChartSymbol] = useState('BINANCE:BTCUSDT');
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [showChart, setShowChart] = useState(false);
+
+  // Top 5 Coins state
   const [topCoins, setTopCoins] = useState<TopCoin[]>([]);
   const [topCoinsLoading, setTopCoinsLoading] = useState(false);
   const [topCoinsScanning, setTopCoinsScanning] = useState(false);
+  const [scanMethod, setScanMethod] = useState<ScanMethod>('classic');
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanProgress, setScanProgress] = useState<{ current: number; total: number } | null>(null);
   const scanPollRef = useRef<NodeJS.Timeout | null>(null);
@@ -343,15 +353,14 @@ export default function AnalyzePage() {
   }, [fetchStats]);
 
   // Fetch top coins from cache
-  const fetchTopCoins = useCallback(async () => {
+  const fetchTopCoins = useCallback(async (method: ScanMethod = 'classic') => {
     setTopCoinsLoading(true);
     setScanError(null);
     try {
-      const res = await authFetch('/api/analysis/top-coins?limit=5&tradeableOnly=true');
+      const res = await authFetch(`/api/analysis/top-coins?limit=5&tradeableOnly=true&method=${method}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.data) {
-          // Backend returns { coins, cacheInfo }, extract coins array
           setTopCoins(data.data.coins || []);
         }
       }
@@ -379,17 +388,18 @@ export default function AnalyzePage() {
     };
   }, []);
 
-  // Start paid scan (300 credits) with proper polling
+  // Start paid scan with selected method (300 credits)
   const startTopCoinsScan = async () => {
     setTopCoinsScanning(true);
     setScanError(null);
     setScanProgress({ current: 0, total: 30 });
 
     try {
-      // Use the dedicated scan endpoint
+      // Use the dedicated scan endpoint with method parameter
       const res = await authFetch('/api/analysis/top-coins/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method: scanMethod }),
       });
       const data = await res.json();
 
@@ -409,20 +419,16 @@ export default function AnalyzePage() {
         pollCount++;
 
         try {
-          // Get current cache status
-          const statusRes = await authFetch('/api/analysis/top-coins/status');
+          const statusRes = await authFetch(`/api/analysis/top-coins/status?method=${scanMethod}`);
           const statusData = await statusRes.json();
 
           if (statusData.success) {
             const freshCoins = statusData.data?.freshCoins || 0;
             setScanProgress({ current: freshCoins, total: 30 });
 
-            // If we have results and count is stable, scan might be done
             if (freshCoins >= 5) {
-              // Fetch top coins to display
-              await fetchTopCoins();
+              await fetchTopCoins(scanMethod);
 
-              // If count hasn't changed in 2 polls, scan is likely done
               if (freshCoins === previousCount || freshCoins >= 25) {
                 clearInterval(scanPollRef.current!);
                 scanPollRef.current = null;
@@ -439,16 +445,15 @@ export default function AnalyzePage() {
           console.error('Poll error:', pollError);
         }
 
-        // Stop polling after max time
         if (pollCount >= maxPolls) {
           clearInterval(scanPollRef.current!);
           scanPollRef.current = null;
           setTopCoinsScanning(false);
           setScanProgress(null);
-          await fetchTopCoins();
+          await fetchTopCoins(scanMethod);
           scrollToTopCoins();
         }
-      }, 5000); // Poll every 5 seconds
+      }, 5000);
 
     } catch (error) {
       console.error('Failed to start scan:', error);
@@ -458,9 +463,10 @@ export default function AnalyzePage() {
     }
   };
 
+  // Fetch top coins on mount and when scan method changes
   useEffect(() => {
-    fetchTopCoins();
-  }, [fetchTopCoins]);
+    fetchTopCoins(scanMethod);
+  }, [fetchTopCoins, scanMethod]);
 
   const getAccuracyDisplay = (value: number) => {
     if (value > 0) return `${value.toFixed(0)}%`;
@@ -581,95 +587,164 @@ export default function AnalyzePage() {
             </div>
           </div>
 
-          {/* Top 5 Coins - Full Width */}
+          {/* Top 5 High-Probability Coins - Dual Method Support */}
           <div id="top-coins-section" className="col-span-12">
             <GlassCard className="p-3 sm:p-4 md:p-6">
-              <div className="space-y-3 sm:space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 flex-shrink-0" />
-                    <span className="truncate">Top 5 High-Probability Coins</span>
-                  </h3>
-                  <button
-                    onClick={startTopCoinsScan}
-                    disabled={topCoinsScanning}
-                    className={cn(
-                      "flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
-                      "bg-gradient-to-r from-amber-500 to-orange-500 text-white",
-                      "hover:from-amber-600 hover:to-orange-600 hover:shadow-lg hover:shadow-amber-500/30",
-                      "disabled:opacity-50 disabled:cursor-not-allowed",
-                      "w-full sm:w-auto flex-shrink-0"
-                    )}
-                  >
-                    {topCoinsScanning ? (
-                      <>
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                        <span>
-                          {scanProgress
-                            ? `Scanning ${scanProgress.current}/${scanProgress.total}...`
-                            : 'Starting...'}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="w-3 h-3" />
-                        <span className="whitespace-nowrap">Scan Now (300 Cr)</span>
-                      </>
-                    )}
-                  </button>
+              <div className="space-y-4">
+                {/* Header with Method Toggle */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 flex-shrink-0" />
+                      Top 5 High-Probability Coins
+                    </h3>
+
+                    {/* Scan Button */}
+                    <button
+                      onClick={startTopCoinsScan}
+                      disabled={topCoinsScanning}
+                      className={cn(
+                        "flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
+                        "w-full sm:w-auto",
+                        scanMethod === 'classic'
+                          ? "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 shadow-teal-500/30"
+                          : "bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 shadow-violet-500/30",
+                        "text-white hover:shadow-lg",
+                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                      )}
+                    >
+                      {topCoinsScanning ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>
+                            {scanProgress
+                              ? `Scanning ${scanProgress.current}/${scanProgress.total}...`
+                              : 'Starting...'}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-4 h-4" />
+                          <span>Scan Now (300 Cr)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Method Toggle */}
+                  <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl">
+                    <button
+                      onClick={() => setScanMethod('classic')}
+                      disabled={topCoinsScanning}
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all",
+                        scanMethod === 'classic'
+                          ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg"
+                          : "text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700/50",
+                        "disabled:opacity-50"
+                      )}
+                    >
+                      <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span>Classic (7-Step)</span>
+                    </button>
+                    <button
+                      onClick={() => setScanMethod('mlis_pro')}
+                      disabled={topCoinsScanning}
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all",
+                        scanMethod === 'mlis_pro'
+                          ? "bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg"
+                          : "text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700/50",
+                        "disabled:opacity-50"
+                      )}
+                    >
+                      <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span>MLIS Pro (5-Layer)</span>
+                    </button>
+                  </div>
                 </div>
 
+                {/* Error Message */}
                 {scanError && (
-                  <div className="text-xs text-red-500 bg-red-50 dark:bg-red-500/10 px-3 py-2 rounded-lg">
+                  <div className="text-sm text-red-500 bg-red-50 dark:bg-red-500/10 px-4 py-3 rounded-xl">
                     {scanError}
                   </div>
                 )}
 
+                {/* Progress Bar */}
                 {topCoinsScanning && scanProgress && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                      <span>Analyzing coins...</span>
+                      <span>Analyzing coins with {scanMethod === 'classic' ? 'Classic' : 'MLIS Pro'}...</span>
                       <span>{Math.round((scanProgress.current / scanProgress.total) * 100)}%</span>
                     </div>
                     <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
+                        className={cn(
+                          "h-full rounded-full transition-all duration-500",
+                          scanMethod === 'classic'
+                            ? "bg-gradient-to-r from-teal-500 to-emerald-500"
+                            : "bg-gradient-to-r from-violet-500 to-purple-500"
+                        )}
                         style={{ width: `${(scanProgress.current / scanProgress.total) * 100}%` }}
                       />
                     </div>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center">
+                    <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 text-center">
                       This may take 2-3 minutes. Results will appear as coins are analyzed.
                     </p>
                   </div>
                 )}
 
+                {/* Coins Grid */}
                 {topCoinsLoading ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                     {[...Array(5)].map((_, i) => (
-                      <div key={i} className="h-28 sm:h-32 bg-slate-100 dark:bg-slate-800/50 rounded-xl animate-pulse" />
+                      <div key={i} className="h-36 bg-slate-100 dark:bg-slate-800/50 rounded-xl animate-pulse" />
                     ))}
                   </div>
                 ) : topCoins.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                     {topCoins.map((coin, index) => {
-                      const verdictColor = {
+                      const isMLIS = coin.method === 'mlis_pro' || scanMethod === 'mlis_pro';
+
+                      // Classic verdict colors
+                      const classicVerdictColor = {
                         'GO': 'from-emerald-500 to-green-600',
                         'CONDITIONAL_GO': 'from-amber-500 to-yellow-600',
                         'WAIT': 'from-slate-500 to-gray-600',
                         'AVOID': 'from-red-500 to-rose-600',
                       }[coin.verdict] || 'from-slate-500 to-gray-600';
 
-                      const verdictLabel = {
-                        'GO': 'GO',
-                        'CONDITIONAL_GO': 'COND',
-                        'WAIT': 'WAIT',
-                        'AVOID': 'AVOID',
-                      }[coin.verdict] || coin.verdict;
+                      // MLIS recommendation colors
+                      const mlisRecommendationColor = {
+                        'STRONG_BUY': 'from-emerald-500 to-green-600',
+                        'BUY': 'from-teal-500 to-cyan-600',
+                        'HOLD': 'from-amber-500 to-yellow-600',
+                        'SELL': 'from-orange-500 to-red-500',
+                        'STRONG_SELL': 'from-red-500 to-rose-600',
+                      }[coin.recommendation || ''] || classicVerdictColor;
+
+                      const verdictColor = isMLIS ? mlisRecommendationColor : classicVerdictColor;
+
+                      const verdictLabel = isMLIS
+                        ? (coin.recommendation || coin.verdict || 'N/A').replace('_', ' ')
+                        : {
+                            'GO': 'GO',
+                            'CONDITIONAL_GO': 'COND',
+                            'WAIT': 'WAIT',
+                            'AVOID': 'AVOID',
+                          }[coin.verdict] || coin.verdict;
 
                       return (
                         <div
                           key={coin.symbol}
-                          className="relative p-2 sm:p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-white/20 dark:border-white/10 hover:shadow-lg transition-all cursor-pointer min-w-0"
+                          className={cn(
+                            "relative p-3 sm:p-4 rounded-xl border-2 transition-all cursor-pointer group",
+                            "hover:shadow-xl hover:scale-[1.02]",
+                            isMLIS
+                              ? "bg-gradient-to-br from-violet-50/50 to-purple-50/50 dark:from-violet-900/20 dark:to-purple-900/20 border-violet-200/50 dark:border-violet-700/50 hover:border-violet-400 dark:hover:border-violet-500"
+                              : "bg-gradient-to-br from-teal-50/50 to-emerald-50/50 dark:from-teal-900/20 dark:to-emerald-900/20 border-teal-200/50 dark:border-teal-700/50 hover:border-teal-400 dark:hover:border-teal-500"
+                          )}
                           onClick={() => {
                             if (coin.analysisId) {
                               window.location.href = `/analyze/details/${coin.analysisId}`;
@@ -677,41 +752,62 @@ export default function AnalyzePage() {
                           }}
                         >
                           {/* Rank Badge */}
-                          <div className="absolute -top-1.5 -left-1.5 sm:-top-2 sm:-left-2 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[10px] sm:text-xs font-bold shadow-lg z-10">
+                          <div className={cn(
+                            "absolute -top-2 -left-2 w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg z-10",
+                            isMLIS
+                              ? "bg-gradient-to-br from-violet-500 to-purple-600"
+                              : "bg-gradient-to-br from-amber-400 to-orange-500"
+                          )}>
                             {index + 1}
                           </div>
 
-                          <div className="flex items-center justify-between mb-1.5 sm:mb-2 gap-1">
-                            <div className="flex items-center gap-1 sm:gap-2 min-w-0">
-                              <CoinIcon symbol={coin.symbol} size={20} className="flex-shrink-0" />
-                              <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">{coin.symbol}</span>
-                            </div>
-                            <span className={cn(
-                              "px-1.5 sm:px-2 py-0.5 rounded text-[8px] sm:text-[10px] font-bold text-white bg-gradient-to-r flex-shrink-0",
-                              verdictColor
-                            )}>
-                              {verdictLabel}
-                            </span>
+                          {/* Method Badge */}
+                          <div className={cn(
+                            "absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold text-white shadow-lg z-10",
+                            isMLIS
+                              ? "bg-gradient-to-r from-violet-500 to-purple-500"
+                              : "bg-gradient-to-r from-teal-500 to-emerald-500"
+                          )}>
+                            {isMLIS ? 'MLIS' : '7-Step'}
                           </div>
 
-                          <div className="space-y-0.5 sm:space-y-1">
-                            <div className="flex items-center justify-between text-[10px] sm:text-xs">
-                              <span className="text-slate-500 dark:text-slate-400">Score</span>
-                              <span className="font-semibold text-slate-700 dark:text-slate-200 tabular-nums">{coin.reliabilityScore}</span>
+                          <div className="flex items-center gap-2 mb-3 pt-1">
+                            <CoinIcon symbol={coin.symbol} size={28} className="flex-shrink-0" />
+                            <span className="text-base font-bold text-slate-900 dark:text-white">{coin.symbol}</span>
+                          </div>
+
+                          {/* Verdict/Recommendation Badge */}
+                          <div className={cn(
+                            "px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r text-center mb-3",
+                            verdictColor
+                          )}>
+                            {verdictLabel}
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-slate-500 dark:text-slate-400">
+                                {isMLIS ? 'Confidence' : 'Score'}
+                              </span>
+                              <span className="font-semibold text-slate-700 dark:text-slate-200">
+                                {isMLIS && coin.confidence
+                                  ? `${coin.confidence}%`
+                                  : coin.reliabilityScore}
+                              </span>
                             </div>
-                            <div className="flex items-center justify-between text-[10px] sm:text-xs">
+                            <div className="flex items-center justify-between text-xs">
                               <span className="text-slate-500 dark:text-slate-400">24h</span>
                               <span className={cn(
-                                "font-semibold flex items-center gap-0.5 tabular-nums",
+                                "font-semibold flex items-center gap-1",
                                 coin.priceChange24h >= 0 ? "text-emerald-500" : "text-red-500"
                               )}>
-                                {coin.priceChange24h >= 0 ? <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" /> : <TrendingDown className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />}
-                                <span>{coin.priceChange24h >= 0 ? '+' : ''}{coin.priceChange24h.toFixed(1)}%</span>
+                                {coin.priceChange24h >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                                {coin.priceChange24h >= 0 ? '+' : ''}{coin.priceChange24h.toFixed(1)}%
                               </span>
                             </div>
                             {coin.direction && (
-                              <div className="flex items-center justify-between text-[10px] sm:text-xs">
-                                <span className="text-slate-500 dark:text-slate-400">Dir</span>
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-500 dark:text-slate-400">Direction</span>
                                 <span className={cn(
                                   "font-semibold",
                                   coin.direction === 'LONG' ? "text-emerald-500" : "text-red-500"
@@ -722,18 +818,22 @@ export default function AnalyzePage() {
                             )}
                           </div>
 
-                          <div className="mt-1.5 sm:mt-2 flex items-center justify-end">
-                            <ArrowRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400" />
+                          <div className="mt-3 flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                              View Details <ArrowRight className="w-3 h-3" />
+                            </span>
                           </div>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-6 sm:py-8 text-slate-500 dark:text-slate-400">
-                    <Crown className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 opacity-30" />
-                    <p className="text-xs sm:text-sm">No cached data available</p>
-                    <p className="text-[10px] sm:text-xs mt-1 px-4">Click "Scan Now" to analyze top 30 coins (300 credits)</p>
+                  <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                    <Crown className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm font-medium">No cached data available</p>
+                    <p className="text-xs mt-1">
+                      Select a method and click "Scan Now" to analyze top 30 coins (300 credits)
+                    </p>
                   </div>
                 )}
               </div>
