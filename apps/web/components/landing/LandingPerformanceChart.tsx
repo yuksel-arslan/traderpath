@@ -190,16 +190,21 @@ export default function LandingPerformanceChart() {
         'https://traderpath-api-production.up.railway.app'
       ].filter(Boolean);
 
+      console.log('[LandingChart] Fetching performance data from API URLs:', apiUrls);
+
       // First try the new performance-history endpoint
       for (const baseUrl of apiUrls) {
         try {
+          console.log(`[LandingChart] Trying ${baseUrl}/api/analysis/platform-performance-history`);
           const res = await fetch(`${baseUrl}/api/analysis/platform-performance-history?days=30`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
             cache: 'no-store'
           });
+          console.log(`[LandingChart] Response status: ${res.status}`);
           if (res.ok) {
             const data = await res.json();
+            console.log('[LandingChart] API response:', { success: data.success, hasDaily: !!data.data?.daily?.length, summary: data.data?.summary });
             if (data.success && data.data?.daily?.length > 0) {
               setRawData(data.data.daily);
               setRawDataClassic(data.data.dailyClassic || []);
@@ -215,15 +220,18 @@ export default function LandingPerformanceChart() {
               const mlisTrades = data.data.summary.allTimeMlisTrades || 0;
               setHasMlisData(mlisTrades > 0);
               setLoading(false);
+              console.log('[LandingChart] Data loaded successfully. Trades:', data.data.summary.allTimeTotalTrades || data.data.summary.totalTrades);
               return;
             }
           }
-        } catch {
+        } catch (err) {
+          console.error(`[LandingChart] Error fetching from ${baseUrl}:`, err);
           continue;
         }
       }
 
       // Fallback to platform-stats endpoint (always available)
+      console.log('[LandingChart] Trying fallback platform-stats endpoint');
       for (const baseUrl of apiUrls) {
         try {
           const res = await fetch(`${baseUrl}/api/analysis/platform-stats`, {
@@ -233,20 +241,24 @@ export default function LandingPerformanceChart() {
           });
           if (res.ok) {
             const data = await res.json();
+            console.log('[LandingChart] platform-stats response:', data);
             if (data.success && data.data?.accuracy) {
               setTotalPnL(data.data.accuracy.totalPnL || 0);
               setAllTimePnL(data.data.accuracy.totalPnL || 0);
               setTotalTrades(data.data.accuracy.closedCount || 0);
               setHasChartData(false);
               setLoading(false);
+              console.log('[LandingChart] Fallback data loaded. Closed trades:', data.data.accuracy.closedCount);
               return;
             }
           }
-        } catch {
+        } catch (err) {
+          console.error(`[LandingChart] Error fetching platform-stats from ${baseUrl}:`, err);
           continue;
         }
       }
 
+      console.log('[LandingChart] No data available from any API');
       setLoading(false);
     };
     fetchPerformance();
@@ -284,9 +296,34 @@ export default function LandingPerformanceChart() {
     );
   }
 
-  // Don't show if no data at all
+  // Show placeholder if no trades have closed yet
   if (totalTrades === 0) {
-    return null;
+    return (
+      <div className="bg-card/50 backdrop-blur border rounded-xl p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
+              <LineChart className="w-6 h-6 text-emerald-500" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg">Platform Performance</h3>
+              <p className="text-sm text-muted-foreground">Real-time trade tracking</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="px-4 py-2 rounded-xl font-bold text-lg bg-muted/50 text-muted-foreground">
+              Collecting Data...
+            </div>
+          </div>
+        </div>
+        <div className="h-32 flex items-center justify-center mt-4">
+          <p className="text-sm text-muted-foreground text-center">
+            Performance chart will appear once trades start closing.<br />
+            <span className="text-xs">All results are verified from real TP/SL outcomes.</span>
+          </p>
+        </div>
+      </div>
+    );
   }
 
   // If we don't have chart data, show a simplified view
