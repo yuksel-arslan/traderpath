@@ -229,6 +229,10 @@ interface AssetGateEvaluationInput {
   resistanceLevels: number[];
   leadingIndicatorsSignal?: string;
   signalConfidence?: number;
+  // Candlestick pattern confirmation
+  bullishPatternCount?: number;
+  bearishPatternCount?: number;
+  highSignificancePatterns?: string[];
 }
 
 interface AssetGateEvaluationResult {
@@ -250,6 +254,11 @@ async function evaluateAssetGateWithRAG(input: AssetGateEvaluationInput): Promis
   try {
     const tradingKnowledge = getTradingKnowledgeForAI();
 
+    const patternInfo = input.highSignificancePatterns && input.highSignificancePatterns.length > 0
+      ? `High-significance patterns: ${input.highSignificancePatterns.join(', ')}`
+      : 'No high-significance patterns detected';
+    const patternBalance = (input.bullishPatternCount || 0) - (input.bearishPatternCount || 0);
+
     const prompt = `You are a professional crypto trader. Based on the asset data below, evaluate whether this specific asset is suitable for trading.
 
 IMPORTANT: You MUST respond in English only.
@@ -267,6 +276,7 @@ IMPORTANT: You MUST respond in English only.
 - ATR: ${input.atr.toFixed(2)} (volatility measure)
 - Support Levels: ${input.supportLevels.slice(0, 2).map(s => '$' + s.toLocaleString()).join(', ')}
 - Resistance Levels: ${input.resistanceLevels.slice(0, 2).map(r => '$' + r.toLocaleString()).join(', ')}
+- Candlestick Patterns: ${patternInfo} (Bullish: ${input.bullishPatternCount || 0}, Bearish: ${input.bearishPatternCount || 0})
 
 ## Trading Knowledge:
 ${tradingKnowledge}
@@ -376,6 +386,28 @@ function evaluateAssetGateRuleBased(input: AssetGateEvaluationInput): AssetGateE
     directionScore += 15;
   } else if (input.leadingIndicatorsSignal === 'bearish' && (input.signalConfidence || 0) >= 60) {
     directionScore -= 15;
+  }
+
+  // Candlestick pattern confirmation for direction
+  const bullishPatterns = input.bullishPatternCount || 0;
+  const bearishPatterns = input.bearishPatternCount || 0;
+  const hasHighSigPatterns = (input.highSignificancePatterns?.length || 0) > 0;
+
+  if (hasHighSigPatterns) {
+    score += 10; // High-significance patterns are valuable
+    if (bullishPatterns > bearishPatterns && input.trendDirection === 'bullish') {
+      // Bullish patterns confirm bullish trend
+      directionScore += 15;
+    } else if (bearishPatterns > bullishPatterns && input.trendDirection === 'bearish') {
+      // Bearish patterns confirm bearish trend
+      directionScore -= 15;
+    } else if (bullishPatterns > bearishPatterns) {
+      // Bullish patterns against trend - potential reversal
+      directionScore += 10;
+    } else if (bearishPatterns > bullishPatterns) {
+      // Bearish patterns against trend - potential reversal
+      directionScore -= 10;
+    }
   }
 
   // 24h price change - extreme moves are risky
@@ -3599,6 +3631,13 @@ export const analysisEngine = {
       movingAverages: { ma50, ma200 },
     });
 
+    // Candlestick pattern detection for direction confirmation
+    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candles4h);
+    const patterns = candlestickPatterns.metadata?.patterns || [];
+    const bullishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bullish');
+    const bearishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bearish');
+    const highSigPatterns = patterns.filter((p: { significance: string }) => p.significance === 'high');
+
     // Gate evaluation for Asset Scanner
     const gateInput: AssetGateEvaluationInput = {
       symbol,
@@ -3615,6 +3654,10 @@ export const analysisEngine = {
       resistanceLevels: levels.resistance,
       leadingIndicatorsSignal: indicatorAnalysis.summary?.leadingIndicatorsSignal,
       signalConfidence: indicatorAnalysis.summary?.signalConfidence,
+      // Candlestick pattern confirmation for direction
+      bullishPatternCount: bullishPatterns.length,
+      bearishPatternCount: bearishPatterns.length,
+      highSignificancePatterns: highSigPatterns.map((p: { name: string }) => p.name),
     };
 
     const gateResult = await evaluateAssetGateWithRAG(gateInput);
@@ -3670,6 +3713,18 @@ export const analysisEngine = {
           lower: roundPrice(bb.lower),
         },
         atr: parseFloat(atr.toFixed(2)),
+        // Candlestick patterns for direction confirmation
+        candlestickPatterns: {
+          total: patterns.length,
+          bullish: bullishPatterns.length,
+          bearish: bearishPatterns.length,
+          highSignificance: highSigPatterns.map((p: { name: string }) => p.name),
+          all: patterns.slice(0, 5).map((p: { name: string; direction: string; significance: string }) => ({
+            name: p.name,
+            direction: p.direction,
+            significance: p.significance,
+          })),
+        },
       },
       // Build detailed indicator analysis with ALL configured indicators
       // Uses full 40+ indicators from trade-config.ts for rich analysis
@@ -4092,6 +4147,13 @@ export const analysisEngine = {
     const pvt = calculatePVT(candles4h);
     const volumeSpike = detectVolumeSpike(candles1h, 15, 2.0);
 
+    // Candlestick pattern detection for entry confirmation
+    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candles4h);
+    const patterns = candlestickPatterns.metadata?.patterns || [];
+    const bullishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bullish');
+    const bearishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bearish');
+    const highSigPatterns = patterns.filter((p: { significance: string }) => p.significance === 'high');
+
     const currentPrice = ticker.price;
 
     // Entry conditions
@@ -4136,10 +4198,25 @@ export const analysisEngine = {
              (trend.direction === 'bearish' && pvt.trend === 'bearish'),
         details: `PVT trend: ${pvt.trend}, momentum: ${pvt.momentum > 0 ? '+' : ''}${(pvt.momentum * 100).toFixed(2)}%`,
       },
+      {
+        name: 'Candlestick Pattern',
+        met: highSigPatterns.length > 0 && (
+          (trend.direction === 'bullish' && bullishPatterns.length >= bearishPatterns.length) ||
+          (trend.direction === 'bearish' && bearishPatterns.length >= bullishPatterns.length)
+        ),
+        details: patterns.length > 0
+          ? `${patterns.length} pattern(s): ${highSigPatterns.map((p: { name: string }) => p.name).join(', ') || 'None high-significance'}`
+          : 'No candlestick patterns detected',
+      },
     ];
 
     const conditionsMet = conditions.filter((c) => c.met).length;
-    // Need at least 4 out of 7 conditions met, RSI not overbought, and no volume spike
+    // Need at least 4 out of 8 conditions met, RSI not overbought, and no volume spike
+    // Bonus: If high-significance bullish/bearish pattern aligns with trend, more confidence
+    const patternAligned = highSigPatterns.length > 0 && (
+      (trend.direction === 'bullish' && bullishPatterns.length > bearishPatterns.length) ||
+      (trend.direction === 'bearish' && bearishPatterns.length > bullishPatterns.length)
+    );
     const tradeNow = conditionsMet >= 4 && rsi4h < 65 && !volumeSpike.isSpike;
 
     // Calculate optimal entry
@@ -4149,14 +4226,17 @@ export const analysisEngine = {
     // Entry zones
     const entryZones: TimingResult['entryZones'] = [];
 
+    // Pattern quality bonus - if high-significance patterns align with trend, zones are higher quality
+    const patternQualityBonus = patternAligned ? 1 : 0;
+
     // Zone 1: Aggressive entry
     if (currentPrice <= bb.middle) {
       entryZones.push({
         priceLow: roundPrice(currentPrice * 0.99),
         priceHigh: roundPrice(currentPrice * 1.01),
-        probability: 70,
+        probability: patternAligned ? 80 : 70,
         eta: 'Now',
-        quality: 4,
+        quality: Math.min(5, 4 + patternQualityBonus),
       });
     }
 
@@ -4165,7 +4245,7 @@ export const analysisEngine = {
       entryZones.push({
         priceLow: roundPrice(levels.support[0] * 0.99),
         priceHigh: roundPrice(levels.support[0] * 1.01),
-        probability: 60,
+        probability: patternAligned ? 70 : 60,
         eta: '4-12 hours',
         quality: 5,
       });
@@ -4176,7 +4256,7 @@ export const analysisEngine = {
       entryZones.push({
         priceLow: roundPrice(levels.support[1] * 0.99),
         priceHigh: roundPrice(levels.support[1] * 1.01),
-        probability: 40,
+        probability: patternAligned ? 50 : 40,
         eta: '1-3 days',
         quality: 5,
       });
@@ -4195,6 +4275,11 @@ export const analysisEngine = {
           event: 'Price dropping below upper BB band',
           estimatedTime: '2-6 hours',
         };
+      } else if (highSigPatterns.length === 0 && patterns.length < 2) {
+        waitFor = {
+          event: 'Candlestick pattern confirmation (e.g., Hammer, Engulfing)',
+          estimatedTime: '1-4 hours',
+        };
       } else if (conditionsMet < 3) {
         waitFor = {
           event: 'More conditions to be met',
@@ -4206,13 +4291,18 @@ export const analysisEngine = {
     // Reason
     let reason = '';
     if (tradeNow) {
-      reason = `${conditionsMet}/5 conditions met. `;
+      reason = `${conditionsMet}/8 conditions met. `;
       if (rsi4h < 40) reason += 'RSI low - good buying opportunity. ';
       if (currentPrice < bb.middle) reason += 'Price below BB middle. ';
+      if (patternAligned) {
+        const patternNames = highSigPatterns.slice(0, 2).map((p: { name: string }) => p.name).join(', ');
+        reason += `Candlestick confirmation: ${patternNames}. `;
+      }
     } else {
-      reason = `${conditionsMet}/5 conditions met - not enough. `;
+      reason = `${conditionsMet}/8 conditions met - not enough. `;
       if (rsi4h > 70) reason += 'RSI in overbought zone. ';
       if (currentPrice > bb.upper) reason += 'Price above upper BB band. ';
+      if (patterns.length === 0) reason += 'No candlestick patterns for entry confirmation. ';
     }
 
     // Score calculation
@@ -4220,6 +4310,8 @@ export const analysisEngine = {
     score += conditionsMet * 0.8;
     if (tradeNow) score += 1;
     if (rsi4h >= 30 && rsi4h <= 50) score += 0.5;
+    // Bonus for candlestick pattern alignment with trend
+    if (patternAligned) score += 0.8;
     score = Math.max(1, Math.min(10, parseFloat(score.toFixed(1))));
 
     // Gate evaluation
@@ -4318,26 +4410,20 @@ export const analysisEngine = {
       safetyAdjusted: false,
     };
 
-    // Take profit levels (R:R based)
+    // Take profit levels (R:R based) - only 2 TPs at 1.5R and 2.5R
     const riskAmount = Math.abs(averageEntry - stopPrice);
     const takeProfits: TradePlanResult['takeProfits'] = [
       {
         price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 1.5 : averageEntry - riskAmount * 1.5),
-        percentage: 30,
+        percentage: 50,
         reason: '1.5R - First take profit',
         source: '1.5R calculation',
       },
       {
         price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 2.5 : averageEntry - riskAmount * 2.5),
-        percentage: 40,
+        percentage: 50,
         reason: '2.5R - Main target',
         source: '2.5R calculation',
-      },
-      {
-        price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 4 : averageEntry - riskAmount * 4),
-        percentage: 30,
-        reason: '4R - Extended target',
-        source: '4R calculation',
       },
     ];
 
@@ -5229,7 +5315,7 @@ export const analysisEngine = {
     const riskAmount = Math.abs(averageEntry - stopPrice);
 
     if (direction === 'long') {
-      // TP1: First resistance or 1.5R
+      // TP1: First resistance or 1.5R (50% of position)
       const tp1FromResistance = assetScan.levels.resistance[0];
       const tp1From15R = averageEntry + (riskAmount * 1.5);
       const tp1 = tp1FromResistance && tp1FromResistance > averageEntry
@@ -5237,13 +5323,13 @@ export const analysisEngine = {
         : tp1From15R;
       takeProfits.push({
         price: roundPrice(tp1),
-        percentage: 40,
+        percentage: 50,
         reason: '1.5R or first resistance',
         source: tp1FromResistance ? 'Asset Scanner resistance' : '1.5R calculation'
       });
       sources.targets.push(tp1FromResistance ? 'Asset Scanner resistance 1' : '1.5R');
 
-      // TP2: Second resistance or 2.5R
+      // TP2: Second resistance or 2.5R (50% of position)
       const tp2FromResistance = assetScan.levels.resistance[1];
       const tp2From25R = averageEntry + (riskAmount * 2.5);
       const tp2 = tp2FromResistance && tp2FromResistance > tp1
@@ -5251,22 +5337,14 @@ export const analysisEngine = {
         : tp2From25R;
       takeProfits.push({
         price: roundPrice(tp2),
-        percentage: 35,
+        percentage: 50,
         reason: '2.5R or second resistance',
         source: tp2FromResistance ? 'Asset Scanner resistance' : '2.5R calculation'
       });
       sources.targets.push(tp2FromResistance ? 'Asset Scanner resistance 2' : '2.5R');
-
-      // TP3: 4R extended target
-      takeProfits.push({
-        price: roundPrice(averageEntry + (riskAmount * 4)),
-        percentage: 25,
-        reason: '4R extended target',
-        source: '4R calculation'
-      });
-      sources.targets.push('4R extended');
     } else {
       // Short direction - use support levels
+      // TP1: First support or 1.5R (50% of position)
       const tp1FromSupport = assetScan.levels.support[0];
       const tp1From15R = averageEntry - (riskAmount * 1.5);
       const tp1 = tp1FromSupport && tp1FromSupport < averageEntry
@@ -5274,12 +5352,13 @@ export const analysisEngine = {
         : tp1From15R;
       takeProfits.push({
         price: roundPrice(tp1),
-        percentage: 40,
+        percentage: 50,
         reason: '1.5R or first support',
         source: tp1FromSupport ? 'Asset Scanner support' : '1.5R calculation'
       });
       sources.targets.push(tp1FromSupport ? 'Asset Scanner support 1' : '1.5R');
 
+      // TP2: Second support or 2.5R (50% of position)
       const tp2FromSupport = assetScan.levels.support[1];
       const tp2From25R = averageEntry - (riskAmount * 2.5);
       const tp2 = tp2FromSupport && tp2FromSupport < tp1
@@ -5287,19 +5366,11 @@ export const analysisEngine = {
         : tp2From25R;
       takeProfits.push({
         price: roundPrice(tp2),
-        percentage: 35,
+        percentage: 50,
         reason: '2.5R or second support',
         source: tp2FromSupport ? 'Asset Scanner support' : '2.5R calculation'
       });
       sources.targets.push(tp2FromSupport ? 'Asset Scanner support 2' : '2.5R');
-
-      takeProfits.push({
-        price: roundPrice(averageEntry - (riskAmount * 4)),
-        percentage: 25,
-        reason: '4R extended target',
-        source: '4R calculation'
-      });
-      sources.targets.push('4R extended');
     }
 
     // ===== RISK/REWARD CALCULATION =====

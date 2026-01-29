@@ -55,7 +55,6 @@ export interface QuickAnalysisResult {
   stopLoss: number;
   takeProfit1: number;
   takeProfit2?: number;
-  takeProfit3?: number;
   riskReward: number;
   reasoning: string;
   analysisId: string;

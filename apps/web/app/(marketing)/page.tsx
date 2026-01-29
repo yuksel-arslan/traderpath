@@ -435,13 +435,13 @@ const ANALYSIS_STEPS = [
     description: 'This is where everything comes together into an actionable plan. We calculate the exact entry price, multiple take-profit targets, and a strategic stop-loss level—all optimized for the best risk/reward ratio.',
     whatWeDo: [
       'Calculate optimal entry price based on current orderbook and momentum',
-      'Set TP1 (conservative), TP2 (moderate), and TP3 (aggressive) targets',
+      'Set TP1 (conservative) and TP2 (main target) based on resistance/support levels',
       'Place stop-loss at technical invalidation points, not arbitrary percentages',
       'Calculate position sizing suggestions based on risk percentage',
       'Determine risk/reward ratio and expected value of the trade'
     ],
     whyItMatters: 'Professional traders never enter without a plan. Having predefined exits removes emotion from trading and protects your capital.',
-    example: 'Entry: $0.5420 | TP1: $0.5680 (+4.8%) | TP2: $0.5890 (+8.7%) | TP3: $0.6200 (+14.4%) | SL: $0.5180 (-4.4%) | R:R = 2.1:1'
+    example: 'Entry: $0.5420 | TP1: $0.5680 (+4.8%) | TP2: $0.5890 (+8.7%) | SL: $0.5180 (-4.4%) | R:R = 2:1'
   },
   {
     name: 'Trap Check',
