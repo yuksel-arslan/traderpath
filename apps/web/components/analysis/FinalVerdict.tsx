@@ -4,6 +4,7 @@ import { CheckCircle, XCircle, AlertCircle, TrendingUp, TrendingDown, Minus, Bra
 import { useRouter } from 'next/navigation';
 import { cn } from '../../lib/utils';
 import { TradePlanChart } from './TradePlanChart';
+import { TradeDecisionVisual } from './TradeDecisionVisual';
 
 interface ComponentScore {
   step: string;
@@ -481,30 +482,19 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
         Final Verdict - {symbol}
       </h3>
 
-      {/* Main Verdict Card */}
-      <div className={cn("p-6 rounded-lg bg-gradient-to-br border", getVerdictStyle())}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            {getVerdictIcon()}
-            <div>
-              <p className="text-sm text-muted-foreground">Overall Verdict</p>
-              <p className={cn("text-3xl font-bold uppercase", getVerdictColor())}>
-                {getVerdictLabel()}
-              </p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-muted-foreground">Score</p>
-            <p className={cn("text-4xl font-bold", getScoreColor(data.overallScore ?? 0))}>
-              {data.overallScore ?? 0}<span className="text-lg text-muted-foreground">/10</span>
-            </p>
-          </div>
-        </div>
+      {/* Visual Trade Decision */}
+      <TradeDecisionVisual
+        verdict={data.verdict}
+        direction={tradePlan?.direction as 'long' | 'short' | undefined}
+        score={data.overallScore ?? 0}
+        symbol={symbol}
+        size="lg"
+      />
 
-        {/* Recommendation */}
-        <div className="mt-4 p-3 bg-background/50 rounded-lg">
-          <p className="text-sm">{data.recommendation}</p>
-        </div>
+      {/* Recommendation Card */}
+      <div className={cn("p-4 rounded-xl bg-gradient-to-br border", getVerdictStyle())}>
+        <p className="text-sm font-medium text-muted-foreground mb-1">AI Recommendation</p>
+        <p className="text-sm">{data.recommendation}</p>
       </div>
 
       {/* Trade Plan Chart - TradingView Lightweight Charts */}

@@ -46,6 +46,7 @@ import { TradePlan } from './TradePlan';
 import { TrapCheck } from './TrapCheck';
 import { FinalVerdict } from './FinalVerdict';
 import { AnalysisProgressBar, MLIS_STEPS as MLIS_PROGRESS_STEPS } from './AnalysisProgressBar';
+import { TradeDecisionVisual, SignalIndicator, VerdictBadge, DirectionArrow, ScoreGauge } from './TradeDecisionVisual';
 
 // MLIS Layer Result Component
 interface MLISLayerData {
@@ -131,54 +132,38 @@ interface MLISVerdictData {
 function MLISVerdictResult({ data, symbol }: { data: MLISVerdictData; symbol: string }) {
   const score = data?.overallScore ? data.overallScore * 10 : 50; // Convert back to 0-100
   const confidence = data?.confidence ?? 50;
-  const recommendation = data?.recommendation || 'HOLD';
+  const recommendation = (data?.recommendation || 'HOLD') as 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
   const direction = data?.direction || 'NEUTRAL';
-  const riskLevel = data?.riskLevel || 'MEDIUM';
+  const riskLevel = (data?.riskLevel?.toLowerCase() || 'medium') as 'low' | 'medium' | 'high';
   const keySignals = data?.keySignals || [];
   const riskFactors = data?.riskFactors || [];
 
-  const getRecommendationColor = (rec: string) => {
-    if (rec === 'STRONG_BUY' || rec === 'BUY') return { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30' };
-    if (rec === 'STRONG_SELL' || rec === 'SELL') return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' };
-    return { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' };
-  };
-
-  const colors = getRecommendationColor(recommendation);
+  // Convert direction to long/short
+  const directionMapped = direction.toUpperCase() === 'LONG' ? 'long' : direction.toUpperCase() === 'SHORT' ? 'short' : null;
 
   return (
     <div className="space-y-4">
-      {/* Recommendation Badge */}
-      <div className={cn("p-4 rounded-xl text-center", colors.bg, `border ${colors.border}`)}>
-        <div className="text-xs text-slate-400 mb-2">MLIS Recommendation for {symbol}</div>
-        <div className={cn("text-3xl font-bold mb-2", colors.text)}>
-          {recommendation.replace('_', ' ')}
-        </div>
-        <div className="flex items-center justify-center gap-4 text-sm">
-          <span className="text-slate-400">Direction: <span className="text-white font-medium">{direction}</span></span>
-          <span className="text-slate-400">Risk: <span className="text-white font-medium">{riskLevel}</span></span>
-        </div>
-      </div>
-
-      {/* Scores */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
-          <div className="text-xs text-slate-400">Overall Score</div>
-          <div className="text-xl font-bold text-purple-400">{score.toFixed(0)}%</div>
-        </div>
-        <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-          <div className="text-xs text-slate-400">Confidence</div>
-          <div className="text-xl font-bold text-blue-400">{confidence.toFixed(0)}%</div>
-        </div>
-      </div>
+      {/* Visual Trade Decision */}
+      <TradeDecisionVisual
+        recommendation={recommendation}
+        direction={directionMapped}
+        confidence={confidence}
+        riskLevel={riskLevel}
+        symbol={symbol}
+        size="md"
+      />
 
       {/* Key Signals */}
       {keySignals.length > 0 && (
-        <div>
-          <div className="text-xs text-slate-400 font-medium mb-2">Key Signals</div>
+        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+          <div className="text-xs text-green-400 font-medium mb-2 flex items-center gap-1">
+            <CheckCircle className="w-3 h-3" />
+            Key Signals
+          </div>
           <div className="space-y-1">
             {keySignals.slice(0, 4).map((signal, idx) => (
               <div key={idx} className="flex items-center gap-2 text-sm text-slate-300">
-                <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
+                <span className="w-1 h-1 rounded-full bg-green-400" />
                 {signal}
               </div>
             ))}
@@ -188,12 +173,15 @@ function MLISVerdictResult({ data, symbol }: { data: MLISVerdictData; symbol: st
 
       {/* Risk Factors */}
       {riskFactors.length > 0 && (
-        <div>
-          <div className="text-xs text-slate-400 font-medium mb-2">Risk Factors</div>
+        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+          <div className="text-xs text-amber-400 font-medium mb-2 flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" />
+            Risk Factors
+          </div>
           <div className="space-y-1">
             {riskFactors.slice(0, 3).map((factor, idx) => (
               <div key={idx} className="flex items-center gap-2 text-sm text-slate-300">
-                <AlertTriangle className="w-3 h-3 text-amber-400 flex-shrink-0" />
+                <span className="w-1 h-1 rounded-full bg-amber-400" />
                 {factor}
               </div>
             ))}
@@ -579,6 +567,12 @@ export function AnalysisDialog({
   // Get verdict based on method
   const verdictStep = isMLIS ? results[5] : results[7];
   const verdict = verdictStep as { action?: string; verdict?: string; overallScore?: number; recommendation?: string } | undefined;
+  // Get trade plan for direction (Classic: step 5, MLIS: step 5 verdict has direction)
+  const tradePlanStep = isMLIS ? results[5] : results[5];
+  const tradePlan = tradePlanStep as { direction?: string } | undefined;
+  const direction = isMLIS
+    ? (verdictStep as { direction?: string } | undefined)?.direction
+    : tradePlan?.direction;
   // Handle verdict action for both Classic and MLIS
   const verdictAction = verdict?.action || verdict?.verdict || verdict?.recommendation || '';
   const normalizedVerdict = verdictAction.toLowerCase().replace('_', ' ');
@@ -1286,56 +1280,41 @@ export function AnalysisDialog({
             className="relative p-4"
             style={{
               background: isGo
-                ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))'
-                : 'linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1))',
-              borderTop: `1px solid ${isGo ? 'rgba(34, 197, 94, 0.3)' : 'rgba(251, 191, 36, 0.3)'}`,
+                ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(22, 163, 74, 0.08))'
+                : 'linear-gradient(135deg, rgba(251, 191, 36, 0.12), rgba(245, 158, 11, 0.08))',
+              borderTop: `1px solid ${isGo ? 'rgba(34, 197, 94, 0.25)' : 'rgba(251, 191, 36, 0.25)'}`,
             }}
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
+              {/* Signal Light + Verdict Badge */}
               <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{
-                    background: isGo
-                      ? 'linear-gradient(135deg, #22C55E, #16A34A)'
-                      : 'linear-gradient(135deg, #FBBF24, #F59E0B)',
-                    boxShadow: isGo
-                      ? '0 8px 30px rgba(34, 197, 94, 0.4)'
-                      : '0 8px 30px rgba(251, 191, 36, 0.4)',
-                  }}
-                >
-                  {isGo ? <CheckCircle className="w-5 h-5 text-white" /> : <AlertTriangle className="w-5 h-5 text-white" />}
-                </div>
-                <div>
-                  <div className="text-sm text-slate-400">Final Verdict</div>
-                  <div
-                    className="font-bold text-lg"
-                    style={{
-                      background: isGo
-                        ? 'linear-gradient(135deg, #22C55E, #4ADE80)'
-                        : 'linear-gradient(135deg, #FBBF24, #FCD34D)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                    }}
-                  >
-                    {verdictAction}
-                  </div>
-                </div>
+                <SignalIndicator
+                  verdict={verdict.verdict as 'go' | 'conditional_go' | 'wait' | 'avoid'}
+                  size="sm"
+                />
+                <VerdictBadge
+                  verdict={verdict.verdict as 'go' | 'conditional_go' | 'wait' | 'avoid'}
+                  size="sm"
+                />
               </div>
+
+              {/* Direction Arrow (if available) */}
+              {direction && (
+                <DirectionArrow
+                  direction={direction.toLowerCase() as 'long' | 'short'}
+                  size="sm"
+                  animated={false}
+                />
+              )}
+
+              {/* Score Gauge */}
               {verdict.overallScore !== undefined && (
-                <div className="text-right">
-                  <div className="text-sm text-slate-400">Score</div>
-                  <div
-                    className="font-bold text-lg"
-                    style={{
-                      background: 'linear-gradient(135deg, #7FFFD4, #2DD4BF)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                    }}
-                  >
-                    {(verdict.overallScore * 10).toFixed(0)}%
-                  </div>
-                </div>
+                <ScoreGauge
+                  score={verdict.overallScore}
+                  maxScore={10}
+                  size="sm"
+                  label="Score"
+                />
               )}
             </div>
           </div>

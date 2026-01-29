@@ -1010,6 +1010,26 @@ Kullanıcı Hakları Aktif:
   - Legend eklendi (Classic Analysis, MLIS Pro)
   - MLIS verisi varsa dual-line, yoksa tek line gösteriliyor
   - Dosyalar: `analysis.routes.ts`, `LandingPerformanceChart.tsx`
+- **Visual Trade Decision Component (TradeDecisionVisual)**:
+  - Yeni bileşen: `apps/web/components/analysis/TradeDecisionVisual.tsx`
+  - **Görsel Bileşenler**:
+    - `SignalIndicator`: 4 ışıklı trafik lambası (GO/COND/WAIT/AVOID veya BUY/HOLD/SELL)
+    - `DirectionArrow`: LONG (yeşil yukarı ok) / SHORT (kırmızı aşağı ok) yön göstergesi
+    - `ScoreGauge`: Animasyonlu dairesel skor göstergesi (0-10 veya 0-100%)
+    - `VerdictBadge`: Gradient renkli karar etiketi (GO, CONDITIONAL GO, WAIT, AVOID)
+    - `RiskMeter`: 3 seviyeli risk göstergesi (low/medium/high)
+  - **Entegre Edilen Sayfalar**:
+    - FinalVerdict component: Ana analiz sonuç kartı
+    - AnalysisDialog footer: Analiz tamamlandığında verdict özeti
+    - MLISVerdictResult: MLIS Pro sonuçları için görsel karar
+    - analyze/details/[id]: Analiz detay sayfası
+    - reports/[id]: Rapor detay sayfası
+  - **Özellikler**:
+    - Responsive boyutlar (sm, md, lg)
+    - Dark mode uyumlu
+    - Animasyonlu glow efektleri
+    - Classic ve MLIS Pro desteği
+  - Dosyalar: `TradeDecisionVisual.tsx`, `FinalVerdict.tsx`, `AnalysisDialog.tsx`, `details/[id]/page.tsx`, `reports/[id]/page.tsx`
 
 ---
 

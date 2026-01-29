@@ -30,6 +30,7 @@ import html2canvas from 'html2canvas';
 import { cn } from '../../../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../../lib/coin-icons';
 import { TradePlanChart } from '../../../../../components/analysis/TradePlanChart';
+import { TradeDecisionVisual } from '../../../../../components/analysis/TradeDecisionVisual';
 import { authFetch } from '../../../../../lib/api';
 
 interface AnalysisData {
@@ -576,15 +577,26 @@ export default function AnalysisDetailsPage() {
             </div>
           </div>
 
-          {/* 7. Final Verdict */}
+          {/* 7. Final Verdict - Visual Trade Decision */}
+          <div className="mb-6">
+            <TradeDecisionVisual
+              verdict={(step7.verdict || (step7.overallScore >= 7 ? 'go' : step7.overallScore >= 5 ? 'conditional_go' : step7.overallScore >= 3 ? 'wait' : 'avoid')) as 'go' | 'conditional_go' | 'wait' | 'avoid'}
+              direction={direction as 'long' | 'short'}
+              score={step7.overallScore || analysis.totalScore * 10 || 5}
+              symbol={analysis.symbol}
+              size="lg"
+            />
+          </div>
+
+          {/* AI Recommendation */}
           <div className={cn(
             "rounded-xl p-4 mb-6",
-            isLong ? "bg-green-50 dark:bg-green-500/20" : "bg-red-50 dark:bg-red-500/20"
+            isLong ? "bg-green-50 dark:bg-green-500/10 border border-green-500/20" : "bg-red-50 dark:bg-red-500/10 border border-red-500/20"
           )}>
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle className={cn("w-5 h-5", isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")} />
               <span className={cn("font-semibold", isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
-                Final Verdict: {direction.toUpperCase()} Recommended
+                AI Recommendation
               </span>
             </div>
             <p className="text-sm text-gray-600 dark:text-slate-300">
