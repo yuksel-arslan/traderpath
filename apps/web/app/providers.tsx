@@ -9,6 +9,7 @@ import { ThemeProvider } from 'next-themes';
 import { useState } from 'react';
 import { Toaster } from 'sonner';
 import { CreditNotificationProvider } from '../contexts/CreditNotificationContext';
+import { InstallPrompt } from '../components/pwa/InstallPrompt';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -36,6 +37,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <CreditNotificationProvider>
           {children}
+          <InstallPrompt />
         </CreditNotificationProvider>
         <Toaster position="top-right" richColors />
       </QueryClientProvider>

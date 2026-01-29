@@ -1,3 +1,94 @@
+// ===========================================
+// Next.js Configuration with PWA Support
+// ===========================================
+
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
+  customWorkerDir: 'worker',
+  runtimeCaching: [
+    {
+      // Cache API responses
+      urlPattern: /^https:\/\/api\.traderpath\.io\/api\/.*/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'api-cache',
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 60 * 5, // 5 minutes
+        },
+        networkTimeoutSeconds: 10,
+      },
+    },
+    {
+      // Cache Binance API for price data
+      urlPattern: /^https:\/\/api\.binance\.com\/.*/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'binance-cache',
+        expiration: {
+          maxEntries: 30,
+          maxAgeSeconds: 60, // 1 minute
+        },
+        networkTimeoutSeconds: 5,
+      },
+    },
+    {
+      // Cache static assets
+      urlPattern: /\.(?:js|css|woff2?|ttf|otf|eot)$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'static-assets',
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+        },
+      },
+    },
+    {
+      // Cache images
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'images',
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+        },
+      },
+    },
+    {
+      // Cache Google Fonts
+      urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'google-fonts',
+        expiration: {
+          maxEntries: 20,
+          maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+        },
+      },
+    },
+    {
+      // Cache coin icons
+      urlPattern: /^https:\/\/(?:assets\.coingecko\.com|raw\.githubusercontent\.com|www\.cryptocompare\.com)\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'coin-icons',
+        expiration: {
+          maxEntries: 200,
+          maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+        },
+      },
+    },
+  ],
+  fallbacks: {
+    document: '/offline',
+  },
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -154,4 +245,4 @@ const nextConfig = {
   transpilePackages: ['@react-pdf/renderer', '@react-pdf/layout', '@react-pdf/pdfkit'],
 };
 
-module.exports = nextConfig;
+module.exports = withPWA(nextConfig);
