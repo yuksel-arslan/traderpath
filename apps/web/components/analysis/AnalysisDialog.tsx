@@ -446,11 +446,38 @@ export function AnalysisDialog({
       pdfGeneratedRef.current = true;
       setPdfGenerating(true);
 
-      // Navigate to details page with ?pdf=true to auto-download PDF
-      setTimeout(() => {
+      // Poll to verify analysis exists in database before redirecting
+      const verifyAndRedirect = async () => {
+        const maxAttempts = 10;
+        const delayMs = 1000; // 1 second between attempts
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          try {
+            const token = await getAuthToken();
+            const response = await fetch(getApiUrl(`/api/analysis/${savedAnalysisId}`), {
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            });
+
+            if (response.ok) {
+              // Analysis found in database, safe to redirect
+              onClose();
+              router.push(`/analyze/details/${savedAnalysisId}?pdf=true`);
+              return;
+            }
+          } catch {
+            // Ignore errors, keep polling
+          }
+
+          // Wait before next attempt
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+
+        // If still not found after max attempts, redirect anyway (fallback)
         onClose();
         router.push(`/analyze/details/${savedAnalysisId}?pdf=true`);
-      }, 1500);
+      };
+
+      verifyAndRedirect();
     }
   }, [reportSaved, savedAnalysisId, router, onClose]);
 
