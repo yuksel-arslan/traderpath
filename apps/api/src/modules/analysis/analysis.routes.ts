@@ -504,8 +504,22 @@ Warn about potential traps and give protective advice.`;
     try {
       // Check if MLIS Pro method is requested
       if (body.method === 'mlis_pro') {
+        console.log(`[MLIS] Starting analysis for ${body.symbol} on ${interval}`);
+
         // Run MLIS Pro analysis
-        const mlisResult = await analyzeMLIS(body.symbol, interval);
+        let mlisResult: MLISResult;
+        try {
+          mlisResult = await analyzeMLIS(body.symbol, interval);
+          console.log(`[MLIS] Analysis completed for ${body.symbol}:`, {
+            overallScore: mlisResult.overallScore,
+            recommendation: mlisResult.recommendation,
+            direction: mlisResult.direction,
+            hasLayers: !!mlisResult.layers,
+          });
+        } catch (mlisError) {
+          console.error(`[MLIS] Analysis failed for ${body.symbol}:`, mlisError);
+          throw new Error(`MLIS analysis failed: ${mlisError instanceof Error ? mlisError.message : 'Unknown error'}`);
+        }
 
         // Save MLIS analysis to database with adapted format
         const savedAnalysis = await prisma.analysis.create({
@@ -513,11 +527,12 @@ Warn about potential traps and give protective advice.`;
             userId,
             symbol: body.symbol,
             interval: interval,
+            method: 'mlis_pro', // Explicitly set method for MLIS
             stepsCompleted: [1, 2, 3, 4, 5, 6, 7], // Mark all steps as completed
-            step1Result: { mlis: true, layer: 'technical', score: mlisResult.layers.technical.score } as object,
-            step2Result: { mlis: true, layer: 'momentum', score: mlisResult.layers.momentum.score } as object,
-            step3Result: { mlis: true, layer: 'volatility', score: mlisResult.layers.volatility.score } as object,
-            step4Result: { mlis: true, layer: 'volume', score: mlisResult.layers.volume.score } as object,
+            step1Result: { mlis: true, layer: 'technical', ...mlisResult.layers.technical } as object,
+            step2Result: { mlis: true, layer: 'momentum', ...mlisResult.layers.momentum } as object,
+            step3Result: { mlis: true, layer: 'volatility', ...mlisResult.layers.volatility } as object,
+            step4Result: { mlis: true, layer: 'volume', ...mlisResult.layers.volume } as object,
             step5Result: { mlis: true, layer: 'sentiment', score: mlisResult.layers.sentiment?.score || 50 } as object,
             step6Result: { mlis: true, layer: 'onchain', score: mlisResult.layers.onchain?.score || 50 } as object,
             step7Result: {
@@ -555,34 +570,42 @@ Warn about potential traps and give protective advice.`;
           }
         );
 
+        console.log(`[MLIS] Analysis saved to database: ${savedAnalysis.id}`);
+
         // Return MLIS result
+        const responseData = {
+          analysisId: savedAnalysis.id,
+          method: 'mlis_pro',
+          symbol: body.symbol,
+          interval,
+          tradeType,
+          ...mlisResult,
+          // Add compatibility fields for existing UI
+          step1Result: { mlis: true, score: mlisResult.layers.technical.score },
+          step2Result: { mlis: true, score: mlisResult.layers.momentum.score },
+          step3Result: { mlis: true, score: mlisResult.layers.volatility.score },
+          step4Result: { mlis: true, score: mlisResult.layers.volume.score },
+          step5Result: { mlis: true, score: mlisResult.layers.sentiment?.score || 50 },
+          step6Result: { mlis: true, score: mlisResult.layers.onchain?.score || 50 },
+          step7Result: {
+            overallScore: mlisResult.overallScore / 10,
+            verdict: mlisResult.recommendation === 'STRONG_BUY' || mlisResult.recommendation === 'BUY' ? 'go' :
+                     mlisResult.recommendation === 'HOLD' ? 'wait' : 'avoid',
+            recommendation: mlisResult.recommendation,
+            direction: mlisResult.direction,
+          },
+          tradePlan: null, // MLIS doesn't generate trade plans
+          creditsUsed: cost,
+          bonusCredits: tradeTypeBonus,
+        };
+
+        console.log(`[MLIS] Sending response for ${body.symbol}`);
+
         return reply.send({
           success: true,
-          data: {
-            analysisId: savedAnalysis.id,
-            method: 'mlis_pro',
-            symbol: body.symbol,
-            interval,
-            tradeType,
-            ...mlisResult,
-            // Add compatibility fields for existing UI
-            step1Result: { mlis: true, score: mlisResult.layers.technical.score },
-            step2Result: { mlis: true, score: mlisResult.layers.momentum.score },
-            step3Result: { mlis: true, score: mlisResult.layers.volatility.score },
-            step4Result: { mlis: true, score: mlisResult.layers.volume.score },
-            step5Result: { mlis: true, score: mlisResult.layers.sentiment?.score || 50 },
-            step6Result: { mlis: true, score: mlisResult.layers.onchain?.score || 50 },
-            step7Result: {
-              overallScore: mlisResult.overallScore / 10,
-              verdict: mlisResult.recommendation === 'STRONG_BUY' || mlisResult.recommendation === 'BUY' ? 'go' :
-                       mlisResult.recommendation === 'HOLD' ? 'wait' : 'avoid',
-              recommendation: mlisResult.recommendation,
-              direction: mlisResult.direction,
-            },
-            tradePlan: null, // MLIS doesn't generate trade plans
-            creditsUsed: cost,
-            bonusCredits: tradeTypeBonus,
-          },
+          data: responseData,
+          creditsSpent: cost,
+          remainingCredits: chargeResult.newBalance,
         });
       }
 
@@ -796,10 +819,11 @@ Explain the key risks and what conditions would need to change before trading th
         remainingCredits: chargeResult.newBalance,
       });
     } catch (error) {
-      console.error('Full Analysis error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Full Analysis error:', errorMessage, error);
       return reply.status(500).send({
         success: false,
-        error: { code: 'ANALYSIS_ERROR', message: 'Failed to complete analysis' },
+        error: { code: 'ANALYSIS_ERROR', message: `Failed to complete analysis: ${errorMessage}` },
       });
     }
   });
