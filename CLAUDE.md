@@ -985,6 +985,31 @@ Kullanıcı Hakları Aktif:
   - Progress bar "X/5 Complete" gösteriyor (MLIS için)
   - Purple tema MLIS Pro için kullanılıyor
   - Dosyalar: `AnalysisDialog.tsx`, `AnalysisProgressBar.tsx`, `analysis.routes.ts`
+- **AI Concierge MLIS Pro Entegrasyonu**:
+  - "BTC MLIS Pro" quick command butonu eklendi (purple gradient, Zap icon)
+  - `handleMLISAnalysis` düzeltildi: `method: 'mlis_pro'` ve 5-layer doğru kaydediliyor
+  - system-prompt.ts güncellendi: MLIS_ANALYSIS intent dokumentasyonu eklendi
+  - HELP_TEXT (TR/EN) MLIS Pro komut örnekleriyle güncellendi
+  - Dosyalar: `concierge/page.tsx`, `concierge.service.ts`, `system-prompt.ts`
+- **Marketing Sayfası Feature 2 - Dual Analysis System**:
+  - Feature 2 başlığı "Dual Analysis System" olarak güncellendi
+  - 7-Step Classic (teal) ve MLIS Pro (violet) yan yana gösteriliyor
+  - MLIS Pro için "NEW" badge eklendi
+  - Eski Feature 8 (ayrı MLIS Pro section) kaldırıldı (birleştirildi)
+  - Dosya: `apps/web/app/(marketing)/page.tsx`
+- **"How TraderPath Works" Step 2 Güncellendi**:
+  - "Run 7-Step Analysis" → "Choose Analysis Method" olarak değiştirildi
+  - Her iki yöntem (Classic + MLIS Pro) karşılaştırmalı olarak gösteriliyor
+  - Classic: 7 adım, 40+ indikatör, GO/WAIT/AVOID verdict
+  - MLIS Pro: 5 layer, neural signals, STRONG_BUY/SELL recommendations
+- **Performance Chart Dual-Line Desteği**:
+  - API endpoint (`platform-performance-history`) Classic ve MLIS Pro verilerini ayrı döndürüyor
+  - `dailyClassic` ve `dailyMlis` ayrı diziler olarak döndürülüyor
+  - Summary'de `classicTrades`, `mlisTrades`, `allTimeClassicPnL`, `allTimeMlisPnL` eklendi
+  - LandingPerformanceChart.tsx iki çizgi gösteriyor (teal: Classic, violet: MLIS Pro)
+  - Legend eklendi (Classic Analysis, MLIS Pro)
+  - MLIS verisi varsa dual-line, yoksa tek line gösteriliyor
+  - Dosyalar: `analysis.routes.ts`, `LandingPerformanceChart.tsx`
 
 ---
 

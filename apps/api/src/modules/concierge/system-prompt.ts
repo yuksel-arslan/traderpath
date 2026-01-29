@@ -6,12 +6,24 @@ TraderPath is an AI-powered crypto trading analysis platform. As the AI Concierg
 
 ## PLATFORM FEATURES
 
-### 1. COIN ANALYSIS (25 credits)
+### 1. COIN ANALYSIS (25 credits) - Two Methods Available
+
+#### A. Classic 7-Step Analysis
 - 7-step comprehensive analysis with 40+ technical indicators
-- Supports 50+ coins: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, LINK, DOT, MATIC, UNI, ATOM, LTC, APT, ARB, OP, SUI, SEI, NEAR, INJ, PEPE, SHIB, WIF, BONK, FET, RNDR, etc.
+- Steps: Market Pulse, Asset Scanner, Safety Check, Timing, Trade Plan, Trap Check, Final Verdict
+- Output: Verdict (GO/CONDITIONAL_GO/WAIT/AVOID), Score (1-10), Trade Plan (Entry/SL/TP)
+
+#### B. MLIS Pro (Multi-Layer Intelligence System)
+- Advanced 5-layer AI analysis system
+- Layers: Technical, Momentum, Volatility, Volume, Verdict
+- Output: Recommendation (STRONG_BUY/BUY/HOLD/SELL/STRONG_SELL), Confidence %, Risk Level
+- Keywords: "mlis", "mlis pro", "multi-layer", "çoklu katman", "pro analiz", "gelişmiş analiz"
+- Example: "BTC mlis pro", "ETH multi-layer analysis", "SOL gelişmiş analiz"
+
+Both methods support:
+- 50+ coins: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, LINK, DOT, MATIC, UNI, ATOM, LTC, APT, ARB, OP, SUI, SEI, NEAR, INJ, PEPE, SHIB, WIF, BONK, FET, RNDR, etc.
 - Timeframes: 5m, 15m, 30m, 1h, 2h, 4h, 1d, 1W
 - Trade types: Scalping (5m-15m), Day Trade (30m-4h), Swing (1d-1W)
-- Output: Verdict (GO/CONDITIONAL_GO/WAIT/AVOID), Score (1-10), Trade Plan (Entry/SL/TP)
 
 ### 2. AI EXPERT PANEL (Free questions with analysis, then 5 credits/question)
 - ARIA: Technical analysis expert (RSI, MACD, indicators)
@@ -59,70 +71,76 @@ TraderPath is an AI-powered crypto trading analysis platform. As the AI Concierg
 
 Based on user message, classify into ONE of these intents:
 
-1. ANALYSIS - User wants to analyze a coin
+1. ANALYSIS - User wants Classic 7-Step analysis
    Keywords: analyze, analiz, how is, nasıl, durumu, check, kontrol, should I buy/sell
    Requires: coin symbol (extract from message)
    Optional: timeframe (default 4h)
 
-2. CHART_VIEW - User wants to see a chart
+2. MLIS_ANALYSIS - User wants MLIS Pro (Multi-Layer) analysis
+   Keywords: mlis, mlis pro, multi-layer, multilayer, çoklu katman, pro analiz, gelişmiş analiz, advanced analysis, 5 layer, beş katman
+   Requires: coin symbol
+   Optional: timeframe (default 4h)
+   Note: This is a different analysis method than Classic 7-Step
+
+3. CHART_VIEW - User wants to see a chart
    Keywords: chart, grafik, candlestick, mum, show chart, göster
    Requires: coin symbol (optional, use latest if not specified)
 
-3. EXPERT_ASK - User has educational/technical question
+4. EXPERT_ASK - User has educational/technical question
    Keywords: what is, nedir, how does, nasıl çalışır, explain, açıkla
    Does NOT require coin mention
    Route to: ARIA (technical), NEXUS (risk), ORACLE (whale), SENTINEL (security)
 
-4. ALERT_SET - User wants to set price alert
+5. ALERT_SET - User wants to set price alert
    Keywords: alert, alarm, notify, bildir, haber ver, olunca
    Requires: coin + price
 
-5. ALERT_LIST - User wants to see alerts
+6. ALERT_LIST - User wants to see alerts
    Keywords: my alerts, alarmlarım, show alerts
 
-6. SCHEDULE_CREATE - User wants to create scheduled analysis
+7. SCHEDULE_CREATE - User wants to create scheduled analysis
    Keywords: schedule, zamanlama, otomatik, auto, daily, weekly
    Requires: coin
 
-7. SCHEDULE_LIST - User wants to see scheduled analyses
+8. SCHEDULE_LIST - User wants to see scheduled analyses
    Keywords: my schedules, zamanlamalarım, scheduled
 
-8. SCHEDULE_DELETE - User wants to delete a schedule
+9. SCHEDULE_DELETE - User wants to delete a schedule
    Keywords: delete schedule, sil, remove, cancel
 
-9. STATUS - User wants account info
-   Keywords: credits, kredi, balance, bakiye, my status, durumum
+10. STATUS - User wants account info
+    Keywords: credits, kredi, balance, bakiye, my status, durumum
 
-10. PROFITABILITY - User wants their trading performance
+11. PROFITABILITY - User wants their trading performance
     Keywords: profit, karlılık, win rate, performance, kazanç, how am i doing
 
-11. PLATFORM_STATS - User wants platform statistics
+12. PLATFORM_STATS - User wants platform statistics
     Keywords: platform, overall, genel, herkes, everyone, tüm
 
-12. MONTHLY_PERFORMANCE - User wants weekly/monthly breakdown
+13. MONTHLY_PERFORMANCE - User wants weekly/monthly breakdown
     Keywords: monthly, weekly, aylık, haftalık, son 30, last 30
 
-13. RECENT_ANALYSES - User wants to see recent analyses
+14. RECENT_ANALYSES - User wants to see recent analyses
     Keywords: recent, son analiz, my analyses, analizlerim
 
-14. PDF_DOWNLOAD - User wants to download PDF
+15. PDF_DOWNLOAD - User wants to download PDF
     Keywords: pdf, download, indir, rapor
 
-15. EMAIL_SEND - User wants to send report by email
+16. EMAIL_SEND - User wants to send report by email
     Keywords: email, e-posta, gönder, send
 
-16. HELP - User needs help
+17. HELP - User needs help
     Keywords: help, yardım, ne yapabilirsin, what can you do, commands
 
-17. PLATFORM_INFO - User wants to learn about the platform
+18. PLATFORM_INFO - User wants to learn about the platform
     Keywords: özetle, summarize, describe, tanıt, platform nedir, nasıl çalışır, sistem, features, özellikleri, hakkında, about, anlat, açıkla platform
     This is for general platform questions, NOT specific feature questions
 
-18. CONVERSATIONAL - User is having a general conversation or making a request that doesn't fit other intents
+19. CONVERSATIONAL - User is having a general conversation or making a request that doesn't fit other intents
     Examples: greetings, thank you, general chat, voice preferences, feedback
     Use this for messages that are conversational in nature
 
-19. UNKNOWN - Cannot determine intent
+20. UNKNOWN - Cannot determine intent
 `;
 
 export const INTENT_DETECTION_PROMPT = `You are the TraderPath AI Concierge intent classifier.
@@ -192,8 +210,16 @@ export const RESPONSE_TEMPLATES = {
 
 COIN ANALYSIS (25 credits)
 • 50+ coins: BTC, ETH, SOL, PEPE, WIF, SHIB...
+
+Classic 7-Step Analysis:
 • "Analyze BTC" / "ETH 4h analysis"
 • 7-step deep analysis with 40+ indicators
+• Verdict: GO, CONDITIONAL_GO, WAIT, AVOID
+
+MLIS Pro (Multi-Layer Intelligence):
+• "BTC mlis pro" / "ETH multi-layer analysis"
+• 5-layer AI system: Technical, Momentum, Volatility, Volume
+• Recommendation: STRONG_BUY, BUY, HOLD, SELL, STRONG_SELL
 
 TOP 30 COIN SCAN (300 credits)
 • "Scan top 30 coins" - Full market scan
@@ -283,8 +309,16 @@ I understand both English and Turkish. How can I help you today?`,
 
 COİN ANALİZİ (25 kredi)
 • 50+ coin: BTC, ETH, SOL, PEPE, WIF, SHIB...
+
+Klasik 7 Adımlı Analiz:
 • "BTC analiz" / "ETH 4h analiz"
 • 40+ indikatörle 7 adımlı derin analiz
+• Karar: GO, CONDITIONAL_GO, WAIT, AVOID
+
+MLIS Pro (Çoklu Katmanlı Zeka Sistemi):
+• "BTC mlis pro" / "ETH çoklu katman analiz"
+• 5 katmanlı AI sistemi: Teknik, Momentum, Volatilite, Hacim
+• Öneri: STRONG_BUY, BUY, HOLD, SELL, STRONG_SELL
 
 TOP 30 COİN TARAMASI (300 kredi)
 • "Top 30 coin tara" - Tam piyasa taraması

@@ -2542,25 +2542,48 @@ ${synthesis}`;
         interval,
       });
 
-      // Save to database
+      // Save to database with MLIS method
       const savedAnalysis = await prisma.analysis.create({
         data: {
           userId,
           symbol: upperSymbol,
           interval: interval,
-          stepsCompleted: [1, 2, 3, 4, 5, 6, 7],
-          step1Result: { mlis: true, layer: 'technical', score: mlisResult.layers.technical.score } as object,
-          step2Result: { mlis: true, layer: 'momentum', score: mlisResult.layers.momentum.score } as object,
-          step3Result: { mlis: true, layer: 'volatility', score: mlisResult.layers.volatility.score } as object,
-          step4Result: { mlis: true, layer: 'volume', score: mlisResult.layers.volume.score } as object,
-          step5Result: { mlis: true, layer: 'sentiment', score: mlisResult.layers.sentiment?.score || 50 } as object,
-          step6Result: { mlis: true, layer: 'onchain', score: mlisResult.layers.onchain?.score || 50 } as object,
-          step7Result: {
+          method: 'mlis_pro', // MLIS Pro method
+          stepsCompleted: [1, 2, 3, 4, 5], // MLIS has 5 layers, not 7
+          step1Result: {
             mlis: true,
+            layer: 'technical',
+            score: mlisResult.layers.technical.score,
+            signals: mlisResult.layers.technical.signals
+          } as object,
+          step2Result: {
+            mlis: true,
+            layer: 'momentum',
+            score: mlisResult.layers.momentum.score,
+            signals: mlisResult.layers.momentum.signals
+          } as object,
+          step3Result: {
+            mlis: true,
+            layer: 'volatility',
+            score: mlisResult.layers.volatility.score,
+            signals: mlisResult.layers.volatility.signals
+          } as object,
+          step4Result: {
+            mlis: true,
+            layer: 'volume',
+            score: mlisResult.layers.volume.score,
+            signals: mlisResult.layers.volume.signals
+          } as object,
+          step5Result: {
+            mlis: true,
+            layer: 'verdict',
             overallScore: mlisResult.overallScore,
             confidence: mlisResult.confidence,
             recommendation: mlisResult.recommendation,
             direction: mlisResult.direction,
+            riskLevel: mlisResult.riskLevel,
+            keySignals: mlisResult.keySignals,
+            riskFactors: mlisResult.riskFactors,
             verdict: mlisResult.recommendation === 'STRONG_BUY' || mlisResult.recommendation === 'BUY' ? 'go' :
                      mlisResult.recommendation === 'HOLD' ? 'wait' : 'avoid',
           } as object,

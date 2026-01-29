@@ -1,13 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { LineChart, TrendingUp, TrendingDown } from 'lucide-react';
+import { LineChart, TrendingUp, TrendingDown, Layers, Target } from 'lucide-react';
 import {
   AreaChart,
   Area,
   ResponsiveContainer,
   Tooltip,
   ReferenceLine,
+  Legend,
+  Line,
+  ComposedChart,
 } from 'recharts';
 
 interface ChartDataPoint {
@@ -16,6 +19,8 @@ interface ChartDataPoint {
   positive: number;
   negative: number;
   trades: number;
+  classicPnl?: number;
+  mlisPnl?: number;
 }
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
@@ -29,16 +34,26 @@ interface DailyData {
 
 export default function LandingPerformanceChart() {
   const [rawData, setRawData] = useState<DailyData[]>([]);
+  const [rawDataClassic, setRawDataClassic] = useState<DailyData[]>([]);
+  const [rawDataMlis, setRawDataMlis] = useState<DailyData[]>([]);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [totalPnL, setTotalPnL] = useState(0);
   const [allTimePnL, setAllTimePnL] = useState(0); // All-time total (same as platform-stats)
+  const [allTimeClassicPnL, setAllTimeClassicPnL] = useState(0);
+  const [allTimeMlisPnL, setAllTimeMlisPnL] = useState(0);
   const [totalTrades, setTotalTrades] = useState(0);
   const [loading, setLoading] = useState(true);
   const [hasChartData, setHasChartData] = useState(false);
+  const [hasMlisData, setHasMlisData] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
 
-  // Build chart data based on view mode
-  const buildChartData = (data: DailyData[], mode: ViewMode): ChartDataPoint[] => {
+  // Build chart data based on view mode, including both Classic and MLIS data
+  const buildChartData = (
+    data: DailyData[],
+    classicData: DailyData[],
+    mlisData: DailyData[],
+    mode: ViewMode
+  ): ChartDataPoint[] => {
     if (!data.length) return [];
 
     const now = new Date();
@@ -47,23 +62,31 @@ export default function LandingPerformanceChart() {
     if (mode === 'daily') {
       // Today only - show hourly breakdown simulation
       const todayData = data.find(d => d.date === todayStr);
+      const todayClassic = classicData.find(d => d.date === todayStr);
+      const todayMlis = mlisData.find(d => d.date === todayStr);
       const hours: number[] = [];
       for (let h = 0; h < 24; h += 3) hours.push(h);
 
       const currentHour = now.getHours();
       const currentBucket = Math.floor(currentHour / 3) * 3;
       const totalDayPnl = todayData?.realized || 0;
+      const totalDayClassic = todayClassic?.realized || 0;
+      const totalDayMlis = todayMlis?.realized || 0;
 
       return hours.map(h => {
         const isCurrentOrPast = h <= currentBucket;
         const progress = isCurrentOrPast ? (h + 3) / (currentBucket + 3) : 0;
         const pnl = isCurrentOrPast ? totalDayPnl * progress : 0;
+        const classicPnl = isCurrentOrPast ? totalDayClassic * progress : 0;
+        const mlisPnl = isCurrentOrPast ? totalDayMlis * progress : 0;
         return {
           name: `${h.toString().padStart(2, '0')}:00`,
           pnl: Number(pnl.toFixed(2)),
           positive: Math.max(0, pnl),
           negative: Math.min(0, pnl),
           trades: h === currentBucket ? (todayData?.trades || 0) : 0,
+          classicPnl: Number(classicPnl.toFixed(2)),
+          mlisPnl: Number(mlisPnl.toFixed(2)),
         };
       });
     }
@@ -79,15 +102,23 @@ export default function LandingPerformanceChart() {
       }
 
       let cumulativePnl = 0;
+      let cumulativeClassic = 0;
+      let cumulativeMlis = 0;
       return weekDays.map((day, i) => {
         const dayData = data.find(d => d.date === day);
+        const dayClassic = classicData.find(d => d.date === day);
+        const dayMlis = mlisData.find(d => d.date === day);
         cumulativePnl += dayData?.realized || 0;
+        cumulativeClassic += dayClassic?.realized || 0;
+        cumulativeMlis += dayMlis?.realized || 0;
         return {
           name: weekDayLabels[i],
           pnl: Number(cumulativePnl.toFixed(2)),
           positive: Math.max(0, cumulativePnl),
           negative: Math.min(0, cumulativePnl),
           trades: dayData?.trades || 0,
+          classicPnl: Number(cumulativeClassic.toFixed(2)),
+          mlisPnl: Number(cumulativeMlis.toFixed(2)),
         };
       });
     }
@@ -102,15 +133,23 @@ export default function LandingPerformanceChart() {
     }
 
     let cumulativePnl = 0;
+    let cumulativeClassic = 0;
+    let cumulativeMlis = 0;
     return monthDays.map((day, i) => {
       const dayData = data.find(d => d.date === day);
+      const dayClassic = classicData.find(d => d.date === day);
+      const dayMlis = mlisData.find(d => d.date === day);
       cumulativePnl += dayData?.realized || 0;
+      cumulativeClassic += dayClassic?.realized || 0;
+      cumulativeMlis += dayMlis?.realized || 0;
       return {
         name: monthDayLabels[i],
         pnl: Number(cumulativePnl.toFixed(2)),
         positive: Math.max(0, cumulativePnl),
         negative: Math.min(0, cumulativePnl),
         trades: dayData?.trades || 0,
+        classicPnl: Number(cumulativeClassic.toFixed(2)),
+        mlisPnl: Number(cumulativeMlis.toFixed(2)),
       };
     });
   };
@@ -163,11 +202,18 @@ export default function LandingPerformanceChart() {
             const data = await res.json();
             if (data.success && data.data?.daily?.length > 0) {
               setRawData(data.data.daily);
+              setRawDataClassic(data.data.dailyClassic || []);
+              setRawDataMlis(data.data.dailyMlis || []);
               setTotalPnL(data.data.summary.totalRealizedPnL || 0);
               // Use all-time total for display (same as platform-stats)
               setAllTimePnL(data.data.summary.allTimeTotalPnL || data.data.summary.totalRealizedPnL || 0);
+              setAllTimeClassicPnL(data.data.summary.allTimeClassicPnL || 0);
+              setAllTimeMlisPnL(data.data.summary.allTimeMlisPnL || 0);
               setTotalTrades(data.data.summary.allTimeTotalTrades || data.data.summary.totalTrades || 0);
               setHasChartData(true);
+              // Check if we have MLIS data
+              const mlisTrades = data.data.summary.allTimeMlisTrades || 0;
+              setHasMlisData(mlisTrades > 0);
               setLoading(false);
               return;
             }
@@ -209,9 +255,9 @@ export default function LandingPerformanceChart() {
   // Update chart data when view mode or raw data changes
   useEffect(() => {
     if (rawData.length > 0) {
-      setChartData(buildChartData(rawData, viewMode));
+      setChartData(buildChartData(rawData, rawDataClassic, rawDataMlis, viewMode));
     }
-  }, [rawData, viewMode]);
+  }, [rawData, rawDataClassic, rawDataMlis, viewMode]);
 
   // For monthly view, show all-time P/L to match dashboard
   // For daily/weekly, show period-specific P/L
@@ -344,10 +390,24 @@ export default function LandingPerformanceChart() {
         </div>
       </div>
 
+      {/* Legend - only show if we have MLIS data */}
+      {hasMlisData && (
+        <div className="flex items-center justify-center gap-4 mb-2">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-0.5 bg-teal-500 rounded"></div>
+            <span className="text-[10px] text-muted-foreground">Classic 7-Step</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-0.5 bg-violet-500 rounded"></div>
+            <span className="text-[10px] text-muted-foreground">MLIS Pro</span>
+          </div>
+        </div>
+      )}
+
       {/* Chart */}
-      <div className="h-48">
+      <div className={hasMlisData ? "h-44" : "h-48"}>
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 10, right: 5, left: 5, bottom: 5 }}>
+          <ComposedChart data={chartData} margin={{ top: 10, right: 5, left: 5, bottom: 5 }}>
             <defs>
               <linearGradient id="publicGreenGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#10b981" stopOpacity={0.6} />
@@ -356,6 +416,14 @@ export default function LandingPerformanceChart() {
               <linearGradient id="publicRedGradient" x1="0" y1="1" x2="0" y2="0">
                 <stop offset="0%" stopColor="#ef4444" stopOpacity={0.6} />
                 <stop offset="100%" stopColor="#ef4444" stopOpacity={0.1} />
+              </linearGradient>
+              <linearGradient id="classicGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="#14b8a6" stopOpacity={0.05} />
+              </linearGradient>
+              <linearGradient id="mlisGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.05} />
               </linearGradient>
             </defs>
             <ReferenceLine y={0} stroke="#64748b" strokeWidth={1} strokeOpacity={0.3} />
@@ -371,6 +439,8 @@ export default function LandingPerformanceChart() {
                 if (!active || !payload || !payload[0]) return null;
                 const data = payload[0].payload as ChartDataPoint;
                 const pnl = data.pnl;
+                const classicPnl = data.classicPnl || 0;
+                const mlisPnl = data.mlisPnl || 0;
                 const isPos = pnl >= 0;
                 return (
                   <div style={{
@@ -379,11 +449,17 @@ export default function LandingPerformanceChart() {
                     padding: '10px 14px',
                     boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
                   }}>
-                    <div style={{ color: '#fff', fontWeight: 600, marginBottom: '4px' }}>{data.name}</div>
-                    <div style={{ color: isPos ? '#10b981' : '#ef4444', fontWeight: 700, fontSize: '16px' }}>
-                      {isPos ? '+' : ''}{pnl.toFixed(1)}%
+                    <div style={{ color: '#fff', fontWeight: 600, marginBottom: '6px' }}>{data.name}</div>
+                    <div style={{ color: isPos ? '#10b981' : '#ef4444', fontWeight: 700, fontSize: '16px', marginBottom: '4px' }}>
+                      Total: {isPos ? '+' : ''}{pnl.toFixed(1)}%
                     </div>
-                    <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '2px' }}>
+                    {hasMlisData && (
+                      <div style={{ display: 'flex', gap: '12px', fontSize: '11px' }}>
+                        <div style={{ color: '#14b8a6' }}>Classic: {classicPnl >= 0 ? '+' : ''}{classicPnl.toFixed(1)}%</div>
+                        <div style={{ color: '#8b5cf6' }}>MLIS: {mlisPnl >= 0 ? '+' : ''}{mlisPnl.toFixed(1)}%</div>
+                      </div>
+                    )}
+                    <div style={{ color: '#94a3b8', fontSize: '10px', marginTop: '4px' }}>
                       {data.trades} trade{data.trades !== 1 ? 's' : ''} closed
                     </div>
                   </div>
@@ -391,25 +467,54 @@ export default function LandingPerformanceChart() {
               }}
               cursor={{ stroke: '#64748b', strokeWidth: 1, strokeDasharray: '4 4' }}
             />
-            <Area
-              type="monotone"
-              dataKey="positive"
-              stroke="#10b981"
-              strokeWidth={2.5}
-              fill="url(#publicGreenGradient)"
-              dot={false}
-              activeDot={{ fill: '#10b981', strokeWidth: 3, stroke: '#fff', r: 6 }}
-            />
-            <Area
-              type="monotone"
-              dataKey="negative"
-              stroke="#ef4444"
-              strokeWidth={2.5}
-              fill="url(#publicRedGradient)"
-              dot={false}
-              activeDot={{ fill: '#ef4444', strokeWidth: 3, stroke: '#fff', r: 6 }}
-            />
-          </AreaChart>
+            {/* Classic 7-Step Line (Teal) */}
+            {hasMlisData && (
+              <Area
+                type="monotone"
+                dataKey="classicPnl"
+                stroke="#14b8a6"
+                strokeWidth={2}
+                fill="url(#classicGradient)"
+                dot={false}
+                activeDot={{ fill: '#14b8a6', strokeWidth: 2, stroke: '#fff', r: 4 }}
+              />
+            )}
+            {/* MLIS Pro Line (Violet) */}
+            {hasMlisData && (
+              <Area
+                type="monotone"
+                dataKey="mlisPnl"
+                stroke="#8b5cf6"
+                strokeWidth={2}
+                fill="url(#mlisGradient)"
+                dot={false}
+                activeDot={{ fill: '#8b5cf6', strokeWidth: 2, stroke: '#fff', r: 4 }}
+              />
+            )}
+            {/* Total P/L (only if no MLIS data - backward compat) */}
+            {!hasMlisData && (
+              <>
+                <Area
+                  type="monotone"
+                  dataKey="positive"
+                  stroke="#10b981"
+                  strokeWidth={2.5}
+                  fill="url(#publicGreenGradient)"
+                  dot={false}
+                  activeDot={{ fill: '#10b981', strokeWidth: 3, stroke: '#fff', r: 6 }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="negative"
+                  stroke="#ef4444"
+                  strokeWidth={2.5}
+                  fill="url(#publicRedGradient)"
+                  dot={false}
+                  activeDot={{ fill: '#ef4444', strokeWidth: 3, stroke: '#fff', r: 6 }}
+                />
+              </>
+            )}
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
 

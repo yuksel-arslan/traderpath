@@ -788,20 +788,50 @@ function FeaturesSection() {
         </div>
       </section>
 
-      {/* Feature 2: 7-Step Analysis Suite */}
+      {/* Feature 2: Dual Analysis System - 7-Step Classic & MLIS Pro */}
       <section className="py-20">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-4">
+          <div className="text-center mb-8">
             <span className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary text-sm font-medium mb-4">
               <BarChart3 className="w-4 h-4" />
               Feature 2
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-              7-Step Analysis Suite
+              Dual Analysis System
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Complete trading analysis covering every aspect of your trade. Click any step to learn more.
+              Two powerful analysis methods: Classic 7-Step for comprehensive trade planning, or MLIS Pro for advanced multi-layer intelligence.
             </p>
+          </div>
+
+          {/* Method Comparison Header */}
+          <div className="max-w-5xl mx-auto mb-8">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-card border-2 border-teal-500/30 rounded-xl text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Target className="w-5 h-5 text-teal-500" />
+                  <span className="font-bold text-teal-500">Classic 7-Step</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Full analysis with Entry/SL/TP trade plan</p>
+              </div>
+              <div className="p-4 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-2 border-violet-500/30 rounded-xl text-center relative">
+                <span className="absolute -top-2 -right-2 text-xs bg-gradient-to-r from-violet-500 to-purple-500 text-white px-2 py-0.5 rounded-full font-medium animate-pulse">NEW</span>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Layers className="w-5 h-5 text-violet-500" />
+                  <span className="font-bold text-violet-400">MLIS Pro</span>
+                </div>
+                <p className="text-xs text-muted-foreground">5-layer AI intelligence system</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 7-Step Analysis Grid */}
+          <div className="text-center mb-4">
+            <h3 className="text-xl font-semibold flex items-center justify-center gap-2 mb-3">
+              <Target className="w-5 h-5 text-teal-500" />
+              <span className="gradient-text-logo-animate">7-Step Analysis Suite</span>
+            </h3>
+            <p className="text-sm text-muted-foreground">Complete trading analysis covering every aspect. Click any step to learn more.</p>
           </div>
           <div className="max-w-5xl mx-auto">
             {/* Steps 1-3 */}
@@ -872,6 +902,70 @@ function FeaturesSection() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          {/* MLIS Pro Section */}
+          <div className="max-w-5xl mx-auto mt-12 pt-12 border-t border-border/50">
+            <div className="text-center mb-6">
+              <h3 className="text-xl font-semibold flex items-center justify-center gap-2 mb-3">
+                <Layers className="w-5 h-5 text-violet-500" />
+                <span className="text-violet-400">MLIS Pro</span>
+                <span className="text-xs bg-gradient-to-r from-violet-500 to-purple-500 text-white px-2 py-0.5 rounded-full font-medium animate-pulse">NEW</span>
+              </h3>
+              <p className="text-sm text-muted-foreground">Multi-Layer Intelligence System - Advanced 5-layer analysis for comprehensive market insights.</p>
+            </div>
+
+            {/* MLIS Layers Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+              <div className="p-4 bg-card border-2 border-blue-500/30 rounded-xl text-center hover:border-blue-500/60 hover:shadow-lg transition group">
+                <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mb-2 mx-auto group-hover:scale-110 transition">
+                  <LineChart className="w-5 h-5 text-blue-500" />
+                </div>
+                <h4 className="font-bold text-xs text-blue-500">Technical</h4>
+                <p className="text-xs text-muted-foreground mt-1">EMA, MACD, ADX</p>
+              </div>
+              <div className="p-4 bg-card border-2 border-emerald-500/30 rounded-xl text-center hover:border-emerald-500/60 hover:shadow-lg transition group">
+                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center mb-2 mx-auto group-hover:scale-110 transition">
+                  <Zap className="w-5 h-5 text-emerald-500" />
+                </div>
+                <h4 className="font-bold text-xs text-emerald-500">Momentum</h4>
+                <p className="text-xs text-muted-foreground mt-1">RSI, StochRSI</p>
+              </div>
+              <div className="p-4 bg-card border-2 border-orange-500/30 rounded-xl text-center hover:border-orange-500/60 hover:shadow-lg transition group">
+                <div className="w-10 h-10 bg-orange-500/10 rounded-lg flex items-center justify-center mb-2 mx-auto group-hover:scale-110 transition">
+                  <Activity className="w-5 h-5 text-orange-500" />
+                </div>
+                <h4 className="font-bold text-xs text-orange-500">Volatility</h4>
+                <p className="text-xs text-muted-foreground mt-1">ATR, Bollinger</p>
+              </div>
+              <div className="p-4 bg-card border-2 border-cyan-500/30 rounded-xl text-center hover:border-cyan-500/60 hover:shadow-lg transition group">
+                <div className="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center mb-2 mx-auto group-hover:scale-110 transition">
+                  <BarChart3 className="w-5 h-5 text-cyan-500" />
+                </div>
+                <h4 className="font-bold text-xs text-cyan-500">Volume</h4>
+                <p className="text-xs text-muted-foreground mt-1">OBV, CMF</p>
+              </div>
+              <div className="col-span-2 md:col-span-1 p-4 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-2 border-violet-500/30 rounded-xl text-center hover:border-violet-500/60 hover:shadow-lg transition group">
+                <div className="w-10 h-10 bg-violet-500/10 rounded-lg flex items-center justify-center mb-2 mx-auto group-hover:scale-110 transition">
+                  <CheckCircle className="w-5 h-5 text-violet-500" />
+                </div>
+                <h4 className="font-bold text-xs text-violet-500">Verdict</h4>
+                <p className="text-xs text-muted-foreground mt-1">BUY / HOLD / SELL</p>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground mb-4">
+                Both methods cost <span className="font-semibold text-primary">25 credits</span>. Choose your preferred analysis style.
+              </p>
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-lg font-semibold hover:opacity-90 transition"
+              >
+                Start Analyzing <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
           </div>
         </div>
@@ -1197,124 +1291,6 @@ function FeaturesSection() {
               <p className="text-sm text-muted-foreground">
                 <span className="font-semibold text-amber-500">Coming Soon:</span> TFT Analysis will be available as an enhanced analysis option for <span className="font-semibold">{ANALYSIS_BUNDLES.find(b => b.comingSoon)?.credits || 50} credits</span>.
               </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature 8: MLIS Pro - Multi-Layer Intelligence System */}
-      <section className="py-20 bg-gradient-to-b from-violet-500/5 via-purple-500/5 to-transparent">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <span className="inline-flex items-center gap-2 px-3 py-1 bg-violet-500/10 border border-violet-500/20 rounded-full text-violet-500 text-sm font-medium mb-4">
-              <Layers className="w-4 h-4" />
-              Feature 8
-            </span>
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <h2 className="text-3xl md:text-4xl font-bold gradient-text-logo-animate">MLIS Pro Analysis</h2>
-              <span className="text-xs bg-gradient-to-r from-violet-500 to-purple-500 text-white px-3 py-1 rounded-full font-medium animate-pulse">NEW</span>
-            </div>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Multi-Layer Intelligence System - Advanced 5-layer analysis combining technical indicators, momentum, volatility, volume, and market sentiment for comprehensive market insights.
-            </p>
-          </div>
-          <div className="max-w-5xl mx-auto">
-            {/* MLIS Layers Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-              {/* Technical Layer */}
-              <div className="p-5 bg-card border-2 border-blue-500/30 rounded-xl text-center hover:border-blue-500/60 hover:shadow-lg hover:shadow-blue-500/10 transition group">
-                <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition">
-                  <LineChart className="w-6 h-6 text-blue-500" />
-                </div>
-                <h3 className="font-bold text-sm mb-1 text-blue-500">Technical</h3>
-                <p className="text-xs text-muted-foreground">EMA, MACD, ADX trend analysis</p>
-              </div>
-              {/* Momentum Layer */}
-              <div className="p-5 bg-card border-2 border-emerald-500/30 rounded-xl text-center hover:border-emerald-500/60 hover:shadow-lg hover:shadow-emerald-500/10 transition group">
-                <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition">
-                  <Zap className="w-6 h-6 text-emerald-500" />
-                </div>
-                <h3 className="font-bold text-sm mb-1 text-emerald-500">Momentum</h3>
-                <p className="text-xs text-muted-foreground">RSI, StochRSI, CCI signals</p>
-              </div>
-              {/* Volatility Layer */}
-              <div className="p-5 bg-card border-2 border-orange-500/30 rounded-xl text-center hover:border-orange-500/60 hover:shadow-lg hover:shadow-orange-500/10 transition group">
-                <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition">
-                  <Activity className="w-6 h-6 text-orange-500" />
-                </div>
-                <h3 className="font-bold text-sm mb-1 text-orange-500">Volatility</h3>
-                <p className="text-xs text-muted-foreground">ATR, Bollinger assessment</p>
-              </div>
-              {/* Volume Layer */}
-              <div className="p-5 bg-card border-2 border-cyan-500/30 rounded-xl text-center hover:border-cyan-500/60 hover:shadow-lg hover:shadow-cyan-500/10 transition group">
-                <div className="w-12 h-12 bg-cyan-500/10 rounded-xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition">
-                  <BarChart3 className="w-6 h-6 text-cyan-500" />
-                </div>
-                <h3 className="font-bold text-sm mb-1 text-cyan-500">Volume</h3>
-                <p className="text-xs text-muted-foreground">OBV, CMF flow analysis</p>
-              </div>
-              {/* Sentiment Layer */}
-              <div className="p-5 bg-card border-2 border-pink-500/30 rounded-xl text-center hover:border-pink-500/60 hover:shadow-lg hover:shadow-pink-500/10 transition group">
-                <div className="w-12 h-12 bg-pink-500/10 rounded-xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition">
-                  <Brain className="w-6 h-6 text-pink-500" />
-                </div>
-                <h3 className="font-bold text-sm mb-1 text-pink-500">Sentiment</h3>
-                <p className="text-xs text-muted-foreground">Fear & Greed index</p>
-              </div>
-            </div>
-
-            {/* MLIS vs Classic Comparison */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Classic Analysis */}
-              <div className="p-6 bg-card border rounded-xl">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-teal-500/10 rounded-lg flex items-center justify-center">
-                    <Target className="w-5 h-5 text-teal-500" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold gradient-text-logo-animate">Classic 7-Step</h3>
-                    <p className="text-xs text-muted-foreground">Full analysis with trade plan</p>
-                  </div>
-                </div>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-teal-500" /> 40+ technical indicators</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-teal-500" /> Entry, SL, TP levels</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-teal-500" /> 4 AI Expert insights</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-teal-500" /> GO/WAIT/AVOID verdict</li>
-                </ul>
-              </div>
-              {/* MLIS Pro */}
-              <div className="p-6 bg-gradient-to-br from-violet-500/10 to-purple-500/10 border-2 border-violet-500/30 rounded-xl relative overflow-hidden">
-                <div className="absolute top-2 right-2 text-xs bg-violet-500 text-white px-2 py-0.5 rounded-full font-medium">NEW</div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-violet-500/20 rounded-lg flex items-center justify-center">
-                    <Layers className="w-5 h-5 text-violet-500" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-violet-400">MLIS Pro</h3>
-                    <p className="text-xs text-muted-foreground">5-layer intelligence</p>
-                  </div>
-                </div>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-violet-500" /> 5-layer signal analysis</li>
-                  <li className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-violet-500" /> Confidence scoring</li>
-                  <li className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-violet-500" /> Risk level assessment</li>
-                  <li className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-violet-500" /> Clear BUY/SELL/HOLD</li>
-                </ul>
-              </div>
-            </div>
-
-            {/* CTA */}
-            <div className="mt-8 text-center">
-              <p className="text-sm text-muted-foreground mb-4">
-                Choose your analysis method when starting a new analysis. Both methods cost <span className="font-semibold text-violet-500">25 credits</span>.
-              </p>
-              <Link
-                href="/register"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-lg font-semibold hover:opacity-90 transition"
-              >
-                Try MLIS Pro Now <ArrowRight className="w-4 h-4" />
-              </Link>
             </div>
           </div>
         </div>
@@ -1885,25 +1861,56 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Step 2: Analysis */}
+              {/* Step 2: Analysis - Dual Method */}
               <div className="bg-card border rounded-xl p-6 relative">
                 <div className="absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
                   2
                 </div>
                 <div className="pt-4">
-                  <h3 className="text-lg font-bold mb-2 gradient-text-logo-animate">Run 7-Step Analysis</h3>
-                  <p className="text-sm text-muted-foreground mb-4">AI analyzes market conditions across 7 key dimensions</p>
-                  <div className="grid grid-cols-4 gap-1">
-                    {ANALYSIS_STEPS.slice(0, 7).map((step, idx) => {
-                      const Icon = step.icon;
-                      return (
-                        <div key={idx} className={`p-1.5 ${step.bg} rounded flex items-center justify-center`}>
-                          <Icon className={`w-3.5 h-3.5 ${step.color}`} />
-                        </div>
-                      );
-                    })}
-                    <div className="p-1.5 bg-green-500/10 rounded flex items-center justify-center col-span-1">
-                      <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                  <h3 className="text-lg font-bold mb-2 gradient-text-logo-animate">Choose Analysis Method</h3>
+                  <p className="text-sm text-muted-foreground mb-3">Two powerful AI analysis systems</p>
+
+                  {/* 7-Step Classic */}
+                  <div className="p-2.5 bg-teal-500/10 border border-teal-500/30 rounded-lg mb-2">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Target className="w-3.5 h-3.5 text-teal-500" />
+                      <span className="text-xs font-bold text-teal-500">7-Step Classic</span>
+                    </div>
+                    <div className="flex gap-0.5">
+                      {ANALYSIS_STEPS.slice(0, 7).map((step, idx) => {
+                        const Icon = step.icon;
+                        return (
+                          <div key={idx} className={`p-1 ${step.bg} rounded flex items-center justify-center`}>
+                            <Icon className={`w-2.5 h-2.5 ${step.color}`} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* MLIS Pro */}
+                  <div className="p-2.5 bg-violet-500/10 border border-violet-500/30 rounded-lg relative">
+                    <span className="absolute -top-1.5 right-2 px-1.5 py-0.5 bg-violet-500 text-white text-[8px] font-bold rounded-full">NEW</span>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Layers className="w-3.5 h-3.5 text-violet-500" />
+                      <span className="text-xs font-bold text-violet-400">MLIS Pro</span>
+                    </div>
+                    <div className="flex gap-0.5">
+                      <div className="p-1 bg-blue-500/10 rounded flex items-center justify-center">
+                        <LineChart className="w-2.5 h-2.5 text-blue-500" />
+                      </div>
+                      <div className="p-1 bg-emerald-500/10 rounded flex items-center justify-center">
+                        <Zap className="w-2.5 h-2.5 text-emerald-500" />
+                      </div>
+                      <div className="p-1 bg-orange-500/10 rounded flex items-center justify-center">
+                        <Activity className="w-2.5 h-2.5 text-orange-500" />
+                      </div>
+                      <div className="p-1 bg-cyan-500/10 rounded flex items-center justify-center">
+                        <BarChart3 className="w-2.5 h-2.5 text-cyan-500" />
+                      </div>
+                      <div className="p-1 bg-violet-500/10 rounded flex items-center justify-center">
+                        <CheckCircle className="w-2.5 h-2.5 text-violet-500" />
+                      </div>
                     </div>
                   </div>
                 </div>
