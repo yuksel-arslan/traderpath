@@ -87,6 +87,23 @@ export const metadata: Metadata = {
   },
 
   // Icons - Next.js auto-detects icon.tsx and apple-icon.tsx in app folder
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-192x192.svg', sizes: '192x192', type: 'image/svg+xml' },
+      { url: '/icons/icon-512x512.svg', sizes: '512x512', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/apple-icon', sizes: '180x180', type: 'image/png' },
+    ],
+  },
+
+  // Apple PWA Meta Tags
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'TraderPath',
+  },
 
   // Manifest
   manifest: '/site.webmanifest',

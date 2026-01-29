@@ -1,0 +1,25 @@
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5EEDC3"/>
+      <stop offset="50%" stop-color="#2DD4BF"/>
+      <stop offset="100%" stop-color="#14B8A6"/>
+    </linearGradient>
+    <linearGradient id="coral" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF8A9B"/>
+      <stop offset="50%" stop-color="#F87171"/>
+      <stop offset="100%" stop-color="#EF5A6F"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="38" fill="url(#bg)"/>
+  <g transform="translate(38.400000000000006, 38.400000000000006) scale(0.576)">
+    <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#teal)"/>
+    <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#teal)"/>
+    <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coral)"/>
+    <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coral)"/>
+  </g>
+</svg>
