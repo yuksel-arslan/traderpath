@@ -278,6 +278,8 @@ Kullanıcı Hakları Aktif:
 | 2026-01-29 | Scan Now dual method yapısı nedeniyle hata veriyordu | 1) `coin-score-cache.service.ts`'de `method: 'classic'` açıkça set ediliyor, 2) System scan'ler Classic metod kullanıyor | `coin-score-cache.service.ts:115` |
 | 2026-01-29 | MLIS Pro analiz tamamlandığında layers undefined olabiliyordu | 1) Default layer değerleri eklendi, 2) Null/undefined için fallback'ler, 3) Classic analiz için steps validasyonu | `AnalysisDialog.tsx:520-566` |
 | 2026-01-29 | Top 5 Coins "Scan Now" cache'den gelen veriyi yanlış işliyordu | Backend `{ coins, cacheInfo }` döndürüyordu ama frontend tüm objeyi `topCoins` array'ine set ediyordu. `data.data.coins` olarak düzeltildi | `analyze/page.tsx:354` |
+| 2026-01-29 | Dil değişikliğinde sayfa boş geliyor veya hata veriyor | 1) `window.location.reload()` yerine `router.refresh()` kullanıldı, 2) Loading state eklendi, 3) Google Translate iframe yöntemi öncelikli, 4) Soft reload fallback (500ms delay), 5) Hata durumunda graceful degradation | `LanguageSelector.tsx:99-158` |
+| 2026-01-29 | Reports sayfası hata durumunda sessizce başarısız oluyordu | 1) `error` state eklendi, 2) API hata mesajları gösteriliyor, 3) "Try Again" butonu ile yeniden deneme, 4) Connection error için özel mesaj | `reports/page.tsx:125-151,509-526` |
 
 ---
 
