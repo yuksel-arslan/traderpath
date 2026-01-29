@@ -7,6 +7,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   Target,
   FileText,
@@ -27,7 +29,9 @@ import {
   RefreshCw,
   ArrowRight,
   Layers,
+  ExternalLink,
 } from 'lucide-react';
+import { useCreditNotification } from '../../../contexts/CreditNotificationContext';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
 import type { TradeType, Timeframe } from '../../../components/analysis/TradeTypeSelector';
@@ -301,6 +305,9 @@ function FeatureBadge({ icon: Icon, text }: { icon: React.ElementType; text: str
 type AnalysisMethod = 'classic' | 'mlis_pro';
 
 export default function AnalyzePage() {
+  const router = useRouter();
+  const { showCelebration, notifyCreditDeduction } = useCreditNotification();
+
   const [stats, setStats] = useState<AnalysisStats | null>(null);
   const [timeframe, setTimeframe] = useState<Timeframe>('4h');
   const [analysisMethod, setAnalysisMethod] = useState<AnalysisMethod>('classic');
@@ -315,6 +322,7 @@ export default function AnalyzePage() {
   const [scanMethod, setScanMethod] = useState<ScanMethod>('classic');
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanProgress, setScanProgress] = useState<{ current: number; total: number } | null>(null);
+  const [lastScanTime, setLastScanTime] = useState<string | null>(null);
   const scanPollRef = useRef<NodeJS.Timeout | null>(null);
 
   // Detect theme
@@ -362,6 +370,10 @@ export default function AnalyzePage() {
         const data = await res.json();
         if (data.success && data.data) {
           setTopCoins(data.data.coins || []);
+          // Set last scan time from cache info
+          if (data.data.cacheInfo?.lastUpdated) {
+            setLastScanTime(data.data.cacheInfo.lastUpdated);
+          }
         }
       }
     } catch (error) {
@@ -442,6 +454,30 @@ export default function AnalyzePage() {
               setTopCoinsScanning(false);
               setScanProgress(null);
               await fetchTopCoins(scanMethod);
+
+              // Show scan complete notification
+              showCelebration({
+                credits: 0,
+                reason: 'scan_complete',
+                title: 'Scan Complete!',
+                subtitle: `Found ${totalCoins} coins analyzed with ${scanMethod === 'classic' ? 'Classic' : 'MLIS Pro'} method`,
+              });
+
+              // Show toast with View All button
+              toast.success(
+                <div className="flex flex-col gap-1">
+                  <span className="font-medium">Top Coins Scan Complete!</span>
+                  <span className="text-sm text-slate-400">{totalCoins} coins analyzed successfully</span>
+                </div>,
+                {
+                  duration: 8000,
+                  action: {
+                    label: 'View All Results',
+                    onClick: () => router.push('/top-coins'),
+                  },
+                }
+              );
+
               scrollToTopCoins();
               return;
             }
@@ -457,6 +493,22 @@ export default function AnalyzePage() {
           setTopCoinsScanning(false);
           setScanProgress(null);
           await fetchTopCoins(scanMethod);
+
+          // Show completion notification even on timeout
+          toast.success(
+            <div className="flex flex-col gap-1">
+              <span className="font-medium">Scan Complete!</span>
+              <span className="text-sm text-slate-400">Results are ready to view</span>
+            </div>,
+            {
+              duration: 8000,
+              action: {
+                label: 'View All Results',
+                onClick: () => router.push('/top-coins'),
+              },
+            }
+          );
+
           scrollToTopCoins();
         }
       }, 5000);
@@ -600,41 +652,60 @@ export default function AnalyzePage() {
                 {/* Header with Method Toggle */}
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                      <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 flex-shrink-0" />
-                      Top 5 High-Probability Coins
-                    </h3>
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 flex-shrink-0" />
+                        Top 5 High-Probability Coins
+                      </h3>
+                      {lastScanTime && (
+                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
+                          Last scan: {new Date(lastScanTime).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
 
-                    {/* Scan Button */}
-                    <button
-                      onClick={startTopCoinsScan}
-                      disabled={topCoinsScanning}
-                      className={cn(
-                        "flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
-                        "w-full sm:w-auto",
-                        scanMethod === 'classic'
-                          ? "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 shadow-teal-500/30"
-                          : "bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 shadow-violet-500/30",
-                        "text-white hover:shadow-lg",
-                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                    <div className="flex items-center gap-2">
+                      {/* View All Results Button */}
+                      {topCoins.length > 0 && (
+                        <button
+                          onClick={() => router.push('/top-coins')}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white/50 dark:bg-slate-800/50 border border-white/20 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all"
+                        >
+                          <span className="hidden sm:inline">View All</span>
+                          <ExternalLink className="w-4 h-4" />
+                        </button>
                       )}
-                    >
-                      {topCoinsScanning ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>
-                            {scanProgress
-                              ? `Scanning ${scanProgress.current}/${scanProgress.total}...`
-                              : 'Starting...'}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="w-4 h-4" />
-                          <span>Scan Now (300 Cr)</span>
-                        </>
-                      )}
-                    </button>
+
+                      {/* Scan Button */}
+                      <button
+                        onClick={startTopCoinsScan}
+                        disabled={topCoinsScanning}
+                        className={cn(
+                          "flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
+                          scanMethod === 'classic'
+                            ? "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 shadow-teal-500/30"
+                            : "bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 shadow-violet-500/30",
+                          "text-white hover:shadow-lg",
+                          "disabled:opacity-50 disabled:cursor-not-allowed"
+                        )}
+                      >
+                        {topCoinsScanning ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            <span>
+                              {scanProgress
+                                ? `${scanProgress.current}/${scanProgress.total}`
+                                : 'Starting...'}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4" />
+                            <span>Scan (300 Cr)</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Method Toggle */}
