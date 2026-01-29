@@ -270,6 +270,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-28 | Login sayfası dark/light mode uyumsuzluğu - sol panel her zaman koyu | Sol marketing paneli artık tema tercihini takip ediyor. Light/dark mode'a uygun renkler kullanılıyor | `apps/web/app/(auth)/layout.tsx` |
 | 2026-01-28 | Top 5 Coins "Scan Now" butonu çalışmıyordu - analiz yapılmıyordu | 1) Yeni API endpoint eklendi: `POST /api/analysis/top-coins/scan` (300 kredi), 2) Frontend concierge yerine dedicated endpoint kullanıyor, 3) Doğru polling ile progress gösterimi (2-3 dakika), 4) Status endpoint eklendi: `GET /api/analysis/top-coins/status` | `analysis.routes.ts:4758-4850`, `analyze/page.tsx:368-454` |
 | 2026-01-28 | Dil seçimi sadece landing page'de çalışıyordu, Settings'teki çalışmıyordu | Settings'teki dil seçici kaldırıldı (sadece backend için kullanılıyordu, UI çevirmiyordu). Google Translate-based LanguageSelector tüm dashboard sayfalarına eklendi (header + mobile menu) | `settings/page.tsx`, `layout.tsx:31,361,486-492` |
+| 2026-01-29 | MLIS Pro analizi "Failed to complete analysis" hatası | 1) `method: 'mlis_pro'` DB'ye kaydedilmiyordu - eklendi, 2) AnalysisProgressBar 5-layer desteği eklendi, 3) AnalysisDialog MLIS sonuçlarını doğru işliyor, 4) saveReportToDatabase MLIS için 5 adım bekliyor | `AnalysisDialog.tsx`, `AnalysisProgressBar.tsx`, `analysis.routes.ts:516` |
 
 ---
 
@@ -968,6 +969,22 @@ Kullanıcı Hakları Aktif:
   - Mobile menüde ayrı bölümde gösteriliyor
   - 8 dil destekleniyor: English, Türkçe, Deutsch, Español, Italiano, Français, 中文, 日本語
   - Dosyalar: `settings/page.tsx`, `layout.tsx`
+
+### 2026-01-29
+- **MLIS Pro analizi "Failed to complete analysis" hatası düzeltildi**:
+  - `method: 'mlis_pro'` veritabanına kaydedilmiyordu - eklendi
+  - AnalysisProgressBar artık dinamik adım sayısını destekliyor (5-layer MLIS vs 7-step Classic)
+  - AnalysisDialog MLIS sonuçlarını doğru işliyor ve görüntülüyor
+  - saveReportToDatabase MLIS için 5 adım, Classic için 7 adım bekliyor
+  - Detaylı console logging eklendi (hata ayıklama için)
+  - Hata mesajları artık gerçek hata detaylarını içeriyor
+- **MLIS Frontend Bileşenleri**:
+  - `MLIS_STEPS` export'u eklendi (Technical, Momentum, Volatility, Volume, Verdict)
+  - `MLISLayerResult` komponenti: Layer skorları ve sinyalleri gösteriyor
+  - `MLISVerdictResult` komponenti: STRONG_BUY/BUY/HOLD/SELL önerileri gösteriyor
+  - Progress bar "X/5 Complete" gösteriyor (MLIS için)
+  - Purple tema MLIS Pro için kullanılıyor
+  - Dosyalar: `AnalysisDialog.tsx`, `AnalysisProgressBar.tsx`, `analysis.routes.ts`
 
 ---
 
