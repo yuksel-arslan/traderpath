@@ -1030,6 +1030,25 @@ Kullanıcı Hakları Aktif:
     - Animasyonlu glow efektleri
     - Classic ve MLIS Pro desteği
   - Dosyalar: `TradeDecisionVisual.tsx`, `FinalVerdict.tsx`, `AnalysisDialog.tsx`, `details/[id]/page.tsx`, `reports/[id]/page.tsx`
+- **Export Dropdown Genişletildi**:
+  - PNG, JPG, PDF, Email seçenekleri tek dropdown'da
+  - PDF export: jsPDF ile dinamik import, tam sayfa capture
+  - Email export: Screenshot gönderimi, mail butonu
+  - FileText ve Mail ikonları eklendi
+  - Dosya: `analyze/details/[id]/page.tsx`
+- **Otomatik PDF Oluşturma (Analiz Tamamlandığında)**:
+  - Analiz tamamlandığında otomatik PDF oluşturma ve indirme
+  - AnalysisDialog'da `?pdf=true` parametresi ile detay sayfasına yönlendirme
+  - Detay sayfasında auto-PDF handler ve overlay UI
+  - PDF generating status mesajı modal'da gösteriliyor
+  - Tamamlandığında "PDF Downloaded!" mesajı ve otomatik yönlendirme
+  - State'ler: `savedAnalysisId`, `pdfGenerating`, `autoPdfInProgress`, `autoPdfDone`
+  - Dosyalar: `AnalysisDialog.tsx`, `details/[id]/page.tsx`
+- **PNG/JPEG Export Kalitesi Artırıldı**:
+  - PNG: scale 3, windowWidth 1400
+  - JPG: scale 2.5, quality 0.95
+  - TraderPath branding header eklendi (logo + text)
+  - Proper background ve padding export container'da
 
 ---
 

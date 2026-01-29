@@ -7,6 +7,7 @@
 // ===========================================
 
 import { useState, useCallback, useRef, useEffect, useId } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   X,
   GraduationCap,
@@ -283,6 +284,7 @@ export function AnalysisDialog({
   // Derive trade type from timeframe
   const tradeType = TIMEFRAME_TO_TRADE_TYPE[timeframe];
   const uniqueId = useId();
+  const router = useRouter();
   const { notifyCreditDeduction, showCelebration, notifyInsufficientCredits } = useCreditNotification();
 
   // Dialog state
@@ -298,7 +300,10 @@ export function AnalysisDialog({
   const [results, setResults] = useState<Record<number, any>>({});
   const [error, setError] = useState<string | null>(null);
   const [reportSaved, setReportSaved] = useState(false);
+  const [savedAnalysisId, setSavedAnalysisId] = useState<string | null>(null);
+  const [pdfGenerating, setPdfGenerating] = useState(false);
   const saveAttemptedRef = useRef(false);
+  const pdfGeneratedRef = useRef(false);
 
 
   // Initialize mode from localStorage
@@ -326,7 +331,10 @@ export function AnalysisDialog({
       setResults({});
       setError(null);
       setReportSaved(false);
+      setSavedAnalysisId(null);
+      setPdfGenerating(false);
       saveAttemptedRef.current = false;
+      pdfGeneratedRef.current = false;
     }
   }, [isOpen]);
 
@@ -409,7 +417,14 @@ export function AnalysisDialog({
       });
 
       if (response.ok) {
+        const responseData = await response.json();
         setReportSaved(true);
+        // Store the analysis ID for PDF generation
+        if (responseData?.data?.analysisId) {
+          setSavedAnalysisId(responseData.data.analysisId);
+        } else if (reportAnalysisId) {
+          setSavedAnalysisId(reportAnalysisId);
+        }
       }
     } catch (error) {
       console.error('Failed to auto-save report:', error);
@@ -424,6 +439,20 @@ export function AnalysisDialog({
       saveReportToDatabase();
     }
   }, [completedSteps.length, saveReportToDatabase, analysisMethod, results]);
+
+  // Auto-generate PDF when analysis is saved
+  useEffect(() => {
+    if (reportSaved && savedAnalysisId && !pdfGeneratedRef.current) {
+      pdfGeneratedRef.current = true;
+      setPdfGenerating(true);
+
+      // Navigate to details page with ?pdf=true to auto-download PDF
+      setTimeout(() => {
+        onClose();
+        router.push(`/analyze/details/${savedAnalysisId}?pdf=true`);
+      }, 1500);
+    }
+  }, [reportSaved, savedAnalysisId, router, onClose]);
 
   // Run full analysis
   const handleStartAnalysis = async () => {
@@ -458,6 +487,11 @@ export function AnalysisDialog({
       }
 
       const analysisData = data.data;
+
+      // Store analysis ID from the response
+      if (analysisData.analysisId) {
+        setSavedAnalysisId(analysisData.analysisId);
+      }
 
       // Show credit deduction notification
       if (data.creditsSpent && data.remainingCredits !== undefined) {
@@ -1245,29 +1279,47 @@ export function AnalysisDialog({
                 <div
                   className="rounded-xl p-5"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.05))',
-                    border: '1px solid rgba(34, 197, 94, 0.2)',
+                    background: pdfGenerating
+                      ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.05))'
+                      : 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.05))',
+                    border: pdfGenerating
+                      ? '1px solid rgba(239, 68, 68, 0.2)'
+                      : '1px solid rgba(34, 197, 94, 0.2)',
                   }}
                 >
-                  <div className="flex items-center justify-center gap-2 text-[#22C55E] mb-3">
-                    <CheckCircle className="w-5 h-5" />
-                    <span className="font-semibold">Analysis completed!</span>
-                  </div>
-                  <p className="text-sm text-slate-400 text-center mb-4">
-                    Your analysis has been saved. View it in Recent Analyses below.
-                  </p>
-                  <button
-                    onClick={onClose}
-                    className="w-full px-4 py-3 rounded-xl font-medium transition flex items-center justify-center gap-2 hover:scale-[1.02]"
-                    style={{
-                      background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
-                      color: 'white',
-                      boxShadow: '0 10px 40px rgba(45, 212, 191, 0.4)',
-                    }}
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    Done
-                  </button>
+                  {pdfGenerating ? (
+                    <>
+                      <div className="flex items-center justify-center gap-2 text-red-400 mb-3">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span className="font-semibold">Generating PDF Report...</span>
+                      </div>
+                      <p className="text-sm text-slate-400 text-center">
+                        Your analysis is complete! Preparing your PDF report for download...
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-center gap-2 text-[#22C55E] mb-3">
+                        <CheckCircle className="w-5 h-5" />
+                        <span className="font-semibold">Analysis completed!</span>
+                      </div>
+                      <p className="text-sm text-slate-400 text-center mb-4">
+                        Your analysis has been saved. View it in Recent Analyses below.
+                      </p>
+                      <button
+                        onClick={onClose}
+                        className="w-full px-4 py-3 rounded-xl font-medium transition flex items-center justify-center gap-2 hover:scale-[1.02]"
+                        style={{
+                          background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                          color: 'white',
+                          boxShadow: '0 10px 40px rgba(45, 212, 191, 0.4)',
+                        }}
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Done
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>

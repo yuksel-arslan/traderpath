@@ -25,6 +25,8 @@ import {
   Download,
   ChevronDown,
   Image,
+  FileText,
+  Mail,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { cn } from '../../../../../lib/utils';
@@ -75,6 +77,9 @@ export default function AnalysisDetailsPage() {
   const [autoEmailInProgress, setAutoEmailInProgress] = useState(false);
   const [autoEmailDone, setAutoEmailDone] = useState(false);
   const autoEmailTriggered = useRef(false);
+  const [autoPdfInProgress, setAutoPdfInProgress] = useState(false);
+  const [autoPdfDone, setAutoPdfDone] = useState(false);
+  const autoPdfTriggered = useRef(false);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -169,6 +174,70 @@ export default function AnalysisDetailsPage() {
     }
   }, [searchParams, analysis, loading, handleAutoEmail]);
 
+  // Auto-PDF handler for ?pdf=true parameter
+  const handleAutoPdf = useCallback(async () => {
+    if (!pageRef.current || !analysis || autoPdfTriggered.current) return;
+
+    autoPdfTriggered.current = true;
+    setAutoPdfInProgress(true);
+
+    try {
+      // Wait for chart to render
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Dynamic import jsPDF
+      const { jsPDF } = await import('jspdf');
+
+      const canvas = await html2canvas(pageRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: 1400,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-export-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+            (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+            (clonedElement as HTMLElement).style.padding = '24px';
+          }
+        },
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height],
+      });
+
+      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+
+      const symbol = analysis.symbol || 'Analysis';
+      const date = new Date().toISOString().split('T')[0];
+      pdf.save(`TraderPath_${symbol}_${date}.pdf`);
+
+      setAutoPdfDone(true);
+      // Redirect back to analyze page after showing success
+      setTimeout(() => {
+        router.push('/analyze#recent-analyses');
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to auto generate PDF:', err);
+      alert('Failed to generate PDF. Please try again.');
+      setAutoPdfInProgress(false);
+    }
+  }, [analysis, router]);
+
+  // Trigger auto-PDF when analysis is loaded and pdf=true parameter is present
+  useEffect(() => {
+    const shouldAutoPdf = searchParams.get('pdf') === 'true';
+    if (shouldAutoPdf && analysis && !loading && !autoPdfTriggered.current) {
+      handleAutoPdf();
+    }
+  }, [searchParams, analysis, loading, handleAutoPdf]);
+
   // Export as PNG (using blob for reliable downloads)
   const handleExportPNG = async () => {
     if (!pageRef.current || exporting || !analysis) return;
@@ -178,15 +247,18 @@ export default function AnalysisDetailsPage() {
     try {
       const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#ffffff',
-        scale: 2,
+        scale: 3, // Higher quality for PNG
         logging: false,
         useCORS: true,
         allowTaint: true,
-        windowWidth: 1200,
+        windowWidth: 1400,
         onclone: (clonedDoc) => {
           const clonedElement = clonedDoc.querySelector('[data-export-container]');
           if (clonedElement) {
             (clonedElement as HTMLElement).style.overflow = 'visible';
+            // Ensure proper background for export
+            (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+            (clonedElement as HTMLElement).style.padding = '24px';
           }
         },
       });
@@ -224,15 +296,18 @@ export default function AnalysisDetailsPage() {
     try {
       const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#ffffff',
-        scale: 2,
+        scale: 2.5, // Good quality for JPG
         logging: false,
         useCORS: true,
         allowTaint: true,
-        windowWidth: 1200,
+        windowWidth: 1400,
         onclone: (clonedDoc) => {
           const clonedElement = clonedDoc.querySelector('[data-export-container]');
           if (clonedElement) {
             (clonedElement as HTMLElement).style.overflow = 'visible';
+            // Ensure proper background for export
+            (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+            (clonedElement as HTMLElement).style.padding = '24px';
           }
         },
       });
@@ -251,10 +326,57 @@ export default function AnalysisDetailsPage() {
         link.href = url;
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 100);
-      }, 'image/jpeg', 0.92);
+      }, 'image/jpeg', 0.95); // Higher quality
     } catch (err) {
       console.error('Failed to export JPG:', err);
       alert('Failed to export image');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Export as PDF
+  const handleExportPDF = async () => {
+    if (!pageRef.current || exporting || !analysis) return;
+
+    setExporting(true);
+    setExportDropdownOpen(false);
+    try {
+      // Dynamic import jsPDF
+      const { jsPDF } = await import('jspdf');
+
+      const canvas = await html2canvas(pageRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: 1400,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-export-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+            (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+            (clonedElement as HTMLElement).style.padding = '24px';
+          }
+        },
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height],
+      });
+
+      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+
+      const symbol = analysis.symbol || 'Analysis';
+      const date = new Date().toISOString().split('T')[0];
+      pdf.save(`TraderPath_${symbol}_${date}.pdf`);
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+      alert('Failed to export PDF');
     } finally {
       setExporting(false);
     }
@@ -413,6 +535,29 @@ export default function AnalysisDetailsPage() {
         </div>
       )}
 
+      {/* Auto-PDF overlay - shows on top of page content */}
+      {autoPdfInProgress && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl text-center max-w-md mx-4">
+            {autoPdfDone ? (
+              <>
+                <div className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <Check className="w-8 h-8 text-green-500" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">PDF Downloaded!</h2>
+                <p className="text-gray-500 dark:text-slate-400">Your analysis report has been saved as PDF. Redirecting...</p>
+              </>
+            ) : (
+              <>
+                <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-red-500" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Generating PDF...</h2>
+                <p className="text-gray-500 dark:text-slate-400">Creating your analysis report as PDF. This may take a moment...</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-center min-h-[calc(100vh-200px)] p-4">
         <div className="w-full max-w-4xl">
           {/* Back Button */}
@@ -426,6 +571,21 @@ export default function AnalysisDetailsPage() {
           ref={pageRef}
           data-export-container
           className="bg-white dark:bg-slate-800/80 rounded-2xl p-4 sm:p-6 shadow-xl border border-gray-200 dark:border-transparent">
+          {/* Export Header - TraderPath Branding (visible in export) */}
+          <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-slate-700">
+            <div className="flex items-center gap-2">
+              {/* TraderPath Logo */}
+              <svg width="32" height="32" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
+                <rect x="60" y="60" width="180" height="180" rx="20" className="fill-green-500" />
+                <rect x="272" y="60" width="180" height="180" rx="20" className="fill-red-500" />
+                <rect x="60" y="272" width="180" height="180" rx="20" className="fill-red-500" />
+                <rect x="272" y="272" width="180" height="180" rx="20" className="fill-green-500" />
+              </svg>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">TraderPath</span>
+            </div>
+            <span className="text-xs text-gray-500 dark:text-slate-400">traderpath.io</span>
+          </div>
+
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
@@ -655,6 +815,27 @@ export default function AnalysisDetailsPage() {
                             <div>
                               <div>Download JPG</div>
                               <div className="text-xs text-gray-400">Smaller Size</div>
+                            </div>
+                          </button>
+                          <button
+                            onClick={handleExportPDF}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                          >
+                            <FileText className="w-4 h-4 text-red-500" />
+                            <div>
+                              <div>Download PDF</div>
+                              <div className="text-xs text-gray-400">Full Report</div>
+                            </div>
+                          </button>
+                          <div className="border-t border-gray-200 dark:border-slate-700" />
+                          <button
+                            onClick={handleSendEmail}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                          >
+                            <Mail className="w-4 h-4 text-purple-500" />
+                            <div>
+                              <div>Send via Email</div>
+                              <div className="text-xs text-gray-400">Share Report</div>
                             </div>
                           </button>
                         </div>
