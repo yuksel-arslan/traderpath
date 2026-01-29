@@ -681,7 +681,7 @@ export default function AnalysisDetailsPage() {
                   )}>{step1.signal || 'Neutral'}</span>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-slate-400">
-                  Score: {step1.score?.toFixed(0) || 0}/100 • {step1.reasoning || 'Technical analysis complete'}
+                  Score: {typeof step1.score === 'number' ? step1.score.toFixed(0) : (Number(step1.score) || 0)}/100 • {step1.reasoning || 'Technical analysis complete'}
                 </p>
               </div>
 
@@ -699,7 +699,7 @@ export default function AnalysisDetailsPage() {
                   )}>{step2.signal || 'Neutral'}</span>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-slate-400">
-                  Score: {step2.score?.toFixed(0) || 0}/100 • {step2.reasoning || 'Momentum analysis complete'}
+                  Score: {typeof step2.score === 'number' ? step2.score.toFixed(0) : (Number(step2.score) || 0)}/100 • {step2.reasoning || 'Momentum analysis complete'}
                 </p>
               </div>
 
@@ -717,7 +717,7 @@ export default function AnalysisDetailsPage() {
                   )}>{step3.signal || 'Moderate'}</span>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-slate-400">
-                  Score: {step3.score?.toFixed(0) || 0}/100 • {step3.reasoning || 'Volatility analysis complete'}
+                  Score: {typeof step3.score === 'number' ? step3.score.toFixed(0) : (Number(step3.score) || 0)}/100 • {step3.reasoning || 'Volatility analysis complete'}
                 </p>
               </div>
 
@@ -735,7 +735,7 @@ export default function AnalysisDetailsPage() {
                   )}>{step4.signal || 'Neutral'}</span>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-slate-400">
-                  Score: {step4.score?.toFixed(0) || 0}/100 • {step4.reasoning || 'Volume analysis complete'}
+                  Score: {typeof step4.score === 'number' ? step4.score.toFixed(0) : (Number(step4.score) || 0)}/100 • {step4.reasoning || 'Volume analysis complete'}
                 </p>
               </div>
 
@@ -757,7 +757,7 @@ export default function AnalysisDetailsPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500 dark:text-slate-400">Confidence</span>
-                    <p className="font-semibold text-gray-900 dark:text-white">{mlisConfidence?.toFixed(0) || 0}%</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">{typeof mlisConfidence === 'number' ? mlisConfidence.toFixed(0) : (Number(mlisConfidence) || 0)}%</p>
                   </div>
                   <div>
                     <span className="text-gray-500 dark:text-slate-400">Risk Level</span>
@@ -905,18 +905,18 @@ export default function AnalysisDetailsPage() {
                 verdict={mlisRecommendation === 'STRONG_BUY' || mlisRecommendation === 'BUY' ? 'go' :
                          mlisRecommendation === 'HOLD' ? 'wait' : 'avoid'}
                 direction={direction.toLowerCase() as 'long' | 'short'}
-                score={step5.overallScore || analysis.totalScore || 5}
+                score={Number(step5.overallScore) || Number(analysis.totalScore) || 5}
                 recommendation={mlisRecommendation}
-                confidence={mlisConfidence}
+                confidence={typeof mlisConfidence === 'number' ? mlisConfidence : Number(mlisConfidence) || 0}
                 riskLevel={mlisRiskLevel}
                 symbol={analysis.symbol}
                 size="lg"
               />
             ) : (
               <TradeDecisionVisual
-                verdict={(step7.verdict || (step7.overallScore >= 7 ? 'go' : step7.overallScore >= 5 ? 'conditional_go' : step7.overallScore >= 3 ? 'wait' : 'avoid')) as 'go' | 'conditional_go' | 'wait' | 'avoid'}
+                verdict={(step7.verdict || (Number(step7.overallScore) >= 7 ? 'go' : Number(step7.overallScore) >= 5 ? 'conditional_go' : Number(step7.overallScore) >= 3 ? 'wait' : 'avoid')) as 'go' | 'conditional_go' | 'wait' | 'avoid'}
                 direction={direction as 'long' | 'short'}
-                score={step7.overallScore || analysis.totalScore * 10 || 5}
+                score={Number(step7.overallScore) || Number(analysis.totalScore) * 10 || 5}
                 symbol={analysis.symbol}
                 size="lg"
               />
@@ -960,14 +960,14 @@ export default function AnalysisDetailsPage() {
                 )}
                 {!mlisKeySignals?.length && !mlisRiskFactors?.length && (
                   <p className="text-sm text-gray-600 dark:text-slate-300">
-                    MLIS Pro analysis recommends <strong>{mlisRecommendation || 'HOLD'}</strong> with {mlisConfidence?.toFixed(0) || 0}% confidence.
+                    MLIS Pro analysis recommends <strong>{mlisRecommendation || 'HOLD'}</strong> with {typeof mlisConfidence === 'number' ? mlisConfidence.toFixed(0) : (Number(mlisConfidence) || 0)}% confidence.
                     Direction: <strong>{isLong ? 'LONG' : 'SHORT'}</strong>. Risk level: <strong>{mlisRiskLevel || 'Medium'}</strong>.
                   </p>
                 )}
               </div>
             ) : (
               <p className="text-sm text-gray-600 dark:text-slate-300">
-                {step7.aiSummary || step7.summary || `Market conditions favor ${isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(entryPrice)} with ${step5.riskReward?.toFixed(1) || '2.0'}:1 risk-reward ratio. Set stop-loss at ${formatPrice(stopLossPrice)} to protect against downside.`}
+                {step7.aiSummary || step7.summary || `Market conditions favor ${isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(entryPrice)} with ${typeof step5.riskReward === 'number' ? step5.riskReward.toFixed(1) : '2.0'}:1 risk-reward ratio. Set stop-loss at ${formatPrice(stopLossPrice)} to protect against downside.`}
               </p>
             )}
           </div>
