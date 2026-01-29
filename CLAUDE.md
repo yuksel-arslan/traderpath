@@ -273,6 +273,10 @@ Kullanıcı Hakları Aktif:
 | 2026-01-29 | MLIS Pro analizi "Failed to complete analysis" hatası | 1) `method: 'mlis_pro'` DB'ye kaydedilmiyordu - eklendi, 2) AnalysisProgressBar 5-layer desteği eklendi, 3) AnalysisDialog MLIS sonuçlarını doğru işliyor, 4) saveReportToDatabase MLIS için 5 adım bekliyor | `AnalysisDialog.tsx`, `AnalysisProgressBar.tsx`, `analysis.routes.ts:516` |
 | 2026-01-29 | MLIS Pro analizi detay sayfasında 7-step formatında gösteriliyordu | 1) `isMLIS` detection eklendi (method veya mlis flag), 2) 5-layer MLIS kartları (Technical, Momentum, Volatility, Volume, Verdict) eklendi, 3) MLIS Verdict badge ve confidence/risk gösterimi, 4) Trade plan chart MLIS için gizlendi, 5) Key signals ve risk factors gösterimi | `analyze/details/[id]/page.tsx` |
 | 2026-01-29 | Details sayfası "o.toFixed is not a function" TypeError hatası | 1) `ScoreGauge` komponentine `safeScore` validasyonu eklendi (non-number input'ları 0'a çeviriyor), 2) Tüm score prop'ları `Number()` ile dönüştürülüyor, 3) Step score gösterimleri (step1-4) ve mlisConfidence için type checking eklendi | `TradeDecisionVisual.tsx`, `details/[id]/page.tsx` |
+| 2026-01-29 | Export header'da yanlış 4-kare logo görünüyordu | `StarLogo` komponenti kullanılıyor, gradient TraderPath metni eklendi | `details/[id]/page.tsx` |
+| 2026-01-29 | Verdict AVOID olduğunda BULLISH gösteriliyordu | `getVerdict()` fonksiyonu eklendi, GO/COND/WAIT/AVOID badge'leri doğru renk ve ikonla gösteriliyor | `details/[id]/page.tsx` |
+| 2026-01-29 | Scan Now dual method yapısı nedeniyle hata veriyordu | 1) `coin-score-cache.service.ts`'de `method: 'classic'` açıkça set ediliyor, 2) System scan'ler Classic metod kullanıyor | `coin-score-cache.service.ts:115` |
+| 2026-01-29 | MLIS Pro analiz tamamlandığında layers undefined olabiliyordu | 1) Default layer değerleri eklendi, 2) Null/undefined için fallback'ler, 3) Classic analiz için steps validasyonu | `AnalysisDialog.tsx:520-566` |
 
 ---
 
@@ -1060,6 +1064,20 @@ Kullanıcı Hakları Aktif:
   - Trade Plan Chart MLIS için gizleniyor (MLIS trade plan üretmiyor)
   - TradeDecisionVisual MLIS için recommendation ve confidence prop'ları eklendi
   - Dosya: `analyze/details/[id]/page.tsx`
+- **Export Header ve Verdict Badge Düzeltmeleri**:
+  - Export header'da 4-kare logo yerine `StarLogo` komponenti kullanılıyor
+  - TraderPath metni kurumsal renklerle gradient gösteriliyor (teal→coral)
+  - Verdict badge artık GO/COND/WAIT/AVOID gösteriyor (BULLISH/BEARISH yerine)
+  - `getVerdict()` fonksiyonu MLIS ve Classic için doğru verdict hesaplıyor
+  - Her verdict için uygun ikon (TrendingUp/Target/Clock/AlertTriangle) gösteriliyor
+  - Dosya: `details/[id]/page.tsx`
+- **Scan Now ve MLIS Pro Robustness Artırıldı**:
+  - `coin-score-cache.service.ts`'de `method: 'classic'` açıkça set ediliyor
+  - System scan'ler için analiz kaydı method bilgisi içeriyor
+  - MLIS Pro layers için default değerler eklendi (undefined durumları için)
+  - Classic analiz steps için null/undefined kontrolleri eklendi
+  - Verdict hesaplamasında overallScore için Number() dönüşümü eklendi
+  - Dosyalar: `coin-score-cache.service.ts`, `AnalysisDialog.tsx`
 
 ---
 

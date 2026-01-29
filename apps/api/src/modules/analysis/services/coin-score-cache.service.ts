@@ -112,6 +112,7 @@ class CoinScoreCacheService {
           userId: 'system', // System-generated analysis
           symbol,
           interval,
+          method: 'classic', // Explicitly set method for system scans
           stepsCompleted: [1, 2, 3, 4],
           step1Result: marketPulse as any,
           step2Result: assetScan as any,
