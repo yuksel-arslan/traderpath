@@ -8,7 +8,7 @@ import { prisma } from '../../core/database';
 
 // Default credit costs (fallback if database is not available)
 const DEFAULT_CREDIT_COSTS = {
-  // Analysis Steps
+  // Analysis Steps (Classic 7-Step)
   STEP_MARKET_PULSE: 0,
   STEP_ASSET_SCANNER: 2,
   STEP_SAFETY_CHECK: 5,
@@ -18,9 +18,17 @@ const DEFAULT_CREDIT_COSTS = {
   STEP_FINAL_VERDICT: 0,
 
   // Bundles
-  BUNDLE_FULL_ANALYSIS: 25,
+  BUNDLE_FULL_ANALYSIS: 25,      // Classic 7-Step Analysis
+  BUNDLE_MLIS_PRO_ANALYSIS: 35,  // MLIS Pro 5-Layer Analysis
   BUNDLE_QUICK_CHECK: 5,
   BUNDLE_SMART_ENTRY: 12,
+
+  // MLIS Pro Layers (5-Layer Neural Network)
+  MLIS_LAYER_TECHNICAL: 5,
+  MLIS_LAYER_MOMENTUM: 5,
+  MLIS_LAYER_VOLATILITY: 5,
+  MLIS_LAYER_VOLUME: 5,
+  MLIS_LAYER_VERDICT: 5,
 
   // Features
   AI_EXPERT_QUESTION: 10,
@@ -53,7 +61,7 @@ let cachedCosts: CachedCosts | null = null;
  */
 function mapDbToCosts(dbSettings: any): typeof DEFAULT_CREDIT_COSTS {
   return {
-    // Analysis Steps
+    // Analysis Steps (Classic 7-Step)
     STEP_MARKET_PULSE: dbSettings.creditCostMarketPulse ?? DEFAULT_CREDIT_COSTS.STEP_MARKET_PULSE,
     STEP_ASSET_SCANNER: dbSettings.creditCostAssetScanner ?? DEFAULT_CREDIT_COSTS.STEP_ASSET_SCANNER,
     STEP_SAFETY_CHECK: dbSettings.creditCostSafetyCheck ?? DEFAULT_CREDIT_COSTS.STEP_SAFETY_CHECK,
@@ -64,8 +72,16 @@ function mapDbToCosts(dbSettings: any): typeof DEFAULT_CREDIT_COSTS {
 
     // Bundles
     BUNDLE_FULL_ANALYSIS: dbSettings.creditCostFullAnalysis ?? DEFAULT_CREDIT_COSTS.BUNDLE_FULL_ANALYSIS,
+    BUNDLE_MLIS_PRO_ANALYSIS: dbSettings.creditCostMlisProAnalysis ?? DEFAULT_CREDIT_COSTS.BUNDLE_MLIS_PRO_ANALYSIS,
     BUNDLE_QUICK_CHECK: dbSettings.creditCostQuickCheck ?? DEFAULT_CREDIT_COSTS.BUNDLE_QUICK_CHECK,
     BUNDLE_SMART_ENTRY: dbSettings.creditCostSmartEntry ?? DEFAULT_CREDIT_COSTS.BUNDLE_SMART_ENTRY,
+
+    // MLIS Pro Layers (5-Layer Neural Network)
+    MLIS_LAYER_TECHNICAL: dbSettings.creditCostMlisTechnicalLayer ?? DEFAULT_CREDIT_COSTS.MLIS_LAYER_TECHNICAL,
+    MLIS_LAYER_MOMENTUM: dbSettings.creditCostMlisMomentumLayer ?? DEFAULT_CREDIT_COSTS.MLIS_LAYER_MOMENTUM,
+    MLIS_LAYER_VOLATILITY: dbSettings.creditCostMlisVolatilityLayer ?? DEFAULT_CREDIT_COSTS.MLIS_LAYER_VOLATILITY,
+    MLIS_LAYER_VOLUME: dbSettings.creditCostMlisVolumeLayer ?? DEFAULT_CREDIT_COSTS.MLIS_LAYER_VOLUME,
+    MLIS_LAYER_VERDICT: dbSettings.creditCostMlisVerdictLayer ?? DEFAULT_CREDIT_COSTS.MLIS_LAYER_VERDICT,
 
     // Features
     AI_EXPERT_QUESTION: dbSettings.creditCostAiExpert ?? DEFAULT_CREDIT_COSTS.AI_EXPERT_QUESTION,

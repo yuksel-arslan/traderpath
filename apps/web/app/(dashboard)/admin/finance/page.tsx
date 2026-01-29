@@ -711,13 +711,21 @@ export default function FinancePage() {
                 </h4>
                 <div className="space-y-4">
                   {[
-                    { key: 'creditCostFullAnalysis', label: 'Full Analysis (7-Step)', desc: 'Complete trading analysis' },
+                    { key: 'creditCostFullAnalysis', label: 'Classic Analysis (7-Step)', desc: 'Complete 7-step trading analysis', color: 'teal' },
+                    { key: 'creditCostMlisProAnalysis', label: 'MLIS Pro Analysis (5-Layer)', desc: 'Neural network based analysis', color: 'violet' },
                     { key: 'creditCostTftAnalysis', label: 'TFT Analysis', desc: 'Full Analysis + AI Price Prediction', comingSoon: true },
-                  ].map(({ key, label, desc, comingSoon }) => (
+                  ].map(({ key, label, desc, comingSoon, color }) => (
                     <div key={key} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div>
-                          <p className="font-medium">{label}</p>
+                          <p className="font-medium flex items-center gap-2">
+                            {label}
+                            {color === 'violet' && (
+                              <span className="bg-violet-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                                NEW
+                              </span>
+                            )}
+                          </p>
                           <p className="text-sm text-muted-foreground">{desc}</p>
                         </div>
                         {comingSoon && (
@@ -798,6 +806,61 @@ export default function FinancePage() {
                       />
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* MLIS Pro Layers */}
+              <div className="bg-card border border-violet-200 dark:border-violet-800 rounded-lg p-4 lg:col-span-2">
+                <h4 className="font-semibold mb-4 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-violet-500" />
+                  <span>MLIS Pro Layers</span>
+                  <span className="bg-violet-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                    5-LAYER
+                  </span>
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {[
+                    { key: 'creditCostMlisTechnicalLayer', label: 'Technical', layer: 1, desc: 'Price patterns & indicators' },
+                    { key: 'creditCostMlisMomentumLayer', label: 'Momentum', layer: 2, desc: 'Trend strength analysis' },
+                    { key: 'creditCostMlisVolatilityLayer', label: 'Volatility', layer: 3, desc: 'Market stability check' },
+                    { key: 'creditCostMlisVolumeLayer', label: 'Volume', layer: 4, desc: 'Trading volume analysis' },
+                    { key: 'creditCostMlisVerdictLayer', label: 'Verdict', layer: 5, desc: 'Final recommendation' },
+                  ].map(({ key, label, layer, desc }) => (
+                    <div key={key} className="p-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg text-center border border-violet-100 dark:border-violet-800">
+                      <p className="text-xs text-violet-600 dark:text-violet-400 mb-1">Layer {layer}</p>
+                      <p className="font-medium text-sm mb-1">{label}</p>
+                      <p className="text-[10px] text-muted-foreground mb-2">{desc}</p>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editingCosts[key] ?? ''}
+                        onChange={(e) => setEditingCosts({ ...editingCosts, [key]: parseInt(e.target.value) || 0 })}
+                        className="w-full px-2 py-1 border border-violet-200 dark:border-violet-700 rounded text-center font-mono text-sm bg-background"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 p-3 bg-violet-100 dark:bg-violet-900/30 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-violet-700 dark:text-violet-300">Total MLIS Pro Cost</p>
+                      <p className="text-xs text-violet-600 dark:text-violet-400">Sum of all 5 layers</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-violet-700 dark:text-violet-300">
+                        {(
+                          (editingCosts.creditCostMlisTechnicalLayer || 0) +
+                          (editingCosts.creditCostMlisMomentumLayer || 0) +
+                          (editingCosts.creditCostMlisVolatilityLayer || 0) +
+                          (editingCosts.creditCostMlisVolumeLayer || 0) +
+                          (editingCosts.creditCostMlisVerdictLayer || 0)
+                        )} credits
+                      </p>
+                      <p className="text-xs text-violet-600 dark:text-violet-400">
+                        Bundle price: {editingCosts.creditCostMlisProAnalysis || 0} credits
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

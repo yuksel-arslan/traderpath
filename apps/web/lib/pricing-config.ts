@@ -84,8 +84,18 @@ export const ANALYSIS_COSTS = [
 // Analysis bundles with discounts
 // NOTE: These values must match backend credit-costs.service.ts (BUNDLE_FULL_ANALYSIS = 25)
 export const ANALYSIS_BUNDLES = [
-  { name: 'Full Analysis', steps: 'All 7 Steps', credits: 25, description: 'Complete trading analysis', comingSoon: false },
-  { name: 'TFT Analysis', steps: 'Full Analysis + AI Price Prediction', credits: 50, description: 'With TFT deep learning model', comingSoon: true },
+  { name: 'Classic Analysis', steps: 'All 7 Steps', credits: 25, description: 'Complete 7-step trading analysis', comingSoon: false, method: 'classic' },
+  { name: 'MLIS Pro Analysis', steps: '5-Layer Neural Network', credits: 35, description: 'Neural network based analysis', comingSoon: false, method: 'mlis_pro' },
+  { name: 'TFT Analysis', steps: 'Full Analysis + AI Price Prediction', credits: 50, description: 'With TFT deep learning model', comingSoon: true, method: 'tft' },
+];
+
+// MLIS Pro layer credit costs
+export const MLIS_PRO_COSTS = [
+  { layer: 'Technical', credits: 5, description: 'Price patterns & indicators' },
+  { layer: 'Momentum', credits: 5, description: 'Trend strength analysis' },
+  { layer: 'Volatility', credits: 5, description: 'Market stability check' },
+  { layer: 'Volume', credits: 5, description: 'Trading volume analysis' },
+  { layer: 'Verdict', credits: 5, description: 'Final recommendation' },
 ];
 
 // Feature credit costs
