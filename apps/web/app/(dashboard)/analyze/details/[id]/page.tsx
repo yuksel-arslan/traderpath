@@ -43,13 +43,14 @@ interface AnalysisData {
   createdAt: string;
   expiresAt: string;
   outcome?: string;
-  step1Result?: any; // Market Pulse
-  step2Result?: any; // Asset Scanner
-  step3Result?: any; // Safety Check
-  step4Result?: any; // Timing Analysis
-  step5Result?: any; // Trade Plan
-  step6Result?: any; // Trap Check
-  step7Result?: any; // Final Verdict
+  method?: 'classic' | 'mlis_pro'; // Analysis method
+  step1Result?: any; // Market Pulse (Classic) or Technical (MLIS)
+  step2Result?: any; // Asset Scanner (Classic) or Momentum (MLIS)
+  step3Result?: any; // Safety Check (Classic) or Volatility (MLIS)
+  step4Result?: any; // Timing Analysis (Classic) or Volume (MLIS)
+  step5Result?: any; // Trade Plan (Classic) or Verdict (MLIS)
+  step6Result?: any; // Trap Check (Classic only)
+  step7Result?: any; // Final Verdict (Classic only)
 }
 
 function formatPrice(price: number): string {
@@ -470,6 +471,9 @@ export default function AnalysisDetailsPage() {
   }
 
 
+  // Detect if this is MLIS Pro analysis
+  const isMLIS = analysis.method === 'mlis_pro' || analysis.step1Result?.mlis === true;
+
   // Extract data from steps
   const step1 = analysis.step1Result || {};
   const step2 = analysis.step2Result || {};
@@ -479,36 +483,67 @@ export default function AnalysisDetailsPage() {
   const step6 = analysis.step6Result || {};
   const step7 = analysis.step7Result || {};
 
-  const direction = step5.direction || step7.direction || 'long';
-  const isLong = direction === 'long';
+  // For MLIS: step5 is the verdict with direction
+  // For Classic: step5 is trade plan, step7 is verdict
+  const direction = isMLIS
+    ? (step5.direction || 'long')
+    : (step5.direction || step7.direction || 'long');
+  const isLong = direction.toLowerCase() === 'long';
   const score = (analysis.totalScore || 0) * 10;
 
-  // Status labels
-  const marketStatus = step1.trend?.direction === 'bullish' ? 'Bullish' :
-                       step1.trend?.direction === 'bearish' ? 'Bearish' : 'Neutral';
+  // MLIS-specific data
+  const mlisRecommendation = isMLIS ? step5.recommendation : null;
+  const mlisConfidence = isMLIS ? step5.confidence : null;
+  const mlisRiskLevel = isMLIS ? step5.riskLevel : null;
+  const mlisKeySignals = isMLIS ? step5.keySignals : [];
+  const mlisRiskFactors = isMLIS ? step5.riskFactors : [];
 
-  const assetStatus = (step2.priceChange24h || 0) >= 2 ? 'Strong' :
-                      (step2.priceChange24h || 0) >= 0 ? 'Stable' :
-                      (step2.priceChange24h || 0) >= -2 ? 'Weak' : 'Declining';
+  // Status labels - different for MLIS vs Classic
+  let marketStatus, assetStatus, safetyStatus, timingStatus;
 
-  const safetyStatus = step3.riskLevel === 'low' ? 'Safe' :
-                       step3.riskLevel === 'high' ? 'Risky' : 'Caution';
+  if (isMLIS) {
+    // MLIS: Technical, Momentum, Volatility, Volume layers
+    const technicalSignal = step1.signal?.toUpperCase() || 'NEUTRAL';
+    const momentumSignal = step2.signal?.toUpperCase() || 'NEUTRAL';
+    const volatilitySignal = step3.signal?.toUpperCase() || 'NEUTRAL';
+    const volumeSignal = step4.signal?.toUpperCase() || 'NEUTRAL';
 
-  const timingStatus = step4.tradeNow ? 'Good' : 'Wait';
+    marketStatus = technicalSignal === 'BULLISH' ? 'Bullish' :
+                   technicalSignal === 'BEARISH' ? 'Bearish' : 'Neutral';
+    assetStatus = momentumSignal === 'BULLISH' ? 'Strong' :
+                  momentumSignal === 'BEARISH' ? 'Weak' : 'Neutral';
+    safetyStatus = volatilitySignal === 'LOW' || step3.score >= 60 ? 'Stable' :
+                   volatilitySignal === 'HIGH' || step3.score < 40 ? 'Volatile' : 'Moderate';
+    timingStatus = volumeSignal === 'BULLISH' || step4.score >= 60 ? 'Good' : 'Wait';
+  } else {
+    // Classic: Market Pulse, Asset Scanner, Safety Check, Timing
+    marketStatus = step1.trend?.direction === 'bullish' ? 'Bullish' :
+                   step1.trend?.direction === 'bearish' ? 'Bearish' : 'Neutral';
+    assetStatus = (step2.priceChange24h || 0) >= 2 ? 'Strong' :
+                  (step2.priceChange24h || 0) >= 0 ? 'Stable' :
+                  (step2.priceChange24h || 0) >= -2 ? 'Weak' : 'Declining';
+    safetyStatus = step3.riskLevel === 'low' ? 'Safe' :
+                   step3.riskLevel === 'high' ? 'Risky' : 'Caution';
+    timingStatus = step4.tradeNow ? 'Good' : 'Wait';
+  }
 
-  const entryPrice = step5.averageEntry || step5.entryPrice;
-  const planStatus = entryPrice ? 'Ready' : 'Pending';
+  // Entry price - for MLIS it might not have a trade plan
+  const entryPrice = isMLIS ? null : (step5.averageEntry || step5.entryPrice);
+  const planStatus = entryPrice ? 'Ready' : (isMLIS ? 'N/A' : 'Pending');
 
-  const trapStatus = step6.traps?.bullTrap || step6.traps?.bearTrap ? 'Warning' :
-                     step6.traps?.fakeoutRisk === 'high' ? 'Caution' : 'Clear';
+  // Trap status - only for Classic
+  const trapStatus = isMLIS ? 'N/A' : (
+    step6.traps?.bullTrap || step6.traps?.bearTrap ? 'Warning' :
+    step6.traps?.fakeoutRisk === 'high' ? 'Caution' : 'Clear'
+  );
 
   const macdDesc = (step2.indicators?.macd?.histogram || 0) > 0 ? 'Bullish crossover' : 'Bearish momentum';
 
-  // Trade plan data
-  const stopLossPrice = step5.stopLoss?.price || step5.stopLoss;
-  const tp1 = step5.takeProfits?.[0]?.price || step5.takeProfit1;
-  const tp2 = step5.takeProfits?.[1]?.price || step5.takeProfit2;
-  const tp3 = step5.takeProfits?.[2]?.price || step5.takeProfit3;
+  // Trade plan data - only for Classic
+  const stopLossPrice = isMLIS ? null : (step5.stopLoss?.price || step5.stopLoss);
+  const tp1 = isMLIS ? null : (step5.takeProfits?.[0]?.price || step5.takeProfit1);
+  const tp2 = isMLIS ? null : (step5.takeProfits?.[1]?.price || step5.takeProfit2);
+  const tp3 = isMLIS ? null : (step5.takeProfits?.[2]?.price || step5.takeProfit3);
 
   return (
     <>
@@ -598,7 +633,14 @@ export default function AnalysisDetailsPage() {
                 }}
               />
               <div>
-                <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{analysis.symbol}/USDT Analysis</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{analysis.symbol}/USDT Analysis</h1>
+                  {isMLIS && (
+                    <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-full">
+                      MLIS Pro
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">
                   {new Date(analysis.createdAt).toLocaleDateString('en-US', {
                     day: 'numeric',
@@ -622,150 +664,317 @@ export default function AnalysisDetailsPage() {
             </div>
           </div>
 
-          {/* 6 Info Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
-            {/* 1. Market Pulse */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-                  <span className="font-medium text-gray-900 dark:text-white">Market Pulse</span>
+          {/* Info Cards - Different layouts for MLIS vs Classic */}
+          {isMLIS ? (
+            /* MLIS Pro: 5 Layer Cards */
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+              {/* 1. Technical Layer */}
+              <div className="bg-violet-50 dark:bg-violet-500/10 rounded-xl p-4 border border-violet-200 dark:border-violet-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-violet-500 dark:text-violet-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Technical</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    step1.signal?.toUpperCase() === 'BULLISH' ? 'text-green-600 dark:text-green-400' :
+                    step1.signal?.toUpperCase() === 'BEARISH' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{step1.signal || 'Neutral'}</span>
                 </div>
-                <span className={cn(
-                  "text-sm font-semibold",
-                  marketStatus === 'Bullish' ? 'text-green-600 dark:text-green-400' : marketStatus === 'Bearish' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
-                )}>{marketStatus}</span>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  Score: {step1.score?.toFixed(0) || 0}/100 • {step1.reasoning || 'Technical analysis complete'}
+                </p>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
-                Fear & Greed: {step1.fearGreedIndex || 0} ({step1.fearGreedLabel || 'N/A'}) • BTC Dom: {step1.btcDominance?.toFixed(1) || '0'}%
-              </p>
-            </div>
 
-            {/* 2. Asset Scan */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Search className="w-4 h-4 text-purple-500 dark:text-purple-400" />
-                  <span className="font-medium text-gray-900 dark:text-white">Asset Scan</span>
+              {/* 2. Momentum Layer */}
+              <div className="bg-purple-50 dark:bg-purple-500/10 rounded-xl p-4 border border-purple-200 dark:border-purple-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-purple-500 dark:text-purple-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Momentum</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    step2.signal?.toUpperCase() === 'BULLISH' ? 'text-green-600 dark:text-green-400' :
+                    step2.signal?.toUpperCase() === 'BEARISH' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{step2.signal || 'Neutral'}</span>
                 </div>
-                <span className={cn(
-                  "text-sm font-semibold",
-                  assetStatus === 'Strong' ? 'text-green-600 dark:text-green-400' :
-                  assetStatus === 'Stable' ? 'text-blue-600 dark:text-blue-400' :
-                  assetStatus === 'Weak' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
-                )}>{assetStatus}</span>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  Score: {step2.score?.toFixed(0) || 0}/100 • {step2.reasoning || 'Momentum analysis complete'}
+                </p>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
-                Price: {formatPrice(step2.currentPrice)} • 24h: {(step2.priceChange24h || 0) >= 0 ? '+' : ''}{step2.priceChange24h?.toFixed(2) || '0'}%
-              </p>
-            </div>
 
-            {/* 3. Safety Check */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-                  <span className="font-medium text-gray-900 dark:text-white">Safety Check</span>
+              {/* 3. Volatility Layer */}
+              <div className="bg-indigo-50 dark:bg-indigo-500/10 rounded-xl p-4 border border-indigo-200 dark:border-indigo-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Volatility</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    step3.signal?.toUpperCase() === 'LOW' || step3.score >= 60 ? 'text-green-600 dark:text-green-400' :
+                    step3.signal?.toUpperCase() === 'HIGH' || step3.score < 40 ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{step3.signal || 'Moderate'}</span>
                 </div>
-                <span className={cn(
-                  "text-sm font-semibold",
-                  safetyStatus === 'Safe' ? 'text-green-600 dark:text-green-400' : safetyStatus === 'Risky' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
-                )}>{safetyStatus}</span>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  Score: {step3.score?.toFixed(0) || 0}/100 • {step3.reasoning || 'Volatility analysis complete'}
+                </p>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
-                {step3.manipulation?.pumpDumpRisk === 'low' ? 'No manipulation' : 'Manipulation risk'} • Whale: {step3.whaleActivity?.bias || 'neutral'}
-              </p>
-            </div>
 
-            {/* 4. Timing Analysis */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-                  <span className="font-medium text-gray-900 dark:text-white">Timing Analysis</span>
+              {/* 4. Volume Layer */}
+              <div className="bg-fuchsia-50 dark:bg-fuchsia-500/10 rounded-xl p-4 border border-fuchsia-200 dark:border-fuchsia-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-fuchsia-500 dark:text-fuchsia-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Volume</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    step4.signal?.toUpperCase() === 'BULLISH' ? 'text-green-600 dark:text-green-400' :
+                    step4.signal?.toUpperCase() === 'BEARISH' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{step4.signal || 'Neutral'}</span>
                 </div>
-                <span className={cn(
-                  "text-sm font-semibold",
-                  timingStatus === 'Good' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
-                )}>{timingStatus}</span>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  Score: {step4.score?.toFixed(0) || 0}/100 • {step4.reasoning || 'Volume analysis complete'}
+                </p>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
-                RSI: {step2.indicators?.rsi?.toFixed(0) || 'N/A'} • MACD: {macdDesc}
-              </p>
-            </div>
 
-            {/* 5. Trade Plan */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Target className="w-4 h-4 text-cyan-500 dark:text-cyan-400" />
-                  <span className="font-medium text-gray-900 dark:text-white">Trade Plan</span>
+              {/* 5. MLIS Confidence & Risk */}
+              <div className="sm:col-span-2 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-500/10 dark:to-purple-500/10 rounded-xl p-4 border border-violet-200 dark:border-violet-500/20">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">MLIS Verdict</span>
+                  </div>
+                  <span className={cn(
+                    "px-3 py-1 rounded-full text-sm font-bold",
+                    mlisRecommendation === 'STRONG_BUY' ? 'bg-green-500 text-white' :
+                    mlisRecommendation === 'BUY' ? 'bg-green-400 text-white' :
+                    mlisRecommendation === 'HOLD' ? 'bg-yellow-400 text-black' :
+                    mlisRecommendation === 'SELL' ? 'bg-orange-500 text-white' : 'bg-red-500 text-white'
+                  )}>{mlisRecommendation || 'HOLD'}</span>
                 </div>
-                <span className={cn(
-                  "text-sm font-semibold",
-                  planStatus === 'Ready' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
-                )}>{planStatus}</span>
-              </div>
-              <div className="text-sm text-gray-500 dark:text-slate-400 space-y-0.5 sm:space-y-0">
-                <span className="block sm:inline">Entry: {formatPrice(entryPrice)}</span>
-                <span className="hidden sm:inline"> • </span>
-                <span className="block sm:inline">TP: {formatPrice(tp1)}</span>
-                <span className="hidden sm:inline"> • </span>
-                <span className="block sm:inline">SL: {formatPrice(stopLossPrice)}</span>
-              </div>
-            </div>
-
-            {/* 6. Trap Check */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Crosshair className="w-4 h-4 text-red-500 dark:text-red-400" />
-                  <span className="font-medium text-gray-900 dark:text-white">Trap Check</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500 dark:text-slate-400">Confidence</span>
+                    <p className="font-semibold text-gray-900 dark:text-white">{mlisConfidence?.toFixed(0) || 0}%</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-slate-400">Risk Level</span>
+                    <p className={cn(
+                      "font-semibold",
+                      mlisRiskLevel === 'low' ? 'text-green-600 dark:text-green-400' :
+                      mlisRiskLevel === 'high' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                    )}>{mlisRiskLevel || 'Medium'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-slate-400">Direction</span>
+                    <p className={cn(
+                      "font-semibold",
+                      isLong ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                    )}>{isLong ? 'LONG' : 'SHORT'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-slate-400">Score</span>
+                    <p className="font-semibold text-violet-600 dark:text-violet-400">{score}/100</p>
+                  </div>
                 </div>
-                <span className={cn(
-                  "text-sm font-semibold",
-                  trapStatus === 'Clear' ? 'text-green-600 dark:text-green-400' : trapStatus === 'Warning' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
-                )}>{trapStatus}</span>
-              </div>
-              <div className="text-sm text-gray-500 dark:text-slate-400 space-y-0.5 sm:space-y-0">
-                <span className="block sm:inline">Bull trap: {step6.traps?.bullTrap ? 'Yes' : 'No'}</span>
-                <span className="hidden sm:inline"> • </span>
-                <span className="block sm:inline">Bear trap: {step6.traps?.bearTrap ? 'Yes' : 'No'}</span>
-                <span className="hidden sm:inline"> • </span>
-                <span className="block sm:inline">Fakeout: {step6.traps?.fakeoutRisk || 'low'}</span>
               </div>
             </div>
-          </div>
+          ) : (
+            /* Classic: 6 Step Cards */
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+              {/* 1. Market Pulse */}
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Market Pulse</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    marketStatus === 'Bullish' ? 'text-green-600 dark:text-green-400' : marketStatus === 'Bearish' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{marketStatus}</span>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  Fear & Greed: {step1.fearGreedIndex || 0} ({step1.fearGreedLabel || 'N/A'}) • BTC Dom: {step1.btcDominance?.toFixed(1) || '0'}%
+                </p>
+              </div>
 
-          {/* 7. Final Verdict - Visual Trade Decision */}
+              {/* 2. Asset Scan */}
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Search className="w-4 h-4 text-purple-500 dark:text-purple-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Asset Scan</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    assetStatus === 'Strong' ? 'text-green-600 dark:text-green-400' :
+                    assetStatus === 'Stable' ? 'text-blue-600 dark:text-blue-400' :
+                    assetStatus === 'Weak' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
+                  )}>{assetStatus}</span>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  Price: {formatPrice(step2.currentPrice)} • 24h: {(step2.priceChange24h || 0) >= 0 ? '+' : ''}{step2.priceChange24h?.toFixed(2) || '0'}%
+                </p>
+              </div>
+
+              {/* 3. Safety Check */}
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Safety Check</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    safetyStatus === 'Safe' ? 'text-green-600 dark:text-green-400' : safetyStatus === 'Risky' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{safetyStatus}</span>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  {step3.manipulation?.pumpDumpRisk === 'low' ? 'No manipulation' : 'Manipulation risk'} • Whale: {step3.whaleActivity?.bias || 'neutral'}
+                </p>
+              </div>
+
+              {/* 4. Timing Analysis */}
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Timing Analysis</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    timingStatus === 'Good' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{timingStatus}</span>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  RSI: {step2.indicators?.rsi?.toFixed(0) || 'N/A'} • MACD: {macdDesc}
+                </p>
+              </div>
+
+              {/* 5. Trade Plan */}
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-cyan-500 dark:text-cyan-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Trade Plan</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    planStatus === 'Ready' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{planStatus}</span>
+                </div>
+                <div className="text-sm text-gray-500 dark:text-slate-400 space-y-0.5 sm:space-y-0">
+                  <span className="block sm:inline">Entry: {formatPrice(entryPrice)}</span>
+                  <span className="hidden sm:inline"> • </span>
+                  <span className="block sm:inline">TP: {formatPrice(tp1)}</span>
+                  <span className="hidden sm:inline"> • </span>
+                  <span className="block sm:inline">SL: {formatPrice(stopLossPrice)}</span>
+                </div>
+              </div>
+
+              {/* 6. Trap Check */}
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Crosshair className="w-4 h-4 text-red-500 dark:text-red-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Trap Check</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    trapStatus === 'Clear' ? 'text-green-600 dark:text-green-400' : trapStatus === 'Warning' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{trapStatus}</span>
+                </div>
+                <div className="text-sm text-gray-500 dark:text-slate-400 space-y-0.5 sm:space-y-0">
+                  <span className="block sm:inline">Bull trap: {step6.traps?.bullTrap ? 'Yes' : 'No'}</span>
+                  <span className="hidden sm:inline"> • </span>
+                  <span className="block sm:inline">Bear trap: {step6.traps?.bearTrap ? 'Yes' : 'No'}</span>
+                  <span className="hidden sm:inline"> • </span>
+                  <span className="block sm:inline">Fakeout: {step6.traps?.fakeoutRisk || 'low'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Final Verdict - Visual Trade Decision */}
           <div className="mb-6">
-            <TradeDecisionVisual
-              verdict={(step7.verdict || (step7.overallScore >= 7 ? 'go' : step7.overallScore >= 5 ? 'conditional_go' : step7.overallScore >= 3 ? 'wait' : 'avoid')) as 'go' | 'conditional_go' | 'wait' | 'avoid'}
-              direction={direction as 'long' | 'short'}
-              score={step7.overallScore || analysis.totalScore * 10 || 5}
-              symbol={analysis.symbol}
-              size="lg"
-            />
+            {isMLIS ? (
+              <TradeDecisionVisual
+                verdict={mlisRecommendation === 'STRONG_BUY' || mlisRecommendation === 'BUY' ? 'go' :
+                         mlisRecommendation === 'HOLD' ? 'wait' : 'avoid'}
+                direction={direction.toLowerCase() as 'long' | 'short'}
+                score={step5.overallScore || analysis.totalScore || 5}
+                recommendation={mlisRecommendation}
+                confidence={mlisConfidence}
+                riskLevel={mlisRiskLevel}
+                symbol={analysis.symbol}
+                size="lg"
+              />
+            ) : (
+              <TradeDecisionVisual
+                verdict={(step7.verdict || (step7.overallScore >= 7 ? 'go' : step7.overallScore >= 5 ? 'conditional_go' : step7.overallScore >= 3 ? 'wait' : 'avoid')) as 'go' | 'conditional_go' | 'wait' | 'avoid'}
+                direction={direction as 'long' | 'short'}
+                score={step7.overallScore || analysis.totalScore * 10 || 5}
+                symbol={analysis.symbol}
+                size="lg"
+              />
+            )}
           </div>
 
-          {/* AI Recommendation */}
+          {/* AI Recommendation / Key Signals */}
           <div className={cn(
             "rounded-xl p-4 mb-6",
-            isLong ? "bg-green-50 dark:bg-green-500/10 border border-green-500/20" : "bg-red-50 dark:bg-red-500/10 border border-red-500/20"
+            isMLIS
+              ? "bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-500/10 dark:to-purple-500/10 border border-violet-200 dark:border-violet-500/20"
+              : (isLong ? "bg-green-50 dark:bg-green-500/10 border border-green-500/20" : "bg-red-50 dark:bg-red-500/10 border border-red-500/20")
           )}>
             <div className="flex items-center gap-2 mb-2">
-              <CheckCircle className={cn("w-5 h-5", isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")} />
-              <span className={cn("font-semibold", isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
-                AI Recommendation
+              <CheckCircle className={cn("w-5 h-5", isMLIS ? "text-violet-600 dark:text-violet-400" : (isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"))} />
+              <span className={cn("font-semibold", isMLIS ? "text-violet-600 dark:text-violet-400" : (isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"))}>
+                {isMLIS ? 'MLIS Pro Analysis' : 'AI Recommendation'}
               </span>
             </div>
-            <p className="text-sm text-gray-600 dark:text-slate-300">
-              {step7.aiSummary || step7.summary || `Market conditions favor ${isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(entryPrice)} with ${step5.riskReward?.toFixed(1) || '2.0'}:1 risk-reward ratio. Set stop-loss at ${formatPrice(stopLossPrice)} to protect against downside.`}
-            </p>
+            {isMLIS ? (
+              <div className="space-y-3">
+                {mlisKeySignals && mlisKeySignals.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Key Signals:</p>
+                    <ul className="text-sm text-gray-600 dark:text-slate-300 list-disc list-inside">
+                      {mlisKeySignals.slice(0, 3).map((signal: string, idx: number) => (
+                        <li key={idx}>{signal}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {mlisRiskFactors && mlisRiskFactors.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Risk Factors:</p>
+                    <ul className="text-sm text-gray-600 dark:text-slate-300 list-disc list-inside">
+                      {mlisRiskFactors.slice(0, 3).map((factor: string, idx: number) => (
+                        <li key={idx}>{factor}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {!mlisKeySignals?.length && !mlisRiskFactors?.length && (
+                  <p className="text-sm text-gray-600 dark:text-slate-300">
+                    MLIS Pro analysis recommends <strong>{mlisRecommendation || 'HOLD'}</strong> with {mlisConfidence?.toFixed(0) || 0}% confidence.
+                    Direction: <strong>{isLong ? 'LONG' : 'SHORT'}</strong>. Risk level: <strong>{mlisRiskLevel || 'Medium'}</strong>.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600 dark:text-slate-300">
+                {step7.aiSummary || step7.summary || `Market conditions favor ${isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(entryPrice)} with ${step5.riskReward?.toFixed(1) || '2.0'}:1 risk-reward ratio. Set stop-loss at ${formatPrice(stopLossPrice)} to protect against downside.`}
+              </p>
+            )}
           </div>
 
-          {/* Trade Plan Chart */}
-          {entryPrice && (
+          {/* Trade Plan Chart - Only for Classic (MLIS doesn't have trade plan) */}
+          {!isMLIS && entryPrice && (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-gray-900 dark:text-white">Trade Plan Chart</h3>

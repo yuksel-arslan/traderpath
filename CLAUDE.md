@@ -271,6 +271,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-28 | Top 5 Coins "Scan Now" butonu çalışmıyordu - analiz yapılmıyordu | 1) Yeni API endpoint eklendi: `POST /api/analysis/top-coins/scan` (300 kredi), 2) Frontend concierge yerine dedicated endpoint kullanıyor, 3) Doğru polling ile progress gösterimi (2-3 dakika), 4) Status endpoint eklendi: `GET /api/analysis/top-coins/status` | `analysis.routes.ts:4758-4850`, `analyze/page.tsx:368-454` |
 | 2026-01-28 | Dil seçimi sadece landing page'de çalışıyordu, Settings'teki çalışmıyordu | Settings'teki dil seçici kaldırıldı (sadece backend için kullanılıyordu, UI çevirmiyordu). Google Translate-based LanguageSelector tüm dashboard sayfalarına eklendi (header + mobile menu) | `settings/page.tsx`, `layout.tsx:31,361,486-492` |
 | 2026-01-29 | MLIS Pro analizi "Failed to complete analysis" hatası | 1) `method: 'mlis_pro'` DB'ye kaydedilmiyordu - eklendi, 2) AnalysisProgressBar 5-layer desteği eklendi, 3) AnalysisDialog MLIS sonuçlarını doğru işliyor, 4) saveReportToDatabase MLIS için 5 adım bekliyor | `AnalysisDialog.tsx`, `AnalysisProgressBar.tsx`, `analysis.routes.ts:516` |
+| 2026-01-29 | MLIS Pro analizi detay sayfasında 7-step formatında gösteriliyordu | 1) `isMLIS` detection eklendi (method veya mlis flag), 2) 5-layer MLIS kartları (Technical, Momentum, Volatility, Volume, Verdict) eklendi, 3) MLIS Verdict badge ve confidence/risk gösterimi, 4) Trade plan chart MLIS için gizlendi, 5) Key signals ve risk factors gösterimi | `analyze/details/[id]/page.tsx` |
 
 ---
 
@@ -1049,6 +1050,15 @@ Kullanıcı Hakları Aktif:
   - JPG: scale 2.5, quality 0.95
   - TraderPath branding header eklendi (logo + text)
   - Proper background ve padding export container'da
+- **MLIS Pro Detay Sayfası Düzeltildi**:
+  - Detay sayfası MLIS Pro analizlerini 5-layer formatında gösteriyor
+  - `isMLIS` detection: `method === 'mlis_pro'` veya `step1Result.mlis === true`
+  - **MLIS Layer Kartları**: Technical, Momentum, Volatility, Volume (violet/purple tema)
+  - **MLIS Verdict Kartı**: Recommendation badge (STRONG_BUY/BUY/HOLD/SELL), Confidence %, Risk Level, Direction
+  - Key Signals ve Risk Factors listesi
+  - Trade Plan Chart MLIS için gizleniyor (MLIS trade plan üretmiyor)
+  - TradeDecisionVisual MLIS için recommendation ve confidence prop'ları eklendi
+  - Dosya: `analyze/details/[id]/page.tsx`
 
 ---
 
