@@ -1431,7 +1431,7 @@ Explain the key risks and what conditions would need to change before trading th
   /**
    * GET /api/analysis/platform-performance-history
    * Platform-wide performance history for landing page chart (public)
-   * Returns daily cumulative P/L from all closed analyses
+   * Returns daily cumulative P/L from all closed analyses, split by method (Classic vs MLIS Pro)
    */
   app.get('/platform-performance-history', async (request: FastifyRequest<{ Querystring: { days?: string } }>, reply: FastifyReply) => {
     try {
@@ -1441,7 +1441,7 @@ Explain the key risks and what conditions would need to change before trading th
       const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
       startDate.setHours(0, 0, 0, 0);
 
-      // Get ALL closed analyses (for all-time total)
+      // Get ALL closed analyses (for all-time total) - includes method field
       const allClosedAnalyses = await prisma.analysis.findMany({
         where: {
           outcome: { in: ['tp1_hit', 'tp2_hit', 'tp3_hit', 'sl_hit'] },
@@ -1451,81 +1451,131 @@ Explain the key risks and what conditions would need to change before trading th
           outcomeAt: true,
           outcomePrice: true,
           step5Result: true,
+          method: true, // Include method to distinguish Classic vs MLIS Pro
         },
         orderBy: { outcomeAt: 'asc' }
       });
+
+      // Separate by method
+      const classicAnalyses = allClosedAnalyses.filter(a => a.method !== 'mlis_pro');
+      const mlisAnalyses = allClosedAnalyses.filter(a => a.method === 'mlis_pro');
 
       // Filter for period-specific data
       const closedAnalyses = allClosedAnalyses.filter(a =>
         a.outcomeAt && a.outcomeAt >= startDate
       );
 
-      // Initialize daily data structure
-      const dailyData: Record<string, { realized: number; trades: number }> = {};
+      // Helper function to calculate P/L from analysis
+      const calculatePnL = (analysis: { step5Result: unknown; outcomePrice: unknown }) => {
+        const step5 = analysis.step5Result as Record<string, unknown> | null;
+        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
+        const outcomePrice = analysis.outcomePrice ? Number(analysis.outcomePrice) : 0;
+        const direction = ((step5?.direction as string) || 'long').toLowerCase();
+
+        if (entryPrice > 0 && outcomePrice > 0) {
+          if (direction === 'short') {
+            return ((entryPrice - outcomePrice) / entryPrice) * 100;
+          } else {
+            return ((outcomePrice - entryPrice) / entryPrice) * 100;
+          }
+        }
+        return 0;
+      };
+
+      // Initialize daily data structure for both methods
+      const dailyDataClassic: Record<string, { realized: number; trades: number }> = {};
+      const dailyDataMlis: Record<string, { realized: number; trades: number }> = {};
+      const dailyDataCombined: Record<string, { realized: number; trades: number }> = {};
+
       for (let i = 0; i < days; i++) {
         const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
         const dateStr = d.toISOString().split('T')[0];
-        dailyData[dateStr] = { realized: 0, trades: 0 };
+        dailyDataClassic[dateStr] = { realized: 0, trades: 0 };
+        dailyDataMlis[dateStr] = { realized: 0, trades: 0 };
+        dailyDataCombined[dateStr] = { realized: 0, trades: 0 };
       }
 
       // Calculate P/L for each closed trade and assign to outcomeAt date
       closedAnalyses.forEach(analysis => {
         if (!analysis.outcomeAt) return;
         const dateStr = analysis.outcomeAt.toISOString().split('T')[0];
-        if (!dailyData[dateStr]) return;
+        if (!dailyDataCombined[dateStr]) return;
 
-        const step5 = analysis.step5Result as Record<string, unknown> | null;
-        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
-        const outcomePrice = analysis.outcomePrice ? Number(analysis.outcomePrice) : 0;
-        const direction = ((step5?.direction as string) || 'long').toLowerCase();
+        const pnl = calculatePnL(analysis);
+        if (pnl !== 0) {
+          dailyDataCombined[dateStr].realized += pnl;
+          dailyDataCombined[dateStr].trades++;
 
-        if (entryPrice > 0 && outcomePrice > 0) {
-          let pnl = 0;
-          if (direction === 'short') {
-            pnl = ((entryPrice - outcomePrice) / entryPrice) * 100;
+          // Split by method
+          if (analysis.method === 'mlis_pro') {
+            dailyDataMlis[dateStr].realized += pnl;
+            dailyDataMlis[dateStr].trades++;
           } else {
-            pnl = ((outcomePrice - entryPrice) / entryPrice) * 100;
+            dailyDataClassic[dateStr].realized += pnl;
+            dailyDataClassic[dateStr].trades++;
           }
-          dailyData[dateStr].realized += pnl;
-          dailyData[dateStr].trades++;
         }
       });
 
-      // Convert to array and calculate cumulative P/L
-      const sortedDates = Object.keys(dailyData).sort();
+      // Convert to arrays with cumulative P/L
+      const sortedDates = Object.keys(dailyDataCombined).sort();
+
       let cumulativePnL = 0;
       const daily = sortedDates.map(date => {
-        cumulativePnL += dailyData[date].realized;
+        cumulativePnL += dailyDataCombined[date].realized;
         return {
           date,
-          realized: Number(dailyData[date].realized.toFixed(2)),
-          trades: dailyData[date].trades,
+          realized: Number(dailyDataCombined[date].realized.toFixed(2)),
+          trades: dailyDataCombined[date].trades,
           cumulative: Number(cumulativePnL.toFixed(2)),
+        };
+      });
+
+      let cumulativeClassic = 0;
+      const dailyClassic = sortedDates.map(date => {
+        cumulativeClassic += dailyDataClassic[date].realized;
+        return {
+          date,
+          realized: Number(dailyDataClassic[date].realized.toFixed(2)),
+          trades: dailyDataClassic[date].trades,
+          cumulative: Number(cumulativeClassic.toFixed(2)),
+        };
+      });
+
+      let cumulativeMlis = 0;
+      const dailyMlis = sortedDates.map(date => {
+        cumulativeMlis += dailyDataMlis[date].realized;
+        return {
+          date,
+          realized: Number(dailyDataMlis[date].realized.toFixed(2)),
+          trades: dailyDataMlis[date].trades,
+          cumulative: Number(cumulativeMlis.toFixed(2)),
         };
       });
 
       // Summary stats (period-filtered)
       const totalRealizedPnL = Number(cumulativePnL.toFixed(2));
       const totalTrades = closedAnalyses.length;
+      const classicTrades = closedAnalyses.filter(a => a.method !== 'mlis_pro').length;
+      const mlisTrades = closedAnalyses.filter(a => a.method === 'mlis_pro').length;
 
       // Calculate ALL-TIME total P/L (same formula as platform-stats)
       let allTimePnLSum = 0;
-      allClosedAnalyses.forEach(analysis => {
-        const step5 = analysis.step5Result as Record<string, unknown> | null;
-        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
-        const outcomePrice = analysis.outcomePrice ? Number(analysis.outcomePrice) : 0;
-        const direction = ((step5?.direction as string) || 'long').toLowerCase();
+      let allTimeClassicPnL = 0;
+      let allTimeMlisPnL = 0;
 
-        if (entryPrice > 0 && outcomePrice > 0) {
-          let pnl = 0;
-          if (direction === 'short') {
-            pnl = ((entryPrice - outcomePrice) / entryPrice) * 100;
-          } else {
-            pnl = ((outcomePrice - entryPrice) / entryPrice) * 100;
-          }
+      allClosedAnalyses.forEach(analysis => {
+        const pnl = calculatePnL(analysis);
+        if (pnl !== 0) {
           allTimePnLSum += pnl;
+          if (analysis.method === 'mlis_pro') {
+            allTimeMlisPnL += pnl;
+          } else {
+            allTimeClassicPnL += pnl;
+          }
         }
       });
+
       const allTimeTotalPnL = Number(allTimePnLSum.toFixed(1));
       const allTimeTotalTrades = allClosedAnalyses.length;
 
@@ -1533,13 +1583,21 @@ Explain the key risks and what conditions would need to change before trading th
         success: true,
         data: {
           daily,
+          dailyClassic,
+          dailyMlis,
           summary: {
             totalRealizedPnL,
             totalTrades,
+            classicTrades,
+            mlisTrades,
             period: days,
             // All-time totals (same as platform-stats)
             allTimeTotalPnL,
             allTimeTotalTrades,
+            allTimeClassicPnL: Number(allTimeClassicPnL.toFixed(1)),
+            allTimeMlisPnL: Number(allTimeMlisPnL.toFixed(1)),
+            allTimeClassicTrades: classicAnalyses.length,
+            allTimeMlisTrades: mlisAnalyses.length,
           }
         }
       });
