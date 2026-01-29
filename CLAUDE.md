@@ -1010,6 +1010,45 @@ Kullanıcı Hakları Aktif:
   - Legend eklendi (Classic Analysis, MLIS Pro)
   - MLIS verisi varsa dual-line, yoksa tek line gösteriliyor
   - Dosyalar: `analysis.routes.ts`, `LandingPerformanceChart.tsx`
+- **Visual Trade Decision Component (TradeDecisionVisual)**:
+  - Yeni bileşen: `apps/web/components/analysis/TradeDecisionVisual.tsx`
+  - **Görsel Bileşenler**:
+    - `SignalIndicator`: 4 ışıklı trafik lambası (GO/COND/WAIT/AVOID veya BUY/HOLD/SELL)
+    - `DirectionArrow`: LONG (yeşil yukarı ok) / SHORT (kırmızı aşağı ok) yön göstergesi
+    - `ScoreGauge`: Animasyonlu dairesel skor göstergesi (0-10 veya 0-100%)
+    - `VerdictBadge`: Gradient renkli karar etiketi (GO, CONDITIONAL GO, WAIT, AVOID)
+    - `RiskMeter`: 3 seviyeli risk göstergesi (low/medium/high)
+  - **Entegre Edilen Sayfalar**:
+    - FinalVerdict component: Ana analiz sonuç kartı
+    - AnalysisDialog footer: Analiz tamamlandığında verdict özeti
+    - MLISVerdictResult: MLIS Pro sonuçları için görsel karar
+    - analyze/details/[id]: Analiz detay sayfası
+    - reports/[id]: Rapor detay sayfası
+  - **Özellikler**:
+    - Responsive boyutlar (sm, md, lg)
+    - Dark mode uyumlu
+    - Animasyonlu glow efektleri
+    - Classic ve MLIS Pro desteği
+  - Dosyalar: `TradeDecisionVisual.tsx`, `FinalVerdict.tsx`, `AnalysisDialog.tsx`, `details/[id]/page.tsx`, `reports/[id]/page.tsx`
+- **Export Dropdown Genişletildi**:
+  - PNG, JPG, PDF, Email seçenekleri tek dropdown'da
+  - PDF export: jsPDF ile dinamik import, tam sayfa capture
+  - Email export: Screenshot gönderimi, mail butonu
+  - FileText ve Mail ikonları eklendi
+  - Dosya: `analyze/details/[id]/page.tsx`
+- **Otomatik PDF Oluşturma (Analiz Tamamlandığında)**:
+  - Analiz tamamlandığında otomatik PDF oluşturma ve indirme
+  - AnalysisDialog'da `?pdf=true` parametresi ile detay sayfasına yönlendirme
+  - Detay sayfasında auto-PDF handler ve overlay UI
+  - PDF generating status mesajı modal'da gösteriliyor
+  - Tamamlandığında "PDF Downloaded!" mesajı ve otomatik yönlendirme
+  - State'ler: `savedAnalysisId`, `pdfGenerating`, `autoPdfInProgress`, `autoPdfDone`
+  - Dosyalar: `AnalysisDialog.tsx`, `details/[id]/page.tsx`
+- **PNG/JPEG Export Kalitesi Artırıldı**:
+  - PNG: scale 3, windowWidth 1400
+  - JPG: scale 2.5, quality 0.95
+  - TraderPath branding header eklendi (logo + text)
+  - Proper background ve padding export container'da
 
 ---
 
