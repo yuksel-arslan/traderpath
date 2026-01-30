@@ -37,6 +37,7 @@ import {
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { X, Loader2, LineChart } from 'lucide-react';
 
 // Types
 interface GlobalLiquidity {
@@ -118,6 +119,20 @@ interface LayerInsights {
   generatedAt: string;
 }
 
+interface MarketAnalysis {
+  market: string;
+  summary: string;
+  trend: 'bullish' | 'bearish' | 'neutral';
+  keyMetrics: {
+    label: string;
+    value: string;
+    status: 'positive' | 'negative' | 'neutral';
+  }[];
+  recommendation: string;
+  confidence: number;
+  generatedAt: string;
+}
+
 interface CapitalFlowSummary {
   timestamp: string;
   globalLiquidity: GlobalLiquidity;
@@ -127,6 +142,159 @@ interface CapitalFlowSummary {
   activeRotation: ActiveRotation | null;
   insights?: LayerInsights;
   cacheExpiry: string;
+}
+
+// Market Analysis Modal Component
+function MarketAnalysisModal({
+  market,
+  analysis,
+  loading,
+  onClose,
+}: {
+  market: MarketFlow | null;
+  analysis: MarketAnalysis | null;
+  loading: boolean;
+  onClose: () => void;
+}) {
+  if (!market) return null;
+
+  const marketNames: Record<string, string> = {
+    crypto: 'Cryptocurrency',
+    stocks: 'Stock Market',
+    bonds: 'Bond Market',
+    metals: 'Precious Metals',
+  };
+
+  const trendColors = {
+    bullish: 'text-emerald-500',
+    bearish: 'text-red-500',
+    neutral: 'text-blue-500',
+  };
+
+  const trendBg = {
+    bullish: 'bg-emerald-500/20',
+    bearish: 'bg-red-500/20',
+    neutral: 'bg-blue-500/20',
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl">
+        {/* Header */}
+        <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+              <LineChart className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                {marketNames[market.market]} Analysis
+              </h2>
+              <p className="text-sm text-slate-500">AI-Powered Market Insights</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            <X className="w-5 h-5 text-slate-500" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 space-y-4">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
+              <p className="text-slate-500">Generating AI analysis...</p>
+            </div>
+          ) : analysis ? (
+            <>
+              {/* Trend Badge */}
+              <div className="flex items-center justify-between">
+                <span className={cn(
+                  'px-4 py-2 rounded-full font-bold text-sm',
+                  trendBg[analysis.trend],
+                  trendColors[analysis.trend]
+                )}>
+                  {analysis.trend.toUpperCase()}
+                </span>
+                <span className="text-sm text-slate-500">
+                  Confidence: <span className="font-bold text-slate-900 dark:text-white">{analysis.confidence}%</span>
+                </span>
+              </div>
+
+              {/* Summary */}
+              <div className="p-4 bg-gradient-to-r from-blue-50 dark:from-blue-500/10 to-indigo-50 dark:to-indigo-500/10 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <Brain className="w-5 h-5 text-blue-500 mt-1 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-slate-900 dark:text-white mb-2">AI Summary</h3>
+                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed">{analysis.summary}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Key Metrics Grid */}
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Key Metrics</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {analysis.keyMetrics.map((metric, index) => (
+                    <div
+                      key={index}
+                      className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl"
+                    >
+                      <p className="text-xs text-slate-500 mb-1">{metric.label}</p>
+                      <p className={cn(
+                        'font-bold text-sm',
+                        metric.status === 'positive' && 'text-emerald-600 dark:text-emerald-400',
+                        metric.status === 'negative' && 'text-red-600 dark:text-red-400',
+                        metric.status === 'neutral' && 'text-slate-900 dark:text-white'
+                      )}>
+                        {metric.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recommendation */}
+              <div className="p-4 bg-gradient-to-r from-amber-50 dark:from-amber-500/10 to-orange-50 dark:to-orange-500/10 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <Target className="w-5 h-5 text-amber-500 mt-1 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Recommendation</h3>
+                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed">{analysis.recommendation}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700">
+                <p className="text-xs text-slate-500">
+                  Generated: {new Date(analysis.generatedAt).toLocaleString()}
+                </p>
+                {market.market === 'crypto' && (
+                  <Link
+                    href="/analyze"
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-medium rounded-lg hover:shadow-lg transition-all"
+                  >
+                    <Zap className="w-4 h-4" />
+                    Full 7-Step Analysis
+                  </Link>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+              <p className="text-slate-500">Failed to generate analysis. Please try again.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Grain Texture Overlay
@@ -236,7 +404,7 @@ function MarketIcon({ market, className }: { market: string; className?: string 
 }
 
 // Market Card Component
-function MarketCard({ market, onClick }: { market: MarketFlow; onClick: () => void }) {
+function MarketCard({ market, onClick, onAnalyze }: { market: MarketFlow; onClick: () => void; onAnalyze: () => void }) {
   const marketNames: Record<string, string> = {
     crypto: 'Crypto',
     stocks: 'Stocks',
@@ -253,8 +421,7 @@ function MarketCard({ market, onClick }: { market: MarketFlow; onClick: () => vo
 
   return (
     <div
-      onClick={onClick}
-      className="group relative backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl p-5 hover:border-blue-500/50 transition-all cursor-pointer hover:shadow-lg hover:shadow-blue-500/10"
+      className="group relative backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl p-5 hover:border-blue-500/50 transition-all hover:shadow-lg hover:shadow-blue-500/10"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
@@ -313,7 +480,7 @@ function MarketCard({ market, onClick }: { market: MarketFlow; onClick: () => vo
 
       {/* Top Sectors Preview */}
       {market.sectors && market.sectors.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5 mb-4">
           {market.sectors.slice(0, 3).map((sector) => (
             <span
               key={sector.name}
@@ -335,8 +502,28 @@ function MarketCard({ market, onClick }: { market: MarketFlow; onClick: () => vo
         </div>
       )}
 
-      {/* Hover Arrow */}
-      <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+      {/* Action Buttons */}
+      <div className="flex gap-2 mt-auto">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          className="flex-1 py-2 px-3 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+        >
+          Sectors
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onAnalyze();
+          }}
+          className="flex-1 py-2 px-3 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg hover:shadow-lg hover:shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5"
+        >
+          <LineChart className="w-4 h-4" />
+          Analyze
+        </button>
+      </div>
     </div>
   );
 }
@@ -528,6 +715,31 @@ export default function CapitalFlowPage() {
   const [selectedMarket, setSelectedMarket] = useState<MarketFlow | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Market Analysis Modal state
+  const [analysisMarket, setAnalysisMarket] = useState<MarketFlow | null>(null);
+  const [analysisData, setAnalysisData] = useState<MarketAnalysis | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+
+  // Fetch market analysis
+  const fetchMarketAnalysis = async (market: MarketFlow) => {
+    setAnalysisMarket(market);
+    setAnalysisData(null);
+    setAnalysisLoading(true);
+
+    try {
+      const response = await authFetch(`/api/capital-flow/analyze/${market.market}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setAnalysisData(result.data);
+      }
+    } catch (err) {
+      console.error('Error fetching market analysis:', err);
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
   const fetchData = async (refresh = false) => {
     try {
       if (refresh) setRefreshing(true);
@@ -695,6 +907,7 @@ export default function CapitalFlowPage() {
                 key={market.market}
                 market={market}
                 onClick={() => setSelectedMarket(selectedMarket?.market === market.market ? null : market)}
+                onAnalyze={() => fetchMarketAnalysis(market)}
               />
             ))}
           </div>
@@ -797,6 +1010,19 @@ export default function CapitalFlowPage() {
           <p className="text-xs mt-1">Data refreshes every 5 minutes. Market data may have delays.</p>
         </div>
       </div>
+
+      {/* Market Analysis Modal */}
+      {analysisMarket && (
+        <MarketAnalysisModal
+          market={analysisMarket}
+          analysis={analysisData}
+          loading={analysisLoading}
+          onClose={() => {
+            setAnalysisMarket(null);
+            setAnalysisData(null);
+          }}
+        />
+      )}
     </div>
   );
 }
