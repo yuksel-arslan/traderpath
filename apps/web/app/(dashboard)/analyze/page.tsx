@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Target,
@@ -30,6 +30,9 @@ import {
   ArrowRight,
   Layers,
   ExternalLink,
+  Coins,
+  Landmark,
+  Gem,
 } from 'lucide-react';
 import { useCreditNotification } from '../../../contexts/CreditNotificationContext';
 import { cn } from '../../../lib/utils';
@@ -301,14 +304,69 @@ function FeatureBadge({ icon: Icon, text }: { icon: React.ElementType; text: str
   );
 }
 
+// Asset type for multi-market analysis
+type AssetType = 'crypto' | 'stocks' | 'bonds' | 'metals';
+
 // Analysis method type
 type AnalysisMethod = 'classic' | 'mlis_pro';
 
+// Asset Type Configuration
+const ASSET_TYPES: {
+  id: AssetType;
+  name: string;
+  description: string;
+  icon: React.ElementType;
+  color: string;
+  available: boolean;
+}[] = [
+  {
+    id: 'crypto',
+    name: 'Crypto',
+    description: '7-Step & MLIS Pro analysis',
+    icon: Coins,
+    color: 'from-orange-500 to-amber-500',
+    available: true,
+  },
+  {
+    id: 'stocks',
+    name: 'Stocks',
+    description: 'Technical + Fundamental',
+    icon: BarChart3,
+    color: 'from-blue-500 to-indigo-500',
+    available: false, // Coming soon
+  },
+  {
+    id: 'bonds',
+    name: 'Bonds',
+    description: 'Yield & Duration analysis',
+    icon: Landmark,
+    color: 'from-purple-500 to-violet-500',
+    available: false, // Coming soon
+  },
+  {
+    id: 'metals',
+    name: 'Metals',
+    description: 'Gold, Silver, Commodities',
+    icon: Gem,
+    color: 'from-yellow-500 to-amber-400',
+    available: false, // Coming soon
+  },
+];
+
 export default function AnalyzePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { showCelebration, notifyCreditDeduction } = useCreditNotification();
 
   const [stats, setStats] = useState<AnalysisStats | null>(null);
+  const [assetType, setAssetType] = useState<AssetType>(() => {
+    // Check URL params for asset type from Capital Flow recommendation
+    const assetParam = searchParams.get('asset') as AssetType | null;
+    if (assetParam && ['crypto', 'stocks', 'bonds', 'metals'].includes(assetParam)) {
+      return assetParam;
+    }
+    return 'crypto';
+  });
   const [timeframe, setTimeframe] = useState<Timeframe>('4h');
   const [analysisMethod, setAnalysisMethod] = useState<AnalysisMethod>('classic');
   const [chartSymbol, setChartSymbol] = useState('BINANCE:BTCUSDT');
@@ -910,6 +968,87 @@ export default function AnalyzePage() {
                     <p className="text-sm font-medium">No cached data available</p>
                     <p className="text-xs mt-1">
                       Select a method and click "Scan Now" to analyze top 30 coins (300 credits)
+                    </p>
+                  </div>
+                )}
+              </div>
+            </GlassCard>
+          </div>
+
+          {/* Asset Type Selection - Full Width */}
+          <div className="col-span-12">
+            <GlassCard className="p-3 sm:p-4 md:p-6">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500" />
+                    Select Asset Type
+                  </h3>
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
+                    LAYER 4 Analysis
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                  {ASSET_TYPES.map((asset) => {
+                    const Icon = asset.icon;
+                    const isSelected = assetType === asset.id;
+
+                    return (
+                      <button
+                        key={asset.id}
+                        onClick={() => asset.available && setAssetType(asset.id)}
+                        disabled={!asset.available}
+                        className={cn(
+                          "relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-300",
+                          "flex flex-col items-center text-center gap-2",
+                          asset.available ? "cursor-pointer hover:shadow-lg" : "cursor-not-allowed opacity-60",
+                          isSelected
+                            ? `border-transparent bg-gradient-to-br ${asset.color} text-white shadow-lg`
+                            : "border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600"
+                        )}
+                      >
+                        {/* Coming Soon Badge */}
+                        {!asset.available && (
+                          <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-slate-500 text-white text-[9px] font-bold rounded-full shadow-lg">
+                            SOON
+                          </div>
+                        )}
+
+                        <div className={cn(
+                          "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center",
+                          isSelected
+                            ? "bg-white/20"
+                            : `bg-gradient-to-br ${asset.color}`
+                        )}>
+                          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                        </div>
+
+                        <div>
+                          <span className={cn(
+                            "font-semibold text-sm",
+                            isSelected ? "text-white" : "text-slate-900 dark:text-white"
+                          )}>
+                            {asset.name}
+                          </span>
+                          <p className={cn(
+                            "text-[10px] sm:text-xs mt-0.5",
+                            isSelected ? "text-white/80" : "text-slate-500 dark:text-slate-400"
+                          )}>
+                            {asset.description}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Asset Type Info */}
+                {assetType !== 'crypto' && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50/50 dark:bg-amber-500/10 border border-amber-200/50 dark:border-amber-500/20">
+                    <Activity className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      <strong>{ASSET_TYPES.find(a => a.id === assetType)?.name} analysis</strong> is coming soon. For now, you can analyze crypto assets with our 7-Step or MLIS Pro methods.
                     </p>
                   </div>
                 )}
