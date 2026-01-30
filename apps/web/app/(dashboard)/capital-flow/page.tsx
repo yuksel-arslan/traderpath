@@ -162,6 +162,24 @@ interface RotationTradeOpportunity {
   }[];
   suggestedSectors?: string[];
   riskLevel: 'low' | 'medium' | 'high';
+  correlationInfo?: {
+    strongestCorrelation: {
+      market: 'crypto' | 'stocks' | 'bonds' | 'metals';
+      value: number;
+      direction: 'positive' | 'negative';
+      interpretation: string;
+    };
+    hedgeSuggestion?: {
+      market: 'crypto' | 'stocks' | 'bonds' | 'metals';
+      correlation: number;
+    };
+  };
+  phaseContext?: {
+    currentPhase: 'early' | 'mid' | 'late' | 'exit';
+    daysInPhase: number;
+    avgDuration: number;
+    phaseProgress: number;
+  };
 }
 
 interface TradeOpportunities {
@@ -823,6 +841,60 @@ export default function CapitalFlowPage() {
   const [analysisData, setAnalysisData] = useState<MarketAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
 
+  // Crypto scan state
+  const [scanningCrypto, setScanningCrypto] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+
+  // Handle BUY Crypto - triggers auto-scan of top 30 coins
+  const handleBuyCryptoScan = async () => {
+    setScanningCrypto(true);
+    setScanProgress(0);
+
+    try {
+      // Start the scan
+      const startResponse = await authFetch('/api/analysis/top-coins/scan', { method: 'POST' });
+      const startResult = await startResponse.json();
+
+      if (!startResult.success) {
+        throw new Error(startResult.error || 'Failed to start scan');
+      }
+
+      // Poll for progress
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await authFetch('/api/analysis/top-coins/status');
+          const statusResult = await statusResponse.json();
+
+          if (statusResult.success) {
+            const { isScanning, coinsAnalyzed, totalCoins } = statusResult.data;
+            setScanProgress(Math.round((coinsAnalyzed / totalCoins) * 100));
+
+            if (!isScanning) {
+              clearInterval(pollInterval);
+              setScanningCrypto(false);
+              // Navigate to top-coins page with results
+              router.push('/top-coins?from=capital-flow');
+            }
+          }
+        } catch (err) {
+          console.error('Error polling scan status:', err);
+        }
+      }, 2000);
+
+      // Timeout after 10 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        setScanningCrypto(false);
+      }, 10 * 60 * 1000);
+
+    } catch (err) {
+      console.error('Error starting crypto scan:', err);
+      setScanningCrypto(false);
+      // Fallback: just navigate to analyze page
+      router.push('/analyze?asset=crypto');
+    }
+  };
+
   // Fetch market analysis
   const fetchMarketAnalysis = async (market: MarketFlow) => {
     setAnalysisMarket(market);
@@ -1346,8 +1418,68 @@ export default function CapitalFlowPage() {
                       </div>
                     </div>
 
-                    {/* Reason */}
-                    <p className="text-sm text-slate-700 dark:text-slate-300 mb-3">{opp.reason}</p>
+                    {/* Reason - WHY this opportunity */}
+                    <div className={cn(
+                      "mb-3 p-2.5 rounded-lg text-sm leading-relaxed",
+                      isBuy
+                        ? "bg-emerald-100/50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-200"
+                        : "bg-red-100/50 dark:bg-red-900/20 text-red-800 dark:text-red-200"
+                    )}>
+                      <div className="flex items-start gap-2">
+                        <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <span>{opp.reason}</span>
+                      </div>
+                    </div>
+
+                    {/* Phase Progress Bar */}
+                    {opp.phaseContext && (
+                      <div className="mb-3 p-2 rounded-lg bg-white/50 dark:bg-slate-800/50">
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-slate-500 dark:text-slate-400">
+                            {opp.phaseContext.currentPhase.toUpperCase()} Phase
+                          </span>
+                          <span className="text-slate-600 dark:text-slate-300 font-medium">
+                            {opp.phaseContext.daysInPhase}d / {opp.phaseContext.avgDuration}d avg
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all",
+                              opp.phaseContext.currentPhase === 'early' ? 'bg-emerald-500' :
+                              opp.phaseContext.currentPhase === 'mid' ? 'bg-yellow-500' :
+                              opp.phaseContext.currentPhase === 'late' ? 'bg-orange-500' : 'bg-red-500'
+                            )}
+                            style={{ width: `${opp.phaseContext.phaseProgress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Correlation Signal */}
+                    {opp.correlationInfo && (
+                      <div className={cn(
+                        "mb-3 p-2 rounded-lg border",
+                        opp.correlationInfo.strongestCorrelation.direction === 'negative'
+                          ? "bg-violet-50 dark:bg-violet-500/10 border-violet-200 dark:border-violet-500/30"
+                          : "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30"
+                      )}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Activity className="w-3.5 h-3.5 text-violet-500" />
+                          <span className="text-xs font-medium text-violet-700 dark:text-violet-300">
+                            Correlation Signal
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                          {Math.round(opp.correlationInfo.strongestCorrelation.value * 100)}% {opp.correlationInfo.strongestCorrelation.direction} with {marketNames[opp.correlationInfo.strongestCorrelation.market]}
+                        </p>
+                        {opp.correlationInfo.hedgeSuggestion && (
+                          <p className="text-xs text-violet-600 dark:text-violet-400 mt-1 font-medium">
+                            Hedge: {marketNames[opp.correlationInfo.hedgeSuggestion.market]}
+                          </p>
+                        )}
+                      </div>
+                    )}
 
                     {/* Related Markets */}
                     {opp.relatedMarkets.length > 0 && (
@@ -1376,7 +1508,7 @@ export default function CapitalFlowPage() {
                     {opp.suggestedSectors && opp.suggestedSectors.length > 0 && (
                       <div className="mb-3">
                         <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">
-                          {isBuy ? 'Consider Buying' : 'Consider Exiting'}
+                          {isBuy ? 'Hot Sectors' : 'Weak Sectors'}
                         </p>
                         <div className="flex flex-wrap gap-1.5">
                           {opp.suggestedSectors.map((sector, sidx) => (
@@ -1392,18 +1524,42 @@ export default function CapitalFlowPage() {
                     )}
 
                     {/* Action Button */}
-                    <Link
-                      href={`/analyze?asset=${opp.market}`}
-                      className={cn(
-                        "flex items-center justify-center gap-2 w-full py-2.5 rounded-xl font-medium text-white transition-all hover:shadow-md",
-                        isBuy
-                          ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:shadow-emerald-500/20"
-                          : "bg-gradient-to-r from-red-500 to-rose-500 hover:shadow-red-500/20"
-                      )}
-                    >
-                      <Target className="w-4 h-4" />
-                      {opp.market === 'crypto' ? 'Run Full Analysis' : 'Analyze Market'}
-                    </Link>
+                    {opp.market === 'crypto' && isBuy ? (
+                      <button
+                        onClick={handleBuyCryptoScan}
+                        disabled={scanningCrypto}
+                        className={cn(
+                          "flex items-center justify-center gap-2 w-full py-2.5 rounded-xl font-medium text-white transition-all hover:shadow-md",
+                          "bg-gradient-to-r from-emerald-500 to-teal-500 hover:shadow-emerald-500/20",
+                          scanningCrypto && "opacity-80 cursor-wait"
+                        )}
+                      >
+                        {scanningCrypto ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Scanning Top 30... {scanProgress}%
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4" />
+                            Find Best Cryptos
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/analyze?asset=${opp.market}`}
+                        className={cn(
+                          "flex items-center justify-center gap-2 w-full py-2.5 rounded-xl font-medium text-white transition-all hover:shadow-md",
+                          isBuy
+                            ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:shadow-emerald-500/20"
+                            : "bg-gradient-to-r from-red-500 to-rose-500 hover:shadow-red-500/20"
+                        )}
+                      >
+                        <Target className="w-4 h-4" />
+                        {opp.market === 'crypto' ? 'View Exiting Positions' : 'Analyze Market'}
+                      </Link>
+                    )}
                   </div>
                 );
               })}
