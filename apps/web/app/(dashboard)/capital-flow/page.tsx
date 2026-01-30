@@ -819,26 +819,60 @@ export default function CapitalFlowPage() {
       <GradientOrbs />
 
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                <Globe className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Capital Flow Radar</h1>
-            </div>
-            <p className="text-slate-500 dark:text-slate-400 text-sm">
-              "Para nereye akiyorsa potansiyel oradadir" - Where money flows, potential exists
-            </p>
+        {/* ===== HERO SECTION with Kinetic Typography ===== */}
+        <div className="text-center space-y-3 sm:space-y-4 py-4 sm:py-6 mb-8">
+          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/20 backdrop-blur-sm animate-blur-in">
+            <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 animate-pulse" />
+            <span className="text-xs sm:text-sm font-medium bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">
+              Global Capital Flow Intelligence
+            </span>
           </div>
-          <div className="flex items-center gap-3">
+
+          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold">
+            <span className="bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">
+              Capital Flow
+            </span>
+            <br />
+            <span className="relative inline-block">
+              <span className="bg-gradient-to-r from-blue-500 via-indigo-400 to-blue-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer" style={{ animationDelay: '0.5s' }}>
+                Radar
+              </span>
+              <span className="absolute -bottom-1 sm:-bottom-2 left-0 right-0 h-0.5 sm:h-1 bg-gradient-to-r from-blue-500 via-indigo-400 to-blue-500 rounded-full opacity-50 animate-pulse" />
+            </span>
+          </h1>
+
+          <p className="text-sm sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto animate-slide-up px-2">
+            "Para nereye akıyorsa potansiyel oradadır" - Where money flows, potential exists
+          </p>
+
+          {/* Feature Badges */}
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-2 sm:pt-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
+              <Landmark className="w-3.5 h-3.5 text-blue-500" />
+              <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Fed & M2 Tracking</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
+              <BarChart3 className="w-3.5 h-3.5 text-indigo-500" />
+              <span className="text-xs font-medium text-slate-700 dark:text-slate-300">4 Markets</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
+              <Activity className="w-3.5 h-3.5 text-violet-500" />
+              <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Real-time Flow</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
+              <Brain className="w-3.5 h-3.5 text-purple-500" />
+              <span className="text-xs font-medium text-slate-700 dark:text-slate-300">AI Insights</span>
+            </div>
+          </div>
+
+          {/* Liquidity Badge and Refresh */}
+          <div className="flex items-center justify-center gap-3 pt-2">
             <LiquidityBiasBadge bias={data.liquidityBias} />
             <button
               onClick={() => fetchData(true)}
               disabled={refreshing}
               className={cn(
-                "p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors",
+                "p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm",
                 refreshing && "opacity-50 cursor-not-allowed"
               )}
             >
