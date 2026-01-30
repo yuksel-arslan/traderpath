@@ -40,20 +40,57 @@ const PriceTicker = dynamic(
   { ssr: false, loading: () => <div className="w-full h-10 bg-card/50 border-b border-border/50" /> }
 );
 
-// Main navigation items
-const mainNav = [
+// Direct navigation items (no dropdown)
+const directNav = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Capital Flow', href: '/capital-flow', icon: Globe },
-  { name: 'Concierge', href: '/concierge', icon: Bot },
+];
+
+// Dropdown navigation groups
+const dropdownNav = [
+  {
+    name: 'Analysis',
+    icon: TrendingUp,
+    items: [
+      { name: 'Analyze', href: '/analyze', icon: TrendingUp },
+      { name: 'Top Coins', href: '/top-coins', icon: Crown },
+    ],
+  },
+  {
+    name: 'AI Chat',
+    icon: Brain,
+    items: [
+      { name: 'Concierge', href: '/concierge', icon: Bot },
+      { name: 'AI Experts', href: '/ai-expert', icon: Brain },
+    ],
+  },
+  {
+    name: 'Tools',
+    icon: Settings,
+    items: [
+      { name: 'History', href: '/reports', icon: FileText },
+      { name: 'Scheduled', href: '/scheduled', icon: Calendar },
+      { name: 'Alerts', href: '/alerts', icon: Bell },
+    ],
+  },
+];
+
+// End navigation items (after dropdowns)
+const endNav = [
+  { name: 'Rewards', href: '/rewards', icon: Gift },
+];
+
+// All flat items for mobile menu
+const allNavItems = [
+  ...directNav,
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Top Coins', href: '/top-coins', icon: Crown },
-  { name: 'Reports', href: '/reports', icon: FileText },
-  { name: 'Scheduled', href: '/scheduled', icon: Calendar },
+  { name: 'Concierge', href: '/concierge', icon: Bot },
   { name: 'AI Experts', href: '/ai-expert', icon: Brain },
-  { name: 'Methodology', href: '/methodology', icon: BookOpen },
-  { name: 'Pricing', href: '/pricing', icon: Coins },
-  { name: 'Rewards', href: '/rewards', icon: Gift },
+  { name: 'History', href: '/reports', icon: FileText },
+  { name: 'Scheduled', href: '/scheduled', icon: Calendar },
   { name: 'Alerts', href: '/alerts', icon: Bell },
+  ...endNav,
 ];
 
 // User menu items (Settings, Admin, Logout)
@@ -61,6 +98,64 @@ const userMenuNav = [
   { name: 'Settings', href: '/settings', icon: Settings },
   { name: 'Admin', href: '/admin', icon: Server },
 ];
+
+// NavDropdown Component for grouped navigation
+function NavDropdown({
+  name,
+  icon: Icon,
+  items,
+  isActive,
+}: {
+  name: string;
+  icon: any;
+  items: { name: string; href: string; icon: any }[];
+  isActive: (href: string) => boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const hasActiveItem = items.some((item) => isActive(item.href));
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className={cn(
+          'flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+          hasActiveItem
+            ? 'bg-primary/10 text-primary'
+            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+        )}
+      >
+        {name}
+        <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', open && 'rotate-180')} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 mt-1 w-48 bg-card border border-border rounded-xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 z-50">
+          <div className="p-1">
+            {items.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                prefetch={true}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
+                  isActive(item.href)
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-accent'
+                )}
+              >
+                <item.icon className="w-4 h-4" />
+                {item.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Alert type for notifications
 interface PriceAlert {
@@ -207,8 +302,37 @@ export default function DashboardLayout({
             <TraderPathLogo size="md" showText={true} showTagline={true} href="/dashboard" className="hidden sm:flex" />
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-1">
-              {mainNav.map((item) => (
+            <nav className="hidden lg:flex items-center gap-1">
+              {/* Direct nav items */}
+              {directNav.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  prefetch={true}
+                  className={cn(
+                    'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    isActive(item.href)
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                  )}
+                >
+                  {item.name}
+                </Link>
+              ))}
+
+              {/* Dropdown nav groups */}
+              {dropdownNav.map((group) => (
+                <NavDropdown
+                  key={group.name}
+                  name={group.name}
+                  icon={group.icon}
+                  items={group.items}
+                  isActive={isActive}
+                />
+              ))}
+
+              {/* End nav items */}
+              {endNav.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
@@ -459,7 +583,7 @@ export default function DashboardLayout({
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 rounded-lg hover:bg-accent md:hidden"
+                className="p-2 rounded-lg hover:bg-accent lg:hidden"
               >
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
@@ -468,9 +592,9 @@ export default function DashboardLayout({
 
           {/* Mobile Navigation */}
           {mobileMenuOpen && (
-            <nav className="md:hidden border-t border-border animate-in fade-in slide-in-from-top-1 duration-150">
+            <nav className="lg:hidden border-t border-border animate-in fade-in slide-in-from-top-1 duration-150">
               <div className="py-3 space-y-1">
-                {[...mainNav, ...userMenuNav.filter(item => item.name !== 'Admin' || isAdmin)].map((item) => (
+                {[...allNavItems, ...userMenuNav.filter(item => item.name !== 'Admin' || isAdmin)].map((item) => (
                   <Link
                     key={item.name}
                     href={item.href}
@@ -504,6 +628,26 @@ export default function DashboardLayout({
       <main className="min-h-[calc(100vh-4rem)]">
         {children}
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border bg-card/50 py-4">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            © {new Date().getFullYear()} TraderPath. All rights reserved.
+          </p>
+          <div className="flex items-center gap-4">
+            <Link href="/methodology" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Methodology
+            </Link>
+            <Link href="/pricing" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Pricing
+            </Link>
+            <Link href="/settings" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Settings
+            </Link>
+          </div>
+        </div>
+      </footer>
 
       {/* Interface Preference Modal - shown to new users */}
       <InterfacePreferenceModal
