@@ -859,53 +859,6 @@ const ANALYSIS_STEPS = [
   },
 ];
 
-// AI Experts Data - 4 specialized AI mentors for chat, education, and analysis review
-const AI_EXPERTS = [
-  {
-    name: 'ARIA',
-    title: 'Technical Analysis Mentor',
-    icon: LineChart,
-    color: 'text-blue-500',
-    bg: 'bg-blue-500/10',
-    border: 'border-blue-500/30',
-    credentials: 'AI Mentor • Technical Analysis Specialist • Chart Pattern Expert',
-    description: 'Your go-to mentor for all things technical analysis. Chat with ARIA to learn about RSI, MACD, chart patterns, support/resistance levels, and multi-timeframe analysis. Ask any question and get clear, educational explanations.',
-    focus: ['RSI & MACD', 'Chart Patterns', 'Support/Resistance', 'Trend Analysis']
-  },
-  {
-    name: 'NEXUS',
-    title: 'Risk Management Mentor',
-    icon: Crosshair,
-    color: 'text-green-500',
-    bg: 'bg-green-500/10',
-    border: 'border-green-500/30',
-    credentials: 'AI Mentor • Risk Management Specialist • Position Sizing Expert',
-    description: 'Your mentor for smart money management. Chat with NEXUS to learn about position sizing, risk/reward ratios, stop-loss strategies, and how to protect your capital. Perfect for beginners and experienced traders alike.',
-    focus: ['Position Sizing', 'Risk/Reward', 'Stop-Loss Strategy', 'Capital Protection']
-  },
-  {
-    name: 'ORACLE',
-    title: 'On-Chain Intelligence Mentor',
-    icon: Radar,
-    color: 'text-purple-500',
-    bg: 'bg-purple-500/10',
-    border: 'border-purple-500/30',
-    credentials: 'AI Mentor • Blockchain Data Specialist • Whale Tracking Expert',
-    description: 'Your guide to understanding on-chain data. Chat with ORACLE to learn about whale movements, exchange flows, smart money tracking, and how blockchain data can inform your trading decisions.',
-    focus: ['Whale Tracking', 'Exchange Flows', 'Smart Money', 'On-Chain Metrics']
-  },
-  {
-    name: 'SENTINEL',
-    title: 'Security & Safety Mentor',
-    icon: ShieldAlert,
-    color: 'text-orange-500',
-    bg: 'bg-orange-500/10',
-    border: 'border-orange-500/30',
-    credentials: 'AI Mentor • Security Specialist • Scam Prevention Expert',
-    description: 'Your protector in the crypto world. Chat with SENTINEL to learn about common scams, how to spot rug pulls, market manipulation tactics, and how to keep your investments safe from fraudulent projects.',
-    focus: ['Scam Detection', 'Rug Pull Signs', 'Manipulation Tactics', 'Safe Trading']
-  },
-];
 
 // Advanced Reporting Features Data
 const REPORTING_FEATURES = [
@@ -915,8 +868,8 @@ const REPORTING_FEATURES = [
     color: 'text-red-500',
     bg: 'bg-red-500/10',
     border: 'border-red-500/30',
-    description: 'Download professional PDF reports with AI Expert insights and Tokenomics analysis. Perfect for record-keeping and sharing.',
-    highlights: ['AI Expert comments', 'Tokenomics analysis', 'Trade plan charts', '40+ indicators']
+    description: 'Download professional PDF reports with Capital Flow insights and Tokenomics analysis. Perfect for record-keeping and sharing.',
+    highlights: ['Capital Flow context', 'Tokenomics analysis', 'Trade plan charts', '40+ indicators']
   },
   {
     name: 'Email Delivery',
@@ -1032,10 +985,8 @@ function AnalysisStepsGrid() {
 // Features Section Component with Four Main Features
 function FeaturesSection() {
   const [activeStep, setActiveStep] = useState<number | null>(null);
-  const [activeExpert, setActiveExpert] = useState<number | null>(null);
   const [activeReport, setActiveReport] = useState<number | null>(null);
   const [activeAlert, setActiveAlert] = useState<number | null>(null);
-  const [activeConcierge, setActiveConcierge] = useState<number | null>(null);
 
   return (
     <>
@@ -1377,63 +1328,71 @@ function FeaturesSection() {
         </div>
       </section>
 
-      {/* Feature 3: 4 AI Experts Council */}
-      <section className="py-20 bg-gradient-to-b from-purple-500/5 via-blue-500/5 to-transparent">
+      {/* Feature 3: Flow AI - RAG-Powered Capital Flow Interpreter */}
+      <section className="py-20 bg-gradient-to-b from-violet-500/5 via-purple-500/5 to-transparent">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <span className="inline-flex items-center gap-2 px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-500 text-sm font-medium mb-4">
+            <span className="inline-flex items-center gap-2 px-3 py-1 bg-violet-500/10 border border-violet-500/20 rounded-full text-violet-500 text-sm font-medium mb-4">
               <Brain className="w-4 h-4" />
               Feature 3
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
-              <span className="gradient-text-logo-animate">4 AI Experts Council</span>
-              <Sparkles className="w-8 h-8 text-yellow-500" />
+              <span className="gradient-text-logo-animate">Flow AI Interpreter</span>
+              <span className="px-2 py-1 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-xs font-bold rounded-full">RAG</span>
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Your personal AI mentors for trading education. Chat with specialized experts to learn, ask questions, and get personalized guidance on any trading topic.
+              AI-powered Capital Flow interpretation using RAG (Retrieval Augmented Generation). Get real-time market context and explanations for every layer.
             </p>
           </div>
           <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {AI_EXPERTS.map((expert, idx) => {
-                const ExpertIcon = expert.icon;
-                return (
-                  <div
-                    key={idx}
-                    onClick={() => setActiveExpert(idx)}
-                    className={`p-6 bg-card border-2 rounded-xl hover:shadow-xl transition cursor-pointer group ${expert.border}`}
-                  >
-                    <div className={`w-16 h-16 ${expert.bg} rounded-xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition`}>
-                      <ExpertIcon className={`w-8 h-8 ${expert.color}`} />
-                    </div>
-                    <div className="text-center">
-                      <h3 className="font-bold text-lg mb-1 gradient-text-logo-animate">{expert.name}</h3>
-                      <p className={`text-sm ${expert.color} font-medium mb-2`}>{expert.title}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{expert.description.split('.')[0]}.</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-8 p-4 bg-card border rounded-xl">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-purple-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Brain className="w-4 h-4 text-purple-500" />
-                  </div>
-                  <div>
-                    <span className="font-semibold text-foreground">Chat & Learn:</span> Ask any trading question and get instant, educational responses tailored to your level.
-                  </div>
+            {/* AI Insight Example */}
+            <div className="bg-card border-2 border-violet-500/30 rounded-2xl p-6 mb-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Brain className="w-6 h-6 text-white" />
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-bold text-violet-500">Flow AI</span>
+                    <span className="px-2 py-0.5 bg-violet-500/10 text-violet-500 text-xs rounded-full">Layer 1 Insight</span>
                   </div>
-                  <div>
-                    <span className="font-semibold text-foreground">Analysis Review:</span> Each expert also reviews your analyses and adds their specialized perspective to your reports.
-                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    &quot;Fed balance sheet contracted 2.1% this week - largest decline in 3 months. Historically, this signals tightening liquidity and typically leads to risk-off sentiment within 2-3 weeks. Crypto inflows may slow. Consider reducing exposure or waiting for Layer 2 confirmation.&quot;
+                  </p>
                 </div>
               </div>
+            </div>
+
+            {/* Features Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="p-5 bg-card border border-violet-500/20 rounded-xl text-center">
+                <div className="w-12 h-12 bg-violet-500/10 rounded-xl flex items-center justify-center mb-3 mx-auto">
+                  <Activity className="w-6 h-6 text-violet-500" />
+                </div>
+                <h3 className="font-bold mb-1 gradient-text-logo-animate">Real-Time Context</h3>
+                <p className="text-xs text-muted-foreground">AI explains what each data point means for your trading decisions</p>
+              </div>
+              <div className="p-5 bg-card border border-purple-500/20 rounded-xl text-center">
+                <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center mb-3 mx-auto">
+                  <TrendingUp className="w-6 h-6 text-purple-500" />
+                </div>
+                <h3 className="font-bold mb-1 gradient-text-logo-animate">Historical Patterns</h3>
+                <p className="text-xs text-muted-foreground">RAG retrieves similar past scenarios to predict likely outcomes</p>
+              </div>
+              <div className="p-5 bg-card border border-fuchsia-500/20 rounded-xl text-center">
+                <div className="w-12 h-12 bg-fuchsia-500/10 rounded-xl flex items-center justify-center mb-3 mx-auto">
+                  <MessageCircle className="w-6 h-6 text-fuchsia-500" />
+                </div>
+                <h3 className="font-bold mb-1 gradient-text-logo-animate">Plain Language</h3>
+                <p className="text-xs text-muted-foreground">Complex macro data explained in simple, actionable terms</p>
+              </div>
+            </div>
+
+            {/* Info Box */}
+            <div className="p-4 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/20 rounded-xl">
+              <p className="text-sm text-center text-muted-foreground">
+                <span className="font-semibold text-violet-500">RAG Technology:</span> Retrieves relevant market history and Fed data to provide context-aware interpretations. No generic responses - every insight is grounded in real data.
+              </p>
             </div>
           </div>
         </div>
@@ -1544,122 +1503,13 @@ function FeaturesSection() {
         </div>
       </section>
 
-      {/* Feature 6: AI Concierge */}
-      <section className="py-20 bg-gradient-to-b from-emerald-500/5 via-teal-500/5 to-transparent">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <span className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-sm font-medium mb-4">
-              <Bot className="w-4 h-4" />
-              Feature 6
-            </span>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
-              <span className="gradient-text-logo-animate">AI Concierge</span>
-              <Sparkles className="w-8 h-8 text-emerald-500" />
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Your personal AI trading assistant. Just ask in plain language - analyze coins, check your stats, set alerts, and more. Voice input supported!
-            </p>
-          </div>
-          <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                {
-                  icon: MessageCircle,
-                  name: 'Natural Language',
-                  description: 'Just type or speak your request. "Analyze BTC for me" or "How is ETH looking?"',
-                  bg: 'bg-emerald-500/10',
-                  color: 'text-emerald-500',
-                  border: 'border-emerald-500/30',
-                },
-                {
-                  icon: Mic,
-                  name: 'Voice Commands',
-                  description: 'Hands-free analysis with voice input. Perfect for busy traders on the go.',
-                  bg: 'bg-teal-500/10',
-                  color: 'text-teal-500',
-                  border: 'border-teal-500/30',
-                },
-                {
-                  icon: Zap,
-                  name: 'Instant Analysis',
-                  description: 'Get full 7-step analysis results in seconds. Entry, SL, TP levels included.',
-                  bg: 'bg-cyan-500/10',
-                  color: 'text-cyan-500',
-                  border: 'border-cyan-500/30',
-                },
-                {
-                  icon: Brain,
-                  name: 'Expert Insights',
-                  description: 'Ask trading questions and get answers from our AI Expert Panel (VOLTRAN).',
-                  bg: 'bg-purple-500/10',
-                  color: 'text-purple-500',
-                  border: 'border-purple-500/30',
-                },
-              ].map((feature, idx) => {
-                const FeatureIcon = feature.icon;
-                return (
-                  <div
-                    key={idx}
-                    onClick={() => setActiveConcierge(idx)}
-                    className={`p-6 bg-card border-2 rounded-xl hover:shadow-xl transition cursor-pointer group ${feature.border}`}
-                  >
-                    <div className={`w-14 h-14 ${feature.bg} rounded-xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition`}>
-                      <FeatureIcon className={`w-7 h-7 ${feature.color}`} />
-                    </div>
-                    <h3 className="font-bold text-lg mb-2 text-center gradient-text-logo-animate">{feature.name}</h3>
-                    <p className="text-sm text-muted-foreground text-center line-clamp-2">{feature.description.split('.')[0]}.</p>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-8 p-4 bg-card border rounded-xl">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Globe className="w-4 h-4 text-emerald-500" />
-                  </div>
-                  <div>
-                    <span className="font-semibold text-foreground">Bilingual Support:</span> Speak Turkish or English - the AI understands both and responds in your language.
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-teal-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Coins className="w-4 h-4 text-teal-500" />
-                  </div>
-                  <div>
-                    <span className="font-semibold text-foreground">50+ Coins:</span> Analyze any major cryptocurrency with natural language aliases like "Bitcoin" or "Ethereum".
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* Example commands showcase */}
-            <div className="mt-6 flex flex-wrap justify-center gap-2">
-              {[
-                '"Analyze BTC for me"',
-                '"How is SOL doing?"',
-                '"Check my stats"',
-                '"Set alert for ETH at 4000"',
-                '"What is RSI?"',
-              ].map((cmd, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-sm text-emerald-600 dark:text-emerald-400 font-medium"
-                >
-                  {cmd}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature 7: TFT Model Prediction (Coming Soon) */}
+      {/* Feature 6: TFT Model Prediction (Coming Soon) */}
       <section className="py-20 bg-gradient-to-b from-pink-500/5 via-purple-500/5 to-transparent">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <span className="inline-flex items-center gap-2 px-3 py-1 bg-pink-500/10 border border-pink-500/20 rounded-full text-pink-500 text-sm font-medium mb-4">
               <Brain className="w-4 h-4" />
-              Feature 7
+              Feature 6
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
               <span className="gradient-text-logo-animate">TFT Model Prediction</span>
@@ -1765,85 +1615,6 @@ function FeaturesSection() {
                   <div className="bg-accent/50 rounded-lg p-4 border border-border">
                     <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Real Example</h5>
                     <p className="text-sm italic">{item.example}</p>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      )}
-
-      {/* AI Expert Modal */}
-      {activeExpert !== null && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4"
-          onClick={() => setActiveExpert(null)}
-        >
-          <div
-            className="bg-card border-2 rounded-2xl shadow-2xl p-4 sm:p-6 max-w-md w-full max-h-[95vh] sm:max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {(() => {
-              const expert = AI_EXPERTS[activeExpert];
-              const ExpertIcon = expert.icon;
-              return (
-                <>
-                  {/* Header */}
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-16 h-16 ${expert.bg} ${expert.border} border-2 rounded-xl flex items-center justify-center flex-shrink-0`}>
-                      <ExpertIcon className={`w-8 h-8 ${expert.color}`} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xl font-bold">{expert.name}</h4>
-                        <Sparkles className="w-4 h-4 text-yellow-500" />
-                      </div>
-                      <p className={`text-sm ${expert.color} font-medium`}>{expert.title}</p>
-                    </div>
-                    <button
-                      onClick={() => setActiveExpert(null)}
-                      className="text-muted-foreground hover:text-foreground transition"
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  {/* Credentials */}
-                  <p className="text-xs text-muted-foreground mb-4 pb-3 border-b border-border">
-                    {expert.credentials}
-                  </p>
-
-                  {/* Description */}
-                  <p className="text-sm leading-relaxed mb-4">
-                    {expert.description}
-                  </p>
-
-                  {/* Expertise Areas */}
-                  <div className={`${expert.bg} rounded-lg p-4 mb-4`}>
-                    <h5 className={`text-xs font-semibold uppercase tracking-wide ${expert.color} mb-2`}>Expertise Areas</h5>
-                    <div className="flex flex-wrap gap-2">
-                      {expert.focus.map((item, i) => (
-                        <span key={i} className={`text-xs px-3 py-1.5 rounded-full border ${expert.border} ${expert.color} font-medium`}>
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* What You Can Do */}
-                  <div className="bg-accent/50 rounded-lg p-4 border border-border space-y-3">
-                    <div className="flex items-start gap-2">
-                      <Brain className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-muted-foreground">
-                        <span className="font-semibold text-foreground">Chat & Learn:</span> Start a conversation with {expert.name} to ask questions, learn concepts, and get personalized trading education.
-                      </p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-muted-foreground">
-                        <span className="font-semibold text-foreground">Analysis Review:</span> {expert.name} also reviews your 7-step analyses and adds specialized insights to your reports.
-                      </p>
-                    </div>
                   </div>
                 </>
               );
@@ -2238,7 +2009,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Features Section with 7-Step Analysis + AI Experts */}
+      {/* Features Section with Capital Flow + Analysis */}
       <FeaturesSection />
 
       {/* How It Works */}
@@ -2343,45 +2114,22 @@ export default function LandingPage() {
             </div>
 
             {/* Additional Features Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* AI Concierge - NEW */}
-              <div className="bg-card border border-emerald-500/30 rounded-xl p-5 relative overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Flow AI Interpreter */}
+              <div className="bg-card border border-violet-500/30 rounded-xl p-5 relative overflow-hidden">
                 <div className="absolute top-2 right-2">
-                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-500 text-[10px] font-bold rounded-full">NEW</span>
+                  <span className="px-2 py-0.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-[10px] font-bold rounded-full">RAG</span>
                 </div>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
-                    <Bot className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold gradient-text-logo-animate">AI Concierge</h4>
-                    <p className="text-xs text-muted-foreground">Chat-based trading assistant</p>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">Just say &quot;How is BTC?&quot; - instant analysis with voice support. Natural language, zero UI complexity.</p>
-              </div>
-
-              {/* AI Expert */}
-              <div className="bg-card border rounded-xl p-5">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+                  <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center">
                     <Brain className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h4 className="font-semibold gradient-text-logo-animate">AI Expert Chat</h4>
-                    <p className="text-xs text-muted-foreground">Ask questions about your analysis</p>
+                    <h4 className="font-semibold gradient-text-logo-animate">Flow AI</h4>
+                    <p className="text-xs text-muted-foreground">Capital Flow interpreter</p>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1">
-                  {AI_EXPERTS.slice(0, 4).map((expert, idx) => {
-                    const ExpertIcon = expert.icon;
-                    return (
-                      <div key={idx} className={`p-1.5 ${expert.bg} rounded`}>
-                        <ExpertIcon className={`w-3.5 h-3.5 ${expert.color}`} />
-                      </div>
-                    );
-                  })}
-                </div>
+                <p className="text-xs text-muted-foreground">RAG-powered AI explains what each layer means for your trading decisions in plain language.</p>
               </div>
 
               {/* PDF Report */}
@@ -2392,7 +2140,7 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <h4 className="font-semibold gradient-text-logo-animate">PDF Report</h4>
-                    <p className="text-xs text-muted-foreground">Download with AI insights</p>
+                    <p className="text-xs text-muted-foreground">Download with Flow insights</p>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">Full analysis with Tokenomics, 40+ indicators in professional PDF format.</p>
