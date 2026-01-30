@@ -33,6 +33,8 @@ import {
   FileText,
   Brain,
   AlertTriangle,
+  Sparkles,
+  Globe,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
@@ -339,6 +341,44 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
         </div>
       )}
     </Link>
+  );
+}
+
+// ===========================================
+// Modern UI Components (2026 Design)
+// ===========================================
+
+// Grain Texture Overlay
+function GrainOverlay() {
+  return (
+    <div
+      className="pointer-events-none fixed inset-0 z-50 opacity-[0.02]"
+      style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+        backgroundRepeat: 'repeat',
+      }}
+    />
+  );
+}
+
+// Gradient Orbs Background
+function GradientOrbs() {
+  return (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-teal-500/20 dark:bg-teal-500/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute top-1/3 -left-20 w-72 h-72 bg-red-500/20 dark:bg-red-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      <div className="absolute -bottom-20 right-1/4 w-80 h-80 bg-amber-500/20 dark:bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+    </div>
+  );
+}
+
+// Feature Badge Component
+function FeatureBadge({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
+  return (
+    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
+      <Icon className="w-3.5 h-3.5 text-teal-500" />
+      <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{text}</span>
+    </div>
   );
 }
 
@@ -676,140 +716,183 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 animate-spin text-emerald-500 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-slate-400 font-medium">Loading dashboard...</p>
+      <div className="relative min-h-screen bg-slate-50 dark:bg-[#0B1120]">
+        <GrainOverlay />
+        <GradientOrbs />
+        <div className="relative z-10 flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="w-10 h-10 animate-spin text-teal-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-slate-400 font-medium">Loading dashboard...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-6">
-      {/* ===== SECTION 1: Credits ===== */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-amber-200/50 dark:border-transparent">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-500/10 dark:from-amber-500/20 via-transparent to-transparent" />
-        <div className="relative z-10 p-5">
-          <div className="flex items-center gap-4">
-            <div className="relative shrink-0">
-              <div className="absolute inset-0 bg-amber-500/30 dark:bg-amber-500/40 blur-xl rounded-full animate-pulse" />
-              <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-500 flex items-center justify-center shadow-lg">
-                <Gem className="w-7 h-7 text-white" />
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-amber-700 dark:text-slate-400 uppercase tracking-wider">Credits</p>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-gray-800 dark:text-white">{formatCredits(credits)}</span>
-                {credits < 10 && credits > 0 && (
-                  <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-full animate-pulse">
-                    Low
-                  </span>
-                )}
-                {credits === 0 && (
-                  <span className="text-xs px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full animate-pulse">
-                    Empty
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="ml-auto flex items-center gap-3">
-              <Link
-                href="/pricing"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-sm font-medium hover:opacity-90 transition"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Buy
-              </Link>
-              <Link
-                href="/rewards"
-                className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
-              >
-                Earn free
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
+    <div className="relative min-h-screen bg-slate-50 dark:bg-[#0B1120]">
+      <GrainOverlay />
+      <GradientOrbs />
+
+      <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        {/* ===== HERO SECTION with Kinetic Typography ===== */}
+        <div className="text-center space-y-3 sm:space-y-4 py-4 sm:py-6 mb-8">
+          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-red-500/10 border border-teal-500/20 backdrop-blur-sm animate-blur-in">
+            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-teal-500 animate-pulse" />
+            <span className="text-xs sm:text-sm font-medium bg-gradient-to-r from-teal-500 to-red-500 bg-clip-text text-transparent">
+              Your Trading Command Center
+            </span>
           </div>
-          {/* Low credit warning */}
-          {credits < 10 && (
-            <div className={cn(
-              "mt-3 p-2 rounded-lg text-xs font-medium flex items-center gap-2",
-              credits === 0
-                ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-            )}>
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              {credits === 0
-                ? "No credits left! Buy or earn credits to continue."
-                : `Running low on credits (${formatCredits(credits)} remaining)`
-              }
-            </div>
-          )}
+
+          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold">
+            <span className="bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">
+              Trading
+            </span>
+            <br />
+            <span className="relative inline-block">
+              <span className="bg-gradient-to-r from-teal-500 via-red-400 to-teal-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer" style={{ animationDelay: '0.5s' }}>
+                Dashboard
+              </span>
+              <span className="absolute -bottom-1 sm:-bottom-2 left-0 right-0 h-0.5 sm:h-1 bg-gradient-to-r from-teal-500 via-red-400 to-teal-500 rounded-full opacity-50 animate-pulse" />
+            </span>
+          </h1>
+
+          <p className="text-sm sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto animate-slide-up px-2">
+            Monitor your portfolio, track performance, and manage your trades
+          </p>
+
+          {/* Feature Badges */}
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-2 sm:pt-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <FeatureBadge icon={Target} text="Live Tracking" />
+            <FeatureBadge icon={BarChart3} text="P/L Analytics" />
+            <FeatureBadge icon={Brain} text="AI Insights" />
+            <FeatureBadge icon={Zap} text="Real-time Data" />
+          </div>
         </div>
-      </div>
 
-      {/* ===== SECTION 2: Statistics Grid ===== */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        <StatCard
-          icon={Target}
-          label="Platform Accuracy"
-          value={platformStats?.accuracy?.overall ? `${platformStats.accuracy.overall}%` : '—'}
-          subValue={`${formatNumber(platformStats?.accuracy?.sampleSize || 0)} verified`}
-          color="emerald"
-        />
-        <StatCard
-          icon={BarChart3}
-          label="Total Analyses"
-          value={formatNumber(platformStats?.platform?.totalAnalyses || 0)}
-          subValue={`${formatNumber(platformStats?.platform?.weeklyAnalyses || 0)} this week`}
-          color="purple"
-        />
-        <StatCard
-          icon={performanceData?.summary?.totalRealizedPnL && performanceData.summary.totalRealizedPnL >= 0 ? TrendingUp : TrendingDown}
-          label="Total P/L"
-          value={performanceData?.summary?.totalRealizedPnL !== undefined
-            ? `${performanceData.summary.totalRealizedPnL >= 0 ? '+' : ''}${performanceData.summary.totalRealizedPnL.toFixed(1)}%`
-            : '—'}
-          subValue={performanceData?.summary?.totalTrades ? `${performanceData.summary.totalTrades} closed trades` : 'No closed trades'}
-          color={performanceData?.summary?.totalRealizedPnL && performanceData.summary.totalRealizedPnL >= 0 ? 'green' : 'red'}
-        />
-        <StatCard
-          icon={Users}
-          label="Platform Users"
-          value={formatNumber(platformStats?.platform?.totalUsers || 0)}
-          color="blue"
-        />
-        <StatCard
-          icon={Award}
-          label="My Accuracy"
-          value={userStats?.verifiedAnalyses ? `${userStats.accuracy?.toFixed(0)}%` : (userStats?.avgScore ? `${(userStats.avgScore * 10).toFixed(0)}%` : '—')}
-          subValue={userStats?.verifiedAnalyses
-            ? `${userStats.correctAnalyses}/${userStats.verifiedAnalyses} closed`
-            : (userStats?.avgScore ? 'Avg analysis score' : 'No data yet')}
-          color="amber"
-        />
-        <StatCard
-          icon={TrendingUp}
-          label="GO Signals"
-          value={formatNumber(userStats?.goSignals || 0)}
-          subValue={`${formatNumber(userStats?.avoidSignals || 0)} avoided`}
-          color="green"
-        />
-        <StatCard
-          icon={Activity}
-          label="Active Trades"
-          value={formatNumber(userStats?.activeCount || 0)}
-          subValue={userStats?.activeCount
-            ? `${formatNumber(userStats.activeProfitable || 0)} profitable (${userStats.activePerformance?.toFixed(0) || 0}%)`
-            : 'Start analyzing'}
-          color="cyan"
-        />
-      </div>
+        {/* ===== SECTION 1: Credits ===== */}
+        <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-amber-200/50 dark:border-slate-700/50 shadow-lg mb-6">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-yellow-500/5" />
+          <div className="relative z-10 p-5">
+            <div className="flex items-center gap-4">
+              <div className="relative shrink-0">
+                <div className="absolute inset-0 bg-amber-500/30 dark:bg-amber-500/40 blur-xl rounded-full animate-pulse" />
+                <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-500 flex items-center justify-center shadow-lg">
+                  <Gem className="w-7 h-7 text-white" />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-amber-700 dark:text-slate-400 uppercase tracking-wider">Credits</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-gray-800 dark:text-white">{formatCredits(credits)}</span>
+                  {credits < 10 && credits > 0 && (
+                    <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-full animate-pulse">
+                      Low
+                    </span>
+                  )}
+                  {credits === 0 && (
+                    <span className="text-xs px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full animate-pulse">
+                      Empty
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="ml-auto flex items-center gap-3">
+                <Link
+                  href="/pricing"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-sm font-medium hover:opacity-90 transition"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Buy
+                </Link>
+                <Link
+                  href="/rewards"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+                >
+                  Earn free
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+            {/* Low credit warning */}
+            {credits < 10 && (
+              <div className={cn(
+                "mt-3 p-2 rounded-lg text-xs font-medium flex items-center gap-2",
+                credits === 0
+                  ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                  : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+              )}>
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                {credits === 0
+                  ? "No credits left! Buy or earn credits to continue."
+                  : `Running low on credits (${formatCredits(credits)} remaining)`
+                }
+              </div>
+            )}
+          </div>
+        </div>
 
-      {/* ===== SECTION 2.5: My Performance Summary ===== */}
-      {userStats && userStats.totalAnalyses > 0 && (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
+        {/* ===== SECTION 2: Statistics Grid ===== */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+          <StatCard
+            icon={Target}
+            label="Platform Accuracy"
+            value={platformStats?.accuracy?.overall ? `${platformStats.accuracy.overall}%` : '—'}
+            subValue={`${formatNumber(platformStats?.accuracy?.sampleSize || 0)} verified`}
+            color="emerald"
+          />
+          <StatCard
+            icon={BarChart3}
+            label="Total Analyses"
+            value={formatNumber(platformStats?.platform?.totalAnalyses || 0)}
+            subValue={`${formatNumber(platformStats?.platform?.weeklyAnalyses || 0)} this week`}
+            color="purple"
+          />
+          <StatCard
+            icon={performanceData?.summary?.totalRealizedPnL && performanceData.summary.totalRealizedPnL >= 0 ? TrendingUp : TrendingDown}
+            label="Total P/L"
+            value={performanceData?.summary?.totalRealizedPnL !== undefined
+              ? `${performanceData.summary.totalRealizedPnL >= 0 ? '+' : ''}${performanceData.summary.totalRealizedPnL.toFixed(1)}%`
+              : '—'}
+            subValue={performanceData?.summary?.totalTrades ? `${performanceData.summary.totalTrades} closed trades` : 'No closed trades'}
+            color={performanceData?.summary?.totalRealizedPnL && performanceData.summary.totalRealizedPnL >= 0 ? 'green' : 'red'}
+          />
+          <StatCard
+            icon={Users}
+            label="Platform Users"
+            value={formatNumber(platformStats?.platform?.totalUsers || 0)}
+            color="blue"
+          />
+          <StatCard
+            icon={Award}
+            label="My Accuracy"
+            value={userStats?.verifiedAnalyses ? `${userStats.accuracy?.toFixed(0)}%` : (userStats?.avgScore ? `${(userStats.avgScore * 10).toFixed(0)}%` : '—')}
+            subValue={userStats?.verifiedAnalyses
+              ? `${userStats.correctAnalyses}/${userStats.verifiedAnalyses} closed`
+              : (userStats?.avgScore ? 'Avg analysis score' : 'No data yet')}
+            color="amber"
+          />
+          <StatCard
+            icon={TrendingUp}
+            label="GO Signals"
+            value={formatNumber(userStats?.goSignals || 0)}
+            subValue={`${formatNumber(userStats?.avoidSignals || 0)} avoided`}
+            color="green"
+          />
+          <StatCard
+            icon={Activity}
+            label="Active Trades"
+            value={formatNumber(userStats?.activeCount || 0)}
+            subValue={userStats?.activeCount
+              ? `${formatNumber(userStats.activeProfitable || 0)} profitable (${userStats.activePerformance?.toFixed(0) || 0}%)`
+              : 'Start analyzing'}
+            color="cyan"
+          />
+        </div>
+
+        {/* ===== SECTION 2.5: My Performance Summary ===== */}
+        {userStats && userStats.totalAnalyses > 0 && (
+          <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/50 mb-6">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
 
           <div className="relative z-10 p-5">
@@ -1166,6 +1249,7 @@ export default function DashboardPage() {
           </Link>
         </div>
       )}
+      </div>
     </div>
   );
 }
