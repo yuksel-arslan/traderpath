@@ -114,6 +114,204 @@ const FEATURES = [
   },
 ];
 
+// System Flow Chart - Visual explanation of how TraderPath works
+function SystemFlowChart() {
+  const [isVisible, setIsVisible] = useState(false);
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.2 }
+    );
+
+    if (chartRef.current) {
+      observer.observe(chartRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const steps = [
+    {
+      icon: '🌍',
+      title: 'Global Liquidity Check',
+      description: 'Fed, M2, DXY, VIX → Risk On or Risk Off?',
+      rightContent: (
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 text-sm font-medium">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          RISK ON
+        </div>
+      ),
+      gradient: 'from-teal-500 to-cyan-500',
+      shadow: 'shadow-teal-500/30',
+    },
+    {
+      icon: '💰',
+      title: 'Where Is Money Flowing?',
+      description: 'Capital rotating from Bonds → Crypto',
+      leftContent: (
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/20 text-red-400 text-sm font-medium">
+          Bonds -2.3% ↓
+        </div>
+      ),
+      gradient: 'from-blue-500 to-indigo-500',
+      shadow: 'shadow-blue-500/30',
+      reverse: true,
+    },
+    {
+      icon: '🔍',
+      title: 'Scan Best Assets',
+      description: 'Analyze top 30 with 40+ indicators',
+      rightContent: (
+        <div className="space-y-1 text-left">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-white font-medium">BTC</span>
+            <span className="text-emerald-400 text-xs">Score: 78</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-white font-medium">ETH</span>
+            <span className="text-emerald-400 text-xs">Score: 72</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-white font-medium">SOL</span>
+            <span className="text-yellow-400 text-xs">Score: 65</span>
+          </div>
+        </div>
+      ),
+      gradient: 'from-purple-500 to-violet-500',
+      shadow: 'shadow-purple-500/30',
+    },
+    {
+      icon: '✅',
+      title: 'Clear Decision',
+      description: 'Entry: $42,150 | SL: $40,800 | TP: $45,200',
+      leftContent: (
+        <div className="inline-block px-4 py-2 rounded-xl bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-500/30">
+          GO LONG BTC
+        </div>
+      ),
+      gradient: 'from-emerald-500 to-green-500',
+      shadow: 'shadow-emerald-500/30',
+      reverse: true,
+    },
+  ];
+
+  return (
+    <section className="py-12 md:py-20 relative overflow-hidden" ref={chartRef}>
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-900/50 via-slate-900/80 to-slate-900/50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-950" />
+
+      <div className="container mx-auto px-4 relative z-10">
+        {/* Header */}
+        <div className="text-center mb-10 md:mb-16">
+          <h2 className="text-2xl md:text-4xl font-bold text-white mb-3">
+            How It Works
+          </h2>
+          <p className="text-slate-400 text-sm md:text-base">
+            Follow the money. Find the opportunity.
+          </p>
+        </div>
+
+        {/* Flow Chart */}
+        <div className="max-w-3xl mx-auto relative">
+          {/* Vertical Line */}
+          <div className="absolute left-1/2 top-8 bottom-8 w-0.5 bg-gradient-to-b from-teal-500 via-blue-500 via-purple-500 to-emerald-500 -translate-x-1/2 z-0 hidden md:block" />
+
+          {/* Steps */}
+          <div className="space-y-6 md:space-y-0">
+            {steps.map((step, idx) => (
+              <div
+                key={idx}
+                className={`relative z-10 transition-all duration-700 ${
+                  isVisible
+                    ? 'opacity-100 translate-y-0'
+                    : 'opacity-0 translate-y-8'
+                }`}
+                style={{ transitionDelay: `${idx * 200}ms` }}
+              >
+                {/* Mobile Layout */}
+                <div className="md:hidden">
+                  <div className="flex items-start gap-4 bg-slate-800/50 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50">
+                    <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${step.gradient} flex items-center justify-center shadow-lg ${step.shadow} flex-shrink-0`}>
+                      <span className="text-xl">{step.icon}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-bold text-white mb-1">{step.title}</h3>
+                      <p className="text-slate-400 text-xs mb-2">{step.description}</p>
+                      <div>{step.leftContent || step.rightContent}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Desktop Layout */}
+                <div className="hidden md:flex items-center gap-6 mb-12">
+                  {step.reverse ? (
+                    <>
+                      <div className="flex-1 flex justify-end pr-6">
+                        {step.leftContent}
+                      </div>
+                      <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${step.gradient} flex items-center justify-center shadow-lg ${step.shadow} z-10`}>
+                        <span className="text-2xl">{step.icon}</span>
+                      </div>
+                      <div className="flex-1 pl-6">
+                        <h3 className="text-xl font-bold text-white">{step.title}</h3>
+                        <p className="text-slate-400 text-sm mt-1">{step.description}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex-1 text-right pr-6">
+                        <h3 className="text-xl font-bold text-white">{step.title}</h3>
+                        <p className="text-slate-400 text-sm mt-1">{step.description}</p>
+                      </div>
+                      <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${step.gradient} flex items-center justify-center shadow-lg ${step.shadow} z-10`}>
+                        <span className="text-2xl">{step.icon}</span>
+                      </div>
+                      <div className="flex-1 pl-6">
+                        {step.rightContent}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Arrow (desktop only) */}
+                {idx < steps.length - 1 && (
+                  <div className="hidden md:flex justify-center -my-4">
+                    <div className="text-slate-500 text-xl">↓</div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom Summary */}
+        <div className="mt-10 md:mt-16 text-center">
+          <p className="text-base md:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
+            <span className="text-teal-400 font-semibold">TraderPath</span> follows global capital flow,
+            scans the best opportunities, and gives you a clear
+            <span className="text-emerald-400 font-semibold"> GO</span> /
+            <span className="text-yellow-400 font-semibold"> WAIT</span> /
+            <span className="text-red-400 font-semibold"> AVOID</span> decision.
+          </p>
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-2 mt-6 md:mt-8 px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all text-sm md:text-base"
+          >
+            Start Free Analysis
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // Platform metrics component - shows real data instead of fake testimonials
 function StatsBoxes() {
   const [metrics, setMetrics] = useState<{
@@ -1820,6 +2018,9 @@ export default function LandingPage() {
           </p>
         </div>
       </section>
+
+      {/* System Flow Chart - How It Works Visual */}
+      <SystemFlowChart />
 
       {/* Performance Chart & Stats Boxes - Above Features */}
       <section className="py-8 md:py-12">
