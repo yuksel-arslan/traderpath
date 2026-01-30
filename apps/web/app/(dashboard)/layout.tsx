@@ -25,6 +25,7 @@ import {
   Calendar,
   Bot,
   Crown,
+  Globe,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -42,6 +43,7 @@ const PriceTicker = dynamic(
 // Main navigation items
 const mainNav = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Capital Flow', href: '/capital-flow', icon: Globe },
   { name: 'Concierge', href: '/concierge', icon: Bot },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Top Coins', href: '/top-coins', icon: Crown },

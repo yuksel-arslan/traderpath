@@ -12,11 +12,12 @@
 4. [Database Design](#4-database-design)
 5. [API Specification](#5-api-specification)
 6. [Credit & Rewards System](#6-credit--rewards-system)
-7. [7-Step Analysis Engine](#7-7-step-analysis-engine)
-8. [Frontend Architecture](#8-frontend-architecture)
-9. [Security](#9-security)
-10. [Deployment](#10-deployment)
-11. [Performance Requirements](#11-performance-requirements)
+7. [Capital Flow System](#7-capital-flow-system) ← NEW
+8. [7-Step Analysis Engine](#8-7-step-analysis-engine)
+9. [Frontend Architecture](#9-frontend-architecture)
+10. [Security](#10-security)
+11. [Deployment](#11-deployment)
+12. [Performance Requirements](#12-performance-requirements)
 
 **Appendices**
 - [Appendix A: Error Codes](#appendix-a-error-codes)
@@ -930,7 +931,425 @@ Response:
 
 ---
 
-## 7. 7-Step Analysis Engine
+## 7. Capital Flow System
+
+> **Core Principle: "Para nereye akıyorsa potansiyel oradadır"**
+> ("Where money flows, potential exists")
+
+The Capital Flow System is TraderPath's macro-level intelligence layer that tracks global liquidity and capital rotation across major asset classes before any micro-level analysis is performed.
+
+### 7.1 System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         CAPITAL FLOW ARCHITECTURE                                │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌────────────────────────────────────────────────────────────────────────────┐ │
+│  │                     LAYER 1: GLOBAL LIQUIDITY TRACKER                      │ │
+│  │                                                                            │ │
+│  │   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │ │
+│  │   │ Fed Balance  │  │   US M2      │  │    DXY       │  │    VIX       │  │ │
+│  │   │    Sheet     │  │   Supply     │  │ Dollar Index │  │  Fear Index  │  │ │
+│  │   │  (FRED API)  │  │  (FRED API)  │  │(Yahoo Finance)│ │(Yahoo Finance)│ │ │
+│  │   └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘  │ │
+│  └────────────────────────────────────────────────────────────────────────────┘ │
+│                                        │                                         │
+│                                        ▼                                         │
+│  ┌────────────────────────────────────────────────────────────────────────────┐ │
+│  │                      LAYER 2: MARKET FLOW ANALYZER                         │ │
+│  │                                                                            │ │
+│  │   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │ │
+│  │   │   STOCKS     │  │    BONDS     │  │   CRYPTO     │  │   METALS     │  │ │
+│  │   │   ────────   │  │   ────────   │  │   ────────   │  │   ────────   │  │ │
+│  │   │  SPX, NDX    │  │  10Y, 2Y     │  │  Total MCap  │  │  XAU, XAG    │  │ │
+│  │   │  Flow: +5.2% │  │  Flow: -1.8% │  │  Flow: +8.3% │  │  Flow: +2.1% │  │ │
+│  │   │  Phase: MID  │  │  Phase: EXIT │  │  Phase: EARLY│  │  Phase: LATE │  │ │
+│  │   └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘  │ │
+│  │                                                                            │ │
+│  │   ROTATION SIGNAL: BONDS ──────────────────────▶ CRYPTO                   │ │
+│  └────────────────────────────────────────────────────────────────────────────┘ │
+│                                        │                                         │
+│                                        ▼                                         │
+│  ┌────────────────────────────────────────────────────────────────────────────┐ │
+│  │                     LAYER 3: SECTOR DRILL-DOWN                             │ │
+│  │                                                                            │ │
+│  │   CRYPTO:                              STOCKS:                             │ │
+│  │   ├── BTC Dominance: 52% (↓)          ├── Tech (XLK): +3.2%               │ │
+│  │   ├── DeFi TVL: $48B (↑)              ├── Finance (XLF): +1.1%            │ │
+│  │   ├── L2 Activity: High               ├── Energy (XLE): -0.5%             │ │
+│  │   └── Stablecoin MCap: $128B          └── Healthcare (XLV): +0.8%         │ │
+│  └────────────────────────────────────────────────────────────────────────────┘ │
+│                                        │                                         │
+│                                        ▼                                         │
+│  ┌────────────────────────────────────────────────────────────────────────────┐ │
+│  │                    LAYER 4: ASSET-LEVEL ANALYSIS                           │ │
+│  │                    (7-Step Classic / MLIS Pro)                             │ │
+│  └────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 7.2 Data Sources
+
+| Source | API | Data Points | Update Frequency |
+|--------|-----|-------------|------------------|
+| **FRED** | api.stlouisfed.org | Fed Balance Sheet, M2, Treasury Yields | Daily |
+| **Yahoo Finance** | yfinance | SPX, NDX, DXY, VIX, XAU, XAG | Real-time |
+| **CoinGecko** | api.coingecko.com | Total Crypto MCap, BTC Dominance | 5 minutes |
+| **DefiLlama** | api.llama.fi | DeFi TVL, Chain TVL, Protocol TVL | Hourly |
+| **Binance** | api.binance.com | Crypto prices, volumes | Real-time |
+
+### 7.3 Core Data Types
+
+```typescript
+// Market Flow Data
+interface MarketFlow {
+  market: 'crypto' | 'stocks' | 'bonds' | 'metals';
+
+  // Current State
+  currentValue: number;        // Market cap or index value
+  flow7d: number;              // 7-day % change
+  flow30d: number;             // 30-day % change
+  flowVelocity: number;        // Acceleration (flow7d - previous 7d)
+
+  // Phase Detection
+  phase: 'early' | 'mid' | 'late' | 'exit';
+  daysInPhase: number;
+  phaseStartDate: Date;
+  avgPhaseDuration: number;    // Historical average
+
+  // Rotation Signals
+  rotationSignal: 'entering' | 'stable' | 'exiting' | null;
+  rotationTarget: string | null;
+  rotationConfidence: number;  // 0-100
+
+  // Sub-markets (for drill-down)
+  sectors?: SectorFlow[];
+}
+
+// Sector Flow (within a market)
+interface SectorFlow {
+  name: string;                // e.g., 'DeFi', 'Tech', 'Treasury'
+  flow7d: number;
+  flow30d: number;
+  dominance: number;           // % of parent market
+  trending: 'up' | 'down' | 'stable';
+  topAssets: string[];         // Top 5 assets in sector
+}
+
+// Global Liquidity Metrics
+interface GlobalLiquidity {
+  fedBalanceSheet: {
+    value: number;             // Trillions USD
+    change30d: number;         // % change
+    trend: 'expanding' | 'contracting' | 'stable';
+  };
+
+  m2MoneySupply: {
+    value: number;             // Trillions USD
+    change30d: number;
+    yoyGrowth: number;         // Year-over-year %
+  };
+
+  dxy: {
+    value: number;             // Dollar Index
+    change7d: number;
+    trend: 'strengthening' | 'weakening' | 'stable';
+  };
+
+  vix: {
+    value: number;             // Fear Index
+    level: 'extreme_fear' | 'fear' | 'neutral' | 'complacent';
+  };
+
+  yieldCurve: {
+    spread10y2y: number;       // 10Y - 2Y Treasury spread
+    inverted: boolean;
+    interpretation: string;
+  };
+}
+
+// Capital Flow Summary (main response)
+interface CapitalFlowSummary {
+  timestamp: Date;
+
+  // Global Liquidity
+  globalLiquidity: GlobalLiquidity;
+  liquidityBias: 'risk_on' | 'risk_off' | 'neutral';
+
+  // Market Flows
+  markets: MarketFlow[];
+
+  // Recommendation
+  recommendation: {
+    primaryMarket: string;     // Where to focus
+    phase: string;             // Market phase
+    action: 'analyze' | 'wait' | 'avoid';
+    reason: string;
+    sectors?: string[];        // Recommended sectors
+  };
+
+  // Rotation
+  activeRotation: {
+    from: string;
+    to: string;
+    confidence: number;
+    estimatedDuration: string;
+  } | null;
+}
+```
+
+### 7.4 Phase Detection Algorithm
+
+```typescript
+function detectPhase(market: MarketFlow): Phase {
+  const { flow7d, flow30d, flowVelocity, daysInPhase } = market;
+
+  // EARLY: New inflow starting
+  if (flow7d > 3 && flow30d < 5 && flowVelocity > 0 && daysInPhase < 30) {
+    return 'early';
+  }
+
+  // MID: Established trend
+  if (flow7d > 0 && flow30d > 5 && daysInPhase >= 30 && daysInPhase < 60) {
+    return 'mid';
+  }
+
+  // LATE: Trend exhaustion
+  if (flow7d < flow30d * 0.3 && daysInPhase >= 60 && daysInPhase < 90) {
+    return 'late';
+  }
+
+  // EXIT: Outflow or reversal
+  if (flow7d < 0 || (flowVelocity < -2 && daysInPhase >= 90)) {
+    return 'exit';
+  }
+
+  return 'mid'; // Default
+}
+```
+
+### 7.5 API Endpoints
+
+```yaml
+# GET /api/capital-flow
+# Returns complete capital flow summary
+Response:
+  success: boolean
+  data: CapitalFlowSummary
+
+# GET /api/capital-flow/:market
+# Returns detailed flow for specific market
+Params:
+  market: 'crypto' | 'stocks' | 'bonds' | 'metals'
+Response:
+  success: boolean
+  data: MarketFlow
+
+# GET /api/capital-flow/recommendation
+# Returns where to analyze based on flow
+Response:
+  success: boolean
+  data:
+    market: string
+    phase: string
+    action: 'analyze' | 'wait' | 'avoid'
+    reason: string
+    sectors: string[]
+    confidence: number
+
+# GET /api/capital-flow/liquidity
+# Returns global liquidity metrics
+Response:
+  success: boolean
+  data: GlobalLiquidity
+
+# GET /api/capital-flow/rotation-history
+# Returns historical rotation patterns
+Query:
+  months?: number (default: 12)
+Response:
+  success: boolean
+  data:
+    rotations: RotationEvent[]
+    avgRotationDuration: number
+    currentCycle: string
+```
+
+### 7.6 Decision Tree (Enforced)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    CAPITAL FLOW DECISION TREE                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ① Is Global Liquidity Expanding? (Fed + M2)                           │
+│     │                                                                   │
+│     ├── NO ──▶ Risk-Off Mode                                           │
+│     │         • Only analyze: BONDS, GOLD                              │
+│     │         • Avoid: CRYPTO, STOCKS                                  │
+│     │                                                                   │
+│     └── YES ─▶ Continue                                                │
+│                                                                         │
+│  ② Is DXY (Dollar) Weakening?                                          │
+│     │                                                                   │
+│     ├── NO ──▶ Caution Mode                                            │
+│     │         • Risk assets under pressure                             │
+│     │         • Reduce position sizes                                  │
+│     │                                                                   │
+│     └── YES ─▶ Continue                                                │
+│                                                                         │
+│  ③ Which Market Has Highest Flow?                                      │
+│     │                                                                   │
+│     ├── STOCKS ──▶ Recommend stock analysis                            │
+│     ├── CRYPTO ──▶ Recommend crypto analysis                           │
+│     ├── METALS ──▶ Recommend gold/silver analysis                      │
+│     └── BONDS ───▶ Safe-haven mode, wait for rotation                  │
+│                                                                         │
+│  ④ What Phase is the Selected Market In?                               │
+│     │                                                                   │
+│     ├── EARLY ──▶ ✅ OPTIMAL ENTRY - Proceed to micro analysis         │
+│     ├── MID ────▶ ⚠️ PROCEED WITH CAUTION - Tighter risk management   │
+│     ├── LATE ───▶ ⛔ NO NEW ENTRIES - Only manage existing positions   │
+│     └── EXIT ───▶ 🚫 DO NOT ANALYZE - Wait for rotation signal        │
+│                                                                         │
+│  ⑤ Sector Selection (if applicable)                                    │
+│     │                                                                   │
+│     └── Drill down to sector with highest flow                         │
+│         • Crypto: DeFi, L2, Meme, AI, Gaming                          │
+│         • Stocks: Tech, Finance, Energy, Healthcare                    │
+│                                                                         │
+│  ⑥ Proceed to Asset Analysis (7-Step or MLIS)                          │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 7.7 Database Schema Additions
+
+```sql
+-- Capital Flow Snapshots (for historical analysis)
+CREATE TABLE capital_flow_snapshots (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    snapshot_date DATE NOT NULL UNIQUE,
+
+    -- Global Liquidity
+    fed_balance_sheet DECIMAL(15,2),
+    m2_money_supply DECIMAL(15,2),
+    dxy_value DECIMAL(8,4),
+    vix_value DECIMAL(6,2),
+    yield_spread_10y2y DECIMAL(6,4),
+
+    -- Market Flows (JSON for flexibility)
+    crypto_flow JSONB NOT NULL,
+    stocks_flow JSONB NOT NULL,
+    bonds_flow JSONB NOT NULL,
+    metals_flow JSONB NOT NULL,
+
+    -- Computed Fields
+    liquidity_bias VARCHAR(20),
+    recommended_market VARCHAR(20),
+    active_rotation JSONB,
+
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Rotation Events History
+CREATE TABLE rotation_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    from_market VARCHAR(20) NOT NULL,
+    to_market VARCHAR(20) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    duration_days INTEGER,
+    flow_magnitude DECIMAL(6,2),
+
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX idx_capital_flow_date ON capital_flow_snapshots(snapshot_date DESC);
+CREATE INDEX idx_rotation_events_dates ON rotation_events(start_date, end_date);
+```
+
+### 7.8 Frontend Integration
+
+```
+┌────────────────────────────────────────────────────────────────────────────────┐
+│  TraderPath                                     [Dashboard] [Analyze] [Flow]   │
+├────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                │
+│  ╔══════════════════════════════════════════════════════════════════════════╗  │
+│  ║                     🌍 CAPITAL FLOW RADAR                                 ║  │
+│  ╠══════════════════════════════════════════════════════════════════════════╣  │
+│  ║                                                                          ║  │
+│  ║   Liquidity: EXPANDING (+2.3%)    │    DXY: 102.4 (Weakening ↓)         ║  │
+│  ║   Risk Sentiment: RISK-ON         │    VIX: 14.2 (Low Fear)             ║  │
+│  ║                                                                          ║  │
+│  ╚══════════════════════════════════════════════════════════════════════════╝  │
+│                                                                                │
+│  ┌─────────────────── MONEY FLOW HEATMAP ───────────────────┐                 │
+│  │                                                           │                 │
+│  │   STOCKS          BONDS           CRYPTO         METALS   │                 │
+│  │  ┌────────┐     ┌────────┐      ┌────────┐    ┌────────┐ │                 │
+│  │  │ ██████ │     │ ░░░░░░ │      │████████│    │ ██░░░░ │ │                 │
+│  │  │ +3.2%  │     │ -1.5%  │      │ +7.8%  │    │ +0.9%  │ │                 │
+│  │  │ 34 days│     │ 12 days│      │ 18 days│    │ 89 days│ │                 │
+│  │  │ ○ MID  │     │ ○ EXIT │      │ ● EARLY│    │ ○ LATE │ │                 │
+│  │  └────────┘     └────────┘      └────────┘    └────────┘ │                 │
+│  │                                      ▲                    │                 │
+│  │                              STRONGEST FLOW               │                 │
+│  │                                                           │                 │
+│  │  💡 Money flowing into CRYPTO (Early Phase)               │                 │
+│  │     Recommended: Analyze crypto assets                    │                 │
+│  └───────────────────────────────────────────────────────────┘                 │
+│                                                                                │
+│  [Analyze Crypto]  [View Stocks]  [View All Markets]                          │
+│                                                                                │
+└────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 7.9 File Structure
+
+```
+apps/api/src/modules/capital-flow/
+├── capital-flow.module.ts
+├── capital-flow.routes.ts
+├── capital-flow.service.ts
+├── flow-calculator.ts
+├── phase-detector.ts
+├── rotation-detector.ts
+├── types.ts
+└── providers/
+    ├── fred.provider.ts        # Federal Reserve data
+    ├── yahoo.provider.ts       # Stocks, DXY, VIX, Metals
+    ├── coingecko.provider.ts   # Crypto market cap
+    └── defillama.provider.ts   # DeFi TVL
+
+apps/web/app/(dashboard)/
+├── capital-flow/
+│   └── page.tsx               # Capital Flow Dashboard
+└── components/capital-flow/
+    ├── CapitalFlowRadar.tsx
+    ├── MarketFlowCard.tsx
+    ├── FlowHeatmap.tsx
+    ├── LiquidityGauge.tsx
+    ├── RotationIndicator.tsx
+    └── PhaseIndicator.tsx
+```
+
+### 7.10 Environment Variables
+
+```env
+# Capital Flow System
+FRED_API_KEY=your_fred_api_key        # Required - Federal Reserve data
+ALPHA_VANTAGE_KEY=your_av_key         # Optional - Stocks fallback
+DEFILLAMA_API_URL=https://api.llama.fi # Default DefiLlama endpoint
+```
+
+---
+
+## 8. 7-Step Analysis Engine
 
 ### 7.1 Step Details
 

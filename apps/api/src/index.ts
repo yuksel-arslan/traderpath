@@ -42,6 +42,7 @@ import smartCoinsRoutes from './modules/analysis/smart-coins.routes';
 import { scheduledReportsService } from './modules/scheduled/scheduled-reports.service';
 import { conciergeRoutes } from './modules/concierge/concierge.routes';
 import { startCoinScoreCacheJob, stopCoinScoreCacheJob } from './modules/analysis/coin-score-cache.job';
+import { capitalFlowRoutes } from './modules/capital-flow/capital-flow.routes';
 
 // ===========================================
 // Server Configuration
@@ -350,6 +351,10 @@ app.register(smartCoinsRoutes);
 // AI Concierge routes (chat-based interface)
 app.register(conciergeRoutes, { prefix: '/api/v1/concierge' });
 app.register(conciergeRoutes, { prefix: '/api/concierge' }); // Legacy
+
+// Capital Flow routes (Global Capital Flow Intelligence)
+app.register(capitalFlowRoutes, { prefix: '/api/v1/capital-flow' });
+app.register(capitalFlowRoutes, { prefix: '/api/capital-flow' }); // Legacy
 
 // ===========================================
 // 404 Handler
