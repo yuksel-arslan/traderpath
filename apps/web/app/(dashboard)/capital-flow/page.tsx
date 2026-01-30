@@ -884,23 +884,23 @@ export default function CapitalFlowPage() {
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* ===== HERO SECTION with Kinetic Typography ===== */}
         <div className="text-center space-y-3 sm:space-y-4 py-4 sm:py-6 mb-8">
-          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/20 backdrop-blur-sm animate-blur-in">
-            <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 animate-pulse" />
-            <span className="text-xs sm:text-sm font-medium bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">
+          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-coral-500/10 border border-teal-500/20 backdrop-blur-sm animate-blur-in">
+            <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-teal-500 animate-pulse" />
+            <span className="text-xs sm:text-sm font-medium bg-gradient-to-r from-teal-500 to-coral-500 bg-clip-text text-transparent">
               Global Capital Flow Intelligence
             </span>
           </div>
 
           <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold">
-            <span className="bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">
+            <span className="bg-gradient-to-r from-teal-500 via-emerald-400 to-teal-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">
               Capital Flow
             </span>
             <br />
             <span className="relative inline-block">
-              <span className="bg-gradient-to-r from-blue-500 via-indigo-400 to-blue-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer" style={{ animationDelay: '0.5s' }}>
+              <span className="bg-gradient-to-r from-coral-500 via-red-400 to-coral-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer" style={{ animationDelay: '0.5s' }}>
                 Radar
               </span>
-              <span className="absolute -bottom-1 sm:-bottom-2 left-0 right-0 h-0.5 sm:h-1 bg-gradient-to-r from-blue-500 via-indigo-400 to-blue-500 rounded-full opacity-50 animate-pulse" />
+              <span className="absolute -bottom-1 sm:-bottom-2 left-0 right-0 h-0.5 sm:h-1 bg-gradient-to-r from-teal-500 via-coral-500 to-teal-500 rounded-full opacity-50 animate-pulse" />
             </span>
           </h1>
 
@@ -911,19 +911,19 @@ export default function CapitalFlowPage() {
           {/* Feature Badges */}
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-2 sm:pt-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
-              <Landmark className="w-3.5 h-3.5 text-blue-500" />
+              <Landmark className="w-3.5 h-3.5 text-teal-500" />
               <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Fed & M2 Tracking</span>
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
-              <BarChart3 className="w-3.5 h-3.5 text-indigo-500" />
+              <BarChart3 className="w-3.5 h-3.5 text-emerald-500" />
               <span className="text-xs font-medium text-slate-700 dark:text-slate-300">4 Markets</span>
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
-              <Activity className="w-3.5 h-3.5 text-violet-500" />
+              <Activity className="w-3.5 h-3.5 text-coral-500" />
               <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Real-time Flow</span>
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
-              <Brain className="w-3.5 h-3.5 text-purple-500" />
+              <Brain className="w-3.5 h-3.5 text-teal-600" />
               <span className="text-xs font-medium text-slate-700 dark:text-slate-300">AI Insights</span>
             </div>
           </div>
