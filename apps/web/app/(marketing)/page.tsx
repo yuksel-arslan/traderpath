@@ -601,8 +601,8 @@ function SystemFlowChart() {
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 <Lock className="w-4 h-4 inline-block mr-2 text-amber-500" />
                 <span className="font-semibold text-amber-600 dark:text-amber-400">Layer 3 & 4</span> provide detailed sector analysis and AI-powered asset signals.
-                <Link href="/pricing" className="ml-1 text-teal-600 dark:text-teal-400 font-semibold hover:underline">
-                  Upgrade to Premium
+                <Link href="/register" className="ml-1 text-teal-600 dark:text-teal-400 font-semibold hover:underline">
+                  Sign up to unlock
                 </Link>
               </p>
             </div>
