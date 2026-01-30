@@ -108,6 +108,53 @@ export interface ActiveRotation {
   startedAt: Date;
 }
 
+// Market Correlation
+export interface MarketCorrelation {
+  market1: MarketType;
+  market2: MarketType;
+  correlation: number;        // -1 to +1
+  strength: 'strong' | 'moderate' | 'weak' | 'none';
+  direction: 'positive' | 'negative' | 'neutral';
+  interpretation: string;     // Human-readable explanation
+}
+
+// Correlation Matrix (all market pairs)
+export interface CorrelationMatrix {
+  correlations: MarketCorrelation[];
+  strongestPositive: MarketCorrelation | null;
+  strongestNegative: MarketCorrelation | null;
+  insights: string;           // AI-generated insight about correlations
+  lastUpdated: Date;
+}
+
+// Trade Direction
+export type TradeDirection = 'BUY' | 'SELL';
+
+// Rotation Trade Opportunity
+export interface RotationTradeOpportunity {
+  market: MarketType;
+  direction: TradeDirection;
+  reason: string;
+  confidence: number;         // 0-100
+  flowSignal: 'entering' | 'exiting';
+  relatedMarkets: {
+    market: MarketType;
+    relationship: 'source' | 'destination';  // source = money coming from, destination = money going to
+  }[];
+  suggestedSectors?: string[];
+  riskLevel: 'low' | 'medium' | 'high';
+}
+
+// Multi-Market Trade Opportunities
+export interface TradeOpportunities {
+  opportunities: RotationTradeOpportunity[];
+  rotationSummary: string;    // Human-readable summary of the rotation
+  totalOpportunities: number;
+  buyOpportunities: number;
+  sellOpportunities: number;
+  lastUpdated: Date;
+}
+
 // Flow Recommendation
 export interface FlowRecommendation {
   primaryMarket: MarketType;
@@ -128,6 +175,12 @@ export interface CapitalFlowSummary {
 
   // Market Flows
   markets: MarketFlow[];
+
+  // Market Correlations
+  correlations?: CorrelationMatrix;
+
+  // Trade Opportunities (multi-market)
+  tradeOpportunities?: TradeOpportunities;
 
   // Recommendation
   recommendation: FlowRecommendation;

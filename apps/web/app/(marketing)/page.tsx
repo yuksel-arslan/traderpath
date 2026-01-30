@@ -245,7 +245,11 @@ function StatsBoxes() {
 const FAQS = [
   {
     question: 'What is TraderPath and how does it work?',
-    answer: 'TraderPath is an AI-powered trading analysis platform that runs your chosen cryptocurrency through 7 specialized analysis steps. In about 60 seconds, you get a complete trade plan with entry points, targets, stop-losses, and a final verdict on whether to trade or wait.',
+    answer: 'TraderPath is a Global Capital Flow Intelligence Platform that tracks where money is flowing across Crypto, Stocks, Bonds, and Precious Metals. Our 4-layer system first identifies which market has the strongest capital inflow, then drills down to specific sectors and assets. You get actionable trade plans with entry points, targets, and stop-losses.',
+  },
+  {
+    question: 'What markets does TraderPath cover?',
+    answer: 'We track capital flows across 4 major markets: Crypto (full 7-Step and MLIS Pro analysis), Stocks, Bonds, and Precious Metals. Our Capital Flow Radar monitors Fed Balance Sheet, M2 Money Supply, DXY, VIX, and sector-specific flows to identify optimal trading opportunities.',
   },
   {
     question: 'Do I need to connect my exchange or wallet?',
@@ -254,10 +258,6 @@ const FAQS = [
   {
     question: 'How accurate is the analysis?',
     answer: 'Our accuracy is calculated from verified trade outcomes (TP hits vs SL hits) and displayed transparently in our Platform Metrics section. We always recommend using our analysis as one input in your trading decisions, not as financial advice.',
-  },
-  {
-    question: 'What cryptocurrencies can I analyze?',
-    answer: 'We support 50+ major cryptocurrencies including BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, and many more. We continuously add new coins based on user demand.',
   },
   {
     question: 'How does the credit system work?',
@@ -1783,8 +1783,8 @@ export default function LandingPage() {
 
         <div className="container mx-auto px-4 text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-teal-500/20 via-cyan-500/15 to-red-500/20 dark:from-teal-500/30 dark:via-cyan-500/20 dark:to-rose-500/30 border-2 border-teal-500/40 dark:border-teal-400/50 rounded-full text-sm sm:text-base font-semibold mb-4 sm:mb-6 shadow-lg shadow-teal-500/20 dark:shadow-teal-400/30">
-            <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-teal-500 dark:text-teal-400" />
-            <span className="bg-gradient-to-r from-teal-600 via-cyan-600 to-teal-600 dark:from-teal-300 dark:via-cyan-300 dark:to-teal-300 bg-clip-text text-transparent">AI-Powered Trading Analysis</span>
+            <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-teal-500 dark:text-teal-400" />
+            <span className="bg-gradient-to-r from-teal-600 via-cyan-600 to-teal-600 dark:from-teal-300 dark:via-cyan-300 dark:to-teal-300 bg-clip-text text-transparent">Global Capital Flow Intelligence</span>
           </div>
           <div className="flex justify-center mb-6 sm:mb-8">
             <div className="float">
@@ -1793,11 +1793,11 @@ export default function LandingPage() {
             </div>
           </div>
           <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2 gradient-text-logo-animate">
-            From Analysis to Action in 60 Seconds
+            Follow the Money, Find the Opportunity
           </h1>
           <p className="text-base sm:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto px-2">
-            Stop drowning in charts. Our AI-powered 7-step analysis gives you clear
-            buy/sell decisions with exact entry points, targets, and stop-losses.
+            Track global capital flows across Crypto, Stocks, Bonds & Metals.
+            Our AI identifies where money is moving and delivers actionable trade signals.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 sm:px-0">
             <Link
@@ -1838,25 +1838,26 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">How TraderPath Works</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Professional-grade analysis tools for informed trading decisions. We analyze, you decide.
+              Follow global capital flows to find the best opportunities. We track the money, you make the trades.
             </p>
           </div>
 
           {/* Workflow Steps */}
           <div className="max-w-5xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {/* Step 1: Select */}
-              <div className="bg-card border rounded-xl p-6 relative">
-                <div className="absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
+              {/* Step 1: Capital Flow Radar */}
+              <div className="bg-card border border-teal-500/30 rounded-xl p-6 relative">
+                <div className="absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
                   1
                 </div>
                 <div className="pt-4">
-                  <h3 className="text-lg font-bold mb-2 gradient-text-logo-animate">Select Coin & Trade Type</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Choose from 200+ coins and select your trading style</p>
+                  <h3 className="text-lg font-bold mb-2 gradient-text-logo-animate">Capital Flow Radar</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Track where global capital is moving across all markets</p>
                   <div className="flex flex-wrap gap-2">
-                    <span className="px-2 py-1 bg-accent text-xs rounded">Scalping (5m-15m)</span>
-                    <span className="px-2 py-1 bg-cyan-500/20 text-cyan-500 text-xs rounded">Day Trade (1h-4h)</span>
-                    <span className="px-2 py-1 bg-accent text-xs rounded">Swing (1D-1W)</span>
+                    <span className="px-2 py-1 bg-orange-500/20 text-orange-500 text-xs rounded">Crypto</span>
+                    <span className="px-2 py-1 bg-blue-500/20 text-blue-500 text-xs rounded">Stocks</span>
+                    <span className="px-2 py-1 bg-purple-500/20 text-purple-500 text-xs rounded">Bonds</span>
+                    <span className="px-2 py-1 bg-yellow-500/20 text-yellow-500 text-xs rounded">Metals</span>
                   </div>
                 </div>
               </div>

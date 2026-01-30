@@ -133,11 +133,53 @@ interface MarketAnalysis {
   generatedAt: string;
 }
 
+interface MarketCorrelation {
+  market1: string;
+  market2: string;
+  correlation: number;
+  strength: 'strong' | 'moderate' | 'weak' | 'none';
+  direction: 'positive' | 'negative' | 'neutral';
+  interpretation: string;
+}
+
+interface CorrelationMatrix {
+  correlations: MarketCorrelation[];
+  strongestPositive: MarketCorrelation | null;
+  strongestNegative: MarketCorrelation | null;
+  insights: string;
+  lastUpdated: string;
+}
+
+interface RotationTradeOpportunity {
+  market: 'crypto' | 'stocks' | 'bonds' | 'metals';
+  direction: 'BUY' | 'SELL';
+  reason: string;
+  confidence: number;
+  flowSignal: 'entering' | 'exiting';
+  relatedMarkets: {
+    market: 'crypto' | 'stocks' | 'bonds' | 'metals';
+    relationship: 'source' | 'destination';
+  }[];
+  suggestedSectors?: string[];
+  riskLevel: 'low' | 'medium' | 'high';
+}
+
+interface TradeOpportunities {
+  opportunities: RotationTradeOpportunity[];
+  rotationSummary: string;
+  totalOpportunities: number;
+  buyOpportunities: number;
+  sellOpportunities: number;
+  lastUpdated: string;
+}
+
 interface CapitalFlowSummary {
   timestamp: string;
   globalLiquidity: GlobalLiquidity;
   liquidityBias: 'risk_on' | 'risk_off' | 'neutral';
   markets: MarketFlow[];
+  correlations?: CorrelationMatrix;
+  tradeOpportunities?: TradeOpportunities;
   recommendation: FlowRecommendation;
   activeRotation: ActiveRotation | null;
   insights?: LayerInsights;
@@ -1109,6 +1151,265 @@ export default function CapitalFlowPage() {
           {/* AI Insight for Layer 2 */}
           {data.insights?.layer2 && <InsightBox insight={data.insights.layer2} icon={Sparkles} />}
         </section>
+
+        {/* Market Correlations */}
+        {data.correlations && data.correlations.correlations.length > 0 && (
+          <section className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="w-5 h-5 text-violet-500" />
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Market Correlations</h2>
+            </div>
+            <div className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl p-4">
+              {/* Correlation Matrix */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                {data.correlations.correlations.map((corr, idx) => {
+                  const marketNames: Record<string, string> = {
+                    crypto: 'Crypto',
+                    stocks: 'Stocks',
+                    bonds: 'Bonds',
+                    metals: 'Metals',
+                  };
+                  const corrPercent = Math.round(corr.correlation * 100);
+                  const isPositive = corr.direction === 'positive';
+                  const isNegative = corr.direction === 'negative';
+
+                  return (
+                    <div
+                      key={idx}
+                      className={cn(
+                        "p-3 rounded-xl border transition-all",
+                        isPositive
+                          ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30"
+                          : isNegative
+                          ? "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30"
+                          : "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700"
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            {marketNames[corr.market1]} ↔ {marketNames[corr.market2]}
+                          </span>
+                        </div>
+                        <span
+                          className={cn(
+                            "text-lg font-bold",
+                            isPositive
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : isNegative
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-slate-500"
+                          )}
+                        >
+                          {corrPercent > 0 ? '+' : ''}{corrPercent}%
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={cn(
+                            "text-xs px-2 py-0.5 rounded-full",
+                            corr.strength === 'strong'
+                              ? "bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300"
+                              : corr.strength === 'moderate'
+                              ? "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300"
+                              : corr.strength === 'weak'
+                              ? "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
+                              : "bg-slate-100 dark:bg-slate-700 text-slate-500"
+                          )}
+                        >
+                          {corr.strength}
+                        </span>
+                        {isPositive && <TrendingUp className="w-4 h-4 text-emerald-500" />}
+                        {isNegative && <TrendingDown className="w-4 h-4 text-red-500" />}
+                        {!isPositive && !isNegative && <Minus className="w-4 h-4 text-slate-400" />}
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 line-clamp-2">
+                        {corr.interpretation}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Correlation Insights */}
+              {data.correlations.insights && (
+                <div className="p-3 rounded-lg bg-violet-50 dark:bg-violet-500/10 border border-violet-200/50 dark:border-violet-500/30">
+                  <div className="flex items-start gap-2">
+                    <Brain className="w-4 h-4 text-violet-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-violet-700 dark:text-violet-300">
+                      {data.correlations.insights}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Trade Opportunities from Rotation */}
+        {data.tradeOpportunities && data.tradeOpportunities.opportunities.length > 0 && (
+          <section className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="w-5 h-5 text-teal-500" />
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Trade Opportunities</h2>
+              <span className="ml-auto text-xs px-2 py-1 rounded-full bg-teal-100 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 font-medium">
+                {data.tradeOpportunities.totalOpportunities} Opportunities
+              </span>
+            </div>
+
+            {/* Rotation Summary */}
+            <div className="backdrop-blur-xl bg-gradient-to-r from-teal-50 dark:from-teal-500/10 to-coral-50 dark:to-coral-500/10 border border-teal-200/50 dark:border-teal-500/30 rounded-xl p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <Activity className="w-5 h-5 text-teal-600 dark:text-teal-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-slate-900 dark:text-white mb-1">Rotation Analysis</h3>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">{data.tradeOpportunities.rotationSummary}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-teal-200/50 dark:border-teal-500/30">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                  <span className="text-sm text-slate-600 dark:text-slate-400">{data.tradeOpportunities.buyOpportunities} BUY</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <span className="text-sm text-slate-600 dark:text-slate-400">{data.tradeOpportunities.sellOpportunities} SELL</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Opportunity Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {data.tradeOpportunities.opportunities.map((opp, idx) => {
+                const isBuy = opp.direction === 'BUY';
+                const marketNames: Record<string, string> = {
+                  crypto: 'Crypto',
+                  stocks: 'Stocks',
+                  bonds: 'Bonds',
+                  metals: 'Metals',
+                };
+                const riskColors: Record<string, string> = {
+                  low: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
+                  medium: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300',
+                  high: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300',
+                };
+
+                return (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "backdrop-blur-xl border rounded-2xl p-4 transition-all hover:shadow-lg",
+                      isBuy
+                        ? "bg-gradient-to-br from-emerald-50 dark:from-emerald-500/10 to-teal-50 dark:to-teal-500/10 border-emerald-200 dark:border-emerald-500/30"
+                        : "bg-gradient-to-br from-red-50 dark:from-red-500/10 to-rose-50 dark:to-rose-500/10 border-red-200 dark:border-red-500/30"
+                    )}
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center",
+                          isBuy ? "bg-emerald-500" : "bg-red-500"
+                        )}>
+                          {isBuy ? <TrendingUp className="w-5 h-5 text-white" /> : <TrendingDown className="w-5 h-5 text-white" />}
+                        </div>
+                        <div>
+                          <h3 className={cn(
+                            "font-bold text-lg",
+                            isBuy ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"
+                          )}>
+                            {opp.direction} {marketNames[opp.market]}
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              "text-xs px-2 py-0.5 rounded-full",
+                              isBuy
+                                ? "bg-emerald-200 dark:bg-emerald-500/30 text-emerald-800 dark:text-emerald-200"
+                                : "bg-red-200 dark:bg-red-500/30 text-red-800 dark:text-red-200"
+                            )}>
+                              {opp.flowSignal.toUpperCase()}
+                            </span>
+                            <span className={cn("text-xs px-2 py-0.5 rounded-full", riskColors[opp.riskLevel])}>
+                              {opp.riskLevel.toUpperCase()} RISK
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Confidence</p>
+                        <p className={cn(
+                          "text-xl font-bold",
+                          isBuy ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                        )}>
+                          {opp.confidence}%
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Reason */}
+                    <p className="text-sm text-slate-700 dark:text-slate-300 mb-3">{opp.reason}</p>
+
+                    {/* Related Markets */}
+                    {opp.relatedMarkets.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">Capital Flow</p>
+                        <div className="flex flex-wrap gap-2">
+                          {opp.relatedMarkets.map((related, ridx) => (
+                            <span
+                              key={ridx}
+                              className={cn(
+                                "text-xs px-2 py-1 rounded-lg font-medium",
+                                related.relationship === 'source'
+                                  ? "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300"
+                                  : "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                              )}
+                            >
+                              {related.relationship === 'source' ? '← From ' : '→ To '}
+                              {marketNames[related.market]}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Suggested Sectors */}
+                    {opp.suggestedSectors && opp.suggestedSectors.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">
+                          {isBuy ? 'Consider Buying' : 'Consider Exiting'}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {opp.suggestedSectors.map((sector, sidx) => (
+                            <span
+                              key={sidx}
+                              className="text-xs px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                            >
+                              {sector}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Button */}
+                    <Link
+                      href={`/analyze?asset=${opp.market}`}
+                      className={cn(
+                        "flex items-center justify-center gap-2 w-full py-2.5 rounded-xl font-medium text-white transition-all hover:shadow-md",
+                        isBuy
+                          ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:shadow-emerald-500/20"
+                          : "bg-gradient-to-r from-red-500 to-rose-500 hover:shadow-red-500/20"
+                      )}
+                    >
+                      <Target className="w-4 h-4" />
+                      {opp.market === 'crypto' ? 'Run Full Analysis' : 'Analyze Market'}
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* LAYER 3: Sector Drill-Down (when market selected) */}
         {selectedMarket && selectedMarket.sectors && selectedMarket.sectors.length > 0 && (
