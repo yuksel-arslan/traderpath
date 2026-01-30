@@ -14,7 +14,7 @@
  * - Investment recommendations
  */
 
-import { redis } from '../../config/redis';
+import { redis } from '../../core/cache';
 import {
   CapitalFlowSummary,
   GlobalLiquidity,
