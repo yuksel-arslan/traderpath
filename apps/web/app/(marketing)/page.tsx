@@ -140,20 +140,23 @@ function SystemFlowChart() {
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data) {
-            const { liquidity, markets } = data.data;
+            const { globalLiquidity, markets, recommendation, liquidityBias } = data.data;
+            const primaryMarket = recommendation?.primaryMarket || 'crypto';
             setFlowData({
               liquidity: {
-                fedStatus: liquidity?.fedBalanceSheet?.trend === 'expanding' ? 'Expanding' : 'Contracting',
-                m2Change: liquidity?.m2MoneySupply?.changePercent ? `${liquidity.m2MoneySupply.changePercent > 0 ? '+' : ''}${liquidity.m2MoneySupply.changePercent.toFixed(1)}%` : '+2.1%',
-                dxyStatus: liquidity?.dxy?.trend === 'weakening' ? 'Weak ↓' : 'Strong ↑',
-                vixLevel: liquidity?.vix?.value ? `${liquidity.vix.level} (${Math.round(liquidity.vix.value)})` : 'Low (14)',
-                bias: liquidity?.bias || 'risk_on',
+                fedStatus: globalLiquidity?.fedBalanceSheet?.trend === 'expanding' ? 'Expanding' : 'Contracting',
+                m2Change: globalLiquidity?.m2MoneySupply?.yoyGrowth != null
+                  ? `${globalLiquidity.m2MoneySupply.yoyGrowth > 0 ? '+' : ''}${globalLiquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%`
+                  : '+2.1%',
+                dxyStatus: globalLiquidity?.dxy?.trend === 'weakening' ? 'Weak ↓' : 'Strong ↑',
+                vixLevel: globalLiquidity?.vix?.value ? `${globalLiquidity.vix.level} (${Math.round(globalLiquidity.vix.value)})` : 'Low (14)',
+                bias: liquidityBias || 'risk_on',
               },
               markets: markets?.map((m: { market: string; flow7d: number; phase: string }) => ({
                 name: m.market.toUpperCase(),
                 flow7d: m.flow7d || 0,
                 phase: m.phase || 'mid',
-                isSelected: m.market === 'crypto',
+                isSelected: m.market === primaryMarket,
               })) || [],
               lastUpdated: new Date().toLocaleTimeString(),
             });
@@ -601,8 +604,8 @@ function SystemFlowChart() {
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 <Lock className="w-4 h-4 inline-block mr-2 text-amber-500" />
                 <span className="font-semibold text-amber-600 dark:text-amber-400">Layer 3 & 4</span> provide detailed sector analysis and AI-powered asset signals.
-                <Link href="/pricing" className="ml-1 text-teal-600 dark:text-teal-400 font-semibold hover:underline">
-                  Upgrade to Premium
+                <Link href="/register" className="ml-1 text-teal-600 dark:text-teal-400 font-semibold hover:underline">
+                  Sign up to unlock
                 </Link>
               </p>
             </div>
