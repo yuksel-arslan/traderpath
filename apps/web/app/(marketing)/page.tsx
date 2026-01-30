@@ -162,74 +162,86 @@ function SystemFlowChart() {
 
   return (
     <section className="py-12 md:py-20 relative overflow-hidden" ref={chartRef}>
-      {/* Background with gradient orbs */}
+      {/* Background with animated gradient orbs - Corporate Teal/Coral */}
       <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
-      <div className="absolute top-20 left-10 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-20 right-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
-      <div className="absolute top-1/4 right-1/4 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute top-10 left-10 w-72 h-72 bg-gradient-to-br from-teal-500/20 to-cyan-500/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-10 right-10 w-72 h-72 bg-gradient-to-br from-orange-500/15 to-amber-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-r from-teal-500/5 via-transparent to-orange-500/5 rounded-full blur-3xl animate-spin-slow" style={{ animationDuration: '30s' }} />
+      <div className="absolute top-1/4 right-1/4 w-56 h-56 bg-gradient-to-br from-emerald-500/15 to-teal-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '0.5s' }} />
+      <div className="absolute bottom-1/4 left-1/4 w-48 h-48 bg-gradient-to-br from-coral-500/10 to-orange-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1.5s' }} />
 
       <div className="container mx-auto px-4 relative z-10">
-        {/* Header - Architecture Title */}
+        {/* Header - Architecture Title with Corporate Gradient */}
         <div className={`text-center mb-8 md:mb-12 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="inline-block backdrop-blur-xl bg-white/80 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-600 rounded-2xl px-6 py-4 shadow-xl">
-            <h2 className="text-lg md:text-xl font-bold text-slate-800 dark:text-white mb-1">
-              TRADERPATH 2.0 ARCHITECTURE
-            </h2>
-            <p className="text-sm text-teal-600 dark:text-teal-400 font-medium">
-              "Follow The Money" Principle
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Click each layer to expand/collapse
-            </p>
+          <div className="inline-block backdrop-blur-xl bg-white/90 dark:bg-slate-800/90 border-2 border-transparent bg-clip-padding rounded-2xl px-6 py-4 shadow-xl relative overflow-hidden">
+            {/* Gradient border effect */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-teal-500 via-emerald-500 to-orange-500 opacity-20" />
+            <div className="absolute inset-[2px] rounded-2xl bg-white dark:bg-slate-800" />
+            <div className="relative">
+              <h2 className="text-lg md:text-xl font-bold bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-600 dark:from-teal-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent mb-1">
+                TRADERPATH 2.0 ARCHITECTURE
+              </h2>
+              <p className="text-sm bg-gradient-to-r from-teal-500 to-orange-500 bg-clip-text text-transparent font-bold">
+                "Follow The Money" Principle
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Click each layer to expand/collapse
+              </p>
+            </div>
           </div>
         </div>
 
         {/* MIND MAP LAYOUT */}
         <div className="relative max-w-6xl mx-auto">
 
-          {/* CENTER: Main Question */}
+          {/* CENTER: Main Question - Corporate Gradient */}
           <div className={`flex justify-center mb-6 transition-all duration-700 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
             <div className="relative">
-              {/* Pulsing rings */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-teal-500/20 to-emerald-500/20 animate-ping" style={{ animationDuration: '2s' }} />
-              <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-teal-500/10 to-emerald-500/10 animate-pulse" />
+              {/* Multiple pulsing rings with teal/coral */}
+              <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-teal-500/30 via-emerald-500/20 to-orange-500/30 animate-ping" style={{ animationDuration: '3s' }} />
+              <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-teal-500/20 to-orange-500/20 animate-pulse" />
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-500/10 via-transparent to-teal-500/10 animate-spin" style={{ animationDuration: '8s' }} />
 
-              <div className="relative backdrop-blur-xl bg-gradient-to-br from-teal-500 to-emerald-500 rounded-full p-6 md:p-8 shadow-2xl shadow-teal-500/30">
+              <div className="relative backdrop-blur-xl bg-gradient-to-br from-teal-500 via-emerald-500 to-teal-600 rounded-full p-6 md:p-8 shadow-2xl shadow-teal-500/40 border border-white/20">
                 <div className="text-center">
-                  <DollarSign className="w-8 h-8 md:w-10 md:h-10 text-white mx-auto mb-2" />
-                  <p className="text-white font-bold text-sm md:text-base">Where Is</p>
-                  <p className="text-white font-bold text-lg md:text-xl">Money Flowing?</p>
+                  <DollarSign className="w-8 h-8 md:w-10 md:h-10 text-white mx-auto mb-2 drop-shadow-lg" />
+                  <p className="text-white/90 font-bold text-sm md:text-base">Where Is</p>
+                  <p className="text-white font-bold text-lg md:text-xl drop-shadow-md">Money Flowing?</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Connector from center */}
+          {/* Connector from center - Gradient */}
           <div className={`flex justify-center mb-4 transition-all duration-700 delay-100 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-            <div className="w-0.5 h-8 bg-gradient-to-b from-teal-500 to-blue-500" />
+            <div className="w-1 h-8 bg-gradient-to-b from-teal-500 via-emerald-500 to-teal-400 rounded-full shadow-lg shadow-teal-500/30" />
           </div>
 
           {/* LAYER 1: Global Liquidity - Collapsible */}
           <div className={`mb-4 transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-            {/* Layer Header - Always Visible, Clickable */}
+            {/* Layer Header - Corporate Teal Gradient */}
             <div
               className="flex justify-center cursor-pointer group"
               onClick={() => toggleLayer(1)}
             >
-              <div className={`backdrop-blur-xl bg-teal-500/10 border-2 border-teal-500/30 rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-teal-500/50 ${expandedLayers[1] ? 'ring-2 ring-teal-500/20' : ''}`}>
-                <div className="flex items-center gap-3">
-                  <Activity className="w-6 h-6 text-teal-500" />
+              <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-teal-500/20 ${expandedLayers[1] ? 'ring-2 ring-teal-500/30' : ''}`}>
+                {/* Gradient border */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-teal-500 via-emerald-500 to-teal-400 opacity-30 group-hover:opacity-50 transition-opacity" />
+                <div className="absolute inset-[2px] rounded-2xl bg-white/95 dark:bg-slate-800/95" />
+                <div className="relative flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 shadow-lg shadow-teal-500/30">
+                    <Activity className="w-5 h-5 text-white" />
+                  </div>
                   <div>
-                    <span className="text-sm font-bold text-teal-600 dark:text-teal-400">LAYER 1: Global Liquidity</span>
+                    <span className="text-sm font-bold bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-400 dark:to-emerald-400 bg-clip-text text-transparent">LAYER 1: Global Liquidity</span>
                     <p className="text-xs text-slate-500 dark:text-slate-400">"Is liquidity expanding or contracting?"</p>
                   </div>
                   <div className={`ml-2 transition-transform duration-300 ${expandedLayers[1] ? 'rotate-180' : ''}`}>
                     <ChevronDown className="w-5 h-5 text-teal-500" />
                   </div>
-                  {/* Quick Answer Badge */}
+                  {/* Quick Answer Badge - Gradient */}
                   {!expandedLayers[1] && (
-                    <span className="ml-2 px-3 py-1 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full animate-pulse">
+                    <span className="ml-2 px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold rounded-full shadow-lg shadow-emerald-500/30 animate-pulse">
                       RISK ON
                     </span>
                   )}
@@ -279,30 +291,35 @@ function SystemFlowChart() {
             </div>
           </div>
 
-          {/* Connector to Layer 2 */}
+          {/* Connector to Layer 2 - Gradient */}
           <div className={`flex justify-center mb-4 transition-all duration-500 ${expandedLayers[1] ? 'opacity-100 h-8' : 'opacity-50 h-4'}`}>
-            <div className="w-0.5 h-full bg-gradient-to-b from-teal-500 to-blue-500" />
+            <div className="w-1 h-full bg-gradient-to-b from-teal-400 via-cyan-500 to-blue-500 rounded-full shadow-lg shadow-cyan-500/30" />
           </div>
 
-          {/* LAYER 2: Market Selection - Collapsible */}
+          {/* LAYER 2: Market Selection - Corporate Blue/Cyan Gradient */}
           <div className={`mb-4 transition-all duration-700 delay-400 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             {/* Layer Header */}
             <div
               className="flex justify-center cursor-pointer group"
               onClick={() => toggleLayer(2)}
             >
-              <div className={`backdrop-blur-xl bg-blue-500/10 border-2 border-blue-500/30 rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-blue-500/50 ${expandedLayers[2] ? 'ring-2 ring-blue-500/20' : ''}`}>
-                <div className="flex items-center gap-3">
-                  <TrendingUp className="w-6 h-6 text-blue-500" />
+              <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-cyan-500/20 ${expandedLayers[2] ? 'ring-2 ring-cyan-500/30' : ''}`}>
+                {/* Gradient border */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-400 opacity-30 group-hover:opacity-50 transition-opacity" />
+                <div className="absolute inset-[2px] rounded-2xl bg-white/95 dark:bg-slate-800/95" />
+                <div className="relative flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 shadow-lg shadow-cyan-500/30">
+                    <TrendingUp className="w-5 h-5 text-white" />
+                  </div>
                   <div>
-                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400">LAYER 2: Market Flow</span>
+                    <span className="text-sm font-bold bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-400 dark:to-blue-400 bg-clip-text text-transparent">LAYER 2: Market Flow</span>
                     <p className="text-xs text-slate-500 dark:text-slate-400">"Which market is receiving the most flow?"</p>
                   </div>
                   <div className={`ml-2 transition-transform duration-300 ${expandedLayers[2] ? 'rotate-180' : ''}`}>
-                    <ChevronDown className="w-5 h-5 text-blue-500" />
+                    <ChevronDown className="w-5 h-5 text-cyan-500" />
                   </div>
                   {!expandedLayers[2] && (
-                    <span className="ml-2 px-3 py-1 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full animate-pulse">
+                    <span className="ml-2 px-3 py-1 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-xs font-bold rounded-full shadow-lg shadow-emerald-500/30 animate-pulse">
                       CRYPTO +8%
                     </span>
                   )}
@@ -350,30 +367,35 @@ function SystemFlowChart() {
             </div>
           </div>
 
-          {/* Connector to Layer 3 */}
+          {/* Connector to Layer 3 - Gradient */}
           <div className={`flex justify-center mb-4 transition-all duration-500 ${expandedLayers[2] ? 'opacity-100 h-8' : 'opacity-50 h-4'}`}>
-            <div className="w-0.5 h-full bg-gradient-to-b from-blue-500 to-purple-500" />
+            <div className="w-1 h-full bg-gradient-to-b from-blue-500 via-violet-500 to-purple-500 rounded-full shadow-lg shadow-purple-500/30" />
           </div>
 
-          {/* LAYER 3: Sector Drill-Down - Collapsible */}
+          {/* LAYER 3: Sector Drill-Down - Corporate Purple/Violet Gradient */}
           <div className={`mb-4 transition-all duration-700 delay-600 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             {/* Layer Header */}
             <div
               className="flex justify-center cursor-pointer group"
               onClick={() => toggleLayer(3)}
             >
-              <div className={`backdrop-blur-xl bg-purple-500/10 border-2 border-purple-500/30 rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-purple-500/50 ${expandedLayers[3] ? 'ring-2 ring-purple-500/20' : ''}`}>
-                <div className="flex items-center gap-3">
-                  <Layers className="w-6 h-6 text-purple-500" />
+              <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/20 ${expandedLayers[3] ? 'ring-2 ring-purple-500/30' : ''}`}>
+                {/* Gradient border */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 opacity-30 group-hover:opacity-50 transition-opacity" />
+                <div className="absolute inset-[2px] rounded-2xl bg-white/95 dark:bg-slate-800/95" />
+                <div className="relative flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 shadow-lg shadow-purple-500/30">
+                    <Layers className="w-5 h-5 text-white" />
+                  </div>
                   <div>
-                    <span className="text-sm font-bold text-purple-600 dark:text-purple-400">LAYER 3: Sector Drill-Down</span>
+                    <span className="text-sm font-bold bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent">LAYER 3: Sector Drill-Down</span>
                     <p className="text-xs text-slate-500 dark:text-slate-400">"Which sector within CRYPTO?"</p>
                   </div>
                   <div className={`ml-2 transition-transform duration-300 ${expandedLayers[3] ? 'rotate-180' : ''}`}>
                     <ChevronDown className="w-5 h-5 text-purple-500" />
                   </div>
                   {!expandedLayers[3] && (
-                    <span className="ml-2 px-3 py-1 bg-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-bold rounded-full animate-pulse">
+                    <span className="ml-2 px-3 py-1 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-xs font-bold rounded-full shadow-lg shadow-purple-500/30 animate-pulse">
                       DeFi & AI
                     </span>
                   )}
@@ -422,30 +444,35 @@ function SystemFlowChart() {
             </div>
           </div>
 
-          {/* Connector to Layer 4 */}
+          {/* Connector to Layer 4 - Gradient */}
           <div className={`flex justify-center mb-4 transition-all duration-500 ${expandedLayers[3] ? 'opacity-100 h-8' : 'opacity-50 h-4'}`}>
-            <div className="w-0.5 h-full bg-gradient-to-b from-purple-500 to-emerald-500" />
+            <div className="w-1 h-full bg-gradient-to-b from-purple-500 via-orange-500 to-amber-500 rounded-full shadow-lg shadow-orange-500/30" />
           </div>
 
-          {/* LAYER 4: Asset Analysis - Collapsible */}
+          {/* LAYER 4: Asset Analysis - Corporate Orange/Coral Gradient */}
           <div className={`mb-8 transition-all duration-700 delay-800 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             {/* Layer Header */}
             <div
               className="flex justify-center cursor-pointer group"
               onClick={() => toggleLayer(4)}
             >
-              <div className={`backdrop-blur-xl bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-emerald-500/50 ${expandedLayers[4] ? 'ring-2 ring-emerald-500/20' : ''}`}>
-                <div className="flex items-center gap-3">
-                  <Search className="w-6 h-6 text-emerald-500" />
+              <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-orange-500/20 ${expandedLayers[4] ? 'ring-2 ring-orange-500/30' : ''}`}>
+                {/* Gradient border */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 opacity-30 group-hover:opacity-50 transition-opacity" />
+                <div className="absolute inset-[2px] rounded-2xl bg-white/95 dark:bg-slate-800/95" />
+                <div className="relative flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 shadow-lg shadow-orange-500/30">
+                    <Search className="w-5 h-5 text-white" />
+                  </div>
                   <div>
-                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">LAYER 4: Asset Analysis</span>
+                    <span className="text-sm font-bold bg-gradient-to-r from-orange-600 to-amber-600 dark:from-orange-400 dark:to-amber-400 bg-clip-text text-transparent">LAYER 4: Asset Analysis</span>
                     <p className="text-xs text-slate-500 dark:text-slate-400">"Top 30 / 7-Step / MLIS Pro"</p>
                   </div>
                   <div className={`ml-2 transition-transform duration-300 ${expandedLayers[4] ? 'rotate-180' : ''}`}>
-                    <ChevronDown className="w-5 h-5 text-emerald-500" />
+                    <ChevronDown className="w-5 h-5 text-orange-500" />
                   </div>
                   {!expandedLayers[4] && (
-                    <span className="ml-2 px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full animate-pulse">
+                    <span className="ml-2 px-3 py-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold rounded-full shadow-lg shadow-orange-500/30 animate-pulse">
                       4 GO signals
                     </span>
                   )}
@@ -508,44 +535,44 @@ function SystemFlowChart() {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className={`flex flex-wrap justify-center gap-3 mb-8 transition-all duration-700 delay-900 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          {/* Action Buttons - Corporate Gradients */}
+          <div className={`flex flex-wrap justify-center gap-4 mb-8 transition-all duration-700 delay-900 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-sm font-bold rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all"
+              className="group relative inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 via-emerald-500 to-teal-500 bg-[length:200%_100%] text-white text-sm font-bold rounded-xl shadow-lg shadow-teal-500/30 hover:shadow-xl hover:shadow-teal-500/40 transition-all hover:bg-[position:100%_0] duration-500"
             >
               <BarChart3 className="w-4 h-4" />
               View Analysis
             </Link>
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-sm font-bold rounded-xl hover:shadow-lg hover:shadow-violet-500/30 transition-all"
+              className="group relative inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-500 via-purple-500 to-violet-500 bg-[length:200%_100%] text-white text-sm font-bold rounded-xl shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 transition-all hover:bg-[position:100%_0] duration-500"
             >
               <Zap className="w-4 h-4" />
               Try MLIS Pro
             </Link>
           </div>
 
-          {/* Bottom Verdict Badges */}
+          {/* Bottom Verdict Badges - Enhanced */}
           <div className={`text-center transition-all duration-700 delay-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <div className="inline-flex flex-wrap justify-center items-center gap-2 md:gap-3 mb-4">
-              <span className="px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-sm font-bold">GO</span>
-              <span className="text-slate-400">/</span>
-              <span className="px-3 py-1.5 rounded-full bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 text-sm font-bold">CONDITIONAL</span>
-              <span className="text-slate-400">/</span>
-              <span className="px-3 py-1.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-sm font-bold">WAIT</span>
-              <span className="text-slate-400">/</span>
-              <span className="px-3 py-1.5 rounded-full bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 text-sm font-bold">AVOID</span>
+              <span className="px-4 py-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-bold shadow-md shadow-emerald-500/30">GO</span>
+              <span className="text-slate-300 dark:text-slate-600">→</span>
+              <span className="px-4 py-1.5 rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-sm font-bold shadow-md shadow-yellow-500/30">CONDITIONAL</span>
+              <span className="text-slate-300 dark:text-slate-600">→</span>
+              <span className="px-4 py-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-sm font-bold shadow-md shadow-orange-500/30">WAIT</span>
+              <span className="text-slate-300 dark:text-slate-600">→</span>
+              <span className="px-4 py-1.5 rounded-full bg-gradient-to-r from-red-500 to-rose-500 text-white text-sm font-bold shadow-md shadow-red-500/30">AVOID</span>
             </div>
             <p className="text-slate-600 dark:text-slate-400 text-sm mb-6 max-w-xl mx-auto">
               Simple, actionable trading signals with complete trade plans
             </p>
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all text-sm md:text-base"
+              className="group relative inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-teal-500 via-emerald-500 to-orange-500 bg-[length:200%_100%] text-white font-bold rounded-xl shadow-xl shadow-teal-500/30 hover:shadow-2xl hover:shadow-emerald-500/40 transition-all hover:bg-[position:100%_0] duration-700 text-sm md:text-base"
             >
               Start Free Analysis
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
         </div>
