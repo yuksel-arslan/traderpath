@@ -75,6 +75,7 @@ interface SectorFlow {
   flow30d: number;
   dominance: number;
   trending: 'up' | 'down' | 'stable';
+  phase: 'early' | 'mid' | 'late' | 'exit';
   topAssets: string[];
 }
 
