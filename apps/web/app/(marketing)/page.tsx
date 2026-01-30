@@ -13,11 +13,9 @@ import {
   FileText,
   Lock,
   Eye,
-  BarChart3,
   Activity,
   HelpCircle,
   ChevronDown,
-  Play,
   Brain,
   Menu,
   X,
@@ -604,46 +602,6 @@ function SystemFlowChart() {
             </div>
           </div>
 
-          {/* Action Buttons - Corporate Gradients */}
-          <div className={`flex flex-wrap justify-center gap-4 mb-8 transition-all duration-700 delay-900 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-            <Link
-              href="/login"
-              className="group relative inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 via-emerald-500 to-teal-500 bg-[length:200%_100%] text-white text-sm font-bold rounded-xl shadow-lg shadow-teal-500/30 hover:shadow-xl hover:shadow-teal-500/40 transition-all hover:bg-[position:100%_0] duration-500"
-            >
-              <BarChart3 className="w-4 h-4" />
-              View Analysis
-            </Link>
-            <Link
-              href="/login"
-              className="group relative inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-500 via-purple-500 to-violet-500 bg-[length:200%_100%] text-white text-sm font-bold rounded-xl shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 transition-all hover:bg-[position:100%_0] duration-500"
-            >
-              <Zap className="w-4 h-4" />
-              Try MLIS Pro
-            </Link>
-          </div>
-
-          {/* Bottom Verdict Badges - Enhanced */}
-          <div className={`text-center transition-all duration-700 delay-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-            <div className="inline-flex flex-wrap justify-center items-center gap-2 md:gap-3 mb-4">
-              <span className="px-4 py-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-bold shadow-md shadow-emerald-500/30">GO</span>
-              <span className="text-slate-300 dark:text-slate-600">→</span>
-              <span className="px-4 py-1.5 rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-sm font-bold shadow-md shadow-yellow-500/30">CONDITIONAL</span>
-              <span className="text-slate-300 dark:text-slate-600">→</span>
-              <span className="px-4 py-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-sm font-bold shadow-md shadow-orange-500/30">WAIT</span>
-              <span className="text-slate-300 dark:text-slate-600">→</span>
-              <span className="px-4 py-1.5 rounded-full bg-gradient-to-r from-red-500 to-rose-500 text-white text-sm font-bold shadow-md shadow-red-500/30">AVOID</span>
-            </div>
-            <p className="text-slate-600 dark:text-slate-400 text-sm mb-6 max-w-xl mx-auto">
-              Simple, actionable trading signals with complete trade plans
-            </p>
-            <Link
-              href="/login"
-              className="group relative inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-teal-500 via-emerald-500 to-orange-500 bg-[length:200%_100%] text-white font-bold rounded-xl shadow-xl shadow-teal-500/30 hover:shadow-2xl hover:shadow-emerald-500/40 transition-all hover:bg-[position:100%_0] duration-700 text-sm md:text-base"
-            >
-              Start Free Analysis
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
         </div>
       </div>
     </section>
@@ -1001,18 +959,6 @@ export default function LandingPage() {
             className="flex-shrink-0 hidden sm:flex"
           />
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
-            <a href="#features" className="text-muted-foreground hover:text-foreground transition">
-              Features
-            </a>
-            <a href="#how-it-works" className="text-muted-foreground hover:text-foreground transition">
-              How it Works
-            </a>
-            <a href="#pricing" className="text-muted-foreground hover:text-foreground transition">
-              Pricing
-            </a>
-          </nav>
 
           {/* Right side buttons */}
           <div className="flex items-center gap-1 sm:gap-3">
@@ -1047,28 +993,6 @@ export default function LandingPage() {
         {mobileMenuOpen && (
           <div className="md:hidden border-t bg-background/95 backdrop-blur">
             <nav className="container mx-auto px-4 py-4 flex flex-col gap-3">
-              <a
-                href="#features"
-                className="py-2 text-muted-foreground hover:text-foreground transition"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Features
-              </a>
-              <a
-                href="#how-it-works"
-                className="py-2 text-muted-foreground hover:text-foreground transition"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                How it Works
-              </a>
-              <a
-                href="#pricing"
-                className="py-2 text-muted-foreground hover:text-foreground transition"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Pricing
-              </a>
-              <hr className="border-border" />
               <div className="flex items-center justify-between py-2">
                 <Link
                   href="/login"
@@ -1111,7 +1035,7 @@ export default function LandingPage() {
             Track global capital flows across Crypto, Stocks, Bonds & Metals.
             Our AI identifies where money is moving and delivers actionable trade signals.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 sm:px-0">
+          <div className="flex justify-center px-4 sm:px-0">
             <Link
               href="/register"
               className="px-6 sm:px-8 py-3 sm:py-4 bg-slate-200 dark:bg-slate-700 rounded-lg font-semibold hover:scale-105 hover:shadow-lg transition-all flex items-center justify-center gap-2 border border-slate-300 dark:border-slate-600"
@@ -1119,13 +1043,6 @@ export default function LandingPage() {
               <span className="gradient-text-rg-animate text-sm sm:text-base">Start Free Analysis</span>
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 gradient-text-rg-animate" />
             </Link>
-            <a
-              href="#features"
-              className="px-6 sm:px-8 py-3 sm:py-4 border rounded-lg font-semibold hover:bg-accent transition flex items-center justify-center gap-2 text-sm sm:text-base"
-            >
-              <Play className="w-4 h-4 sm:w-5 sm:h-5" />
-              See Features
-            </a>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
             Get 25 free credits on signup. No credit card required.
@@ -1243,7 +1160,7 @@ export default function LandingPage() {
             <div>
               <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-muted-foreground">
-                <li><a href="#features" className="hover:text-foreground transition">Features</a></li>
+                <li><a href="#features" className="hover:text-foreground transition">Capital Flow</a></li>
                 <li><Link href="/pricing" className="hover:text-foreground transition">Pricing</Link></li>
               </ul>
             </div>
