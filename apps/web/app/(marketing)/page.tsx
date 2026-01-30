@@ -50,7 +50,8 @@ import {
   Gift,
   Crown,
   Mic,
-  Layers
+  Layers,
+  DollarSign
 } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
