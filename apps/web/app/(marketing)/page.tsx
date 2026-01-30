@@ -50,6 +50,67 @@ interface LivePrice {
   up: boolean;
 }
 
+// Typewriter Effect Component
+function TypewriterText({ text, delay = 0, speed = 30, className = '' }: { text: string; delay?: number; speed?: number; className?: string }) {
+  const [displayText, setDisplayText] = useState('');
+  const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    const startTimer = setTimeout(() => setStarted(true), delay);
+    return () => clearTimeout(startTimer);
+  }, [delay]);
+
+  useEffect(() => {
+    if (!started) return;
+    let i = 0;
+    const timer = setInterval(() => {
+      if (i < text.length) {
+        setDisplayText(text.slice(0, i + 1));
+        i++;
+      } else {
+        clearInterval(timer);
+      }
+    }, speed);
+    return () => clearInterval(timer);
+  }, [started, text, speed]);
+
+  return <span className={className}>{displayText}<span className="animate-pulse">|</span></span>;
+}
+
+// Animated Flow Line Component
+function FlowLine({ expanded, color1, color2 }: { expanded: boolean; color1: string; color2: string }) {
+  return (
+    <div className={`flex justify-center mb-4 transition-all duration-500 ${expanded ? 'opacity-100 h-12' : 'opacity-50 h-6'}`}>
+      <div className="relative">
+        {/* Main line */}
+        <div className={`w-1 h-full bg-gradient-to-b ${color1} ${color2} rounded-full shadow-lg`} />
+        {/* Animated flowing particles */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-white shadow-lg animate-flow-down" style={{ animationDuration: '1.5s' }} />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-white/80 shadow-md animate-flow-down" style={{ animationDuration: '1.5s', animationDelay: '0.5s' }} />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white/60 shadow animate-flow-down" style={{ animationDuration: '1.5s', animationDelay: '1s' }} />
+      </div>
+    </div>
+  );
+}
+
+// Live Capital Flow Data Interface
+interface CapitalFlowData {
+  liquidity: {
+    fedStatus: string;
+    m2Change: string;
+    dxyStatus: string;
+    vixLevel: string;
+    bias: string;
+  };
+  markets: {
+    name: string;
+    flow7d: number;
+    phase: string;
+    isSelected: boolean;
+  }[];
+  lastUpdated: string;
+}
+
 // System Flow Chart - Visual explanation of how TraderPath works
 // 4-Layer Capital Flow Architecture - "Follow The Money" Principle
 function SystemFlowChart() {
@@ -60,7 +121,50 @@ function SystemFlowChart() {
     3: false,
     4: false,
   });
+  const [flowData, setFlowData] = useState<CapitalFlowData | null>(null);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [showTypewriter, setShowTypewriter] = useState<{ [key: number]: boolean }>({});
   const chartRef = useRef<HTMLDivElement>(null);
+
+  // Fetch live capital flow data
+  useEffect(() => {
+    const fetchFlowData = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io'}/api/capital-flow/summary`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            const { liquidity, markets } = data.data;
+            setFlowData({
+              liquidity: {
+                fedStatus: liquidity?.fedBalanceSheet?.trend === 'expanding' ? 'Expanding' : 'Contracting',
+                m2Change: liquidity?.m2MoneySupply?.changePercent ? `${liquidity.m2MoneySupply.changePercent > 0 ? '+' : ''}${liquidity.m2MoneySupply.changePercent.toFixed(1)}%` : '+2.1%',
+                dxyStatus: liquidity?.dxy?.trend === 'weakening' ? 'Weak ↓' : 'Strong ↑',
+                vixLevel: liquidity?.vix?.value ? `${liquidity.vix.level} (${Math.round(liquidity.vix.value)})` : 'Low (14)',
+                bias: liquidity?.bias || 'risk_on',
+              },
+              markets: markets?.map((m: { market: string; flow7d: number; phase: string }) => ({
+                name: m.market.toUpperCase(),
+                flow7d: m.flow7d || 0,
+                phase: m.phase || 'mid',
+                isSelected: m.market === 'crypto',
+              })) || [],
+              lastUpdated: new Date().toLocaleTimeString(),
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch capital flow data:', error);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    fetchFlowData();
+    const interval = setInterval(fetchFlowData, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -83,8 +187,14 @@ function SystemFlowChart() {
   useEffect(() => {
     if (isVisible) {
       const timers = [
-        setTimeout(() => setExpandedLayers(prev => ({ ...prev, 1: true })), 500),
-        setTimeout(() => setExpandedLayers(prev => ({ ...prev, 2: true })), 1500),
+        setTimeout(() => {
+          setExpandedLayers(prev => ({ ...prev, 1: true }));
+          setShowTypewriter(prev => ({ ...prev, 1: true }));
+        }, 500),
+        setTimeout(() => {
+          setExpandedLayers(prev => ({ ...prev, 2: true }));
+          setShowTypewriter(prev => ({ ...prev, 2: true }));
+        }, 1500),
       ];
       return () => timers.forEach(t => clearTimeout(t));
     }
@@ -93,7 +203,22 @@ function SystemFlowChart() {
   const toggleLayer = (layer: number) => {
     // Only layers 1 and 2 are free - layers 3 and 4 are premium
     if (layer <= 2) {
-      setExpandedLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
+      const newExpanded = !expandedLayers[layer];
+      setExpandedLayers(prev => ({ ...prev, [layer]: newExpanded }));
+      if (newExpanded) {
+        setShowTypewriter(prev => ({ ...prev, [layer]: true }));
+      }
+    }
+  };
+
+  // Helper to get phase badge color
+  const getPhaseColor = (phase: string) => {
+    switch (phase) {
+      case 'early': return 'bg-emerald-500/20 text-emerald-600';
+      case 'mid': return 'bg-yellow-500/20 text-yellow-600';
+      case 'late': return 'bg-amber-500/20 text-amber-600';
+      case 'exit': return 'bg-red-500/20 text-red-600';
+      default: return 'bg-slate-500/20 text-slate-600';
     }
   };
 
@@ -186,52 +311,114 @@ function SystemFlowChart() {
               </div>
             </div>
 
-            {/* Layer Content - Collapsible */}
+            {/* Layer Content - Collapsible with Typewriter Effect */}
             <div className={`overflow-hidden transition-all duration-500 ${expandedLayers[1] ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
               <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-                {/* Data Points */}
+                {/* Data Points with Live Data & Typewriter */}
                 <div className="backdrop-blur-xl bg-slate-100/80 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-                  <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-                    <div className="flex justify-between gap-4">
-                      <span className="text-slate-500">Fed:</span>
-                      <span className="text-emerald-500 font-bold">Expanding</span>
+                  {isLoadingData ? (
+                    <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+                      {[1,2,3,4].map(i => (
+                        <div key={i} className="h-4 bg-slate-300 dark:bg-slate-600 rounded animate-pulse" />
+                      ))}
                     </div>
-                    <div className="flex justify-between gap-4">
-                      <span className="text-slate-500">M2:</span>
-                      <span className="text-emerald-500 font-bold">+2.1%</span>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-slate-500">Fed:</span>
+                        {showTypewriter[1] ? (
+                          <TypewriterText
+                            text={flowData?.liquidity.fedStatus || 'Expanding'}
+                            delay={0}
+                            speed={50}
+                            className="text-emerald-500 font-bold"
+                          />
+                        ) : (
+                          <span className="text-emerald-500 font-bold">{flowData?.liquidity.fedStatus || 'Expanding'}</span>
+                        )}
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-slate-500">M2:</span>
+                        {showTypewriter[1] ? (
+                          <TypewriterText
+                            text={flowData?.liquidity.m2Change || '+2.1%'}
+                            delay={200}
+                            speed={50}
+                            className="text-emerald-500 font-bold"
+                          />
+                        ) : (
+                          <span className="text-emerald-500 font-bold">{flowData?.liquidity.m2Change || '+2.1%'}</span>
+                        )}
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-slate-500">DXY:</span>
+                        {showTypewriter[1] ? (
+                          <TypewriterText
+                            text={flowData?.liquidity.dxyStatus || 'Weak ↓'}
+                            delay={400}
+                            speed={50}
+                            className="text-emerald-500 font-bold"
+                          />
+                        ) : (
+                          <span className="text-emerald-500 font-bold">{flowData?.liquidity.dxyStatus || 'Weak ↓'}</span>
+                        )}
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-slate-500">VIX:</span>
+                        {showTypewriter[1] ? (
+                          <TypewriterText
+                            text={flowData?.liquidity.vixLevel || 'Low (14)'}
+                            delay={600}
+                            speed={50}
+                            className="text-emerald-500 font-bold"
+                          />
+                        ) : (
+                          <span className="text-emerald-500 font-bold">{flowData?.liquidity.vixLevel || 'Low (14)'}</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex justify-between gap-4">
-                      <span className="text-slate-500">DXY:</span>
-                      <span className="text-emerald-500 font-bold">Weak ↓</span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <span className="text-slate-500">VIX:</span>
-                      <span className="text-emerald-500 font-bold">Low (14)</span>
-                    </div>
-                  </div>
+                  )}
+                  {flowData?.lastUpdated && (
+                    <p className="text-[10px] text-slate-400 mt-2 text-center">
+                      Live • Updated {flowData.lastUpdated}
+                    </p>
+                  )}
                 </div>
 
-                {/* Arrow */}
-                <ArrowRight className="w-6 h-6 text-teal-500 hidden md:block" />
+                {/* Animated Arrow */}
+                <div className="hidden md:block relative">
+                  <ArrowRight className="w-6 h-6 text-teal-500 animate-pulse" />
+                  <div className="absolute inset-0 bg-teal-500/20 rounded-full blur-md animate-ping" style={{ animationDuration: '2s' }} />
+                </div>
 
                 {/* Answer */}
                 <div className="backdrop-blur-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 border-2 border-emerald-500/50 rounded-xl p-4 shadow-lg ring-2 ring-emerald-500/20">
                   <div className="flex items-center gap-2 mb-2">
                     <CheckCircle className="w-5 h-5 text-emerald-500" />
-                    <span className="px-3 py-1 bg-emerald-500 text-white text-sm font-bold rounded-full">RISK ON</span>
+                    <span className={`px-3 py-1 text-white text-sm font-bold rounded-full ${
+                      flowData?.liquidity.bias === 'risk_on'
+                        ? 'bg-emerald-500'
+                        : flowData?.liquidity.bias === 'risk_off'
+                        ? 'bg-red-500'
+                        : 'bg-yellow-500'
+                    }`}>
+                      {flowData?.liquidity.bias === 'risk_on' ? 'RISK ON' : flowData?.liquidity.bias === 'risk_off' ? 'RISK OFF' : 'NEUTRAL'}
+                    </span>
                   </div>
                   <p className="text-xs text-slate-600 dark:text-slate-300">
-                    Liquidity expanding → Risk assets favored
+                    {flowData?.liquidity.bias === 'risk_on'
+                      ? 'Liquidity expanding → Risk assets favored'
+                      : flowData?.liquidity.bias === 'risk_off'
+                      ? 'Liquidity contracting → Safe havens favored'
+                      : 'Mixed signals → Wait for clarity'}
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Connector to Layer 2 - Gradient */}
-          <div className={`flex justify-center mb-4 transition-all duration-500 ${expandedLayers[1] ? 'opacity-100 h-8' : 'opacity-50 h-4'}`}>
-            <div className="w-1 h-full bg-gradient-to-b from-teal-400 via-cyan-500 to-blue-500 rounded-full shadow-lg shadow-cyan-500/30" />
-          </div>
+          {/* Connector to Layer 2 - Animated Flow Line */}
+          <FlowLine expanded={expandedLayers[1]} color1="from-teal-400" color2="to-cyan-500" />
 
           {/* LAYER 2: Market Selection - Corporate Blue/Cyan Gradient */}
           <div className={`mb-4 transition-all duration-700 delay-400 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
@@ -264,50 +451,88 @@ function SystemFlowChart() {
               </div>
             </div>
 
-            {/* Layer Content */}
+            {/* Layer Content with Live Market Data */}
             <div className={`overflow-hidden transition-all duration-500 ${expandedLayers[2] ? 'max-h-[500px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
-              {/* Market Options */}
+              {/* Market Options - Dynamic from API */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto mb-4">
-                <div className="backdrop-blur-xl bg-slate-100/80 dark:bg-slate-700/50 rounded-xl p-3 text-center border border-slate-200 dark:border-slate-600 opacity-60">
-                  <div className="font-bold text-sm text-slate-600 dark:text-slate-400 mb-1">STOCKS</div>
-                  <div className="text-xs font-mono text-slate-500">+5%</div>
-                  <div className="mt-1 px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-600 text-[10px] font-bold inline-block">MID</div>
-                </div>
-                <div className="backdrop-blur-xl bg-slate-100/80 dark:bg-slate-700/50 rounded-xl p-3 text-center border border-slate-200 dark:border-slate-600 opacity-40">
-                  <div className="font-bold text-sm text-slate-600 dark:text-slate-400 mb-1">BONDS</div>
-                  <div className="text-xs font-mono text-red-500">-2%</div>
-                  <div className="mt-1 px-2 py-0.5 rounded-full bg-red-500/20 text-red-600 text-[10px] font-bold inline-block">EXIT</div>
-                </div>
-                <div className="backdrop-blur-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 rounded-xl p-3 text-center border-2 border-emerald-500 ring-4 ring-emerald-500/20 shadow-lg">
-                  <div className="font-bold text-sm text-emerald-600 dark:text-emerald-400 mb-1">CRYPTO</div>
-                  <div className="text-xs font-mono text-emerald-600 font-bold">+8%</div>
-                  <div className="mt-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 text-[10px] font-bold inline-block">EARLY</div>
-                  <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto mt-1" />
-                </div>
-                <div className="backdrop-blur-xl bg-slate-100/80 dark:bg-slate-700/50 rounded-xl p-3 text-center border border-slate-200 dark:border-slate-600 opacity-50">
-                  <div className="font-bold text-sm text-slate-600 dark:text-slate-400 mb-1">METALS</div>
-                  <div className="text-xs font-mono text-amber-500">+1%</div>
-                  <div className="mt-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 text-[10px] font-bold inline-block">LATE</div>
-                </div>
+                {isLoadingData ? (
+                  // Loading skeleton
+                  [1,2,3,4].map(i => (
+                    <div key={i} className="backdrop-blur-xl bg-slate-100/80 dark:bg-slate-700/50 rounded-xl p-3 animate-pulse">
+                      <div className="h-4 bg-slate-300 dark:bg-slate-600 rounded mb-2" />
+                      <div className="h-3 bg-slate-300 dark:bg-slate-600 rounded w-1/2 mx-auto" />
+                    </div>
+                  ))
+                ) : (
+                  // Fallback markets if API fails
+                  (flowData?.markets.length ? flowData.markets : [
+                    { name: 'STOCKS', flow7d: 5, phase: 'mid', isSelected: false },
+                    { name: 'BONDS', flow7d: -2, phase: 'exit', isSelected: false },
+                    { name: 'CRYPTO', flow7d: 8, phase: 'early', isSelected: true },
+                    { name: 'METALS', flow7d: 1, phase: 'late', isSelected: false },
+                  ]).map((market, idx) => (
+                    <div
+                      key={market.name}
+                      className={`backdrop-blur-xl rounded-xl p-3 text-center transition-all duration-500 ${
+                        market.isSelected
+                          ? 'bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 border-2 border-emerald-500 ring-4 ring-emerald-500/20 shadow-lg scale-105'
+                          : 'bg-slate-100/80 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 opacity-60 hover:opacity-80'
+                      }`}
+                      style={{ animationDelay: `${idx * 100}ms` }}
+                    >
+                      <div className={`font-bold text-sm mb-1 ${market.isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                        {showTypewriter[2] ? (
+                          <TypewriterText text={market.name} delay={idx * 150} speed={40} />
+                        ) : market.name}
+                      </div>
+                      <div className={`text-xs font-mono font-bold ${
+                        market.flow7d > 0 ? 'text-emerald-500' : market.flow7d < 0 ? 'text-red-500' : 'text-slate-500'
+                      }`}>
+                        {showTypewriter[2] ? (
+                          <TypewriterText
+                            text={`${market.flow7d > 0 ? '+' : ''}${market.flow7d}%`}
+                            delay={idx * 150 + 200}
+                            speed={60}
+                          />
+                        ) : `${market.flow7d > 0 ? '+' : ''}${market.flow7d}%`}
+                      </div>
+                      <div className={`mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold inline-block ${getPhaseColor(market.phase)}`}>
+                        {market.phase.toUpperCase()}
+                      </div>
+                      {market.isSelected && <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto mt-1 animate-bounce" />}
+                    </div>
+                  ))
+                )}
               </div>
 
-              {/* Answer */}
+              {/* Answer with Selected Market */}
               <div className="flex justify-center">
                 <div className="backdrop-blur-xl bg-gradient-to-r from-blue-500/10 to-emerald-500/10 border border-emerald-500/30 rounded-xl p-3">
                   <div className="flex items-center justify-center gap-3 flex-wrap">
                     <CheckCircle className="w-4 h-4 text-emerald-500" />
-                    <span className="px-3 py-1 bg-emerald-500 text-white text-sm font-bold rounded-full">CRYPTO</span>
-                    <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">Early phase • +8% flow • 23 days</span>
+                    <span className="px-3 py-1 bg-emerald-500 text-white text-sm font-bold rounded-full">
+                      {flowData?.markets.find(m => m.isSelected)?.name || 'CRYPTO'}
+                    </span>
+                    {showTypewriter[2] ? (
+                      <TypewriterText
+                        text={`${flowData?.markets.find(m => m.isSelected)?.phase || 'Early'} phase • ${flowData?.markets.find(m => m.isSelected)?.flow7d || 8}% flow`}
+                        delay={800}
+                        speed={30}
+                        className="text-xs text-slate-600 dark:text-slate-300 font-mono"
+                      />
+                    ) : (
+                      <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">
+                        {flowData?.markets.find(m => m.isSelected)?.phase || 'Early'} phase • {flowData?.markets.find(m => m.isSelected)?.flow7d || 8}% flow
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Connector to Layer 3 - Gradient */}
-          <div className={`flex justify-center mb-4 transition-all duration-500 ${expandedLayers[2] ? 'opacity-100 h-8' : 'opacity-50 h-4'}`}>
-            <div className="w-1 h-full bg-gradient-to-b from-blue-500 via-violet-500 to-purple-500 rounded-full shadow-lg shadow-purple-500/30" />
-          </div>
+          {/* Connector to Layer 3 - Animated Flow Line */}
+          <FlowLine expanded={expandedLayers[2]} color1="from-cyan-500" color2="to-violet-500" />
 
           {/* LAYER 3: Sector Drill-Down - PREMIUM (Locked) */}
           <div className={`mb-4 transition-all duration-700 delay-600 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
@@ -336,10 +561,8 @@ function SystemFlowChart() {
             </div>
           </div>
 
-          {/* Connector to Layer 4 - Gradient */}
-          <div className="flex justify-center mb-4 opacity-50 h-4">
-            <div className="w-1 h-full bg-gradient-to-b from-purple-500 via-orange-500 to-amber-500 rounded-full shadow-lg shadow-orange-500/30" />
-          </div>
+          {/* Connector to Layer 4 - Animated Flow Line */}
+          <FlowLine expanded={false} color1="from-violet-500" color2="to-amber-500" />
 
           {/* LAYER 4: Asset Analysis - PREMIUM (Locked) */}
           <div className={`mb-6 transition-all duration-700 delay-800 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
