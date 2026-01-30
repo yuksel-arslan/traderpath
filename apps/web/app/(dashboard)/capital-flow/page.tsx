@@ -29,6 +29,7 @@ import {
   RefreshCw,
   Info,
   ChevronRight,
+  ChevronDown,
   Layers,
   Zap,
   Sparkles,
@@ -1336,7 +1337,7 @@ export default function CapitalFlowPage() {
                     <div className="w-6 h-6 bg-amber-500 rounded flex items-center justify-center text-white text-xs font-bold">4</div>
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">AI Recommendation</h3>
                   </div>
-                  <RecommendationCard recommendation={data.recommendation} rotation={data.rotation} />
+                  <RecommendationCard recommendation={data.recommendation} rotation={data.activeRotation} />
                 </div>
               )}
             </div>
