@@ -144,21 +144,22 @@ function SystemFlowChart() {
     return () => observer.disconnect();
   }, []);
 
-  // Auto-expand layers sequentially when visible
+  // Auto-expand layers 1 and 2 sequentially when visible (3 and 4 are premium)
   useEffect(() => {
     if (isVisible) {
       const timers = [
         setTimeout(() => setExpandedLayers(prev => ({ ...prev, 1: true })), 500),
         setTimeout(() => setExpandedLayers(prev => ({ ...prev, 2: true })), 1500),
-        setTimeout(() => setExpandedLayers(prev => ({ ...prev, 3: true })), 2500),
-        setTimeout(() => setExpandedLayers(prev => ({ ...prev, 4: true })), 3500),
       ];
       return () => timers.forEach(t => clearTimeout(t));
     }
   }, [isVisible]);
 
   const toggleLayer = (layer: number) => {
-    setExpandedLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
+    // Only layers 1 and 2 are free - layers 3 and 4 are premium
+    if (layer <= 2) {
+      setExpandedLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
+    }
   };
 
   return (
@@ -373,166 +374,75 @@ function SystemFlowChart() {
             <div className="w-1 h-full bg-gradient-to-b from-blue-500 via-violet-500 to-purple-500 rounded-full shadow-lg shadow-purple-500/30" />
           </div>
 
-          {/* LAYER 3: Sector Drill-Down - Corporate Purple/Violet Gradient */}
+          {/* LAYER 3: Sector Drill-Down - PREMIUM (Locked) */}
           <div className={`mb-4 transition-all duration-700 delay-600 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-            {/* Layer Header */}
-            <div
-              className="flex justify-center cursor-pointer group"
-              onClick={() => toggleLayer(3)}
-            >
-              <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/20 ${expandedLayers[3] ? 'ring-2 ring-purple-500/30' : ''}`}>
+            {/* Layer Header - Locked */}
+            <div className="flex justify-center group">
+              <div className="relative backdrop-blur-xl rounded-2xl p-4 shadow-lg opacity-60">
                 {/* Gradient border */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 opacity-30 group-hover:opacity-50 transition-opacity" />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 opacity-20" />
                 <div className="absolute inset-[2px] rounded-2xl bg-white/95 dark:bg-slate-800/95" />
                 <div className="relative flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 shadow-lg shadow-purple-500/30">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-slate-400 to-slate-500 shadow-lg">
                     <Layers className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <span className="text-sm font-bold bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent">LAYER 3: Sector Drill-Down</span>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">"Which sector within CRYPTO?"</p>
+                    <span className="text-sm font-bold text-slate-400 dark:text-slate-500">LAYER 3: Sector Drill-Down</span>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">"Which sector within the market?"</p>
                   </div>
-                  <div className={`ml-2 transition-transform duration-300 ${expandedLayers[3] ? 'rotate-180' : ''}`}>
-                    <ChevronDown className="w-5 h-5 text-purple-500" />
-                  </div>
-                  {!expandedLayers[3] && (
-                    <span className="ml-2 px-3 py-1 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-xs font-bold rounded-full shadow-lg shadow-purple-500/30 animate-pulse">
-                      DeFi & AI
+                  <div className="ml-2 flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-amber-500" />
+                    <span className="px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold rounded-full shadow-lg">
+                      PREMIUM
                     </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Layer Content */}
-            <div className={`overflow-hidden transition-all duration-500 ${expandedLayers[3] ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
-              <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-                {/* Sector Data */}
-                <div className="backdrop-blur-xl bg-slate-100/80 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-                  <div className="space-y-2 text-xs font-mono">
-                    <div className="flex justify-between gap-4">
-                      <span className="text-slate-500">BTC Dominance:</span>
-                      <span className="text-red-500 font-bold">52% ↓</span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <span className="text-slate-500">DeFi TVL:</span>
-                      <span className="text-emerald-500 font-bold">$48B ↑</span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <span className="text-slate-500">L2 Activity:</span>
-                      <span className="text-emerald-500 font-bold">High</span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <span className="text-slate-500">AI Tokens:</span>
-                      <span className="text-purple-500 font-bold">Trending</span>
-                    </div>
                   </div>
-                </div>
-
-                <ArrowRight className="w-6 h-6 text-purple-500 hidden md:block" />
-
-                {/* Answer */}
-                <div className="backdrop-blur-xl bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/30 dark:to-violet-900/30 border-2 border-purple-500/50 rounded-xl p-4 shadow-lg ring-2 ring-purple-500/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Target className="w-5 h-5 text-purple-500" />
-                    <span className="px-3 py-1 bg-purple-500 text-white text-sm font-bold rounded-full">DeFi & AI</span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">
-                    BTC dom falling • TVL rising • AI trending
-                  </p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Connector to Layer 4 - Gradient */}
-          <div className={`flex justify-center mb-4 transition-all duration-500 ${expandedLayers[3] ? 'opacity-100 h-8' : 'opacity-50 h-4'}`}>
+          <div className="flex justify-center mb-4 opacity-50 h-4">
             <div className="w-1 h-full bg-gradient-to-b from-purple-500 via-orange-500 to-amber-500 rounded-full shadow-lg shadow-orange-500/30" />
           </div>
 
-          {/* LAYER 4: Asset Analysis - Corporate Orange/Coral Gradient */}
-          <div className={`mb-8 transition-all duration-700 delay-800 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-            {/* Layer Header */}
-            <div
-              className="flex justify-center cursor-pointer group"
-              onClick={() => toggleLayer(4)}
-            >
-              <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-orange-500/20 ${expandedLayers[4] ? 'ring-2 ring-orange-500/30' : ''}`}>
+          {/* LAYER 4: Asset Analysis - PREMIUM (Locked) */}
+          <div className={`mb-6 transition-all duration-700 delay-800 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            {/* Layer Header - Locked */}
+            <div className="flex justify-center group">
+              <div className="relative backdrop-blur-xl rounded-2xl p-4 shadow-lg opacity-60">
                 {/* Gradient border */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 opacity-30 group-hover:opacity-50 transition-opacity" />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 opacity-20" />
                 <div className="absolute inset-[2px] rounded-2xl bg-white/95 dark:bg-slate-800/95" />
                 <div className="relative flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 shadow-lg shadow-orange-500/30">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-slate-400 to-slate-500 shadow-lg">
                     <Search className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <span className="text-sm font-bold bg-gradient-to-r from-orange-600 to-amber-600 dark:from-orange-400 dark:to-amber-400 bg-clip-text text-transparent">LAYER 4: Asset Analysis</span>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">"Top 30 / 7-Step / MLIS Pro"</p>
+                    <span className="text-sm font-bold text-slate-400 dark:text-slate-500">LAYER 4: Asset Analysis</span>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">"Top 30 / 7-Step / MLIS Pro"</p>
                   </div>
-                  <div className={`ml-2 transition-transform duration-300 ${expandedLayers[4] ? 'rotate-180' : ''}`}>
-                    <ChevronDown className="w-5 h-5 text-orange-500" />
-                  </div>
-                  {!expandedLayers[4] && (
-                    <span className="ml-2 px-3 py-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold rounded-full shadow-lg shadow-orange-500/30 animate-pulse">
-                      4 GO signals
+                  <div className="ml-2 flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-amber-500" />
+                    <span className="px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold rounded-full shadow-lg">
+                      PREMIUM
                     </span>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Layer Content */}
-            <div className={`overflow-hidden transition-all duration-500 ${expandedLayers[4] ? 'max-h-[600px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
-              {/* Analysis Methods */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-3xl mx-auto mb-4">
-                <div className="backdrop-blur-xl bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-xl p-4 border border-teal-500/30 text-center hover:shadow-lg hover:shadow-teal-500/20 transition-all cursor-pointer">
-                  <Radar className="w-6 h-6 text-teal-500 mx-auto mb-2" />
-                  <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">Top 30 Scan</div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Auto-scan assets</p>
-                </div>
-                <div className="backdrop-blur-xl bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-xl p-4 border border-emerald-500/30 text-center hover:shadow-lg hover:shadow-emerald-500/20 transition-all cursor-pointer">
-                  <BarChart3 className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
-                  <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">7-Step Classic</div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">40+ indicators</p>
-                </div>
-                <div className="backdrop-blur-xl bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-xl p-4 border border-violet-500/30 text-center hover:shadow-lg hover:shadow-violet-500/20 transition-all cursor-pointer">
-                  <Brain className="w-6 h-6 text-violet-500 mx-auto mb-2" />
-                  <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">MLIS Pro</div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Neural signals</p>
-                </div>
-              </div>
-
-              {/* Top Assets */}
-              <div className="max-w-3xl mx-auto">
-                <div className="backdrop-blur-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-2 border-emerald-500/30 rounded-2xl p-4 shadow-lg">
-                  <div className="flex items-center justify-center gap-2 mb-3">
-                    <CheckCircle className="w-5 h-5 text-emerald-500" />
-                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Top Assets in DeFi & AI Sector:</span>
-                  </div>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-white/70 dark:bg-slate-700/70 rounded-xl border border-emerald-500/30 shadow-sm hover:shadow-md transition-all cursor-pointer">
-                      <span className="font-bold text-slate-800 dark:text-white">AAVE</span>
-                      <span className="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-600 px-2 py-0.5 rounded">87</span>
-                      <span className="px-2 py-0.5 bg-emerald-500 text-white text-xs font-bold rounded">GO</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-4 py-2 bg-white/70 dark:bg-slate-700/70 rounded-xl border border-emerald-500/30 shadow-sm hover:shadow-md transition-all cursor-pointer">
-                      <span className="font-bold text-slate-800 dark:text-white">FET</span>
-                      <span className="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-600 px-2 py-0.5 rounded">84</span>
-                      <span className="px-2 py-0.5 bg-emerald-500 text-white text-xs font-bold rounded">GO</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-4 py-2 bg-white/70 dark:bg-slate-700/70 rounded-xl border border-amber-500/30 shadow-sm hover:shadow-md transition-all cursor-pointer">
-                      <span className="font-bold text-slate-800 dark:text-white">ARB</span>
-                      <span className="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-600 px-2 py-0.5 rounded">76</span>
-                      <span className="px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded">COND</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-4 py-2 bg-white/70 dark:bg-slate-700/70 rounded-xl border border-amber-500/30 shadow-sm hover:shadow-md transition-all cursor-pointer">
-                      <span className="font-bold text-slate-800 dark:text-white">OP</span>
-                      <span className="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-600 px-2 py-0.5 rounded">72</span>
-                      <span className="px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded">COND</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {/* Premium Note */}
+          <div className={`flex justify-center mb-8 transition-all duration-700 delay-900 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            <div className="backdrop-blur-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-500/30 rounded-xl px-6 py-3 max-w-lg text-center">
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                <Lock className="w-4 h-4 inline-block mr-2 text-amber-500" />
+                <span className="font-semibold text-amber-600 dark:text-amber-400">Layer 3 & 4</span> provide detailed sector analysis and AI-powered asset signals.
+                <Link href="/pricing" className="ml-1 text-teal-600 dark:text-teal-400 font-semibold hover:underline">
+                  Upgrade to Premium
+                </Link>
+              </p>
             </div>
           </div>
 
