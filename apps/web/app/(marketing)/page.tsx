@@ -115,6 +115,68 @@ const FEATURES = [
 ];
 
 // System Flow Chart - Visual explanation of how TraderPath works
+// Flow Box Component - styled like Capital Flow page
+function FlowBox({
+  step,
+  title,
+  status,
+  statusType,
+  detail,
+  icon: Icon,
+  color,
+}: {
+  step: number;
+  title: string;
+  status: string;
+  statusType: 'positive' | 'negative' | 'neutral' | 'warning';
+  detail: string;
+  icon: any;
+  color: 'teal' | 'blue' | 'purple' | 'emerald' | 'amber';
+}) {
+  const statusColors = {
+    positive: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/30',
+    negative: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 border-red-300 dark:border-red-500/30',
+    neutral: 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-500/30',
+    warning: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-500/30',
+  };
+
+  const bgColors = {
+    teal: 'from-teal-500/10 to-cyan-500/10 border-teal-500/30 dark:from-teal-500/20 dark:to-cyan-500/20',
+    blue: 'from-blue-500/10 to-indigo-500/10 border-blue-500/30 dark:from-blue-500/20 dark:to-indigo-500/20',
+    purple: 'from-purple-500/10 to-violet-500/10 border-purple-500/30 dark:from-purple-500/20 dark:to-violet-500/20',
+    emerald: 'from-emerald-500/10 to-green-500/10 border-emerald-500/30 dark:from-emerald-500/20 dark:to-green-500/20',
+    amber: 'from-amber-500/10 to-orange-500/10 border-amber-500/30 dark:from-amber-500/20 dark:to-orange-500/20',
+  };
+
+  const numColors = {
+    teal: 'bg-gradient-to-br from-teal-500 to-cyan-500',
+    blue: 'bg-gradient-to-br from-blue-500 to-indigo-500',
+    purple: 'bg-gradient-to-br from-purple-500 to-violet-500',
+    emerald: 'bg-gradient-to-br from-emerald-500 to-green-500',
+    amber: 'bg-gradient-to-br from-amber-500 to-orange-500',
+  };
+
+  return (
+    <div className={`backdrop-blur-xl bg-gradient-to-br border rounded-2xl p-4 sm:p-5 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 ${bgColors[color]}`}>
+      <div className="flex items-start gap-3 sm:gap-4">
+        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white text-sm sm:text-base font-bold flex-shrink-0 shadow-lg ${numColors[color]}`}>
+          {step}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 dark:text-slate-400" />
+            <span className="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-200 truncate">{title}</span>
+          </div>
+          <div className={`inline-flex px-2.5 py-1 rounded-full text-xs sm:text-sm font-bold mb-2 border ${statusColors[statusType]}`}>
+            {status}
+          </div>
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-2">{detail}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SystemFlowChart() {
   const [isVisible, setIsVisible] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -136,172 +198,156 @@ function SystemFlowChart() {
     return () => observer.disconnect();
   }, []);
 
-  const steps = [
-    {
-      icon: '🌍',
-      title: 'Global Liquidity Check',
-      description: 'Fed, M2, DXY, VIX → Risk On or Risk Off?',
-      rightContent: (
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 text-sm font-medium">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          RISK ON
-        </div>
-      ),
-      gradient: 'from-teal-500 to-cyan-500',
-      shadow: 'shadow-teal-500/30',
-    },
-    {
-      icon: '💰',
-      title: 'Where Is Money Flowing?',
-      description: 'Capital rotating from Bonds → Crypto',
-      leftContent: (
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/20 text-red-400 text-sm font-medium">
-          Bonds -2.3% ↓
-        </div>
-      ),
-      gradient: 'from-blue-500 to-indigo-500',
-      shadow: 'shadow-blue-500/30',
-      reverse: true,
-    },
-    {
-      icon: '🔍',
-      title: 'Scan Best Assets',
-      description: 'Analyze top 30 with 40+ indicators',
-      rightContent: (
-        <div className="space-y-1 text-left">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-white font-medium">BTC</span>
-            <span className="text-emerald-400 text-xs">Score: 78</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-white font-medium">ETH</span>
-            <span className="text-emerald-400 text-xs">Score: 72</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-white font-medium">SOL</span>
-            <span className="text-yellow-400 text-xs">Score: 65</span>
-          </div>
-        </div>
-      ),
-      gradient: 'from-purple-500 to-violet-500',
-      shadow: 'shadow-purple-500/30',
-    },
-    {
-      icon: '✅',
-      title: 'Clear Decision',
-      description: 'Entry: $42,150 | SL: $40,800 | TP: $45,200',
-      leftContent: (
-        <div className="inline-block px-4 py-2 rounded-xl bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-500/30">
-          GO LONG BTC
-        </div>
-      ),
-      gradient: 'from-emerald-500 to-green-500',
-      shadow: 'shadow-emerald-500/30',
-      reverse: true,
-    },
-  ];
-
   return (
     <section className="py-12 md:py-20 relative overflow-hidden" ref={chartRef}>
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-900/50 via-slate-900/80 to-slate-900/50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-950" />
+      {/* Background with gradient orbs */}
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
+      <div className="absolute top-20 left-10 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-20 right-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
 
       <div className="container mx-auto px-4 relative z-10">
         {/* Header */}
-        <div className="text-center mb-10 md:mb-16">
-          <h2 className="text-2xl md:text-4xl font-bold text-white mb-3">
-            How It Works
+        <div className={`text-center mb-10 md:mb-14 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-emerald-500/10 border border-teal-500/20 mb-4">
+            <Layers className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            <span className="text-sm font-medium text-teal-700 dark:text-teal-300">Capital Flow Intelligence</span>
+          </div>
+          <h2 className="text-2xl md:text-4xl font-bold mb-3 bg-gradient-to-r from-slate-900 via-teal-800 to-emerald-800 dark:from-white dark:via-teal-200 dark:to-emerald-200 bg-clip-text text-transparent">
+            How TraderPath Works
           </h2>
-          <p className="text-slate-400 text-sm md:text-base">
-            Follow the money. Find the opportunity.
+          <p className="text-slate-600 dark:text-slate-400 text-sm md:text-base max-w-xl mx-auto">
+            Follow the money, find the opportunity, get a clear decision
           </p>
         </div>
 
-        {/* Flow Chart */}
-        <div className="max-w-3xl mx-auto relative">
-          {/* Vertical Line */}
-          <div className="absolute left-1/2 top-8 bottom-8 w-0.5 bg-gradient-to-b from-teal-500 via-blue-500 via-purple-500 to-emerald-500 -translate-x-1/2 z-0 hidden md:block" />
+        {/* SECTION 1: Capital Flow Status */}
+        <div className={`mb-8 md:mb-10 transition-all duration-700 delay-100 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className="flex items-center justify-center gap-3 mb-5">
+            <div className="h-px flex-1 max-w-[80px] bg-gradient-to-r from-transparent to-teal-500/50" />
+            <h3 className="text-base md:text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <Globe className="w-5 h-5 text-teal-500" />
+              Capital Flow Radar
+            </h3>
+            <div className="h-px flex-1 max-w-[80px] bg-gradient-to-l from-transparent to-teal-500/50" />
+          </div>
 
-          {/* Steps */}
-          <div className="space-y-6 md:space-y-0">
-            {steps.map((step, idx) => (
-              <div
-                key={idx}
-                className={`relative z-10 transition-all duration-700 ${
-                  isVisible
-                    ? 'opacity-100 translate-y-0'
-                    : 'opacity-0 translate-y-8'
-                }`}
-                style={{ transitionDelay: `${idx * 200}ms` }}
-              >
-                {/* Mobile Layout */}
-                <div className="md:hidden">
-                  <div className="flex items-start gap-4 bg-slate-800/50 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50">
-                    <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${step.gradient} flex items-center justify-center shadow-lg ${step.shadow} flex-shrink-0`}>
-                      <span className="text-xl">{step.icon}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-bold text-white mb-1">{step.title}</h3>
-                      <p className="text-slate-400 text-xs mb-2">{step.description}</p>
-                      <div>{step.leftContent || step.rightContent}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Desktop Layout */}
-                <div className="hidden md:flex items-center gap-6 mb-12">
-                  {step.reverse ? (
-                    <>
-                      <div className="flex-1 flex justify-end pr-6">
-                        {step.leftContent}
-                      </div>
-                      <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${step.gradient} flex items-center justify-center shadow-lg ${step.shadow} z-10`}>
-                        <span className="text-2xl">{step.icon}</span>
-                      </div>
-                      <div className="flex-1 pl-6">
-                        <h3 className="text-xl font-bold text-white">{step.title}</h3>
-                        <p className="text-slate-400 text-sm mt-1">{step.description}</p>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex-1 text-right pr-6">
-                        <h3 className="text-xl font-bold text-white">{step.title}</h3>
-                        <p className="text-slate-400 text-sm mt-1">{step.description}</p>
-                      </div>
-                      <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${step.gradient} flex items-center justify-center shadow-lg ${step.shadow} z-10`}>
-                        <span className="text-2xl">{step.icon}</span>
-                      </div>
-                      <div className="flex-1 pl-6">
-                        {step.rightContent}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Arrow (desktop only) */}
-                {idx < steps.length - 1 && (
-                  <div className="hidden md:flex justify-center -my-4">
-                    <div className="text-slate-500 text-xl">↓</div>
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 max-w-5xl mx-auto">
+            <FlowBox
+              step={1}
+              title="Global Liquidity"
+              status="RISK ON"
+              statusType="positive"
+              detail="Fed, M2, DXY, VIX indicators show expansive conditions"
+              icon={Activity}
+              color="teal"
+            />
+            <FlowBox
+              step={2}
+              title="Market Flow"
+              status="CRYPTO +3.2%"
+              statusType="positive"
+              detail="Capital rotating from Bonds to Risk Assets"
+              icon={TrendingUp}
+              color="blue"
+            />
+            <FlowBox
+              step={3}
+              title="Best Market"
+              status="CRYPTO"
+              statusType="positive"
+              detail="Highest flow velocity, early phase detected"
+              icon={Target}
+              color="purple"
+            />
+            <FlowBox
+              step={4}
+              title="Rotation"
+              status="BONDS → CRYPTO"
+              statusType="neutral"
+              detail="Active capital rotation in progress"
+              icon={ArrowRight}
+              color="amber"
+            />
           </div>
         </div>
 
-        {/* Bottom Summary */}
-        <div className="mt-10 md:mt-16 text-center">
-          <p className="text-base md:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            <span className="text-teal-400 font-semibold">TraderPath</span> follows global capital flow,
-            scans the best opportunities, and gives you a clear
-            <span className="text-emerald-400 font-semibold"> GO</span> /
-            <span className="text-yellow-400 font-semibold"> WAIT</span> /
-            <span className="text-red-400 font-semibold"> AVOID</span> decision.
+        {/* Connector Arrow */}
+        <div className={`flex justify-center mb-8 md:mb-10 transition-all duration-700 delay-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="flex flex-col items-center">
+            <div className="w-0.5 h-8 bg-gradient-to-b from-teal-500/50 to-emerald-500/50" />
+            <ChevronDown className="w-6 h-6 text-emerald-500 -mt-1 animate-bounce" />
+          </div>
+        </div>
+
+        {/* SECTION 2: Analysis Flow */}
+        <div className={`transition-all duration-700 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className="flex items-center justify-center gap-3 mb-5">
+            <div className="h-px flex-1 max-w-[80px] bg-gradient-to-r from-transparent to-emerald-500/50" />
+            <h3 className="text-base md:text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <Search className="w-5 h-5 text-emerald-500" />
+              Deep Analysis
+            </h3>
+            <div className="h-px flex-1 max-w-[80px] bg-gradient-to-l from-transparent to-emerald-500/50" />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 max-w-5xl mx-auto">
+            <FlowBox
+              step={5}
+              title="Scan Top 30"
+              status="ANALYZING"
+              statusType="neutral"
+              detail="Auto-scan top assets with technical indicators"
+              icon={Radar}
+              color="emerald"
+            />
+            <FlowBox
+              step={6}
+              title="40+ Indicators"
+              status="COMPLETE"
+              statusType="positive"
+              detail="RSI, MACD, Volume, Support/Resistance levels"
+              icon={BarChart3}
+              color="teal"
+            />
+            <FlowBox
+              step={7}
+              title="AI Expert Panel"
+              status="VOLTRAN READY"
+              statusType="positive"
+              detail="4 AI experts synthesize analysis into verdict"
+              icon={Brain}
+              color="purple"
+            />
+            <FlowBox
+              step={8}
+              title="Clear Decision"
+              status="GO LONG BTC"
+              statusType="positive"
+              detail="Entry: $42,150 | SL: $40,800 | TP: $45,200"
+              icon={CheckCircle}
+              color="emerald"
+            />
+          </div>
+        </div>
+
+        {/* Bottom CTA */}
+        <div className={`mt-10 md:mt-14 text-center transition-all duration-700 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className="inline-flex flex-wrap justify-center items-center gap-2 md:gap-3 mb-6">
+            <span className="px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-sm font-bold">GO</span>
+            <span className="text-slate-400">/</span>
+            <span className="px-3 py-1.5 rounded-full bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 text-sm font-bold">CONDITIONAL</span>
+            <span className="text-slate-400">/</span>
+            <span className="px-3 py-1.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-sm font-bold">WAIT</span>
+            <span className="text-slate-400">/</span>
+            <span className="px-3 py-1.5 rounded-full bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 text-sm font-bold">AVOID</span>
+          </div>
+          <p className="text-slate-600 dark:text-slate-400 text-sm md:text-base mb-6 max-w-xl mx-auto">
+            Simple, actionable trading signals with complete trade plans
           </p>
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 mt-6 md:mt-8 px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all text-sm md:text-base"
+            className="inline-flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all text-sm md:text-base"
           >
             Start Free Analysis
             <ArrowRight className="w-4 h-4" />
