@@ -800,6 +800,58 @@ model CoinScoreCache {
 }
 
 // ===========================================
+// Multi-Asset Score Cache (Stocks, Bonds, Metals)
+// Same structure as CoinScoreCache but for traditional markets
+// ===========================================
+
+model AssetScoreCache {
+  id           String   @id @default(uuid()) @db.Uuid
+  symbol       String   @db.VarChar(20)
+  market       String   @db.VarChar(20) // stocks, bonds, metals
+  name         String   @db.VarChar(100) // Company/ETF name
+
+  // Analysis scores
+  totalScore       Decimal  @map("total_score") @db.Decimal(4, 1)
+  reliabilityScore Decimal  @map("reliability_score") @db.Decimal(4, 1)
+
+  // Score components
+  trendScore       Decimal  @map("trend_score") @db.Decimal(4, 1)
+  momentumScore    Decimal  @map("momentum_score") @db.Decimal(4, 1)
+  volatilityScore  Decimal  @map("volatility_score") @db.Decimal(4, 1)
+  volumeScore      Decimal  @map("volume_score") @db.Decimal(4, 1)
+
+  // Verdict info
+  verdict          String   @db.VarChar(20) // GO, CONDITIONAL_GO, WAIT, AVOID
+  direction        String?  @db.VarChar(10) // LONG, SHORT
+  confidence       Decimal  @db.Decimal(3, 1)
+
+  // Market data snapshot
+  price            Decimal  @db.Decimal(20, 8)
+  priceChange1d    Decimal  @map("price_change_1d") @db.Decimal(6, 2)
+  priceChange5d    Decimal  @map("price_change_5d") @db.Decimal(6, 2)
+  priceChange1m    Decimal  @map("price_change_1m") @db.Decimal(6, 2)
+  volume           Decimal  @db.Decimal(20, 2)
+  avgVolume        Decimal  @map("avg_volume") @db.Decimal(20, 2)
+  fiftyDayAvg      Decimal  @map("fifty_day_avg") @db.Decimal(20, 8)
+  twoHundredDayAvg Decimal  @map("two_hundred_day_avg") @db.Decimal(20, 8)
+
+  // Analysis reference
+  analysisId       String?  @map("analysis_id") @db.Uuid
+
+  // Timestamps
+  scannedAt        DateTime @default(now()) @map("scanned_at")
+  expiresAt        DateTime @map("expires_at")
+
+  @@unique([symbol, market], name: "symbol_market")
+  @@index([market])
+  @@index([reliabilityScore(sort: Desc)])
+  @@index([totalScore(sort: Desc)])
+  @@index([verdict])
+  @@index([scannedAt])
+  @@map("asset_score_cache")
+}
+
+// ===========================================
 // TFT Prediction Models
 // ===========================================
 
