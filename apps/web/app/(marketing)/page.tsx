@@ -2341,94 +2341,92 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Workflow Steps */}
-          <div className="max-w-5xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {/* Step 1: Capital Flow Radar */}
-              <div className="bg-card border border-teal-500/30 rounded-xl p-6 relative">
+          {/* Workflow Steps - 4 Layers matching Capital Flow Architecture */}
+          <div className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+              {/* Step 1: Global Liquidity */}
+              <div className="bg-card border border-teal-500/30 rounded-xl p-5 relative group hover:shadow-xl hover:shadow-teal-500/10 transition-all duration-300">
                 <div className="absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
                   1
                 </div>
                 <div className="pt-4">
-                  <h3 className="text-lg font-bold mb-2 gradient-text-logo-animate">Capital Flow Radar</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Track where global capital is moving across all markets</p>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-2 py-1 bg-orange-500/20 text-orange-500 text-xs rounded">Crypto</span>
-                    <span className="px-2 py-1 bg-blue-500/20 text-blue-500 text-xs rounded">Stocks</span>
-                    <span className="px-2 py-1 bg-purple-500/20 text-purple-500 text-xs rounded">Bonds</span>
-                    <span className="px-2 py-1 bg-yellow-500/20 text-yellow-500 text-xs rounded">Metals</span>
+                  <h3 className="text-base font-bold mb-2 gradient-text-logo-animate">Global Liquidity</h3>
+                  <p className="text-xs text-muted-foreground mb-3">Is money expanding or contracting globally?</p>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs">
+                      <Activity className="w-3.5 h-3.5 text-teal-500" />
+                      <span className="text-muted-foreground">Fed Balance Sheet</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
+                      <span className="text-muted-foreground">M2 Money Supply</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <TrendingUp className="w-3.5 h-3.5 text-cyan-500" />
+                      <span className="text-muted-foreground">DXY & Yield Curve</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Step 2: Analysis - Dual Method */}
-              <div className="bg-card border rounded-xl p-6 relative">
-                <div className="absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
+              {/* Step 2: Market Flow */}
+              <div className="bg-card border border-cyan-500/30 rounded-xl p-5 relative group hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-300">
+                <div className="absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
                   2
                 </div>
                 <div className="pt-4">
-                  <h3 className="text-lg font-bold mb-2 gradient-text-logo-animate">Choose Analysis Method</h3>
-                  <p className="text-sm text-muted-foreground mb-3">Two powerful AI analysis systems</p>
-
-                  {/* 7-Step Classic */}
-                  <div className="p-2.5 bg-teal-500/10 border border-teal-500/30 rounded-lg mb-2">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <Target className="w-3.5 h-3.5 text-teal-500" />
-                      <span className="text-xs font-bold text-teal-500">7-Step Classic</span>
-                    </div>
-                    <div className="flex gap-0.5">
-                      {ANALYSIS_STEPS.slice(0, 7).map((step, idx) => {
-                        const Icon = step.icon;
-                        return (
-                          <div key={idx} className={`p-1 ${step.bg} rounded flex items-center justify-center`}>
-                            <Icon className={`w-2.5 h-2.5 ${step.color}`} />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* MLIS Pro */}
-                  <div className="p-2.5 bg-violet-500/10 border border-violet-500/30 rounded-lg relative">
-                    <span className="absolute -top-1.5 right-2 px-1.5 py-0.5 bg-violet-500 text-white text-[8px] font-bold rounded-full">NEW</span>
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <Layers className="w-3.5 h-3.5 text-violet-500" />
-                      <span className="text-xs font-bold text-violet-400">MLIS Pro</span>
-                    </div>
-                    <div className="flex gap-0.5">
-                      <div className="p-1 bg-blue-500/10 rounded flex items-center justify-center">
-                        <LineChart className="w-2.5 h-2.5 text-blue-500" />
-                      </div>
-                      <div className="p-1 bg-emerald-500/10 rounded flex items-center justify-center">
-                        <Zap className="w-2.5 h-2.5 text-emerald-500" />
-                      </div>
-                      <div className="p-1 bg-orange-500/10 rounded flex items-center justify-center">
-                        <Activity className="w-2.5 h-2.5 text-orange-500" />
-                      </div>
-                      <div className="p-1 bg-cyan-500/10 rounded flex items-center justify-center">
-                        <BarChart3 className="w-2.5 h-2.5 text-cyan-500" />
-                      </div>
-                      <div className="p-1 bg-violet-500/10 rounded flex items-center justify-center">
-                        <CheckCircle className="w-2.5 h-2.5 text-violet-500" />
-                      </div>
-                    </div>
+                  <h3 className="text-base font-bold mb-2 gradient-text-logo-animate">Market Flow</h3>
+                  <p className="text-xs text-muted-foreground mb-3">Which market is capital flowing into?</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="px-2 py-1 bg-orange-500/20 text-orange-500 text-xs font-medium rounded">Crypto</span>
+                    <span className="px-2 py-1 bg-blue-500/20 text-blue-500 text-xs font-medium rounded">Stocks</span>
+                    <span className="px-2 py-1 bg-purple-500/20 text-purple-500 text-xs font-medium rounded">Bonds</span>
+                    <span className="px-2 py-1 bg-yellow-500/20 text-yellow-500 text-xs font-medium rounded">Metals</span>
                   </div>
                 </div>
               </div>
 
-              {/* Step 3: Verdict */}
-              <div className="bg-card border rounded-xl p-6 relative">
-                <div className="absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
+              {/* Step 3: Sector Drill-Down */}
+              <div className="bg-card border border-purple-500/30 rounded-xl p-5 relative group hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300">
+                <div className="absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
                   3
                 </div>
                 <div className="pt-4">
-                  <h3 className="text-lg font-bold mb-2 gradient-text-logo-animate">Get Clear Verdict</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Receive actionable signal with entry, SL & TP levels</p>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-2 py-1 bg-green-500/20 text-green-500 text-xs font-medium rounded">GO</span>
-                    <span className="px-2 py-1 bg-amber-500/20 text-amber-500 text-xs font-medium rounded">CONDITIONAL</span>
-                    <span className="px-2 py-1 bg-gray-500/20 text-gray-400 text-xs font-medium rounded">WAIT</span>
-                    <span className="px-2 py-1 bg-red-500/20 text-red-500 text-xs font-medium rounded">AVOID</span>
+                  <h3 className="text-base font-bold mb-2 gradient-text-logo-animate">Sector Drill-Down</h3>
+                  <p className="text-xs text-muted-foreground mb-3">Which sector is leading the flow?</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="px-2 py-1 bg-emerald-500/20 text-emerald-500 text-xs font-medium rounded">DeFi</span>
+                    <span className="px-2 py-1 bg-blue-500/20 text-blue-500 text-xs font-medium rounded">Layer2</span>
+                    <span className="px-2 py-1 bg-violet-500/20 text-violet-500 text-xs font-medium rounded">AI</span>
+                    <span className="px-2 py-1 bg-pink-500/20 text-pink-500 text-xs font-medium rounded">Gaming</span>
+                    <span className="px-2 py-1 bg-amber-500/20 text-amber-500 text-xs font-medium rounded">Meme</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 4: Asset Analysis */}
+              <div className="bg-card border border-orange-500/30 rounded-xl p-5 relative group hover:shadow-xl hover:shadow-orange-500/10 transition-all duration-300">
+                <div className="absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
+                  4
+                </div>
+                <div className="pt-4">
+                  <h3 className="text-base font-bold mb-2 gradient-text-logo-animate">Asset Analysis</h3>
+                  <p className="text-xs text-muted-foreground mb-3">Deep analysis with AI-powered verdict</p>
+                  <div className="flex gap-1.5 mb-2">
+                    <div className="px-2 py-1 bg-teal-500/10 border border-teal-500/30 rounded flex items-center gap-1">
+                      <Target className="w-3 h-3 text-teal-500" />
+                      <span className="text-[10px] font-medium text-teal-500">7-Step</span>
+                    </div>
+                    <div className="px-2 py-1 bg-violet-500/10 border border-violet-500/30 rounded flex items-center gap-1">
+                      <Layers className="w-3 h-3 text-violet-500" />
+                      <span className="text-[10px] font-medium text-violet-500">MLIS Pro</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <span className="px-1.5 py-0.5 bg-green-500/20 text-green-500 text-[10px] font-medium rounded">GO</span>
+                    <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-500 text-[10px] font-medium rounded">COND</span>
+                    <span className="px-1.5 py-0.5 bg-gray-500/20 text-gray-400 text-[10px] font-medium rounded">WAIT</span>
+                    <span className="px-1.5 py-0.5 bg-red-500/20 text-red-500 text-[10px] font-medium rounded">AVOID</span>
                   </div>
                 </div>
               </div>
