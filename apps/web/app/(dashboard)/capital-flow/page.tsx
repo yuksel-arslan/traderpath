@@ -818,6 +818,16 @@ export default function CapitalFlowPage() {
       if (result.success) {
         setData(result.data);
         setError(null);
+
+        // Auto-select the market with highest flow for LAYER 3 visibility
+        if (result.data.markets && result.data.markets.length > 0 && !selectedMarket) {
+          const topMarket = result.data.markets.reduce((prev: MarketFlow, curr: MarketFlow) =>
+            curr.flow7d > prev.flow7d ? curr : prev
+          );
+          if (topMarket.sectors && topMarket.sectors.length > 0) {
+            setSelectedMarket(topMarket);
+          }
+        }
       } else {
         throw new Error(result.error || 'Unknown error');
       }
