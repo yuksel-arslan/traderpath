@@ -31,6 +31,8 @@ import {
   ChevronRight,
   Layers,
   Zap,
+  Sparkles,
+  Brain,
 } from 'lucide-react';
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
@@ -108,6 +110,14 @@ interface ActiveRotation {
   startedAt: string;
 }
 
+interface LayerInsights {
+  layer1: string;
+  layer2: string;
+  layer3: string;
+  layer4: string;
+  generatedAt: string;
+}
+
 interface CapitalFlowSummary {
   timestamp: string;
   globalLiquidity: GlobalLiquidity;
@@ -115,6 +125,7 @@ interface CapitalFlowSummary {
   markets: MarketFlow[];
   recommendation: FlowRecommendation;
   activeRotation: ActiveRotation | null;
+  insights?: LayerInsights;
   cacheExpiry: string;
 }
 
@@ -138,6 +149,20 @@ function GradientOrbs() {
       <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-gradient-to-br from-blue-500/10 dark:from-blue-500/20 to-indigo-500/5 dark:to-indigo-500/10 rounded-full blur-3xl animate-float-slow" />
       <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] bg-gradient-to-tr from-teal-500/10 dark:from-teal-500/15 to-emerald-500/5 dark:to-emerald-500/10 rounded-full blur-3xl animate-float-slow" style={{ animationDelay: '-3s' }} />
       <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] bg-gradient-to-br from-amber-500/5 dark:from-amber-500/10 to-orange-500/5 rounded-full blur-3xl animate-orb-move" />
+    </div>
+  );
+}
+
+// AI Insight Box Component
+function InsightBox({ insight, icon: Icon }: { insight: string; icon: any }) {
+  if (!insight) return null;
+
+  return (
+    <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 dark:from-blue-500/10 to-indigo-50 dark:to-indigo-500/10 border border-blue-200/50 dark:border-blue-500/30 rounded-xl">
+      <div className="flex items-start gap-2">
+        <Icon className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{insight}</p>
+      </div>
     </div>
   );
 }
@@ -654,6 +679,8 @@ export default function CapitalFlowPage() {
               info={data.globalLiquidity.yieldCurve.interpretation}
             />
           </div>
+          {/* AI Insight for Layer 1 */}
+          {data.insights?.layer1 && <InsightBox insight={data.insights.layer1} icon={Brain} />}
         </section>
 
         {/* LAYER 2: Market Flow */}
@@ -671,6 +698,8 @@ export default function CapitalFlowPage() {
               />
             ))}
           </div>
+          {/* AI Insight for Layer 2 */}
+          {data.insights?.layer2 && <InsightBox insight={data.insights.layer2} icon={Sparkles} />}
         </section>
 
         {/* LAYER 3: Sector Drill-Down (when market selected) */}
@@ -699,6 +728,8 @@ export default function CapitalFlowPage() {
                   </div>
                 ))}
               </div>
+              {/* AI Insight for Layer 3 */}
+              {data.insights?.layer3 && <InsightBox insight={data.insights.layer3} icon={Brain} />}
             </div>
           </section>
         )}
@@ -711,6 +742,8 @@ export default function CapitalFlowPage() {
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">LAYER 4: Recommendation</h2>
             </div>
             <RecommendationCard recommendation={data.recommendation} rotation={data.activeRotation} />
+            {/* AI Insight for Layer 4 */}
+            {data.insights?.layer4 && <InsightBox insight={data.insights.layer4} icon={Sparkles} />}
           </div>
 
           <div>
