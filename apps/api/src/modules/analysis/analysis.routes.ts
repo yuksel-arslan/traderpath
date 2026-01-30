@@ -5031,6 +5031,239 @@ Explain the key risks and what conditions would need to change before trading th
     }
   });
 
+  // ===========================================
+  // Multi-Asset Scan Endpoints (Stocks, Bonds, Metals)
+  // ===========================================
+
+  /**
+   * GET /api/analysis/multi-asset/:market
+   * Get top assets for a market (stocks, bonds, metals)
+   */
+  app.get('/multi-asset/:market', async (request: FastifyRequest<{
+    Params: { market: string };
+    Querystring: { limit?: string; sortBy?: string; tradeableOnly?: string };
+  }>, reply: FastifyReply) => {
+    const { multiAssetScoreCacheService } = await import('./services/multi-asset-score-cache.service');
+
+    const { market } = request.params;
+    const { limit = '5', sortBy = 'reliabilityScore', tradeableOnly = 'false' } = request.query;
+
+    const validMarkets = ['stocks', 'bonds', 'metals'];
+    if (!validMarkets.includes(market)) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'INVALID_MARKET', message: `Market must be one of: ${validMarkets.join(', ')}` },
+      });
+    }
+
+    try {
+      const limitNum = Math.min(30, Math.max(1, parseInt(limit, 10)));
+      const marketType = market as 'stocks' | 'bonds' | 'metals';
+
+      let assets;
+      if (tradeableOnly === 'true') {
+        assets = await multiAssetScoreCacheService.getTopTradeableAssets(marketType, limitNum);
+      } else {
+        assets = await multiAssetScoreCacheService.getTopAssetsByScore(marketType, limitNum);
+      }
+
+      const cacheStats = await multiAssetScoreCacheService.getCacheStats(marketType);
+
+      return reply.send({
+        success: true,
+        data: {
+          market,
+          assets,
+          cacheInfo: {
+            ...cacheStats,
+            sortBy,
+          },
+        },
+      });
+    } catch (error) {
+      console.error(`Multi-asset fetch error (${market}):`, error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'FETCH_ERROR', message: 'Failed to get assets' },
+      });
+    }
+  });
+
+  /**
+   * POST /api/analysis/multi-asset/:market/scan
+   * Start a paid scan of a market (stocks, bonds, metals)
+   * Cost: 300 credits
+   */
+  app.post('/multi-asset/:market/scan', { preHandler: [authenticate] }, async (request: FastifyRequest<{
+    Params: { market: string };
+  }>, reply: FastifyReply) => {
+    const { multiAssetScoreCacheService, STOCKS_TO_SCAN, BONDS_TO_SCAN, METALS_TO_SCAN } = await import('./services/multi-asset-score-cache.service');
+
+    const SCAN_COST = 300;
+    const SECONDS_PER_ASSET = 3;
+    const { market } = request.params;
+
+    const validMarkets = ['stocks', 'bonds', 'metals'];
+    if (!validMarkets.includes(market)) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'INVALID_MARKET', message: `Market must be one of: ${validMarkets.join(', ')}` },
+      });
+    }
+
+    const marketType = market as 'stocks' | 'bonds' | 'metals';
+    const assetLists = { stocks: STOCKS_TO_SCAN, bonds: BONDS_TO_SCAN, metals: METALS_TO_SCAN };
+    const assetsToScan = assetLists[marketType].length;
+
+    try {
+      const user = getUser(request);
+      const userId = user.id;
+
+      // Check credit balance
+      const balanceResult = await creditService.getBalance(userId);
+      if (balanceResult.balance < SCAN_COST) {
+        return reply.status(402).send({
+          success: false,
+          error: {
+            code: 'INSUFFICIENT_CREDITS',
+            message: `Insufficient credits. Scan requires ${SCAN_COST} credits, you have ${balanceResult.balance}`,
+          },
+          creditsRequired: SCAN_COST,
+          creditsAvailable: balanceResult.balance,
+        });
+      }
+
+      // Charge credits
+      const chargeResult = await creditService.charge(userId, SCAN_COST, `${market}_scan`, {
+        description: `Top ${assetsToScan} ${market} analysis scan`,
+      });
+
+      if (!chargeResult.success) {
+        return reply.status(402).send({
+          success: false,
+          error: { code: 'CHARGE_FAILED', message: 'Failed to charge credits' },
+        });
+      }
+
+      // Start scan in background (don't await)
+      multiAssetScoreCacheService.scanMarket(marketType).then((result) => {
+        console.log(`[MultiAsset] Paid ${market} scan complete for user ${userId}. Success: ${result.success}, Failed: ${result.failed}`);
+      }).catch((error) => {
+        console.error(`[MultiAsset] Paid ${market} scan failed for user ${userId}:`, error);
+      });
+
+      const estimatedMinutes = Math.ceil((assetsToScan * SECONDS_PER_ASSET) / 60);
+
+      return reply.send({
+        success: true,
+        data: {
+          message: `Scan started. Analyzing ${assetsToScan} ${market}...`,
+          market,
+          estimatedMinutes,
+          assetsToScan,
+          creditsCharged: SCAN_COST,
+          creditsRemaining: chargeResult.newBalance,
+        },
+      });
+    } catch (error) {
+      console.error(`Multi-asset scan error (${market}):`, error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'SCAN_ERROR', message: 'Failed to start scan' },
+      });
+    }
+  });
+
+  /**
+   * GET /api/analysis/multi-asset/:market/status
+   * Check the status of a market scan
+   */
+  app.get('/multi-asset/:market/status', async (request: FastifyRequest<{
+    Params: { market: string };
+  }>, reply: FastifyReply) => {
+    const { multiAssetScoreCacheService } = await import('./services/multi-asset-score-cache.service');
+
+    const { market } = request.params;
+    const validMarkets = ['stocks', 'bonds', 'metals'];
+    if (!validMarkets.includes(market)) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'INVALID_MARKET', message: `Market must be one of: ${validMarkets.join(', ')}` },
+      });
+    }
+
+    const marketType = market as 'stocks' | 'bonds' | 'metals';
+
+    try {
+      const stats = await multiAssetScoreCacheService.getCacheStats(marketType);
+      const isStale = await multiAssetScoreCacheService.isCacheStale(marketType);
+      const scanSession = multiAssetScoreCacheService.getScanSession(marketType);
+
+      return reply.send({
+        success: true,
+        data: {
+          market,
+          ...stats,
+          isStale,
+          isScanning: scanSession.isScanning,
+          scanProgress: {
+            assetsAnalyzed: scanSession.assetsAnalyzed,
+            totalAssets: scanSession.totalAssets,
+            lastAnalyzedAsset: scanSession.lastAnalyzedAsset,
+            startedAt: scanSession.startedAt,
+          },
+        },
+      });
+    } catch (error) {
+      console.error(`Multi-asset status error (${market}):`, error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'STATUS_ERROR', message: 'Failed to get cache status' },
+      });
+    }
+  });
+
+  /**
+   * GET /api/analysis/multi-asset/:market/all
+   * Get all cached assets for a market
+   */
+  app.get('/multi-asset/:market/all', async (request: FastifyRequest<{
+    Params: { market: string };
+  }>, reply: FastifyReply) => {
+    const { multiAssetScoreCacheService } = await import('./services/multi-asset-score-cache.service');
+
+    const { market } = request.params;
+    const validMarkets = ['stocks', 'bonds', 'metals'];
+    if (!validMarkets.includes(market)) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'INVALID_MARKET', message: `Market must be one of: ${validMarkets.join(', ')}` },
+      });
+    }
+
+    const marketType = market as 'stocks' | 'bonds' | 'metals';
+
+    try {
+      const assets = await multiAssetScoreCacheService.getAllCachedAssets(marketType);
+      const stats = await multiAssetScoreCacheService.getCacheStats(marketType);
+
+      return reply.send({
+        success: true,
+        data: {
+          market,
+          assets,
+          cacheInfo: stats,
+        },
+      });
+    } catch (error) {
+      console.error(`Multi-asset all fetch error (${market}):`, error);
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'FETCH_ERROR', message: 'Failed to get all assets' },
+      });
+    }
+  });
+
   /**
    * GET /api/analysis/performance-history
    * Returns daily realized P/L for chart visualization

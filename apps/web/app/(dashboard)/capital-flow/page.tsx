@@ -841,57 +841,68 @@ export default function CapitalFlowPage() {
   const [analysisData, setAnalysisData] = useState<MarketAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
 
-  // Crypto scan state
-  const [scanningCrypto, setScanningCrypto] = useState(false);
+  // Market scan states
+  type ScanningMarket = 'crypto' | 'stocks' | 'bonds' | 'metals' | null;
+  const [scanningMarket, setScanningMarket] = useState<ScanningMarket>(null);
   const [scanProgress, setScanProgress] = useState(0);
 
-  // Handle BUY Crypto - triggers auto-scan of top 30 coins
-  const handleBuyCryptoScan = async () => {
-    setScanningCrypto(true);
+  // Generic scan handler for all markets
+  const handleMarketScan = async (market: 'crypto' | 'stocks' | 'bonds' | 'metals') => {
+    setScanningMarket(market);
     setScanProgress(0);
+
+    const isCrypto = market === 'crypto';
+    const scanEndpoint = isCrypto ? '/api/analysis/top-coins/scan' : `/api/analysis/multi-asset/${market}/scan`;
+    const statusEndpoint = isCrypto ? '/api/analysis/top-coins/status' : `/api/analysis/multi-asset/${market}/status`;
+    const resultsPage = isCrypto ? '/top-coins?from=capital-flow' : `/top-assets/${market}?from=capital-flow`;
 
     try {
       // Start the scan
-      const startResponse = await authFetch('/api/analysis/top-coins/scan', { method: 'POST' });
+      const startResponse = await authFetch(scanEndpoint, { method: 'POST' });
       const startResult = await startResponse.json();
 
       if (!startResult.success) {
-        throw new Error(startResult.error || 'Failed to start scan');
+        throw new Error(startResult.error?.message || 'Failed to start scan');
       }
 
       // Poll for progress
       const pollInterval = setInterval(async () => {
         try {
-          const statusResponse = await authFetch('/api/analysis/top-coins/status');
+          const statusResponse = await authFetch(statusEndpoint);
           const statusResult = await statusResponse.json();
 
           if (statusResult.success) {
-            const { isScanning, coinsAnalyzed, totalCoins } = statusResult.data;
-            setScanProgress(Math.round((coinsAnalyzed / totalCoins) * 100));
+            const { isScanning, scanProgress: progress } = statusResult.data;
+            const analyzed = isCrypto ? progress?.coinsAnalyzed : progress?.assetsAnalyzed;
+            const total = isCrypto ? progress?.totalCoins : progress?.totalAssets;
+
+            if (analyzed !== undefined && total !== undefined && total > 0) {
+              setScanProgress(Math.round((analyzed / total) * 100));
+            }
 
             if (!isScanning) {
               clearInterval(pollInterval);
-              setScanningCrypto(false);
-              // Navigate to top-coins page with results
-              router.push('/top-coins?from=capital-flow');
+              setScanningMarket(null);
+              // Navigate to results page
+              router.push(resultsPage);
             }
           }
         } catch (err) {
-          console.error('Error polling scan status:', err);
+          console.error(`Error polling ${market} scan status:`, err);
         }
       }, 2000);
 
       // Timeout after 10 minutes
       setTimeout(() => {
         clearInterval(pollInterval);
-        setScanningCrypto(false);
+        setScanningMarket(null);
       }, 10 * 60 * 1000);
 
     } catch (err) {
-      console.error('Error starting crypto scan:', err);
-      setScanningCrypto(false);
+      console.error(`Error starting ${market} scan:`, err);
+      setScanningMarket(null);
       // Fallback: just navigate to analyze page
-      router.push('/analyze?asset=crypto');
+      router.push(`/analyze?asset=${market}`);
     }
   };
 
@@ -1524,25 +1535,25 @@ export default function CapitalFlowPage() {
                     )}
 
                     {/* Action Button */}
-                    {opp.market === 'crypto' && isBuy ? (
+                    {isBuy ? (
                       <button
-                        onClick={handleBuyCryptoScan}
-                        disabled={scanningCrypto}
+                        onClick={() => handleMarketScan(opp.market)}
+                        disabled={scanningMarket !== null}
                         className={cn(
                           "flex items-center justify-center gap-2 w-full py-2.5 rounded-xl font-medium text-white transition-all hover:shadow-md",
                           "bg-gradient-to-r from-emerald-500 to-teal-500 hover:shadow-emerald-500/20",
-                          scanningCrypto && "opacity-80 cursor-wait"
+                          scanningMarket !== null && "opacity-80 cursor-wait"
                         )}
                       >
-                        {scanningCrypto ? (
+                        {scanningMarket === opp.market ? (
                           <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            Scanning Top 30... {scanProgress}%
+                            Scanning... {scanProgress}%
                           </>
                         ) : (
                           <>
                             <Sparkles className="w-4 h-4" />
-                            Find Best Cryptos
+                            Find Best {marketNames[opp.market]}
                           </>
                         )}
                       </button>
@@ -1551,13 +1562,11 @@ export default function CapitalFlowPage() {
                         href={`/analyze?asset=${opp.market}`}
                         className={cn(
                           "flex items-center justify-center gap-2 w-full py-2.5 rounded-xl font-medium text-white transition-all hover:shadow-md",
-                          isBuy
-                            ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:shadow-emerald-500/20"
-                            : "bg-gradient-to-r from-red-500 to-rose-500 hover:shadow-red-500/20"
+                          "bg-gradient-to-r from-red-500 to-rose-500 hover:shadow-red-500/20"
                         )}
                       >
                         <Target className="w-4 h-4" />
-                        {opp.market === 'crypto' ? 'View Exiting Positions' : 'Analyze Market'}
+                        View Exiting Positions
                       </Link>
                     )}
                   </div>
