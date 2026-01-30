@@ -109,6 +109,12 @@ interface CapitalFlowData {
   lastUpdated: string;
 }
 
+// Format flow percentage to max 2 decimal places
+function formatFlow(value: number): string {
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${value.toFixed(2)}%`;
+}
+
 // System Flow Chart - Visual explanation of how TraderPath works
 // 4-Layer Capital Flow Architecture - "Follow The Money" Principle
 function SystemFlowChart() {
@@ -488,11 +494,11 @@ function SystemFlowChart() {
                       }`}>
                         {showTypewriter[2] ? (
                           <TypewriterText
-                            text={`${market.flow7d > 0 ? '+' : ''}${market.flow7d}%`}
+                            text={formatFlow(market.flow7d)}
                             delay={idx * 150 + 200}
                             speed={60}
                           />
-                        ) : `${market.flow7d > 0 ? '+' : ''}${market.flow7d}%`}
+                        ) : formatFlow(market.flow7d)}
                       </div>
                       <div className={`mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold inline-block ${getPhaseColor(market.phase)}`}>
                         {market.phase.toUpperCase()}
@@ -513,14 +519,14 @@ function SystemFlowChart() {
                     </span>
                     {showTypewriter[2] ? (
                       <TypewriterText
-                        text={`${flowData?.markets.find(m => m.isSelected)?.phase || 'Early'} phase • ${flowData?.markets.find(m => m.isSelected)?.flow7d || 8}% flow`}
+                        text={`${flowData?.markets.find(m => m.isSelected)?.phase || 'early'} phase • ${formatFlow(flowData?.markets.find(m => m.isSelected)?.flow7d ?? 8)} flow`}
                         delay={800}
                         speed={30}
                         className="text-xs text-slate-600 dark:text-slate-300 font-mono"
                       />
                     ) : (
                       <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">
-                        {flowData?.markets.find(m => m.isSelected)?.phase || 'Early'} phase • {flowData?.markets.find(m => m.isSelected)?.flow7d || 8}% flow
+                        {flowData?.markets.find(m => m.isSelected)?.phase || 'early'} phase • {formatFlow(flowData?.markets.find(m => m.isSelected)?.flow7d ?? 8)} flow
                       </span>
                     )}
                   </div>
