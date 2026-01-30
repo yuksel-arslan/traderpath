@@ -274,15 +274,13 @@ function MarketAnalysisModal({
                 <p className="text-xs text-slate-500">
                   Generated: {new Date(analysis.generatedAt).toLocaleString()}
                 </p>
-                {market.market === 'crypto' && (
-                  <Link
-                    href="/analyze"
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-medium rounded-lg hover:shadow-lg transition-all"
-                  >
-                    <Zap className="w-4 h-4" />
-                    Full 7-Step Analysis
-                  </Link>
-                )}
+                <Link
+                  href={`/analyze?asset=${market.market}`}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-medium rounded-lg hover:shadow-lg transition-all"
+                >
+                  <Zap className="w-4 h-4" />
+                  {market.market === 'crypto' ? 'Full 7-Step Analysis' : 'Analyze'}
+                </Link>
               </div>
             </>
           ) : (
@@ -818,6 +816,16 @@ export default function CapitalFlowPage() {
       if (result.success) {
         setData(result.data);
         setError(null);
+
+        // Auto-select the market with highest flow for LAYER 3 visibility
+        if (result.data.markets && result.data.markets.length > 0 && !selectedMarket) {
+          const topMarket = result.data.markets.reduce((prev: MarketFlow, curr: MarketFlow) =>
+            curr.flow7d > prev.flow7d ? curr : prev
+          );
+          if (topMarket.sectors && topMarket.sectors.length > 0) {
+            setSelectedMarket(topMarket);
+          }
+        }
       } else {
         throw new Error(result.error || 'Unknown error');
       }
@@ -1157,12 +1165,19 @@ export default function CapitalFlowPage() {
               </p>
               <div className="space-y-3">
                 <Link
-                  href="/analyze"
+                  href={`/analyze?asset=${data.recommendation.primaryMarket}`}
                   className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-teal-50 dark:from-teal-500/10 to-emerald-50 dark:to-emerald-500/10 border border-teal-200 dark:border-teal-500/30 hover:shadow-md transition-all"
                 >
                   <div className="flex items-center gap-3">
                     <Target className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-                    <span className="font-medium text-teal-700 dark:text-teal-300">7-Step Analysis</span>
+                    <div>
+                      <span className="font-medium text-teal-700 dark:text-teal-300">
+                        {data.recommendation.primaryMarket === 'crypto' ? '7-Step / MLIS Pro' : 'Asset'} Analysis
+                      </span>
+                      <p className="text-xs text-teal-600/70 dark:text-teal-400/70">
+                        Analyze {data.recommendation.primaryMarket.charAt(0).toUpperCase() + data.recommendation.primaryMarket.slice(1)} assets
+                      </p>
+                    </div>
                   </div>
                   <ChevronRight className="w-5 h-5 text-teal-500" />
                 </Link>
