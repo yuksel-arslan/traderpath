@@ -21,7 +21,98 @@ import {
   getCapabilities,
   AssetClass,
 } from './providers';
-import { calculateAllIndicators } from './services/indicators.service';
+import { IndicatorsService, OHLCV as IndicatorOHLCV } from './services/indicators.service';
+
+// Create indicators service instance
+const indicatorsService = new IndicatorsService();
+
+// Helper type for processed indicators
+interface ProcessedIndicators {
+  rsi?: { current: number; signal: string };
+  macd?: { macd: number; signal: number; histogram: number };
+  stochastic?: { k: number; d: number };
+  trend?: { direction: 'up' | 'down' | 'neutral'; strength: number };
+  sma50?: number;
+  sma200?: number;
+  ema20?: number;
+  ema50?: number;
+  atr?: number;
+  bollingerBands?: { upper: number; middle: number; lower: number };
+  volume?: { obv: number; vwap?: number };
+}
+
+/**
+ * Calculate all indicators and return in a standardized format
+ */
+function calculateAllIndicators(candles: IndicatorOHLCV[]): ProcessedIndicators {
+  // Calculate core indicators
+  const rsiResult = indicatorsService.calculateRSI(candles, 14);
+  const macdResult = indicatorsService.calculateMACD(candles);
+  const stochResult = indicatorsService.calculateStochastic(candles);
+  const sma50Result = indicatorsService.calculateSMA(candles, 50);
+  const sma200Result = indicatorsService.calculateSMA(candles, 200);
+  const ema20Result = indicatorsService.calculateEMA(candles, 20);
+  const ema50Result = indicatorsService.calculateEMA(candles, 50);
+  const atrResult = indicatorsService.calculateATR(candles, 14);
+  const bbResult = indicatorsService.calculateBollingerBands(candles);
+  const obvResult = indicatorsService.calculateOBV(candles);
+
+  // Determine trend direction from EMA alignment
+  const currentPrice = candles[candles.length - 1]?.close || 0;
+  const ema20Val = ema20Result.value || 0;
+  const ema50Val = ema50Result.value || 0;
+  const sma200Val = sma200Result.value || 0;
+
+  let trendDirection: 'up' | 'down' | 'neutral' = 'neutral';
+  let trendStrength = 50;
+
+  if (currentPrice > ema20Val && ema20Val > ema50Val && ema50Val > sma200Val) {
+    trendDirection = 'up';
+    trendStrength = 80;
+  } else if (currentPrice < ema20Val && ema20Val < ema50Val && ema50Val < sma200Val) {
+    trendDirection = 'down';
+    trendStrength = 20;
+  } else if (currentPrice > ema50Val) {
+    trendDirection = 'up';
+    trendStrength = 60;
+  } else if (currentPrice < ema50Val) {
+    trendDirection = 'down';
+    trendStrength = 40;
+  }
+
+  return {
+    rsi: rsiResult.value !== null ? {
+      current: rsiResult.value,
+      signal: rsiResult.signal || 'neutral'
+    } : undefined,
+    macd: macdResult.metadata ? {
+      macd: macdResult.metadata.macd || 0,
+      signal: macdResult.metadata.signal || 0,
+      histogram: macdResult.value || 0
+    } : undefined,
+    stochastic: stochResult.metadata ? {
+      k: stochResult.metadata.k || 0,
+      d: stochResult.metadata.d || 0
+    } : undefined,
+    trend: {
+      direction: trendDirection,
+      strength: trendStrength
+    },
+    sma50: sma50Result.value || undefined,
+    sma200: sma200Result.value || undefined,
+    ema20: ema20Result.value || undefined,
+    ema50: ema50Result.value || undefined,
+    atr: atrResult.value || undefined,
+    bollingerBands: bbResult.metadata ? {
+      upper: bbResult.metadata.upper || 0,
+      middle: bbResult.metadata.middle || 0,
+      lower: bbResult.metadata.lower || 0
+    } : undefined,
+    volume: obvResult.value !== null ? {
+      obv: obvResult.value
+    } : undefined
+  };
+}
 
 // Types for request params/query
 interface AnalyzeParams {
@@ -253,14 +344,13 @@ export async function multiMarketRoutes(app: FastifyInstance) {
         }
 
         // Convert to format expected by indicators service
-        const candleData = candles.map(c => ({
-          openTime: c.timestamp,
+        const candleData: IndicatorOHLCV[] = candles.map(c => ({
+          timestamp: c.timestamp,
           open: c.open,
           high: c.high,
           low: c.low,
           close: c.close,
           volume: c.volume,
-          closeTime: c.timestamp,
         }));
 
         // Calculate indicators
@@ -319,15 +409,14 @@ export async function multiMarketRoutes(app: FastifyInstance) {
           });
         }
 
-        // Convert candles
-        const candleData = candles.map(c => ({
-          openTime: c.timestamp,
+        // Convert candles to indicator format
+        const candleData: IndicatorOHLCV[] = candles.map(c => ({
+          timestamp: c.timestamp,
           open: c.open,
           high: c.high,
           low: c.low,
           close: c.close,
           volume: c.volume,
-          closeTime: c.timestamp,
         }));
 
         // Calculate indicators
