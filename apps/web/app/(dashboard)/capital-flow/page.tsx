@@ -690,6 +690,8 @@ function LayerSummaryBox({
   details,
   icon: Icon,
   color,
+  onClick,
+  isSelected,
 }: {
   layerNum: number;
   title: string;
@@ -698,6 +700,8 @@ function LayerSummaryBox({
   details: string;
   icon: any;
   color: string;
+  onClick?: () => void;
+  isSelected?: boolean;
 }) {
   const statusColors = {
     positive: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
@@ -713,6 +717,13 @@ function LayerSummaryBox({
     amber: 'from-amber-500/10 to-orange-500/10 border-amber-500/30',
   };
 
+  const selectedBgColors: Record<string, string> = {
+    blue: 'from-blue-500/20 to-indigo-500/20 border-blue-500 ring-2 ring-blue-500/50',
+    emerald: 'from-emerald-500/20 to-teal-500/20 border-emerald-500 ring-2 ring-emerald-500/50',
+    purple: 'from-purple-500/20 to-violet-500/20 border-purple-500 ring-2 ring-purple-500/50',
+    amber: 'from-amber-500/20 to-orange-500/20 border-amber-500 ring-2 ring-amber-500/50',
+  };
+
   const numColors: Record<string, string> = {
     blue: 'bg-blue-500',
     emerald: 'bg-emerald-500',
@@ -721,10 +732,13 @@ function LayerSummaryBox({
   };
 
   return (
-    <div className={cn(
-      'backdrop-blur-xl bg-gradient-to-br border rounded-xl p-3 sm:p-4 hover:shadow-lg transition-all',
-      bgColors[color]
-    )}>
+    <button
+      onClick={onClick}
+      className={cn(
+        'backdrop-blur-xl bg-gradient-to-br border rounded-xl p-3 sm:p-4 hover:shadow-lg transition-all cursor-pointer text-left w-full',
+        isSelected ? selectedBgColors[color] : bgColors[color]
+      )}
+    >
       <div className="flex items-start gap-2 sm:gap-3">
         <div className={cn('w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0', numColors[color])}>
           {layerNum}
@@ -739,8 +753,13 @@ function LayerSummaryBox({
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{details}</p>
         </div>
+        {/* Expand indicator */}
+        <ChevronDown className={cn(
+          'w-4 h-4 text-slate-400 transition-transform flex-shrink-0',
+          isSelected && 'rotate-180'
+        )} />
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -834,6 +853,7 @@ export default function CapitalFlowPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedMarket, setSelectedMarket] = useState<MarketFlow | null>(null);
+  const [selectedLayer, setSelectedLayer] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   // Market Analysis Modal state
@@ -1105,6 +1125,8 @@ export default function CapitalFlowPage() {
               details={`Fed: ${data.globalLiquidity.fedBalanceSheet.value.toFixed(1)}T • DXY: ${data.globalLiquidity.dxy.value.toFixed(1)} • VIX: ${data.globalLiquidity.vix.value.toFixed(0)}`}
               icon={Landmark}
               color="blue"
+              onClick={() => setSelectedLayer(selectedLayer === 1 ? null : 1)}
+              isSelected={selectedLayer === 1}
             />
 
             {/* Layer 2: Market Flow */}
@@ -1122,6 +1144,8 @@ export default function CapitalFlowPage() {
                   details={`${inflowCount}/4 markets inflow • Top: ${topMarket.flow7d > 0 ? '+' : ''}${topMarket.flow7d.toFixed(1)}% (7D)`}
                   icon={BarChart3}
                   color="emerald"
+                  onClick={() => setSelectedLayer(selectedLayer === 2 ? null : 2)}
+                  isSelected={selectedLayer === 2}
                 />
               );
             })()}
@@ -1144,6 +1168,8 @@ export default function CapitalFlowPage() {
                     : 'Click a market to see sectors'}
                   icon={Activity}
                   color="purple"
+                  onClick={() => setSelectedLayer(selectedLayer === 3 ? null : 3)}
+                  isSelected={selectedLayer === 3}
                 />
               );
             })()}
@@ -1163,76 +1189,158 @@ export default function CapitalFlowPage() {
               details={`Phase: ${data.recommendation.phase.toUpperCase()} • Confidence: ${data.recommendation.confidence}%`}
               icon={Target}
               color="amber"
+              onClick={() => setSelectedLayer(selectedLayer === 4 ? null : 4)}
+              isSelected={selectedLayer === 4}
             />
           </div>
-        </section>
 
-        {/* LAYER 1: Global Liquidity */}
-        <section className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center text-white text-xs font-bold">1</div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">LAYER 1: Global Liquidity Tracker</h2>
-          </div>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-            <LiquidityMetric
-              title="Fed Balance Sheet"
-              value={data.globalLiquidity.fedBalanceSheet.value.toFixed(2)}
-              unit="T USD"
-              trend={data.globalLiquidity.fedBalanceSheet.trend === 'expanding' ? 'up' : data.globalLiquidity.fedBalanceSheet.trend === 'contracting' ? 'down' : 'stable'}
-              icon={Landmark}
-              info="Federal Reserve total assets"
-            />
-            <LiquidityMetric
-              title="M2 Money Supply"
-              value={data.globalLiquidity.m2MoneySupply.value.toFixed(2)}
-              unit="T USD"
-              change={data.globalLiquidity.m2MoneySupply.yoyGrowth}
-              icon={DollarSign}
-              info="Year-over-year growth"
-            />
-            <LiquidityMetric
-              title="Dollar Index (DXY)"
-              value={data.globalLiquidity.dxy.value.toFixed(2)}
-              change={data.globalLiquidity.dxy.change7d}
-              icon={Globe}
-              info={data.globalLiquidity.dxy.trend === 'strengthening' ? 'Dollar strengthening' : data.globalLiquidity.dxy.trend === 'weakening' ? 'Dollar weakening' : 'Dollar stable'}
-            />
-            <LiquidityMetric
-              title="VIX (Fear Index)"
-              value={data.globalLiquidity.vix.value.toFixed(2)}
-              icon={Activity}
-              info={`Market sentiment: ${data.globalLiquidity.vix.level.replace('_', ' ').toUpperCase()}`}
-            />
-            <LiquidityMetric
-              title="Yield Curve (10Y-2Y)"
-              value={data.globalLiquidity.yieldCurve.spread10y2y.toFixed(3)}
-              unit="%"
-              icon={BarChart3}
-              info={data.globalLiquidity.yieldCurve.interpretation}
-            />
-          </div>
-          {/* AI Insight for Layer 1 */}
-          {data.insights?.layer1 && <InsightBox insight={data.insights.layer1} icon={Brain} />}
-        </section>
+          {/* Expanded Layer Detail */}
+          {selectedLayer && (
+            <div className="mt-4 animate-slide-up">
+              {/* Layer 1 Detail */}
+              {selectedLayer === 1 && (
+                <div className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-blue-200/50 dark:border-blue-700/50 rounded-2xl p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center text-white text-xs font-bold">1</div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Global Liquidity Tracker</h3>
+                  </div>
+                  <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                    <LiquidityMetric
+                      title="Fed Balance Sheet"
+                      value={data.globalLiquidity.fedBalanceSheet.value.toFixed(2)}
+                      unit="T USD"
+                      trend={data.globalLiquidity.fedBalanceSheet.trend === 'expanding' ? 'up' : data.globalLiquidity.fedBalanceSheet.trend === 'contracting' ? 'down' : 'stable'}
+                      icon={Landmark}
+                      info="Federal Reserve total assets"
+                    />
+                    <LiquidityMetric
+                      title="M2 Money Supply"
+                      value={data.globalLiquidity.m2MoneySupply.value.toFixed(2)}
+                      unit="T USD"
+                      change={data.globalLiquidity.m2MoneySupply.yoyGrowth}
+                      icon={DollarSign}
+                      info="Year-over-year growth"
+                    />
+                    <LiquidityMetric
+                      title="Dollar Index (DXY)"
+                      value={data.globalLiquidity.dxy.value.toFixed(2)}
+                      change={data.globalLiquidity.dxy.change7d}
+                      icon={Globe}
+                      info={data.globalLiquidity.dxy.trend === 'strengthening' ? 'Dollar strengthening' : data.globalLiquidity.dxy.trend === 'weakening' ? 'Dollar weakening' : 'Dollar stable'}
+                    />
+                    <LiquidityMetric
+                      title="VIX (Fear Index)"
+                      value={data.globalLiquidity.vix.value.toFixed(2)}
+                      icon={Activity}
+                      info={`Market sentiment: ${data.globalLiquidity.vix.level.replace('_', ' ').toUpperCase()}`}
+                    />
+                    <LiquidityMetric
+                      title="Yield Curve (10Y-2Y)"
+                      value={data.globalLiquidity.yieldCurve.spread10y2y.toFixed(3)}
+                      unit="%"
+                      icon={BarChart3}
+                      info={data.globalLiquidity.yieldCurve.interpretation}
+                    />
+                  </div>
+                  {data.insights?.layer1 && <InsightBox insight={data.insights.layer1} icon={Brain} />}
+                </div>
+              )}
 
-        {/* LAYER 2: Market Flow */}
-        <section className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-6 h-6 bg-emerald-500 rounded flex items-center justify-center text-white text-xs font-bold">2</div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">LAYER 2: Market Flow Analyzer</h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {data.markets.map((market) => (
-              <MarketCard
-                key={market.market}
-                market={market}
-                onClick={() => setSelectedMarket(selectedMarket?.market === market.market ? null : market)}
-                onAnalyze={() => fetchMarketAnalysis(market)}
-              />
-            ))}
-          </div>
-          {/* AI Insight for Layer 2 */}
-          {data.insights?.layer2 && <InsightBox insight={data.insights.layer2} icon={Sparkles} />}
+              {/* Layer 2 Detail */}
+              {selectedLayer === 2 && (
+                <div className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-emerald-200/50 dark:border-emerald-700/50 rounded-2xl p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-6 h-6 bg-emerald-500 rounded flex items-center justify-center text-white text-xs font-bold">2</div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Market Flow Analyzer</h3>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {data.markets.map((market) => (
+                      <MarketCard
+                        key={market.market}
+                        market={market}
+                        onClick={() => setSelectedMarket(selectedMarket?.market === market.market ? null : market)}
+                        onAnalyze={() => fetchMarketAnalysis(market)}
+                      />
+                    ))}
+                  </div>
+                  {data.insights?.layer2 && <InsightBox insight={data.insights.layer2} icon={Sparkles} />}
+                </div>
+              )}
+
+              {/* Layer 3 Detail */}
+              {selectedLayer === 3 && (
+                <div className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-purple-200/50 dark:border-purple-700/50 rounded-2xl p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-6 h-6 bg-purple-500 rounded flex items-center justify-center text-white text-xs font-bold">3</div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Sector Drill-Down</h3>
+                  </div>
+                  {selectedMarket ? (
+                    <div className="space-y-4">
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                        Showing sectors for <strong className="capitalize">{selectedMarket.market}</strong>
+                      </p>
+                      {selectedMarket.sectors && selectedMarket.sectors.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {selectedMarket.sectors.map((sector, idx) => (
+                            <div
+                              key={idx}
+                              className={cn(
+                                "p-3 rounded-xl border transition-all",
+                                sector.trending === 'up'
+                                  ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30"
+                                  : sector.trending === 'down'
+                                  ? "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30"
+                                  : "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700"
+                              )}
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-semibold text-slate-900 dark:text-white">{sector.name}</span>
+                                <span className={cn(
+                                  "text-sm font-bold",
+                                  sector.flow7d > 0 ? "text-emerald-600" : "text-red-600"
+                                )}>
+                                  {sector.flow7d > 0 ? '+' : ''}{sector.flow7d.toFixed(1)}%
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <span>Phase: {sector.phase}</span>
+                                <span>•</span>
+                                <span className="capitalize">{sector.trending}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-500 dark:text-slate-400">No sector data available for this market.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Activity className="w-12 h-12 text-purple-300 mx-auto mb-3" />
+                      <p className="text-slate-600 dark:text-slate-400">Select a market from Layer 2 to see sector breakdown</p>
+                      <button
+                        onClick={() => setSelectedLayer(2)}
+                        className="mt-3 px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-medium hover:bg-purple-600 transition-colors"
+                      >
+                        Go to Layer 2
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Layer 4 Detail */}
+              {selectedLayer === 4 && (
+                <div className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-amber-200/50 dark:border-amber-700/50 rounded-2xl p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-6 h-6 bg-amber-500 rounded flex items-center justify-center text-white text-xs font-bold">4</div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">AI Recommendation</h3>
+                  </div>
+                  <RecommendationCard recommendation={data.recommendation} rotation={data.rotation} />
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
         {/* Market Correlations */}
@@ -1576,50 +1684,8 @@ export default function CapitalFlowPage() {
           </section>
         )}
 
-        {/* LAYER 3: Sector Drill-Down (when market selected) */}
-        {selectedMarket && selectedMarket.sectors && selectedMarket.sectors.length > 0 && (
-          <section className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-6 h-6 bg-purple-500 rounded flex items-center justify-center text-white text-xs font-bold">3</div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                LAYER 3: {selectedMarket.market.charAt(0).toUpperCase() + selectedMarket.market.slice(1)} Sectors
-              </h2>
-            </div>
-            <div className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {selectedMarket.sectors.map((sector) => (
-                  <div key={sector.name} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-                    <SectorRow sector={sector} />
-                    {sector.topAssets.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {sector.topAssets.slice(0, 4).map((asset) => (
-                          <span key={asset} className="px-2 py-0.5 bg-white dark:bg-slate-700 rounded text-xs font-medium text-slate-600 dark:text-slate-300">
-                            {asset}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-              {/* AI Insight for Layer 3 */}
-              {data.insights?.layer3 && <InsightBox insight={data.insights.layer3} icon={Brain} />}
-            </div>
-          </section>
-        )}
-
-        {/* LAYER 4: Asset Analysis + Recommendation */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-6 h-6 bg-amber-500 rounded flex items-center justify-center text-white text-xs font-bold">4</div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">LAYER 4: Recommendation</h2>
-            </div>
-            <RecommendationCard recommendation={data.recommendation} rotation={data.activeRotation} />
-            {/* AI Insight for Layer 4 */}
-            {data.insights?.layer4 && <InsightBox insight={data.insights.layer4} icon={Sparkles} />}
-          </div>
-
+        {/* Asset Analysis Navigation */}
+        <section className="mb-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Layers className="w-5 h-5 text-slate-500" />
