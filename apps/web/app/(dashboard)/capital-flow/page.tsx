@@ -623,6 +623,69 @@ function SectorRow({ sector }: { sector: SectorFlow }) {
   );
 }
 
+// Layer Summary Box Component
+function LayerSummaryBox({
+  layerNum,
+  title,
+  status,
+  statusType,
+  details,
+  icon: Icon,
+  color,
+}: {
+  layerNum: number;
+  title: string;
+  status: string;
+  statusType: 'positive' | 'negative' | 'neutral' | 'warning';
+  details: string;
+  icon: any;
+  color: string;
+}) {
+  const statusColors = {
+    positive: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
+    negative: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300',
+    neutral: 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300',
+    warning: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300',
+  };
+
+  const bgColors: Record<string, string> = {
+    blue: 'from-blue-500/10 to-indigo-500/10 border-blue-500/30',
+    emerald: 'from-emerald-500/10 to-teal-500/10 border-emerald-500/30',
+    purple: 'from-purple-500/10 to-violet-500/10 border-purple-500/30',
+    amber: 'from-amber-500/10 to-orange-500/10 border-amber-500/30',
+  };
+
+  const numColors: Record<string, string> = {
+    blue: 'bg-blue-500',
+    emerald: 'bg-emerald-500',
+    purple: 'bg-purple-500',
+    amber: 'bg-amber-500',
+  };
+
+  return (
+    <div className={cn(
+      'backdrop-blur-xl bg-gradient-to-br border rounded-xl p-3 sm:p-4 hover:shadow-lg transition-all',
+      bgColors[color]
+    )}>
+      <div className="flex items-start gap-2 sm:gap-3">
+        <div className={cn('w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0', numColors[color])}>
+          {layerNum}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500" />
+            <span className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 truncate">{title}</span>
+          </div>
+          <div className={cn('inline-flex px-2 py-0.5 rounded-full text-xs font-bold mb-1', statusColors[statusType])}>
+            {status}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{details}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Recommendation Card
 function RecommendationCard({ recommendation, rotation }: { recommendation: FlowRecommendation; rotation: ActiveRotation | null }) {
   const actionConfig: Record<string, { bg: string; color: string; icon: any }> = {
@@ -880,6 +943,96 @@ export default function CapitalFlowPage() {
             </button>
           </div>
         </div>
+
+        {/* ===== LAYER FLOW SUMMARY - Quick Overview ===== */}
+        <section className="mb-8 animate-slide-up" style={{ animationDelay: '0.3s' }}>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Layers className="w-5 h-5 text-slate-500" />
+            <h2 className="text-sm font-medium text-slate-600 dark:text-slate-400">Current Flow Status</h2>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Layer 1: Global Liquidity */}
+            <LayerSummaryBox
+              layerNum={1}
+              title="Global Liquidity"
+              status={
+                data.globalLiquidity.fedBalanceSheet.trend === 'expanding'
+                  ? 'EXPANDING'
+                  : data.globalLiquidity.fedBalanceSheet.trend === 'contracting'
+                  ? 'CONTRACTING'
+                  : 'STABLE'
+              }
+              statusType={
+                data.globalLiquidity.fedBalanceSheet.trend === 'expanding'
+                  ? 'positive'
+                  : data.globalLiquidity.fedBalanceSheet.trend === 'contracting'
+                  ? 'negative'
+                  : 'neutral'
+              }
+              details={`Fed: ${data.globalLiquidity.fedBalanceSheet.value.toFixed(1)}T • DXY: ${data.globalLiquidity.dxy.value.toFixed(1)} • VIX: ${data.globalLiquidity.vix.value.toFixed(0)}`}
+              icon={Landmark}
+              color="blue"
+            />
+
+            {/* Layer 2: Market Flow */}
+            {(() => {
+              const topMarket = data.markets.reduce((prev, curr) =>
+                curr.flow7d > prev.flow7d ? curr : prev
+              );
+              const inflowCount = data.markets.filter(m => m.flow7d > 0).length;
+              return (
+                <LayerSummaryBox
+                  layerNum={2}
+                  title="Market Flow"
+                  status={`${topMarket.market.toUpperCase()} LEADS`}
+                  statusType={topMarket.flow7d > 2 ? 'positive' : topMarket.flow7d > 0 ? 'neutral' : 'warning'}
+                  details={`${inflowCount}/4 markets inflow • Top: ${topMarket.flow7d > 0 ? '+' : ''}${topMarket.flow7d.toFixed(1)}% (7D)`}
+                  icon={BarChart3}
+                  color="emerald"
+                />
+              );
+            })()}
+
+            {/* Layer 3: Sector Status */}
+            {(() => {
+              const allSectors = data.markets.flatMap(m => m.sectors || []);
+              const topSector = allSectors.length > 0
+                ? allSectors.reduce((prev, curr) => curr.flow7d > prev.flow7d ? curr : prev)
+                : null;
+              const upSectors = allSectors.filter(s => s.trending === 'up').length;
+              return (
+                <LayerSummaryBox
+                  layerNum={3}
+                  title="Sector Activity"
+                  status={topSector ? `${topSector.name.toUpperCase()} HOT` : 'SELECT MARKET'}
+                  statusType={topSector && topSector.flow7d > 3 ? 'positive' : topSector && topSector.flow7d > 0 ? 'neutral' : 'warning'}
+                  details={topSector
+                    ? `${upSectors} sectors up • Top: ${topSector.flow7d > 0 ? '+' : ''}${topSector.flow7d.toFixed(1)}%`
+                    : 'Click a market to see sectors'}
+                  icon={Activity}
+                  color="purple"
+                />
+              );
+            })()}
+
+            {/* Layer 4: Recommendation */}
+            <LayerSummaryBox
+              layerNum={4}
+              title="Recommendation"
+              status={`${data.recommendation.action.toUpperCase()} ${data.recommendation.primaryMarket.toUpperCase()}`}
+              statusType={
+                data.recommendation.action === 'analyze'
+                  ? 'positive'
+                  : data.recommendation.action === 'wait'
+                  ? 'warning'
+                  : 'negative'
+              }
+              details={`Phase: ${data.recommendation.phase.toUpperCase()} • Confidence: ${data.recommendation.confidence}%`}
+              icon={Target}
+              color="amber"
+            />
+          </div>
+        </section>
 
         {/* LAYER 1: Global Liquidity */}
         <section className="mb-8">
