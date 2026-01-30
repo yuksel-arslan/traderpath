@@ -28,6 +28,8 @@ import {
   LayerInsights,
   MarketCorrelation,
   CorrelationMatrix,
+  TradeOpportunities,
+  RotationTradeOpportunity,
   PHASE_CONFIG,
   MARKET_CONFIG,
 } from './types';
@@ -45,6 +47,7 @@ const CACHE_KEYS = {
   INSIGHTS: 'capital-flow:insights',
   ROTATION_HISTORY: 'capital-flow:rotation-history',
   CORRELATIONS: 'capital-flow:correlations',
+  TRADE_OPPORTUNITIES: 'capital-flow:trade-opportunities',
 };
 
 // Cache TTL (in seconds)
@@ -55,6 +58,7 @@ const CACHE_TTL = {
   ROTATION: 86400,   // 24 hours
   INSIGHTS: 900,     // 15 minutes (AI insights)
   CORRELATIONS: 1800, // 30 minutes
+  TRADE_OPPORTUNITIES: 600, // 10 minutes
 };
 
 /**
@@ -90,6 +94,14 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
     console.error('[CapitalFlow] Error calculating correlations:', error);
   }
 
+  // Detect trade opportunities from rotation
+  let tradeOpportunities: TradeOpportunities | undefined;
+  try {
+    tradeOpportunities = await detectTradeOpportunities(markets, correlations);
+  } catch (error) {
+    console.error('[CapitalFlow] Error detecting trade opportunities:', error);
+  }
+
   // Generate AI insights (non-blocking, with fallback)
   let insights: LayerInsights | undefined;
   try {
@@ -105,6 +117,7 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
     liquidityBias,
     markets,
     correlations,
+    tradeOpportunities,
     recommendation,
     activeRotation,
     insights,
@@ -817,6 +830,168 @@ function generateCorrelationInsights(
   }
 
   return parts.join('. ') + '.';
+}
+
+/**
+ * Detect trade opportunities based on capital rotation
+ * When money exits market A and enters markets B/C:
+ * - Market A = SELL opportunity (capital exiting)
+ * - Markets B/C = BUY opportunity (capital entering)
+ */
+async function detectTradeOpportunities(
+  markets: MarketFlow[],
+  correlations?: CorrelationMatrix
+): Promise<TradeOpportunities> {
+  // Try cache first
+  const cached = await redis?.get(CACHE_KEYS.TRADE_OPPORTUNITIES);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  const opportunities: RotationTradeOpportunity[] = [];
+
+  // Find markets with entering and exiting signals
+  const enteringMarkets = markets.filter(m => m.rotationSignal === 'entering');
+  const exitingMarkets = markets.filter(m => m.rotationSignal === 'exiting');
+
+  // Generate SELL opportunities for exiting markets
+  for (const market of exitingMarkets) {
+    // Calculate confidence based on flow strength and velocity
+    let confidence = 50;
+    if (market.flow7d < -3) confidence += 15;
+    if (market.flow7d < -5) confidence += 10;
+    if (market.flowVelocity < -2) confidence += 10;
+    if (market.phase === 'exit') confidence += 15;
+
+    // Find where the capital is going (related markets)
+    const relatedMarkets = enteringMarkets.map(dest => ({
+      market: dest.market,
+      relationship: 'destination' as const,
+    }));
+
+    // Determine risk level
+    let riskLevel: 'low' | 'medium' | 'high' = 'medium';
+    if (confidence >= 75 && market.flow7d < -5) {
+      riskLevel = 'low'; // Strong signal = lower risk
+    } else if (confidence < 60 || Math.abs(market.flow7d) < 2) {
+      riskLevel = 'high'; // Weak signal = higher risk
+    }
+
+    // Get top sectors to exit
+    const exitSectors = market.sectors
+      ?.filter(s => s.trending === 'down')
+      .slice(0, 3)
+      .map(s => s.name);
+
+    opportunities.push({
+      market: market.market,
+      direction: 'SELL',
+      reason: `Capital outflow detected in ${MARKET_CONFIG[market.market].name}. ${market.flow7d.toFixed(1)}% 7-day flow with ${market.phase} phase suggests reducing exposure.`,
+      confidence: Math.min(90, confidence),
+      flowSignal: 'exiting',
+      relatedMarkets,
+      suggestedSectors: exitSectors,
+      riskLevel,
+    });
+  }
+
+  // Generate BUY opportunities for entering markets
+  for (const market of enteringMarkets) {
+    // Calculate confidence based on flow strength and velocity
+    let confidence = 50;
+    if (market.flow7d > 3) confidence += 15;
+    if (market.flow7d > 5) confidence += 10;
+    if (market.flowVelocity > 2) confidence += 10;
+    if (market.phase === 'early') confidence += 20;
+    else if (market.phase === 'mid') confidence += 10;
+
+    // Find where the capital is coming from (related markets)
+    const relatedMarkets = exitingMarkets.map(source => ({
+      market: source.market,
+      relationship: 'source' as const,
+    }));
+
+    // Determine risk level based on phase
+    let riskLevel: 'low' | 'medium' | 'high' = 'medium';
+    if (market.phase === 'early' && confidence >= 70) {
+      riskLevel = 'low'; // Early phase entry = lower risk
+    } else if (market.phase === 'late' || confidence < 60) {
+      riskLevel = 'high'; // Late phase or weak signal = higher risk
+    }
+
+    // Get top sectors to buy
+    const buySectors = market.sectors
+      ?.filter(s => s.trending === 'up')
+      .slice(0, 3)
+      .map(s => s.name);
+
+    opportunities.push({
+      market: market.market,
+      direction: 'BUY',
+      reason: `Capital inflow detected in ${MARKET_CONFIG[market.market].name}. ${market.flow7d.toFixed(1)}% 7-day flow in ${market.phase} phase presents accumulation opportunity.`,
+      confidence: Math.min(90, confidence),
+      flowSignal: 'entering',
+      relatedMarkets,
+      suggestedSectors: buySectors,
+      riskLevel,
+    });
+  }
+
+  // Enhance opportunities with correlation data if available
+  if (correlations && opportunities.length > 0) {
+    for (const opp of opportunities) {
+      // Find strong inverse correlations for hedging suggestions
+      const inverseCorr = correlations.correlations.find(c =>
+        (c.market1 === opp.market || c.market2 === opp.market) &&
+        c.direction === 'negative' &&
+        c.strength !== 'none'
+      );
+
+      if (inverseCorr) {
+        const hedgeMarket = inverseCorr.market1 === opp.market
+          ? inverseCorr.market2
+          : inverseCorr.market1;
+
+        // Add correlation context to reason
+        opp.reason += ` Consider ${MARKET_CONFIG[hedgeMarket].name} as hedge (${(inverseCorr.correlation * 100).toFixed(0)}% inverse correlation).`;
+      }
+    }
+  }
+
+  // Sort by confidence (highest first)
+  opportunities.sort((a, b) => b.confidence - a.confidence);
+
+  // Generate rotation summary
+  let rotationSummary = '';
+  if (exitingMarkets.length > 0 && enteringMarkets.length > 0) {
+    const exitNames = exitingMarkets.map(m => MARKET_CONFIG[m.market].name).join(', ');
+    const enterNames = enteringMarkets.map(m => MARKET_CONFIG[m.market].name).join(', ');
+    rotationSummary = `Capital rotation detected: ${exitNames} → ${enterNames}. This creates SELL opportunities in exiting markets and BUY opportunities in receiving markets.`;
+  } else if (enteringMarkets.length > 0) {
+    const enterNames = enteringMarkets.map(m => MARKET_CONFIG[m.market].name).join(', ');
+    rotationSummary = `Capital inflow detected in ${enterNames}. BUY opportunities available in these markets.`;
+  } else if (exitingMarkets.length > 0) {
+    const exitNames = exitingMarkets.map(m => MARKET_CONFIG[m.market].name).join(', ');
+    rotationSummary = `Capital outflow detected from ${exitNames}. Consider reducing exposure in these markets.`;
+  } else {
+    rotationSummary = 'No significant rotation detected. Markets are relatively stable.';
+  }
+
+  const result: TradeOpportunities = {
+    opportunities,
+    rotationSummary,
+    totalOpportunities: opportunities.length,
+    buyOpportunities: opportunities.filter(o => o.direction === 'BUY').length,
+    sellOpportunities: opportunities.filter(o => o.direction === 'SELL').length,
+    lastUpdated: new Date(),
+  };
+
+  // Cache
+  if (redis) {
+    await redis.setex(CACHE_KEYS.TRADE_OPPORTUNITIES, CACHE_TTL.TRADE_OPPORTUNITIES, JSON.stringify(result));
+  }
+
+  return result;
 }
 
 /**
