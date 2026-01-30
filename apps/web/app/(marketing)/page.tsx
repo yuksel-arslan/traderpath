@@ -168,7 +168,7 @@ function SystemFlowChart() {
               </div>
               <p className="text-sm text-slate-600 dark:text-slate-400">"How much money is in the world and where is it going?"</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center text-xs mb-4">
               <div className="bg-slate-100/80 dark:bg-slate-700/50 rounded-lg p-3">
                 <p className="text-slate-500 dark:text-slate-400 mb-1">Central Banks</p>
                 <p className="font-mono font-semibold text-slate-700 dark:text-slate-300">Fed • ECB • BOJ</p>
@@ -180,6 +180,14 @@ function SystemFlowChart() {
               <div className="bg-slate-100/80 dark:bg-slate-700/50 rounded-lg p-3">
                 <p className="text-slate-500 dark:text-slate-400 mb-1">Risk Indicators</p>
                 <p className="font-mono font-semibold text-slate-700 dark:text-slate-300">DXY • VIX • Yield</p>
+              </div>
+            </div>
+            {/* ANSWER BOX */}
+            <div className="bg-gradient-to-r from-teal-500/10 to-emerald-500/10 border border-teal-500/30 rounded-xl p-3">
+              <div className="flex items-center justify-center gap-3 flex-wrap">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Answer:</span>
+                <span className="px-3 py-1 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full">RISK ON</span>
+                <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">Fed expanding • M2 +2.1% • DXY weakening • VIX low</span>
               </div>
             </div>
           </div>
@@ -260,12 +268,22 @@ function SystemFlowChart() {
             </div>
 
             {/* Rotation Signal */}
-            <div className="text-center">
+            <div className="text-center mb-4">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-emerald-500/10 border border-blue-500/20">
                 <span className="text-xs font-bold text-slate-600 dark:text-slate-300">ROTATION SIGNAL:</span>
                 <span className="text-xs font-bold text-red-500">BONDS</span>
                 <ArrowRight className="w-4 h-4 text-emerald-500" />
                 <span className="text-xs font-bold text-emerald-500">CRYPTO</span>
+              </div>
+            </div>
+            {/* ANSWER BOX */}
+            <div className="bg-gradient-to-r from-blue-500/10 to-emerald-500/10 border border-blue-500/30 rounded-xl p-3">
+              <div className="flex items-center justify-center gap-3 flex-wrap">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Answer:</span>
+                <span className="px-3 py-1 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3" /> CRYPTO
+                </span>
+                <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">Early phase • +8% flow • 23 days • Highest velocity</span>
               </div>
             </div>
           </div>
@@ -348,11 +366,14 @@ function SystemFlowChart() {
               </div>
             </div>
 
-            {/* Recommendation */}
-            <div className="mt-4 text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/10 to-violet-500/10 border border-purple-500/20">
-                <Target className="w-4 h-4 text-purple-500" />
-                <span className="text-xs font-bold text-purple-600 dark:text-purple-400">RECOMMENDATION: Analyze DeFi & AI tokens</span>
+            {/* ANSWER BOX */}
+            <div className="mt-4 bg-gradient-to-r from-purple-500/10 to-violet-500/10 border border-purple-500/30 rounded-xl p-3">
+              <div className="flex items-center justify-center gap-3 flex-wrap">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Answer:</span>
+                <span className="px-3 py-1 bg-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-bold rounded-full flex items-center gap-1">
+                  <Target className="w-3 h-3" /> DeFi & AI Tokens
+                </span>
+                <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">BTC dom falling • DeFi TVL rising • L2 high activity</span>
               </div>
             </div>
           </div>
@@ -393,6 +414,36 @@ function SystemFlowChart() {
                 <Brain className="w-6 h-6 text-violet-500 mx-auto mb-2" />
                 <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">MLIS Pro</div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">5-layer neural signals</p>
+              </div>
+            </div>
+
+            {/* ANSWER BOX - Top Assets */}
+            <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-xl p-4 mb-4">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Answer:</span>
+                <span className="text-xs text-slate-600 dark:text-slate-300">Top assets in selected sector</span>
+              </div>
+              <div className="flex flex-wrap justify-center gap-2">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-slate-700/50 rounded-lg border border-emerald-500/30">
+                  <span className="font-bold text-sm text-slate-800 dark:text-white">AAVE</span>
+                  <span className="text-xs font-mono text-slate-500">87</span>
+                  <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded">GO</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-slate-700/50 rounded-lg border border-emerald-500/30">
+                  <span className="font-bold text-sm text-slate-800 dark:text-white">FET</span>
+                  <span className="text-xs font-mono text-slate-500">84</span>
+                  <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded">GO</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-slate-700/50 rounded-lg border border-amber-500/30">
+                  <span className="font-bold text-sm text-slate-800 dark:text-white">ARB</span>
+                  <span className="text-xs font-mono text-slate-500">76</span>
+                  <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold rounded">COND</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-slate-700/50 rounded-lg border border-amber-500/30">
+                  <span className="font-bold text-sm text-slate-800 dark:text-white">OP</span>
+                  <span className="text-xs font-mono text-slate-500">72</span>
+                  <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold rounded">COND</span>
+                </div>
               </div>
             </div>
 
