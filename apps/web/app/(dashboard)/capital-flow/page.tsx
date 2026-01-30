@@ -133,11 +133,29 @@ interface MarketAnalysis {
   generatedAt: string;
 }
 
+interface MarketCorrelation {
+  market1: string;
+  market2: string;
+  correlation: number;
+  strength: 'strong' | 'moderate' | 'weak' | 'none';
+  direction: 'positive' | 'negative' | 'neutral';
+  interpretation: string;
+}
+
+interface CorrelationMatrix {
+  correlations: MarketCorrelation[];
+  strongestPositive: MarketCorrelation | null;
+  strongestNegative: MarketCorrelation | null;
+  insights: string;
+  lastUpdated: string;
+}
+
 interface CapitalFlowSummary {
   timestamp: string;
   globalLiquidity: GlobalLiquidity;
   liquidityBias: 'risk_on' | 'risk_off' | 'neutral';
   markets: MarketFlow[];
+  correlations?: CorrelationMatrix;
   recommendation: FlowRecommendation;
   activeRotation: ActiveRotation | null;
   insights?: LayerInsights;
@@ -1109,6 +1127,100 @@ export default function CapitalFlowPage() {
           {/* AI Insight for Layer 2 */}
           {data.insights?.layer2 && <InsightBox insight={data.insights.layer2} icon={Sparkles} />}
         </section>
+
+        {/* Market Correlations */}
+        {data.correlations && data.correlations.correlations.length > 0 && (
+          <section className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="w-5 h-5 text-violet-500" />
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Market Correlations</h2>
+            </div>
+            <div className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl p-4">
+              {/* Correlation Matrix */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                {data.correlations.correlations.map((corr, idx) => {
+                  const marketNames: Record<string, string> = {
+                    crypto: 'Crypto',
+                    stocks: 'Stocks',
+                    bonds: 'Bonds',
+                    metals: 'Metals',
+                  };
+                  const corrPercent = Math.round(corr.correlation * 100);
+                  const isPositive = corr.direction === 'positive';
+                  const isNegative = corr.direction === 'negative';
+
+                  return (
+                    <div
+                      key={idx}
+                      className={cn(
+                        "p-3 rounded-xl border transition-all",
+                        isPositive
+                          ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30"
+                          : isNegative
+                          ? "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30"
+                          : "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700"
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            {marketNames[corr.market1]} ↔ {marketNames[corr.market2]}
+                          </span>
+                        </div>
+                        <span
+                          className={cn(
+                            "text-lg font-bold",
+                            isPositive
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : isNegative
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-slate-500"
+                          )}
+                        >
+                          {corrPercent > 0 ? '+' : ''}{corrPercent}%
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={cn(
+                            "text-xs px-2 py-0.5 rounded-full",
+                            corr.strength === 'strong'
+                              ? "bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300"
+                              : corr.strength === 'moderate'
+                              ? "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300"
+                              : corr.strength === 'weak'
+                              ? "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
+                              : "bg-slate-100 dark:bg-slate-700 text-slate-500"
+                          )}
+                        >
+                          {corr.strength}
+                        </span>
+                        {isPositive && <TrendingUp className="w-4 h-4 text-emerald-500" />}
+                        {isNegative && <TrendingDown className="w-4 h-4 text-red-500" />}
+                        {!isPositive && !isNegative && <Minus className="w-4 h-4 text-slate-400" />}
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 line-clamp-2">
+                        {corr.interpretation}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Correlation Insights */}
+              {data.correlations.insights && (
+                <div className="p-3 rounded-lg bg-violet-50 dark:bg-violet-500/10 border border-violet-200/50 dark:border-violet-500/30">
+                  <div className="flex items-start gap-2">
+                    <Brain className="w-4 h-4 text-violet-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-violet-700 dark:text-violet-300">
+                      {data.correlations.insights}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* LAYER 3: Sector Drill-Down (when market selected) */}
         {selectedMarket && selectedMarket.sectors && selectedMarket.sectors.length > 0 && (

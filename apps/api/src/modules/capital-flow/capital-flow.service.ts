@@ -26,6 +26,8 @@ import {
   FlowRecommendation,
   ActiveRotation,
   LayerInsights,
+  MarketCorrelation,
+  CorrelationMatrix,
   PHASE_CONFIG,
   MARKET_CONFIG,
 } from './types';
@@ -42,6 +44,7 @@ const CACHE_KEYS = {
   MARKET_FLOW: (market: MarketType) => `capital-flow:market:${market}`,
   INSIGHTS: 'capital-flow:insights',
   ROTATION_HISTORY: 'capital-flow:rotation-history',
+  CORRELATIONS: 'capital-flow:correlations',
 };
 
 // Cache TTL (in seconds)
@@ -51,6 +54,7 @@ const CACHE_TTL = {
   MARKET: 300,       // 5 minutes
   ROTATION: 86400,   // 24 hours
   INSIGHTS: 900,     // 15 minutes (AI insights)
+  CORRELATIONS: 1800, // 30 minutes
 };
 
 /**
@@ -78,6 +82,14 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
   // Detect active rotation
   const activeRotation = detectActiveRotation(markets);
 
+  // Calculate market correlations
+  let correlations: CorrelationMatrix | undefined;
+  try {
+    correlations = await calculateMarketCorrelations(markets);
+  } catch (error) {
+    console.error('[CapitalFlow] Error calculating correlations:', error);
+  }
+
   // Generate AI insights (non-blocking, with fallback)
   let insights: LayerInsights | undefined;
   try {
@@ -92,6 +104,7 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
     globalLiquidity,
     liquidityBias,
     markets,
+    correlations,
     recommendation,
     activeRotation,
     insights,
@@ -603,6 +616,207 @@ function detectActiveRotation(markets: MarketFlow[]): ActiveRotation | null {
 export async function getFlowRecommendation(): Promise<FlowRecommendation> {
   const summary = await getCapitalFlowSummary();
   return summary.recommendation;
+}
+
+/**
+ * Calculate market correlations
+ * Based on flow direction and velocity similarities
+ */
+async function calculateMarketCorrelations(markets: MarketFlow[]): Promise<CorrelationMatrix> {
+  // Try cache first
+  const cached = await redis?.get(CACHE_KEYS.CORRELATIONS);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  const correlations: MarketCorrelation[] = [];
+  const marketTypes: MarketType[] = ['crypto', 'stocks', 'bonds', 'metals'];
+
+  // Calculate correlation for each pair
+  for (let i = 0; i < marketTypes.length; i++) {
+    for (let j = i + 1; j < marketTypes.length; j++) {
+      const market1 = markets.find(m => m.market === marketTypes[i]);
+      const market2 = markets.find(m => m.market === marketTypes[j]);
+
+      if (!market1 || !market2) continue;
+
+      const correlation = calculatePairCorrelation(market1, market2);
+      correlations.push(correlation);
+    }
+  }
+
+  // Find strongest correlations
+  const strongestPositive = correlations
+    .filter(c => c.correlation > 0)
+    .sort((a, b) => b.correlation - a.correlation)[0] || null;
+
+  const strongestNegative = correlations
+    .filter(c => c.correlation < 0)
+    .sort((a, b) => a.correlation - b.correlation)[0] || null;
+
+  // Generate insights
+  const insights = generateCorrelationInsights(correlations, strongestPositive, strongestNegative);
+
+  const matrix: CorrelationMatrix = {
+    correlations,
+    strongestPositive,
+    strongestNegative,
+    insights,
+    lastUpdated: new Date(),
+  };
+
+  // Cache
+  if (redis) {
+    await redis.setex(CACHE_KEYS.CORRELATIONS, CACHE_TTL.CORRELATIONS, JSON.stringify(matrix));
+  }
+
+  return matrix;
+}
+
+/**
+ * Calculate correlation between two markets
+ * Uses flow direction, velocity, and phase alignment
+ */
+function calculatePairCorrelation(market1: MarketFlow, market2: MarketFlow): MarketCorrelation {
+  // Correlation factors:
+  // 1. Flow direction alignment (same direction = positive correlation)
+  // 2. Velocity similarity
+  // 3. Phase alignment
+
+  // Flow direction score (-1 to +1)
+  const directionScore = (
+    (market1.flow7d > 0 && market2.flow7d > 0) ||
+    (market1.flow7d < 0 && market2.flow7d < 0)
+  ) ? 0.4 : -0.4;
+
+  // Velocity similarity score (-0.3 to +0.3)
+  const velocityDiff = Math.abs(market1.flowVelocity - market2.flowVelocity);
+  const velocityScore = velocityDiff < 1 ? 0.3 : velocityDiff < 3 ? 0.1 : -0.1;
+
+  // Phase alignment score (-0.3 to +0.3)
+  const phaseScore = market1.phase === market2.phase ? 0.3 :
+    (market1.phase === 'early' && market2.phase === 'mid') ||
+    (market1.phase === 'mid' && market2.phase === 'early') ? 0.15 :
+    (market1.phase === 'late' && market2.phase === 'exit') ||
+    (market1.phase === 'exit' && market2.phase === 'late') ? 0.15 : -0.15;
+
+  // Flow magnitude similarity (are they moving at similar rates?)
+  const flow7dRatio = Math.min(Math.abs(market1.flow7d), Math.abs(market2.flow7d)) /
+    Math.max(Math.abs(market1.flow7d), Math.abs(market2.flow7d)) || 0;
+  const magnitudeScore = flow7dRatio > 0.7 ? 0.2 : flow7dRatio > 0.4 ? 0.1 : 0;
+
+  // Total correlation (-1 to +1)
+  let correlation = directionScore + velocityScore + phaseScore + magnitudeScore;
+  correlation = Math.max(-1, Math.min(1, correlation)); // Clamp
+
+  // Determine strength
+  const absCorr = Math.abs(correlation);
+  const strength: MarketCorrelation['strength'] =
+    absCorr >= 0.7 ? 'strong' :
+    absCorr >= 0.4 ? 'moderate' :
+    absCorr >= 0.2 ? 'weak' : 'none';
+
+  // Determine direction
+  const direction: MarketCorrelation['direction'] =
+    correlation > 0.1 ? 'positive' :
+    correlation < -0.1 ? 'negative' : 'neutral';
+
+  // Generate interpretation
+  const interpretation = generateCorrelationInterpretation(
+    market1.market,
+    market2.market,
+    correlation,
+    strength,
+    direction
+  );
+
+  return {
+    market1: market1.market,
+    market2: market2.market,
+    correlation: parseFloat(correlation.toFixed(2)),
+    strength,
+    direction,
+    interpretation,
+  };
+}
+
+/**
+ * Generate human-readable interpretation for a correlation
+ */
+function generateCorrelationInterpretation(
+  market1: MarketType,
+  market2: MarketType,
+  correlation: number,
+  strength: MarketCorrelation['strength'],
+  direction: MarketCorrelation['direction']
+): string {
+  const m1Name = MARKET_CONFIG[market1].name;
+  const m2Name = MARKET_CONFIG[market2].name;
+
+  if (strength === 'none') {
+    return `${m1Name} and ${m2Name} are moving independently with no significant correlation.`;
+  }
+
+  if (direction === 'positive') {
+    if (strength === 'strong') {
+      return `${m1Name} and ${m2Name} are strongly correlated. Capital flows tend to move together.`;
+    }
+    return `${m1Name} and ${m2Name} show ${strength} positive correlation. They often move in the same direction.`;
+  }
+
+  if (direction === 'negative') {
+    if (strength === 'strong') {
+      return `${m1Name} and ${m2Name} are inversely correlated. When one rises, the other tends to fall. Good for hedging.`;
+    }
+    return `${m1Name} and ${m2Name} show ${strength} negative correlation. They often move in opposite directions.`;
+  }
+
+  return `${m1Name} and ${m2Name} have a neutral relationship currently.`;
+}
+
+/**
+ * Generate overall correlation insights
+ */
+function generateCorrelationInsights(
+  correlations: MarketCorrelation[],
+  strongestPositive: MarketCorrelation | null,
+  strongestNegative: MarketCorrelation | null
+): string {
+  const parts: string[] = [];
+
+  if (strongestPositive && strongestPositive.strength !== 'none') {
+    const m1 = MARKET_CONFIG[strongestPositive.market1].name;
+    const m2 = MARKET_CONFIG[strongestPositive.market2].name;
+    parts.push(`${m1} and ${m2} are moving together (${(strongestPositive.correlation * 100).toFixed(0)}% correlation)`);
+  }
+
+  if (strongestNegative && strongestNegative.strength !== 'none') {
+    const m1 = MARKET_CONFIG[strongestNegative.market1].name;
+    const m2 = MARKET_CONFIG[strongestNegative.market2].name;
+    parts.push(`${m1} and ${m2} are diverging (${(strongestNegative.correlation * 100).toFixed(0)}% inverse correlation)`);
+  }
+
+  // Check for risk-on/risk-off patterns
+  const cryptoStocks = correlations.find(c =>
+    (c.market1 === 'crypto' && c.market2 === 'stocks') ||
+    (c.market1 === 'stocks' && c.market2 === 'crypto')
+  );
+  const bondsCrypto = correlations.find(c =>
+    (c.market1 === 'bonds' && c.market2 === 'crypto') ||
+    (c.market1 === 'crypto' && c.market2 === 'bonds')
+  );
+
+  if (cryptoStocks && cryptoStocks.correlation > 0.5 && bondsCrypto && bondsCrypto.correlation < -0.3) {
+    parts.push('Risk-on environment: risky assets are correlated, safe havens are inverse');
+  } else if (cryptoStocks && cryptoStocks.correlation < -0.3 && bondsCrypto && bondsCrypto.correlation > 0.3) {
+    parts.push('Risk-off rotation: capital moving from risky to safe assets');
+  }
+
+  if (parts.length === 0) {
+    return 'Markets are showing mixed correlations. Monitor individual market signals.';
+  }
+
+  return parts.join('. ') + '.';
 }
 
 /**
