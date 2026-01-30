@@ -143,6 +143,28 @@ export interface RotationTradeOpportunity {
   }[];
   suggestedSectors?: string[];
   riskLevel: 'low' | 'medium' | 'high';
+
+  // Enhanced correlation info for UI
+  correlationInfo?: {
+    strongestCorrelation: {
+      market: MarketType;
+      value: number;          // -1 to +1
+      direction: 'positive' | 'negative';
+      interpretation: string;
+    };
+    hedgeSuggestion?: {
+      market: MarketType;
+      correlation: number;
+    };
+  };
+
+  // Phase context for the opportunity
+  phaseContext: {
+    currentPhase: Phase;
+    daysInPhase: number;
+    avgDuration: number;
+    phaseProgress: number;    // 0-100%
+  };
 }
 
 // Multi-Market Trade Opportunities

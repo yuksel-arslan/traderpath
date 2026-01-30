@@ -863,6 +863,45 @@ async function detectTradeOpportunities(
     if (market.flowVelocity < -2) confidence += 10;
     if (market.phase === 'exit') confidence += 15;
 
+    // Boost confidence if correlation supports the signal
+    let correlationBoost = 0;
+    let correlationInfo: RotationTradeOpportunity['correlationInfo'] = undefined;
+
+    if (correlations) {
+      // Find the strongest correlation for this market
+      const marketCorrelations = correlations.correlations.filter(c =>
+        c.market1 === market.market || c.market2 === market.market
+      );
+
+      if (marketCorrelations.length > 0) {
+        const strongest = marketCorrelations.reduce((a, b) =>
+          Math.abs(a.correlation) > Math.abs(b.correlation) ? a : b
+        );
+        const otherMarket = strongest.market1 === market.market ? strongest.market2 : strongest.market1;
+
+        // If negative correlation with entering market, boost confidence
+        const isEnteringMarket = enteringMarkets.some(m => m.market === otherMarket);
+        if (strongest.direction === 'negative' && isEnteringMarket) {
+          correlationBoost = Math.abs(strongest.correlation) * 15; // Up to +15%
+        }
+
+        correlationInfo = {
+          strongestCorrelation: {
+            market: otherMarket,
+            value: strongest.correlation,
+            direction: strongest.direction as 'positive' | 'negative',
+            interpretation: strongest.interpretation,
+          },
+          hedgeSuggestion: strongest.direction === 'negative' ? {
+            market: otherMarket,
+            correlation: strongest.correlation,
+          } : undefined,
+        };
+      }
+    }
+
+    confidence += correlationBoost;
+
     // Find where the capital is going (related markets)
     const relatedMarkets = enteringMarkets.map(dest => ({
       market: dest.market,
@@ -883,6 +922,9 @@ async function detectTradeOpportunities(
       .slice(0, 3)
       .map(s => s.name);
 
+    // Phase context
+    const phaseProgress = Math.min(100, (market.daysInPhase / market.avgPhaseDuration) * 100);
+
     opportunities.push({
       market: market.market,
       direction: 'SELL',
@@ -892,6 +934,13 @@ async function detectTradeOpportunities(
       relatedMarkets,
       suggestedSectors: exitSectors,
       riskLevel,
+      correlationInfo,
+      phaseContext: {
+        currentPhase: market.phase,
+        daysInPhase: market.daysInPhase,
+        avgDuration: market.avgPhaseDuration,
+        phaseProgress,
+      },
     });
   }
 
@@ -904,6 +953,45 @@ async function detectTradeOpportunities(
     if (market.flowVelocity > 2) confidence += 10;
     if (market.phase === 'early') confidence += 20;
     else if (market.phase === 'mid') confidence += 10;
+
+    // Boost confidence if correlation supports the signal
+    let correlationBoost = 0;
+    let correlationInfo: RotationTradeOpportunity['correlationInfo'] = undefined;
+
+    if (correlations) {
+      // Find the strongest correlation for this market
+      const marketCorrelations = correlations.correlations.filter(c =>
+        c.market1 === market.market || c.market2 === market.market
+      );
+
+      if (marketCorrelations.length > 0) {
+        const strongest = marketCorrelations.reduce((a, b) =>
+          Math.abs(a.correlation) > Math.abs(b.correlation) ? a : b
+        );
+        const otherMarket = strongest.market1 === market.market ? strongest.market2 : strongest.market1;
+
+        // If negative correlation with exiting market, boost confidence (capital rotation confirmed)
+        const isExitingMarket = exitingMarkets.some(m => m.market === otherMarket);
+        if (strongest.direction === 'negative' && isExitingMarket) {
+          correlationBoost = Math.abs(strongest.correlation) * 15; // Up to +15%
+        }
+
+        correlationInfo = {
+          strongestCorrelation: {
+            market: otherMarket,
+            value: strongest.correlation,
+            direction: strongest.direction as 'positive' | 'negative',
+            interpretation: strongest.interpretation,
+          },
+          hedgeSuggestion: strongest.direction === 'negative' ? {
+            market: otherMarket,
+            correlation: strongest.correlation,
+          } : undefined,
+        };
+      }
+    }
+
+    confidence += correlationBoost;
 
     // Find where the capital is coming from (related markets)
     const relatedMarkets = exitingMarkets.map(source => ({
@@ -925,6 +1013,9 @@ async function detectTradeOpportunities(
       .slice(0, 3)
       .map(s => s.name);
 
+    // Phase context
+    const phaseProgress = Math.min(100, (market.daysInPhase / market.avgPhaseDuration) * 100);
+
     opportunities.push({
       market: market.market,
       direction: 'BUY',
@@ -934,28 +1025,14 @@ async function detectTradeOpportunities(
       relatedMarkets,
       suggestedSectors: buySectors,
       riskLevel,
+      correlationInfo,
+      phaseContext: {
+        currentPhase: market.phase,
+        daysInPhase: market.daysInPhase,
+        avgDuration: market.avgPhaseDuration,
+        phaseProgress,
+      },
     });
-  }
-
-  // Enhance opportunities with correlation data if available
-  if (correlations && opportunities.length > 0) {
-    for (const opp of opportunities) {
-      // Find strong inverse correlations for hedging suggestions
-      const inverseCorr = correlations.correlations.find(c =>
-        (c.market1 === opp.market || c.market2 === opp.market) &&
-        c.direction === 'negative' &&
-        c.strength !== 'none'
-      );
-
-      if (inverseCorr) {
-        const hedgeMarket = inverseCorr.market1 === opp.market
-          ? inverseCorr.market2
-          : inverseCorr.market1;
-
-        // Add correlation context to reason
-        opp.reason += ` Consider ${MARKET_CONFIG[hedgeMarket].name} as hedge (${(inverseCorr.correlation * 100).toFixed(0)}% inverse correlation).`;
-      }
-    }
   }
 
   // Sort by confidence (highest first)
