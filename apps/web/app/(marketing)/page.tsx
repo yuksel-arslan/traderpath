@@ -115,68 +115,7 @@ const FEATURES = [
 ];
 
 // System Flow Chart - Visual explanation of how TraderPath works
-// Flow Box Component - styled like Capital Flow page
-function FlowBox({
-  step,
-  title,
-  status,
-  statusType,
-  detail,
-  icon: Icon,
-  color,
-}: {
-  step: number;
-  title: string;
-  status: string;
-  statusType: 'positive' | 'negative' | 'neutral' | 'warning';
-  detail: string;
-  icon: any;
-  color: 'teal' | 'blue' | 'purple' | 'emerald' | 'amber';
-}) {
-  const statusColors = {
-    positive: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/30',
-    negative: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 border-red-300 dark:border-red-500/30',
-    neutral: 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-500/30',
-    warning: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-500/30',
-  };
-
-  const bgColors = {
-    teal: 'from-teal-500/10 to-cyan-500/10 border-teal-500/30 dark:from-teal-500/20 dark:to-cyan-500/20',
-    blue: 'from-blue-500/10 to-indigo-500/10 border-blue-500/30 dark:from-blue-500/20 dark:to-indigo-500/20',
-    purple: 'from-purple-500/10 to-violet-500/10 border-purple-500/30 dark:from-purple-500/20 dark:to-violet-500/20',
-    emerald: 'from-emerald-500/10 to-green-500/10 border-emerald-500/30 dark:from-emerald-500/20 dark:to-green-500/20',
-    amber: 'from-amber-500/10 to-orange-500/10 border-amber-500/30 dark:from-amber-500/20 dark:to-orange-500/20',
-  };
-
-  const numColors = {
-    teal: 'bg-gradient-to-br from-teal-500 to-cyan-500',
-    blue: 'bg-gradient-to-br from-blue-500 to-indigo-500',
-    purple: 'bg-gradient-to-br from-purple-500 to-violet-500',
-    emerald: 'bg-gradient-to-br from-emerald-500 to-green-500',
-    amber: 'bg-gradient-to-br from-amber-500 to-orange-500',
-  };
-
-  return (
-    <div className={`backdrop-blur-xl bg-gradient-to-br border rounded-2xl p-4 sm:p-5 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 ${bgColors[color]}`}>
-      <div className="flex items-start gap-3 sm:gap-4">
-        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white text-sm sm:text-base font-bold flex-shrink-0 shadow-lg ${numColors[color]}`}>
-          {step}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 dark:text-slate-400" />
-            <span className="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-200 truncate">{title}</span>
-          </div>
-          <div className={`inline-flex px-2.5 py-1 rounded-full text-xs sm:text-sm font-bold mb-2 border ${statusColors[statusType]}`}>
-            {status}
-          </div>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-2">{detail}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
+// 4-Layer Capital Flow Architecture - "Follow The Money" Principle
 function SystemFlowChart() {
   const [isVisible, setIsVisible] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -188,7 +127,7 @@ function SystemFlowChart() {
           setIsVisible(true);
         }
       },
-      { threshold: 0.2 }
+      { threshold: 0.1 }
     );
 
     if (chartRef.current) {
@@ -207,132 +146,285 @@ function SystemFlowChart() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
 
       <div className="container mx-auto px-4 relative z-10">
-        {/* Header */}
-        <div className={`text-center mb-10 md:mb-14 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-emerald-500/10 border border-teal-500/20 mb-4">
-            <Layers className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-            <span className="text-sm font-medium text-teal-700 dark:text-teal-300">Capital Flow Intelligence</span>
+        {/* Header - Architecture Title */}
+        <div className={`text-center mb-8 md:mb-12 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className="inline-block backdrop-blur-xl bg-white/80 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-600 rounded-2xl px-6 py-4 shadow-xl">
+            <h2 className="text-lg md:text-xl font-bold text-slate-800 dark:text-white mb-1">
+              TRADERPATH 2.0 ARCHITECTURE
+            </h2>
+            <p className="text-sm text-teal-600 dark:text-teal-400 font-medium">
+              "Follow The Money" Principle
+            </p>
           </div>
-          <h2 className="text-2xl md:text-4xl font-bold mb-3 bg-gradient-to-r from-slate-900 via-teal-800 to-emerald-800 dark:from-white dark:via-teal-200 dark:to-emerald-200 bg-clip-text text-transparent">
-            How TraderPath Works
-          </h2>
-          <p className="text-slate-600 dark:text-slate-400 text-sm md:text-base max-w-xl mx-auto">
-            Follow the money, find the opportunity, get a clear decision
+        </div>
+
+        {/* LAYER 1: Global Liquidity Tracker */}
+        <div className={`mb-6 transition-all duration-700 delay-100 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className="max-w-4xl mx-auto backdrop-blur-xl bg-white/60 dark:bg-slate-800/60 border-2 border-teal-500/30 dark:border-teal-400/30 rounded-2xl p-5 md:p-6 shadow-lg">
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/30 mb-2">
+                <Activity className="w-4 h-4 text-teal-500" />
+                <span className="text-xs font-bold text-teal-600 dark:text-teal-400">LAYER 1: GLOBAL LIQUIDITY TRACKER</span>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-400">"How much money is in the world and where is it going?"</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center text-xs">
+              <div className="bg-slate-100/80 dark:bg-slate-700/50 rounded-lg p-3">
+                <p className="text-slate-500 dark:text-slate-400 mb-1">Central Banks</p>
+                <p className="font-mono font-semibold text-slate-700 dark:text-slate-300">Fed • ECB • BOJ</p>
+              </div>
+              <div className="bg-slate-100/80 dark:bg-slate-700/50 rounded-lg p-3">
+                <p className="text-slate-500 dark:text-slate-400 mb-1">Money Supply</p>
+                <p className="font-mono font-semibold text-slate-700 dark:text-slate-300">M2 Growth • Credit</p>
+              </div>
+              <div className="bg-slate-100/80 dark:bg-slate-700/50 rounded-lg p-3">
+                <p className="text-slate-500 dark:text-slate-400 mb-1">Risk Indicators</p>
+                <p className="font-mono font-semibold text-slate-700 dark:text-slate-300">DXY • VIX • Yield</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Connector Arrow 1 */}
+        <div className={`flex justify-center mb-6 transition-all duration-700 delay-150 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="flex flex-col items-center">
+            <div className="w-0.5 h-6 bg-gradient-to-b from-teal-500/50 to-blue-500/50" />
+            <ChevronDown className="w-5 h-5 text-blue-500 -mt-1" />
+          </div>
+        </div>
+
+        {/* LAYER 2: Market Flow Analyzer */}
+        <div className={`mb-6 transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className="max-w-4xl mx-auto backdrop-blur-xl bg-white/60 dark:bg-slate-800/60 border-2 border-blue-500/30 dark:border-blue-400/30 rounded-2xl p-5 md:p-6 shadow-lg">
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 mb-2">
+                <TrendingUp className="w-4 h-4 text-blue-500" />
+                <span className="text-xs font-bold text-blue-600 dark:text-blue-400">LAYER 2: MARKET FLOW ANALYZER</span>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-400">"Which market is money flowing to and how fast?"</p>
+            </div>
+
+            {/* 4 Market Boxes */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              {/* STOCKS */}
+              <div className="bg-slate-100/80 dark:bg-slate-700/50 rounded-xl p-3 text-center border border-slate-200 dark:border-slate-600">
+                <div className="font-bold text-sm text-slate-800 dark:text-white mb-2">STOCKS</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">SPX, NDX</div>
+                <div className="text-xs font-mono">
+                  <span className="text-emerald-500">Flow: +5%</span>
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Days: 45</div>
+                <div className="mt-1 px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-xs font-bold inline-block">
+                  MID
+                </div>
+              </div>
+
+              {/* BONDS */}
+              <div className="bg-slate-100/80 dark:bg-slate-700/50 rounded-xl p-3 text-center border border-slate-200 dark:border-slate-600">
+                <div className="font-bold text-sm text-slate-800 dark:text-white mb-2">BONDS</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">10Y, 2Y</div>
+                <div className="text-xs font-mono">
+                  <span className="text-red-500">Flow: -2%</span>
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Days: 12</div>
+                <div className="mt-1 px-2 py-0.5 rounded-full bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-bold inline-block">
+                  EXIT
+                </div>
+              </div>
+
+              {/* CRYPTO */}
+              <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 rounded-xl p-3 text-center border-2 border-emerald-500/50 dark:border-emerald-400/50 ring-2 ring-emerald-500/20">
+                <div className="font-bold text-sm text-slate-800 dark:text-white mb-2">CRYPTO</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">BTC, ETH</div>
+                <div className="text-xs font-mono">
+                  <span className="text-emerald-500 font-bold">Flow: +8%</span>
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Days: 23</div>
+                <div className="mt-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold inline-block">
+                  EARLY
+                </div>
+              </div>
+
+              {/* METALS */}
+              <div className="bg-slate-100/80 dark:bg-slate-700/50 rounded-xl p-3 text-center border border-slate-200 dark:border-slate-600">
+                <div className="font-bold text-sm text-slate-800 dark:text-white mb-2">METALS</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">XAU, XAG</div>
+                <div className="text-xs font-mono">
+                  <span className="text-emerald-500">Flow: +1%</span>
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Days: 67</div>
+                <div className="mt-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold inline-block">
+                  LATE
+                </div>
+              </div>
+            </div>
+
+            {/* Rotation Signal */}
+            <div className="text-center">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-emerald-500/10 border border-blue-500/20">
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">ROTATION SIGNAL:</span>
+                <span className="text-xs font-bold text-red-500">BONDS</span>
+                <ArrowRight className="w-4 h-4 text-emerald-500" />
+                <span className="text-xs font-bold text-emerald-500">CRYPTO</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Connector Arrow 2 */}
+        <div className={`flex justify-center mb-6 transition-all duration-700 delay-250 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="flex flex-col items-center">
+            <div className="w-0.5 h-6 bg-gradient-to-b from-blue-500/50 to-purple-500/50" />
+            <ChevronDown className="w-5 h-5 text-purple-500 -mt-1" />
+          </div>
+        </div>
+
+        {/* LAYER 3: Sector Drill-Down */}
+        <div className={`mb-6 transition-all duration-700 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className="max-w-4xl mx-auto backdrop-blur-xl bg-white/60 dark:bg-slate-800/60 border-2 border-purple-500/30 dark:border-purple-400/30 rounded-2xl p-5 md:p-6 shadow-lg">
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/30 mb-2">
+                <Layers className="w-4 h-4 text-purple-500" />
+                <span className="text-xs font-bold text-purple-600 dark:text-purple-400">LAYER 3: SECTOR DRILL-DOWN</span>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-400">"Which sector in the selected market has the money?"</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* CRYPTO Selected */}
+              <div className="bg-gradient-to-br from-emerald-50/80 to-teal-50/80 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl p-4 border border-emerald-500/30">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">CRYPTO Selected:</span>
+                </div>
+                <div className="space-y-1.5 text-xs font-mono">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">BTC Dominance:</span>
+                    <span className="text-slate-800 dark:text-white">52% <span className="text-red-500">(down)</span></span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">DeFi TVL:</span>
+                    <span className="text-slate-800 dark:text-white">$48B <span className="text-emerald-500">(up)</span></span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">L2 Activity:</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">High</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Meme Volume:</span>
+                    <span className="text-amber-600 dark:text-amber-400 font-bold">Spike</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">AI Tokens:</span>
+                    <span className="text-purple-600 dark:text-purple-400 font-bold">Trending</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* STOCKS Selected */}
+              <div className="bg-slate-100/80 dark:bg-slate-700/30 rounded-xl p-4 border border-slate-300 dark:border-slate-600">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                  <span className="text-sm font-bold text-slate-600 dark:text-slate-400">STOCKS Selected:</span>
+                </div>
+                <div className="space-y-1.5 text-xs font-mono">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 dark:text-slate-500">Tech (XLK):</span>
+                    <span className="text-emerald-500">+3.2%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 dark:text-slate-500">Finance (XLF):</span>
+                    <span className="text-emerald-500">+1.1%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 dark:text-slate-500">Energy (XLE):</span>
+                    <span className="text-red-500">-0.5%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 dark:text-slate-500">Healthcare (XLV):</span>
+                    <span className="text-emerald-500">+0.8%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recommendation */}
+            <div className="mt-4 text-center">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/10 to-violet-500/10 border border-purple-500/20">
+                <Target className="w-4 h-4 text-purple-500" />
+                <span className="text-xs font-bold text-purple-600 dark:text-purple-400">RECOMMENDATION: Analyze DeFi & AI tokens</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Connector Arrow 3 */}
+        <div className={`flex justify-center mb-6 transition-all duration-700 delay-350 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="flex flex-col items-center">
+            <div className="w-0.5 h-6 bg-gradient-to-b from-purple-500/50 to-emerald-500/50" />
+            <ChevronDown className="w-5 h-5 text-emerald-500 -mt-1" />
+          </div>
+        </div>
+
+        {/* LAYER 4: Asset Analysis */}
+        <div className={`mb-8 transition-all duration-700 delay-400 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className="max-w-4xl mx-auto backdrop-blur-xl bg-white/60 dark:bg-slate-800/60 border-2 border-emerald-500/30 dark:border-emerald-400/30 rounded-2xl p-5 md:p-6 shadow-lg">
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 mb-2">
+                <Search className="w-4 h-4 text-emerald-500" />
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">LAYER 4: ASSET ANALYSIS</span>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-400">"Top 30 Assets / 7-Step Analysis / MLIS Pro"</p>
+            </div>
+
+            {/* Analysis Methods */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              <div className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-xl p-4 border border-teal-500/30 text-center">
+                <Radar className="w-6 h-6 text-teal-500 mx-auto mb-2" />
+                <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">Top 30 Scan</div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Auto-scan top assets</p>
+              </div>
+              <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-xl p-4 border border-emerald-500/30 text-center">
+                <BarChart3 className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
+                <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">7-Step Classic</div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">40+ indicators analysis</p>
+              </div>
+              <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-xl p-4 border border-violet-500/30 text-center">
+                <Brain className="w-6 h-6 text-violet-500 mx-auto mb-2" />
+                <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">MLIS Pro</div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">5-layer neural signals</p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-sm font-bold rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all"
+              >
+                <BarChart3 className="w-4 h-4" />
+                View Analysis
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-sm font-bold rounded-xl hover:shadow-lg hover:shadow-violet-500/30 transition-all"
+              >
+                <Zap className="w-4 h-4" />
+                Try MLIS Pro
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Deep Analysis Badge - linking to features */}
+        <div className={`text-center mb-8 transition-all duration-700 delay-450 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Deep Analysis below: <span className="text-teal-600 dark:text-teal-400 font-medium">AI-Powered Market Scanner</span> &gt; <span className="text-violet-600 dark:text-violet-400 font-medium">Dual Analysis System</span>
           </p>
         </div>
 
-        {/* SECTION 1: Capital Flow Status */}
-        <div className={`mb-8 md:mb-10 transition-all duration-700 delay-100 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="flex items-center justify-center gap-3 mb-5">
-            <div className="h-px flex-1 max-w-[80px] bg-gradient-to-r from-transparent to-teal-500/50" />
-            <h3 className="text-base md:text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <Globe className="w-5 h-5 text-teal-500" />
-              Capital Flow Radar
-            </h3>
-            <div className="h-px flex-1 max-w-[80px] bg-gradient-to-l from-transparent to-teal-500/50" />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 max-w-5xl mx-auto">
-            <FlowBox
-              step={1}
-              title="Global Liquidity"
-              status="RISK ON"
-              statusType="positive"
-              detail="Fed, M2, DXY, VIX indicators show expansive conditions"
-              icon={Activity}
-              color="teal"
-            />
-            <FlowBox
-              step={2}
-              title="Market Flow"
-              status="CRYPTO +3.2%"
-              statusType="positive"
-              detail="Capital rotating from Bonds to Risk Assets"
-              icon={TrendingUp}
-              color="blue"
-            />
-            <FlowBox
-              step={3}
-              title="Best Market"
-              status="CRYPTO"
-              statusType="positive"
-              detail="Highest flow velocity, early phase detected"
-              icon={Target}
-              color="purple"
-            />
-            <FlowBox
-              step={4}
-              title="Rotation"
-              status="BONDS → CRYPTO"
-              statusType="neutral"
-              detail="Active capital rotation in progress"
-              icon={ArrowRight}
-              color="amber"
-            />
-          </div>
-        </div>
-
-        {/* Connector Arrow */}
-        <div className={`flex justify-center mb-8 md:mb-10 transition-all duration-700 delay-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="flex flex-col items-center">
-            <div className="w-0.5 h-8 bg-gradient-to-b from-teal-500/50 to-emerald-500/50" />
-            <ChevronDown className="w-6 h-6 text-emerald-500 -mt-1 animate-bounce" />
-          </div>
-        </div>
-
-        {/* SECTION 2: Analysis Flow */}
-        <div className={`transition-all duration-700 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="flex items-center justify-center gap-3 mb-5">
-            <div className="h-px flex-1 max-w-[80px] bg-gradient-to-r from-transparent to-emerald-500/50" />
-            <h3 className="text-base md:text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <Search className="w-5 h-5 text-emerald-500" />
-              Deep Analysis
-            </h3>
-            <div className="h-px flex-1 max-w-[80px] bg-gradient-to-l from-transparent to-emerald-500/50" />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 max-w-5xl mx-auto">
-            <FlowBox
-              step={5}
-              title="Scan Top 30"
-              status="ANALYZING"
-              statusType="neutral"
-              detail="Auto-scan top assets with technical indicators"
-              icon={Radar}
-              color="emerald"
-            />
-            <FlowBox
-              step={6}
-              title="40+ Indicators"
-              status="COMPLETE"
-              statusType="positive"
-              detail="RSI, MACD, Volume, Support/Resistance levels"
-              icon={BarChart3}
-              color="teal"
-            />
-            <FlowBox
-              step={7}
-              title="AI Expert Panel"
-              status="VOLTRAN READY"
-              statusType="positive"
-              detail="4 AI experts synthesize analysis into verdict"
-              icon={Brain}
-              color="purple"
-            />
-            <FlowBox
-              step={8}
-              title="Clear Decision"
-              status="GO LONG BTC"
-              statusType="positive"
-              detail="Entry: $42,150 | SL: $40,800 | TP: $45,200"
-              icon={CheckCircle}
-              color="emerald"
-            />
-          </div>
-        </div>
-
-        {/* Bottom CTA */}
-        <div className={`mt-10 md:mt-14 text-center transition-all duration-700 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+        {/* Bottom Verdict Badges */}
+        <div className={`text-center transition-all duration-700 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="inline-flex flex-wrap justify-center items-center gap-2 md:gap-3 mb-6">
             <span className="px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-sm font-bold">GO</span>
             <span className="text-slate-400">/</span>
