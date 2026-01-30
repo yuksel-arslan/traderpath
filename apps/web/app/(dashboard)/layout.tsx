@@ -26,6 +26,7 @@ import {
   Bot,
   Crown,
   Globe,
+  Building2,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -54,6 +55,7 @@ const dropdownNav = [
     items: [
       { name: 'Analyze', href: '/analyze', icon: TrendingUp },
       { name: 'Top Coins', href: '/top-coins', icon: Crown },
+      { name: 'Top Assets', href: '/top-assets/stocks', icon: Building2 },
     ],
   },
   {
@@ -85,6 +87,7 @@ const allNavItems = [
   ...directNav,
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Top Coins', href: '/top-coins', icon: Crown },
+  { name: 'Top Assets', href: '/top-assets/stocks', icon: Building2 },
   { name: 'Concierge', href: '/concierge', icon: Bot },
   { name: 'AI Experts', href: '/ai-expert', icon: Brain },
   { name: 'History', href: '/reports', icon: FileText },
