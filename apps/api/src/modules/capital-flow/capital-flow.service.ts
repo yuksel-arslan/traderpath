@@ -15,6 +15,7 @@
  */
 
 import { redis } from '../../core/cache';
+import { callGeminiWithRetry } from '../../core/gemini';
 import {
   CapitalFlowSummary,
   GlobalLiquidity,
@@ -24,6 +25,7 @@ import {
   LiquidityBias,
   FlowRecommendation,
   ActiveRotation,
+  LayerInsights,
   PHASE_CONFIG,
   MARKET_CONFIG,
 } from './types';
@@ -38,6 +40,7 @@ const CACHE_KEYS = {
   CAPITAL_FLOW: 'capital-flow:summary',
   GLOBAL_LIQUIDITY: 'capital-flow:liquidity',
   MARKET_FLOW: (market: MarketType) => `capital-flow:market:${market}`,
+  INSIGHTS: 'capital-flow:insights',
   ROTATION_HISTORY: 'capital-flow:rotation-history',
 };
 
@@ -47,6 +50,7 @@ const CACHE_TTL = {
   LIQUIDITY: 3600,   // 1 hour (FRED data is daily)
   MARKET: 300,       // 5 minutes
   ROTATION: 86400,   // 24 hours
+  INSIGHTS: 900,     // 15 minutes (AI insights)
 };
 
 /**
@@ -74,6 +78,15 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
   // Detect active rotation
   const activeRotation = detectActiveRotation(markets);
 
+  // Generate AI insights (non-blocking, with fallback)
+  let insights: LayerInsights | undefined;
+  try {
+    insights = await generateLayerInsights(globalLiquidity, markets, liquidityBias, recommendation, activeRotation);
+  } catch (error) {
+    console.error('[CapitalFlow] Error generating AI insights:', error);
+    // Continue without insights
+  }
+
   const summary: CapitalFlowSummary = {
     timestamp: new Date(),
     globalLiquidity,
@@ -81,6 +94,7 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
     markets,
     recommendation,
     activeRotation,
+    insights,
     cacheExpiry: new Date(Date.now() + CACHE_TTL.SUMMARY * 1000),
   };
 
@@ -592,6 +606,314 @@ export async function getFlowRecommendation(): Promise<FlowRecommendation> {
 }
 
 /**
+ * Generate AI-powered insights for each layer
+ * Uses Gemini 2.5 Flash for quick, contextual analysis
+ */
+async function generateLayerInsights(
+  liquidity: GlobalLiquidity,
+  markets: MarketFlow[],
+  bias: LiquidityBias,
+  recommendation: FlowRecommendation,
+  rotation: ActiveRotation | null
+): Promise<LayerInsights> {
+  // Try cache first
+  const cached = await redis?.get(CACHE_KEYS.INSIGHTS);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  // Prepare data summary for AI
+  const cryptoMarket = markets.find(m => m.market === 'crypto');
+  const stocksMarket = markets.find(m => m.market === 'stocks');
+  const bondsMarket = markets.find(m => m.market === 'bonds');
+  const metalsMarket = markets.find(m => m.market === 'metals');
+
+  const prompt = `You are a financial analyst providing brief, actionable insights for a Capital Flow dashboard. Analyze the following data and provide 2-3 sentence insights for each layer. Be concise, specific, and actionable. Use plain language a trader would understand.
+
+DATA:
+Layer 1 - Global Liquidity:
+- Fed Balance Sheet: ${liquidity.fedBalanceSheet.value.toFixed(2)}T USD (${liquidity.fedBalanceSheet.trend})
+- M2 Money Supply: ${liquidity.m2MoneySupply.value.toFixed(2)}T USD (YoY: ${liquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%)
+- DXY (Dollar): ${liquidity.dxy.value.toFixed(2)} (${liquidity.dxy.trend}, 7d: ${liquidity.dxy.change7d > 0 ? '+' : ''}${liquidity.dxy.change7d.toFixed(2)}%)
+- VIX: ${liquidity.vix.value.toFixed(2)} (${liquidity.vix.level})
+- Yield Curve: ${liquidity.yieldCurve.inverted ? 'INVERTED' : 'Normal'} (10Y-2Y: ${liquidity.yieldCurve.spread10y2y.toFixed(3)}%)
+- Overall Bias: ${bias.toUpperCase()}
+
+Layer 2 - Market Flows:
+- Crypto: ${cryptoMarket?.flow7d.toFixed(1)}% (7d), Phase: ${cryptoMarket?.phase}, Signal: ${cryptoMarket?.rotationSignal || 'none'}
+- Stocks: ${stocksMarket?.flow7d.toFixed(1)}% (7d), Phase: ${stocksMarket?.phase}, Signal: ${stocksMarket?.rotationSignal || 'none'}
+- Bonds: ${bondsMarket?.flow7d.toFixed(1)}% (7d), Phase: ${bondsMarket?.phase}, Signal: ${bondsMarket?.rotationSignal || 'none'}
+- Metals: ${metalsMarket?.flow7d.toFixed(1)}% (7d), Phase: ${metalsMarket?.phase}, Signal: ${metalsMarket?.rotationSignal || 'none'}
+
+Layer 3 - Top Sectors:
+${cryptoMarket?.sectors?.slice(0, 3).map(s => `- ${s.name}: ${s.flow7d > 0 ? '+' : ''}${s.flow7d.toFixed(1)}%`).join('\n') || 'No sector data'}
+
+Recommendation: ${recommendation.action.toUpperCase()} ${recommendation.primaryMarket.toUpperCase()} (${recommendation.confidence}% confidence)
+${rotation ? `Active Rotation: ${rotation.from} → ${rotation.to}` : 'No active rotation detected'}
+
+Respond in this exact JSON format (no markdown, just pure JSON):
+{
+  "layer1": "Your 2-3 sentence insight about global liquidity conditions and what they mean for traders",
+  "layer2": "Your 2-3 sentence insight about which markets are attracting capital and the phase implications",
+  "layer3": "Your 2-3 sentence insight about sector performance and opportunities",
+  "layer4": "Your 2-3 sentence synthesis tying everything together with actionable guidance"
+}`;
+
+  try {
+    const response = await callGeminiWithRetry(
+      {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 500,
+        },
+      },
+      3,
+      'capital_flow_insights'
+    );
+
+    const text = response.text || response.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (text) {
+      // Parse the JSON response
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        const insights: LayerInsights = {
+          layer1: parsed.layer1 || 'Global liquidity data is being analyzed.',
+          layer2: parsed.layer2 || 'Market flow data is being analyzed.',
+          layer3: parsed.layer3 || 'Sector data is being analyzed.',
+          layer4: parsed.layer4 || 'Overall analysis is in progress.',
+          generatedAt: new Date(),
+        };
+
+        // Cache insights
+        if (redis) {
+          await redis.setex(CACHE_KEYS.INSIGHTS, CACHE_TTL.INSIGHTS, JSON.stringify(insights));
+        }
+
+        return insights;
+      }
+    }
+  } catch (error) {
+    console.error('[CapitalFlow] Gemini API error:', error);
+  }
+
+  // Fallback insights
+  return {
+    layer1: `Fed balance sheet is ${liquidity.fedBalanceSheet.trend}. ${bias === 'risk_on' ? 'Liquidity conditions favor risk assets.' : bias === 'risk_off' ? 'Defensive positioning recommended.' : 'Mixed signals in liquidity.'}`,
+    layer2: `${recommendation.primaryMarket.toUpperCase()} market is in ${recommendation.phase} phase with ${recommendation.confidence}% confidence.`,
+    layer3: cryptoMarket?.sectors?.[0] ? `${cryptoMarket.sectors[0].name} is the leading sector with ${cryptoMarket.sectors[0].flow7d.toFixed(1)}% 7-day flow.` : 'Sector analysis pending.',
+    layer4: `${recommendation.action === 'analyze' ? 'Good conditions to analyze opportunities.' : recommendation.action === 'wait' ? 'Wait for better entry conditions.' : 'Avoid new positions in current conditions.'}`,
+    generatedAt: new Date(),
+  };
+}
+
+/**
+ * Get detailed AI-powered analysis for a specific market
+ * FREE feature - provides value without requiring credits
+ */
+export async function getMarketAnalysis(market: MarketType): Promise<{
+  market: string;
+  summary: string;
+  trend: 'bullish' | 'bearish' | 'neutral';
+  keyMetrics: Array<{ label: string; value: string; status: 'positive' | 'negative' | 'neutral' }>;
+  recommendation: string;
+  confidence: number;
+  generatedAt: Date;
+}> {
+  // Cache key for market analysis
+  const cacheKey = `capital-flow:analysis:${market}`;
+  const cached = await redis?.get(cacheKey);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  // Get market data and global liquidity
+  const [marketFlow, liquidity] = await Promise.all([
+    getMarketFlow(market),
+    getGlobalLiquidity(),
+  ]);
+
+  // Build key metrics based on market type
+  const keyMetrics: Array<{ label: string; value: string; status: 'positive' | 'negative' | 'neutral' }> = [];
+
+  // Common metrics for all markets
+  keyMetrics.push({
+    label: '7-Day Flow',
+    value: `${marketFlow.flow7d >= 0 ? '+' : ''}${marketFlow.flow7d.toFixed(2)}%`,
+    status: marketFlow.flow7d > 2 ? 'positive' : marketFlow.flow7d < -2 ? 'negative' : 'neutral',
+  });
+
+  keyMetrics.push({
+    label: '30-Day Flow',
+    value: `${marketFlow.flow30d >= 0 ? '+' : ''}${marketFlow.flow30d.toFixed(2)}%`,
+    status: marketFlow.flow30d > 5 ? 'positive' : marketFlow.flow30d < -5 ? 'negative' : 'neutral',
+  });
+
+  keyMetrics.push({
+    label: 'Flow Velocity',
+    value: `${marketFlow.flowVelocity >= 0 ? '+' : ''}${marketFlow.flowVelocity.toFixed(2)}`,
+    status: marketFlow.flowVelocity > 0 ? 'positive' : marketFlow.flowVelocity < 0 ? 'negative' : 'neutral',
+  });
+
+  keyMetrics.push({
+    label: 'Phase',
+    value: marketFlow.phase.toUpperCase(),
+    status: marketFlow.phase === 'early' ? 'positive' : marketFlow.phase === 'exit' ? 'negative' : 'neutral',
+  });
+
+  keyMetrics.push({
+    label: 'Days in Phase',
+    value: `${marketFlow.daysInPhase} / ${marketFlow.avgPhaseDuration} avg`,
+    status: marketFlow.daysInPhase < marketFlow.avgPhaseDuration ? 'positive' : 'negative',
+  });
+
+  // Market-specific metrics
+  if (market === 'crypto') {
+    keyMetrics.push({
+      label: 'Market Signal',
+      value: marketFlow.rotationSignal?.toUpperCase() || 'STABLE',
+      status: marketFlow.rotationSignal === 'entering' ? 'positive' : marketFlow.rotationSignal === 'exiting' ? 'negative' : 'neutral',
+    });
+  } else if (market === 'stocks') {
+    keyMetrics.push({
+      label: 'VIX Level',
+      value: `${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level.replace('_', ' ')})`,
+      status: liquidity.vix.level === 'complacent' ? 'positive' : liquidity.vix.level === 'extreme_fear' ? 'negative' : 'neutral',
+    });
+  } else if (market === 'bonds') {
+    keyMetrics.push({
+      label: 'Yield Curve',
+      value: `${liquidity.yieldCurve.spread10y2y.toFixed(3)}% ${liquidity.yieldCurve.inverted ? '(INVERTED)' : ''}`,
+      status: liquidity.yieldCurve.inverted ? 'negative' : 'positive',
+    });
+  } else if (market === 'metals') {
+    keyMetrics.push({
+      label: 'Dollar Trend',
+      value: `${liquidity.dxy.trend.toUpperCase()}`,
+      status: liquidity.dxy.trend === 'weakening' ? 'positive' : liquidity.dxy.trend === 'strengthening' ? 'negative' : 'neutral',
+    });
+  }
+
+  // Determine trend
+  let trend: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  if (marketFlow.flow7d > 2 && marketFlow.flowVelocity > 0) {
+    trend = 'bullish';
+  } else if (marketFlow.flow7d < -2 || marketFlow.flowVelocity < -2) {
+    trend = 'bearish';
+  }
+
+  // Generate AI summary
+  const marketName = MARKET_CONFIG[market].name;
+  const topSectors = marketFlow.sectors?.slice(0, 3).map(s => s.name).join(', ') || '';
+
+  const prompt = `You are a senior market analyst. Provide a brief, actionable analysis for ${marketName} market.
+
+MARKET DATA:
+- Market: ${marketName}
+- 7-Day Flow: ${marketFlow.flow7d.toFixed(2)}%
+- 30-Day Flow: ${marketFlow.flow30d.toFixed(2)}%
+- Flow Velocity: ${marketFlow.flowVelocity.toFixed(2)}
+- Phase: ${marketFlow.phase.toUpperCase()} (${marketFlow.daysInPhase} days)
+- Rotation Signal: ${marketFlow.rotationSignal || 'none'}
+${topSectors ? `- Top Sectors: ${topSectors}` : ''}
+
+GLOBAL CONTEXT:
+- Liquidity: Fed ${liquidity.fedBalanceSheet.trend}, M2 YoY ${liquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%
+- Dollar: ${liquidity.dxy.trend} (${liquidity.dxy.value.toFixed(2)})
+- VIX: ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level})
+- Yield Curve: ${liquidity.yieldCurve.inverted ? 'INVERTED' : 'Normal'}
+
+Provide your analysis in this exact JSON format (no markdown):
+{
+  "summary": "2-3 sentences summarizing current market conditions and what traders should know",
+  "recommendation": "One clear, actionable sentence about what traders should do right now"
+}`;
+
+  let summary = '';
+  let recommendation = '';
+  let confidence = 50;
+
+  try {
+    const response = await callGeminiWithRetry(
+      {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 300,
+        },
+      },
+      3,
+      'market_analysis'
+    );
+
+    const text = response.text || response.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (text) {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        summary = parsed.summary || '';
+        recommendation = parsed.recommendation || '';
+      }
+    }
+  } catch (error) {
+    console.error('[CapitalFlow] Market analysis AI error:', error);
+  }
+
+  // Fallback if AI fails
+  if (!summary) {
+    summary = `${marketName} is in a ${marketFlow.phase} phase with ${marketFlow.flow7d.toFixed(1)}% 7-day flow. `;
+    if (trend === 'bullish') {
+      summary += 'Capital inflows are accelerating, suggesting positive momentum.';
+    } else if (trend === 'bearish') {
+      summary += 'Capital outflows detected. Exercise caution.';
+    } else {
+      summary += 'Capital flows are relatively stable. Monitor for changes.';
+    }
+  }
+
+  if (!recommendation) {
+    if (marketFlow.phase === 'early' && trend !== 'bearish') {
+      recommendation = `Consider analyzing ${marketName.toLowerCase()} opportunities. Early phase with positive flow.`;
+      confidence = 80;
+    } else if (marketFlow.phase === 'mid') {
+      recommendation = `${marketName} in established trend. Selective entries may work with tight risk management.`;
+      confidence = 65;
+    } else if (marketFlow.phase === 'late') {
+      recommendation = `Late phase in ${marketName.toLowerCase()}. Avoid new positions, consider taking profits.`;
+      confidence = 60;
+    } else {
+      recommendation = `Wait for better conditions in ${marketName.toLowerCase()}. Exit phase signals caution.`;
+      confidence = 70;
+    }
+  } else {
+    // Calculate confidence based on data
+    confidence = 50;
+    if (marketFlow.phase === 'early') confidence += 20;
+    if (Math.abs(marketFlow.flow7d) > 5) confidence += 10;
+    if (marketFlow.flowVelocity > 0 && marketFlow.flow7d > 0) confidence += 10;
+    confidence = Math.min(90, confidence);
+  }
+
+  const analysis = {
+    market,
+    summary,
+    trend,
+    keyMetrics,
+    recommendation,
+    confidence,
+    generatedAt: new Date(),
+  };
+
+  // Cache for 10 minutes
+  if (redis) {
+    await redis.setex(cacheKey, 600, JSON.stringify(analysis));
+  }
+
+  return analysis;
+}
+
+/**
  * Clear all capital flow cache
  */
 export async function clearCapitalFlowCache(): Promise<void> {
@@ -602,5 +924,6 @@ export async function clearCapitalFlowCache(): Promise<void> {
     await redis.del(CACHE_KEYS.MARKET_FLOW('stocks'));
     await redis.del(CACHE_KEYS.MARKET_FLOW('bonds'));
     await redis.del(CACHE_KEYS.MARKET_FLOW('metals'));
+    await redis.del(CACHE_KEYS.INSIGHTS);
   }
 }

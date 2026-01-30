@@ -13,7 +13,8 @@ import {
   getGlobalLiquidity,
   getAllMarketFlows,
   getMarketFlow,
-  clearCapitalFlowCache
+  clearCapitalFlowCache,
+  getMarketAnalysis
 } from './capital-flow.service';
 import { MarketType } from './types';
 
@@ -138,6 +139,45 @@ export async function capitalFlowRoutes(app: FastifyInstance) {
       return reply.status(500).send({
         success: false,
         error: 'Failed to fetch market flow',
+      });
+    }
+  });
+
+  /**
+   * GET /api/capital-flow/analyze/:market
+   *
+   * Returns AI-generated analysis for a specific market
+   * Includes trend analysis, key metrics, and recommendation
+   *
+   * FREE endpoint - provides value without full analysis credits
+   */
+  app.get('/analyze/:market', async (
+    request: FastifyRequest<{ Params: { market: string } }>,
+    reply: FastifyReply
+  ) => {
+    try {
+      const market = request.params.market as MarketType;
+
+      // Validate market type
+      const validMarkets: MarketType[] = ['crypto', 'stocks', 'bonds', 'metals'];
+      if (!validMarkets.includes(market)) {
+        return reply.status(400).send({
+          success: false,
+          error: `Invalid market type. Valid options: ${validMarkets.join(', ')}`,
+        });
+      }
+
+      const analysis = await getMarketAnalysis(market);
+
+      return reply.send({
+        success: true,
+        data: analysis,
+      });
+    } catch (error) {
+      console.error('[CapitalFlow] Error getting market analysis:', error);
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to generate market analysis',
       });
     }
   });

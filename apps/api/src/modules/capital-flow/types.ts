@@ -135,8 +135,20 @@ export interface CapitalFlowSummary {
   // Rotation
   activeRotation: ActiveRotation | null;
 
+  // AI-generated insights for each layer
+  insights?: LayerInsights;
+
   // Cache info
   cacheExpiry?: Date;
+}
+
+// AI-generated insights for each layer
+export interface LayerInsights {
+  layer1: string;  // Global Liquidity interpretation
+  layer2: string;  // Market Flow interpretation
+  layer3: string;  // Sector analysis
+  layer4: string;  // Overall recommendation reasoning
+  generatedAt: Date;
 }
 
 // Provider Response Types
