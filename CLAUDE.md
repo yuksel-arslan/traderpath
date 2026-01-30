@@ -59,6 +59,154 @@
 
 ---
 
+## 🌍 CAPITAL FLOW PRENSİBİ (TEMEL FELSEFİ)
+
+> **"Para nereye akıyorsa potansiyel oradadır"**
+
+### Temel Yaklaşım
+
+TraderPath artık **Top-Down** yaklaşımla çalışır:
+
+```
+ESKİ (Bottom-Up):
+  Kullanıcı coin seçer → 7 adım analiz → Karar
+
+YENİ (Top-Down):
+  Global Likidite → Hangi Piyasa? → Hangi Sektör? → Hangi Asset? → Mikro Analiz
+```
+
+### Para Akış Hiyerarşisi
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    LAYER 1: GLOBAL LİKİDİTE                     │
+│         Fed Balance Sheet, M2 Money Supply, DXY, VIX            │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        ▼                     ▼                     ▼
+   ┌─────────┐          ┌─────────┐          ┌─────────┐
+   │ STOCKS  │          │  BONDS  │          │ CRYPTO  │
+   │ METALS  │          │         │          │         │
+   └────┬────┘          └────┬────┘          └────┬────┘
+        │                    │                    │
+   SPX, NDX              10Y, 2Y            Total MCap
+   XAU, XAG              Yield Curve        BTC Dominance
+                                                  │
+                                         ┌────────┴────────┐
+                                         ▼                 ▼
+                                      BTC/ETH          ALTCOINS
+                                                           │
+                                              ┌────────────┼────────────┐
+                                              ▼            ▼            ▼
+                                           DeFi        Layer2       Meme/AI
+```
+
+### Cevaplanması Gereken Sorular
+
+| Soru | Kaynak | Güncelleme |
+|------|--------|------------|
+| Para nereye akıyor? | Flow hızı ve yönü | Günlük |
+| Ne kadar hızla akıyor? | 7d/30d flow değişimi | Günlük |
+| Ne zamandır orada? | Faz tespiti (gün sayısı) | Günlük |
+| Ne kadar daha kalacak? | Tarihsel faz süreleri | Haftalık |
+| Sonra nereye gidecek? | Rotasyon pattern'leri | Haftalık |
+
+### Piyasa Fazları
+
+| Faz | Süre | Anlam | Aksiyon |
+|-----|------|-------|---------|
+| **EARLY** | 0-30 gün | Para yeni girmeye başladı | ✅ EN İYİ GİRİŞ |
+| **MID** | 30-60 gün | Trend olgunlaşıyor | ⚠️ Dikkatli giriş |
+| **LATE** | 60-90 gün | Trend yoruluyor | ⛔ Yeni giriş yapma |
+| **EXIT** | 90+ gün / tersine dönüş | Para çıkıyor | 🚫 ASLA GİRME |
+
+### Desteklenen Piyasalar
+
+| Piyasa | Veri Kaynağı | Analiz Tipi |
+|--------|--------------|-------------|
+| **Crypto** | Binance, CoinGecko, DefiLlama | Full 7-Step / MLIS |
+| **Stocks** | Yahoo Finance | Temel Trend Analizi |
+| **Bonds** | FRED API | Yield Curve, Flow |
+| **Metals** | Yahoo Finance | XAU/XAG Trend |
+
+### Flow Hesaplama Metrikleri
+
+```typescript
+interface MarketFlow {
+  market: 'crypto' | 'stocks' | 'bonds' | 'metals';
+
+  // Flow Metrikleri
+  flow7d: number;          // 7 günlük % değişim
+  flow30d: number;         // 30 günlük % değişim
+  flowVelocity: number;    // Hız (flow7d - önceki 7d)
+
+  // Faz Tespiti
+  phase: 'early' | 'mid' | 'late' | 'exit';
+  daysInPhase: number;
+  avgPhaseDuration: number; // Tarihsel ortalama
+
+  // Rotasyon Sinyali
+  rotationSignal: 'entering' | 'stable' | 'exiting' | null;
+  rotationTarget: string | null; // Örn: 'crypto', 'bonds'
+}
+```
+
+### Karar Ağacı (ZORUNLU)
+
+```
+1. Global Likidite Genişliyor mu? (Fed, M2)
+   ├── HAYIR → "Risk-off ortam, sadece BONDS/GOLD analiz et"
+   └── EVET → Devam
+
+2. DXY (Dolar) Zayıflıyor mu?
+   ├── HAYIR → "Risk varlıkları zayıf, dikkatli ol"
+   └── EVET → Devam
+
+3. Hangi Piyasaya Para Akıyor? (En yüksek flow)
+   ├── STOCKS → Stock analizi öner
+   ├── CRYPTO → Crypto analizi öner
+   ├── METALS → Gold/Silver analizi öner
+   └── BONDS → "Safe haven modu, bekle"
+
+4. Piyasa Hangi Fazda?
+   ├── EARLY → ✅ "Optimal giriş zamanı"
+   ├── MID → ⚠️ "Giriş yapılabilir, dikkatli"
+   ├── LATE → ⛔ "Yeni giriş önerilmez"
+   └── EXIT → 🚫 "Kesinlikle girme"
+
+5. Seçilen Piyasada Sektör Seçimi → Mikro Analiz
+```
+
+### API Endpoint'ler
+
+| Endpoint | Method | Açıklama | Maliyet |
+|----------|--------|----------|---------|
+| `/api/capital-flow` | GET | Tüm piyasalar flow özeti | FREE |
+| `/api/capital-flow/:market` | GET | Tek piyasa detay | FREE |
+| `/api/capital-flow/recommendation` | GET | Hangi piyasada fırsat var? | FREE |
+| `/api/capital-flow/rotation-history` | GET | Tarihsel rotasyon verileri | FREE |
+
+### Kod Lokasyonları
+
+| Servis | Dosya |
+|--------|-------|
+| Capital Flow Service | `apps/api/src/modules/capital-flow/capital-flow.service.ts` |
+| FRED API Integration | `apps/api/src/modules/capital-flow/providers/fred.provider.ts` |
+| Yahoo Finance Integration | `apps/api/src/modules/capital-flow/providers/yahoo.provider.ts` |
+| DefiLlama Integration | `apps/api/src/modules/capital-flow/providers/defillama.provider.ts` |
+| Flow Calculator | `apps/api/src/modules/capital-flow/flow-calculator.ts` |
+
+### ENV Variables
+
+```env
+# Capital Flow APIs
+FRED_API_KEY=           # Federal Reserve Economic Data
+ALPHA_VANTAGE_KEY=      # Stocks fallback (optional)
+```
+
+---
+
 ## 📊 Analiz Veri Gereksinimleri (ZORUNLU)
 
 ### Timeframe Seçenekleri
@@ -1100,6 +1248,35 @@ Kullanıcı Hakları Aktif:
 - **Sidebar'a Top Coins linki eklendi**:
   - Crown ikonu ile Analyze'dan sonra eklendi
   - Dosya: `apps/web/app/(dashboard)/layout.tsx`
+
+### 2026-01-30
+- **Capital Flow System Implemented** (Global Capital Flow Intelligence Platform):
+  - Temel prensip: "Para nereye akıyorsa potansiyel oradadır" (Where money flows, potential exists)
+  - **4 LAYER mimarisi**:
+    - LAYER 1: Global Liquidity Tracker (Fed Balance Sheet, M2, DXY, VIX, Yield Curve)
+    - LAYER 2: Market Flow Analyzer (Crypto, Stocks, Bonds, Metals)
+    - LAYER 3: Sector Drill-Down (DeFi, L2, Tech, Finance, etc.)
+    - LAYER 4: Asset Analysis (7-Step/MLIS bağlantısı)
+  - **Backend Files**:
+    - `apps/api/src/modules/capital-flow/types.ts` - Tüm type tanımlamaları
+    - `apps/api/src/modules/capital-flow/providers/fred.provider.ts` - FRED API (Fed Balance Sheet, M2, Treasury)
+    - `apps/api/src/modules/capital-flow/providers/yahoo.provider.ts` - Yahoo Finance (DXY, VIX, Stocks, Metals)
+    - `apps/api/src/modules/capital-flow/providers/defillama.provider.ts` - DefiLlama API (DeFi TVL, Chains, Stablecoins)
+    - `apps/api/src/modules/capital-flow/capital-flow.service.ts` - Ana servis
+    - `apps/api/src/modules/capital-flow/capital-flow.routes.ts` - API routes
+  - **Frontend Files**:
+    - `apps/web/app/(dashboard)/capital-flow/page.tsx` - Capital Flow Radar dashboard
+  - **API Endpoints**:
+    - `GET /api/capital-flow/summary` - Full summary with recommendation
+    - `GET /api/capital-flow/liquidity` - Global liquidity only
+    - `GET /api/capital-flow/markets` - All market flows
+    - `GET /api/capital-flow/markets/:market` - Single market with sectors
+    - `POST /api/capital-flow/refresh` - Force cache refresh
+  - **Phase Detection**: Early (0-30d), Mid (30-60d), Late (60-90d), Exit (90+d)
+  - **Rotation Detection**: entering, stable, exiting signals
+  - **Liquidity Bias**: risk_on, risk_off, neutral
+  - **Recommendation Engine**: Primary market, action (analyze/wait/avoid), confidence %
+  - Sidebar'a "Capital Flow" linki eklendi (Globe ikonu)
 
 ---
 
