@@ -1658,6 +1658,21 @@ export default function CapitalFlowPage() {
                   <ChevronRight className="w-5 h-5 text-amber-500" />
                 </Link>
                 <Link
+                  href="/top-assets/stocks"
+                  className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-50 dark:from-blue-500/10 to-indigo-50 dark:to-indigo-500/10 border border-blue-200 dark:border-blue-500/30 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <div>
+                      <span className="font-medium text-blue-700 dark:text-blue-300">Top Assets (Multi-Market)</span>
+                      <p className="text-xs text-blue-600/70 dark:text-blue-400/70">
+                        Stocks, Bonds, Metals
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-blue-500" />
+                </Link>
+                <Link
                   href="/concierge"
                   className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-purple-50 dark:from-purple-500/10 to-violet-50 dark:to-violet-500/10 border border-purple-200 dark:border-purple-500/30 hover:shadow-md transition-all"
                 >
