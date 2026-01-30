@@ -118,6 +118,12 @@ const FEATURES = [
 // 4-Layer Capital Flow Architecture - "Follow The Money" Principle
 function SystemFlowChart() {
   const [isVisible, setIsVisible] = useState(false);
+  const [expandedLayers, setExpandedLayers] = useState<{ [key: number]: boolean }>({
+    1: true, // Start with layer 1 expanded
+    2: false,
+    3: false,
+    4: false,
+  });
   const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -137,13 +143,31 @@ function SystemFlowChart() {
     return () => observer.disconnect();
   }, []);
 
+  // Auto-expand layers sequentially when visible
+  useEffect(() => {
+    if (isVisible) {
+      const timers = [
+        setTimeout(() => setExpandedLayers(prev => ({ ...prev, 1: true })), 500),
+        setTimeout(() => setExpandedLayers(prev => ({ ...prev, 2: true })), 1500),
+        setTimeout(() => setExpandedLayers(prev => ({ ...prev, 3: true })), 2500),
+        setTimeout(() => setExpandedLayers(prev => ({ ...prev, 4: true })), 3500),
+      ];
+      return () => timers.forEach(t => clearTimeout(t));
+    }
+  }, [isVisible]);
+
+  const toggleLayer = (layer: number) => {
+    setExpandedLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
+  };
+
   return (
     <section className="py-12 md:py-20 relative overflow-hidden" ref={chartRef}>
       {/* Background with gradient orbs */}
       <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
-      <div className="absolute top-20 left-10 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-20 right-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl" />
+      <div className="absolute top-20 left-10 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-20 right-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl animate-pulse" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
+      <div className="absolute top-1/4 right-1/4 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl animate-pulse" />
 
       <div className="container mx-auto px-4 relative z-10">
         {/* Header - Architecture Title */}
@@ -155,346 +179,375 @@ function SystemFlowChart() {
             <p className="text-sm text-teal-600 dark:text-teal-400 font-medium">
               "Follow The Money" Principle
             </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Click each layer to expand/collapse
+            </p>
           </div>
         </div>
 
-        {/* LAYER 1: Global Liquidity Tracker */}
-        <div className={`mb-6 transition-all duration-700 delay-100 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="max-w-4xl mx-auto backdrop-blur-xl bg-white/60 dark:bg-slate-800/60 border-2 border-teal-500/30 dark:border-teal-400/30 rounded-2xl p-5 md:p-6 shadow-lg">
-            <div className="text-center mb-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/30 mb-2">
-                <Activity className="w-4 h-4 text-teal-500" />
-                <span className="text-xs font-bold text-teal-600 dark:text-teal-400">LAYER 1: GLOBAL LIQUIDITY TRACKER</span>
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">"How much money is in the world and where is it going?"</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center text-xs mb-4">
-              <div className="bg-slate-100/80 dark:bg-slate-700/50 rounded-lg p-3">
-                <p className="text-slate-500 dark:text-slate-400 mb-1">Central Banks</p>
-                <p className="font-mono font-semibold text-slate-700 dark:text-slate-300">Fed • ECB • BOJ</p>
-              </div>
-              <div className="bg-slate-100/80 dark:bg-slate-700/50 rounded-lg p-3">
-                <p className="text-slate-500 dark:text-slate-400 mb-1">Money Supply</p>
-                <p className="font-mono font-semibold text-slate-700 dark:text-slate-300">M2 Growth • Credit</p>
-              </div>
-              <div className="bg-slate-100/80 dark:bg-slate-700/50 rounded-lg p-3">
-                <p className="text-slate-500 dark:text-slate-400 mb-1">Risk Indicators</p>
-                <p className="font-mono font-semibold text-slate-700 dark:text-slate-300">DXY • VIX • Yield</p>
-              </div>
-            </div>
-            {/* ANSWER BOX */}
-            <div className="bg-gradient-to-r from-teal-500/10 to-emerald-500/10 border border-teal-500/30 rounded-xl p-3">
-              <div className="flex items-center justify-center gap-3 flex-wrap">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Answer:</span>
-                <span className="px-3 py-1 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full">RISK ON</span>
-                <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">Fed expanding • M2 +2.1% • DXY weakening • VIX low</span>
+        {/* MIND MAP LAYOUT */}
+        <div className="relative max-w-6xl mx-auto">
+
+          {/* CENTER: Main Question */}
+          <div className={`flex justify-center mb-6 transition-all duration-700 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
+            <div className="relative">
+              {/* Pulsing rings */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-teal-500/20 to-emerald-500/20 animate-ping" style={{ animationDuration: '2s' }} />
+              <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-teal-500/10 to-emerald-500/10 animate-pulse" />
+
+              <div className="relative backdrop-blur-xl bg-gradient-to-br from-teal-500 to-emerald-500 rounded-full p-6 md:p-8 shadow-2xl shadow-teal-500/30">
+                <div className="text-center">
+                  <DollarSign className="w-8 h-8 md:w-10 md:h-10 text-white mx-auto mb-2" />
+                  <p className="text-white font-bold text-sm md:text-base">Where Is</p>
+                  <p className="text-white font-bold text-lg md:text-xl">Money Flowing?</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Connector Arrow 1 */}
-        <div className={`flex justify-center mb-6 transition-all duration-700 delay-150 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="flex flex-col items-center">
-            <div className="w-0.5 h-6 bg-gradient-to-b from-teal-500/50 to-blue-500/50" />
-            <ChevronDown className="w-5 h-5 text-blue-500 -mt-1" />
+          {/* Connector from center */}
+          <div className={`flex justify-center mb-4 transition-all duration-700 delay-100 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+            <div className="w-0.5 h-8 bg-gradient-to-b from-teal-500 to-blue-500" />
           </div>
-        </div>
 
-        {/* LAYER 2: Market Flow Analyzer */}
-        <div className={`mb-6 transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="max-w-4xl mx-auto backdrop-blur-xl bg-white/60 dark:bg-slate-800/60 border-2 border-blue-500/30 dark:border-blue-400/30 rounded-2xl p-5 md:p-6 shadow-lg">
-            <div className="text-center mb-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 mb-2">
-                <TrendingUp className="w-4 h-4 text-blue-500" />
-                <span className="text-xs font-bold text-blue-600 dark:text-blue-400">LAYER 2: MARKET FLOW ANALYZER</span>
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">"Which market is money flowing to and how fast?"</p>
-            </div>
-
-            {/* 4 Market Boxes */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-              {/* STOCKS */}
-              <div className="bg-slate-100/80 dark:bg-slate-700/50 rounded-xl p-3 text-center border border-slate-200 dark:border-slate-600">
-                <div className="font-bold text-sm text-slate-800 dark:text-white mb-2">STOCKS</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">SPX, NDX</div>
-                <div className="text-xs font-mono">
-                  <span className="text-emerald-500">Flow: +5%</span>
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Days: 45</div>
-                <div className="mt-1 px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-xs font-bold inline-block">
-                  MID
-                </div>
-              </div>
-
-              {/* BONDS */}
-              <div className="bg-slate-100/80 dark:bg-slate-700/50 rounded-xl p-3 text-center border border-slate-200 dark:border-slate-600">
-                <div className="font-bold text-sm text-slate-800 dark:text-white mb-2">BONDS</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">10Y, 2Y</div>
-                <div className="text-xs font-mono">
-                  <span className="text-red-500">Flow: -2%</span>
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Days: 12</div>
-                <div className="mt-1 px-2 py-0.5 rounded-full bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-bold inline-block">
-                  EXIT
-                </div>
-              </div>
-
-              {/* CRYPTO */}
-              <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 rounded-xl p-3 text-center border-2 border-emerald-500/50 dark:border-emerald-400/50 ring-2 ring-emerald-500/20">
-                <div className="font-bold text-sm text-slate-800 dark:text-white mb-2">CRYPTO</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">BTC, ETH</div>
-                <div className="text-xs font-mono">
-                  <span className="text-emerald-500 font-bold">Flow: +8%</span>
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Days: 23</div>
-                <div className="mt-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold inline-block">
-                  EARLY
-                </div>
-              </div>
-
-              {/* METALS */}
-              <div className="bg-slate-100/80 dark:bg-slate-700/50 rounded-xl p-3 text-center border border-slate-200 dark:border-slate-600">
-                <div className="font-bold text-sm text-slate-800 dark:text-white mb-2">METALS</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">XAU, XAG</div>
-                <div className="text-xs font-mono">
-                  <span className="text-emerald-500">Flow: +1%</span>
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Days: 67</div>
-                <div className="mt-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold inline-block">
-                  LATE
+          {/* LAYER 1: Global Liquidity - Collapsible */}
+          <div className={`mb-4 transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            {/* Layer Header - Always Visible, Clickable */}
+            <div
+              className="flex justify-center cursor-pointer group"
+              onClick={() => toggleLayer(1)}
+            >
+              <div className={`backdrop-blur-xl bg-teal-500/10 border-2 border-teal-500/30 rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-teal-500/50 ${expandedLayers[1] ? 'ring-2 ring-teal-500/20' : ''}`}>
+                <div className="flex items-center gap-3">
+                  <Activity className="w-6 h-6 text-teal-500" />
+                  <div>
+                    <span className="text-sm font-bold text-teal-600 dark:text-teal-400">LAYER 1: Global Liquidity</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">"Is liquidity expanding or contracting?"</p>
+                  </div>
+                  <div className={`ml-2 transition-transform duration-300 ${expandedLayers[1] ? 'rotate-180' : ''}`}>
+                    <ChevronDown className="w-5 h-5 text-teal-500" />
+                  </div>
+                  {/* Quick Answer Badge */}
+                  {!expandedLayers[1] && (
+                    <span className="ml-2 px-3 py-1 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full animate-pulse">
+                      RISK ON
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Rotation Signal */}
-            <div className="text-center mb-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-emerald-500/10 border border-blue-500/20">
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">ROTATION SIGNAL:</span>
-                <span className="text-xs font-bold text-red-500">BONDS</span>
-                <ArrowRight className="w-4 h-4 text-emerald-500" />
-                <span className="text-xs font-bold text-emerald-500">CRYPTO</span>
-              </div>
-            </div>
-            {/* ANSWER BOX */}
-            <div className="bg-gradient-to-r from-blue-500/10 to-emerald-500/10 border border-blue-500/30 rounded-xl p-3">
-              <div className="flex items-center justify-center gap-3 flex-wrap">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Answer:</span>
-                <span className="px-3 py-1 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" /> CRYPTO
-                </span>
-                <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">Early phase • +8% flow • 23 days • Highest velocity</span>
+            {/* Layer Content - Collapsible */}
+            <div className={`overflow-hidden transition-all duration-500 ${expandedLayers[1] ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+              <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+                {/* Data Points */}
+                <div className="backdrop-blur-xl bg-slate-100/80 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                  <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-500">Fed:</span>
+                      <span className="text-emerald-500 font-bold">Expanding</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-500">M2:</span>
+                      <span className="text-emerald-500 font-bold">+2.1%</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-500">DXY:</span>
+                      <span className="text-emerald-500 font-bold">Weak ↓</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-500">VIX:</span>
+                      <span className="text-emerald-500 font-bold">Low (14)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Arrow */}
+                <ArrowRight className="w-6 h-6 text-teal-500 hidden md:block" />
+
+                {/* Answer */}
+                <div className="backdrop-blur-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 border-2 border-emerald-500/50 rounded-xl p-4 shadow-lg ring-2 ring-emerald-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="w-5 h-5 text-emerald-500" />
+                    <span className="px-3 py-1 bg-emerald-500 text-white text-sm font-bold rounded-full">RISK ON</span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    Liquidity expanding → Risk assets favored
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Connector Arrow 2 */}
-        <div className={`flex justify-center mb-6 transition-all duration-700 delay-250 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="flex flex-col items-center">
-            <div className="w-0.5 h-6 bg-gradient-to-b from-blue-500/50 to-purple-500/50" />
-            <ChevronDown className="w-5 h-5 text-purple-500 -mt-1" />
+          {/* Connector to Layer 2 */}
+          <div className={`flex justify-center mb-4 transition-all duration-500 ${expandedLayers[1] ? 'opacity-100 h-8' : 'opacity-50 h-4'}`}>
+            <div className="w-0.5 h-full bg-gradient-to-b from-teal-500 to-blue-500" />
           </div>
-        </div>
 
-        {/* LAYER 3: Sector Drill-Down */}
-        <div className={`mb-6 transition-all duration-700 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="max-w-4xl mx-auto backdrop-blur-xl bg-white/60 dark:bg-slate-800/60 border-2 border-purple-500/30 dark:border-purple-400/30 rounded-2xl p-5 md:p-6 shadow-lg">
-            <div className="text-center mb-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/30 mb-2">
-                <Layers className="w-4 h-4 text-purple-500" />
-                <span className="text-xs font-bold text-purple-600 dark:text-purple-400">LAYER 3: SECTOR DRILL-DOWN</span>
+          {/* LAYER 2: Market Selection - Collapsible */}
+          <div className={`mb-4 transition-all duration-700 delay-400 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            {/* Layer Header */}
+            <div
+              className="flex justify-center cursor-pointer group"
+              onClick={() => toggleLayer(2)}
+            >
+              <div className={`backdrop-blur-xl bg-blue-500/10 border-2 border-blue-500/30 rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-blue-500/50 ${expandedLayers[2] ? 'ring-2 ring-blue-500/20' : ''}`}>
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="w-6 h-6 text-blue-500" />
+                  <div>
+                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400">LAYER 2: Market Flow</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">"Which market is receiving the most flow?"</p>
+                  </div>
+                  <div className={`ml-2 transition-transform duration-300 ${expandedLayers[2] ? 'rotate-180' : ''}`}>
+                    <ChevronDown className="w-5 h-5 text-blue-500" />
+                  </div>
+                  {!expandedLayers[2] && (
+                    <span className="ml-2 px-3 py-1 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full animate-pulse">
+                      CRYPTO +8%
+                    </span>
+                  )}
+                </div>
               </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">"Which sector in the selected market has the money?"</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* CRYPTO Selected */}
-              <div className="bg-gradient-to-br from-emerald-50/80 to-teal-50/80 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl p-4 border border-emerald-500/30">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">CRYPTO Selected:</span>
+            {/* Layer Content */}
+            <div className={`overflow-hidden transition-all duration-500 ${expandedLayers[2] ? 'max-h-[500px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+              {/* Market Options */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto mb-4">
+                <div className="backdrop-blur-xl bg-slate-100/80 dark:bg-slate-700/50 rounded-xl p-3 text-center border border-slate-200 dark:border-slate-600 opacity-60">
+                  <div className="font-bold text-sm text-slate-600 dark:text-slate-400 mb-1">STOCKS</div>
+                  <div className="text-xs font-mono text-slate-500">+5%</div>
+                  <div className="mt-1 px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-600 text-[10px] font-bold inline-block">MID</div>
                 </div>
-                <div className="space-y-1.5 text-xs font-mono">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">BTC Dominance:</span>
-                    <span className="text-slate-800 dark:text-white">52% <span className="text-red-500">(down)</span></span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">DeFi TVL:</span>
-                    <span className="text-slate-800 dark:text-white">$48B <span className="text-emerald-500">(up)</span></span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">L2 Activity:</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">High</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Meme Volume:</span>
-                    <span className="text-amber-600 dark:text-amber-400 font-bold">Spike</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">AI Tokens:</span>
-                    <span className="text-purple-600 dark:text-purple-400 font-bold">Trending</span>
-                  </div>
+                <div className="backdrop-blur-xl bg-slate-100/80 dark:bg-slate-700/50 rounded-xl p-3 text-center border border-slate-200 dark:border-slate-600 opacity-40">
+                  <div className="font-bold text-sm text-slate-600 dark:text-slate-400 mb-1">BONDS</div>
+                  <div className="text-xs font-mono text-red-500">-2%</div>
+                  <div className="mt-1 px-2 py-0.5 rounded-full bg-red-500/20 text-red-600 text-[10px] font-bold inline-block">EXIT</div>
+                </div>
+                <div className="backdrop-blur-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 rounded-xl p-3 text-center border-2 border-emerald-500 ring-4 ring-emerald-500/20 shadow-lg">
+                  <div className="font-bold text-sm text-emerald-600 dark:text-emerald-400 mb-1">CRYPTO</div>
+                  <div className="text-xs font-mono text-emerald-600 font-bold">+8%</div>
+                  <div className="mt-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 text-[10px] font-bold inline-block">EARLY</div>
+                  <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto mt-1" />
+                </div>
+                <div className="backdrop-blur-xl bg-slate-100/80 dark:bg-slate-700/50 rounded-xl p-3 text-center border border-slate-200 dark:border-slate-600 opacity-50">
+                  <div className="font-bold text-sm text-slate-600 dark:text-slate-400 mb-1">METALS</div>
+                  <div className="text-xs font-mono text-amber-500">+1%</div>
+                  <div className="mt-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 text-[10px] font-bold inline-block">LATE</div>
                 </div>
               </div>
 
-              {/* STOCKS Selected */}
-              <div className="bg-slate-100/80 dark:bg-slate-700/30 rounded-xl p-4 border border-slate-300 dark:border-slate-600">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-2 h-2 rounded-full bg-slate-400"></div>
-                  <span className="text-sm font-bold text-slate-600 dark:text-slate-400">STOCKS Selected:</span>
-                </div>
-                <div className="space-y-1.5 text-xs font-mono">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-500">Tech (XLK):</span>
-                    <span className="text-emerald-500">+3.2%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-500">Finance (XLF):</span>
-                    <span className="text-emerald-500">+1.1%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-500">Energy (XLE):</span>
-                    <span className="text-red-500">-0.5%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-500">Healthcare (XLV):</span>
-                    <span className="text-emerald-500">+0.8%</span>
+              {/* Answer */}
+              <div className="flex justify-center">
+                <div className="backdrop-blur-xl bg-gradient-to-r from-blue-500/10 to-emerald-500/10 border border-emerald-500/30 rounded-xl p-3">
+                  <div className="flex items-center justify-center gap-3 flex-wrap">
+                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    <span className="px-3 py-1 bg-emerald-500 text-white text-sm font-bold rounded-full">CRYPTO</span>
+                    <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">Early phase • +8% flow • 23 days</span>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* ANSWER BOX */}
-            <div className="mt-4 bg-gradient-to-r from-purple-500/10 to-violet-500/10 border border-purple-500/30 rounded-xl p-3">
-              <div className="flex items-center justify-center gap-3 flex-wrap">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Answer:</span>
-                <span className="px-3 py-1 bg-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-bold rounded-full flex items-center gap-1">
-                  <Target className="w-3 h-3" /> DeFi & AI Tokens
-                </span>
-                <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">BTC dom falling • DeFi TVL rising • L2 high activity</span>
-              </div>
-            </div>
           </div>
-        </div>
 
-        {/* Connector Arrow 3 */}
-        <div className={`flex justify-center mb-6 transition-all duration-700 delay-350 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="flex flex-col items-center">
-            <div className="w-0.5 h-6 bg-gradient-to-b from-purple-500/50 to-emerald-500/50" />
-            <ChevronDown className="w-5 h-5 text-emerald-500 -mt-1" />
+          {/* Connector to Layer 3 */}
+          <div className={`flex justify-center mb-4 transition-all duration-500 ${expandedLayers[2] ? 'opacity-100 h-8' : 'opacity-50 h-4'}`}>
+            <div className="w-0.5 h-full bg-gradient-to-b from-blue-500 to-purple-500" />
           </div>
-        </div>
 
-        {/* LAYER 4: Asset Analysis */}
-        <div className={`mb-8 transition-all duration-700 delay-400 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="max-w-4xl mx-auto backdrop-blur-xl bg-white/60 dark:bg-slate-800/60 border-2 border-emerald-500/30 dark:border-emerald-400/30 rounded-2xl p-5 md:p-6 shadow-lg">
-            <div className="text-center mb-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 mb-2">
-                <Search className="w-4 h-4 text-emerald-500" />
-                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">LAYER 4: ASSET ANALYSIS</span>
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">"Top 30 Assets / 7-Step Analysis / MLIS Pro"</p>
-            </div>
-
-            {/* Analysis Methods */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-              <div className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-xl p-4 border border-teal-500/30 text-center">
-                <Radar className="w-6 h-6 text-teal-500 mx-auto mb-2" />
-                <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">Top 30 Scan</div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Auto-scan top assets</p>
-              </div>
-              <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-xl p-4 border border-emerald-500/30 text-center">
-                <BarChart3 className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
-                <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">7-Step Classic</div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">40+ indicators analysis</p>
-              </div>
-              <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-xl p-4 border border-violet-500/30 text-center">
-                <Brain className="w-6 h-6 text-violet-500 mx-auto mb-2" />
-                <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">MLIS Pro</div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">5-layer neural signals</p>
-              </div>
-            </div>
-
-            {/* ANSWER BOX - Top Assets */}
-            <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-xl p-4 mb-4">
-              <div className="flex items-center justify-center gap-2 mb-3">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Answer:</span>
-                <span className="text-xs text-slate-600 dark:text-slate-300">Top assets in selected sector</span>
-              </div>
-              <div className="flex flex-wrap justify-center gap-2">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-slate-700/50 rounded-lg border border-emerald-500/30">
-                  <span className="font-bold text-sm text-slate-800 dark:text-white">AAVE</span>
-                  <span className="text-xs font-mono text-slate-500">87</span>
-                  <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded">GO</span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-slate-700/50 rounded-lg border border-emerald-500/30">
-                  <span className="font-bold text-sm text-slate-800 dark:text-white">FET</span>
-                  <span className="text-xs font-mono text-slate-500">84</span>
-                  <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded">GO</span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-slate-700/50 rounded-lg border border-amber-500/30">
-                  <span className="font-bold text-sm text-slate-800 dark:text-white">ARB</span>
-                  <span className="text-xs font-mono text-slate-500">76</span>
-                  <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold rounded">COND</span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-slate-700/50 rounded-lg border border-amber-500/30">
-                  <span className="font-bold text-sm text-slate-800 dark:text-white">OP</span>
-                  <span className="text-xs font-mono text-slate-500">72</span>
-                  <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold rounded">COND</span>
+          {/* LAYER 3: Sector Drill-Down - Collapsible */}
+          <div className={`mb-4 transition-all duration-700 delay-600 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            {/* Layer Header */}
+            <div
+              className="flex justify-center cursor-pointer group"
+              onClick={() => toggleLayer(3)}
+            >
+              <div className={`backdrop-blur-xl bg-purple-500/10 border-2 border-purple-500/30 rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-purple-500/50 ${expandedLayers[3] ? 'ring-2 ring-purple-500/20' : ''}`}>
+                <div className="flex items-center gap-3">
+                  <Layers className="w-6 h-6 text-purple-500" />
+                  <div>
+                    <span className="text-sm font-bold text-purple-600 dark:text-purple-400">LAYER 3: Sector Drill-Down</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">"Which sector within CRYPTO?"</p>
+                  </div>
+                  <div className={`ml-2 transition-transform duration-300 ${expandedLayers[3] ? 'rotate-180' : ''}`}>
+                    <ChevronDown className="w-5 h-5 text-purple-500" />
+                  </div>
+                  {!expandedLayers[3] && (
+                    <span className="ml-2 px-3 py-1 bg-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-bold rounded-full animate-pulse">
+                      DeFi & AI
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-wrap justify-center gap-3">
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-sm font-bold rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all"
-              >
-                <BarChart3 className="w-4 h-4" />
-                View Analysis
-              </Link>
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-sm font-bold rounded-xl hover:shadow-lg hover:shadow-violet-500/30 transition-all"
-              >
-                <Zap className="w-4 h-4" />
-                Try MLIS Pro
-              </Link>
+            {/* Layer Content */}
+            <div className={`overflow-hidden transition-all duration-500 ${expandedLayers[3] ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+              <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+                {/* Sector Data */}
+                <div className="backdrop-blur-xl bg-slate-100/80 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                  <div className="space-y-2 text-xs font-mono">
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-500">BTC Dominance:</span>
+                      <span className="text-red-500 font-bold">52% ↓</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-500">DeFi TVL:</span>
+                      <span className="text-emerald-500 font-bold">$48B ↑</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-500">L2 Activity:</span>
+                      <span className="text-emerald-500 font-bold">High</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-500">AI Tokens:</span>
+                      <span className="text-purple-500 font-bold">Trending</span>
+                    </div>
+                  </div>
+                </div>
+
+                <ArrowRight className="w-6 h-6 text-purple-500 hidden md:block" />
+
+                {/* Answer */}
+                <div className="backdrop-blur-xl bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/30 dark:to-violet-900/30 border-2 border-purple-500/50 rounded-xl p-4 shadow-lg ring-2 ring-purple-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Target className="w-5 h-5 text-purple-500" />
+                    <span className="px-3 py-1 bg-purple-500 text-white text-sm font-bold rounded-full">DeFi & AI</span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    BTC dom falling • TVL rising • AI trending
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Deep Analysis Badge - linking to features */}
-        <div className={`text-center mb-8 transition-all duration-700 delay-450 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Deep Analysis below: <span className="text-teal-600 dark:text-teal-400 font-medium">AI-Powered Market Scanner</span> &gt; <span className="text-violet-600 dark:text-violet-400 font-medium">Dual Analysis System</span>
-          </p>
-        </div>
-
-        {/* Bottom Verdict Badges */}
-        <div className={`text-center transition-all duration-700 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="inline-flex flex-wrap justify-center items-center gap-2 md:gap-3 mb-6">
-            <span className="px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-sm font-bold">GO</span>
-            <span className="text-slate-400">/</span>
-            <span className="px-3 py-1.5 rounded-full bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 text-sm font-bold">CONDITIONAL</span>
-            <span className="text-slate-400">/</span>
-            <span className="px-3 py-1.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-sm font-bold">WAIT</span>
-            <span className="text-slate-400">/</span>
-            <span className="px-3 py-1.5 rounded-full bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 text-sm font-bold">AVOID</span>
+          {/* Connector to Layer 4 */}
+          <div className={`flex justify-center mb-4 transition-all duration-500 ${expandedLayers[3] ? 'opacity-100 h-8' : 'opacity-50 h-4'}`}>
+            <div className="w-0.5 h-full bg-gradient-to-b from-purple-500 to-emerald-500" />
           </div>
-          <p className="text-slate-600 dark:text-slate-400 text-sm md:text-base mb-6 max-w-xl mx-auto">
-            Simple, actionable trading signals with complete trade plans
-          </p>
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all text-sm md:text-base"
-          >
-            Start Free Analysis
-            <ArrowRight className="w-4 h-4" />
-          </Link>
+
+          {/* LAYER 4: Asset Analysis - Collapsible */}
+          <div className={`mb-8 transition-all duration-700 delay-800 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            {/* Layer Header */}
+            <div
+              className="flex justify-center cursor-pointer group"
+              onClick={() => toggleLayer(4)}
+            >
+              <div className={`backdrop-blur-xl bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-emerald-500/50 ${expandedLayers[4] ? 'ring-2 ring-emerald-500/20' : ''}`}>
+                <div className="flex items-center gap-3">
+                  <Search className="w-6 h-6 text-emerald-500" />
+                  <div>
+                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">LAYER 4: Asset Analysis</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">"Top 30 / 7-Step / MLIS Pro"</p>
+                  </div>
+                  <div className={`ml-2 transition-transform duration-300 ${expandedLayers[4] ? 'rotate-180' : ''}`}>
+                    <ChevronDown className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  {!expandedLayers[4] && (
+                    <span className="ml-2 px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full animate-pulse">
+                      4 GO signals
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Layer Content */}
+            <div className={`overflow-hidden transition-all duration-500 ${expandedLayers[4] ? 'max-h-[600px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+              {/* Analysis Methods */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-3xl mx-auto mb-4">
+                <div className="backdrop-blur-xl bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-xl p-4 border border-teal-500/30 text-center hover:shadow-lg hover:shadow-teal-500/20 transition-all cursor-pointer">
+                  <Radar className="w-6 h-6 text-teal-500 mx-auto mb-2" />
+                  <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">Top 30 Scan</div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Auto-scan assets</p>
+                </div>
+                <div className="backdrop-blur-xl bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-xl p-4 border border-emerald-500/30 text-center hover:shadow-lg hover:shadow-emerald-500/20 transition-all cursor-pointer">
+                  <BarChart3 className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
+                  <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">7-Step Classic</div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">40+ indicators</p>
+                </div>
+                <div className="backdrop-blur-xl bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-xl p-4 border border-violet-500/30 text-center hover:shadow-lg hover:shadow-violet-500/20 transition-all cursor-pointer">
+                  <Brain className="w-6 h-6 text-violet-500 mx-auto mb-2" />
+                  <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">MLIS Pro</div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Neural signals</p>
+                </div>
+              </div>
+
+              {/* Top Assets */}
+              <div className="max-w-3xl mx-auto">
+                <div className="backdrop-blur-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-2 border-emerald-500/30 rounded-2xl p-4 shadow-lg">
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <CheckCircle className="w-5 h-5 text-emerald-500" />
+                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Top Assets in DeFi & AI Sector:</span>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-white/70 dark:bg-slate-700/70 rounded-xl border border-emerald-500/30 shadow-sm hover:shadow-md transition-all cursor-pointer">
+                      <span className="font-bold text-slate-800 dark:text-white">AAVE</span>
+                      <span className="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-600 px-2 py-0.5 rounded">87</span>
+                      <span className="px-2 py-0.5 bg-emerald-500 text-white text-xs font-bold rounded">GO</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-4 py-2 bg-white/70 dark:bg-slate-700/70 rounded-xl border border-emerald-500/30 shadow-sm hover:shadow-md transition-all cursor-pointer">
+                      <span className="font-bold text-slate-800 dark:text-white">FET</span>
+                      <span className="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-600 px-2 py-0.5 rounded">84</span>
+                      <span className="px-2 py-0.5 bg-emerald-500 text-white text-xs font-bold rounded">GO</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-4 py-2 bg-white/70 dark:bg-slate-700/70 rounded-xl border border-amber-500/30 shadow-sm hover:shadow-md transition-all cursor-pointer">
+                      <span className="font-bold text-slate-800 dark:text-white">ARB</span>
+                      <span className="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-600 px-2 py-0.5 rounded">76</span>
+                      <span className="px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded">COND</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-4 py-2 bg-white/70 dark:bg-slate-700/70 rounded-xl border border-amber-500/30 shadow-sm hover:shadow-md transition-all cursor-pointer">
+                      <span className="font-bold text-slate-800 dark:text-white">OP</span>
+                      <span className="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-600 px-2 py-0.5 rounded">72</span>
+                      <span className="px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded">COND</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className={`flex flex-wrap justify-center gap-3 mb-8 transition-all duration-700 delay-900 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-sm font-bold rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all"
+            >
+              <BarChart3 className="w-4 h-4" />
+              View Analysis
+            </Link>
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-sm font-bold rounded-xl hover:shadow-lg hover:shadow-violet-500/30 transition-all"
+            >
+              <Zap className="w-4 h-4" />
+              Try MLIS Pro
+            </Link>
+          </div>
+
+          {/* Bottom Verdict Badges */}
+          <div className={`text-center transition-all duration-700 delay-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            <div className="inline-flex flex-wrap justify-center items-center gap-2 md:gap-3 mb-4">
+              <span className="px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-sm font-bold">GO</span>
+              <span className="text-slate-400">/</span>
+              <span className="px-3 py-1.5 rounded-full bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 text-sm font-bold">CONDITIONAL</span>
+              <span className="text-slate-400">/</span>
+              <span className="px-3 py-1.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-sm font-bold">WAIT</span>
+              <span className="text-slate-400">/</span>
+              <span className="px-3 py-1.5 rounded-full bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 text-sm font-bold">AVOID</span>
+            </div>
+            <p className="text-slate-600 dark:text-slate-400 text-sm mb-6 max-w-xl mx-auto">
+              Simple, actionable trading signals with complete trade plans
+            </p>
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all text-sm md:text-base"
+            >
+              Start Free Analysis
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
       </div>
     </section>
@@ -746,17 +799,17 @@ const ANALYSIS_STEPS = [
     color: 'text-blue-500',
     bg: 'bg-blue-500/10',
     border: 'border-blue-500/30',
-    subtitle: 'Understanding the Big Picture',
-    description: 'Before analyzing any specific coin, we first check the overall health of the crypto market. Even the best altcoin setup can fail if Bitcoin suddenly dumps or the entire market shifts to fear mode. Market Pulse acts as your macro-level radar.',
+    subtitle: 'Capital Flow Validated',
+    description: 'By the time you reach this step, our Capital Flow system (Layers 1-3) has already determined that money is flowing into this market. Market Pulse confirms the micro-level conditions within your selected asset class—verifying that sector momentum aligns with the macro flow.',
     whatWeDo: [
-      'Monitor Bitcoin dominance trends to predict altcoin season or Bitcoin season',
-      'Analyze total crypto market cap momentum and direction',
+      'Confirm sector-level flow matches global liquidity direction',
+      'Monitor Bitcoin dominance trends to time altcoin vs BTC trades',
       'Track the Fear & Greed Index to gauge market psychology',
-      'Detect institutional money flows through on-chain data',
-      'Identify correlation patterns between major assets'
+      'Validate that the Capital Flow phase (Early/Mid/Late) is still active',
+      'Check correlation patterns to avoid counter-trend trades'
     ],
-    whyItMatters: 'Trading against the market trend is like swimming against the current. Market Pulse ensures you only trade when conditions are favorable.',
-    example: 'If Fear & Greed shows "Extreme Fear" while BTC dominance is rising, altcoins typically underperform—we factor this into your trade decision.'
+    whyItMatters: 'Capital Flow tells us WHERE money is going. Market Pulse tells us IF the timing is right within that market. Both must align for high-probability trades.',
+    example: 'Capital Flow shows CRYPTO is in EARLY phase with DeFi sector selected. Market Pulse confirms Fear & Greed at 65 (Greed) and BTC dominance falling—perfect conditions for DeFi altcoin longs.'
   },
   {
     name: 'Asset Scan',
@@ -855,16 +908,16 @@ const ANALYSIS_STEPS = [
     bg: 'bg-emerald-500/10',
     border: 'border-emerald-500/30',
     subtitle: 'The Final Decision',
-    description: 'All six analysis steps are combined using our proprietary scoring algorithm to deliver a clear, actionable verdict. No more analysis paralysis—you get a straightforward recommendation backed by comprehensive data.',
+    description: 'All 4 Capital Flow layers plus the 6 technical analysis steps combine to deliver your final verdict. This isn\'t just chart analysis—it\'s a holistic view from global liquidity down to your specific entry price.',
     whatWeDo: [
-      'Aggregate scores from all previous analysis steps',
-      'Weight factors based on current market conditions',
-      'Generate a confidence percentage (0-100%)',
+      'Verify Capital Flow alignment (Global → Market → Sector → Asset)',
+      'Aggregate scores from all technical analysis steps',
+      'Weight factors based on current Capital Flow phase',
       'Deliver clear verdict: GO (take the trade), WAIT (conditions uncertain), or AVOID (too risky)',
-      'Provide a summary of the key factors behind the decision'
+      'Show which layers support or contradict the trade'
     ],
-    whyItMatters: 'Information overload leads to bad decisions. A clear verdict with reasoning helps you act confidently and consistently.',
-    example: 'VERDICT: GO (78% confidence) | Strong technicals + favorable market + no manipulation detected + optimal timing. Key risk: BTC correlation during US market hours.'
+    whyItMatters: 'Most traders only see the micro picture. Our 4-layer approach ensures you\'re trading WITH the global money flow, not against it.',
+    example: 'VERDICT: GO (82%) | Capital Flow: RISK ON → CRYPTO (Early) → DeFi | Asset: Strong technicals, no manipulation, optimal timing. Key strength: Trading with institutional flow.'
   },
 ];
 
@@ -1060,10 +1113,38 @@ function FeaturesSection() {
               AI-Powered Market Scanner
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Ask our AI to scan the entire market and discover the highest-scoring trading opportunities based on 40+ technical indicators.
+              Our AI first identifies where capital is flowing, then scans the best opportunities in that market with 40+ technical indicators.
             </p>
           </div>
           <div className="max-w-5xl mx-auto">
+            {/* Capital Flow Context Box */}
+            <div className="mb-4 p-3 bg-gradient-to-r from-teal-500/10 via-blue-500/10 to-purple-500/10 border border-teal-500/20 rounded-xl">
+              <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-teal-500" />
+                  <span className="text-slate-600 dark:text-slate-400">Capital Flow:</span>
+                  <span className="font-bold text-emerald-500">RISK ON</span>
+                </div>
+                <ArrowRight className="w-3 h-3 text-slate-400" />
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-blue-500" />
+                  <span className="text-slate-600 dark:text-slate-400">Best Market:</span>
+                  <span className="font-bold text-blue-500">CRYPTO</span>
+                </div>
+                <ArrowRight className="w-3 h-3 text-slate-400" />
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-purple-500" />
+                  <span className="text-slate-600 dark:text-slate-400">Target Sector:</span>
+                  <span className="font-bold text-purple-500">DeFi & AI</span>
+                </div>
+                <ArrowRight className="w-3 h-3 text-slate-400" />
+                <div className="flex items-center gap-2">
+                  <Radar className="w-4 h-4 text-emerald-500" />
+                  <span className="font-bold text-emerald-500">Scanning...</span>
+                </div>
+              </div>
+            </div>
+
             {/* Top Row - Main Scanner Card + Stats */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
               {/* Scanner Visual */}
@@ -1074,7 +1155,7 @@ function FeaturesSection() {
                   </div>
                   <div>
                     <h3 className="font-semibold gradient-text-logo-animate">Market Scan Results</h3>
-                    <p className="text-xs text-muted-foreground">Top opportunities ranked by reliability score</p>
+                    <p className="text-xs text-muted-foreground">Top opportunities in target sector</p>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -1130,25 +1211,25 @@ function FeaturesSection() {
                 </div>
                 <div className="p-4 bg-card border rounded-lg hover:border-emerald-500/50 transition">
                   <div className="flex items-center gap-2 mb-1">
-                    <Target className="w-4 h-4 text-emerald-500" />
-                    <span className="text-2xl font-bold">7</span>
+                    <Layers className="w-4 h-4 text-emerald-500" />
+                    <span className="text-2xl font-bold">4</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">Analysis Steps</span>
+                  <span className="text-xs text-muted-foreground">Capital Flow Layers</span>
                 </div>
               </div>
             </div>
 
             {/* Bottom Features Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-5 bg-card border rounded-lg hover:border-emerald-500/50 hover:shadow-lg transition cursor-pointer group">
+              <div className="p-5 bg-card border rounded-lg hover:border-teal-500/50 hover:shadow-lg transition cursor-pointer group">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
-                    <CheckCircle className="w-5 h-5 text-emerald-500" />
+                  <div className="w-10 h-10 bg-gradient-to-br from-teal-500/20 to-blue-500/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
+                    <Globe className="w-5 h-5 text-teal-500" />
                   </div>
-                  <span className="text-xs font-medium text-emerald-500">Scoring</span>
+                  <span className="text-xs font-medium text-teal-500">Layer 1-3</span>
                 </div>
-                <h3 className="font-semibold mb-1 gradient-text-logo-animate">Reliability Score</h3>
-                <p className="text-sm text-muted-foreground line-clamp-2">Each coin gets a score based on liquidity, volatility, trend strength, and momentum.</p>
+                <h3 className="font-semibold mb-1 gradient-text-logo-animate">Capital Flow First</h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">Check global liquidity, identify the best market, then drill down to the hottest sector.</p>
               </div>
               <div className="p-5 bg-card border rounded-lg hover:border-emerald-500/50 hover:shadow-lg transition cursor-pointer group">
                 <div className="flex items-center gap-3 mb-3">
