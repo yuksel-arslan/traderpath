@@ -1688,70 +1688,27 @@ export default function CapitalFlowPage() {
 
         {/* Asset Analysis Navigation */}
         <section className="mb-8">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Layers className="w-5 h-5 text-slate-500" />
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Asset Analysis</h2>
-            </div>
-            <div className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl p-6">
-              <p className="text-slate-600 dark:text-slate-400 mb-4">
-                Based on current capital flow analysis, proceed to detailed asset analysis for the recommended market.
-              </p>
-              <div className="space-y-3">
-                <Link
-                  href={`/analyze?asset=${data.recommendation.primaryMarket}`}
-                  className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-teal-50 dark:from-teal-500/10 to-emerald-50 dark:to-emerald-500/10 border border-teal-200 dark:border-teal-500/30 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    <Target className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-                    <div>
-                      <span className="font-medium text-teal-700 dark:text-teal-300">
-                        {data.recommendation.primaryMarket === 'crypto' ? '7-Step / MLIS Pro' : 'Asset'} Analysis
-                      </span>
-                      <p className="text-xs text-teal-600/70 dark:text-teal-400/70">
-                        Analyze {data.recommendation.primaryMarket.charAt(0).toUpperCase() + data.recommendation.primaryMarket.slice(1)} assets
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-teal-500" />
-                </Link>
-                <Link
-                  href="/top-coins"
-                  className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-amber-50 dark:from-amber-500/10 to-yellow-50 dark:to-yellow-500/10 border border-amber-200 dark:border-amber-500/30 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    <Coins className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                    <span className="font-medium text-amber-700 dark:text-amber-300">Top Coins by Score</span>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-amber-500" />
-                </Link>
-                <Link
-                  href="/top-assets/stocks"
-                  className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-50 dark:from-blue-500/10 to-indigo-50 dark:to-indigo-500/10 border border-blue-200 dark:border-blue-500/30 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    <div>
-                      <span className="font-medium text-blue-700 dark:text-blue-300">Top Assets (Multi-Market)</span>
-                      <p className="text-xs text-blue-600/70 dark:text-blue-400/70">
-                        Stocks, Bonds, Metals
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-blue-500" />
-                </Link>
-                <Link
-                  href="/concierge"
-                  className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-purple-50 dark:from-purple-500/10 to-violet-50 dark:to-violet-500/10 border border-purple-200 dark:border-purple-500/30 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    <Zap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                    <span className="font-medium text-purple-700 dark:text-purple-300">AI Concierge</span>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-purple-500" />
-                </Link>
+          <div className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl p-6">
+            <p className="text-slate-600 dark:text-slate-400 mb-4">
+              Based on current capital flow analysis, proceed to detailed asset analysis for the recommended market.
+            </p>
+            <Link
+              href={`/analyze?asset=${data.recommendation.primaryMarket}`}
+              className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 shadow-lg hover:shadow-xl hover:shadow-teal-500/20 transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <Target className="w-6 h-6 text-white" />
+                <div>
+                  <span className="font-bold text-white text-lg">
+                    Start Analysis
+                  </span>
+                  <p className="text-sm text-white/80">
+                    {data.recommendation.primaryMarket === 'crypto' ? '7-Step Classic or MLIS Pro' : 'Asset Analysis'} for {data.recommendation.primaryMarket.charAt(0).toUpperCase() + data.recommendation.primaryMarket.slice(1)}
+                  </p>
+                </div>
               </div>
-            </div>
+              <ChevronRight className="w-6 h-6 text-white" />
+            </Link>
           </div>
         </section>
 
