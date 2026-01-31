@@ -61,6 +61,13 @@ model User {
   registrationEmail       String?   @map("registration_email") @db.VarChar(255)  // Original email used at registration
   firstLoginBonusReceived Boolean   @default(false) @map("first_login_bonus_received")  // Track if first login bonus was given
 
+  // ===========================================
+  // Free Trial (1 day free access on first login)
+  // ===========================================
+  freeTrialUsed          Boolean   @default(false) @map("free_trial_used")
+  freeTrialStartedAt     DateTime? @map("free_trial_started_at")
+  freeTrialAnalysesUsed  Int       @default(0) @map("free_trial_analyses_used")
+
   // Gamification
   level         Int      @default(1)
   xp            Int      @default(0)
