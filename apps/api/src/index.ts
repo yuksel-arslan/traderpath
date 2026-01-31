@@ -45,6 +45,8 @@ import { startCoinScoreCacheJob, stopCoinScoreCacheJob } from './modules/analysi
 import { capitalFlowRoutes } from './modules/capital-flow/capital-flow.routes';
 import { multiMarketRoutes } from './modules/analysis/multi-market.routes';
 import dailyPassRoutes from './modules/passes/daily-pass.routes';
+import assetLogosRoutes from './modules/asset-logos/asset-logos.routes';
+import { initializeAssetLogos } from './modules/asset-logos/asset-logos.service';
 
 // ===========================================
 // Server Configuration
@@ -366,6 +368,10 @@ app.register(multiMarketRoutes, { prefix: '/api/multi-market' }); // Legacy
 app.register(dailyPassRoutes, { prefix: '/api/v1/passes' });
 app.register(dailyPassRoutes, { prefix: '/api/passes' }); // Legacy
 
+// Asset Logos routes (public)
+app.register(assetLogosRoutes, { prefix: '/api/v1/asset-logos' });
+app.register(assetLogosRoutes, { prefix: '/api/asset-logos' }); // Legacy
+
 // ===========================================
 // 404 Handler
 // ===========================================
@@ -516,6 +522,10 @@ const start = async () => {
     // Start coin score cache cron job
     startCoinScoreCacheJob();
     logger.info('✓ Coin score cache cron started');
+
+    // Initialize asset logos in database
+    await initializeAssetLogos();
+    logger.info('✓ Asset logos initialized');
 
     // Start server
     await app.listen({
