@@ -4,7 +4,7 @@
 // Fetches from API and caches in localStorage + memory
 // ===========================================
 
-import { authFetch } from './authFetch';
+import { authFetch } from './api';
 
 // ===========================================
 // Types
