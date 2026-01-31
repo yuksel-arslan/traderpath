@@ -430,6 +430,9 @@ Kullanıcı Hakları Aktif:
 | 2026-01-29 | Reports sayfası hata durumunda sessizce başarısız oluyordu | 1) `error` state eklendi, 2) API hata mesajları gösteriliyor, 3) "Try Again" butonu ile yeniden deneme, 4) Connection error için özel mesaj | `reports/page.tsx:125-151,509-526` |
 | 2026-01-29 | Top 5 Coins scan başlıyor ama tamamlanmıyordu | 1) Scan session tracking eklendi (isScanning, coinsAnalyzed, totalCoins), 2) Status endpoint gerçek scan progress döndürüyor, 3) Frontend polling doğru koşulları kontrol ediyor, 4) Timeout 5 dakikadan 10 dakikaya çıkarıldı, 5) Duplicate scan'ler engellendi | `coin-score-cache.service.ts`, `analysis.routes.ts:5004-5032`, `analyze/page.tsx:391-470` |
 | 2026-01-31 | SLV ve diğer non-crypto varlıklar için analiz hatası (Binance SLVUSDT yok) | Multi-Asset Data Provider oluşturuldu: Crypto→Binance, Stocks/Bonds/Metals→Yahoo Finance. analysis.engine.ts ve mlis.service.ts güncellendi. Asset class detection ile doğru API'ye yönlendirme | `multi-asset-data-provider.ts`, `analysis.engine.ts`, `mlis.service.ts` |
+| 2026-01-31 | Capital Flow Sectors butonu çalışmıyordu | onClick handler'a `setSelectedLayer(3)` eklendi - artık sektörler görünüyor | `capital-flow/page.tsx` |
+| 2026-01-31 | Capital Flow SELL önerisi gösterilmiyordu (tüm marketler pozitifken) | Relative weakness detection eklendi (>5% gap), slowing momentum check eklendi (<-1 velocity), risk-off için her zaman gösterim | `capital-flow.service.ts` |
+| 2026-01-31 | Analyze sayfasında Recent bölümü iç içe geçmişti | Wrapper'daki gereksiz header kaldırıldı (RecentAnalyses zaten kendi header'ına sahip) | `analyze/page.tsx` |
 
 ---
 
@@ -1348,6 +1351,27 @@ Kullanıcı Hakları Aktif:
   - **Empty State**: Yeni kullanıcılar için Capital Flow CTA
   - Capital Flow API entegrasyonu (`/api/capital-flow/summary`)
   - Dosya: `apps/web/app/(dashboard)/dashboard/page.tsx`
+- **Capital Flow SELL Recommendation Improved**:
+  - SELL önerisi artık sadece mutlak çıkış (negative flow) değil, görece zayıflık da dikkate alıyor
+  - Relative weakness detection: En iyi ve en kötü performans gösteren market arasında %5+ fark varsa SELL önerisi
+  - Slowing momentum detection: flowVelocity < -1 ise erken uyarı sinyali
+  - Risk-off modunda SELL her zaman gösteriliyor (gerçek çıkış olmasa bile)
+  - Sector filtering iyileştirildi: trending down veya market ortalamasının altındaki sektörler
+  - Confidence skorlaması sinyal gücüne göre ayarlandı (50-80 arası)
+  - Dosya: `apps/api/src/modules/capital-flow/capital-flow.service.ts`
+- **Market Flow Analyzer Charts Added**:
+  - Her market kartına zamana bağlı Para Akışı (Money Flow) çizgi grafiği eklendi
+  - Her market kartına zamana bağlı Akış Hızı (Flow Velocity) çizgi grafiği eklendi
+  - MiniSparkline SVG komponenti oluşturuldu (gradient fill, responsive)
+  - 30 günlük sentetik tarihsel veri üretimi (flowHistory, velocityHistory)
+  - FlowDataPoint interface eklendi types.ts'e
+  - Dosya: `apps/web/app/(dashboard)/capital-flow/page.tsx`, `capital-flow.service.ts`, `types.ts`
+- **Sectors Button Fixed**:
+  - Market Flow kartındaki Sectors butonu Layer 3'e geçmiyor sorunu düzeltildi
+  - onClick handler'a `setSelectedLayer(3)` eklendi
+- **Analyze Page Recent Section Fixed**:
+  - İç içe geçmiş "Recent" header sorunu düzeltildi
+  - Wrapper'daki gereksiz header kaldırıldı (RecentAnalyses zaten kendi header'ına sahip)
 
 ---
 
