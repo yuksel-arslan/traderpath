@@ -3,7 +3,7 @@
 
 -- Create DailyPassType enum
 DO $$ BEGIN
-  CREATE TYPE "DailyPassType" AS ENUM ('CAPITAL_FLOW_L3', 'ASSET_ANALYSIS');
+  CREATE TYPE "DailyPassType" AS ENUM ('CAPITAL_FLOW_L3', 'CAPITAL_FLOW_L4', 'ASSET_ANALYSIS');
 EXCEPTION
   WHEN duplicate_object THEN null;
 END $$;

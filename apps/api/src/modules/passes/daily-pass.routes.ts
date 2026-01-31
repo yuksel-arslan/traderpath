@@ -44,6 +44,11 @@ export default async function dailyPassRoutes(app: FastifyInstance) {
             cost: DAILY_PASS_CONFIG.CAPITAL_FLOW_L3.cost,
             description: DAILY_PASS_CONFIG.CAPITAL_FLOW_L3.description,
           },
+          capitalFlowL4: {
+            ...passes.capitalFlowL4,
+            cost: DAILY_PASS_CONFIG.CAPITAL_FLOW_L4.cost,
+            description: DAILY_PASS_CONFIG.CAPITAL_FLOW_L4.description,
+          },
           assetAnalysis: {
             ...passes.assetAnalysis,
             cost: DAILY_PASS_CONFIG.ASSET_ANALYSIS.cost,
@@ -66,7 +71,7 @@ export default async function dailyPassRoutes(app: FastifyInstance) {
    * Purchase a daily pass
    */
   const purchaseSchema = z.object({
-    passType: z.enum(['CAPITAL_FLOW_L3', 'ASSET_ANALYSIS']),
+    passType: z.enum(['CAPITAL_FLOW_L3', 'CAPITAL_FLOW_L4', 'ASSET_ANALYSIS']),
   });
 
   app.post('/purchase', {
@@ -112,7 +117,7 @@ export default async function dailyPassRoutes(app: FastifyInstance) {
     const { passType } = request.params;
 
     // Validate passType
-    if (!['CAPITAL_FLOW_L3', 'ASSET_ANALYSIS'].includes(passType)) {
+    if (!['CAPITAL_FLOW_L3', 'CAPITAL_FLOW_L4', 'ASSET_ANALYSIS'].includes(passType)) {
       return reply.status(400).send({
         success: false,
         error: { code: 'INVALID_PASS_TYPE', message: 'Invalid pass type' },
@@ -150,6 +155,11 @@ export default async function dailyPassRoutes(app: FastifyInstance) {
           cost: DAILY_PASS_CONFIG.CAPITAL_FLOW_L3.cost,
           maxUsage: DAILY_PASS_CONFIG.CAPITAL_FLOW_L3.maxUsage,
           description: DAILY_PASS_CONFIG.CAPITAL_FLOW_L3.description,
+        },
+        capitalFlowL4: {
+          cost: DAILY_PASS_CONFIG.CAPITAL_FLOW_L4.cost,
+          maxUsage: DAILY_PASS_CONFIG.CAPITAL_FLOW_L4.maxUsage,
+          description: DAILY_PASS_CONFIG.CAPITAL_FLOW_L4.description,
         },
         assetAnalysis: {
           cost: DAILY_PASS_CONFIG.ASSET_ANALYSIS.cost,

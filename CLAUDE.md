@@ -213,15 +213,24 @@ ALPHA_VANTAGE_KEY=      # Stocks fallback (optional)
 
 | Katman | Fiyat | İçerik | Limit |
 |--------|-------|--------|-------|
-| **Layer 1-2-3** | FREE | Global Likidite, Market Flow, Sector Activity | Sınırsız |
-| **Layer 4** | 25 kredi/gün | AI Recommendations (BUY/SELL) | Günlük 1 pass |
-| **Asset Analysis** | 100 kredi/gün | 7-Step / MLIS Pro analiz | Günlük max 10 analiz |
+| **Layer 1-2** | FREE | Global Likidite, Market Flow | Sınırsız |
+| **Layer 3** | 25 kredi/gün | Sector Activity | Sınırsız erişim |
+| **Layer 4** | 25 kredi/gün | AI Recommendations (BUY/SELL) | Sınırsız erişim |
+| **Asset Analysis** | 100 kredi/gün | 7-Step / MLIS Pro | Günlük max 10 analiz |
+
+> **Toplam:** 150 kredi/aktif gün (25 + 25 + 100)
+> **Not:** Sadece kullanıcının giriş yaptığı günler hesaba katılır.
 
 ### Daily Pass Mantığı
 
 ```typescript
 // Günlük Pass Konfigürasyonu
 DAILY_PASS_CONFIG = {
+  CAPITAL_FLOW_L3: {
+    cost: 25,           // Kredi
+    maxUsage: 1,        // Sınırsız erişim (tek pass)
+    expiresAt: 'EOD',   // Gece 00:00 UTC sıfırlanır
+  },
   CAPITAL_FLOW_L4: {
     cost: 25,           // Kredi
     maxUsage: 1,        // Sınırsız erişim (tek pass)
@@ -1469,6 +1478,15 @@ Kullanıcı Hakları Aktif:
 - **Landing Page FAQ Updated**:
   - 8 soru Capital Flow yaklaşımına göre güncellendi
   - What is Capital Flow, 4-Layer System, Phases, BUY/SELL recommendations
+- **Daily Pass Pricing System (3 Tier)**:
+  - 3 ayrı Daily Pass tipi tanımlandı:
+    - **CAPITAL_FLOW_L3**: 25 kredi/gün - Sector Activity
+    - **CAPITAL_FLOW_L4**: 25 kredi/gün - AI Recommendations
+    - **ASSET_ANALYSIS**: 100 kredi/gün - 7-Step/MLIS Pro (max 10 analiz)
+  - **Toplam: 150 kredi/aktif gün** (sadece giriş yapılan günler)
+  - capital-flow sayfasına L3 ve L4 için ayrı unlock butonları
+  - Admin > Finance > Credit Economy bölümüne 3'lü Daily Pass Pricing section
+  - Dosyalar: `schema.prisma`, `daily-pass.service.ts`, `daily-pass.routes.ts`, `capital-flow/page.tsx`, `admin/finance/page.tsx`
 
 ---
 

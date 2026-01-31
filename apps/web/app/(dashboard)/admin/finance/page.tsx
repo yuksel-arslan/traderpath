@@ -721,7 +721,7 @@ export default function FinancePage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Layer 3 - Sector Activity */}
               <div className="bg-card border rounded-lg p-4">
                 <div className="flex items-center gap-3 mb-3">
@@ -729,8 +729,8 @@ export default function FinancePage() {
                     <Globe className="w-5 h-5 text-purple-500" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">Layer 3 - Sector Activity</p>
-                    <p className="text-xs text-muted-foreground">Sector drill-down access</p>
+                    <p className="font-medium">Layer 3 - Sectors</p>
+                    <p className="text-xs text-muted-foreground">Sector drill-down</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
@@ -742,21 +742,45 @@ export default function FinancePage() {
                       onChange={(e) => setEditingCosts({ ...editingCosts, creditCostCapitalFlowL3Daily: parseInt(e.target.value) || 0 })}
                       className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
                     />
-                    <span className="text-sm text-muted-foreground">credits/day</span>
+                    <span className="text-sm text-muted-foreground">cr/day</span>
                   </div>
-                  <span className="text-xs text-green-500 font-medium">Unlimited access</span>
                 </div>
               </div>
 
-              {/* Layer 4 - Asset Analysis */}
+              {/* Layer 4 - AI Recommendations */}
               <div className="bg-card border rounded-lg p-4">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-amber-500/10 rounded-lg">
                     <Target className="w-5 h-5 text-amber-500" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">Layer 4 - Asset Analysis</p>
-                    <p className="text-xs text-muted-foreground">7-Step / MLIS Pro (AI Recommendations)</p>
+                    <p className="font-medium">Layer 4 - AI Recs</p>
+                    <p className="text-xs text-muted-foreground">BUY/SELL signals</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingCosts.creditCostCapitalFlowL4Daily ?? 25}
+                      onChange={(e) => setEditingCosts({ ...editingCosts, creditCostCapitalFlowL4Daily: parseInt(e.target.value) || 0 })}
+                      className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
+                    />
+                    <span className="text-sm text-muted-foreground">cr/day</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Asset Analysis */}
+              <div className="bg-card border border-violet-200 dark:border-violet-700 rounded-lg p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-violet-500/10 rounded-lg">
+                    <Activity className="w-5 h-5 text-violet-500" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">Asset Analysis</p>
+                    <p className="text-xs text-muted-foreground">7-Step / MLIS Pro</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
@@ -768,31 +792,36 @@ export default function FinancePage() {
                       onChange={(e) => setEditingCosts({ ...editingCosts, creditCostAssetAnalysisDaily: parseInt(e.target.value) || 0 })}
                       className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
                     />
-                    <span className="text-sm text-muted-foreground">credits/day</span>
+                    <span className="text-sm text-muted-foreground">cr/day</span>
                   </div>
-                  <span className="text-xs text-amber-500 font-medium">Max 10 analyses</span>
+                  <span className="text-xs text-amber-500 font-medium">Max 10</span>
                 </div>
               </div>
             </div>
 
             {/* Summary */}
             <div className="mt-4 p-3 bg-card/50 rounded-lg border border-dashed">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-4">
+              <div className="flex items-center justify-between text-sm flex-wrap gap-2">
+                <div className="flex items-center gap-4 flex-wrap">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-purple-500" />
-                    <span className="text-muted-foreground">L3 (Sectors):</span>
-                    <span className="font-mono font-medium">{editingCosts.creditCostCapitalFlowL3Daily ?? 25} cr/day</span>
+                    <span className="text-muted-foreground">L3:</span>
+                    <span className="font-mono font-medium">{editingCosts.creditCostCapitalFlowL3Daily ?? 25}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-amber-500" />
-                    <span className="text-muted-foreground">L4 (Analysis):</span>
-                    <span className="font-mono font-medium">{editingCosts.creditCostAssetAnalysisDaily ?? 100} cr/day</span>
+                    <span className="text-muted-foreground">L4:</span>
+                    <span className="font-mono font-medium">{editingCosts.creditCostCapitalFlowL4Daily ?? 25}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-violet-500" />
+                    <span className="text-muted-foreground">Analysis:</span>
+                    <span className="font-mono font-medium">{editingCosts.creditCostAssetAnalysisDaily ?? 100}</span>
                   </div>
                 </div>
                 <div className="text-muted-foreground">
-                  Total daily max: <span className="font-mono font-medium text-foreground">
-                    {(editingCosts.creditCostCapitalFlowL3Daily ?? 25) + (editingCosts.creditCostAssetAnalysisDaily ?? 100)} credits
+                  Total: <span className="font-mono font-medium text-foreground">
+                    {(editingCosts.creditCostCapitalFlowL3Daily ?? 25) + (editingCosts.creditCostCapitalFlowL4Daily ?? 25) + (editingCosts.creditCostAssetAnalysisDaily ?? 100)} cr/day
                   </span>
                 </div>
               </div>

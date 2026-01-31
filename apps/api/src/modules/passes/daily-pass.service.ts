@@ -14,10 +14,15 @@ export const DAILY_PASS_CONFIG = {
     maxUsage: 1, // Unlimited access for the day (no per-usage limit)
     description: 'Layer 3 - Sector Activity',
   },
+  CAPITAL_FLOW_L4: {
+    cost: 25,
+    maxUsage: 1, // Unlimited access for the day (no per-usage limit)
+    description: 'Layer 4 - AI Recommendations',
+  },
   ASSET_ANALYSIS: {
     cost: 100,
     maxUsage: 10, // Max 10 analyses per day
-    description: 'Layer 4 - Asset Analysis (7-Step/MLIS Pro)',
+    description: 'Asset Analysis (7-Step/MLIS Pro)',
   },
 } as const;
 
@@ -268,14 +273,16 @@ class DailyPassService {
    */
   async getActivePasses(userId: string): Promise<{
     capitalFlowL3: PassCheckResult;
+    capitalFlowL4: PassCheckResult;
     assetAnalysis: PassCheckResult;
   }> {
-    const [capitalFlowL3, assetAnalysis] = await Promise.all([
+    const [capitalFlowL3, capitalFlowL4, assetAnalysis] = await Promise.all([
       this.checkPass(userId, 'CAPITAL_FLOW_L3'),
+      this.checkPass(userId, 'CAPITAL_FLOW_L4'),
       this.checkPass(userId, 'ASSET_ANALYSIS'),
     ]);
 
-    return { capitalFlowL3, assetAnalysis };
+    return { capitalFlowL3, capitalFlowL4, assetAnalysis };
   }
 
   /**
