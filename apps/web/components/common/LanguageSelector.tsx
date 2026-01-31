@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Globe, ChevronDown, Loader2 } from 'lucide-react';
 
 const LANGUAGES = [
@@ -34,13 +33,79 @@ interface LanguageSelectorProps {
   compact?: boolean;
 }
 
+// Helper to fire events on elements (for Google Translate combo)
+function fireEvent(element: HTMLElement, eventName: string) {
+  const event = new Event(eventName, { bubbles: true, cancelable: true });
+  element.dispatchEvent(event);
+}
+
 export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
-  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isChanging, setIsChanging] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Find Google Translate combo box
+  const findTranslateCombo = useCallback((): HTMLSelectElement | null => {
+    const selects = document.getElementsByTagName('select');
+    for (let i = 0; i < selects.length; i++) {
+      if (selects[i].className.includes('goog-te-combo')) {
+        return selects[i];
+      }
+    }
+    return null;
+  }, []);
+
+  // Trigger translation via Google Translate combo box (no page reload)
+  const triggerTranslation = useCallback((langCode: string, retries = 0): boolean => {
+    const combo = findTranslateCombo();
+
+    if (!combo || combo.innerHTML.length === 0) {
+      // Widget not ready yet, retry
+      if (retries < 10) {
+        setTimeout(() => triggerTranslation(langCode, retries + 1), 200);
+      }
+      return false;
+    }
+
+    // Set value and fire change event
+    combo.value = langCode;
+    fireEvent(combo, 'change');
+    return true;
+  }, [findTranslateCombo]);
+
+  // Reset to English (remove translation)
+  const resetToEnglish = useCallback(() => {
+    // Try to find and click the "Show original" button
+    const frame = document.querySelector('.goog-te-banner-frame') as HTMLIFrameElement;
+    if (frame?.contentDocument) {
+      const showOriginalBtn = frame.contentDocument.querySelector('.goog-te-button button') as HTMLButtonElement;
+      if (showOriginalBtn) {
+        showOriginalBtn.click();
+        return true;
+      }
+    }
+
+    // Alternative: Set combo to empty (original language)
+    const combo = findTranslateCombo();
+    if (combo) {
+      combo.value = '';
+      fireEvent(combo, 'change');
+      return true;
+    }
+
+    // Fallback: Clear cookies and let page handle it
+    const domain = window.location.hostname;
+    document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = `googtrans=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    document.cookie = `googtrans=; path=/; domain=.${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+
+    // Remove translated classes
+    document.documentElement.classList.remove('translated-ltr', 'translated-rtl');
+
+    return false;
+  }, [findTranslateCombo]);
 
   // Load Google Translate script
   useEffect(() => {
@@ -86,7 +151,7 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Read saved language from cookie
+  // Read saved language from cookie on mount
   useEffect(() => {
     const match = document.cookie.match(/googtrans=\/[^/]+\/([^;]+)/);
     if (match) {
@@ -97,63 +162,34 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
   }, []);
 
   const handleLanguageChange = async (lang: typeof LANGUAGES[0]) => {
-    if (isChanging) return;
+    if (isChanging || lang.code === selectedLang.code) return;
 
     setSelectedLang(lang);
     setIsOpen(false);
     setIsChanging(true);
 
-    // Set cookie for Google Translate
-    const domain = window.location.hostname;
-    document.cookie = `googtrans=/en/${lang.code}; path=/; domain=${domain}`;
-    document.cookie = `googtrans=/en/${lang.code}; path=/`;
-
-    // Trigger translation by clicking the hidden Google Translate element
-    const frame = document.querySelector('.goog-te-menu-frame') as HTMLIFrameElement;
-    if (frame) {
-      const frameDoc = frame.contentDocument || frame.contentWindow?.document;
-      if (frameDoc) {
-        const langLink = frameDoc.querySelector(`a[lang="${lang.code}"]`) as HTMLAnchorElement;
-        if (langLink) {
-          langLink.click();
-          setIsChanging(false);
-          return;
-        }
-      }
-    }
-
-    // Fallback: Use Next.js router refresh instead of hard reload
-    // This prevents blank page issues during navigation
     try {
       if (lang.code === 'en') {
-        // Reset to English - clear cookies first
-        document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-        document.cookie = `googtrans=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-      }
-
-      // Small delay to ensure cookies are set before refresh
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Use router refresh for smoother transition
-      router.refresh();
-
-      // Fallback to reload after a short delay if translation didn't apply
-      setTimeout(() => {
-        // Check if translation was applied by looking for translated content
-        const isTranslated = document.documentElement.classList.contains('translated-ltr') ||
-                            document.documentElement.classList.contains('translated-rtl');
-
-        // If changing from English and not yet translated, do a soft reload
-        if (lang.code !== 'en' && !isTranslated) {
-          window.location.href = window.location.href;
-        }
+        // Reset to English
+        resetToEnglish();
         setIsChanging(false);
-      }, 500);
+      } else {
+        // Set cookie for persistence
+        const domain = window.location.hostname;
+        document.cookie = `googtrans=/en/${lang.code}; path=/`;
+        document.cookie = `googtrans=/en/${lang.code}; path=/; domain=${domain}`;
+
+        // Trigger translation without page reload
+        const success = triggerTranslation(lang.code);
+
+        // Short delay to allow translation to apply
+        setTimeout(() => {
+          setIsChanging(false);
+        }, success ? 300 : 1000);
+      }
     } catch (error) {
       console.error('Language change error:', error);
       setIsChanging(false);
-      // Last resort: hard reload
-      window.location.reload();
     }
   };
 
