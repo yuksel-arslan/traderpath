@@ -189,39 +189,86 @@ const SECTOR_SUGGESTIONS: Record<string, SuggestedAsset[]> = {
   ],
 };
 
-// All searchable symbols
+// All available assets per market (complete list)
 const ALL_SYMBOLS: Record<AssetType, { symbol: string; name: string }[]> = {
   crypto: [
+    // Top 10
     { symbol: 'BTC', name: 'Bitcoin' }, { symbol: 'ETH', name: 'Ethereum' },
-    { symbol: 'SOL', name: 'Solana' }, { symbol: 'BNB', name: 'BNB' },
+    { symbol: 'BNB', name: 'BNB' }, { symbol: 'SOL', name: 'Solana' },
     { symbol: 'XRP', name: 'XRP' }, { symbol: 'ADA', name: 'Cardano' },
     { symbol: 'AVAX', name: 'Avalanche' }, { symbol: 'DOGE', name: 'Dogecoin' },
     { symbol: 'DOT', name: 'Polkadot' }, { symbol: 'LINK', name: 'Chainlink' },
+    // Top 20
     { symbol: 'MATIC', name: 'Polygon' }, { symbol: 'UNI', name: 'Uniswap' },
-    { symbol: 'AAVE', name: 'Aave' }, { symbol: 'MKR', name: 'Maker' },
-    { symbol: 'ARB', name: 'Arbitrum' }, { symbol: 'OP', name: 'Optimism' },
-    { symbol: 'FET', name: 'Fetch.ai' }, { symbol: 'RNDR', name: 'Render' },
-    { symbol: 'NEAR', name: 'NEAR Protocol' }, { symbol: 'APT', name: 'Aptos' },
-    { symbol: 'SUI', name: 'Sui' }, { symbol: 'INJ', name: 'Injective' },
-    { symbol: 'PEPE', name: 'Pepe' }, { symbol: 'SHIB', name: 'Shiba Inu' },
     { symbol: 'LTC', name: 'Litecoin' }, { symbol: 'ATOM', name: 'Cosmos' },
+    { symbol: 'XLM', name: 'Stellar' }, { symbol: 'TRX', name: 'TRON' },
+    { symbol: 'ETC', name: 'Ethereum Classic' }, { symbol: 'NEAR', name: 'NEAR Protocol' },
+    { symbol: 'APT', name: 'Aptos' }, { symbol: 'SUI', name: 'Sui' },
+    // DeFi
+    { symbol: 'AAVE', name: 'Aave' }, { symbol: 'MKR', name: 'Maker' },
+    { symbol: 'CRV', name: 'Curve' }, { symbol: 'SNX', name: 'Synthetix' },
+    { symbol: 'COMP', name: 'Compound' }, { symbol: '1INCH', name: '1inch' },
+    { symbol: 'YFI', name: 'Yearn Finance' }, { symbol: 'SUSHI', name: 'SushiSwap' },
+    // Layer 2
+    { symbol: 'ARB', name: 'Arbitrum' }, { symbol: 'OP', name: 'Optimism' },
+    { symbol: 'IMX', name: 'Immutable X' }, { symbol: 'STRK', name: 'Starknet' },
+    // AI & Data
+    { symbol: 'FET', name: 'Fetch.ai' }, { symbol: 'RNDR', name: 'Render' },
+    { symbol: 'TAO', name: 'Bittensor' }, { symbol: 'OCEAN', name: 'Ocean Protocol' },
+    { symbol: 'GRT', name: 'The Graph' }, { symbol: 'FIL', name: 'Filecoin' },
+    // Gaming & NFT
+    { symbol: 'INJ', name: 'Injective' }, { symbol: 'SAND', name: 'The Sandbox' },
+    { symbol: 'MANA', name: 'Decentraland' }, { symbol: 'AXS', name: 'Axie Infinity' },
+    { symbol: 'GALA', name: 'Gala' }, { symbol: 'ENJ', name: 'Enjin Coin' },
+    // Meme Coins
+    { symbol: 'PEPE', name: 'Pepe' }, { symbol: 'SHIB', name: 'Shiba Inu' },
+    { symbol: 'BONK', name: 'Bonk' }, { symbol: 'WIF', name: 'dogwifhat' },
+    { symbol: 'FLOKI', name: 'Floki' },
+    // Others
+    { symbol: 'VET', name: 'VeChain' }, { symbol: 'ALGO', name: 'Algorand' },
+    { symbol: 'ICP', name: 'Internet Computer' }, { symbol: 'HBAR', name: 'Hedera' },
+    { symbol: 'SEI', name: 'Sei' }, { symbol: 'TIA', name: 'Celestia' },
   ],
   stocks: [
+    // Index ETFs
     { symbol: 'SPY', name: 'S&P 500 ETF' }, { symbol: 'QQQ', name: 'Nasdaq 100 ETF' },
+    { symbol: 'DIA', name: 'Dow Jones ETF' }, { symbol: 'IWM', name: 'Russell 2000 ETF' },
+    // Tech Giants
     { symbol: 'AAPL', name: 'Apple Inc.' }, { symbol: 'MSFT', name: 'Microsoft Corp.' },
     { symbol: 'GOOGL', name: 'Alphabet Inc.' }, { symbol: 'AMZN', name: 'Amazon.com Inc.' },
     { symbol: 'NVDA', name: 'NVIDIA Corp.' }, { symbol: 'TSLA', name: 'Tesla Inc.' },
-    { symbol: 'META', name: 'Meta Platforms' }, { symbol: 'JPM', name: 'JPMorgan Chase' },
+    { symbol: 'META', name: 'Meta Platforms' }, { symbol: 'NFLX', name: 'Netflix Inc.' },
+    // Finance
+    { symbol: 'JPM', name: 'JPMorgan Chase' }, { symbol: 'BAC', name: 'Bank of America' },
+    { symbol: 'GS', name: 'Goldman Sachs' }, { symbol: 'V', name: 'Visa Inc.' },
+    { symbol: 'MA', name: 'Mastercard' },
+    // Others
+    { symbol: 'WMT', name: 'Walmart Inc.' }, { symbol: 'JNJ', name: 'Johnson & Johnson' },
+    { symbol: 'PG', name: 'Procter & Gamble' }, { symbol: 'XOM', name: 'ExxonMobil' },
+    { symbol: 'CVX', name: 'Chevron Corp.' },
   ],
   bonds: [
-    { symbol: 'TLT', name: '20+ Year Treasury ETF' }, { symbol: 'IEF', name: '7-10 Year Treasury ETF' },
-    { symbol: 'SHY', name: '1-3 Year Treasury ETF' }, { symbol: 'BND', name: 'Total Bond Market ETF' },
-    { symbol: 'LQD', name: 'Investment Grade Corp ETF' }, { symbol: 'HYG', name: 'High Yield Corp ETF' },
+    // Treasury ETFs
+    { symbol: 'TLT', name: '20+ Year Treasury' }, { symbol: 'IEF', name: '7-10 Year Treasury' },
+    { symbol: 'SHY', name: '1-3 Year Treasury' }, { symbol: 'GOVT', name: 'US Treasury' },
+    // Broad Bond ETFs
+    { symbol: 'BND', name: 'Total Bond Market' }, { symbol: 'AGG', name: 'Aggregate Bond' },
+    // Corporate
+    { symbol: 'LQD', name: 'Investment Grade Corp' }, { symbol: 'HYG', name: 'High Yield Corp' },
+    { symbol: 'VCIT', name: 'Intermediate Corp' },
+    // International
+    { symbol: 'BNDX', name: 'International Bond' }, { symbol: 'EMB', name: 'Emerging Markets' },
   ],
   metals: [
-    { symbol: 'GLD', name: 'Gold ETF (SPDR)' }, { symbol: 'SLV', name: 'Silver ETF (iShares)' },
-    { symbol: 'IAU', name: 'Gold Trust (iShares)' }, { symbol: 'PPLT', name: 'Platinum ETF' },
-    { symbol: 'GDX', name: 'Gold Miners ETF' }, { symbol: 'GDXJ', name: 'Junior Gold Miners ETF' },
+    // Gold
+    { symbol: 'GLD', name: 'Gold ETF (SPDR)' }, { symbol: 'IAU', name: 'Gold Trust (iShares)' },
+    { symbol: 'GDX', name: 'Gold Miners ETF' }, { symbol: 'GDXJ', name: 'Jr Gold Miners' },
+    // Silver
+    { symbol: 'SLV', name: 'Silver ETF (iShares)' }, { symbol: 'SIL', name: 'Silver Miners' },
+    // Other Precious
+    { symbol: 'PPLT', name: 'Platinum ETF' }, { symbol: 'PALL', name: 'Palladium ETF' },
+    // Base Metals
+    { symbol: 'COPX', name: 'Copper Miners' }, { symbol: 'DBB', name: 'Base Metals' },
   ],
 };
 
@@ -254,9 +301,7 @@ export default function AnalyzePage() {
   const [timeframe, setTimeframe] = useState<Timeframe>('4h');
   const [method, setMethod] = useState<AnalysisMethod>('classic');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
-  const [suggestions, setSuggestions] = useState<SuggestedAsset[]>([]);
 
   // Top Opportunities state
   const [topCoins, setTopCoins] = useState<TopCoin[]>([]);
@@ -323,23 +368,6 @@ export default function AnalyzePage() {
     fetchTopOpportunities();
   }, [fetchTopOpportunities]);
 
-  // Update suggestions based on asset type and sector
-  useEffect(() => {
-    if (sectorParam && assetType === 'crypto' && SECTOR_SUGGESTIONS[sectorParam]) {
-      setSuggestions(SECTOR_SUGGESTIONS[sectorParam]);
-    } else {
-      setSuggestions(DEFAULT_SUGGESTIONS[assetType] || []);
-    }
-  }, [assetType, sectorParam]);
-
-  // Filter symbols for search
-  const filteredSymbols = searchQuery.length > 0
-    ? ALL_SYMBOLS[assetType].filter(
-        s => s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-             s.name.toLowerCase().includes(searchQuery.toLowerCase())
-      ).slice(0, 8)
-    : [];
-
   // Filter top coins
   const filteredTopCoins = topCoins.filter(coin => {
     if (verdictFilter === 'all') return true;
@@ -351,8 +379,6 @@ export default function AnalyzePage() {
 
   const handleSelectSymbol = (symbol: string) => {
     setSelectedSymbol(symbol);
-    setSearchQuery('');
-    setShowSearch(false);
   };
 
   const runAnalysis = () => {
@@ -620,10 +646,13 @@ export default function AnalyzePage() {
             {/* Asset Selection */}
             <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
               <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-                <h2 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Target className="w-4 h-4 text-teal-500" />
-                  Select Asset (L4)
-                </h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Target className="w-4 h-4 text-teal-500" />
+                    Select Asset
+                  </h2>
+                  <span className="text-xs text-slate-500">{ALL_SYMBOLS[assetType].length} available</span>
+                </div>
               </div>
               <div className="p-4 space-y-4">
                 {/* Market Tabs */}
@@ -634,7 +663,7 @@ export default function AnalyzePage() {
                     return (
                       <button
                         key={type}
-                        onClick={() => { setAssetType(type); setSelectedSymbol(''); }}
+                        onClick={() => { setAssetType(type); setSelectedSymbol(''); setSearchQuery(''); }}
                         className={cn(
                           "flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-sm font-medium transition-all",
                           assetType === type
@@ -649,53 +678,69 @@ export default function AnalyzePage() {
                   })}
                 </div>
 
-                {/* Suggested Assets */}
-                <div className="flex flex-wrap gap-2">
-                  {suggestions.map((asset) => (
-                    <button
-                      key={asset.symbol}
-                      onClick={() => handleSelectSymbol(asset.symbol)}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-xl border transition-all",
-                        selectedSymbol === asset.symbol
-                          ? "border-teal-500 bg-teal-50 dark:bg-teal-500/10"
-                          : "border-slate-200 dark:border-slate-700 hover:border-slate-300"
-                      )}
-                    >
-                      {assetType === 'crypto' && <CoinIcon symbol={asset.symbol} size={20} />}
-                      <span className={cn("text-sm font-semibold", selectedSymbol === asset.symbol ? "text-teal-700 dark:text-teal-400" : "text-slate-900 dark:text-white")}>
-                        {asset.symbol}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
                 {/* Search */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
                     value={searchQuery}
-                    onChange={(e) => { setSearchQuery(e.target.value); setShowSearch(true); }}
-                    onFocus={() => setShowSearch(true)}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={`Search ${ASSET_CONFIGS[assetType].name.toLowerCase()}...`}
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
-                  {showSearch && filteredSymbols.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-2 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl z-50 max-h-64 overflow-y-auto">
-                      {filteredSymbols.map((item) => (
+                </div>
+
+                {/* All Assets Grid (scrollable) */}
+                <div className="max-h-[320px] overflow-y-auto pr-1 -mr-1">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                    {ALL_SYMBOLS[assetType]
+                      .filter(asset =>
+                        searchQuery.length === 0 ||
+                        asset.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        asset.name.toLowerCase().includes(searchQuery.toLowerCase())
+                      )
+                      .map((asset) => (
                         <button
-                          key={item.symbol}
-                          onClick={() => handleSelectSymbol(item.symbol)}
-                          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          key={asset.symbol}
+                          onClick={() => handleSelectSymbol(asset.symbol)}
+                          className={cn(
+                            "flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all",
+                            selectedSymbol === asset.symbol
+                              ? "border-teal-500 bg-teal-50 dark:bg-teal-500/10 ring-2 ring-teal-500/20"
+                              : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                          )}
                         >
-                          {assetType === 'crypto' && <CoinIcon symbol={item.symbol} size={24} />}
-                          <div className="text-left">
-                            <p className="text-sm font-semibold text-slate-900 dark:text-white">{item.symbol}</p>
-                            <p className="text-xs text-slate-500">{item.name}</p>
-                          </div>
+                          {assetType === 'crypto' ? (
+                            <CoinIcon symbol={asset.symbol} size={28} />
+                          ) : (
+                            <div className={cn(
+                              "w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold",
+                              `bg-gradient-to-br ${ASSET_CONFIGS[assetType].gradient}`
+                            )}>
+                              {asset.symbol.slice(0, 2)}
+                            </div>
+                          )}
+                          <span className={cn(
+                            "text-xs font-semibold text-center leading-tight",
+                            selectedSymbol === asset.symbol
+                              ? "text-teal-700 dark:text-teal-400"
+                              : "text-slate-900 dark:text-white"
+                          )}>
+                            {asset.symbol}
+                          </span>
+                          <span className="text-[9px] text-slate-500 text-center leading-tight line-clamp-1">
+                            {asset.name}
+                          </span>
                         </button>
                       ))}
+                  </div>
+                  {searchQuery.length > 0 && ALL_SYMBOLS[assetType].filter(asset =>
+                    asset.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    asset.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).length === 0 && (
+                    <div className="text-center py-8 text-slate-500">
+                      <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No assets found for "{searchQuery}"</p>
                     </div>
                   )}
                 </div>

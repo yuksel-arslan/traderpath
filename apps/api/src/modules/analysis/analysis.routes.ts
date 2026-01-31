@@ -1635,9 +1635,16 @@ Explain the key risks and what conditions would need to change before trading th
           outcome: true,
           expiresAt: true,
           createdAt: true,
+          aiExpertQuestionsUsed: true,
         },
         orderBy: { createdAt: 'desc' }
       });
+
+      // Calculate total AI Expert questions used
+      const aiExpertQuestionsTotal = userAnalyses.reduce(
+        (sum, a) => sum + (a.aiExpertQuestionsUsed || 0),
+        0
+      );
 
       // Calculate statistics from analyses
       const totalAnalyses = userAnalyses.length;
@@ -1766,6 +1773,8 @@ Explain the key risks and what conditions would need to change before trading th
         goSignals,
         avoidSignals,
         lastAnalysisDate,
+        // AI Expert stats
+        aiExpertQuestionsTotal,
       });
     } catch (error) {
       console.error('Statistics error:', error);
