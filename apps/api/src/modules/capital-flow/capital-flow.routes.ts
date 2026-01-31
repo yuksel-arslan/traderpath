@@ -17,6 +17,21 @@ import {
   getMarketAnalysis
 } from './capital-flow.service';
 import { MarketType } from './types';
+import { prisma } from '../../core/database';
+import { authenticate } from '../../core/auth/middleware';
+
+// Admin emails - their reports are public and visible to all users
+const ADMIN_EMAILS = ['contact@yukselarslan.com'];
+
+interface SaveCapitalFlowReportBody {
+  reportData: {
+    liquidity: unknown;
+    markets: unknown;
+    sectors: unknown;
+    recommendation: unknown;
+    timestamp: string;
+  };
+}
 
 export async function capitalFlowRoutes(app: FastifyInstance) {
   /**
@@ -206,6 +221,90 @@ export async function capitalFlowRoutes(app: FastifyInstance) {
       return reply.status(500).send({
         success: false,
         error: 'Failed to refresh capital flow data',
+      });
+    }
+  });
+
+  /**
+   * POST /api/capital-flow/report
+   *
+   * Saves Capital Flow snapshot as a report to user's history
+   * Requires authentication
+   */
+  app.post('/report', {
+    onRequest: [authenticate],
+  }, async (
+    request: FastifyRequest<{ Body: SaveCapitalFlowReportBody }>,
+    reply: FastifyReply
+  ) => {
+    try {
+      const userId = request.user!.id;
+      const { reportData } = request.body;
+
+      if (!reportData) {
+        return reply.status(400).send({
+          success: false,
+          error: 'reportData is required',
+        });
+      }
+
+      // Get user email to check admin status
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true },
+      });
+
+      const isAdmin = user ? ADMIN_EMAILS.includes(user.email) : false;
+
+      // Extract recommendation for verdict and score
+      const recommendation = reportData.recommendation as {
+        action?: string;
+        market?: string;
+        confidence?: number;
+      } | undefined;
+
+      const verdict = recommendation?.action || 'ANALYZE';
+      const score = recommendation?.confidence || 50;
+      const direction = verdict.toUpperCase() === 'BUY' ? 'long' :
+                       verdict.toUpperCase() === 'SELL' ? 'short' : null;
+
+      // Calculate expiration (48 hours from now)
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 48);
+
+      // Create the report
+      const report = await prisma.report.create({
+        data: {
+          userId,
+          symbol: 'CAPITAL_FLOW',
+          reportData: reportData as any,
+          verdict,
+          score,
+          direction,
+          expiresAt,
+          tradeType: 'capital_flow',
+          isPublic: isAdmin,
+        },
+      });
+
+      console.log('[CapitalFlow] Report saved:', { reportId: report.id, userId });
+
+      return reply.code(201).send({
+        success: true,
+        data: {
+          id: report.id,
+          symbol: report.symbol,
+          verdict: report.verdict,
+          score: Number(report.score),
+          generatedAt: report.generatedAt,
+          expiresAt: report.expiresAt,
+        },
+      });
+    } catch (error) {
+      console.error('[CapitalFlow] Error saving report:', error);
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to save capital flow report',
       });
     }
   });

@@ -37,7 +37,7 @@ import {
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { X, Loader2, LineChart, Download, FileImage, FileText, Mail, ChevronUp, CheckCircle, HelpCircle } from 'lucide-react';
+import { X, Loader2, LineChart, Download, FileImage, FileText, Mail, ChevronUp, CheckCircle, HelpCircle, Bookmark, Save } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
 
@@ -1093,6 +1093,8 @@ export default function CapitalFlowPage() {
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [savingReport, setSavingReport] = useState(false);
+  const [reportSaved, setReportSaved] = useState(false);
 
   // Ref for capturing the content
   const contentRef = useRef<HTMLDivElement>(null);
@@ -1563,6 +1565,52 @@ export default function CapitalFlowPage() {
     }
   };
 
+  // Save Capital Flow report to history
+  const handleSaveToReports = async () => {
+    if (!data || savingReport) return;
+
+    setSavingReport(true);
+    setExportDropdownOpen(false);
+    try {
+      // Get sectors from the first market (crypto) if available
+      const cryptoMarket = data.markets.find(m => m.market === 'crypto');
+      const sectors = cryptoMarket?.sectors || [];
+
+      const reportData = {
+        liquidity: data.globalLiquidity,
+        markets: data.markets,
+        sectors: sectors,
+        recommendation: data.recommendation,
+        sellRecommendation: data.sellRecommendation,
+        liquidityBias: data.liquidityBias,
+        activeRotation: data.activeRotation,
+        correlations: data.correlations,
+        tradeOpportunities: data.tradeOpportunities,
+        timestamp: data.timestamp,
+      };
+
+      const response = await authFetch('/api/capital-flow/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportData }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setReportSaved(true);
+        setTimeout(() => setReportSaved(false), 3000);
+      } else {
+        throw new Error(result.error || 'Failed to save report');
+      }
+    } catch (err) {
+      console.error('Failed to save report:', err);
+      alert('Failed to save report. Please try again.');
+    } finally {
+      setSavingReport(false);
+    }
+  };
+
   // Generic scan handler for all markets
   const handleMarketScan = async (market: 'crypto' | 'stocks' | 'bonds' | 'metals') => {
     setScanningMarket(market);
@@ -1823,6 +1871,24 @@ export default function CapitalFlowPage() {
                           <div>
                             <div>Send via Email</div>
                             <div className="text-xs text-slate-400">Share Report</div>
+                          </div>
+                        </button>
+                        <div className="border-t border-slate-700" />
+                        <button
+                          onClick={handleSaveToReports}
+                          disabled={savingReport || reportSaved}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-slate-200 hover:bg-slate-700 transition disabled:opacity-50"
+                        >
+                          {savingReport ? (
+                            <Loader2 className="w-4 h-4 text-emerald-500 animate-spin" />
+                          ) : reportSaved ? (
+                            <CheckCircle className="w-4 h-4 text-emerald-500" />
+                          ) : (
+                            <Bookmark className="w-4 h-4 text-emerald-500" />
+                          )}
+                          <div>
+                            <div>{reportSaved ? 'Saved!' : savingReport ? 'Saving...' : 'Save to Reports'}</div>
+                            <div className="text-xs text-slate-400">Add to My Reports history</div>
                           </div>
                         </button>
                       </div>
