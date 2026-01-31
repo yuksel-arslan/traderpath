@@ -1003,6 +1003,10 @@ export default function CapitalFlowPage() {
   const [layer4Unlocked, setLayer4Unlocked] = useState(false);
   const [unlockingLayer4, setUnlockingLayer4] = useState(false);
 
+  // Fullscreen layer modal state
+  const [fullscreenLayer, setFullscreenLayer] = useState<number | null>(null);
+  const fullscreenRef = useRef<HTMLDivElement>(null);
+
   // Check if Layers 3 and 4 are unlocked via Daily Pass API
   useEffect(() => {
     const checkPasses = async () => {
@@ -1355,6 +1359,210 @@ export default function CapitalFlowPage() {
     }
   };
 
+  // Layer names for fullscreen modal
+  const layerNames: Record<number, string> = {
+    1: 'Global_Liquidity',
+    2: 'Market_Flow',
+    3: 'Sector_Activity',
+    4: 'AI_Recommendations',
+  };
+
+  // Fullscreen modal export functions
+  const handleFullscreenExportPNG = async () => {
+    if (!fullscreenRef.current || exporting) return;
+
+    setExporting(true);
+    setExportDropdownOpen(false);
+    try {
+      const canvas = await html2canvas(fullscreenRef.current, {
+        backgroundColor: '#0B1120',
+        scale: 3,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: 1400,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-fullscreen-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+            (clonedElement as HTMLElement).style.backgroundColor = '#0B1120';
+            (clonedElement as HTMLElement).style.padding = '24px';
+          }
+        },
+      });
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert('Failed to create image');
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const date = new Date().toISOString().split('T')[0];
+        const layerName = fullscreenLayer ? layerNames[fullscreenLayer] : 'Layer';
+        link.download = `TraderPath_${layerName}_${date}.png`;
+        link.href = url;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      }, 'image/png');
+    } catch (err) {
+      console.error('Failed to export PNG:', err);
+      alert('Failed to export image');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleFullscreenExportJPG = async () => {
+    if (!fullscreenRef.current || exporting) return;
+
+    setExporting(true);
+    setExportDropdownOpen(false);
+    try {
+      const canvas = await html2canvas(fullscreenRef.current, {
+        backgroundColor: '#0B1120',
+        scale: 2.5,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: 1400,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-fullscreen-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+            (clonedElement as HTMLElement).style.backgroundColor = '#0B1120';
+            (clonedElement as HTMLElement).style.padding = '24px';
+          }
+        },
+      });
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert('Failed to create image');
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const date = new Date().toISOString().split('T')[0];
+        const layerName = fullscreenLayer ? layerNames[fullscreenLayer] : 'Layer';
+        link.download = `TraderPath_${layerName}_${date}.jpg`;
+        link.href = url;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      }, 'image/jpeg', 0.95);
+    } catch (err) {
+      console.error('Failed to export JPG:', err);
+      alert('Failed to export image');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleFullscreenExportPDF = async () => {
+    if (!fullscreenRef.current || exporting) return;
+
+    setExporting(true);
+    setExportDropdownOpen(false);
+    try {
+      const { jsPDF } = await import('jspdf');
+
+      const canvas = await html2canvas(fullscreenRef.current, {
+        backgroundColor: '#0B1120',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: 1400,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-fullscreen-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+            (clonedElement as HTMLElement).style.backgroundColor = '#0B1120';
+            (clonedElement as HTMLElement).style.padding = '24px';
+          }
+        },
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height],
+      });
+
+      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+
+      const date = new Date().toISOString().split('T')[0];
+      const layerName = fullscreenLayer ? layerNames[fullscreenLayer] : 'Layer';
+      pdf.save(`TraderPath_${layerName}_${date}.pdf`);
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+      alert('Failed to export PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleFullscreenSendEmail = async () => {
+    if (!fullscreenRef.current || exporting) return;
+
+    setExporting(true);
+    setExportDropdownOpen(false);
+    try {
+      const canvas = await html2canvas(fullscreenRef.current, {
+        backgroundColor: '#0B1120',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: 1200,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-fullscreen-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+          }
+        },
+      });
+
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
+      const layerName = fullscreenLayer ? layerNames[fullscreenLayer] : 'Layer';
+
+      // Download the image first
+      const link = document.createElement('a');
+      const date = new Date().toISOString().split('T')[0];
+      link.download = `TraderPath_${layerName}_${date}.jpg`;
+      link.href = imageBase64;
+      link.click();
+
+      // Then send via email
+      const response = await authFetch('/api/reports/email-screenshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: `CAPITAL_FLOW_L${fullscreenLayer}`,
+          interval: 'Daily',
+          screenshot: imageBase64,
+          score: data?.recommendation?.confidence || 0,
+          direction: data?.recommendation?.direction || 'BUY',
+        }),
+      });
+
+      if (response.ok) {
+        setEmailSent(true);
+        setTimeout(() => setEmailSent(false), 3000);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Email send failed:', response.status, errorData);
+        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
+      }
+    } catch (err) {
+      console.error('Failed to send email:', err);
+      alert('Failed to send email. Screenshot was downloaded.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // Generic scan handler for all markets
   const handleMarketScan = async (market: 'crypto' | 'stocks' | 'bonds' | 'metals') => {
     setScanningMarket(market);
@@ -1526,6 +1734,346 @@ export default function CapitalFlowPage() {
         tourId="capital-flow"
         autoStart={true}
       />
+
+      {/* Fullscreen Layer Modal */}
+      {fullscreenLayer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full h-full max-w-7xl max-h-[95vh] m-4 bg-slate-900 rounded-2xl overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold",
+                  fullscreenLayer === 1 ? 'bg-blue-500' :
+                  fullscreenLayer === 2 ? 'bg-emerald-500' :
+                  fullscreenLayer === 3 ? 'bg-purple-500' : 'bg-amber-500'
+                )}>
+                  {fullscreenLayer}
+                </div>
+                <h2 className="text-lg font-bold text-white">
+                  {fullscreenLayer === 1 ? 'Global Liquidity Tracker' :
+                   fullscreenLayer === 2 ? 'Market Flow Analyzer' :
+                   fullscreenLayer === 3 ? 'Sector Drill-Down' : 'AI Recommendations'}
+                </h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Export Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                    disabled={exporting}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition disabled:opacity-50",
+                      emailSent
+                        ? "bg-green-500 text-white"
+                        : "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white"
+                    )}
+                  >
+                    {exporting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : emailSent ? (
+                      <CheckCircle className="w-4 h-4" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    <span>{exporting ? 'Exporting...' : emailSent ? 'Sent!' : 'Export'}</span>
+                    <ChevronDown className={cn("w-3 h-3 transition-transform", exportDropdownOpen && "rotate-180")} />
+                  </button>
+
+                  {exportDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setExportDropdownOpen(false)} />
+                      <div className="absolute right-0 mt-2 w-48 bg-slate-800 rounded-xl shadow-2xl border border-slate-700 z-50 overflow-hidden">
+                        <button
+                          onClick={handleFullscreenExportPNG}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-slate-200 hover:bg-slate-700 transition"
+                        >
+                          <FileImage className="w-4 h-4 text-teal-500" />
+                          <div>
+                            <div>Download PNG</div>
+                            <div className="text-xs text-slate-400">High Quality</div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={handleFullscreenExportJPG}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-slate-200 hover:bg-slate-700 transition"
+                        >
+                          <FileImage className="w-4 h-4 text-blue-500" />
+                          <div>
+                            <div>Download JPG</div>
+                            <div className="text-xs text-slate-400">Smaller Size</div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={handleFullscreenExportPDF}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-slate-200 hover:bg-slate-700 transition"
+                        >
+                          <FileText className="w-4 h-4 text-red-500" />
+                          <div>
+                            <div>Download PDF</div>
+                            <div className="text-xs text-slate-400">Full Report</div>
+                          </div>
+                        </button>
+                        <div className="border-t border-slate-700" />
+                        <button
+                          onClick={handleFullscreenSendEmail}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-slate-200 hover:bg-slate-700 transition"
+                        >
+                          <Mail className="w-4 h-4 text-purple-500" />
+                          <div>
+                            <div>Send via Email</div>
+                            <div className="text-xs text-slate-400">Share Report</div>
+                          </div>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Close Button */}
+                <button
+                  onClick={() => {
+                    setFullscreenLayer(null);
+                    setExportDropdownOpen(false);
+                  }}
+                  className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content - Scrollable */}
+            <div ref={fullscreenRef} data-fullscreen-container className="flex-1 overflow-y-auto p-6 bg-slate-900">
+              {/* Layer 1: Global Liquidity */}
+              {fullscreenLayer === 1 && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                    <LiquidityMetric
+                      title="Fed Balance Sheet"
+                      value={data.globalLiquidity.fedBalanceSheet.value.toFixed(2)}
+                      unit="T USD"
+                      trend={data.globalLiquidity.fedBalanceSheet.trend === 'expanding' ? 'up' : data.globalLiquidity.fedBalanceSheet.trend === 'contracting' ? 'down' : 'stable'}
+                      icon={Landmark}
+                      info="Federal Reserve total assets"
+                    />
+                    <LiquidityMetric
+                      title="M2 Money Supply"
+                      value={data.globalLiquidity.m2MoneySupply.value.toFixed(2)}
+                      unit="T USD"
+                      change={data.globalLiquidity.m2MoneySupply.yoyGrowth}
+                      icon={DollarSign}
+                      info="Year-over-year growth"
+                    />
+                    <LiquidityMetric
+                      title="Dollar Index (DXY)"
+                      value={data.globalLiquidity.dxy.value.toFixed(2)}
+                      change={data.globalLiquidity.dxy.change7d}
+                      icon={Globe}
+                      info={data.globalLiquidity.dxy.trend === 'strengthening' ? 'Dollar strengthening' : data.globalLiquidity.dxy.trend === 'weakening' ? 'Dollar weakening' : 'Dollar stable'}
+                    />
+                    <LiquidityMetric
+                      title="VIX (Fear Index)"
+                      value={data.globalLiquidity.vix.value.toFixed(2)}
+                      icon={Activity}
+                      info={`Market sentiment: ${data.globalLiquidity.vix.level.replace('_', ' ').toUpperCase()}`}
+                    />
+                    <LiquidityMetric
+                      title="Yield Curve (10Y-2Y)"
+                      value={data.globalLiquidity.yieldCurve.spread10y2y.toFixed(3)}
+                      unit="%"
+                      icon={BarChart3}
+                      info={data.globalLiquidity.yieldCurve.interpretation}
+                    />
+                  </div>
+                  {data.insights?.layer1 && <InsightBox insight={data.insights.layer1} icon={Brain} />}
+                </div>
+              )}
+
+              {/* Layer 2: Market Flow */}
+              {fullscreenLayer === 2 && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {data.markets.map((market) => (
+                      <MarketCard
+                        key={market.market}
+                        market={market}
+                        onClick={() => {
+                          setSelectedMarket(selectedMarket?.market === market.market ? null : market);
+                        }}
+                        onAnalyze={() => fetchMarketAnalysis(market)}
+                      />
+                    ))}
+                  </div>
+                  {data.insights?.layer2 && <InsightBox insight={data.insights.layer2} icon={Sparkles} />}
+                </div>
+              )}
+
+              {/* Layer 3: Sector Activity */}
+              {fullscreenLayer === 3 && (
+                <div className="space-y-6">
+                  {!layer3Unlocked ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg">
+                        <Zap className="w-8 h-8 text-white" />
+                      </div>
+                      <h4 className="text-lg font-bold text-white mb-2">Unlock Sector Activity</h4>
+                      <p className="text-sm text-slate-400 mb-4 text-center max-w-xs">
+                        See which sectors are receiving capital inflows. Requires 25 credits/day.
+                      </p>
+                      <button
+                        onClick={unlockLayer3}
+                        disabled={unlockingLayer3}
+                        className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all shadow-lg"
+                      >
+                        {unlockingLayer3 ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Unlock for 25 Credits'}
+                      </button>
+                    </div>
+                  ) : selectedMarket ? (
+                    <div className="space-y-4">
+                      <p className="text-sm text-slate-400">
+                        Showing sectors for <strong className="capitalize text-white">{selectedMarket.market}</strong>
+                      </p>
+                      {selectedMarket.sectors && selectedMarket.sectors.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {selectedMarket.sectors.map((sector, idx) => (
+                            <div
+                              key={idx}
+                              className={cn(
+                                "p-4 rounded-xl border transition-all",
+                                sector.trending === 'up'
+                                  ? "bg-emerald-500/10 border-emerald-500/30"
+                                  : sector.trending === 'down'
+                                  ? "bg-red-500/10 border-red-500/30"
+                                  : "bg-slate-800/50 border-slate-700"
+                              )}
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-semibold text-white">{sector.name}</span>
+                                <span className={cn(
+                                  "text-sm font-bold",
+                                  sector.flow7d > 0 ? "text-emerald-400" : "text-red-400"
+                                )}>
+                                  {sector.flow7d > 0 ? '+' : ''}{sector.flow7d.toFixed(1)}%
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-slate-400">
+                                <span>Phase: {sector.phase}</span>
+                                <span>•</span>
+                                <span className="capitalize">{sector.trending}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-400">No sector data available for this market.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Activity className="w-12 h-12 text-purple-400 mx-auto mb-3" />
+                      <p className="text-slate-400">Select a market from Layer 2 to see sector breakdown</p>
+                      <button
+                        onClick={() => setFullscreenLayer(2)}
+                        className="mt-3 px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-medium hover:bg-purple-600 transition-colors"
+                      >
+                        Go to Layer 2
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Layer 4: AI Recommendations */}
+              {fullscreenLayer === 4 && (
+                <div className="space-y-6">
+                  {!layer4Unlocked ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
+                        <Zap className="w-8 h-8 text-white" />
+                      </div>
+                      <h4 className="text-lg font-bold text-white mb-2">Unlock AI Recommendations</h4>
+                      <p className="text-sm text-slate-400 mb-4 text-center max-w-xs">
+                        Get specific BUY and SELL recommendations with confidence scores. Requires 25 credits/day.
+                      </p>
+                      <button
+                        onClick={unlockLayer4}
+                        disabled={unlockingLayer4}
+                        className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg"
+                      >
+                        {unlockingLayer4 ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Unlock for 25 Credits'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+                      {/* BUY Opportunity */}
+                      <div className="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/30">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                            <TrendingUp className="w-5 h-5 text-emerald-400" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-emerald-400">BUY Opportunity</h4>
+                            <p className="text-xs text-slate-400">Capital entering this market</p>
+                          </div>
+                          <span className="ml-auto text-2xl font-bold text-emerald-400">
+                            {data.recommendation?.confidence || 0}%
+                          </span>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-slate-400">Primary Market</span>
+                            <span className="font-semibold text-white capitalize">{data.recommendation?.primaryMarket || 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-slate-400">Phase</span>
+                            <span className="font-semibold text-white uppercase">{data.recommendation?.phase || 'N/A'}</span>
+                          </div>
+                          <p className="text-sm text-slate-300 pt-2 border-t border-emerald-500/20">
+                            {data.recommendation?.reason || 'No recommendation available'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* SELL Opportunity */}
+                      {data.sellRecommendation && (
+                        <div className="p-6 rounded-2xl bg-red-500/10 border border-red-500/30">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
+                              <TrendingDown className="w-5 h-5 text-red-400" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-red-400">SELL Opportunity</h4>
+                              <p className="text-xs text-slate-400">Capital exiting this market</p>
+                            </div>
+                            <span className="ml-auto text-2xl font-bold text-red-400">
+                              {data.sellRecommendation.confidence}%
+                            </span>
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-slate-400">Market</span>
+                              <span className="font-semibold text-white capitalize">{data.sellRecommendation.primaryMarket}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-slate-400">Phase</span>
+                              <span className="font-semibold text-white uppercase">{data.sellRecommendation.phase}</span>
+                            </div>
+                            <p className="text-sm text-slate-300 pt-2 border-t border-red-500/20">
+                              {data.sellRecommendation.reason}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {data.insights?.layer4 && layer4Unlocked && <InsightBox insight={data.insights.layer4} icon={Brain} />}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <GrainOverlay />
       <GradientOrbs />
@@ -1702,7 +2250,7 @@ export default function CapitalFlowPage() {
               details={`Fed: ${data.globalLiquidity.fedBalanceSheet.value.toFixed(1)}T • DXY: ${data.globalLiquidity.dxy.value.toFixed(1)} • VIX: ${data.globalLiquidity.vix.value.toFixed(0)}`}
               icon={Landmark}
               color="blue"
-              onClick={() => setSelectedLayer(selectedLayer === 1 ? null : 1)}
+              onClick={() => setFullscreenLayer(1)}
               isSelected={selectedLayer === 1}
             />
 
@@ -1722,7 +2270,7 @@ export default function CapitalFlowPage() {
                   details={`${inflowCount}/4 markets inflow • Top: ${topMarket.flow7d > 0 ? '+' : ''}${topMarket.flow7d.toFixed(1)}% (7D)`}
                   icon={BarChart3}
                   color="emerald"
-                  onClick={() => setSelectedLayer(selectedLayer === 2 ? null : 2)}
+                  onClick={() => setFullscreenLayer(2)}
                   isSelected={selectedLayer === 2}
                 />
               );
@@ -1747,7 +2295,7 @@ export default function CapitalFlowPage() {
                     : 'Click a market to see sectors'}
                   icon={Activity}
                   color="purple"
-                  onClick={() => setSelectedLayer(selectedLayer === 3 ? null : 3)}
+                  onClick={() => setFullscreenLayer(3)}
                   isSelected={selectedLayer === 3}
                 />
               );
@@ -1777,7 +2325,7 @@ export default function CapitalFlowPage() {
               }
               icon={Target}
               color="amber"
-              onClick={() => setSelectedLayer(selectedLayer === 4 ? null : 4)}
+              onClick={() => setFullscreenLayer(4)}
               isSelected={selectedLayer === 4}
             />
           </div>
