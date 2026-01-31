@@ -2,8 +2,8 @@
 
 // ===========================================
 // UNIFIED ANALYSIS PAGE
-// LAYER 4: Asset Micro Analysis + Top Opportunities
-// Part of Capital Flow hierarchy
+// ALL 4 LAYERS in one place:
+// L1: Global Liquidity | L2: Markets | L3: Sectors | L4: Analysis
 // ===========================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -14,6 +14,7 @@ import {
   Target,
   Timer,
   ChevronRight,
+  ChevronDown,
   Sparkles,
   TrendingUp,
   TrendingDown,
@@ -26,12 +27,18 @@ import {
   Globe,
   Layers,
   ArrowRight,
+  ArrowUpRight,
+  ArrowDownRight,
   Info,
   Zap,
   Crown,
   Building2,
   Clock,
   RefreshCw,
+  Activity,
+  DollarSign,
+  Minus,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
@@ -56,14 +63,52 @@ const AnalysisDialog = dynamic(
 // Types
 type AssetType = 'crypto' | 'stocks' | 'bonds' | 'metals';
 type AnalysisMethod = 'classic' | 'mlis_pro';
-type TabType = 'new-analysis' | 'top-opportunities';
 
-interface CapitalFlowContext {
-  liquidity: { bias: 'risk_on' | 'risk_off' | 'neutral'; expanding: boolean };
-  recommendedMarket: AssetType | null;
-  recommendedSector: string | null;
-  phase: 'early' | 'mid' | 'late' | 'exit' | null;
-  recommendation: string;
+// Capital Flow Types
+interface GlobalLiquidity {
+  fedBalanceSheet: { value: number; change30d: number; trend: 'expanding' | 'contracting' | 'stable' };
+  m2MoneySupply: { value: number; change30d: number; yoyGrowth: number };
+  dxy: { value: number; change7d: number; trend: 'strengthening' | 'weakening' | 'stable' };
+  vix: { value: number; level: string };
+  yieldCurve: { spread10y2y: number; inverted: boolean; interpretation: string };
+}
+
+interface SectorFlow {
+  name: string;
+  flow7d: number;
+  flow30d: number;
+  dominance: number;
+  trending: 'up' | 'down' | 'stable';
+  phase: 'early' | 'mid' | 'late' | 'exit';
+}
+
+interface MarketFlow {
+  market: AssetType;
+  flow7d: number;
+  flow30d: number;
+  flowVelocity: number;
+  phase: 'early' | 'mid' | 'late' | 'exit';
+  daysInPhase: number;
+  avgPhaseDuration: number;
+  rotationSignal: 'entering' | 'stable' | 'exiting' | null;
+  sectors?: SectorFlow[];
+}
+
+interface FlowRecommendation {
+  primaryMarket: string;
+  phase: string;
+  action: 'analyze' | 'wait' | 'avoid';
+  reason: string;
+  sectors?: string[];
+  confidence: number;
+}
+
+interface CapitalFlowData {
+  timestamp: string;
+  globalLiquidity: GlobalLiquidity;
+  liquidityBias: 'risk_on' | 'risk_off' | 'neutral';
+  markets: MarketFlow[];
+  recommendation: FlowRecommendation;
 }
 
 interface SuggestedAsset {
@@ -196,12 +241,14 @@ export default function AnalyzePage() {
   const marketParam = searchParams.get('market') as AssetType | null;
   const sectorParam = searchParams.get('sector');
   const symbolParam = searchParams.get('symbol');
-  const tabParam = searchParams.get('tab') as TabType | null;
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState<TabType>(tabParam || 'new-analysis');
+  // Capital Flow state (L1-L3)
+  const [flowData, setFlowData] = useState<CapitalFlowData | null>(null);
+  const [flowLoading, setFlowLoading] = useState(true);
+  const [flowExpanded, setFlowExpanded] = useState(false);
+  const [selectedMarket, setSelectedMarket] = useState<MarketFlow | null>(null);
 
-  // New Analysis state
+  // Asset Analysis state (L4)
   const [assetType, setAssetType] = useState<AssetType>(marketParam || 'crypto');
   const [selectedSymbol, setSelectedSymbol] = useState<string>(symbolParam || '');
   const [timeframe, setTimeframe] = useState<Timeframe>('4h');
@@ -209,10 +256,6 @@ export default function AnalyzePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
-
-  // Capital Flow context
-  const [flowContext, setFlowContext] = useState<CapitalFlowContext | null>(null);
-  const [flowLoading, setFlowLoading] = useState(true);
   const [suggestions, setSuggestions] = useState<SuggestedAsset[]>([]);
 
   // Top Opportunities state
@@ -221,40 +264,28 @@ export default function AnalyzePage() {
   const [lastScanTime, setLastScanTime] = useState<string | null>(null);
   const [verdictFilter, setVerdictFilter] = useState<string>('all');
 
-  // Fetch Capital Flow context
+  // Fetch Capital Flow data
   useEffect(() => {
-    const fetchFlowContext = async () => {
+    const fetchFlowData = async () => {
       setFlowLoading(true);
       try {
         const res = await authFetch('/api/capital-flow/summary');
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.data) {
-            const { liquidityBias, recommendation, markets } = data.data;
-            let bestMarket: AssetType | null = null;
-            let bestPhase: string | null = null;
-
-            if (markets) {
-              const marketOrder: AssetType[] = ['crypto', 'stocks', 'metals', 'bonds'];
-              for (const m of marketOrder) {
-                if (markets[m]?.phase === 'early' || markets[m]?.phase === 'mid') {
-                  bestMarket = m;
-                  bestPhase = markets[m].phase;
-                  break;
-                }
-              }
+            setFlowData(data.data);
+            // Auto-select recommended market
+            if (data.data.recommendation?.primaryMarket && !marketParam) {
+              const recMarket = data.data.recommendation.primaryMarket as AssetType;
+              setAssetType(recMarket);
+              // Find and set the market
+              const market = data.data.markets?.find((m: MarketFlow) => m.market === recMarket);
+              if (market) setSelectedMarket(market);
+            } else if (marketParam) {
+              setAssetType(marketParam);
+              const market = data.data.markets?.find((m: MarketFlow) => m.market === marketParam);
+              if (market) setSelectedMarket(market);
             }
-
-            setFlowContext({
-              liquidity: { bias: liquidityBias || 'neutral', expanding: liquidityBias === 'risk_on' },
-              recommendedMarket: marketParam || bestMarket,
-              recommendedSector: sectorParam || null,
-              phase: bestPhase as any,
-              recommendation: recommendation?.text || 'Select an asset to analyze',
-            });
-
-            if (marketParam) setAssetType(marketParam);
-            else if (bestMarket) setAssetType(bestMarket);
           }
         }
       } catch (error) {
@@ -263,14 +294,14 @@ export default function AnalyzePage() {
         setFlowLoading(false);
       }
     };
-    fetchFlowContext();
-  }, [marketParam, sectorParam]);
+    fetchFlowData();
+  }, [marketParam]);
 
   // Fetch top opportunities
   const fetchTopOpportunities = useCallback(async () => {
     setTopCoinsLoading(true);
     try {
-      const res = await authFetch('/api/analysis/top-coins?limit=20&tradeableOnly=false');
+      const res = await authFetch('/api/analysis/top-coins?limit=10&tradeableOnly=false');
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.data) {
@@ -287,11 +318,10 @@ export default function AnalyzePage() {
     }
   }, []);
 
+  // Fetch top opportunities on mount
   useEffect(() => {
-    if (activeTab === 'top-opportunities') {
-      fetchTopOpportunities();
-    }
-  }, [activeTab, fetchTopOpportunities]);
+    fetchTopOpportunities();
+  }, [fetchTopOpportunities]);
 
   // Update suggestions based on asset type and sector
   useEffect(() => {
@@ -341,7 +371,23 @@ export default function AnalyzePage() {
     return 'bg-red-500';
   };
 
-  const hasFlowContext = marketParam || sectorParam;
+  // Helper functions for Capital Flow display
+  const getLiquidityBiasDisplay = () => {
+    if (!flowData) return { text: 'Loading', color: 'text-slate-500', bg: 'bg-slate-100' };
+    const bias = flowData.liquidityBias;
+    if (bias === 'risk_on') return { text: 'Risk-On', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-500/20' };
+    if (bias === 'risk_off') return { text: 'Risk-Off', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-500/20' };
+    return { text: 'Neutral', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-500/20' };
+  };
+
+  const getPhaseColor = (phase: string) => {
+    if (phase === 'early') return 'bg-emerald-500';
+    if (phase === 'mid') return 'bg-amber-500';
+    if (phase === 'late') return 'bg-orange-500';
+    return 'bg-red-500';
+  };
+
+  const liquidityDisplay = getLiquidityBiasDisplay();
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -354,124 +400,229 @@ export default function AnalyzePage() {
                 <Layers className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-slate-900 dark:text-white">Analysis</h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">LAYER 4: Micro-level analysis</p>
+                <h1 className="text-lg font-bold text-slate-900 dark:text-white">Analysis Hub</h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400">All 4 Layers • Capital Flow → Analysis</p>
               </div>
             </div>
             <button
-              onClick={() => router.push('/capital-flow')}
+              onClick={() => fetchTopOpportunities()}
+              disabled={topCoinsLoading}
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
-              <Globe className="w-4 h-4" />
-              <span className="hidden sm:inline">Capital Flow</span>
-            </button>
-          </div>
-
-          {/* Tabs */}
-          <div className="mt-4 flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
-            <button
-              onClick={() => setActiveTab('new-analysis')}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
-                activeTab === 'new-analysis'
-                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              )}
-            >
-              <Target className="w-4 h-4" />
-              New Analysis
-            </button>
-            <button
-              onClick={() => setActiveTab('top-opportunities')}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
-                activeTab === 'top-opportunities'
-                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              )}
-            >
-              <Crown className="w-4 h-4" />
-              Top Opportunities
+              <RefreshCw className={cn("w-4 h-4", topCoinsLoading && "animate-spin")} />
+              <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        {/* TAB: New Analysis */}
-        {activeTab === 'new-analysis' && (
-          <>
-            {/* Capital Flow Context */}
-            <div className={cn(
-              "rounded-2xl border overflow-hidden transition-all",
-              hasFlowContext
-                ? "bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20 border-teal-200 dark:border-teal-800"
-                : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
-            )}>
-              <div className="p-4">
-                {flowLoading ? (
-                  <div className="flex items-center gap-3">
-                    <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
-                    <span className="text-sm text-slate-500">Loading context...</span>
-                  </div>
-                ) : hasFlowContext ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-medium text-teal-600 dark:text-teal-400">
-                      <Globe className="w-3.5 h-3.5" />
-                      CAPITAL FLOW CONTEXT
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                        <span className="text-[10px] font-medium text-slate-500">L1</span>
-                        <span className={cn(
-                          "text-xs font-semibold",
-                          flowContext?.liquidity.bias === 'risk_on' ? "text-emerald-600" :
-                          flowContext?.liquidity.bias === 'risk_off' ? "text-red-600" : "text-amber-600"
-                        )}>
-                          {flowContext?.liquidity.bias === 'risk_on' ? 'Risk-On' : flowContext?.liquidity.bias === 'risk_off' ? 'Risk-Off' : 'Neutral'}
-                        </span>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                        <span className="text-[10px] font-medium text-slate-500">L2</span>
-                        <span className="text-xs font-semibold text-slate-900 dark:text-white capitalize">{flowContext?.recommendedMarket || assetType}</span>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-teal-500 text-white">
-                        <span className="text-[10px] font-medium opacity-80">L4</span>
-                        <span className="text-xs font-semibold">Analysis</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                        <Globe className="w-5 h-5 text-slate-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-white">No Capital Flow Context</p>
-                        <p className="text-xs text-slate-500">Start from Capital Flow for optimal timing</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => router.push('/capital-flow')}
-                      className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-gradient-to-r from-teal-500 to-emerald-600 text-white hover:shadow-lg transition-all"
-                    >
-                      <Globe className="w-4 h-4" />
-                      Go to Capital Flow
-                    </button>
-                  </div>
-                )}
-              </div>
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+        {/* ===== CAPITAL FLOW DASHBOARD (L1-L3) ===== */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+          {/* Collapsed Header - Always Visible */}
+          <button
+            onClick={() => setFlowExpanded(!flowExpanded)}
+            className="w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+          >
+            <div className="flex items-center gap-4">
+              <Globe className="w-5 h-5 text-teal-500" />
+              <span className="font-semibold text-slate-900 dark:text-white">Capital Flow</span>
+              {flowLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+              ) : (
+                <div className="flex items-center gap-2">
+                  {/* L1: Liquidity Badge */}
+                  <span className={cn("px-2 py-0.5 rounded-full text-xs font-bold", liquidityDisplay.bg, liquidityDisplay.color)}>
+                    L1: {liquidityDisplay.text}
+                  </span>
+                  {/* L2: Top Market */}
+                  {flowData?.recommendation && (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300">
+                      L2: {flowData.recommendation.primaryMarket.toUpperCase()}
+                    </span>
+                  )}
+                  {/* L4: Recommendation */}
+                  {flowData?.recommendation && (
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full text-xs font-bold text-white",
+                      flowData.recommendation.action === 'analyze' ? 'bg-emerald-500' :
+                      flowData.recommendation.action === 'wait' ? 'bg-amber-500' : 'bg-red-500'
+                    )}>
+                      {flowData.recommendation.action.toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
+            <ChevronDown className={cn("w-5 h-5 text-slate-400 transition-transform", flowExpanded && "rotate-180")} />
+          </button>
 
+          {/* Expanded Content */}
+          {flowExpanded && flowData && (
+            <div className="border-t border-slate-200 dark:border-slate-800 p-4 space-y-4">
+              {/* L1: Global Liquidity */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-blue-500 flex items-center justify-center text-white text-xs font-bold">1</div>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Global Liquidity</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <p className="text-[10px] text-slate-500 mb-1">Fed Balance</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{flowData.globalLiquidity.fedBalanceSheet.value.toFixed(2)}T</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <p className="text-[10px] text-slate-500 mb-1">DXY</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{flowData.globalLiquidity.dxy.value.toFixed(1)}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <p className="text-[10px] text-slate-500 mb-1">VIX</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{flowData.globalLiquidity.vix.value.toFixed(1)}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <p className="text-[10px] text-slate-500 mb-1">10Y-2Y Spread</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{flowData.globalLiquidity.yieldCurve.spread10y2y.toFixed(2)}%</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* L2: Market Flow */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-emerald-500 flex items-center justify-center text-white text-xs font-bold">2</div>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Market Flow</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {flowData.markets.map((market) => (
+                    <button
+                      key={market.market}
+                      onClick={() => {
+                        setAssetType(market.market);
+                        setSelectedMarket(market);
+                      }}
+                      className={cn(
+                        "p-3 rounded-xl border transition-all text-left",
+                        selectedMarket?.market === market.market
+                          ? "border-teal-500 bg-teal-50 dark:bg-teal-500/10"
+                          : "border-slate-200 dark:border-slate-700 hover:border-slate-300"
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 capitalize">{market.market}</span>
+                        <span className={cn("w-2 h-2 rounded-full", getPhaseColor(market.phase))} />
+                      </div>
+                      <p className={cn(
+                        "text-sm font-bold",
+                        market.flow7d >= 0 ? "text-emerald-600" : "text-red-600"
+                      )}>
+                        {market.flow7d >= 0 ? '+' : ''}{market.flow7d.toFixed(1)}%
+                      </p>
+                      <p className="text-[10px] text-slate-500">{market.phase} • {market.daysInPhase}d</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* L3: Sectors (if market selected) */}
+              {selectedMarket?.sectors && selectedMarket.sectors.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded bg-purple-500 flex items-center justify-center text-white text-xs font-bold">3</div>
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Sectors ({selectedMarket.market})</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedMarket.sectors.slice(0, 6).map((sector) => (
+                      <span
+                        key={sector.name}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-medium",
+                          sector.trending === 'up' ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300" :
+                          sector.trending === 'down' ? "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300" :
+                          "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                        )}
+                      >
+                        {sector.name} {sector.flow7d >= 0 ? '+' : ''}{sector.flow7d.toFixed(1)}%
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recommendation */}
+              {flowData.recommendation && (
+                <div className={cn(
+                  "p-3 rounded-xl",
+                  flowData.recommendation.action === 'analyze' ? "bg-emerald-50 dark:bg-emerald-500/10" :
+                  flowData.recommendation.action === 'wait' ? "bg-amber-50 dark:bg-amber-500/10" :
+                  "bg-red-50 dark:bg-red-500/10"
+                )}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Target className="w-4 h-4 text-teal-600" />
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                      {flowData.recommendation.action.toUpperCase()}: {flowData.recommendation.primaryMarket.toUpperCase()}
+                    </span>
+                    <span className="text-xs text-slate-500 ml-auto">{flowData.recommendation.confidence}% confidence</span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">{flowData.recommendation.reason}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ===== TOP OPPORTUNITIES (Quick View) ===== */}
+        {topCoins.length > 0 && (
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Crown className="w-4 h-4 text-amber-500" />
+                <span className="text-sm font-semibold text-slate-900 dark:text-white">Top Opportunities</span>
+                <span className="text-xs text-slate-500">({topCoins.length})</span>
+              </div>
+              {lastScanTime && (
+                <span className="text-[10px] text-slate-400">{new Date(lastScanTime).toLocaleTimeString()}</span>
+              )}
+            </div>
+            <div className="p-2 flex gap-2 overflow-x-auto">
+              {topCoins.slice(0, 5).map((coin) => (
+                <button
+                  key={coin.symbol}
+                  onClick={() => {
+                    if (coin.analysisId) {
+                      router.push(`/analyze/details/${coin.analysisId}`);
+                    } else {
+                      setSelectedSymbol(coin.symbol);
+                      setAssetType('crypto');
+                    }
+                  }}
+                  className="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-teal-500 transition-all"
+                >
+                  <CoinIcon symbol={coin.symbol} size={24} />
+                  <div className="text-left">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">{coin.symbol}</p>
+                    <p className={cn("text-[10px] font-medium", coin.priceChange24h >= 0 ? "text-emerald-500" : "text-red-500")}>
+                      {coin.priceChange24h >= 0 ? '+' : ''}{coin.priceChange24h?.toFixed(1)}%
+                    </p>
+                  </div>
+                  <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold text-white", getVerdictColor(coin.verdict, coin.recommendation))}>
+                    {(coin.recommendation || coin.verdict)?.split('_')[0]}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ===== L4: ASSET ANALYSIS ===== */}
+        <div className="grid lg:grid-cols-3 gap-4">
+          {/* Left: Asset Selection + Parameters */}
+          <div className="lg:col-span-2 space-y-4">
             {/* Asset Selection */}
             <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
               <div className="p-4 border-b border-slate-200 dark:border-slate-800">
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                   <Target className="w-4 h-4 text-teal-500" />
-                  Select Asset
+                  Select Asset (L4)
                 </h2>
               </div>
               <div className="p-4 space-y-4">
@@ -485,7 +636,7 @@ export default function AnalyzePage() {
                         key={type}
                         onClick={() => { setAssetType(type); setSelectedSymbol(''); }}
                         className={cn(
-                          "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                          "flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-sm font-medium transition-all",
                           assetType === type
                             ? `bg-gradient-to-r ${config.gradient} text-white shadow-lg`
                             : "text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700/50"
@@ -499,28 +650,24 @@ export default function AnalyzePage() {
                 </div>
 
                 {/* Suggested Assets */}
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Popular Assets</p>
-                  <div className="flex flex-wrap gap-2">
-                    {suggestions.map((asset) => (
-                      <button
-                        key={asset.symbol}
-                        onClick={() => handleSelectSymbol(asset.symbol)}
-                        className={cn(
-                          "flex items-center gap-2 px-3 py-2 rounded-xl border transition-all",
-                          selectedSymbol === asset.symbol
-                            ? "border-teal-500 bg-teal-50 dark:bg-teal-500/10"
-                            : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800"
-                        )}
-                      >
-                        {assetType === 'crypto' && <CoinIcon symbol={asset.symbol} size={20} />}
-                        <span className={cn(
-                          "text-sm font-semibold",
-                          selectedSymbol === asset.symbol ? "text-teal-700 dark:text-teal-400" : "text-slate-900 dark:text-white"
-                        )}>{asset.symbol}</span>
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.map((asset) => (
+                    <button
+                      key={asset.symbol}
+                      onClick={() => handleSelectSymbol(asset.symbol)}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-xl border transition-all",
+                        selectedSymbol === asset.symbol
+                          ? "border-teal-500 bg-teal-50 dark:bg-teal-500/10"
+                          : "border-slate-200 dark:border-slate-700 hover:border-slate-300"
+                      )}
+                    >
+                      {assetType === 'crypto' && <CoinIcon symbol={asset.symbol} size={20} />}
+                      <span className={cn("text-sm font-semibold", selectedSymbol === asset.symbol ? "text-teal-700 dark:text-teal-400" : "text-slate-900 dark:text-white")}>
+                        {asset.symbol}
+                      </span>
+                    </button>
+                  ))}
                 </div>
 
                 {/* Search */}
@@ -532,7 +679,7 @@ export default function AnalyzePage() {
                     onChange={(e) => { setSearchQuery(e.target.value); setShowSearch(true); }}
                     onFocus={() => setShowSearch(true)}
                     placeholder={`Search ${ASSET_CONFIGS[assetType].name.toLowerCase()}...`}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
                   {showSearch && filteredSymbols.length > 0 && (
                     <div className="absolute top-full left-0 right-0 mt-2 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl z-50 max-h-64 overflow-y-auto">
@@ -552,18 +699,6 @@ export default function AnalyzePage() {
                     </div>
                   )}
                 </div>
-
-                {/* Selected Asset */}
-                {selectedSymbol && (
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20 border border-teal-200 dark:border-teal-800">
-                    {assetType === 'crypto' && <CoinIcon symbol={selectedSymbol} size={32} />}
-                    <div>
-                      <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedSymbol}</p>
-                      <p className="text-xs text-slate-500">{ALL_SYMBOLS[assetType].find(s => s.symbol === selectedSymbol)?.name || 'Selected'}</p>
-                    </div>
-                    <span className="ml-auto text-xs font-medium text-teal-600 dark:text-teal-400">Ready</span>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -583,10 +718,10 @@ export default function AnalyzePage() {
                       key={tf.value}
                       onClick={() => setTimeframe(tf.value)}
                       className={cn(
-                        "flex-1 flex flex-col items-center gap-1 px-3 py-3 rounded-xl border transition-all",
+                        "flex-1 flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl border transition-all",
                         timeframe === tf.value
                           ? "border-teal-500 bg-teal-50 dark:bg-teal-500/10"
-                          : "border-slate-200 dark:border-slate-700 hover:border-slate-300"
+                          : "border-slate-200 dark:border-slate-700"
                       )}
                     >
                       <span className={cn("text-sm font-bold", timeframe === tf.value ? "text-teal-700 dark:text-teal-400" : "text-slate-900 dark:text-white")}>{tf.label}</span>
@@ -596,42 +731,54 @@ export default function AnalyzePage() {
                 </div>
 
                 {/* Method */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setMethod('classic')}
                     className={cn(
-                      "p-4 rounded-xl border text-left transition-all",
+                      "p-3 rounded-xl border text-left transition-all",
                       method === 'classic' ? "border-teal-500 bg-teal-50 dark:bg-teal-500/10" : "border-slate-200 dark:border-slate-700"
                     )}
                   >
                     <div className="flex items-center gap-2">
                       <BarChart3 className="w-4 h-4 text-teal-500" />
-                      <span className="font-semibold text-sm text-slate-900 dark:text-white">Classic 7-Step</span>
+                      <span className="font-semibold text-sm text-slate-900 dark:text-white">7-Step</span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">40+ indicators, trade plan</p>
+                    <p className="text-[10px] text-slate-500 mt-1">40+ indicators</p>
                   </button>
                   <button
                     onClick={() => setMethod('mlis_pro')}
                     className={cn(
-                      "relative p-4 rounded-xl border text-left transition-all",
+                      "relative p-3 rounded-xl border text-left transition-all",
                       method === 'mlis_pro' ? "border-violet-500 bg-violet-50 dark:bg-violet-500/10" : "border-slate-200 dark:border-slate-700"
                     )}
                   >
-                    <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-[10px] font-bold rounded-full">NEW</div>
+                    <div className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 bg-violet-500 text-white text-[8px] font-bold rounded-full">NEW</div>
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-violet-500" />
                       <span className="font-semibold text-sm text-slate-900 dark:text-white">MLIS Pro</span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">5-layer neural analysis</p>
+                    <p className="text-[10px] text-slate-500 mt-1">5-layer neural</p>
                   </button>
                 </div>
+
+                {/* Selected Asset Display */}
+                {selectedSymbol && (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20 border border-teal-200 dark:border-teal-800">
+                    {assetType === 'crypto' && <CoinIcon symbol={selectedSymbol} size={28} />}
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedSymbol}</p>
+                      <p className="text-xs text-slate-500">{ALL_SYMBOLS[assetType].find(s => s.symbol === selectedSymbol)?.name}</p>
+                    </div>
+                    <span className="text-xs font-medium text-teal-600 dark:text-teal-400">Ready</span>
+                  </div>
+                )}
 
                 {/* Run Button */}
                 <button
                   onClick={runAnalysis}
                   disabled={!selectedSymbol}
                   className={cn(
-                    "w-full flex items-center justify-center gap-3 py-4 rounded-xl font-semibold text-white transition-all",
+                    "w-full flex items-center justify-center gap-3 py-3.5 rounded-xl font-semibold text-white transition-all",
                     selectedSymbol
                       ? method === 'mlis_pro'
                         ? "bg-gradient-to-r from-violet-500 to-purple-600 hover:shadow-lg hover:shadow-violet-500/20"
@@ -640,147 +787,31 @@ export default function AnalyzePage() {
                   )}
                 >
                   <Zap className="w-5 h-5" />
-                  <span>Run {method === 'mlis_pro' ? 'MLIS Pro' : '7-Step'} Analysis</span>
-                  <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">25 Credits</span>
+                  <span>Analyze {selectedSymbol || 'Asset'}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">25 Cr</span>
                 </button>
               </div>
             </div>
+          </div>
 
-            {/* Recent Analyses */}
-            <div id="recent-analyses" className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+          {/* Right: Recent Analyses */}
+          <div className="lg:col-span-1">
+            <div id="recent-analyses" className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden h-full">
               <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-teal-500" />
-                  Recent Analyses
+                  Recent
                 </h2>
                 <button onClick={() => router.push('/reports')} className="text-xs font-medium text-teal-600 dark:text-teal-400 flex items-center gap-1">
-                  View All <ArrowRight className="w-3 h-3" />
+                  All <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
-              <div className="p-4">
+              <div className="p-4 overflow-y-auto" style={{ maxHeight: '400px' }}>
                 <RecentAnalyses />
               </div>
             </div>
-          </>
-        )}
-
-        {/* TAB: Top Opportunities */}
-        {activeTab === 'top-opportunities' && (
-          <div className="space-y-4">
-            {/* Info Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <Crown className="w-5 h-5 text-amber-500" />
-                <div>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white">Top Opportunities</p>
-                  {lastScanTime && (
-                    <p className="text-xs text-slate-500 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      Last scan: {new Date(lastScanTime).toLocaleString()}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={fetchTopOpportunities}
-                disabled={topCoinsLoading}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
-              >
-                <RefreshCw className={cn("w-4 h-4", topCoinsLoading && "animate-spin")} />
-                Refresh
-              </button>
-            </div>
-
-            {/* Filters */}
-            <div className="flex gap-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
-              {['all', 'GO', 'WAIT', 'AVOID'].map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setVerdictFilter(f)}
-                  className={cn(
-                    "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all",
-                    verdictFilter === f
-                      ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                      : "text-slate-600 dark:text-slate-400"
-                  )}
-                >
-                  {f === 'all' ? 'All' : f}
-                </button>
-              ))}
-            </div>
-
-            {/* Coins List */}
-            {topCoinsLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-              </div>
-            ) : filteredTopCoins.length === 0 ? (
-              <div className="text-center py-12">
-                <Crown className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-                <p className="text-slate-500">No opportunities found</p>
-              </div>
-            ) : (
-              <div className="grid gap-3">
-                {filteredTopCoins.map((coin, index) => (
-                  <div
-                    key={coin.symbol}
-                    onClick={() => {
-                      if (coin.analysisId) {
-                        router.push(`/analyze/details/${coin.analysisId}`);
-                      } else {
-                        setSelectedSymbol(coin.symbol);
-                        setAssetType('crypto');
-                        setActiveTab('new-analysis');
-                      }
-                    }}
-                    className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 cursor-pointer transition-all"
-                  >
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-sm font-bold text-slate-500">
-                      {index + 1}
-                    </div>
-                    <CoinIcon symbol={coin.symbol} size={32} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 dark:text-white">{coin.symbol}</span>
-                        <span className={cn(
-                          "px-2 py-0.5 rounded-full text-[10px] font-bold text-white",
-                          getVerdictColor(coin.verdict, coin.recommendation)
-                        )}>
-                          {coin.recommendation?.replace('_', ' ') || coin.verdict?.replace('_', ' ')}
-                        </span>
-                        {coin.method === 'mlis_pro' && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-400">MLIS</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs text-slate-500">Score: {Math.round(coin.reliabilityScore)}</span>
-                        {coin.direction && (
-                          <span className={cn(
-                            "text-xs font-medium",
-                            coin.direction === 'LONG' ? "text-emerald-500" : "text-red-500"
-                          )}>
-                            {coin.direction === 'LONG' ? <TrendingUp className="w-3 h-3 inline" /> : <TrendingDown className="w-3 h-3 inline" />}
-                            {' '}{coin.direction}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className={cn(
-                        "text-sm font-semibold",
-                        coin.priceChange24h >= 0 ? "text-emerald-500" : "text-red-500"
-                      )}>
-                        {coin.priceChange24h >= 0 ? '+' : ''}{coin.priceChange24h?.toFixed(2)}%
-                      </p>
-                      <p className="text-xs text-slate-500">${coin.price?.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-slate-400" />
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Analysis Dialog */}
