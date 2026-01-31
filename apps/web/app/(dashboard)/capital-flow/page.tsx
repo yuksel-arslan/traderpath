@@ -1038,23 +1038,36 @@ export default function CapitalFlowPage() {
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* ===== HERO SECTION with Kinetic Typography ===== */}
         <div className="text-center space-y-3 sm:space-y-4 py-4 sm:py-6 mb-8">
-          <div className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-3 rounded-full bg-gradient-to-r from-teal-500/20 via-emerald-500/20 to-coral-500/20 border-2 border-teal-500/40 backdrop-blur-md shadow-lg shadow-teal-500/10 animate-blur-in">
-            <div className="relative">
-              <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-teal-500" />
-              <div className="absolute inset-0 w-5 h-5 sm:w-6 sm:h-6 bg-teal-500/30 rounded-full blur-md animate-pulse" />
+          <div className="relative inline-flex items-center gap-2 sm:gap-3 px-5 sm:px-8 py-3 sm:py-4 rounded-full overflow-hidden animate-blur-in group">
+            {/* Animated gradient background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-teal-500 via-emerald-400 to-coral-500 opacity-20 group-hover:opacity-30 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-r from-teal-500 via-emerald-400 via-coral-500 to-teal-500 bg-[length:300%_100%] animate-gradient-x opacity-10" />
+            {/* Border glow */}
+            <div className="absolute inset-0 rounded-full border-2 border-transparent bg-gradient-to-r from-teal-500 via-emerald-400 to-coral-500 bg-clip-border opacity-60" style={{ WebkitMask: 'linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude' }} />
+            <div className="relative flex items-center gap-2 sm:gap-3">
+              <div className="relative">
+                <Globe className="w-6 h-6 sm:w-7 sm:h-7 text-teal-500" />
+                <div className="absolute inset-0 w-6 h-6 sm:w-7 sm:h-7 bg-teal-500/40 rounded-full blur-lg animate-pulse" />
+              </div>
+              <span className="text-base sm:text-lg font-black uppercase tracking-[0.2em] bg-gradient-to-r from-teal-400 via-emerald-300 via-50% to-coral-400 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">
+                Global Capital Flow Intelligence
+              </span>
             </div>
-            <span className="text-sm sm:text-base font-bold bg-gradient-to-r from-teal-400 via-emerald-400 to-coral-400 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer tracking-wide">
-              GLOBAL CAPITAL FLOW INTELLIGENCE
-            </span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold">
-            <span className="bg-gradient-to-r from-teal-500 via-emerald-400 to-teal-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">
-              Follow the Money
+          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight">
+            <span className="relative inline-block">
+              <span className="bg-gradient-to-r from-teal-400 via-emerald-300 to-teal-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer drop-shadow-sm">
+                Follow the Money
+              </span>
+              <span className="absolute -inset-1 bg-gradient-to-r from-teal-500/20 via-emerald-400/20 to-teal-500/20 blur-xl rounded-lg -z-10" />
             </span>
             <br />
-            <span className="bg-gradient-to-r from-coral-500 via-red-400 to-coral-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer" style={{ animationDelay: '0.5s' }}>
-              Flow
+            <span className="relative inline-block mt-2">
+              <span className="bg-gradient-to-r from-coral-400 via-red-400 to-coral-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer drop-shadow-sm" style={{ animationDelay: '0.5s' }}>
+                Flow
+              </span>
+              <span className="absolute -inset-1 bg-gradient-to-r from-coral-500/20 via-red-400/20 to-coral-500/20 blur-xl rounded-lg -z-10" />
             </span>
           </h1>
 
