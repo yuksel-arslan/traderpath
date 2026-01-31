@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TradePath Logo Preview</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+  <title>TraderPath Logo Preview - Light & Dark Mode</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -13,259 +13,497 @@
     }
 
     body {
-      background: #0a0a0a;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 60px;
-      padding: 40px;
-    }
-
-    .logo-container {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    /* SVG Logo Icon */
-    .logo-icon {
-      width: 80px;
-      height: 80px;
-    }
-
-    .logo-icon-sm {
-      width: 48px;
-      height: 48px;
-    }
-
-    .logo-icon-lg {
-      width: 120px;
-      height: 120px;
-    }
-
-    /* Brand Text Container */
-    .brand-text {
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* TradePath Text */
-    .brand-name {
-      font-family: 'Playfair Display', 'Times New Roman', Georgia, serif;
-      font-size: 48px;
-      font-weight: 500;
-      letter-spacing: 1px;
-      background: linear-gradient(135deg, #E8C599 0%, #D4A574 30%, #C9956C 60%, #A67C3D 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .brand-name-sm {
-      font-size: 28px;
-    }
-
-    .brand-name-lg {
-      font-size: 64px;
-    }
-
-    /* Motto Text */
-    .motto {
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 13px;
-      letter-spacing: 0.35em;
-      text-transform: uppercase;
-      color: #E8D5C4;
-      font-weight: 300;
-      margin-top: 6px;
-    }
-
-    .motto-sm {
-      font-size: 9px;
-      letter-spacing: 0.3em;
-    }
-
-    .motto-lg {
-      font-size: 16px;
-    }
-
-    /* Section Labels */
-    .section-label {
-      color: #64748b;
-      font-family: Arial, sans-serif;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      margin-bottom: 20px;
     }
 
     .section {
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
+      padding: 60px 40px;
+      gap: 40px;
     }
 
-    /* Light background variant */
-    .light-bg {
+    .dark-section {
+      background: #0a0f1a;
+    }
+
+    .light-section {
       background: #ffffff;
-      padding: 40px 60px;
-      border-radius: 16px;
     }
 
-    .light-bg .motto {
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 20px;
+    }
+
+    .dark-section .section-title {
+      color: #64748b;
+    }
+
+    .light-section .section-title {
+      color: #64748b;
+    }
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 60px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .dark-section .logo-label {
+      color: #94a3b8;
+    }
+
+    .light-section .logo-label {
+      color: #64748b;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-name {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-name-sm {
+      font-size: 24px;
+    }
+
+    .brand-name-lg {
+      font-size: 48px;
+    }
+
+    /* Dark mode brand colors */
+    .dark-section .teal {
+      color: #2DD4BF;
+    }
+
+    .dark-section .coral {
+      color: #F87171;
+    }
+
+    /* Light mode brand colors - deeper for contrast */
+    .light-section .teal {
+      color: #0D9488;
+    }
+
+    .light-section .coral {
+      color: #DC2626;
+    }
+
+    .motto {
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      font-weight: 400;
+      margin-top: 4px;
+    }
+
+    .dark-section .motto {
+      color: #94a3b8;
+    }
+
+    .light-section .motto {
+      color: #64748b;
+    }
+
+    .divider {
+      width: 100%;
+      max-width: 800px;
+      height: 1px;
+      margin: 20px 0;
+    }
+
+    .dark-section .divider {
+      background: linear-gradient(90deg, transparent, #334155, transparent);
+    }
+
+    .light-section .divider {
+      background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+    }
+
+    .color-palette {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .color-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .color-swatch {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+    }
+
+    .color-code {
+      font-size: 11px;
+      font-family: monospace;
+    }
+
+    .dark-section .color-code {
+      color: #94a3b8;
+    }
+
+    .light-section .color-code {
       color: #64748b;
     }
   </style>
 </head>
 <body>
 
-  <!-- Main Logo - Dark Background -->
-  <div class="section">
-    <div class="section-label">Dark Background (Default)</div>
-    <div class="logo-container">
-      <svg class="logo-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="goldGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#E8C599" />
-            <stop offset="30%" stop-color="#D4A574" />
-            <stop offset="60%" stop-color="#C9956C" />
-            <stop offset="100%" stop-color="#8B6914" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M12 22
-             Q12 12, 25 12
-             L75 12
-             Q88 12, 88 22
-             Q88 32, 75 32
-             L60 32
-             L60 40
-             Q60 55, 72 70
-             Q82 82, 72 90
-             Q62 96, 50 85
-             Q40 74, 40 55
-             L40 32
-             L25 32
-             Q12 32, 12 22
-             Z"
-          fill="url(#goldGradient1)"
-        />
-      </svg>
-      <div class="brand-text">
-        <span class="brand-name">TradePath</span>
-        <span class="motto">From Charts to Clarity</span>
+  <!-- DARK MODE SECTION -->
+  <div class="section dark-section">
+    <div class="section-title">Dark Mode - For Dark Backgrounds</div>
+
+    <div class="logo-row">
+      <!-- Small -->
+      <div class="logo-box">
+        <div class="logo-label">Small</div>
+        <div class="logo-container">
+          <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="tealDark1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#5EEDC3"/>
+                <stop offset="50%" stop-color="#2DD4A8"/>
+                <stop offset="100%" stop-color="#14B8A6"/>
+              </linearGradient>
+              <linearGradient id="coralDark1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FF8A9B"/>
+                <stop offset="50%" stop-color="#F87171"/>
+                <stop offset="100%" stop-color="#EF5A6F"/>
+              </linearGradient>
+            </defs>
+            <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealDark1)"/>
+            <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealDark1)"/>
+            <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralDark1)"/>
+            <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralDark1)"/>
+          </svg>
+          <div class="brand-text">
+            <span class="brand-name brand-name-sm"><span class="teal">Trader</span><span class="coral">Path</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Medium -->
+      <div class="logo-box">
+        <div class="logo-label">Medium</div>
+        <div class="logo-container">
+          <svg width="48" height="48" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="tealDark2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#5EEDC3"/>
+                <stop offset="50%" stop-color="#2DD4A8"/>
+                <stop offset="100%" stop-color="#14B8A6"/>
+              </linearGradient>
+              <linearGradient id="coralDark2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FF8A9B"/>
+                <stop offset="50%" stop-color="#F87171"/>
+                <stop offset="100%" stop-color="#EF5A6F"/>
+              </linearGradient>
+            </defs>
+            <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealDark2)"/>
+            <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealDark2)"/>
+            <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralDark2)"/>
+            <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralDark2)"/>
+          </svg>
+          <div class="brand-text">
+            <span class="brand-name"><span class="teal">Trader</span><span class="coral">Path</span></span>
+            <span class="motto">From Charts to Clarity</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Large -->
+      <div class="logo-box">
+        <div class="logo-label">Large</div>
+        <div class="logo-container">
+          <svg width="64" height="64" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="tealDark3" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#5EEDC3"/>
+                <stop offset="50%" stop-color="#2DD4A8"/>
+                <stop offset="100%" stop-color="#14B8A6"/>
+              </linearGradient>
+              <linearGradient id="coralDark3" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FF8A9B"/>
+                <stop offset="50%" stop-color="#F87171"/>
+                <stop offset="100%" stop-color="#EF5A6F"/>
+              </linearGradient>
+            </defs>
+            <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealDark3)"/>
+            <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealDark3)"/>
+            <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralDark3)"/>
+            <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralDark3)"/>
+          </svg>
+          <div class="brand-text">
+            <span class="brand-name brand-name-lg"><span class="teal">Trader</span><span class="coral">Path</span></span>
+            <span class="motto">From Charts to Clarity</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">Dark Mode Color Palette</div>
+    <div class="color-palette">
+      <div class="color-box">
+        <div class="color-swatch" style="background: #5EEDC3;"></div>
+        <span class="color-code">#5EEDC3</span>
+      </div>
+      <div class="color-box">
+        <div class="color-swatch" style="background: #2DD4A8;"></div>
+        <span class="color-code">#2DD4A8</span>
+      </div>
+      <div class="color-box">
+        <div class="color-swatch" style="background: #14B8A6;"></div>
+        <span class="color-code">#14B8A6</span>
+      </div>
+      <div class="color-box">
+        <div class="color-swatch" style="background: #FF8A9B;"></div>
+        <span class="color-code">#FF8A9B</span>
+      </div>
+      <div class="color-box">
+        <div class="color-swatch" style="background: #F87171;"></div>
+        <span class="color-code">#F87171</span>
+      </div>
+      <div class="color-box">
+        <div class="color-swatch" style="background: #EF5A6F;"></div>
+        <span class="color-code">#EF5A6F</span>
       </div>
     </div>
   </div>
 
-  <!-- Light Background Variant -->
-  <div class="section">
-    <div class="section-label">Light Background (For PDF)</div>
-    <div class="logo-container light-bg">
-      <svg class="logo-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="goldGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#C9956C" />
-            <stop offset="30%" stop-color="#B8834F" />
-            <stop offset="60%" stop-color="#A67C3D" />
-            <stop offset="100%" stop-color="#8B6914" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M12 22
-             Q12 12, 25 12
-             L75 12
-             Q88 12, 88 22
-             Q88 32, 75 32
-             L60 32
-             L60 40
-             Q60 55, 72 70
-             Q82 82, 72 90
-             Q62 96, 50 85
-             Q40 74, 40 55
-             L40 32
-             L25 32
-             Q12 32, 12 22
-             Z"
-          fill="url(#goldGradient2)"
-        />
-      </svg>
-      <div class="brand-text">
-        <span class="brand-name">TradePath</span>
-        <span class="motto">From Charts to Clarity</span>
+  <!-- LIGHT MODE SECTION -->
+  <div class="section light-section">
+    <div class="section-title">Light Mode - For White/Light Backgrounds</div>
+
+    <div class="logo-row">
+      <!-- Small -->
+      <div class="logo-box">
+        <div class="logo-label">Small</div>
+        <div class="logo-container">
+          <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="tealLight1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#14B8A6"/>
+                <stop offset="50%" stop-color="#0D9488"/>
+                <stop offset="100%" stop-color="#0F766E"/>
+              </linearGradient>
+              <linearGradient id="coralLight1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#F87171"/>
+                <stop offset="50%" stop-color="#EF4444"/>
+                <stop offset="100%" stop-color="#DC2626"/>
+              </linearGradient>
+              <filter id="shadowLight1" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0D9488" flood-opacity="0.2"/>
+              </filter>
+            </defs>
+            <g filter="url(#shadowLight1)">
+              <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealLight1)"/>
+              <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealLight1)"/>
+              <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralLight1)"/>
+              <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralLight1)"/>
+            </g>
+          </svg>
+          <div class="brand-text">
+            <span class="brand-name brand-name-sm"><span class="teal">Trader</span><span class="coral">Path</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Medium -->
+      <div class="logo-box">
+        <div class="logo-label">Medium</div>
+        <div class="logo-container">
+          <svg width="48" height="48" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="tealLight2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#14B8A6"/>
+                <stop offset="50%" stop-color="#0D9488"/>
+                <stop offset="100%" stop-color="#0F766E"/>
+              </linearGradient>
+              <linearGradient id="coralLight2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#F87171"/>
+                <stop offset="50%" stop-color="#EF4444"/>
+                <stop offset="100%" stop-color="#DC2626"/>
+              </linearGradient>
+              <filter id="shadowLight2" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0D9488" flood-opacity="0.2"/>
+              </filter>
+            </defs>
+            <g filter="url(#shadowLight2)">
+              <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealLight2)"/>
+              <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealLight2)"/>
+              <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralLight2)"/>
+              <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralLight2)"/>
+            </g>
+          </svg>
+          <div class="brand-text">
+            <span class="brand-name"><span class="teal">Trader</span><span class="coral">Path</span></span>
+            <span class="motto">From Charts to Clarity</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Large -->
+      <div class="logo-box">
+        <div class="logo-label">Large</div>
+        <div class="logo-container">
+          <svg width="64" height="64" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="tealLight3" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#14B8A6"/>
+                <stop offset="50%" stop-color="#0D9488"/>
+                <stop offset="100%" stop-color="#0F766E"/>
+              </linearGradient>
+              <linearGradient id="coralLight3" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#F87171"/>
+                <stop offset="50%" stop-color="#EF4444"/>
+                <stop offset="100%" stop-color="#DC2626"/>
+              </linearGradient>
+              <filter id="shadowLight3" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0D9488" flood-opacity="0.2"/>
+              </filter>
+            </defs>
+            <g filter="url(#shadowLight3)">
+              <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealLight3)"/>
+              <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealLight3)"/>
+              <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralLight3)"/>
+              <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralLight3)"/>
+            </g>
+          </svg>
+          <div class="brand-text">
+            <span class="brand-name brand-name-lg"><span class="teal">Trader</span><span class="coral">Path</span></span>
+            <span class="motto">From Charts to Clarity</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">Light Mode Color Palette (Deeper for Contrast)</div>
+    <div class="color-palette">
+      <div class="color-box">
+        <div class="color-swatch" style="background: #14B8A6;"></div>
+        <span class="color-code">#14B8A6</span>
+      </div>
+      <div class="color-box">
+        <div class="color-swatch" style="background: #0D9488;"></div>
+        <span class="color-code">#0D9488</span>
+      </div>
+      <div class="color-box">
+        <div class="color-swatch" style="background: #0F766E;"></div>
+        <span class="color-code">#0F766E</span>
+      </div>
+      <div class="color-box">
+        <div class="color-swatch" style="background: #F87171;"></div>
+        <span class="color-code">#F87171</span>
+      </div>
+      <div class="color-box">
+        <div class="color-swatch" style="background: #EF4444;"></div>
+        <span class="color-code">#EF4444</span>
+      </div>
+      <div class="color-box">
+        <div class="color-swatch" style="background: #DC2626;"></div>
+        <span class="color-code">#DC2626</span>
       </div>
     </div>
   </div>
 
-  <!-- Small Size -->
-  <div class="section">
-    <div class="section-label">Small Size</div>
-    <div class="logo-container">
-      <svg class="logo-icon-sm" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="goldGradient3" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#E8C599" />
-            <stop offset="30%" stop-color="#D4A574" />
-            <stop offset="60%" stop-color="#C9956C" />
-            <stop offset="100%" stop-color="#8B6914" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M12 22 Q12 12, 25 12 L75 12 Q88 12, 88 22 Q88 32, 75 32 L60 32 L60 40 Q60 55, 72 70 Q82 82, 72 90 Q62 96, 50 85 Q40 74, 40 55 L40 32 L25 32 Q12 32, 12 22 Z"
-          fill="url(#goldGradient3)"
-        />
-      </svg>
-      <div class="brand-text">
-        <span class="brand-name brand-name-sm">TradePath</span>
-        <span class="motto motto-sm">From Charts to Clarity</span>
+  <!-- ICON ONLY SECTION -->
+  <div class="section dark-section">
+    <div class="section-title">Icon Only Variants</div>
+    <div class="logo-row">
+      <div class="logo-box">
+        <div class="logo-label">Dark Mode</div>
+        <svg width="80" height="80" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="tealIcon1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#5EEDC3"/>
+              <stop offset="50%" stop-color="#2DD4A8"/>
+              <stop offset="100%" stop-color="#14B8A6"/>
+            </linearGradient>
+            <linearGradient id="coralIcon1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#FF8A9B"/>
+              <stop offset="50%" stop-color="#F87171"/>
+              <stop offset="100%" stop-color="#EF5A6F"/>
+            </linearGradient>
+          </defs>
+          <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealIcon1)"/>
+          <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealIcon1)"/>
+          <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralIcon1)"/>
+          <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralIcon1)"/>
+        </svg>
+      </div>
+      <div class="logo-box" style="background: white; padding: 20px; border-radius: 12px;">
+        <div class="logo-label" style="color: #64748b;">Light Mode</div>
+        <svg width="80" height="80" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="tealIcon2" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#14B8A6"/>
+              <stop offset="50%" stop-color="#0D9488"/>
+              <stop offset="100%" stop-color="#0F766E"/>
+            </linearGradient>
+            <linearGradient id="coralIcon2" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#F87171"/>
+              <stop offset="50%" stop-color="#EF4444"/>
+              <stop offset="100%" stop-color="#DC2626"/>
+            </linearGradient>
+            <filter id="shadowIcon" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0D9488" flood-opacity="0.25"/>
+            </filter>
+          </defs>
+          <g filter="url(#shadowIcon)">
+            <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealIcon2)"/>
+            <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealIcon2)"/>
+            <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralIcon2)"/>
+            <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralIcon2)"/>
+          </g>
+        </svg>
       </div>
     </div>
-  </div>
-
-  <!-- Large Size -->
-  <div class="section">
-    <div class="section-label">Large Size</div>
-    <div class="logo-container">
-      <svg class="logo-icon-lg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="goldGradient4" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#E8C599" />
-            <stop offset="30%" stop-color="#D4A574" />
-            <stop offset="60%" stop-color="#C9956C" />
-            <stop offset="100%" stop-color="#8B6914" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M12 22 Q12 12, 25 12 L75 12 Q88 12, 88 22 Q88 32, 75 32 L60 32 L60 40 Q60 55, 72 70 Q82 82, 72 90 Q62 96, 50 85 Q40 74, 40 55 L40 32 L25 32 Q12 32, 12 22 Z"
-          fill="url(#goldGradient4)"
-        />
-      </svg>
-      <div class="brand-text">
-        <span class="brand-name brand-name-lg">TradePath</span>
-        <span class="motto motto-lg">From Charts to Clarity</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Icon Only -->
-  <div class="section">
-    <div class="section-label">Icon Only</div>
-    <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="goldGradient5" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#E8C599" />
-          <stop offset="30%" stop-color="#D4A574" />
-          <stop offset="60%" stop-color="#C9956C" />
-          <stop offset="100%" stop-color="#8B6914" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M12 22 Q12 12, 25 12 L75 12 Q88 12, 88 22 Q88 32, 75 32 L60 32 L60 40 Q60 55, 72 70 Q82 82, 72 90 Q62 96, 50 85 Q40 74, 40 55 L40 32 L25 32 Q12 32, 12 22 Z"
-        fill="url(#goldGradient5)"
-      />
-    </svg>
   </div>
 
 </body>
