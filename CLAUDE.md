@@ -559,6 +559,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-28 | Login sayfası: Tema uyumlu marketing paneli | Sol panel artık light/dark mode'a uygun görünüyor |
 | 2026-01-31 | Analyze sayfası: LAYER 4 minimalist tasarım | Karmaşık animasyonlar kaldırıldı, Capital Flow context eklendi, 4 adımlı akış |
 | 2026-01-31 | Dashboard: Platform + My Performance bölümleri | Capital Flow entegrasyonu, her layer için özet kartları, platform ve kişisel AI stats |
+| 2026-01-31 | Scheduled sayfası: Kurumsal stil tasarımı | Glassmorphism kartlar, gradient orbs, animasyonlu status badge'leri, progress bar, hover efektleri |
 
 ---
 
@@ -1530,6 +1531,21 @@ Kullanıcı Hakları Aktif:
     - Hata durumunda fallback SVG
     - Lazy loading ve error handling
   - Dosyalar: `apps/api/src/modules/asset-logos/`, `apps/web/lib/asset-logos-cache.ts`, `apps/web/hooks/useAssetLogos.ts`
+- **Scheduled Reports Page Corporate Styling**:
+  - Glassmorphism kartlar backdrop-blur efektleri ile
+  - Gradient orbs arka plan (teal, orange, blue)
+  - Animasyonlu status badge'leri (ACTIVE/PAUSED with pulse)
+  - Progress bar aktif schedule sayısı için
+  - Timeframe badge'leri gradient renklerle (15m kırmızı, 1H amber, 4H teal, 1D mavi)
+  - Frequency badge'leri (DAILY/WEEKLY/MONTHLY)
+  - Delivery channel ikonları aktif durumlarla
+  - Modal tasarımı sticky header/footer ile
+  - Tüm interaktif elementlerde hover efektleri
+  - Kurumsal teal/coral renk şeması tutarlı şekilde
+  - Geliştirilmiş empty state gradient dekorasyonlarla
+  - Info box amber gradient tema ile
+  - Geliştirilmiş loading state glowing spinner ile
+  - Dosya: `apps/web/app/(dashboard)/scheduled/page.tsx`
 
 ---
 
