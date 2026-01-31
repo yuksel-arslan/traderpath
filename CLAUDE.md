@@ -1504,6 +1504,29 @@ Kullanıcı Hakları Aktif:
   - Layer 1-4 tüm detayları fullscreen'de gösteriliyor
   - Export fonksiyonları layer-specific isimlendirme ile (TraderPath_Global_Liquidity_2026-01-31.pdf)
   - Dosya: `capital-flow/page.tsx`
+- **Asset Logos Database System**:
+  - **Yeni Tablo**: `AssetLogos` - JSON olarak tüm asset logolarını saklar
+  - **Kapsamlı Logo Verileri**:
+    - Crypto: 80+ coin (CoinGecko CDN)
+    - Stocks: 60+ şirket (Clearbit Logo API)
+    - Metals: 13 metal ETF/commodity
+    - Bonds: 14 bond ETF/treasury
+  - **API Endpoint'leri**:
+    - `GET /api/asset-logos` - Tüm logolar
+    - `GET /api/asset-logos/:assetClass` - Asset class bazında
+    - `GET /api/asset-logos/symbol/:symbol` - Tek sembol
+    - `POST /api/asset-logos/batch` - Çoklu sembol
+    - `PUT /api/asset-logos/admin/update` - Logo güncelleme (admin)
+    - `PUT /api/asset-logos/admin/bulk` - Toplu güncelleme (admin)
+  - **Frontend Cache Sistemi**:
+    - Memory cache + localStorage (24 saat TTL)
+    - `useAssetLogo` ve `useAssetLogos` React hooks
+    - Fallback SVG generation (logo yüklenemezse)
+  - **CoinIcon Komponenti Güncellendi**:
+    - API cache'den logo çekiyor
+    - Hata durumunda fallback SVG
+    - Lazy loading ve error handling
+  - Dosyalar: `apps/api/src/modules/asset-logos/`, `apps/web/lib/asset-logos-cache.ts`, `apps/web/hooks/useAssetLogos.ts`
 
 ---
 
