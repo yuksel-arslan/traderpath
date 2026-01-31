@@ -1372,7 +1372,10 @@ export default function CapitalFlowPage() {
                       <MarketCard
                         key={market.market}
                         market={market}
-                        onClick={() => setSelectedMarket(selectedMarket?.market === market.market ? null : market)}
+                        onClick={() => {
+                          setSelectedMarket(selectedMarket?.market === market.market ? null : market);
+                          setSelectedLayer(3); // Switch to Layer 3 to show sectors
+                        }}
                         onAnalyze={() => fetchMarketAnalysis(market)}
                       />
                     ))}
