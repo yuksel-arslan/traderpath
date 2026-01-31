@@ -122,7 +122,8 @@ function LayerBreadcrumb({ activeLayer = 0 }: { activeLayer?: number }) {
 
 // Flow Direction Indicator
 function FlowIndicator({ flow, label }: { flow: number; label: string }) {
-  const isPositive = flow >= 0;
+  const safeFlow = typeof flow === 'number' && !isNaN(flow) ? flow : 0;
+  const isPositive = safeFlow >= 0;
   return (
     <div className="flex items-center gap-2">
       <div className={cn(
@@ -132,7 +133,7 @@ function FlowIndicator({ flow, label }: { flow: number; label: string }) {
           : "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
       )}>
         {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-        {isPositive ? '+' : ''}{flow.toFixed(1)}%
+        {isPositive ? '+' : ''}{safeFlow.toFixed(1)}%
       </div>
       <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
     </div>
@@ -530,7 +531,7 @@ export default function ConciergePage() {
     }
   };
 
-  const biasDisplay = capitalFlow ? getBiasDisplay(capitalFlow.globalLiquidity.bias) : null;
+  const biasDisplay = capitalFlow?.globalLiquidity?.bias ? getBiasDisplay(capitalFlow.globalLiquidity.bias) : null;
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
@@ -568,7 +569,7 @@ export default function ConciergePage() {
           </div>
 
           {/* Capital Flow Summary Bar */}
-          {!flowLoading && capitalFlow && (
+          {!flowLoading && capitalFlow && capitalFlow.marketFlows && capitalFlow.recommendation && (
             <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 shadow-sm">
               <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                 {/* Global Liquidity Status */}
@@ -590,9 +591,9 @@ export default function ConciergePage() {
                     <MarketFlowCard
                       key={market.market}
                       market={market.market}
-                      flow7d={market.flow7d}
-                      phase={market.phase}
-                      isRecommended={capitalFlow.recommendation.primaryMarket === market.market}
+                      flow7d={market.flow7d ?? 0}
+                      phase={market.phase || 'mid'}
+                      isRecommended={capitalFlow.recommendation?.primaryMarket === market.market}
                       onClick={() => sendMessage(`Analyze ${market.market} market`)}
                     />
                   ))}
@@ -604,15 +605,15 @@ export default function ConciergePage() {
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <div className={cn(
                     "p-2 rounded-lg",
-                    capitalFlow.recommendation.action === 'analyze'
+                    capitalFlow.recommendation?.action === 'analyze'
                       ? "bg-emerald-100 dark:bg-emerald-500/20"
-                      : capitalFlow.recommendation.action === 'wait'
+                      : capitalFlow.recommendation?.action === 'wait'
                       ? "bg-amber-100 dark:bg-amber-500/20"
                       : "bg-red-100 dark:bg-red-500/20"
                   )}>
-                    {capitalFlow.recommendation.action === 'analyze' ? (
+                    {capitalFlow.recommendation?.action === 'analyze' ? (
                       <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    ) : capitalFlow.recommendation.action === 'wait' ? (
+                    ) : capitalFlow.recommendation?.action === 'wait' ? (
                       <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                     ) : (
                       <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
@@ -621,7 +622,7 @@ export default function ConciergePage() {
                   <div>
                     <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Recommendation</p>
                     <p className="font-bold text-slate-800 dark:text-white capitalize">
-                      {capitalFlow.recommendation.action} {capitalFlow.recommendation.primaryMarket.toUpperCase()}
+                      {capitalFlow.recommendation?.action || 'wait'} {(capitalFlow.recommendation?.primaryMarket || 'market').toUpperCase()}
                     </p>
                   </div>
                 </div>
@@ -657,7 +658,7 @@ export default function ConciergePage() {
                       Follow The Money
                     </h2>
                     <p className="text-slate-600 dark:text-slate-400 max-w-md mb-6">
-                      {capitalFlow?.recommendation.reasoning || 'Ask me about market flows, trading opportunities, or analyze any asset.'}
+                      {capitalFlow?.recommendation?.reasoning || 'Ask me about market flows, trading opportunities, or analyze any asset.'}
                     </p>
 
                     {/* Smart Quick Commands */}
@@ -730,33 +731,58 @@ export default function ConciergePage() {
                       {/* Chart */}
                       {msg.data?.tradePlan && (
                         (() => {
-                          // Handle both simple and full tradePlan structures
-                          const tp = msg.data.tradePlan;
-                          const entryPrice = tp.averageEntry || tp.entry || 0;
-                          const slPrice = typeof tp.stopLoss === 'object' ? tp.stopLoss?.price : tp.stopLoss;
-                          const tpArr = (tp.takeProfits || []).map((item, i) => ({
-                            price: typeof item === 'object' ? (item as any).price : item,
-                            percentage: typeof item === 'object' ? ((item as any).percentage || 0) : 0,
-                            riskReward: typeof item === 'object' ? ((item as any).riskReward || (i + 1)) : (i + 1),
-                          }));
-                          const dir = (msg.data.direction || tp.direction || 'long').toLowerCase() as 'long' | 'short';
+                          try {
+                            // Handle both simple and full tradePlan structures
+                            const tp = msg.data.tradePlan;
+                            if (!tp) return null;
 
-                          // Only render if we have valid entry and stopLoss prices
-                          if (!entryPrice || !slPrice) return null;
+                            // Get entry price - handle both averageEntry and entry
+                            const entryPrice = Number(tp.averageEntry || tp.entry) || 0;
 
-                          return (
-                            <div className="mt-4 rounded-xl overflow-hidden bg-slate-50 dark:bg-black/20">
-                              <TradePlanChart
-                                symbol="Analysis"
-                                direction={dir}
-                                entries={[{ price: entryPrice, percentage: 100 }]}
-                                stopLoss={{ price: slPrice || 0, percentage: 0 }}
-                                takeProfits={tpArr}
-                                currentPrice={entryPrice}
-                                analysisTime={msg.timestamp}
-                              />
-                            </div>
-                          );
+                            // Get stop loss price - handle both object and number
+                            const slPrice = typeof tp.stopLoss === 'object' && tp.stopLoss
+                              ? Number((tp.stopLoss as { price?: number }).price) || 0
+                              : Number(tp.stopLoss) || 0;
+
+                            // Get take profits - handle both object array and number array
+                            const tpArr = Array.isArray(tp.takeProfits)
+                              ? tp.takeProfits.map((item, i) => {
+                                  const price = typeof item === 'object' && item
+                                    ? Number((item as { price?: number }).price) || 0
+                                    : Number(item) || 0;
+                                  const percentage = typeof item === 'object' && item
+                                    ? Number((item as { percentage?: number }).percentage) || 0
+                                    : 0;
+                                  const riskReward = typeof item === 'object' && item
+                                    ? Number((item as { riskReward?: number }).riskReward) || (i + 1)
+                                    : (i + 1);
+                                  return { price, percentage, riskReward };
+                                }).filter(t => t.price > 0)
+                              : [];
+
+                            // Get direction
+                            const dir = ((msg.data?.direction || tp.direction || 'long') as string).toLowerCase() as 'long' | 'short';
+
+                            // Only render if we have valid entry and stopLoss prices
+                            if (entryPrice <= 0 || slPrice <= 0) return null;
+
+                            return (
+                              <div className="mt-4 rounded-xl overflow-hidden bg-slate-50 dark:bg-black/20">
+                                <TradePlanChart
+                                  symbol="Analysis"
+                                  direction={dir}
+                                  entries={[{ price: entryPrice, percentage: 100 }]}
+                                  stopLoss={{ price: slPrice, percentage: 0 }}
+                                  takeProfits={tpArr.length > 0 ? tpArr : [{ price: entryPrice * 1.05, percentage: 100, riskReward: 1 }]}
+                                  currentPrice={entryPrice}
+                                  analysisTime={msg.timestamp}
+                                />
+                              </div>
+                            );
+                          } catch (error) {
+                            console.error('Error rendering TradePlanChart:', error);
+                            return null;
+                          }
                         })()
                       )}
 
