@@ -43,6 +43,7 @@ import {
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
 import type { Timeframe } from '../../../components/analysis/TradeTypeSelector';
+import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
 
 // Lazy load components
 const CoinIcon = dynamic(
@@ -495,10 +496,63 @@ export default function AnalyzePage() {
 
   const liquidityDisplay = getLiquidityBiasDisplay();
 
+  // Analyze page tour steps
+  const analyzeTourSteps: TourStep[] = [
+    {
+      target: '#tour-analyze-header',
+      title: 'Welcome to Analysis Hub',
+      content: 'This is where you run detailed analyses on assets. Use Capital Flow insights to guide your selection.',
+      placement: 'bottom',
+      spotlightPadding: 15,
+    },
+    {
+      target: '#tour-capital-flow-context',
+      title: 'Capital Flow Context',
+      content: 'See the current Capital Flow status. Expand to view detailed L1-L3 data including global liquidity, market flow, and sector activity.',
+      placement: 'bottom',
+      spotlightPadding: 8,
+    },
+    {
+      target: '#tour-asset-selection',
+      title: 'Select Your Asset',
+      content: 'Choose a market (Crypto, Stocks, Bonds, Metals), then search for or select a specific asset to analyze.',
+      placement: 'right',
+      spotlightPadding: 8,
+    },
+    {
+      target: '#tour-timeframe',
+      title: 'Choose Timeframe',
+      content: 'Select the timeframe for your analysis. Shorter timeframes (15m, 1h) for scalping/day trading, longer (4h, 1d) for swing trades.',
+      placement: 'bottom',
+      spotlightPadding: 8,
+    },
+    {
+      target: '#tour-method',
+      title: 'Analysis Method',
+      content: 'Choose between Classic 7-Step Analysis (comprehensive) or MLIS Pro (multi-layer intelligence). Each has unique strengths.',
+      placement: 'bottom',
+      spotlightPadding: 8,
+    },
+    {
+      target: '#tour-analyze-button',
+      title: 'Run Analysis',
+      content: 'Once everything is set, click to run the analysis. Requires a Daily Pass (100 credits/day for up to 10 analyses).',
+      placement: 'top',
+      spotlightPadding: 8,
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      {/* Onboarding Tour */}
+      <OnboardingTour
+        steps={analyzeTourSteps}
+        tourId="analyze"
+        autoStart={true}
+      />
+
       {/* Header */}
-      <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <div id="tour-analyze-header" className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -510,21 +564,24 @@ export default function AnalyzePage() {
                 <p className="text-xs text-slate-500 dark:text-slate-400">All 4 Layers • Capital Flow → Analysis</p>
               </div>
             </div>
-            <button
-              onClick={() => fetchTopOpportunities()}
-              disabled={topCoinsLoading}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              <RefreshCw className={cn("w-4 h-4", topCoinsLoading && "animate-spin")} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <TourTriggerButton tourId="analyze" />
+              <button
+                onClick={() => fetchTopOpportunities()}
+                disabled={topCoinsLoading}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <RefreshCw className={cn("w-4 h-4", topCoinsLoading && "animate-spin")} />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
         {/* ===== CAPITAL FLOW DASHBOARD (L1-L3) ===== */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+        <div id="tour-capital-flow-context" className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
           {/* Collapsed Header - Always Visible */}
           <button
             onClick={() => setFlowExpanded(!flowExpanded)}
@@ -724,7 +781,7 @@ export default function AnalyzePage() {
           {/* Left: Asset Selection + Parameters */}
           <div className="lg:col-span-2 space-y-4">
             {/* Asset Selection */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+            <div id="tour-asset-selection" className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
               <div className="p-4 border-b border-slate-200 dark:border-slate-800">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
@@ -837,7 +894,7 @@ export default function AnalyzePage() {
               </div>
               <div className="p-4 space-y-4">
                 {/* Timeframe */}
-                <div className="flex gap-2">
+                <div id="tour-timeframe" className="flex gap-2">
                   {TIMEFRAMES.map((tf) => (
                     <button
                       key={tf.value}
@@ -856,7 +913,7 @@ export default function AnalyzePage() {
                 </div>
 
                 {/* Method */}
-                <div className="grid grid-cols-2 gap-2">
+                <div id="tour-method" className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setMethod('classic')}
                     className={cn(
@@ -944,6 +1001,7 @@ export default function AnalyzePage() {
 
                 {/* Run Button */}
                 <button
+                  id="tour-analyze-button"
                   onClick={runAnalysis}
                   disabled={!selectedSymbol || !dailyPassStatus?.canUse}
                   className={cn(

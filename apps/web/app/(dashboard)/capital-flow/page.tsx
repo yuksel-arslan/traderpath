@@ -37,8 +37,9 @@ import {
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { X, Loader2, LineChart, Download, FileImage, FileText, Mail, ChevronUp, CheckCircle } from 'lucide-react';
+import { X, Loader2, LineChart, Download, FileImage, FileText, Mail, ChevronUp, CheckCircle, HelpCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
 
 // Types
 interface GlobalLiquidity {
@@ -794,6 +795,7 @@ function LayerSummaryBox({
   color,
   onClick,
   isSelected,
+  id,
 }: {
   layerNum: number;
   title: string;
@@ -804,6 +806,7 @@ function LayerSummaryBox({
   color: string;
   onClick?: () => void;
   isSelected?: boolean;
+  id?: string;
 }) {
   const statusColors = {
     positive: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
@@ -835,6 +838,7 @@ function LayerSummaryBox({
 
   return (
     <button
+      id={id}
       onClick={onClick}
       className={cn(
         'backdrop-blur-xl bg-gradient-to-br border rounded-xl p-3 sm:p-4 hover:shadow-lg transition-all cursor-pointer text-left w-full',
@@ -1089,6 +1093,52 @@ export default function CapitalFlowPage() {
   // Ref for capturing the content
   const contentRef = useRef<HTMLDivElement>(null);
   const exportDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Tour steps for Capital Flow page
+  const capitalFlowTourSteps: TourStep[] = [
+    {
+      target: '#tour-hero-section',
+      title: 'Welcome to Capital Flow',
+      content: 'Track global money flow across markets. Follow the principle: "Where money flows, potential exists."',
+      placement: 'bottom',
+      spotlightPadding: 20,
+    },
+    {
+      target: '#tour-layer-1',
+      title: 'Layer 1: Global Liquidity',
+      content: 'Monitor Fed Balance Sheet, M2 Money Supply, DXY (Dollar Index), and VIX. These macro indicators show the overall liquidity environment.',
+      placement: 'bottom',
+      spotlightPadding: 8,
+    },
+    {
+      target: '#tour-layer-2',
+      title: 'Layer 2: Market Flow',
+      content: 'See which markets (Crypto, Stocks, Bonds, Metals) are receiving capital inflows. The top market indicates where smart money is flowing.',
+      placement: 'bottom',
+      spotlightPadding: 8,
+    },
+    {
+      target: '#tour-layer-3',
+      title: 'Layer 3: Sector Activity',
+      content: 'Drill down into specific sectors (DeFi, L2, Tech, etc.). See which sectors are hot and which are cooling down. Requires 25 credits/day.',
+      placement: 'bottom',
+      spotlightPadding: 8,
+    },
+    {
+      target: '#tour-layer-4',
+      title: 'Layer 4: AI Recommendations',
+      content: 'Get AI-powered BUY/SELL recommendations based on flow analysis. Shows phase (Early/Mid/Late/Exit) and confidence level. Requires 25 credits/day.',
+      placement: 'bottom',
+      spotlightPadding: 8,
+    },
+    {
+      target: '#tour-export',
+      title: 'Export & Share',
+      content: 'Export your Capital Flow analysis as PNG, JPG, or PDF. You can also send it via email for reference or sharing.',
+      placement: 'top',
+      spotlightPadding: 8,
+    },
+  ];
 
   // Close export dropdown when clicking outside
   useEffect(() => {
@@ -1470,12 +1520,19 @@ export default function CapitalFlowPage() {
 
   return (
     <div className="relative min-h-screen bg-slate-50 dark:bg-[#0B1120]">
+      {/* Onboarding Tour */}
+      <OnboardingTour
+        steps={capitalFlowTourSteps}
+        tourId="capital-flow"
+        autoStart={true}
+      />
+
       <GrainOverlay />
       <GradientOrbs />
 
       <div ref={contentRef} data-export-container className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* ===== HERO SECTION with Kinetic Typography ===== */}
-        <div className="text-center space-y-3 sm:space-y-4 py-4 sm:py-6 mb-8">
+        <div id="tour-hero-section" className="text-center space-y-3 sm:space-y-4 py-4 sm:py-6 mb-8">
           <div className="relative inline-flex items-center gap-2 sm:gap-3 px-5 sm:px-8 py-3 sm:py-4 rounded-full overflow-hidden animate-blur-in group">
             {/* Animated gradient background */}
             <div className="absolute inset-0 bg-gradient-to-r from-teal-500 via-emerald-400 to-coral-500 opacity-20 group-hover:opacity-30 transition-opacity" />
@@ -1548,7 +1605,7 @@ export default function CapitalFlowPage() {
             </button>
 
             {/* Export Dropdown */}
-            <div className="relative" ref={exportDropdownRef}>
+            <div id="tour-export" className="relative" ref={exportDropdownRef}>
               <button
                 onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
                 disabled={exporting}
@@ -1610,6 +1667,9 @@ export default function CapitalFlowPage() {
                 </div>
               )}
             </div>
+
+            {/* Tour Trigger Button */}
+            <TourTriggerButton tourId="capital-flow" />
           </div>
         </div>
 
@@ -1622,6 +1682,7 @@ export default function CapitalFlowPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Layer 1: Global Liquidity */}
             <LayerSummaryBox
+              id="tour-layer-1"
               layerNum={1}
               title="Global Liquidity"
               status={
@@ -1653,6 +1714,7 @@ export default function CapitalFlowPage() {
               const inflowCount = data.markets.filter(m => m.flow7d > 0).length;
               return (
                 <LayerSummaryBox
+                  id="tour-layer-2"
                   layerNum={2}
                   title="Market Flow"
                   status={`${topMarket.market.toUpperCase()} LEADS`}
@@ -1675,6 +1737,7 @@ export default function CapitalFlowPage() {
               const upSectors = allSectors.filter(s => s.trending === 'up').length;
               return (
                 <LayerSummaryBox
+                  id="tour-layer-3"
                   layerNum={3}
                   title="Sector Activity"
                   status={topSector ? `${topSector.name.toUpperCase()} HOT` : 'SELECT MARKET'}
@@ -1692,6 +1755,7 @@ export default function CapitalFlowPage() {
 
             {/* Layer 4: Recommendation - Locked until 25 credits paid */}
             <LayerSummaryBox
+              id="tour-layer-4"
               layerNum={4}
               title="Recommendation"
               status={layer4Unlocked
