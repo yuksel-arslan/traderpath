@@ -990,39 +990,40 @@ export default function CapitalFlowPage() {
   const [correlationsExpanded, setCorrelationsExpanded] = useState(false);
   const [opportunitiesExpanded, setOpportunitiesExpanded] = useState(false);
 
-  // Layer 4 unlock state (5 credits per day)
+  // Layer 4 unlock state (25 credits per day via Daily Pass)
   const [layer4Unlocked, setLayer4Unlocked] = useState(false);
   const [unlockingLayer4, setUnlockingLayer4] = useState(false);
 
-  // Check if Layer 4 was unlocked today (localStorage)
+  // Check if Layer 4 is unlocked via Daily Pass API
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const unlockDate = localStorage.getItem('capitalFlow_layer4_unlockDate');
-    if (unlockDate === today) {
-      setLayer4Unlocked(true);
-    }
+    const checkLayer4Pass = async () => {
+      try {
+        const response = await authFetch('/api/passes/check/CAPITAL_FLOW_L4');
+        const result = await response.json();
+        if (result.success && result.data?.hasPass && result.data?.canUse) {
+          setLayer4Unlocked(true);
+        }
+      } catch (err) {
+        console.error('Failed to check Layer 4 pass:', err);
+      }
+    };
+    checkLayer4Pass();
   }, []);
 
-  // Unlock Layer 4 with 5 credits
+  // Unlock Layer 4 with 25 credits via Daily Pass
   const unlockLayer4 = async () => {
     setUnlockingLayer4(true);
     try {
-      const response = await authFetch('/api/credits/charge', {
+      const response = await authFetch('/api/passes/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: 5,
-          reason: 'Capital Flow Layer 4 - AI Recommendations',
-          type: 'CAPITAL_FLOW_LAYER4',
-        }),
+        body: JSON.stringify({ passType: 'CAPITAL_FLOW_L4' }),
       });
       const result = await response.json();
       if (result.success) {
-        const today = new Date().toISOString().split('T')[0];
-        localStorage.setItem('capitalFlow_layer4_unlockDate', today);
         setLayer4Unlocked(true);
       } else {
-        alert(result.error?.message || 'Insufficient credits. You need 5 credits to unlock AI Recommendations.');
+        alert(result.error?.message || 'Insufficient credits. You need 25 credits to unlock AI Recommendations.');
       }
     } catch (err) {
       console.error('Failed to unlock Layer 4:', err);
@@ -1363,7 +1364,7 @@ export default function CapitalFlowPage() {
               );
             })()}
 
-            {/* Layer 4: Recommendation - Locked until 5 credits paid */}
+            {/* Layer 4: Recommendation - Locked until 25 credits paid */}
             <LayerSummaryBox
               layerNum={4}
               title="Recommendation"
@@ -1382,7 +1383,7 @@ export default function CapitalFlowPage() {
               }
               details={layer4Unlocked
                 ? `Phase: ${data.recommendation.phase.toUpperCase()} • Confidence: ${data.recommendation.confidence}%`
-                : '5 credits to unlock • Valid 24h'
+                : '25 credits to unlock • Valid 24h'
               }
               icon={Target}
               color="amber"
@@ -1537,7 +1538,7 @@ export default function CapitalFlowPage() {
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">AI Recommendations</h3>
                     {!layer4Unlocked && (
                       <span className="ml-auto px-2 py-0.5 text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">
-                        5 Credits
+                        25 Credits
                       </span>
                     )}
                   </div>
@@ -1590,7 +1591,7 @@ export default function CapitalFlowPage() {
                             ) : (
                               <>
                                 <Coins className="w-4 h-4" />
-                                Unlock for 5 Credits
+                                Unlock for 25 Credits
                               </>
                             )}
                           </button>

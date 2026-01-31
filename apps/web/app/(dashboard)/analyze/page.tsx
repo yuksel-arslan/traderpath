@@ -309,6 +309,65 @@ export default function AnalyzePage() {
   const [lastScanTime, setLastScanTime] = useState<string | null>(null);
   const [verdictFilter, setVerdictFilter] = useState<string>('all');
 
+  // Daily Pass state (100 credits/day, max 10 analyses)
+  const [dailyPassStatus, setDailyPassStatus] = useState<{
+    hasPass: boolean;
+    canUse: boolean;
+    usageCount: number;
+    maxUsage: number;
+    expiresAt: Date | null;
+  } | null>(null);
+  const [purchasingPass, setPurchasingPass] = useState(false);
+
+  // Fetch Daily Pass status
+  const fetchDailyPassStatus = useCallback(async () => {
+    try {
+      const res = await authFetch('/api/passes/check/ASSET_ANALYSIS');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setDailyPassStatus({
+            hasPass: data.data.hasPass,
+            canUse: data.data.canUse,
+            usageCount: data.data.pass?.usageCount ?? 0,
+            maxUsage: data.data.pass?.maxUsage ?? 10,
+            expiresAt: data.data.pass?.expiresAt ? new Date(data.data.pass.expiresAt) : null,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch daily pass status:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDailyPassStatus();
+  }, [fetchDailyPassStatus]);
+
+  // Purchase Daily Pass
+  const purchaseDailyPass = async () => {
+    setPurchasingPass(true);
+    try {
+      const res = await authFetch('/api/passes/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passType: 'ASSET_ANALYSIS' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Daily Analysis Pass purchased! You can now run up to 10 analyses today.');
+        await fetchDailyPassStatus();
+      } else {
+        toast.error(data.error?.message || 'Failed to purchase pass. You need 100 credits.');
+      }
+    } catch (error) {
+      console.error('Failed to purchase pass:', error);
+      toast.error('Failed to purchase pass. Please try again.');
+    } finally {
+      setPurchasingPass(false);
+    }
+  };
+
   // Fetch Capital Flow data
   useEffect(() => {
     const fetchFlowData = async () => {
@@ -381,11 +440,32 @@ export default function AnalyzePage() {
     setSelectedSymbol(symbol);
   };
 
-  const runAnalysis = () => {
+  const runAnalysis = async () => {
     if (!selectedSymbol) {
       toast.error('Please select an asset to analyze');
       return;
     }
+
+    // Check if user has a valid daily pass
+    if (!dailyPassStatus?.hasPass || !dailyPassStatus?.canUse) {
+      // No pass - ask to purchase
+      const confirm = window.confirm(
+        'You need a Daily Analysis Pass to run analyses.\n\n' +
+        '100 Credits = 10 Analyses Today\n\n' +
+        'Would you like to purchase a Daily Pass?'
+      );
+      if (confirm) {
+        await purchaseDailyPass();
+        // Re-check status and try again if pass was purchased
+        const res = await authFetch('/api/passes/check/ASSET_ANALYSIS');
+        const data = await res.json();
+        if (data.success && data.data?.hasPass && data.data?.canUse) {
+          setShowAnalysisDialog(true);
+        }
+      }
+      return;
+    }
+
     setShowAnalysisDialog(true);
   };
 
@@ -818,13 +898,57 @@ export default function AnalyzePage() {
                   </div>
                 )}
 
+                {/* Daily Pass Status */}
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Daily Analysis Pass</span>
+                    {dailyPassStatus?.hasPass ? (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-semibold">
+                        Not Active
+                      </span>
+                    )}
+                  </div>
+                  {dailyPassStatus?.hasPass ? (
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 transition-all"
+                          style={{ width: `${((dailyPassStatus.maxUsage - dailyPassStatus.usageCount) / dailyPassStatus.maxUsage) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                        {dailyPassStatus.maxUsage - dailyPassStatus.usageCount}/{dailyPassStatus.maxUsage} left
+                      </span>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={purchaseDailyPass}
+                      disabled={purchasingPass}
+                      className="w-full py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white text-sm font-semibold hover:shadow-lg transition-all disabled:opacity-50"
+                    >
+                      {purchasingPass ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Purchasing...
+                        </span>
+                      ) : (
+                        'Buy Pass • 100 Credits = 10 Analyses'
+                      )}
+                    </button>
+                  )}
+                </div>
+
                 {/* Run Button */}
                 <button
                   onClick={runAnalysis}
-                  disabled={!selectedSymbol}
+                  disabled={!selectedSymbol || !dailyPassStatus?.canUse}
                   className={cn(
                     "w-full flex items-center justify-center gap-3 py-3.5 rounded-xl font-semibold text-white transition-all",
-                    selectedSymbol
+                    selectedSymbol && dailyPassStatus?.canUse
                       ? method === 'mlis_pro'
                         ? "bg-gradient-to-r from-violet-500 to-purple-600 hover:shadow-lg hover:shadow-violet-500/20"
                         : "bg-gradient-to-r from-teal-500 to-emerald-600 hover:shadow-lg hover:shadow-teal-500/20"
@@ -833,7 +957,11 @@ export default function AnalyzePage() {
                 >
                   <Zap className="w-5 h-5" />
                   <span>Analyze {selectedSymbol || 'Asset'}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">25 Cr</span>
+                  {dailyPassStatus?.hasPass && (
+                    <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                      FREE ({dailyPassStatus.maxUsage - dailyPassStatus.usageCount} left)
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
@@ -861,6 +989,8 @@ export default function AnalyzePage() {
           onClose={() => setShowAnalysisDialog(false)}
           onComplete={() => {
             setShowAnalysisDialog(false);
+            // Refresh daily pass status after analysis
+            fetchDailyPassStatus();
             setTimeout(() => {
               document.getElementById('recent-analyses')?.scrollIntoView({ behavior: 'smooth' });
             }, 500);

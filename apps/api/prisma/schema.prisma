@@ -109,6 +109,7 @@ model User {
   quizAnswers      QuizAnswer[]
   reports          Report[]
   scheduledReports ScheduledReport[]
+  dailyPasses      DailyPass[]
 
   @@map("users")
 }
@@ -908,4 +909,38 @@ enum TFTModelStatus {
   ACTIVE
   ARCHIVED
   FAILED
+}
+
+// ===========================================
+// Daily Pass System
+// Tracks daily passes for Capital Flow and Asset Analysis
+// ===========================================
+
+model DailyPass {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  passType     DailyPassType @map("pass_type")
+  passDate     DateTime @map("pass_date") @db.Date // The date this pass is valid for
+  creditsCost  Int      @map("credits_cost") // How many credits were charged
+
+  // Usage tracking (for asset_analysis pass)
+  usageCount   Int      @default(0) @map("usage_count") // Number of analyses done today
+  maxUsage     Int      @default(10) @map("max_usage") // Maximum allowed (10 for asset analysis)
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  expiresAt    DateTime @map("expires_at") // End of day UTC
+
+  @@unique([userId, passType, passDate], name: "unique_daily_pass")
+  @@index([userId])
+  @@index([passType])
+  @@index([passDate])
+  @@index([expiresAt])
+  @@map("daily_passes")
+}
+
+enum DailyPassType {
+  CAPITAL_FLOW_L4    // 25 credits/day - AI Recommendations
+  ASSET_ANALYSIS     // 100 credits/day - 7-Step/MLIS (max 20)
 }

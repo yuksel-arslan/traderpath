@@ -482,6 +482,7 @@ Warn about potential traps and give protective advice.`;
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = getUser(request).id;
+    const isAdmin = getUser(request).isAdmin || false;
     const body = fullAnalysisSchema.parse(request.body);
     // Resolve tradeType from interval if provided
     const tradeType = resolveTradeType(body.interval, body.tradeType as TradeType);
@@ -489,17 +490,57 @@ Warn about potential traps and give protective advice.`;
     // Mapping: scalping=15m, dayTrade=1h, swing=1d
     const interval = body.interval || (tradeType === 'scalping' ? '15m' : tradeType === 'dayTrade' ? '1h' : '1d');
 
-    const cost = await creditCostsService.getCreditCost('BUNDLE_FULL_ANALYSIS');
-    const chargeResult = await creditService.charge(userId, cost, 'analysis_full', {
-      symbol: body.symbol,
-    });
+    // Check for Daily Pass system (100 credits/day, max 10 analyses)
+    // Admin users bypass the daily pass system
+    let usedDailyPass = false;
+    if (!isAdmin) {
+      const { dailyPassService } = await import('../passes/daily-pass.service');
+      const passCheck = await dailyPassService.checkPass(userId, 'ASSET_ANALYSIS');
 
-    if (!chargeResult.success) {
-      return reply.status(402).send({
-        success: false,
-        error: { code: 'CREDIT_001', message: 'Insufficient credits', required: cost },
-      });
+      if (!passCheck.hasPass) {
+        // User doesn't have a daily pass - they need to purchase one
+        return reply.status(402).send({
+          success: false,
+          error: {
+            code: 'DAILY_PASS_REQUIRED',
+            message: 'A Daily Analysis Pass is required. Purchase for 100 credits to get 10 analyses today.',
+            required: 100,
+            passType: 'ASSET_ANALYSIS',
+            purchaseUrl: '/api/passes/purchase',
+          },
+        });
+      }
+
+      if (!passCheck.canUse) {
+        // User has a pass but reached daily limit
+        return reply.status(402).send({
+          success: false,
+          error: {
+            code: 'DAILY_LIMIT_REACHED',
+            message: 'Daily analysis limit reached (10/10). Your pass will reset at midnight UTC.',
+            usageCount: passCheck.pass?.usageCount || 0,
+            maxUsage: passCheck.pass?.maxUsage || 10,
+            expiresAt: passCheck.pass?.expiresAt,
+          },
+        });
+      }
+
+      // Use the daily pass
+      const useResult = await dailyPassService.usePass(userId, 'ASSET_ANALYSIS');
+      if (!useResult.success) {
+        return reply.status(402).send({
+          success: false,
+          error: {
+            code: 'PASS_USE_FAILED',
+            message: useResult.error || 'Failed to use daily pass',
+          },
+        });
+      }
+      usedDailyPass = true;
     }
+
+    // For admin users, still log the cost but don't charge (legacy behavior)
+    const cost = isAdmin ? 0 : 0; // No per-analysis cost when using daily pass
 
     try {
       // Check if MLIS Pro method is requested
@@ -601,11 +642,18 @@ Warn about potential traps and give protective advice.`;
 
         console.log(`[MLIS] Sending response for ${body.symbol}`);
 
+        // Get current credit balance
+        const creditBalance = await prisma.creditBalance.findUnique({
+          where: { userId },
+          select: { balance: true },
+        });
+
         return reply.send({
           success: true,
           data: responseData,
           creditsSpent: cost,
-          remainingCredits: chargeResult.newBalance,
+          remainingCredits: creditBalance?.balance ?? 0,
+          dailyPassUsed: usedDailyPass,
         });
       }
 
@@ -792,6 +840,12 @@ Explain the key risks and what conditions would need to change before trading th
       const aiResult = await getGeminiInsight(aiPrompt, 'analysis_full', userId, body.symbol);
       const aiVerdict = aiResult.text;
 
+      // Get current credit balance
+      const creditBalance = await prisma.creditBalance.findUnique({
+        where: { userId },
+        select: { balance: true },
+      });
+
       return reply.send({
         success: true,
         data: {
@@ -816,7 +870,8 @@ Explain the key risks and what conditions would need to change before trading th
           },
         },
         creditsSpent: cost,
-        remainingCredits: chargeResult.newBalance,
+        remainingCredits: creditBalance?.balance ?? 0,
+        dailyPassUsed: usedDailyPass,
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
