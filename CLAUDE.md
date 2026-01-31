@@ -475,6 +475,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-28 | Kutlama Modal: Confetti ve balon animasyonları | Kullanıcı ödül kazandığında mutlu etme - gamification |
 | 2026-01-28 | Kredi Bildirimi: Toast notification sistemi | Kredi harcama/kazanma anında kullanıcıyı bilgilendirme |
 | 2026-01-28 | Login sayfası: Tema uyumlu marketing paneli | Sol panel artık light/dark mode'a uygun görünüyor |
+| 2026-01-31 | Analyze sayfası: LAYER 4 minimalist tasarım | Karmaşık animasyonlar kaldırıldı, Capital Flow context eklendi, 4 adımlı akış |
 
 ---
 
@@ -1305,6 +1306,29 @@ Kullanıcı Hakları Aktif:
     - Stocks: AAPL, MSFT, SPY, QQQ, vb. (Yahoo Finance)
     - Bonds: TLT, IEF, SHY, BND, vb. (Yahoo Finance)
     - Metals: GLD, SLV, IAU, XAUUSD, XAGUSD, vb. (Yahoo Finance)
+- **Analyze Sayfası LAYER 4 Olarak Yeniden Tasarlandı**:
+  - Sayfa artık Capital Flow hiyerarşisinin LAYER 4'ü olarak konumlandırıldı
+  - **Kaldırılan Bileşenler** (1600→~860 satır):
+    - MarqueeBanner (kayan kripto fiyatları)
+    - KineticText (karakter animasyonları)
+    - GradientOrbs (arka plan küreleri)
+    - GrainOverlay (grenli doku)
+    - StatCards (6 istatistik kartı - dashboard'da var)
+    - Top 5 Coins Scan (ayrı /top-coins sayfasına taşındı)
+    - Live Chart collapse
+    - Feature badges
+  - **Yeni Bileşenler**:
+    - Capital Flow Context Bar: L1→L2→L3→L4 breadcrumb gösterimi
+    - Sector-based suggestions: Capital Flow'dan gelen sektöre göre asset önerileri
+    - Unified search: Tüm marketlerde tek arama kutusu
+    - Flow warning: Context olmadan girişte uyarı
+  - **URL Parametreleri**: `?market=crypto&sector=defi&symbol=AAVE`
+  - **Akış**:
+    1. Capital Flow'dan market/sector önerisi al
+    2. Önerilen asset'lerden seç veya arama yap
+    3. Timeframe ve method seç (Classic 7-Step / MLIS Pro)
+    4. Analiz çalıştır
+  - Dosya: `apps/web/app/(dashboard)/analyze/page.tsx`
 
 ---
 
