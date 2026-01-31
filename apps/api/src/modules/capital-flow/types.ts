@@ -26,6 +26,12 @@ export interface SectorFlow {
   topAssets: string[];         // Top 5 assets in sector
 }
 
+// Historical Data Point
+export interface FlowDataPoint {
+  date: string;               // ISO date string
+  value: number;              // Flow percentage
+}
+
 // Market Flow Data
 export interface MarketFlow {
   market: MarketType;
@@ -35,6 +41,10 @@ export interface MarketFlow {
   flow7d: number;              // 7-day % change
   flow30d: number;             // 30-day % change
   flowVelocity: number;        // Acceleration (flow7d - previous 7d)
+
+  // Historical Data for Charts
+  flowHistory: FlowDataPoint[];      // 30-day flow history
+  velocityHistory: FlowDataPoint[];  // 30-day velocity history
 
   // Phase Detection
   phase: Phase;

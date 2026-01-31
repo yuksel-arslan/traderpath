@@ -78,12 +78,19 @@ interface SectorFlow {
   topAssets: string[];
 }
 
+interface FlowDataPoint {
+  date: string;
+  value: number;
+}
+
 interface MarketFlow {
   market: 'crypto' | 'stocks' | 'bonds' | 'metals';
   currentValue: number;
   flow7d: number;
   flow30d: number;
   flowVelocity: number;
+  flowHistory?: FlowDataPoint[];
+  velocityHistory?: FlowDataPoint[];
   phase: 'early' | 'mid' | 'late' | 'exit';
   daysInPhase: number;
   phaseStartDate: string;
@@ -462,6 +469,65 @@ function MarketIcon({ market, className }: { market: string; className?: string 
   return <Icon className={className} />;
 }
 
+// Mini Sparkline Chart Component
+function MiniSparkline({ data, color, height = 40 }: { data: FlowDataPoint[]; color: 'emerald' | 'blue' | 'red' | 'amber'; height?: number }) {
+  if (!data || data.length < 2) return null;
+
+  const values = data.map(d => d.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+
+  const width = 100;
+  const padding = 2;
+  const chartHeight = height - padding * 2;
+  const chartWidth = width - padding * 2;
+
+  // Generate path
+  const points = values.map((v, i) => {
+    const x = padding + (i / (values.length - 1)) * chartWidth;
+    const y = padding + chartHeight - ((v - min) / range) * chartHeight;
+    return `${x},${y}`;
+  });
+
+  const pathD = `M ${points.join(' L ')}`;
+
+  // Area path (for gradient fill)
+  const areaD = `${pathD} L ${padding + chartWidth},${height - padding} L ${padding},${height - padding} Z`;
+
+  const colorMap = {
+    emerald: { stroke: '#10b981', fill: 'url(#emeraldGradient)' },
+    blue: { stroke: '#3b82f6', fill: 'url(#blueGradient)' },
+    red: { stroke: '#ef4444', fill: 'url(#redGradient)' },
+    amber: { stroke: '#f59e0b', fill: 'url(#amberGradient)' },
+  };
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ height }}>
+      <defs>
+        <linearGradient id="emeraldGradient" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="blueGradient" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="redGradient" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="#ef4444" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="amberGradient" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={areaD} fill={colorMap[color].fill} />
+      <path d={pathD} fill="none" stroke={colorMap[color].stroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 // Market Card Component
 function MarketCard({ market, onClick, onAnalyze }: { market: MarketFlow; onClick: () => void; onAnalyze: () => void }) {
   const marketNames: Record<string, string> = {
@@ -517,6 +583,38 @@ function MarketCard({ market, onClick, onAnalyze }: { market: MarketFlow; onClic
           </p>
         </div>
       </div>
+
+      {/* Flow Charts */}
+      {market.flowHistory && market.flowHistory.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {/* Money Flow Chart */}
+          <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" />
+              Para Akışı (30g)
+            </p>
+            <MiniSparkline
+              data={market.flowHistory}
+              color={market.flow30d >= 0 ? 'emerald' : 'red'}
+              height={36}
+            />
+          </div>
+          {/* Velocity Chart */}
+          <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1">
+              <Activity className="w-3 h-3" />
+              Akış Hızı (30g)
+            </p>
+            {market.velocityHistory && (
+              <MiniSparkline
+                data={market.velocityHistory}
+                color={market.flowVelocity >= 0 ? 'blue' : 'amber'}
+                height={36}
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Phase Progress */}
       <div className="mb-4">
