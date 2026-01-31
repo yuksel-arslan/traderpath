@@ -44,6 +44,7 @@ import { conciergeRoutes } from './modules/concierge/concierge.routes';
 import { startCoinScoreCacheJob, stopCoinScoreCacheJob } from './modules/analysis/coin-score-cache.job';
 import { capitalFlowRoutes } from './modules/capital-flow/capital-flow.routes';
 import { multiMarketRoutes } from './modules/analysis/multi-market.routes';
+import dailyPassRoutes from './modules/passes/daily-pass.routes';
 
 // ===========================================
 // Server Configuration
@@ -360,6 +361,10 @@ app.register(capitalFlowRoutes, { prefix: '/api/capital-flow' }); // Legacy
 // Multi-Market Analysis routes (Stocks, Bonds, Metals, Crypto)
 app.register(multiMarketRoutes, { prefix: '/api/v1/multi-market' });
 app.register(multiMarketRoutes, { prefix: '/api/multi-market' }); // Legacy
+
+// Daily Pass routes (Capital Flow L4 and Asset Analysis passes)
+app.register(dailyPassRoutes, { prefix: '/api/v1/passes' });
+app.register(dailyPassRoutes, { prefix: '/api/passes' }); // Legacy
 
 // ===========================================
 // 404 Handler

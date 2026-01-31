@@ -207,6 +207,81 @@ ALPHA_VANTAGE_KEY=      # Stocks fallback (optional)
 
 ---
 
+## 💰 DAILY PASS FİYATLANDIRMA MODELİ (2026-01-31)
+
+### Katmanlı Erişim Sistemi
+
+| Katman | Fiyat | İçerik | Limit |
+|--------|-------|--------|-------|
+| **Layer 1-2** | FREE | Global Likidite, Market Flow | Sınırsız |
+| **Layer 3** | 25 kredi/gün | Sector Activity | Sınırsız erişim |
+| **Layer 4** | 25 kredi/gün | AI Recommendations (BUY/SELL) | Sınırsız erişim |
+| **Asset Analysis** | 100 kredi/gün | 7-Step / MLIS Pro | Günlük max 10 analiz |
+
+> **Toplam:** 150 kredi/aktif gün (25 + 25 + 100)
+> **Not:** Sadece kullanıcının giriş yaptığı günler hesaba katılır.
+
+### Daily Pass Mantığı
+
+```typescript
+// Günlük Pass Konfigürasyonu
+DAILY_PASS_CONFIG = {
+  CAPITAL_FLOW_L3: {
+    cost: 25,           // Kredi
+    maxUsage: 1,        // Sınırsız erişim (tek pass)
+    expiresAt: 'EOD',   // Gece 00:00 UTC sıfırlanır
+  },
+  CAPITAL_FLOW_L4: {
+    cost: 25,           // Kredi
+    maxUsage: 1,        // Sınırsız erişim (tek pass)
+    expiresAt: 'EOD',   // Gece 00:00 UTC sıfırlanır
+  },
+  ASSET_ANALYSIS: {
+    cost: 100,          // Kredi
+    maxUsage: 10,       // Max 10 analiz/gün
+    expiresAt: 'EOD',   // Gece 00:00 UTC sıfırlanır
+  },
+}
+```
+
+### API Endpoint'ler
+
+| Endpoint | Method | Açıklama |
+|----------|--------|----------|
+| `/api/passes/status` | GET | Kullanıcının aktif pass'leri |
+| `/api/passes/purchase` | POST | Pass satın al |
+| `/api/passes/check/:type` | GET | Belirli pass tipini kontrol et |
+| `/api/passes/config` | GET | Pass fiyat konfigürasyonu |
+
+### Kod Lokasyonları
+
+| Dosya | Açıklama |
+|-------|----------|
+| `apps/api/src/modules/passes/daily-pass.service.ts` | Pass yönetim servisi |
+| `apps/api/src/modules/passes/daily-pass.routes.ts` | API routes |
+| `apps/api/prisma/schema.prisma` | DailyPass model |
+| `apps/web/app/(dashboard)/analyze/page.tsx` | Frontend pass UI |
+| `apps/web/app/(dashboard)/capital-flow/page.tsx` | Layer 4 paywall |
+
+### Maliyet Analizi (Aylık $200 API Bütçesi)
+
+```
+Günlük API Bütçesi: $200/30 = $6.67/gün
+
+Asset Analysis (100 kredi/gün, max 10 analiz):
+- Analiz başına API maliyeti: ~$0.05 (Gemini + Binance/Yahoo)
+- En kötü senaryo: 10 analiz × $0.05 = $0.50/kullanıcı/gün
+- Kar marjı: $5+ (100 kredi ≈ $10 değer)
+
+Capital Flow L4 (25 kredi/gün):
+- API maliyeti: ~$0.01/gün (cache + minimal API)
+- Kar marjı: %99+
+
+✅ Model, $200/ay bütçe ile sürdürülebilir
+```
+
+---
+
 ## 📊 Analiz Veri Gereksinimleri (ZORUNLU)
 
 ### Timeframe Seçenekleri
@@ -1372,6 +1447,46 @@ Kullanıcı Hakları Aktif:
 - **Analyze Page Recent Section Fixed**:
   - İç içe geçmiş "Recent" header sorunu düzeltildi
   - Wrapper'daki gereksiz header kaldırıldı (RecentAnalyses zaten kendi header'ına sahip)
+- **Daily Pass Pricing System Implemented**:
+  - **Yeni Tablo**: `DailyPass` - günlük pass'ları takip eder
+  - **Yeni Servis**: `apps/api/src/modules/passes/daily-pass.service.ts`
+  - **Yeni Routes**: `apps/api/src/modules/passes/daily-pass.routes.ts`
+  - **Fiyatlandırma Modeli**:
+    - Layer 1-2-3: FREE (tüm kullanıcılar)
+    - Layer 4 (AI Recommendations): 25 kredi/gün
+    - Asset Analysis: 100 kredi/gün (max 10 analiz)
+  - **Frontend Güncellemeleri**:
+    - Capital Flow page: Layer 4 unlock için 25 kredi (5'ten değiştirildi)
+    - Analyze page: Daily Pass status bar ve satın alma butonu
+    - Pass olmadan analiz yapılamaz (paywall)
+  - **Backend Güncellemeleri**:
+    - `/api/analysis/full`: Daily Pass kontrolü eklendi
+    - Pass yoksa `DAILY_PASS_REQUIRED` hatası döner
+    - Limit aşılırsa `DAILY_LIMIT_REACHED` hatası döner
+    - Admin kullanıcılar bypass eder
+  - **API Endpoint'ler**:
+    - `GET /api/passes/status` - Aktif pass'leri listele
+    - `POST /api/passes/purchase` - Pass satın al
+    - `GET /api/passes/check/:type` - Belirli pass'ı kontrol et
+  - Migration: `apps/api/prisma/migrations/add_daily_passes_table.sql`
+- **Auth Page Marketing Panel Updated**:
+  - Sol panel Capital Flow yaklaşımına göre güncellendi
+  - 4-Layer flow sistemi gösterimi
+  - "Follow the Money" mottosu
+  - Phase badges (EARLY, MID, LATE, EXIT)
+  - Stats: 4 Markets, BUY Signals, SELL Signals
+- **Landing Page FAQ Updated**:
+  - 8 soru Capital Flow yaklaşımına göre güncellendi
+  - What is Capital Flow, 4-Layer System, Phases, BUY/SELL recommendations
+- **Daily Pass Pricing System (3 Tier)**:
+  - 3 ayrı Daily Pass tipi tanımlandı:
+    - **CAPITAL_FLOW_L3**: 25 kredi/gün - Sector Activity
+    - **CAPITAL_FLOW_L4**: 25 kredi/gün - AI Recommendations
+    - **ASSET_ANALYSIS**: 100 kredi/gün - 7-Step/MLIS Pro (max 10 analiz)
+  - **Toplam: 150 kredi/aktif gün** (sadece giriş yapılan günler)
+  - capital-flow sayfasına L3 ve L4 için ayrı unlock butonları
+  - Admin > Finance > Credit Economy bölümüne 3'lü Daily Pass Pricing section
+  - Dosyalar: `schema.prisma`, `daily-pass.service.ts`, `daily-pass.routes.ts`, `capital-flow/page.tsx`, `admin/finance/page.tsx`
 
 ---
 
