@@ -5,7 +5,7 @@
 // Global Capital Flow Intelligence Platform
 // ===========================================
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   TrendingUp,
@@ -37,7 +37,9 @@ import {
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { X, Loader2, LineChart } from 'lucide-react';
+import { X, Loader2, LineChart, Download, FileImage, FileText, Mail, ChevronUp } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 // Types
 interface GlobalLiquidity {
@@ -1078,6 +1080,124 @@ export default function CapitalFlowPage() {
   const [scanningMarket, setScanningMarket] = useState<ScanningMarket>(null);
   const [scanProgress, setScanProgress] = useState(0);
 
+  // Export states
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportType, setExportType] = useState<'png' | 'jpeg' | 'pdf' | 'email' | null>(null);
+
+  // Ref for capturing the content
+  const contentRef = useRef<HTMLDivElement>(null);
+  const exportDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close export dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target as Node)) {
+        setExportDropdownOpen(false);
+      }
+    };
+
+    if (exportDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [exportDropdownOpen]);
+
+  // Export handlers
+  const handleExport = async (type: 'png' | 'jpeg' | 'pdf' | 'email') => {
+    if (!contentRef.current) return;
+
+    setExporting(true);
+    setExportType(type);
+    setExportDropdownOpen(false);
+
+    try {
+      // Capture the content
+      const canvas = await html2canvas(contentRef.current, {
+        scale: type === 'png' ? 3 : 2.5,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#0B1120',
+        windowWidth: 1400,
+        logging: false,
+      });
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `capital-flow-${timestamp}`;
+
+      if (type === 'png') {
+        const link = document.createElement('a');
+        link.download = `${filename}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } else if (type === 'jpeg') {
+        const link = document.createElement('a');
+        link.download = `${filename}.jpg`;
+        link.href = canvas.toDataURL('image/jpeg', 0.95);
+        link.click();
+      } else if (type === 'pdf') {
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        const pdf = new jsPDF({
+          orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
+          unit: 'px',
+          format: [canvas.width, canvas.height],
+        });
+        pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+        pdf.save(`${filename}.pdf`);
+      } else if (type === 'email') {
+        // First download as PNG, then send via email
+        const imageData = canvas.toDataURL('image/png');
+
+        // Download the file first
+        const link = document.createElement('a');
+        link.download = `${filename}.png`;
+        link.href = imageData;
+        link.click();
+
+        // Then send via email
+        try {
+          const response = await authFetch('/api/reports/email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subject: `Capital Flow Analysis - ${timestamp}`,
+              title: 'Capital Flow Intelligence Report',
+              symbol: 'CAPITAL_FLOW',
+              screenshot: imageData,
+              analysisData: {
+                liquidityBias: data?.liquidityBias,
+                recommendation: data?.recommendation,
+                markets: data?.markets?.map(m => ({
+                  market: m.market,
+                  flow7d: m.flow7d,
+                  phase: m.phase,
+                })),
+              },
+            }),
+          });
+          const result = await response.json();
+          if (result.success) {
+            alert('Email sent successfully!');
+          } else {
+            alert('Failed to send email: ' + (result.error?.message || 'Unknown error'));
+          }
+        } catch (err) {
+          console.error('Email error:', err);
+          alert('Failed to send email. Screenshot was downloaded.');
+        }
+      }
+    } catch (err) {
+      console.error('Export error:', err);
+      alert('Failed to export. Please try again.');
+    } finally {
+      setExporting(false);
+      setExportType(null);
+    }
+  };
+
   // Generic scan handler for all markets
   const handleMarketScan = async (market: 'crypto' | 'stocks' | 'bonds' | 'metals') => {
     setScanningMarket(market);
@@ -1246,7 +1366,7 @@ export default function CapitalFlowPage() {
       <GrainOverlay />
       <GradientOrbs />
 
-      <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      <div ref={contentRef} className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* ===== HERO SECTION with Kinetic Typography ===== */}
         <div className="text-center space-y-3 sm:space-y-4 py-4 sm:py-6 mb-8">
           <div className="relative inline-flex items-center gap-2 sm:gap-3 px-5 sm:px-8 py-3 sm:py-4 rounded-full overflow-hidden animate-blur-in group">
@@ -1306,7 +1426,7 @@ export default function CapitalFlowPage() {
             </div>
           </div>
 
-          {/* Liquidity Badge and Refresh */}
+          {/* Liquidity Badge, Refresh and Export */}
           <div className="flex items-center justify-center gap-3 pt-2">
             <LiquidityBiasBadge bias={data.liquidityBias} />
             <button
@@ -1319,6 +1439,66 @@ export default function CapitalFlowPage() {
             >
               <RefreshCw className={cn("w-5 h-5 text-slate-500", refreshing && "animate-spin")} />
             </button>
+
+            {/* Export Dropdown */}
+            <div className="relative" ref={exportDropdownRef}>
+              <button
+                onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                disabled={exporting}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm",
+                  exporting && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                {exporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+                ) : (
+                  <Download className="w-4 h-4 text-slate-500" />
+                )}
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  {exporting ? 'Exporting...' : 'Export'}
+                </span>
+                <ChevronUp className={cn(
+                  "w-4 h-4 text-slate-400 transition-transform",
+                  exportDropdownOpen && "rotate-180"
+                )} />
+              </button>
+
+              {/* Dropdown Menu */}
+              {exportDropdownOpen && (
+                <div className="absolute bottom-full left-0 mb-2 w-48 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50">
+                  <button
+                    onClick={() => handleExport('png')}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    <FileImage className="w-4 h-4 text-emerald-500" />
+                    <span>Download PNG</span>
+                  </button>
+                  <button
+                    onClick={() => handleExport('jpeg')}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    <FileImage className="w-4 h-4 text-blue-500" />
+                    <span>Download JPEG</span>
+                  </button>
+                  <button
+                    onClick={() => handleExport('pdf')}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    <FileText className="w-4 h-4 text-red-500" />
+                    <span>Download PDF</span>
+                  </button>
+                  <div className="my-1 border-t border-slate-200 dark:border-slate-700" />
+                  <button
+                    onClick={() => handleExport('email')}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    <Mail className="w-4 h-4 text-teal-500" />
+                    <span>Send via Email</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
