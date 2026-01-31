@@ -33,6 +33,8 @@ import {
   Coins,
   Landmark,
   Gem,
+  Loader2,
+  X,
 } from 'lucide-react';
 import { useCreditNotification } from '../../../contexts/CreditNotificationContext';
 import { cn } from '../../../lib/utils';
@@ -333,7 +335,7 @@ const ASSET_TYPES: {
     description: 'Technical + Fundamental',
     icon: BarChart3,
     color: 'from-blue-500 to-indigo-500',
-    available: false, // Coming soon
+    available: true,
   },
   {
     id: 'bonds',
@@ -341,7 +343,7 @@ const ASSET_TYPES: {
     description: 'Yield & Duration analysis',
     icon: Landmark,
     color: 'from-purple-500 to-violet-500',
-    available: false, // Coming soon
+    available: true,
   },
   {
     id: 'metals',
@@ -349,9 +351,53 @@ const ASSET_TYPES: {
     description: 'Gold, Silver, Commodities',
     icon: Gem,
     color: 'from-yellow-500 to-amber-400',
-    available: false, // Coming soon
+    available: true,
   },
 ];
+
+// Symbol lists for each asset type
+const MULTI_MARKET_SYMBOLS: Record<Exclude<AssetType, 'crypto'>, { symbol: string; name: string; }[]> = {
+  stocks: [
+    { symbol: 'SPY', name: 'S&P 500 ETF' },
+    { symbol: 'QQQ', name: 'Nasdaq 100 ETF' },
+    { symbol: 'DIA', name: 'Dow Jones ETF' },
+    { symbol: 'IWM', name: 'Russell 2000 ETF' },
+    { symbol: 'AAPL', name: 'Apple Inc.' },
+    { symbol: 'MSFT', name: 'Microsoft Corp.' },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.' },
+    { symbol: 'AMZN', name: 'Amazon.com Inc.' },
+    { symbol: 'NVDA', name: 'NVIDIA Corp.' },
+    { symbol: 'TSLA', name: 'Tesla Inc.' },
+    { symbol: 'META', name: 'Meta Platforms' },
+    { symbol: 'JPM', name: 'JPMorgan Chase' },
+    { symbol: 'V', name: 'Visa Inc.' },
+    { symbol: 'JNJ', name: 'Johnson & Johnson' },
+    { symbol: 'WMT', name: 'Walmart Inc.' },
+  ],
+  bonds: [
+    { symbol: 'TLT', name: '20+ Year Treasury ETF' },
+    { symbol: 'IEF', name: '7-10 Year Treasury ETF' },
+    { symbol: 'SHY', name: '1-3 Year Treasury ETF' },
+    { symbol: 'BND', name: 'Total Bond Market ETF' },
+    { symbol: 'LQD', name: 'Investment Grade Corp ETF' },
+    { symbol: 'HYG', name: 'High Yield Corp ETF' },
+    { symbol: 'AGG', name: 'Core U.S. Aggregate Bond' },
+    { symbol: 'GOVT', name: 'U.S. Treasury Bond ETF' },
+    { symbol: 'US10Y', name: '10-Year Treasury Yield' },
+    { symbol: 'US2Y', name: '2-Year Treasury Yield' },
+  ],
+  metals: [
+    { symbol: 'GLD', name: 'Gold ETF (SPDR)' },
+    { symbol: 'SLV', name: 'Silver ETF (iShares)' },
+    { symbol: 'IAU', name: 'Gold Trust (iShares)' },
+    { symbol: 'PPLT', name: 'Platinum ETF' },
+    { symbol: 'PALL', name: 'Palladium ETF' },
+    { symbol: 'XAUUSD', name: 'Gold Spot Price' },
+    { symbol: 'XAGUSD', name: 'Silver Spot Price' },
+    { symbol: 'GDX', name: 'Gold Miners ETF' },
+    { symbol: 'GDXJ', name: 'Junior Gold Miners ETF' },
+  ],
+};
 
 export default function AnalyzePage() {
   const router = useRouter();
@@ -382,6 +428,12 @@ export default function AnalyzePage() {
   const [scanProgress, setScanProgress] = useState<{ current: number; total: number } | null>(null);
   const [lastScanTime, setLastScanTime] = useState<string | null>(null);
   const scanPollRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Multi-market analysis state
+  const [selectedMultiMarketSymbol, setSelectedMultiMarketSymbol] = useState<string>('');
+  const [multiMarketLoading, setMultiMarketLoading] = useState(false);
+  const [multiMarketResult, setMultiMarketResult] = useState<any>(null);
+  const [showMultiMarketResult, setShowMultiMarketResult] = useState(false);
 
   // Detect theme
   useEffect(() => {
@@ -588,6 +640,47 @@ export default function AnalyzePage() {
     if (value > 0) return `${value.toFixed(0)}%`;
     return '—';
   };
+
+  // Multi-market analysis function
+  const runMultiMarketAnalysis = async () => {
+    if (!selectedMultiMarketSymbol || assetType === 'crypto') return;
+
+    setMultiMarketLoading(true);
+    setMultiMarketResult(null);
+
+    try {
+      const res = await authFetch(`/api/multi-market/analyze/${selectedMultiMarketSymbol}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          interval: timeframe,
+          limit: '200',
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setMultiMarketResult(data.data);
+        setShowMultiMarketResult(true);
+        notifyCreditDeduction?.(0, 'multi-market', 0); // Multi-market is free for now
+      } else {
+        toast.error(data.error || 'Analysis failed');
+      }
+    } catch (error) {
+      console.error('Multi-market analysis error:', error);
+      toast.error('Failed to run analysis. Please try again.');
+    } finally {
+      setMultiMarketLoading(false);
+    }
+  };
+
+  // Reset multi-market state when asset type changes
+  useEffect(() => {
+    setSelectedMultiMarketSymbol('');
+    setMultiMarketResult(null);
+    setShowMultiMarketResult(false);
+  }, [assetType]);
 
   return (
     <div className="relative min-h-screen">
@@ -1043,13 +1136,72 @@ export default function AnalyzePage() {
                   })}
                 </div>
 
-                {/* Asset Type Info */}
+                {/* Multi-Market Symbol Selector */}
                 {assetType !== 'crypto' && (
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50/50 dark:bg-amber-500/10 border border-amber-200/50 dark:border-amber-500/20">
-                    <Activity className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-amber-700 dark:text-amber-300">
-                      <strong>{ASSET_TYPES.find(a => a.id === assetType)?.name} analysis</strong> is coming soon. For now, you can analyze crypto assets with our 7-Step or MLIS Pro methods.
-                    </p>
+                  <div className="space-y-3 p-4 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 border border-slate-200 dark:border-slate-700">
+                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                      {assetType === 'stocks' && <BarChart3 className="w-4 h-4 text-blue-500" />}
+                      {assetType === 'bonds' && <Landmark className="w-4 h-4 text-purple-500" />}
+                      {assetType === 'metals' && <Gem className="w-4 h-4 text-yellow-500" />}
+                      Select {ASSET_TYPES.find(a => a.id === assetType)?.name} Symbol
+                    </h4>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                      {MULTI_MARKET_SYMBOLS[assetType as Exclude<AssetType, 'crypto'>]?.map((item) => (
+                        <button
+                          key={item.symbol}
+                          onClick={() => setSelectedMultiMarketSymbol(item.symbol)}
+                          className={cn(
+                            "p-2 rounded-lg border text-left transition-all",
+                            selectedMultiMarketSymbol === item.symbol
+                              ? assetType === 'stocks'
+                                ? "border-blue-500 bg-blue-50 dark:bg-blue-500/20"
+                                : assetType === 'bonds'
+                                ? "border-purple-500 bg-purple-50 dark:bg-purple-500/20"
+                                : "border-yellow-500 bg-yellow-50 dark:bg-yellow-500/20"
+                              : "border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 bg-white dark:bg-slate-800"
+                          )}
+                        >
+                          <div className="font-semibold text-xs text-slate-900 dark:text-white">
+                            {item.symbol}
+                          </div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                            {item.name}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Analyze Button for Multi-Market */}
+                    {selectedMultiMarketSymbol && (
+                      <button
+                        onClick={runMultiMarketAnalysis}
+                        disabled={multiMarketLoading}
+                        className={cn(
+                          "w-full mt-3 py-3 px-4 rounded-xl font-semibold text-white transition-all",
+                          "flex items-center justify-center gap-2",
+                          multiMarketLoading ? "opacity-70 cursor-not-allowed" : "hover:shadow-lg",
+                          assetType === 'stocks'
+                            ? "bg-gradient-to-r from-blue-500 to-indigo-500"
+                            : assetType === 'bonds'
+                            ? "bg-gradient-to-r from-purple-500 to-violet-500"
+                            : "bg-gradient-to-r from-yellow-500 to-amber-500"
+                        )}
+                      >
+                        {multiMarketLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Analyzing {selectedMultiMarketSymbol}...
+                          </>
+                        ) : (
+                          <>
+                            <TrendingUp className="w-4 h-4" />
+                            Analyze {selectedMultiMarketSymbol}
+                            <span className="text-xs opacity-75">(FREE)</span>
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -1168,18 +1320,20 @@ export default function AnalyzePage() {
             </GlassCard>
           </div>
 
-          {/* Coin Selector - Full Width with dynamic height */}
-          <div className="col-span-12 relative z-20">
-            <GlassCard className="p-3 sm:p-4 md:p-6" allowOverflow>
-              <div className="space-y-3 sm:space-y-4">
-                <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
-                  Select Coin to Analyze
-                </h3>
-                <CoinSelector timeframe={timeframe} analysisMethod={analysisMethod} />
-              </div>
-            </GlassCard>
-          </div>
+          {/* Coin Selector - Full Width with dynamic height (Crypto only) */}
+          {assetType === 'crypto' && (
+            <div className="col-span-12 relative z-20">
+              <GlassCard className="p-3 sm:p-4 md:p-6" allowOverflow>
+                <div className="space-y-3 sm:space-y-4">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
+                    Select Coin to Analyze
+                  </h3>
+                  <CoinSelector timeframe={timeframe} analysisMethod={analysisMethod} />
+                </div>
+              </GlassCard>
+            </div>
+          )}
 
           {/* Recent Analyses - Full Width */}
           <div id="recent-analyses" className="col-span-12 relative z-10">
@@ -1189,6 +1343,234 @@ export default function AnalyzePage() {
           </div>
         </div>
       </div>
+
+      {/* Multi-Market Analysis Result Modal */}
+      {showMultiMarketResult && multiMarketResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl">
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                setShowMultiMarketResult(false);
+                setMultiMarketResult(null);
+              }}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-5 h-5 text-slate-500" />
+            </button>
+
+            {/* Header */}
+            <div className={cn(
+              "p-6 border-b border-slate-200 dark:border-slate-700",
+              "bg-gradient-to-r",
+              multiMarketResult.assetClass === 'stocks'
+                ? "from-blue-500/10 to-indigo-500/10"
+                : multiMarketResult.assetClass === 'bonds'
+                ? "from-purple-500/10 to-violet-500/10"
+                : "from-yellow-500/10 to-amber-500/10"
+            )}>
+              <div className="flex items-center gap-3">
+                {multiMarketResult.assetClass === 'stocks' && <BarChart3 className="w-8 h-8 text-blue-500" />}
+                {multiMarketResult.assetClass === 'bonds' && <Landmark className="w-8 h-8 text-purple-500" />}
+                {multiMarketResult.assetClass === 'metals' && <Gem className="w-8 h-8 text-yellow-500" />}
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                    {multiMarketResult.symbol}
+                  </h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">
+                    {multiMarketResult.assetClass} Analysis • {multiMarketResult.interval}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Price & Change */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800">
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Current Price</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                    ${multiMarketResult.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className={cn(
+                  "px-3 py-1.5 rounded-lg font-semibold",
+                  (multiMarketResult.change24h || 0) >= 0
+                    ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400"
+                    : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                )}>
+                  {(multiMarketResult.change24h || 0) >= 0 ? '+' : ''}
+                  {(multiMarketResult.change24h || 0).toFixed(2)}%
+                </div>
+              </div>
+
+              {/* Analysis Summary */}
+              {multiMarketResult.analysis && (
+                <div className="space-y-4">
+                  {/* Verdict */}
+                  <div className={cn(
+                    "p-4 rounded-xl text-center",
+                    multiMarketResult.analysis.verdict === 'GO'
+                      ? "bg-green-100 dark:bg-green-500/20"
+                      : multiMarketResult.analysis.verdict === 'CONDITIONAL_GO'
+                      ? "bg-yellow-100 dark:bg-yellow-500/20"
+                      : multiMarketResult.analysis.verdict === 'WAIT'
+                      ? "bg-orange-100 dark:bg-orange-500/20"
+                      : "bg-red-100 dark:bg-red-500/20"
+                  )}>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Verdict</p>
+                    <p className={cn(
+                      "text-2xl font-bold",
+                      multiMarketResult.analysis.verdict === 'GO'
+                        ? "text-green-600 dark:text-green-400"
+                        : multiMarketResult.analysis.verdict === 'CONDITIONAL_GO'
+                        ? "text-yellow-600 dark:text-yellow-400"
+                        : multiMarketResult.analysis.verdict === 'WAIT'
+                        ? "text-orange-600 dark:text-orange-400"
+                        : "text-red-600 dark:text-red-400"
+                    )}>
+                      {multiMarketResult.analysis.verdict?.replace('_', ' ')}
+                    </p>
+                    <div className="flex items-center justify-center gap-2 mt-2">
+                      <span className="text-sm text-slate-600 dark:text-slate-300">
+                        Direction: <strong>{multiMarketResult.analysis.direction}</strong>
+                      </span>
+                      <span className="text-sm text-slate-600 dark:text-slate-300">
+                        Score: <strong>{multiMarketResult.analysis.score}/100</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Signals */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-lg bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30">
+                      <p className="text-xs text-green-600 dark:text-green-400 font-medium">Bullish Signals</p>
+                      <p className="text-xl font-bold text-green-700 dark:text-green-300">
+                        {multiMarketResult.analysis.bullishSignals || 0}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30">
+                      <p className="text-xs text-red-600 dark:text-red-400 font-medium">Bearish Signals</p>
+                      <p className="text-xl font-bold text-red-700 dark:text-red-300">
+                        {multiMarketResult.analysis.bearishSignals || 0}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  {multiMarketResult.analysis.assetSpecificNotes?.length > 0 && (
+                    <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                      <p className="text-sm font-medium text-slate-900 dark:text-white mb-2">Analysis Notes</p>
+                      <ul className="space-y-1">
+                        {multiMarketResult.analysis.assetSpecificNotes.map((note: string, i: number) => (
+                          <li key={i} className="text-sm text-slate-600 dark:text-slate-400 flex items-start gap-2">
+                            <span className="text-teal-500">•</span>
+                            {note}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Indicators */}
+              {multiMarketResult.indicators && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-slate-900 dark:text-white">Technical Indicators</h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {multiMarketResult.indicators.trend && (
+                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                        <p className="text-slate-500 dark:text-slate-400">Trend</p>
+                        <p className={cn(
+                          "font-semibold capitalize",
+                          multiMarketResult.indicators.trend.direction === 'up'
+                            ? "text-green-600"
+                            : multiMarketResult.indicators.trend.direction === 'down'
+                            ? "text-red-600"
+                            : "text-yellow-600"
+                        )}>
+                          {multiMarketResult.indicators.trend.direction}
+                        </p>
+                      </div>
+                    )}
+                    {multiMarketResult.indicators.momentum?.rsi && (
+                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                        <p className="text-slate-500 dark:text-slate-400">RSI</p>
+                        <p className={cn(
+                          "font-semibold",
+                          multiMarketResult.indicators.momentum.rsi < 30
+                            ? "text-green-600"
+                            : multiMarketResult.indicators.momentum.rsi > 70
+                            ? "text-red-600"
+                            : "text-slate-900 dark:text-white"
+                        )}>
+                          {multiMarketResult.indicators.momentum.rsi.toFixed(1)}
+                        </p>
+                      </div>
+                    )}
+                    {multiMarketResult.indicators.volatility?.atr && (
+                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                        <p className="text-slate-500 dark:text-slate-400">ATR</p>
+                        <p className="font-semibold text-slate-900 dark:text-white">
+                          {multiMarketResult.indicators.volatility.atr.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Fundamentals */}
+              {multiMarketResult.fundamentals && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-slate-900 dark:text-white">Fundamentals</h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {multiMarketResult.fundamentals.marketCap && (
+                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                        <p className="text-slate-500 dark:text-slate-400">Market Cap</p>
+                        <p className="font-semibold text-slate-900 dark:text-white">
+                          ${(multiMarketResult.fundamentals.marketCap / 1e9).toFixed(2)}B
+                        </p>
+                      </div>
+                    )}
+                    {multiMarketResult.fundamentals.peRatio && (
+                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                        <p className="text-slate-500 dark:text-slate-400">P/E Ratio</p>
+                        <p className="font-semibold text-slate-900 dark:text-white">
+                          {multiMarketResult.fundamentals.peRatio.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                    {multiMarketResult.fundamentals.yield && (
+                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                        <p className="text-slate-500 dark:text-slate-400">Yield</p>
+                        <p className="font-semibold text-slate-900 dark:text-white">
+                          {multiMarketResult.fundamentals.yield.toFixed(2)}%
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowMultiMarketResult(false);
+                  setMultiMarketResult(null);
+                }}
+                className="px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
