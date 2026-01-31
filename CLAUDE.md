@@ -429,6 +429,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-29 | Dil değişikliğinde sayfa boş geliyor veya hata veriyor | 1) `window.location.reload()` yerine `router.refresh()` kullanıldı, 2) Loading state eklendi, 3) Google Translate iframe yöntemi öncelikli, 4) Soft reload fallback (500ms delay), 5) Hata durumunda graceful degradation | `LanguageSelector.tsx:99-158` |
 | 2026-01-29 | Reports sayfası hata durumunda sessizce başarısız oluyordu | 1) `error` state eklendi, 2) API hata mesajları gösteriliyor, 3) "Try Again" butonu ile yeniden deneme, 4) Connection error için özel mesaj | `reports/page.tsx:125-151,509-526` |
 | 2026-01-29 | Top 5 Coins scan başlıyor ama tamamlanmıyordu | 1) Scan session tracking eklendi (isScanning, coinsAnalyzed, totalCoins), 2) Status endpoint gerçek scan progress döndürüyor, 3) Frontend polling doğru koşulları kontrol ediyor, 4) Timeout 5 dakikadan 10 dakikaya çıkarıldı, 5) Duplicate scan'ler engellendi | `coin-score-cache.service.ts`, `analysis.routes.ts:5004-5032`, `analyze/page.tsx:391-470` |
+| 2026-01-31 | SLV ve diğer non-crypto varlıklar için analiz hatası (Binance SLVUSDT yok) | Multi-Asset Data Provider oluşturuldu: Crypto→Binance, Stocks/Bonds/Metals→Yahoo Finance. analysis.engine.ts ve mlis.service.ts güncellendi. Asset class detection ile doğru API'ye yönlendirme | `multi-asset-data-provider.ts`, `analysis.engine.ts`, `mlis.service.ts` |
 
 ---
 
@@ -1277,6 +1278,33 @@ Kullanıcı Hakları Aktif:
   - **Liquidity Bias**: risk_on, risk_off, neutral
   - **Recommendation Engine**: Primary market, action (analyze/wait/avoid), confidence %
   - Sidebar'a "Capital Flow" linki eklendi (Globe ikonu)
+
+### 2026-01-31
+- **Multi-Asset Analysis Support (Unified Analysis Engine)**:
+  - SLV ve diğer non-crypto varlıklar için analiz hatası düzeltildi
+  - **Yeni Dosya**: `apps/api/src/modules/analysis/providers/multi-asset-data-provider.ts`
+  - **Unified Data Provider**:
+    - Crypto varlıklar → Binance API
+    - Stocks/Bonds/Metals → Yahoo Finance API
+    - `fetchCandles()` ve `fetchTicker()` fonksiyonları asset class'a göre doğru API'ye yönlendiriyor
+  - **Analysis Engine Güncellemeleri**:
+    - `analysis.engine.ts`'e multi-asset provider import edildi
+    - `scanAsset()`: Tokenomics sadece crypto için çağrılıyor
+    - `safetyCheck()`: Order book ve trades sadece crypto için çağrılıyor
+    - Non-crypto varlıklar için default değerler kullanılıyor
+  - **MLIS Service Güncellemeleri**:
+    - `mlis.service.ts`'e multi-asset provider import edildi
+    - `fetchCandles()` yeni provider kullanıyor
+    - Tüm asset class'ları için MLIS Pro analizi destekleniyor
+  - **Frontend Güncellemeleri**:
+    - Non-crypto varlıklar için ana analiz endpoint'i (`/api/analysis/full`) kullanılıyor
+    - Metod seçimi (Classic 7-Step vs MLIS Pro) tüm asset türleri için gösteriliyor
+    - Analyze butonu seçilen metodu ve kredi maliyetini gösteriyor
+  - **Desteklenen Asset Class'lar**:
+    - Crypto: BTC, ETH, SOL, vb. (Binance üzerinden)
+    - Stocks: AAPL, MSFT, SPY, QQQ, vb. (Yahoo Finance)
+    - Bonds: TLT, IEF, SHY, BND, vb. (Yahoo Finance)
+    - Metals: GLD, SLV, IAU, XAUUSD, XAGUSD, vb. (Yahoo Finance)
 
 ---
 

@@ -9,10 +9,19 @@
  * - Supply/Demand Dynamics
  *
  * Provides enhanced signal generation with confidence scoring
+ *
+ * Supports all asset classes:
+ * - Crypto: Binance API
+ * - Stocks, Bonds, Metals: Yahoo Finance API
  */
 
 import { OHLCV, IndicatorsService } from './indicators.service';
 import { callGeminiWithRetry } from '../../../core/gemini';
+import {
+  fetchCandles as fetchMultiAssetCandles,
+  getAssetClass,
+  AssetClass,
+} from '../providers/multi-asset-data-provider';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -194,48 +203,24 @@ export class MLISService {
   }
 
   // ============================================================================
-  // DATA FETCHING
+  // DATA FETCHING - Multi-Asset Support
   // ============================================================================
 
   private async fetchCandles(symbol: string, timeframe: string): Promise<OHLCV[]> {
     try {
-      // Map timeframe to Binance interval
-      const intervalMap: Record<string, string> = {
-        '5m': '5m',
-        '15m': '15m',
-        '30m': '30m',
-        '1h': '1h',
-        '2h': '2h',
-        '4h': '4h',
-        '1d': '1d',
-        '1D': '1d',
-        '1W': '1w',
-      };
+      const assetClass = getAssetClass(symbol);
+      console.log(`[MLIS] Fetching candles for ${symbol} (${assetClass}) - timeframe: ${timeframe}`);
 
-      const interval = intervalMap[timeframe] || '4h';
-      const limit = 500;
+      // Use multi-asset provider which routes to correct API based on asset class
+      const candles = await fetchMultiAssetCandles(symbol, timeframe, 500);
 
-      const symbolUpper = symbol.toUpperCase().replace('USDT', '');
-      const binanceSymbol = `${symbolUpper}USDT`;
-
-      const response = await fetch(
-        `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=${limit}`,
-        { signal: AbortSignal.timeout(10000) }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Binance API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      return data.map((candle: any[]) => ({
-        timestamp: candle[0],
-        open: parseFloat(candle[1]),
-        high: parseFloat(candle[2]),
-        low: parseFloat(candle[3]),
-        close: parseFloat(candle[4]),
-        volume: parseFloat(candle[5]),
+      return candles.map((c) => ({
+        timestamp: c.timestamp,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+        volume: c.volume,
       }));
     } catch (error) {
       console.warn(`[MLIS] Failed to fetch candles for ${symbol}:`, error);

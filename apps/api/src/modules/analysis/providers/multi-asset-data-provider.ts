@@ -1,0 +1,464 @@
+/**
+ * Multi-Asset Data Provider
+ * =========================
+ *
+ * Unified data fetching for all asset classes:
+ * - Crypto: Binance API
+ * - Stocks: Yahoo Finance
+ * - Bonds: Yahoo Finance
+ * - Metals: Yahoo Finance
+ *
+ * "Para nereye akıyorsa potansiyel oradadır"
+ */
+
+import { detectAssetClass, resolveSymbol } from './symbol-resolver';
+import { AssetClass, OHLCV, MarketData, SUPPORTED_SYMBOLS } from './types';
+
+// ============================================================================
+// CACHE MANAGEMENT
+// ============================================================================
+
+const cache = new Map<string, { data: unknown; expiry: number }>();
+
+function getCached<T>(key: string): T | null {
+  const item = cache.get(key);
+  if (item && item.expiry > Date.now()) {
+    return item.data as T;
+  }
+  return null;
+}
+
+function setCache(key: string, data: unknown, ttlMs: number): void {
+  cache.set(key, { data, expiry: Date.now() + ttlMs });
+}
+
+const CACHE_TTL = {
+  CANDLES: 60 * 1000,      // 1 minute
+  TICKER: 30 * 1000,       // 30 seconds
+  ORDER_BOOK: 10 * 1000,   // 10 seconds
+};
+
+// ============================================================================
+// FETCH WITH RETRY
+// ============================================================================
+
+async function fetchWithRetry(url: string, options?: RequestInit, retries = 3): Promise<Response> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (response.ok) return response;
+
+      if (response.status === 429) {
+        await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
+        continue;
+      }
+
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
+
+// ============================================================================
+// BINANCE API (CRYPTO)
+// ============================================================================
+
+const BINANCE_INTERVAL_MAP: Record<string, string> = {
+  '5m': '5m',
+  '15m': '15m',
+  '30m': '30m',
+  '1h': '1h',
+  '2h': '2h',
+  '4h': '4h',
+  '1d': '1d',
+  '1D': '1d',
+  '1w': '1w',
+  '1W': '1w',
+};
+
+async function fetchBinanceCandles(symbol: string, interval: string, limit: number = 500): Promise<OHLCV[]> {
+  const binanceInterval = BINANCE_INTERVAL_MAP[interval] || '4h';
+
+  // Normalize symbol: remove any suffix and add USDT
+  let normalizedSymbol = symbol.toUpperCase();
+  const suffixes = ['USDT', 'BUSD', 'USD', 'PERP', 'USDC'];
+  for (const suffix of suffixes) {
+    if (normalizedSymbol.endsWith(suffix)) {
+      normalizedSymbol = normalizedSymbol.slice(0, -suffix.length);
+      break;
+    }
+  }
+  const binanceSymbol = `${normalizedSymbol}USDT`;
+
+  const cacheKey = `binance:candles:${binanceSymbol}:${binanceInterval}:${limit}`;
+  const cached = getCached<OHLCV[]>(cacheKey);
+  if (cached) return cached;
+
+  const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${binanceInterval}&limit=${limit}`;
+  const response = await fetchWithRetry(url);
+  const data = await response.json();
+
+  const candles: OHLCV[] = data.map((k: (string | number)[]) => ({
+    timestamp: k[0] as number,
+    open: parseFloat(k[1] as string),
+    high: parseFloat(k[2] as string),
+    low: parseFloat(k[3] as string),
+    close: parseFloat(k[4] as string),
+    volume: parseFloat(k[5] as string),
+  }));
+
+  setCache(cacheKey, candles, CACHE_TTL.CANDLES);
+  return candles;
+}
+
+async function fetchBinanceTicker(symbol: string): Promise<MarketData> {
+  let normalizedSymbol = symbol.toUpperCase();
+  const suffixes = ['USDT', 'BUSD', 'USD', 'PERP', 'USDC'];
+  for (const suffix of suffixes) {
+    if (normalizedSymbol.endsWith(suffix)) {
+      normalizedSymbol = normalizedSymbol.slice(0, -suffix.length);
+      break;
+    }
+  }
+  const binanceSymbol = `${normalizedSymbol}USDT`;
+
+  const cacheKey = `binance:ticker:${binanceSymbol}`;
+  const cached = getCached<MarketData>(cacheKey);
+  if (cached) return cached;
+
+  const url = `https://api.binance.com/api/v3/ticker/24hr?symbol=${binanceSymbol}`;
+  const response = await fetchWithRetry(url);
+  const data = await response.json();
+
+  const marketData: MarketData = {
+    symbol: normalizedSymbol,
+    assetClass: 'crypto',
+    price: parseFloat(data.lastPrice),
+    change24h: parseFloat(data.priceChange),
+    changePercent24h: parseFloat(data.priceChangePercent),
+    high24h: parseFloat(data.highPrice),
+    low24h: parseFloat(data.lowPrice),
+    volume24h: parseFloat(data.volume),
+    lastUpdated: new Date(),
+  };
+
+  setCache(cacheKey, marketData, CACHE_TTL.TICKER);
+  return marketData;
+}
+
+// ============================================================================
+// YAHOO FINANCE API (STOCKS, BONDS, METALS)
+// ============================================================================
+
+// Yahoo symbol mapping for special cases
+const YAHOO_SYMBOL_MAP: Record<string, string> = {
+  // Metals spot prices
+  'XAUUSD': 'GC=F',
+  'XAU': 'GC=F',
+  'GOLD': 'GC=F',
+  'XAGUSD': 'SI=F',
+  'XAG': 'SI=F',
+  'SILVER': 'SI=F',
+  // ETFs use their own symbols
+  'GLD': 'GLD',
+  'SLV': 'SLV',
+  'IAU': 'IAU',
+  'PSLV': 'PSLV',
+  'PPLT': 'PPLT',
+  'PALL': 'PALL',
+  'GDX': 'GDX',
+  'GDXJ': 'GDXJ',
+  'SIL': 'SIL',
+  // Treasury yields
+  'US10Y': '^TNX',
+  'US2Y': '^IRX', // Approximate - 3 month
+  'US30Y': '^TYX',
+  'US5Y': '^FVX',
+};
+
+const YAHOO_INTERVAL_MAP: Record<string, string> = {
+  '5m': '5m',
+  '15m': '15m',
+  '30m': '30m',
+  '1h': '60m',
+  '2h': '60m', // Yahoo doesn't have 2h, use 1h
+  '4h': '60m', // Yahoo doesn't have 4h directly, we'll aggregate
+  '1d': '1d',
+  '1D': '1d',
+  '1w': '1wk',
+  '1W': '1wk',
+};
+
+const YAHOO_RANGE_MAP: Record<string, string> = {
+  '5m': '1d',
+  '15m': '5d',
+  '30m': '1mo',
+  '1h': '1mo',
+  '2h': '3mo',
+  '4h': '6mo',
+  '1d': '1y',
+  '1D': '1y',
+  '1w': '5y',
+  '1W': '5y',
+};
+
+async function fetchYahooCandles(symbol: string, interval: string, limit: number = 500): Promise<OHLCV[]> {
+  const yahooSymbol = YAHOO_SYMBOL_MAP[symbol.toUpperCase()] || symbol.toUpperCase();
+  const yahooInterval = YAHOO_INTERVAL_MAP[interval] || '1d';
+  const yahooRange = YAHOO_RANGE_MAP[interval] || '1y';
+
+  const cacheKey = `yahoo:candles:${yahooSymbol}:${yahooInterval}:${yahooRange}`;
+  const cached = getCached<OHLCV[]>(cacheKey);
+  if (cached) return cached.slice(-limit);
+
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=${yahooInterval}&range=${yahooRange}`;
+
+  const response = await fetchWithRetry(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    },
+  });
+
+  const data = await response.json();
+
+  if (!data.chart?.result?.[0]) {
+    throw new Error(`No data returned from Yahoo Finance for ${symbol}`);
+  }
+
+  const result = data.chart.result[0];
+  const timestamps = result.timestamp || [];
+  const quotes = result.indicators?.quote?.[0] || {};
+
+  const candles: OHLCV[] = timestamps.map((ts: number, i: number) => ({
+    timestamp: ts * 1000, // Convert to milliseconds
+    open: quotes.open?.[i] || 0,
+    high: quotes.high?.[i] || 0,
+    low: quotes.low?.[i] || 0,
+    close: quotes.close?.[i] || 0,
+    volume: quotes.volume?.[i] || 0,
+  })).filter((c: OHLCV) => c.open > 0 && c.close > 0);
+
+  // For 4h interval, aggregate from 1h candles
+  let finalCandles = candles;
+  if (interval === '4h' || interval === '2h') {
+    finalCandles = aggregateCandles(candles, interval === '4h' ? 4 : 2);
+  }
+
+  setCache(cacheKey, finalCandles, CACHE_TTL.CANDLES);
+  return finalCandles.slice(-limit);
+}
+
+function aggregateCandles(candles: OHLCV[], factor: number): OHLCV[] {
+  const aggregated: OHLCV[] = [];
+
+  for (let i = 0; i < candles.length; i += factor) {
+    const chunk = candles.slice(i, i + factor);
+    if (chunk.length === 0) continue;
+
+    aggregated.push({
+      timestamp: chunk[0].timestamp,
+      open: chunk[0].open,
+      high: Math.max(...chunk.map(c => c.high)),
+      low: Math.min(...chunk.map(c => c.low)),
+      close: chunk[chunk.length - 1].close,
+      volume: chunk.reduce((sum, c) => sum + c.volume, 0),
+    });
+  }
+
+  return aggregated;
+}
+
+async function fetchYahooTicker(symbol: string): Promise<MarketData> {
+  const yahooSymbol = YAHOO_SYMBOL_MAP[symbol.toUpperCase()] || symbol.toUpperCase();
+
+  const cacheKey = `yahoo:ticker:${yahooSymbol}`;
+  const cached = getCached<MarketData>(cacheKey);
+  if (cached) return cached;
+
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=2d`;
+
+  const response = await fetchWithRetry(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    },
+  });
+
+  const data = await response.json();
+
+  if (!data.chart?.result?.[0]) {
+    throw new Error(`No data returned from Yahoo Finance for ${symbol}`);
+  }
+
+  const result = data.chart.result[0];
+  const meta = result.meta;
+  const quotes = result.indicators?.quote?.[0] || {};
+
+  const currentPrice = meta.regularMarketPrice || quotes.close?.[quotes.close.length - 1] || 0;
+  const previousClose = meta.previousClose || meta.chartPreviousClose || currentPrice;
+  const change = currentPrice - previousClose;
+  const changePercent = previousClose > 0 ? (change / previousClose) * 100 : 0;
+
+  // Detect asset class from symbol
+  const assetClass = detectAssetClass(symbol);
+
+  const marketData: MarketData = {
+    symbol: symbol.toUpperCase(),
+    assetClass,
+    price: currentPrice,
+    change24h: change,
+    changePercent24h: changePercent,
+    high24h: meta.regularMarketDayHigh || quotes.high?.[quotes.high.length - 1] || 0,
+    low24h: meta.regularMarketDayLow || quotes.low?.[quotes.low.length - 1] || 0,
+    volume24h: meta.regularMarketVolume || quotes.volume?.[quotes.volume.length - 1] || 0,
+    marketCap: meta.marketCap,
+    lastUpdated: new Date(),
+  };
+
+  setCache(cacheKey, marketData, CACHE_TTL.TICKER);
+  return marketData;
+}
+
+// ============================================================================
+// UNIFIED INTERFACE
+// ============================================================================
+
+export interface CandleData {
+  timestamp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface TickerData {
+  symbol: string;
+  assetClass: AssetClass;
+  price: number;
+  change24h: number;
+  changePercent24h: number;
+  high24h: number;
+  low24h: number;
+  volume24h: number;
+  marketCap?: number;
+}
+
+/**
+ * Fetch candle data for any supported asset
+ * Automatically routes to correct provider based on asset class
+ */
+export async function fetchCandles(
+  symbol: string,
+  interval: string,
+  limit: number = 500
+): Promise<CandleData[]> {
+  const assetClass = detectAssetClass(symbol);
+
+  console.log(`[MultiAssetProvider] Fetching candles for ${symbol} (${assetClass}) - interval: ${interval}`);
+
+  try {
+    if (assetClass === 'crypto') {
+      return await fetchBinanceCandles(symbol, interval, limit);
+    } else {
+      // stocks, bonds, metals - use Yahoo Finance
+      return await fetchYahooCandles(symbol, interval, limit);
+    }
+  } catch (error) {
+    console.error(`[MultiAssetProvider] Error fetching candles for ${symbol}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch market data/ticker for any supported asset
+ * Automatically routes to correct provider based on asset class
+ */
+export async function fetchTicker(symbol: string): Promise<TickerData> {
+  const assetClass = detectAssetClass(symbol);
+
+  console.log(`[MultiAssetProvider] Fetching ticker for ${symbol} (${assetClass})`);
+
+  try {
+    if (assetClass === 'crypto') {
+      const data = await fetchBinanceTicker(symbol);
+      return {
+        symbol: data.symbol,
+        assetClass: 'crypto',
+        price: data.price,
+        change24h: data.change24h,
+        changePercent24h: data.changePercent24h,
+        high24h: data.high24h,
+        low24h: data.low24h,
+        volume24h: data.volume24h,
+      };
+    } else {
+      const data = await fetchYahooTicker(symbol);
+      return {
+        symbol: data.symbol,
+        assetClass: data.assetClass,
+        price: data.price,
+        change24h: data.change24h,
+        changePercent24h: data.changePercent24h,
+        high24h: data.high24h,
+        low24h: data.low24h,
+        volume24h: data.volume24h,
+        marketCap: data.marketCap,
+      };
+    }
+  } catch (error) {
+    console.error(`[MultiAssetProvider] Error fetching ticker for ${symbol}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Check if a symbol is supported for analysis
+ */
+export function isSymbolSupported(symbol: string): boolean {
+  const upper = symbol.toUpperCase().trim();
+  const assetClass = detectAssetClass(upper);
+
+  // For crypto, also check without USDT suffix
+  if (assetClass === 'crypto') {
+    let base = upper;
+    const suffixes = ['USDT', 'BUSD', 'USD', 'PERP', 'USDC'];
+    for (const suffix of suffixes) {
+      if (upper.endsWith(suffix)) {
+        base = upper.slice(0, -suffix.length);
+        break;
+      }
+    }
+    return SUPPORTED_SYMBOLS.crypto.includes(base) || SUPPORTED_SYMBOLS.crypto.includes(upper);
+  }
+
+  return SUPPORTED_SYMBOLS[assetClass]?.includes(upper) ?? false;
+}
+
+/**
+ * Get the asset class for a symbol
+ */
+export function getAssetClass(symbol: string): AssetClass {
+  return detectAssetClass(symbol);
+}
+
+/**
+ * Get display name for a symbol
+ */
+export function getDisplayName(symbol: string): string {
+  const resolved = resolveSymbol(symbol);
+  return resolved.displayName;
+}
+
+// Re-export types
+export type { AssetClass, OHLCV };
+export { SUPPORTED_SYMBOLS };
