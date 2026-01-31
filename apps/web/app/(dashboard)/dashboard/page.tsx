@@ -640,15 +640,19 @@ export default function DashboardPage() {
       }
 
       // Calculate AI Stats from available data
+      // Platform stats: estimate based on total analyses (real tracking TBD)
+      // User stats: use real aiExpertQuestionsTotal from statistics API
       newAIStats = {
         platform: {
           totalExpertQuestions: newPlatformStats?.platform?.totalAnalyses ? Math.floor(newPlatformStats.platform.totalAnalyses * 0.8) : 0,
-          totalConciergeMessages: newPlatformStats?.platform?.totalAnalyses ? Math.floor(newPlatformStats.platform.totalAnalyses * 1.5) : 0,
-          avgQuestionsPerUser: 2.4,
+          totalConciergeMessages: newPlatformStats?.platform?.totalAnalyses ? Math.floor(newPlatformStats.platform.totalAnalyses * 1.2) : 0,
+          avgQuestionsPerUser: newPlatformStats?.platform?.totalUsers
+            ? Number(((newPlatformStats.platform.totalAnalyses * 0.8) / newPlatformStats.platform.totalUsers).toFixed(1))
+            : 0,
         },
         user: {
-          expertQuestions: newUserStats?.aiExpertQuestionsTotal || Math.floor((newUserStats?.totalAnalyses || 0) * 0.7),
-          conciergeMessages: newUserStats?.conciergeMessagesTotal || Math.floor((newUserStats?.totalAnalyses || 0) * 1.2),
+          expertQuestions: newUserStats?.aiExpertQuestionsTotal || 0,
+          conciergeMessages: Math.floor((newUserStats?.totalAnalyses || 0) * 1.0), // Estimate: ~1 message per analysis
         },
       };
       setAIStats(newAIStats);
