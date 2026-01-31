@@ -679,6 +679,11 @@ function generateSellRecommendation(
   markets: MarketFlow[],
   bias: LiquidityBias
 ): FlowRecommendation | null {
+  // Safety check - need at least 2 markets to compare
+  if (!markets || markets.length < 2) {
+    return null;
+  }
+
   // Sort markets by flow strength (lowest/most negative first for SELL)
   const sortedMarkets = [...markets].sort((a, b) => {
     const scoreA = a.flow7d * 0.7 + a.flowVelocity * 0.3;
@@ -688,6 +693,11 @@ function generateSellRecommendation(
 
   const worstMarket = sortedMarkets[0];
   const bestMarket = sortedMarkets[sortedMarkets.length - 1];
+
+  // Safety check for undefined
+  if (!worstMarket || !bestMarket) {
+    return null;
+  }
 
   // Calculate relative weakness (difference from best performer)
   const relativeWeakness = bestMarket.flow7d - worstMarket.flow7d;
