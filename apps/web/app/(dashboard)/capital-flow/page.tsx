@@ -1039,10 +1039,13 @@ export default function CapitalFlowPage() {
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* ===== HERO SECTION with Kinetic Typography ===== */}
         <div className="text-center space-y-3 sm:space-y-4 py-4 sm:py-6 mb-8">
-          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-coral-500/10 border border-teal-500/20 backdrop-blur-sm animate-blur-in">
-            <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-teal-500 animate-pulse" />
-            <span className="text-xs sm:text-sm font-medium bg-gradient-to-r from-teal-500 to-coral-500 bg-clip-text text-transparent">
-              Global Capital Flow Intelligence
+          <div className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-3 rounded-full bg-gradient-to-r from-teal-500/20 via-emerald-500/20 to-coral-500/20 border-2 border-teal-500/40 backdrop-blur-md shadow-lg shadow-teal-500/10 animate-blur-in">
+            <div className="relative">
+              <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-teal-500" />
+              <div className="absolute inset-0 w-5 h-5 sm:w-6 sm:h-6 bg-teal-500/30 rounded-full blur-md animate-pulse" />
+            </div>
+            <span className="text-sm sm:text-base font-bold bg-gradient-to-r from-teal-400 via-emerald-400 to-coral-400 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer tracking-wide">
+              GLOBAL CAPITAL FLOW INTELLIGENCE
             </span>
           </div>
 
