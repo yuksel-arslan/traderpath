@@ -509,6 +509,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-31 | Capital Flow SELL önerisi gösterilmiyordu (tüm marketler pozitifken) | Relative weakness detection eklendi (>5% gap), slowing momentum check eklendi (<-1 velocity), risk-off için her zaman gösterim | `capital-flow.service.ts` |
 | 2026-01-31 | Analyze sayfasında Recent bölümü iç içe geçmişti | Wrapper'daki gereksiz header kaldırıldı (RecentAnalyses zaten kendi header'ına sahip) | `analyze/page.tsx` |
 | 2026-01-31 | AI Concierge analiz sonucu verdict kartı ve TradePlanChart görüntülenmiyor | handleAnalysis fonksiyonu direction ve tradePlan döndürmüyordu. Analiz DB'den çekilip step5Result ve step7Result'tan direction/tradePlan eklendi | `concierge.service.ts` |
+| 2026-01-31 | Dil değişikliği sayfa yenilemesi gerektiriyordu | Google Translate combo box doğrudan manipüle ediliyor (fireEvent ile change tetikleme). triggerTranslation ve resetToEnglish fonksiyonları eklendi. Sayfa yenileme yerine anlık çeviri | `LanguageSelector.tsx` |
 
 ---
 
