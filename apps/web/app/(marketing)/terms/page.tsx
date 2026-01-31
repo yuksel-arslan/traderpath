@@ -1,12 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, FileText, AlertTriangle, CreditCard, UserX, Scale, Shield, RefreshCw, Mail } from 'lucide-react';
+import { ArrowLeft, FileText, AlertTriangle, CreditCard, UserX, Scale, Shield, RefreshCw, Mail, Clock, Globe, Target, Activity } from 'lucide-react';
 import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 
 export default function TermsOfServicePage() {
-  const lastUpdated = 'January 26, 2026';
+  const lastUpdated = 'January 31, 2026';
 
   return (
     <div className="min-h-screen bg-background">
@@ -62,11 +62,12 @@ export default function TermsOfServicePage() {
         {/* Quick Navigation */}
         <div className="bg-card border rounded-xl p-6 mb-12">
           <h2 className="font-semibold mb-4">Quick Navigation</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
               { href: '#acceptance', label: 'Acceptance', icon: FileText },
               { href: '#services', label: 'Our Services', icon: Shield },
               { href: '#payments', label: 'Payments', icon: CreditCard },
+              { href: '#daily-pass', label: 'Daily Pass', icon: Clock },
               { href: '#liability', label: 'Liability', icon: Scale },
             ].map((item) => (
               <a
@@ -188,6 +189,108 @@ export default function TermsOfServicePage() {
                 <h3 className="font-semibold text-foreground mb-2">Payment Processing</h3>
                 <p>
                   All payments are processed securely through Stripe. We do not store your credit card information. By making a purchase, you authorize us to charge your payment method for the selected amount.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Section 4b: Daily Pass System */}
+          <section id="daily-pass">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
+                <Clock className="w-5 h-5 text-amber-500" />
+              </div>
+              <h2 className="text-2xl font-bold">4b. Daily Pass System</h2>
+            </div>
+            <div className="space-y-4 text-muted-foreground">
+              <p>
+                TraderPath offers a Daily Pass subscription model for premium features. Each pass provides unlimited access for the calendar day (UTC timezone) it was purchased.
+              </p>
+
+              <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-500/30 rounded-lg p-6">
+                <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <span className="bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded">PRICING</span>
+                  Daily Pass Rates
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Layer 3 */}
+                  <div className="bg-card border rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-purple-500/10 rounded-lg">
+                        <Globe className="w-5 h-5 text-purple-500" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground">Layer 3 - Sectors</p>
+                        <p className="text-xs text-muted-foreground">Sector drill-down analysis</p>
+                      </div>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold text-foreground">25</span>
+                      <span className="text-sm text-muted-foreground">credits/day</span>
+                    </div>
+                  </div>
+
+                  {/* Layer 4 */}
+                  <div className="bg-card border rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-amber-500/10 rounded-lg">
+                        <Target className="w-5 h-5 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground">Layer 4 - AI Recommendations</p>
+                        <p className="text-xs text-muted-foreground">BUY/SELL signals</p>
+                      </div>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold text-foreground">25</span>
+                      <span className="text-sm text-muted-foreground">credits/day</span>
+                    </div>
+                  </div>
+
+                  {/* Asset Analysis */}
+                  <div className="bg-card border border-violet-200 dark:border-violet-700 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-violet-500/10 rounded-lg">
+                        <Activity className="w-5 h-5 text-violet-500" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground">Asset Analysis</p>
+                        <p className="text-xs text-muted-foreground">7-Step / MLIS Pro</p>
+                      </div>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold text-foreground">100</span>
+                      <span className="text-sm text-muted-foreground">credits/day</span>
+                    </div>
+                    <p className="text-xs text-amber-600 mt-2">Maximum 10 analyses per day</p>
+                  </div>
+                </div>
+
+                {/* Total */}
+                <div className="mt-4 p-3 bg-card/50 rounded-lg border border-dashed">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Total for full daily access:</span>
+                    <span className="font-bold text-foreground">150 credits/day</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-card border rounded-lg p-4">
+                <h3 className="font-semibold text-foreground mb-2">Daily Pass Terms</h3>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Passes are valid for the calendar day (UTC) they are purchased</li>
+                  <li>Passes expire at 23:59:59 UTC on the purchase date</li>
+                  <li>Unused passes cannot be refunded or transferred</li>
+                  <li>Credits are only charged on days you actively use the platform</li>
+                  <li>Asset Analysis pass includes a maximum of 10 analyses per day</li>
+                  <li>Layer 3 and Layer 4 passes provide unlimited views for the day</li>
+                </ul>
+              </div>
+
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                <p className="text-blue-600 dark:text-blue-400 text-sm">
+                  <strong>Note:</strong> Daily Pass pricing may be adjusted. Any changes will be communicated via email and platform notifications before taking effect.
                 </p>
               </div>
             </div>

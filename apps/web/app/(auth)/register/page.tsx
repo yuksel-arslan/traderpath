@@ -226,7 +226,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-2 p-3 bg-accent/50 rounded-lg border">
               <input
                 type="checkbox"
                 id="terms"
@@ -236,9 +236,12 @@ export default function RegisterPage() {
               />
               <label htmlFor="terms" className="text-sm text-muted-foreground cursor-pointer">
                 I agree to the{' '}
-                <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link>
+                <Link href="/terms" className="text-primary hover:underline font-medium" target="_blank">Terms of Service</Link>
                 {' '}and{' '}
-                <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+                <Link href="/privacy" className="text-primary hover:underline font-medium" target="_blank">Privacy Policy</Link>
+                , including the{' '}
+                <Link href="/terms#daily-pass" className="text-primary hover:underline font-medium" target="_blank">Daily Pass pricing</Link>
+                .
               </label>
             </div>
 
