@@ -45,6 +45,7 @@ import {
 import { cn } from '../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
 import { getApiUrl, authFetch } from '../../../lib/api';
+import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
 
 // Lazy load chart component
 const PnLChart = dynamic(
@@ -841,6 +842,45 @@ export default function DashboardPage() {
   const hasChartData = (performanceData?.summary?.totalTrades || 0) > 0 || recentAnalyses.filter(o => o.unrealizedPnL !== undefined).length >= 1;
   const activeTrades = recentAnalyses.filter(t => t.outcome === 'pending');
 
+  // Dashboard tour steps
+  const dashboardTourSteps: TourStep[] = [
+    {
+      target: '#tour-dashboard-hero',
+      title: 'Welcome to Dashboard',
+      content: 'Your trading command center. Monitor performance, track positions, and follow market flows all in one place.',
+      placement: 'bottom',
+      spotlightPadding: 20,
+    },
+    {
+      target: '#tour-credits',
+      title: 'Your Credits',
+      content: 'Credits are used for analyses and premium features. Buy more credits or earn free credits through rewards.',
+      placement: 'bottom',
+      spotlightPadding: 8,
+    },
+    {
+      target: '#tour-capital-flow',
+      title: 'Capital Flow Summary',
+      content: 'Quick overview of the 4-layer Capital Flow system. See global liquidity, market flow, sector activity, and AI recommendations at a glance.',
+      placement: 'bottom',
+      spotlightPadding: 8,
+    },
+    {
+      target: '#tour-platform-performance',
+      title: 'Platform Performance',
+      content: 'See how the platform is performing overall. Track platform accuracy, total analyses, and active users.',
+      placement: 'bottom',
+      spotlightPadding: 8,
+    },
+    {
+      target: '#tour-my-performance',
+      title: 'My Performance',
+      content: 'Track your personal trading performance. See your accuracy, P/L chart, and active trades.',
+      placement: 'top',
+      spotlightPadding: 8,
+    },
+  ];
+
   if (loading) {
     return (
       <div className="relative min-h-screen bg-slate-50 dark:bg-[#0B1120]">
@@ -858,12 +898,19 @@ export default function DashboardPage() {
 
   return (
     <div className="relative min-h-screen bg-slate-50 dark:bg-[#0B1120]">
+      {/* Onboarding Tour */}
+      <OnboardingTour
+        steps={dashboardTourSteps}
+        tourId="dashboard"
+        autoStart={true}
+      />
+
       <GrainOverlay />
       <GradientOrbs />
 
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* ===== HERO SECTION ===== */}
-        <div className="text-center space-y-3 sm:space-y-4 py-4 sm:py-6 mb-8">
+        <div id="tour-dashboard-hero" className="text-center space-y-3 sm:space-y-4 py-4 sm:py-6 mb-8">
           <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-red-500/10 border border-teal-500/20 backdrop-blur-sm animate-blur-in">
             <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-teal-500 animate-pulse" />
             <span className="text-xs sm:text-sm font-medium bg-gradient-to-r from-teal-500 to-red-500 bg-clip-text text-transparent">
@@ -897,7 +944,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ===== CREDITS SECTION ===== */}
-        <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-amber-200/50 dark:border-slate-700/50 shadow-lg mb-6">
+        <div id="tour-credits" className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-amber-200/50 dark:border-slate-700/50 shadow-lg mb-6">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-yellow-500/5" />
           <div className="relative z-10 p-5">
             <div className="flex items-center gap-4">
@@ -945,7 +992,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ===== PLATFORM PERFORMANCE SECTION ===== */}
-        <section className="mb-8">
+        <section id="tour-platform-performance" className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
               <Globe className="w-4.5 h-4.5 text-white" />
@@ -954,11 +1001,15 @@ export default function DashboardPage() {
               <h2 className="text-lg font-bold bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Platform Performance</h2>
               <p className="text-xs text-gray-500 dark:text-slate-400">Global insights and Capital Flow</p>
             </div>
+            {/* Tour Trigger Button */}
+            <div className="ml-auto">
+              <TourTriggerButton tourId="dashboard" />
+            </div>
           </div>
 
           {/* Capital Flow 4-Layer Summary */}
           {capitalFlow && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+            <div id="tour-capital-flow" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
               <LayerCard
                 layerNum={1}
                 title="Global Liquidity"
@@ -1117,7 +1168,7 @@ export default function DashboardPage() {
         </section>
 
         {/* ===== MY PERFORMANCE SECTION ===== */}
-        <section className="mb-8">
+        <section id="tour-my-performance" className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
               <Award className="w-4.5 h-4.5 text-white" />
