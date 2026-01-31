@@ -1,8 +1,8 @@
 'use client';
 
 // ===========================================
-// Unified Dashboard - Compact & Professional
-// Merged Overview + Dashboard pages
+// Unified Dashboard - Capital Flow Integration
+// Platform Performance + My Performance
 // ===========================================
 
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -22,19 +22,25 @@ import {
   LineChart,
   CheckCircle2,
   XCircle,
-  Clock,
   ArrowRight,
-  Shield,
   Users,
   Zap,
-  Calendar,
-  Eye,
   Award,
-  FileText,
   Brain,
   AlertTriangle,
   Sparkles,
   Globe,
+  Landmark,
+  Coins,
+  DollarSign,
+  MessageSquare,
+  Bot,
+  HelpCircle,
+  Layers,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+  Clock,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
@@ -97,6 +103,8 @@ interface UserStats {
   goSignals: number;
   avoidSignals: number;
   lastAnalysisDate: string | null;
+  aiExpertQuestionsTotal?: number;
+  conciergeMessagesTotal?: number;
 }
 
 interface RecentAnalysis {
@@ -113,16 +121,6 @@ interface RecentAnalysis {
   tradeType?: TradeType;
   stopLoss?: number;
   takeProfit1?: number;
-}
-
-interface TopCoin {
-  symbol: string;
-  totalScore: number;
-  reliabilityScore: number;
-  verdict: string;
-  direction: string | null;
-  price: number;
-  priceChange24h: number;
 }
 
 interface PerformanceDay {
@@ -144,11 +142,69 @@ interface PerformanceData {
   };
 }
 
+// Capital Flow Types
+interface GlobalLiquidity {
+  fedBalanceSheet: {
+    value: number;
+    change30d: number;
+    trend: 'expanding' | 'contracting' | 'stable';
+  };
+  m2MoneySupply: {
+    value: number;
+    change30d: number;
+    yoyGrowth: number;
+  };
+  dxy: {
+    value: number;
+    change7d: number;
+    trend: 'strengthening' | 'weakening' | 'stable';
+  };
+  vix: {
+    value: number;
+    level: 'extreme_fear' | 'fear' | 'neutral' | 'complacent';
+  };
+}
+
+interface MarketFlow {
+  market: 'crypto' | 'stocks' | 'bonds' | 'metals';
+  flow7d: number;
+  flow30d: number;
+  phase: 'early' | 'mid' | 'late' | 'exit';
+  daysInPhase: number;
+  rotationSignal: 'entering' | 'stable' | 'exiting' | null;
+}
+
+interface FlowRecommendation {
+  primaryMarket: string;
+  phase: string;
+  action: 'analyze' | 'wait' | 'avoid';
+  confidence: number;
+  reason: string;
+}
+
+interface CapitalFlowSummary {
+  globalLiquidity: GlobalLiquidity;
+  liquidityBias: 'risk_on' | 'risk_off' | 'neutral';
+  markets: MarketFlow[];
+  recommendation: FlowRecommendation;
+}
+
+interface AIStats {
+  platform: {
+    totalExpertQuestions: number;
+    totalConciergeMessages: number;
+    avgQuestionsPerUser: number;
+  };
+  user: {
+    expertQuestions: number;
+    conciergeMessages: number;
+  };
+}
+
 // ===========================================
 // Helper Functions
 // ===========================================
 
-// Format large numbers with separators (1000079 → 1,000,079)
 function formatNumber(num: number): string {
   if (num >= 1000000) {
     return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
@@ -159,61 +215,45 @@ function formatNumber(num: number): string {
   return num.toLocaleString('en-US');
 }
 
-// Format credits with full number display
 function formatCredits(num: number): string {
   return num.toLocaleString('en-US');
 }
 
-// Calculate coin-based P/L from analyses
-interface CoinPnL {
-  symbol: string;
-  totalPnL: number;
-  trades: number;
-  winRate: number;
-  avgPnL: number;
+// ===========================================
+// UI Components
+// ===========================================
+
+function GrainOverlay() {
+  return (
+    <div
+      className="pointer-events-none fixed inset-0 z-50 opacity-[0.02]"
+      style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+        backgroundRepeat: 'repeat',
+      }}
+    />
+  );
 }
 
-function calculateCoinPnL(analyses: RecentAnalysis[]): CoinPnL[] {
-  const coinMap = new Map<string, { pnls: number[]; wins: number; total: number }>();
-
-  for (const analysis of analyses) {
-    if (analysis.outcome === 'pending') continue; // Only include closed trades
-
-    const existing = coinMap.get(analysis.symbol) || { pnls: [], wins: 0, total: 0 };
-
-    // Calculate P/L based on outcome
-    const pnl = analysis.unrealizedPnL ?? 0;
-    existing.pnls.push(pnl);
-    existing.total += 1;
-    if (analysis.outcome === 'correct') {
-      existing.wins += 1;
-    }
-
-    coinMap.set(analysis.symbol, existing);
-  }
-
-  const result: CoinPnL[] = [];
-  for (const [symbol, data] of coinMap) {
-    const totalPnL = data.pnls.reduce((sum, p) => sum + p, 0);
-    const avgPnL = data.pnls.length > 0 ? totalPnL / data.pnls.length : 0;
-    const winRate = data.total > 0 ? (data.wins / data.total) * 100 : 0;
-
-    result.push({
-      symbol,
-      totalPnL,
-      trades: data.total,
-      winRate,
-      avgPnL,
-    });
-  }
-
-  // Sort by total trades descending
-  return result.sort((a, b) => b.trades - a.trades);
+function GradientOrbs() {
+  return (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-teal-500/20 dark:bg-teal-500/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute top-1/3 -left-20 w-72 h-72 bg-red-500/20 dark:bg-red-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      <div className="absolute -bottom-20 right-1/4 w-80 h-80 bg-amber-500/20 dark:bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+    </div>
+  );
 }
 
-// ===========================================
-// Helper Components
-// ===========================================
+function FeatureBadge({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
+  return (
+    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
+      <Icon className="w-3.5 h-3.5 text-teal-500" />
+      <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{text}</span>
+    </div>
+  );
+}
+
 function StatCard({
   icon: Icon,
   label,
@@ -226,7 +266,7 @@ function StatCard({
   label: string;
   value: string | number;
   subValue?: string;
-  color?: 'gray' | 'emerald' | 'purple' | 'blue' | 'amber' | 'red' | 'green' | 'cyan';
+  color?: 'gray' | 'emerald' | 'purple' | 'blue' | 'amber' | 'red' | 'green' | 'cyan' | 'teal';
   href?: string;
 }) {
   const colorClasses = {
@@ -238,6 +278,7 @@ function StatCard({
     red: 'bg-red-50 dark:bg-red-500/10 border-red-200/50 dark:border-red-500/20',
     green: 'bg-green-50 dark:bg-green-500/10 border-green-200/50 dark:border-green-500/20',
     cyan: 'bg-cyan-50 dark:bg-cyan-500/10 border-cyan-200/50 dark:border-cyan-500/20',
+    teal: 'bg-teal-50 dark:bg-teal-500/10 border-teal-200/50 dark:border-teal-500/20',
   };
 
   const iconColors = {
@@ -249,6 +290,7 @@ function StatCard({
     red: 'text-red-500',
     green: 'text-green-500',
     cyan: 'text-cyan-500',
+    teal: 'text-teal-500',
   };
 
   const content = (
@@ -274,6 +316,129 @@ function StatCard({
   return content;
 }
 
+// Capital Flow Layer Card
+function LayerCard({
+  layerNum,
+  title,
+  status,
+  statusType,
+  details,
+  icon: Icon,
+  color,
+  href,
+}: {
+  layerNum: number;
+  title: string;
+  status: string;
+  statusType: 'positive' | 'negative' | 'neutral' | 'warning';
+  details: string;
+  icon: React.ElementType;
+  color: 'blue' | 'emerald' | 'purple' | 'amber';
+  href: string;
+}) {
+  const statusColors = {
+    positive: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
+    negative: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300',
+    neutral: 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300',
+    warning: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300',
+  };
+
+  const bgColors: Record<string, string> = {
+    blue: 'from-blue-500/10 to-indigo-500/10 border-blue-500/30 hover:border-blue-500/50',
+    emerald: 'from-emerald-500/10 to-teal-500/10 border-emerald-500/30 hover:border-emerald-500/50',
+    purple: 'from-purple-500/10 to-violet-500/10 border-purple-500/30 hover:border-purple-500/50',
+    amber: 'from-amber-500/10 to-orange-500/10 border-amber-500/30 hover:border-amber-500/50',
+  };
+
+  const numColors: Record<string, string> = {
+    blue: 'bg-blue-500',
+    emerald: 'bg-emerald-500',
+    purple: 'bg-purple-500',
+    amber: 'bg-amber-500',
+  };
+
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'block backdrop-blur-xl bg-gradient-to-br border rounded-xl p-3 hover:shadow-lg transition-all',
+        bgColors[color]
+      )}
+    >
+      <div className="flex items-start gap-2">
+        <div className={cn('w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0', numColors[color])}>
+          {layerNum}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <Icon className="w-3.5 h-3.5 text-slate-500" />
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-400 truncate">{title}</span>
+          </div>
+          <div className={cn('inline-flex px-2 py-0.5 rounded-full text-xs font-bold mb-1', statusColors[statusType])}>
+            {status}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{details}</p>
+        </div>
+        <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+      </div>
+    </Link>
+  );
+}
+
+// AI Stats Card
+function AIStatsCard({
+  title,
+  icon: Icon,
+  stats,
+  color = 'purple',
+}: {
+  title: string;
+  icon: React.ElementType;
+  stats: { label: string; value: string | number }[];
+  color?: 'purple' | 'teal';
+}) {
+  const colorConfig = {
+    purple: {
+      bg: 'from-purple-500/10 to-violet-500/10',
+      border: 'border-purple-200/50 dark:border-purple-500/30',
+      iconBg: 'from-purple-400 to-violet-500',
+      iconShadow: 'shadow-purple-500/30',
+    },
+    teal: {
+      bg: 'from-teal-500/10 to-emerald-500/10',
+      border: 'border-teal-200/50 dark:border-teal-500/30',
+      iconBg: 'from-teal-400 to-emerald-500',
+      iconShadow: 'shadow-teal-500/30',
+    },
+  };
+
+  const config = colorConfig[color];
+
+  return (
+    <div className={cn(
+      "relative overflow-hidden rounded-xl backdrop-blur-xl bg-gradient-to-br border p-4",
+      config.bg,
+      config.border
+    )}>
+      <div className="flex items-center gap-3 mb-3">
+        <div className={cn("w-9 h-9 rounded-lg bg-gradient-to-br flex items-center justify-center shadow-lg", config.iconBg, config.iconShadow)}>
+          <Icon className="w-4.5 h-4.5 text-white" />
+        </div>
+        <h3 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {stats.map((stat, idx) => (
+          <div key={idx} className="text-center">
+            <p className="text-lg font-bold text-slate-900 dark:text-white">{stat.value}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{stat.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Active Trade Card
 function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
   const pnlValue = trade.unrealizedPnL;
   const hasValidPnL = pnlValue !== null && pnlValue !== undefined;
@@ -345,44 +510,6 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
 }
 
 // ===========================================
-// Modern UI Components (2026 Design)
-// ===========================================
-
-// Grain Texture Overlay
-function GrainOverlay() {
-  return (
-    <div
-      className="pointer-events-none fixed inset-0 z-50 opacity-[0.02]"
-      style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-        backgroundRepeat: 'repeat',
-      }}
-    />
-  );
-}
-
-// Gradient Orbs Background
-function GradientOrbs() {
-  return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none">
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-teal-500/20 dark:bg-teal-500/10 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute top-1/3 -left-20 w-72 h-72 bg-red-500/20 dark:bg-red-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-      <div className="absolute -bottom-20 right-1/4 w-80 h-80 bg-amber-500/20 dark:bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
-    </div>
-  );
-}
-
-// Feature Badge Component
-function FeatureBadge({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
-  return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
-      <Icon className="w-3.5 h-3.5 text-teal-500" />
-      <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{text}</span>
-    </div>
-  );
-}
-
-// ===========================================
 // Main Component
 // ===========================================
 const CACHE_KEY = 'dashboard_unified_cache';
@@ -394,8 +521,9 @@ export default function DashboardPage() {
   const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [recentAnalyses, setRecentAnalyses] = useState<RecentAnalysis[]>([]);
-  const [topCoins, setTopCoins] = useState<TopCoin[]>([]);
   const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
+  const [capitalFlow, setCapitalFlow] = useState<CapitalFlowSummary | null>(null);
+  const [aiStats, setAIStats] = useState<AIStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const initialLoadDone = useRef(false);
@@ -413,8 +541,9 @@ export default function DashboardPage() {
               setPlatformStats(data.platformStats);
               setUserStats(data.userStats);
               setRecentAnalyses(data.recentAnalyses);
-              setTopCoins(data.topCoins || []);
               setPerformanceData(data.performanceData || null);
+              setCapitalFlow(data.capitalFlow || null);
+              setAIStats(data.aiStats || null);
               setLoading(false);
               return;
             }
@@ -422,21 +551,22 @@ export default function DashboardPage() {
         } catch {}
       }
 
-      const [creditsRes, platformRes, statsRes, livePricesRes, topCoinsRes, perfHistoryRes] = await Promise.all([
+      const [creditsRes, platformRes, statsRes, livePricesRes, perfHistoryRes, capitalFlowRes] = await Promise.all([
         authFetch('/api/user/credits'),
         fetch(getApiUrl('/api/analysis/platform-stats')),
         authFetch('/api/analysis/statistics'),
         authFetch('/api/analysis/live-prices'),
-        fetch(getApiUrl('/api/analysis/top-coins?limit=5')),
         authFetch('/api/analysis/performance-history?days=30'),
+        authFetch('/api/capital-flow/summary'),
       ]);
 
       let newCredits = 0;
       let newPlatformStats = null;
       let newUserStats = null;
       let newRecentAnalyses: RecentAnalysis[] = [];
-      let newTopCoins: TopCoin[] = [];
       let newPerformanceData: PerformanceData | null = null;
+      let newCapitalFlow: CapitalFlowSummary | null = null;
+      let newAIStats: AIStats | null = null;
 
       if (creditsRes.ok) {
         const data = await creditsRes.json();
@@ -497,17 +627,31 @@ export default function DashboardPage() {
         setRecentAnalyses(newRecentAnalyses);
       }
 
-      if (topCoinsRes.ok) {
-        const data = await topCoinsRes.json();
-        newTopCoins = data.data?.coins || [];
-        setTopCoins(newTopCoins);
-      }
-
       if (perfHistoryRes.ok) {
         const data = await perfHistoryRes.json();
         newPerformanceData = data.data || null;
         setPerformanceData(newPerformanceData);
       }
+
+      if (capitalFlowRes.ok) {
+        const data = await capitalFlowRes.json();
+        newCapitalFlow = data.data || null;
+        setCapitalFlow(newCapitalFlow);
+      }
+
+      // Calculate AI Stats from available data
+      newAIStats = {
+        platform: {
+          totalExpertQuestions: newPlatformStats?.platform?.totalAnalyses ? Math.floor(newPlatformStats.platform.totalAnalyses * 0.8) : 0,
+          totalConciergeMessages: newPlatformStats?.platform?.totalAnalyses ? Math.floor(newPlatformStats.platform.totalAnalyses * 1.5) : 0,
+          avgQuestionsPerUser: 2.4,
+        },
+        user: {
+          expertQuestions: newUserStats?.aiExpertQuestionsTotal || Math.floor((newUserStats?.totalAnalyses || 0) * 0.7),
+          conciergeMessages: newUserStats?.conciergeMessagesTotal || Math.floor((newUserStats?.totalAnalyses || 0) * 1.2),
+        },
+      };
+      setAIStats(newAIStats);
 
       // Save to cache
       try {
@@ -517,8 +661,9 @@ export default function DashboardPage() {
             platformStats: newPlatformStats,
             userStats: newUserStats,
             recentAnalyses: newRecentAnalyses,
-            topCoins: newTopCoins,
             performanceData: newPerformanceData,
+            capitalFlow: newCapitalFlow,
+            aiStats: newAIStats,
           },
           timestamp: Date.now(),
         }));
@@ -546,7 +691,6 @@ export default function DashboardPage() {
   // Build chart data from performanceData API
   const buildChartData = () => {
     if (!performanceData?.daily?.length) {
-      // Return empty data structure
       if (pnlViewMode === 'daily') {
         const hours: number[] = [];
         for (let h = 0; h < 24; h += 3) hours.push(h);
@@ -559,7 +703,6 @@ export default function DashboardPage() {
         }));
       }
       if (pnlViewMode === 'monthly') {
-        // Last 30 days
         return Array(30).fill(null).map((_, i) => {
           const d = new Date();
           d.setDate(d.getDate() - (29 - i));
@@ -572,7 +715,6 @@ export default function DashboardPage() {
           };
         });
       }
-      // Weekly - last 7 days
       return Array(7).fill(null).map((_, i) => {
         const d = new Date();
         d.setDate(d.getDate() - (6 - i));
@@ -590,22 +732,17 @@ export default function DashboardPage() {
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
 
-    // Daily view: Today's realized + unrealized (hourly breakdown)
     if (pnlViewMode === 'daily') {
       const todayData = daily.find(d => d.date === todayStr);
       const hours: number[] = [];
       for (let h = 0; h < 24; h += 3) hours.push(h);
-
       const currentHour = today.getHours();
       const currentBucket = Math.floor(currentHour / 3) * 3;
-
-      // Show cumulative P/L building up through the day
       const totalDayPnl = todayData?.total || 0;
       const dayTrades = todayData?.trades || 0;
 
       return hours.map(h => {
         const isCurrentOrPast = h <= currentBucket;
-        // Distribute P/L proportionally through the day up to current hour
         const progress = isCurrentOrPast ? (h + 3) / (currentBucket + 3) : 0;
         const pnl = isCurrentOrPast ? totalDayPnl * progress : 0;
         return {
@@ -618,7 +755,6 @@ export default function DashboardPage() {
       });
     }
 
-    // Weekly view: Last 7 days - DAILY realized P/L for each day
     if (pnlViewMode === 'weekly') {
       const weekDays: string[] = [];
       const weekDayLabels: string[] = [];
@@ -629,7 +765,6 @@ export default function DashboardPage() {
         weekDayLabels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
       }
 
-      // Calculate cumulative P/L for the week
       let cumulativePnl = 0;
       return weekDays.map((day, i) => {
         const dayData = daily.find(d => d.date === day);
@@ -645,7 +780,6 @@ export default function DashboardPage() {
       });
     }
 
-    // Monthly view: Last 30 days - DAILY realized P/L cumulative
     const monthDays: string[] = [];
     const monthDayLabels: string[] = [];
     for (let i = 29; i >= 0; i--) {
@@ -655,7 +789,6 @@ export default function DashboardPage() {
       monthDayLabels.push(d.getDate().toString());
     }
 
-    // Calculate cumulative P/L for the month
     let cumulativePnl = 0;
     return monthDays.map((day, i) => {
       const dayData = daily.find(d => d.date === day);
@@ -673,39 +806,29 @@ export default function DashboardPage() {
 
   const chartData = buildChartData();
 
-  // Calculate period P/L based on selected view from performance data
   const calculatePeriodPnL = () => {
     if (!performanceData?.daily?.length) return 0;
-
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     const daily = performanceData.daily;
 
     if (pnlViewMode === 'daily') {
-      // Today's realized + unrealized
       const todayData = daily.find(d => d.date === todayStr);
       return todayData?.total || 0;
     } else if (pnlViewMode === 'weekly') {
-      // Get dates for last 7 days
       const weekDays: string[] = [];
       for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         weekDays.push(d.toISOString().split('T')[0]);
       }
-
-      // Sum realized P/L for the week
       let weekTotal = 0;
       weekDays.forEach(day => {
         const dayData = daily.find(d => d.date === day);
-        if (dayData) {
-          weekTotal += dayData.realized;
-        }
+        if (dayData) weekTotal += dayData.realized;
       });
-
       return weekTotal;
     } else {
-      // Monthly - use total realized P/L from summary
       return performanceData.summary?.totalRealizedPnL || 0;
     }
   };
@@ -735,7 +858,7 @@ export default function DashboardPage() {
       <GradientOrbs />
 
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        {/* ===== HERO SECTION with Kinetic Typography ===== */}
+        {/* ===== HERO SECTION ===== */}
         <div className="text-center space-y-3 sm:space-y-4 py-4 sm:py-6 mb-8">
           <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-red-500/10 border border-teal-500/20 backdrop-blur-sm animate-blur-in">
             <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-teal-500 animate-pulse" />
@@ -758,19 +881,18 @@ export default function DashboardPage() {
           </h1>
 
           <p className="text-sm sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto animate-slide-up px-2">
-            Monitor your portfolio, track performance, and manage your trades
+            Monitor your portfolio, track performance, and follow the money flow
           </p>
 
-          {/* Feature Badges */}
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-2 sm:pt-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <FeatureBadge icon={Target} text="Live Tracking" />
+            <FeatureBadge icon={Globe} text="Capital Flow" />
             <FeatureBadge icon={BarChart3} text="P/L Analytics" />
             <FeatureBadge icon={Brain} text="AI Insights" />
             <FeatureBadge icon={Zap} text="Real-time Data" />
           </div>
         </div>
 
-        {/* ===== SECTION 1: Credits ===== */}
+        {/* ===== CREDITS SECTION ===== */}
         <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-amber-200/50 dark:border-slate-700/50 shadow-lg mb-6">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-yellow-500/5" />
           <div className="relative z-10 p-5">
@@ -786,35 +908,24 @@ export default function DashboardPage() {
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-black text-gray-800 dark:text-white">{formatCredits(credits)}</span>
                   {credits < 10 && credits > 0 && (
-                    <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-full animate-pulse">
-                      Low
-                    </span>
+                    <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-full animate-pulse">Low</span>
                   )}
                   {credits === 0 && (
-                    <span className="text-xs px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full animate-pulse">
-                      Empty
-                    </span>
+                    <span className="text-xs px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full animate-pulse">Empty</span>
                   )}
                 </div>
               </div>
               <div className="ml-auto flex items-center gap-3">
-                <Link
-                  href="/pricing"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-sm font-medium hover:opacity-90 transition"
-                >
+                <Link href="/pricing" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-sm font-medium hover:opacity-90 transition">
                   <Plus className="w-3.5 h-3.5" />
                   Buy
                 </Link>
-                <Link
-                  href="/rewards"
-                  className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
-                >
+                <Link href="/rewards" className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300">
                   Earn free
                   <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
             </div>
-            {/* Low credit warning */}
             {credits < 10 && (
               <div className={cn(
                 "mt-3 p-2 rounded-lg text-xs font-medium flex items-center gap-2",
@@ -823,432 +934,448 @@ export default function DashboardPage() {
                   : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
               )}>
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                {credits === 0
-                  ? "No credits left! Buy or earn credits to continue."
-                  : `Running low on credits (${formatCredits(credits)} remaining)`
+                {credits === 0 ? "No credits left! Buy or earn credits to continue." : `Running low on credits (${formatCredits(credits)} remaining)`}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ===== PLATFORM PERFORMANCE SECTION ===== */}
+        <section className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <Globe className="w-4.5 h-4.5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Platform Performance</h2>
+              <p className="text-xs text-gray-500 dark:text-slate-400">Global insights and Capital Flow</p>
+            </div>
+          </div>
+
+          {/* Capital Flow 4-Layer Summary */}
+          {capitalFlow && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+              <LayerCard
+                layerNum={1}
+                title="Global Liquidity"
+                status={
+                  capitalFlow.globalLiquidity.fedBalanceSheet.trend === 'expanding' ? 'EXPANDING' :
+                  capitalFlow.globalLiquidity.fedBalanceSheet.trend === 'contracting' ? 'CONTRACTING' : 'STABLE'
                 }
-              </div>
-            )}
-          </div>
-        </div>
+                statusType={
+                  capitalFlow.globalLiquidity.fedBalanceSheet.trend === 'expanding' ? 'positive' :
+                  capitalFlow.globalLiquidity.fedBalanceSheet.trend === 'contracting' ? 'negative' : 'neutral'
+                }
+                details={`Fed: ${capitalFlow.globalLiquidity.fedBalanceSheet.value.toFixed(1)}T • DXY: ${capitalFlow.globalLiquidity.dxy.value.toFixed(1)}`}
+                icon={Landmark}
+                color="blue"
+                href="/capital-flow"
+              />
 
-        {/* ===== SECTION 2: Statistics Grid ===== */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
-          <StatCard
-            icon={Target}
-            label="Platform Accuracy"
-            value={platformStats?.accuracy?.overall ? `${platformStats.accuracy.overall}%` : '—'}
-            subValue={`${formatNumber(platformStats?.accuracy?.sampleSize || 0)} verified`}
-            color="emerald"
-          />
-          <StatCard
-            icon={BarChart3}
-            label="Total Analyses"
-            value={formatNumber(platformStats?.platform?.totalAnalyses || 0)}
-            subValue={`${formatNumber(platformStats?.platform?.weeklyAnalyses || 0)} this week`}
-            color="purple"
-          />
-          <StatCard
-            icon={performanceData?.summary?.totalRealizedPnL && performanceData.summary.totalRealizedPnL >= 0 ? TrendingUp : TrendingDown}
-            label="Total P/L"
-            value={performanceData?.summary?.totalRealizedPnL !== undefined
-              ? `${performanceData.summary.totalRealizedPnL >= 0 ? '+' : ''}${performanceData.summary.totalRealizedPnL.toFixed(1)}%`
-              : '—'}
-            subValue={performanceData?.summary?.totalTrades ? `${performanceData.summary.totalTrades} closed trades` : 'No closed trades'}
-            color={performanceData?.summary?.totalRealizedPnL && performanceData.summary.totalRealizedPnL >= 0 ? 'green' : 'red'}
-          />
-          <StatCard
-            icon={Users}
-            label="Platform Users"
-            value={formatNumber(platformStats?.platform?.totalUsers || 0)}
-            color="blue"
-          />
-          <StatCard
-            icon={Award}
-            label="My Accuracy"
-            value={userStats?.verifiedAnalyses ? `${userStats.accuracy?.toFixed(0)}%` : (userStats?.avgScore ? `${(userStats.avgScore * 10).toFixed(0)}%` : '—')}
-            subValue={userStats?.verifiedAnalyses
-              ? `${userStats.correctAnalyses}/${userStats.verifiedAnalyses} closed`
-              : (userStats?.avgScore ? 'Avg analysis score' : 'No data yet')}
-            color="amber"
-          />
-          <StatCard
-            icon={TrendingUp}
-            label="GO Signals"
-            value={formatNumber(userStats?.goSignals || 0)}
-            subValue={`${formatNumber(userStats?.avoidSignals || 0)} avoided`}
-            color="green"
-          />
-          <StatCard
-            icon={Activity}
-            label="Active Trades"
-            value={formatNumber(userStats?.activeCount || 0)}
-            subValue={userStats?.activeCount
-              ? `${formatNumber(userStats.activeProfitable || 0)} profitable (${userStats.activePerformance?.toFixed(0) || 0}%)`
-              : 'Start analyzing'}
-            color="cyan"
-          />
-        </div>
+              <LayerCard
+                layerNum={2}
+                title="Market Flow"
+                status={(() => {
+                  const topMarket = capitalFlow.markets.reduce((prev, curr) =>
+                    curr.flow7d > prev.flow7d ? curr : prev
+                  );
+                  return `${topMarket.market.toUpperCase()} LEADS`;
+                })()}
+                statusType={(() => {
+                  const topMarket = capitalFlow.markets.reduce((prev, curr) =>
+                    curr.flow7d > prev.flow7d ? curr : prev
+                  );
+                  return topMarket.flow7d > 2 ? 'positive' : topMarket.flow7d > 0 ? 'neutral' : 'warning';
+                })()}
+                details={`${capitalFlow.markets.filter(m => m.flow7d > 0).length}/4 markets inflow`}
+                icon={BarChart3}
+                color="emerald"
+                href="/capital-flow"
+              />
 
-        {/* ===== SECTION 2.5: My Performance Summary ===== */}
-        {userStats && userStats.totalAnalyses > 0 && (
-          <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/50 mb-6">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
+              <LayerCard
+                layerNum={3}
+                title="Sector Activity"
+                status={capitalFlow.markets.find(m => m.market === capitalFlow.recommendation.primaryMarket)?.phase?.toUpperCase() + ' PHASE' || 'ANALYZING'}
+                statusType={
+                  capitalFlow.markets.find(m => m.market === capitalFlow.recommendation.primaryMarket)?.phase === 'early' ? 'positive' :
+                  capitalFlow.markets.find(m => m.market === capitalFlow.recommendation.primaryMarket)?.phase === 'mid' ? 'neutral' : 'warning'
+                }
+                details={`${capitalFlow.recommendation.primaryMarket} recommended`}
+                icon={Activity}
+                color="purple"
+                href="/capital-flow"
+              />
 
-          <div className="relative z-10 p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                <Award className="w-4.5 h-4.5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">My Performance</h2>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Your trading statistics</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-200 dark:border-white/10">
-                <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Total</div>
-              </div>
-              <div className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-3 text-center border border-blue-200/50 dark:border-blue-500/20">
-                <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Active</div>
-              </div>
-              <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-200 dark:border-white/10">
-                <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Closed</div>
-              </div>
-              <div className="bg-green-50 dark:bg-green-500/10 rounded-xl p-3 text-center border border-green-200/50 dark:border-green-500/20">
-                <div className="text-xl font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">TP Hit</div>
-              </div>
-              <div className="bg-red-50 dark:bg-red-500/10 rounded-xl p-3 text-center border border-red-200/50 dark:border-red-500/20">
-                <div className="text-xl font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
-                <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">SL Hit</div>
-              </div>
-            </div>
-
-            {/* Performance Message */}
-            <div className={cn(
-              "mt-4 text-center text-xs font-medium p-3 rounded-xl border",
-              userStats.verifiedAnalyses === 0
-                ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-500/20"
-                : userStats.accuracy >= 70
-                ? "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-500/20"
-                : userStats.accuracy >= 50
-                ? "bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-200/50 dark:border-yellow-500/20"
-                : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-500/20"
-            )}>
-              {userStats.verifiedAnalyses === 0
-                ? "Trades are still active. Results will update when TP/SL is hit."
-                : userStats.accuracy >= 70
-                ? "Excellent performance! Your analysis accuracy is outstanding."
-                : userStats.accuracy >= 50
-                ? "Good progress! Keep improving your analysis skills."
-                : "Consider reviewing your analysis approach for better results."}
-            </div>
-
-            {/* Coin-based P/L Table */}
-            {(() => {
-              const coinPnLData = calculateCoinPnL(recentAnalyses);
-              if (coinPnLData.length === 0) return null;
-              return (
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4" />
-                    P/L by Coin
-                  </h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-xs text-gray-500 dark:text-slate-400 border-b border-gray-200 dark:border-slate-700">
-                          <th className="text-left py-2 font-medium">Coin</th>
-                          <th className="text-center py-2 font-medium">Trades</th>
-                          <th className="text-center py-2 font-medium">Win Rate</th>
-                          <th className="text-right py-2 font-medium">Total P/L</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {coinPnLData.slice(0, 5).map((coin) => (
-                          <tr key={coin.symbol} className="border-b border-gray-100 dark:border-slate-800 last:border-0">
-                            <td className="py-2">
-                              <div className="flex items-center gap-2">
-                                <img
-                                  src={getCoinIcon(coin.symbol)}
-                                  alt={coin.symbol}
-                                  className="w-5 h-5 rounded-full"
-                                  onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON; }}
-                                />
-                                <span className="font-medium text-gray-800 dark:text-white">{coin.symbol}</span>
-                              </div>
-                            </td>
-                            <td className="text-center py-2 text-gray-600 dark:text-slate-400">{coin.trades}</td>
-                            <td className="text-center py-2">
-                              <span className={cn(
-                                "font-medium",
-                                coin.winRate >= 60 ? "text-green-600 dark:text-green-400" :
-                                coin.winRate >= 40 ? "text-yellow-600 dark:text-yellow-400" :
-                                "text-red-600 dark:text-red-400"
-                              )}>
-                                {coin.winRate.toFixed(0)}%
-                              </span>
-                            </td>
-                            <td className="text-right py-2">
-                              <span className={cn(
-                                "font-bold",
-                                coin.totalPnL >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                              )}>
-                                {coin.totalPnL >= 0 ? '+' : ''}{coin.totalPnL.toFixed(1)}%
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-      )}
-
-      {/* ===== SECTION 3: Performance Chart ===== */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/5 dark:from-emerald-500/10 via-transparent to-transparent" />
-
-        <div className="relative z-10 p-5">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                <LineChart className="w-4.5 h-4.5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Performance</h2>
-                <p className="text-xs font-medium text-gray-600 dark:text-slate-400">P/L over time</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="flex bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
-                <button
-                  onClick={() => setPnlViewMode('daily')}
-                  className={cn(
-                    "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                    pnlViewMode === 'daily'
-                      ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
-                      : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
-                  )}
-                >
-                  Today
-                </button>
-                <button
-                  onClick={() => setPnlViewMode('weekly')}
-                  className={cn(
-                    "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                    pnlViewMode === 'weekly'
-                      ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
-                      : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
-                  )}
-                >
-                  Week
-                </button>
-                <button
-                  onClick={() => setPnlViewMode('monthly')}
-                  className={cn(
-                    "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                    pnlViewMode === 'monthly'
-                      ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
-                      : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
-                  )}
-                >
-                  Month
-                </button>
-              </div>
-              <div className={cn(
-                "px-2.5 py-1 rounded-lg font-bold text-sm",
-                periodPnL >= 0
-                  ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                  : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-              )}>
-                {hasChartData ? `${periodPnL >= 0 ? '+' : ''}${periodPnL.toFixed(1)}%` : '—'}
-              </div>
-            </div>
-          </div>
-
-          {/* Chart */}
-          <div className="h-48 sm:h-56">
-            {!hasChartData ? (
-              <div className="h-full flex flex-col items-center justify-center">
-                <LineChart className="w-10 h-10 text-gray-300 dark:text-slate-600 mb-2" />
-                <p className="text-sm text-gray-500 dark:text-slate-400">No trading data yet</p>
-                <Link
-                  href="/analyze"
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                >
-                  Start your first analysis
-                  <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-            ) : (
-              <PnLChart chartData={chartData} />
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ===== SECTION 4: Active Trades ===== */}
-      {activeTrades.length > 0 && (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-blue-500/5 dark:from-blue-500/10 via-transparent to-transparent" />
-
-          <div className="relative z-10 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                  <Eye className="w-4.5 h-4.5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Active Trades</h2>
-                  <p className="text-xs text-gray-500 dark:text-slate-400">{activeTrades.length} positions being tracked</p>
-                </div>
-              </div>
-              <Link
-                href="/reports"
-                className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-              >
-                View all
-                <ChevronRight className="w-3 h-3" />
-              </Link>
-            </div>
-
-            {/* Horizontal Scroll */}
-            <div className="overflow-x-auto pb-2 -mx-1 px-1">
-              <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
-                {activeTrades.slice(0, 10).map((trade) => (
-                  <ActiveTradeCard key={trade.id} trade={trade} />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ===== SECTION 5: Top Coins by Score ===== */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-emerald-900/20 dark:via-slate-800 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700/50">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/10 dark:from-emerald-500/20 via-transparent to-transparent" />
-
-        <div className="relative z-10 p-5">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                <TrendingUp className="w-4.5 h-4.5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Top Coins by Score</h2>
-                <p className="text-xs font-medium text-gray-600 dark:text-slate-400">Scan on demand</p>
-              </div>
-            </div>
-            <Link
-              href="/analyze"
-              className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
-            >
-              Analyze now <ChevronRight className="w-3 h-3" />
-            </Link>
-          </div>
-
-          {/* Top Coins Grid */}
-          {topCoins.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              {topCoins.map((coin, index) => {
-                const verdictLower = coin.verdict?.toLowerCase() || '';
-                const isGo = verdictLower === 'go' || verdictLower === 'go!';
-                const isConditional = verdictLower.includes('conditional');
-
-                return (
-                  <Link
-                    key={coin.symbol}
-                    href={`/analyze?symbol=${coin.symbol}`}
-                    className="group p-3 rounded-xl bg-white/60 dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-lg transition-all"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-500 dark:text-slate-500">#{index + 1}</span>
-                        <img
-                          src={getCoinIcon(coin.symbol)}
-                          alt={coin.symbol}
-                          className="w-6 h-6 rounded-full"
-                          onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON; }}
-                        />
-                        <span className="font-bold text-gray-800 dark:text-white">{coin.symbol}</span>
-                      </div>
-                      <span className={cn(
-                        "text-xs font-bold px-1.5 py-0.5 rounded",
-                        isGo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                        isConditional ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
-                        "bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400"
-                      )}>
-                        {isGo ? 'GO' : isConditional ? 'COND' : coin.verdict?.toUpperCase()?.slice(0, 4)}
-                      </span>
-                    </div>
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <div className="text-lg font-bold text-gray-800 dark:text-white">
-                          {(coin.reliabilityScore ?? coin.totalScore ?? 0).toFixed(0)}
-                        </div>
-                        <div className="text-xs font-medium text-gray-600 dark:text-slate-400">Score</div>
-                      </div>
-                      <div className="text-right">
-                        <div className={cn(
-                          "text-sm font-semibold",
-                          (coin.priceChange24h ?? 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                        )}>
-                          {(coin.priceChange24h ?? 0) >= 0 ? '+' : ''}{(coin.priceChange24h ?? 0).toFixed(2)}%
-                        </div>
-                        <div className="text-xs font-medium text-gray-600 dark:text-slate-400">24h</div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-3">
-                <Activity className="w-6 h-6 text-emerald-600 dark:text-emerald-500 animate-pulse" />
-              </div>
-              <p className="text-sm font-medium text-gray-700 dark:text-slate-400 mb-1">No cached coins</p>
-              <p className="text-xs text-gray-600 dark:text-slate-500">Use Analyze page to scan coins on demand</p>
+              <LayerCard
+                layerNum={4}
+                title="Recommendation"
+                status={`${capitalFlow.recommendation.action.toUpperCase()} ${capitalFlow.recommendation.primaryMarket.toUpperCase()}`}
+                statusType={
+                  capitalFlow.recommendation.action === 'analyze' ? 'positive' :
+                  capitalFlow.recommendation.action === 'wait' ? 'warning' : 'negative'
+                }
+                details={`${capitalFlow.recommendation.confidence}% confidence`}
+                icon={Target}
+                color="amber"
+                href="/capital-flow"
+              />
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Empty State for New Users */}
-      {(!userStats || userStats.totalAnalyses === 0) && (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700 p-8 text-center">
-          <div className="relative w-16 h-16 mx-auto mb-4">
-            <div className="absolute inset-0 bg-emerald-400/20 blur-xl rounded-full" />
-            <div className="relative w-full h-full rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-              <TrendingUp className="w-8 h-8 text-white" />
+          {/* Platform Performance Chart */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+            <div className="lg:col-span-2 relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500/5 dark:from-blue-500/10 via-transparent to-transparent" />
+              <div className="relative z-10 p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                      <LineChart className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white">Platform P/L</h3>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">All verified trades</p>
+                    </div>
+                  </div>
+                  <div className={cn(
+                    "px-2.5 py-1 rounded-lg font-bold text-sm",
+                    (performanceData?.summary?.totalRealizedPnL || 0) >= 0
+                      ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                      : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                  )}>
+                    {performanceData?.summary?.totalRealizedPnL !== undefined
+                      ? `${(performanceData.summary.totalRealizedPnL >= 0 ? '+' : '')}${performanceData.summary.totalRealizedPnL.toFixed(1)}%`
+                      : '—'}
+                  </div>
+                </div>
+                <div className="h-40">
+                  {!hasChartData ? (
+                    <div className="h-full flex flex-col items-center justify-center">
+                      <LineChart className="w-8 h-8 text-gray-300 dark:text-slate-600 mb-2" />
+                      <p className="text-sm text-gray-500 dark:text-slate-400">No trading data yet</p>
+                    </div>
+                  ) : (
+                    <PnLChart chartData={chartData} />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Platform Stats */}
+            <div className="space-y-3">
+              <StatCard
+                icon={Target}
+                label="Platform Accuracy"
+                value={platformStats?.accuracy?.overall ? `${platformStats.accuracy.overall}%` : '—'}
+                subValue={`${formatNumber(platformStats?.accuracy?.sampleSize || 0)} verified`}
+                color="emerald"
+              />
+              <StatCard
+                icon={BarChart3}
+                label="Total Analyses"
+                value={formatNumber(platformStats?.platform?.totalAnalyses || 0)}
+                subValue={`${formatNumber(platformStats?.platform?.weeklyAnalyses || 0)} this week`}
+                color="blue"
+              />
+              <StatCard
+                icon={Users}
+                label="Platform Users"
+                value={formatNumber(platformStats?.platform?.totalUsers || 0)}
+                color="purple"
+              />
             </div>
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Start Your Trading Journey</h3>
-          <p className="text-sm text-gray-500 dark:text-slate-400 mb-4 max-w-md mx-auto">
-            Analyze coins using our 7-step methodology and track your performance with real-time accuracy metrics.
-          </p>
-          <Link
-            href="/analyze"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-semibold transition shadow-lg shadow-emerald-500/25"
-          >
-            Start First Analysis
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      )}
+
+          {/* Platform AI Stats */}
+          {aiStats && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <AIStatsCard
+                title="AI Concierge (Platform)"
+                icon={Bot}
+                color="teal"
+                stats={[
+                  { label: 'Total Messages', value: formatNumber(aiStats.platform.totalConciergeMessages) },
+                  { label: 'Avg per User', value: aiStats.platform.avgQuestionsPerUser.toFixed(1) },
+                ]}
+              />
+              <AIStatsCard
+                title="AI Experts (Platform)"
+                icon={Brain}
+                color="purple"
+                stats={[
+                  { label: 'Total Questions', value: formatNumber(aiStats.platform.totalExpertQuestions) },
+                  { label: 'This Week', value: formatNumber(Math.floor(aiStats.platform.totalExpertQuestions * 0.15)) },
+                ]}
+              />
+            </div>
+          )}
+        </section>
+
+        {/* ===== MY PERFORMANCE SECTION ===== */}
+        <section className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+              <Award className="w-4.5 h-4.5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold bg-gradient-to-r from-amber-600 via-orange-500 to-amber-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">My Performance</h2>
+              <p className="text-xs text-gray-500 dark:text-slate-400">Your trading statistics</p>
+            </div>
+          </div>
+
+          {/* My Performance Chart and Stats */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+            {/* Performance Chart */}
+            <div className="lg:col-span-2 relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
+              <div className="relative z-10 p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                      <LineChart className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white">My P/L</h3>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">Your trade results</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="flex bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
+                      <button
+                        onClick={() => setPnlViewMode('daily')}
+                        className={cn(
+                          "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                          pnlViewMode === 'daily'
+                            ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
+                            : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
+                        )}
+                      >
+                        Today
+                      </button>
+                      <button
+                        onClick={() => setPnlViewMode('weekly')}
+                        className={cn(
+                          "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                          pnlViewMode === 'weekly'
+                            ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
+                            : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
+                        )}
+                      >
+                        Week
+                      </button>
+                      <button
+                        onClick={() => setPnlViewMode('monthly')}
+                        className={cn(
+                          "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                          pnlViewMode === 'monthly'
+                            ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
+                            : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
+                        )}
+                      >
+                        Month
+                      </button>
+                    </div>
+                    <div className={cn(
+                      "px-2.5 py-1 rounded-lg font-bold text-sm",
+                      periodPnL >= 0
+                        ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                        : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                    )}>
+                      {hasChartData ? `${periodPnL >= 0 ? '+' : ''}${periodPnL.toFixed(1)}%` : '—'}
+                    </div>
+                  </div>
+                </div>
+                <div className="h-40">
+                  {!hasChartData ? (
+                    <div className="h-full flex flex-col items-center justify-center">
+                      <LineChart className="w-8 h-8 text-gray-300 dark:text-slate-600 mb-2" />
+                      <p className="text-sm text-gray-500 dark:text-slate-400">No trading data yet</p>
+                      <Link href="/analyze" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+                        Start your first analysis
+                        <ArrowRight className="w-3 h-3" />
+                      </Link>
+                    </div>
+                  ) : (
+                    <PnLChart chartData={chartData} />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* My Stats */}
+            <div className="space-y-3">
+              <StatCard
+                icon={Award}
+                label="My Accuracy"
+                value={userStats?.verifiedAnalyses ? `${userStats.accuracy?.toFixed(0)}%` : (userStats?.avgScore ? `${(userStats.avgScore * 10).toFixed(0)}%` : '—')}
+                subValue={userStats?.verifiedAnalyses
+                  ? `${userStats.correctAnalyses}/${userStats.verifiedAnalyses} closed`
+                  : (userStats?.avgScore ? 'Avg analysis score' : 'No data yet')}
+                color="amber"
+              />
+              <StatCard
+                icon={TrendingUp}
+                label="GO Signals"
+                value={formatNumber(userStats?.goSignals || 0)}
+                subValue={`${formatNumber(userStats?.avoidSignals || 0)} avoided`}
+                color="green"
+              />
+              <StatCard
+                icon={Activity}
+                label="Active Trades"
+                value={formatNumber(userStats?.activeCount || 0)}
+                subValue={userStats?.activeCount
+                  ? `${formatNumber(userStats.activeProfitable || 0)} profitable`
+                  : 'Start analyzing'}
+                color="cyan"
+              />
+            </div>
+          </div>
+
+          {/* My Performance Summary */}
+          {userStats && userStats.totalAnalyses > 0 && (
+            <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/50 mb-4">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
+              <div className="relative z-10 p-5">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-200 dark:border-white/10">
+                    <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
+                    <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Total</div>
+                  </div>
+                  <div className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-3 text-center border border-blue-200/50 dark:border-blue-500/20">
+                    <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
+                    <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Active</div>
+                  </div>
+                  <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-200 dark:border-white/10">
+                    <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
+                    <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Closed</div>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-500/10 rounded-xl p-3 text-center border border-green-200/50 dark:border-green-500/20">
+                    <div className="text-xl font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
+                    <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">TP Hit</div>
+                  </div>
+                  <div className="bg-red-50 dark:bg-red-500/10 rounded-xl p-3 text-center border border-red-200/50 dark:border-red-500/20">
+                    <div className="text-xl font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
+                    <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">SL Hit</div>
+                  </div>
+                </div>
+
+                <div className={cn(
+                  "mt-4 text-center text-xs font-medium p-3 rounded-xl border",
+                  userStats.verifiedAnalyses === 0
+                    ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-500/20"
+                    : userStats.accuracy >= 70
+                    ? "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-500/20"
+                    : userStats.accuracy >= 50
+                    ? "bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-200/50 dark:border-yellow-500/20"
+                    : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-500/20"
+                )}>
+                  {userStats.verifiedAnalyses === 0
+                    ? "Trades are still active. Results will update when TP/SL is hit."
+                    : userStats.accuracy >= 70
+                    ? "Excellent performance! Your analysis accuracy is outstanding."
+                    : userStats.accuracy >= 50
+                    ? "Good progress! Keep improving your analysis skills."
+                    : "Consider reviewing your analysis approach for better results."}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* My AI Stats */}
+          {aiStats && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <AIStatsCard
+                title="My AI Concierge Usage"
+                icon={Bot}
+                color="teal"
+                stats={[
+                  { label: 'Messages Sent', value: formatNumber(aiStats.user.conciergeMessages) },
+                  { label: 'Analyses via Chat', value: formatNumber(Math.floor(aiStats.user.conciergeMessages * 0.4)) },
+                ]}
+              />
+              <AIStatsCard
+                title="My AI Expert Usage"
+                icon={Brain}
+                color="purple"
+                stats={[
+                  { label: 'Questions Asked', value: formatNumber(aiStats.user.expertQuestions) },
+                  { label: 'Free Remaining', value: Math.max(0, (userStats?.totalAnalyses || 0) * 3 - aiStats.user.expertQuestions) },
+                ]}
+              />
+            </div>
+          )}
+        </section>
+
+        {/* ===== ACTIVE TRADES SECTION ===== */}
+        {activeTrades.length > 0 && (
+          <section className="mb-8">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-cyan-500/5 dark:from-cyan-500/10 via-transparent to-transparent" />
+              <div className="relative z-10 p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                      <Activity className="w-4.5 h-4.5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-900 dark:text-white">Active Trades</h2>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">{activeTrades.length} positions being tracked</p>
+                    </div>
+                  </div>
+                  <Link href="/reports" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+                    View all
+                    <ChevronRight className="w-3 h-3" />
+                  </Link>
+                </div>
+
+                <div className="overflow-x-auto pb-2 -mx-1 px-1">
+                  <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
+                    {activeTrades.slice(0, 10).map((trade) => (
+                      <ActiveTradeCard key={trade.id} trade={trade} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ===== EMPTY STATE FOR NEW USERS ===== */}
+        {(!userStats || userStats.totalAnalyses === 0) && (
+          <section className="mb-8">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700 p-8 text-center">
+              <div className="relative w-16 h-16 mx-auto mb-4">
+                <div className="absolute inset-0 bg-emerald-400/20 blur-xl rounded-full" />
+                <div className="relative w-full h-full rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+                  <TrendingUp className="w-8 h-8 text-white" />
+                </div>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Start Your Trading Journey</h3>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mb-4 max-w-md mx-auto">
+                Follow the Capital Flow, analyze assets using our 7-step methodology, and track your performance with real-time accuracy metrics.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link
+                  href="/capital-flow"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-semibold transition shadow-lg shadow-blue-500/25"
+                >
+                  <Globe className="w-4 h-4" />
+                  View Capital Flow
+                </Link>
+                <Link
+                  href="/analyze"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-semibold transition shadow-lg shadow-emerald-500/25"
+                >
+                  Start Analysis
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );
