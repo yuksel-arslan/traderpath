@@ -25,6 +25,7 @@ import {
   Calendar,
   Bot,
   Globe,
+  Crown,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -48,10 +49,11 @@ const directNav = [
 // Dropdown navigation groups
 const dropdownNav = [
   {
-    name: 'Analysis',
+    name: 'Analyze',
     icon: TrendingUp,
     items: [
-      { name: 'Analyze', href: '/analyze', icon: TrendingUp },
+      { name: 'New Analysis', href: '/analyze', icon: TrendingUp },
+      { name: 'Top Coins', href: '/top-coins', icon: Crown },
     ],
   },
   {
@@ -81,7 +83,8 @@ const endNav = [
 // All flat items for mobile menu
 const allNavItems = [
   ...directNav,
-  { name: 'Analyze', href: '/analyze', icon: TrendingUp },
+  { name: 'New Analysis', href: '/analyze', icon: TrendingUp },
+  { name: 'Top Coins', href: '/top-coins', icon: Crown },
   { name: 'Concierge', href: '/concierge', icon: Bot },
   { name: 'AI Experts', href: '/ai-expert', icon: Brain },
   { name: 'History', href: '/reports', icon: FileText },

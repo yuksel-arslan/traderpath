@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle, AlertTriangle, FileText } from 'lucide-react';
 import { FirstLoginModal } from '../../../components/modals/FirstLoginModal';
 
 export default function LoginPage() {
@@ -21,6 +21,7 @@ export default function LoginPage() {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [firstLoginBonus, setFirstLoginBonus] = useState(0);
   const [welcomeName, setWelcomeName] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // Check if email is from Gmail
   const isGoogleEmail = (email: string) => {
@@ -58,10 +59,17 @@ export default function LoginPage() {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError('');
     setSuccessMessage('');
     setEmailNotVerified(false);
+
+    // Require terms acceptance
+    if (!agreedToTerms) {
+      setError('Please agree to the Terms of Service and Privacy Policy to continue.');
+      return;
+    }
+
+    setIsLoading(true);
 
     // SECURITY: Redirect Gmail users to Google OAuth
     if (isGoogleEmail(email)) {
@@ -112,6 +120,11 @@ export default function LoginPage() {
 
   // Handle OAuth Sign-In
   const handleOAuthClick = (provider: string) => {
+    // Require terms acceptance
+    if (!agreedToTerms) {
+      setError('Please agree to the Terms of Service and Privacy Policy to continue.');
+      return;
+    }
     setLoadingProvider(provider);
     setError('');
     window.location.href = `/api/auth/${provider}`;
@@ -218,10 +231,42 @@ export default function LoginPage() {
               </Link>
             </div>
 
+            {/* Terms Acceptance */}
+            <div className="p-3 bg-slate-100 dark:bg-accent/50 rounded-xl border border-slate-200 dark:border-border">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="terms-login"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  className="mt-1 rounded border-slate-300 dark:border-border text-teal-500 focus:ring-teal-500"
+                />
+                <label htmlFor="terms-login" className="text-sm text-slate-600 dark:text-muted-foreground cursor-pointer">
+                  <span className="flex items-center gap-1.5 mb-1">
+                    <FileText className="w-4 h-4 text-teal-500" />
+                    <span className="font-medium text-slate-700 dark:text-foreground">Terms & Conditions</span>
+                  </span>
+                  By signing in, I agree to the{' '}
+                  <Link href="/terms" className="text-teal-600 dark:text-primary hover:underline font-medium" target="_blank">
+                    Terms of Service
+                  </Link>
+                  {' '}and{' '}
+                  <Link href="/privacy" className="text-teal-600 dark:text-primary hover:underline font-medium" target="_blank">
+                    Privacy Policy
+                  </Link>
+                  , including the{' '}
+                  <Link href="/terms#daily-pass" className="text-teal-600 dark:text-primary hover:underline font-medium" target="_blank">
+                    Daily Pass pricing
+                  </Link>
+                  .
+                </label>
+              </div>
+            </div>
+
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full py-3 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40"
+              disabled={isLoading || !agreedToTerms}
+              className="w-full py-3 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40"
             >
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               {isLoading ? 'Signing in...' : 'Sign In'}
