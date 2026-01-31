@@ -22,6 +22,9 @@ import {
   Calculator,
   Activity,
   FileText,
+  Clock,
+  Globe,
+  Target,
 } from 'lucide-react';
 import Link from 'next/link';
 import { authFetch } from '../../../../lib/api';
@@ -701,6 +704,101 @@ export default function FinancePage() {
             </div>
           </div>
 
+          {/* Daily Pass Pricing Section */}
+          <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-500/30 rounded-lg p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-500/20 rounded-lg">
+                  <Clock className="w-5 h-5 text-amber-500" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-lg">Daily Pass Pricing</h4>
+                  <p className="text-sm text-muted-foreground">Users pay once per day for unlimited access</p>
+                </div>
+              </div>
+              <span className="bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded">
+                NEW MODEL
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Capital Flow L4 */}
+              <div className="bg-card border rounded-lg p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <Globe className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">Capital Flow Layer 4</p>
+                    <p className="text-xs text-muted-foreground">AI Recommendations</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingCosts.creditCostCapitalFlowL4Daily ?? 25}
+                      onChange={(e) => setEditingCosts({ ...editingCosts, creditCostCapitalFlowL4Daily: parseInt(e.target.value) || 0 })}
+                      className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
+                    />
+                    <span className="text-sm text-muted-foreground">credits/day</span>
+                  </div>
+                  <span className="text-xs text-green-500 font-medium">Unlimited access</span>
+                </div>
+              </div>
+
+              {/* Asset Analysis */}
+              <div className="bg-card border rounded-lg p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-violet-500/10 rounded-lg">
+                    <Target className="w-5 h-5 text-violet-500" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">Asset Analysis</p>
+                    <p className="text-xs text-muted-foreground">7-Step / MLIS Pro</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingCosts.creditCostAssetAnalysisDaily ?? 100}
+                      onChange={(e) => setEditingCosts({ ...editingCosts, creditCostAssetAnalysisDaily: parseInt(e.target.value) || 0 })}
+                      className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
+                    />
+                    <span className="text-sm text-muted-foreground">credits/day</span>
+                  </div>
+                  <span className="text-xs text-amber-500 font-medium">Max 10 analyses</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div className="mt-4 p-3 bg-card/50 rounded-lg border border-dashed">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span className="text-muted-foreground">L4:</span>
+                    <span className="font-mono font-medium">{editingCosts.creditCostCapitalFlowL4Daily ?? 25} cr/day</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-violet-500" />
+                    <span className="text-muted-foreground">Analysis:</span>
+                    <span className="font-mono font-medium">{editingCosts.creditCostAssetAnalysisDaily ?? 100} cr/day</span>
+                  </div>
+                </div>
+                <div className="text-muted-foreground">
+                  Total daily max: <span className="font-mono font-medium text-foreground">
+                    {(editingCosts.creditCostCapitalFlowL4Daily ?? 25) + (editingCosts.creditCostAssetAnalysisDaily ?? 100)} credits
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {creditCosts ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Analysis Bundles */}
@@ -708,6 +806,7 @@ export default function FinancePage() {
                 <h4 className="font-semibold mb-4 flex items-center gap-2">
                   <FileText className="w-4 h-4" />
                   Analysis Bundles
+                  <span className="text-xs text-muted-foreground font-normal">(Legacy - per analysis)</span>
                 </h4>
                 <div className="space-y-4">
                   {[
