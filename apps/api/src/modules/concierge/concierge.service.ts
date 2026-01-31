@@ -5,6 +5,7 @@ import { callGeminiWithRetry } from '../../core/gemini';
 import { INTENT_DETECTION_PROMPT, RESPONSE_TEMPLATES } from './system-prompt';
 import { coinScoreCacheService, CoinScore } from '../analysis/services/coin-score-cache.service';
 import * as capitalFlowService from '../capital-flow/capital-flow.service';
+import { translationService, SUPPORTED_LANGUAGES } from '../translation/translation.service';
 
 interface ConciergeRequest {
   message: string;
@@ -945,29 +946,43 @@ class ConciergeService {
     }
   }
 
+  // ===== MULTI-LANGUAGE TRANSLATION HELPER =====
+
+  /**
+   * Translates message to target language if not English
+   * Uses Google Translate API (primary) with Gemini fallback
+   * Supports 18 languages: en, tr, es, de, fr, pt, ru, zh, ja, ko, ar, it, nl, pl, vi, th, id, hi
+   */
+  private async translateIfNeeded(message: string, targetLanguage: string): Promise<string> {
+    // No translation needed for English
+    if (targetLanguage === 'en' || !targetLanguage) {
+      return message;
+    }
+
+    // Check if language is supported
+    if (!SUPPORTED_LANGUAGES[targetLanguage as keyof typeof SUPPORTED_LANGUAGES]) {
+      console.warn(`[Concierge] Unsupported language: ${targetLanguage}, falling back to English`);
+      return message;
+    }
+
+    try {
+      const translated = await translationService.translate(message, targetLanguage);
+      return translated;
+    } catch (error) {
+      console.error(`[Concierge] Translation error for language ${targetLanguage}:`, error);
+      return message; // Return original English message on error
+    }
+  }
+
   // ===== CAPITAL FLOW HANDLERS =====
 
   private async handleCapitalFlowSummary(language: string, creditBalance: number): Promise<ConciergeResponse> {
     try {
       const summary = await capitalFlowService.getCapitalFlowSummary();
-      const isTr = language === 'tr';
 
-      // Format global liquidity
+      // Format global liquidity (English base)
       const liquidity = summary.globalLiquidity;
-      const liquidityText = isTr
-        ? `📊 KATMAN 1: KÜRESEL LİKİDİTE
-
-Fed Bilançosu: $${(liquidity.fedBalanceSheet.value / 1e12).toFixed(2)}T (${liquidity.fedBalanceSheet.change30d > 0 ? '+' : ''}${liquidity.fedBalanceSheet.change30d.toFixed(1)}% 30G)
-→ Durum: ${liquidity.fedBalanceSheet.trend === 'expanding' ? 'Genişliyor ✅' : liquidity.fedBalanceSheet.trend === 'contracting' ? 'Daralıyor ⚠️' : 'Stabil'}
-
-M2 Para Arzı: $${(liquidity.m2MoneySupply.value / 1e12).toFixed(2)}T (YoY: ${liquidity.m2MoneySupply.yoyGrowth > 0 ? '+' : ''}${liquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%)
-
-DXY (Dolar): ${liquidity.dxy.value.toFixed(2)} (${liquidity.dxy.trend === 'weakening' ? 'Zayıflıyor → Risk-On ✅' : liquidity.dxy.trend === 'strengthening' ? 'Güçleniyor → Risk-Off ⚠️' : 'Stabil'})
-
-VIX (Korku): ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level === 'low' ? 'Düşük → Sakin Piyasa' : liquidity.vix.level === 'elevated' ? 'Yükselen → Dikkat' : 'Yüksek → Panik ⚠️'})
-
-Verim Eğrisi (10Y-2Y): ${liquidity.yieldCurve.spread10y2y.toFixed(2)}bp ${liquidity.yieldCurve.inverted ? '⚠️ TERS (Resesyon sinyali)' : '✅ Normal'}`
-        : `📊 LAYER 1: GLOBAL LIQUIDITY
+      const liquidityText = `📊 LAYER 1: GLOBAL LIQUIDITY
 
 Fed Balance Sheet: $${(liquidity.fedBalanceSheet.value / 1e12).toFixed(2)}T (${liquidity.fedBalanceSheet.change30d > 0 ? '+' : ''}${liquidity.fedBalanceSheet.change30d.toFixed(1)}% 30D)
 → Status: ${liquidity.fedBalanceSheet.trend === 'expanding' ? 'Expanding ✅' : liquidity.fedBalanceSheet.trend === 'contracting' ? 'Contracting ⚠️' : 'Stable'}
@@ -980,52 +995,23 @@ VIX (Fear): ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level === 'low' ?
 
 Yield Curve (10Y-2Y): ${liquidity.yieldCurve.spread10y2y.toFixed(2)}bp ${liquidity.yieldCurve.inverted ? '⚠️ INVERTED (Recession signal)' : '✅ Normal'}`;
 
-      // Format market flows
+      // Format market flows (English base)
       const marketsText = summary.markets.map(m => {
         const phaseEmoji = m.phase === 'early' ? '🟢' : m.phase === 'mid' ? '🟡' : m.phase === 'late' ? '🟠' : '🔴';
         const flowSign = m.flow7d > 0 ? '+' : '';
-        return isTr
-          ? `${m.market.toUpperCase()}: ${flowSign}${m.flow7d.toFixed(1)}% 7G | ${phaseEmoji} ${m.phase.toUpperCase()} faz (${m.daysInPhase}G)`
-          : `${m.market.toUpperCase()}: ${flowSign}${m.flow7d.toFixed(1)}% 7D | ${phaseEmoji} ${m.phase.toUpperCase()} phase (${m.daysInPhase}D)`;
+        return `${m.market.toUpperCase()}: ${flowSign}${m.flow7d.toFixed(1)}% 7D | ${phaseEmoji} ${m.phase.toUpperCase()} phase (${m.daysInPhase}D)`;
       }).join('\n');
 
-      // Format recommendation
+      // Format recommendation (English base)
       const rec = summary.recommendation;
-      const recText = isTr
-        ? `🎯 ÖNERİ: ${rec.primaryMarket.toUpperCase()} piyasası (${rec.confidence}% güven)
-Aksiyon: ${rec.action === 'analyze' ? '✅ ANALİZ YAP' : rec.action === 'wait' ? '⏳ BEKLE' : '⛔ KAÇIN'}
-${rec.reasoning}`
-        : `🎯 RECOMMENDATION: ${rec.primaryMarket.toUpperCase()} market (${rec.confidence}% confidence)
+      const recText = `🎯 RECOMMENDATION: ${rec.primaryMarket.toUpperCase()} market (${rec.confidence}% confidence)
 Action: ${rec.action === 'analyze' ? '✅ ANALYZE' : rec.action === 'wait' ? '⏳ WAIT' : '⛔ AVOID'}
 ${rec.reasoning}`;
 
-      const biasText = isTr
-        ? `\n📈 Likidite Eğilimi: ${summary.liquidityBias === 'risk_on' ? 'RISK-ON ✅' : summary.liquidityBias === 'risk_off' ? 'RISK-OFF ⚠️' : 'NÖTR'}`
-        : `\n📈 Liquidity Bias: ${summary.liquidityBias === 'risk_on' ? 'RISK-ON ✅' : summary.liquidityBias === 'risk_off' ? 'RISK-OFF ⚠️' : 'NEUTRAL'}`;
+      const biasText = `\n📈 Liquidity Bias: ${summary.liquidityBias === 'risk_on' ? 'RISK-ON ✅' : summary.liquidityBias === 'risk_off' ? 'RISK-OFF ⚠️' : 'NEUTRAL'}`;
 
-      const message = isTr
-        ? `═══════════════════════════════════
-SERMAYE AKIŞ RADARIMIZ 🌐
-"Para nereye akıyorsa potansiyel oradadır"
-═══════════════════════════════════
-
-${liquidityText}
-${biasText}
-
-═══════════════════════════════════
-📊 KATMAN 2: PİYASA AKIŞI
-═══════════════════════════════════
-${marketsText}
-
-═══════════════════════════════════
-${recText}
-═══════════════════════════════════
-
-💡 Daha fazla detay için:
-• "Küresel likidite durumu" - Katman 1 detay
-• "Hangi piyasaya para giriyor?" - Katman 2 detay
-• "${rec.primaryMarket} sektörleri" - Katman 3 detay`
-        : `═══════════════════════════════════
+      // Build English message
+      const messageEn = `═══════════════════════════════════
 CAPITAL FLOW RADAR 🌐
 "Where money flows, potential exists"
 ═══════════════════════════════════
@@ -1047,6 +1033,9 @@ ${recText}
 • "Which market is leading?" - Layer 2 detail
 • "${rec.primaryMarket} sectors" - Layer 3 detail`;
 
+      // Translate to target language if needed (supports 18 languages)
+      const message = await this.translateIfNeeded(messageEn, language);
+
       return {
         success: true,
         intent: 'CAPITAL_FLOW_SUMMARY',
@@ -1057,12 +1046,14 @@ ${recText}
       };
     } catch (error) {
       console.error('[Concierge] Capital flow summary error:', error);
+      const errorMessage = await this.translateIfNeeded(
+        'Could not fetch capital flow data. Please try again.',
+        language
+      );
       return {
         success: false,
         intent: 'CAPITAL_FLOW_SUMMARY',
-        message: language === 'tr'
-          ? 'Sermaye akış verileri alınamadı. Lütfen tekrar deneyin.'
-          : 'Could not fetch capital flow data. Please try again.',
+        message: errorMessage,
         creditsSpent: 0,
         creditsRemaining: creditBalance,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -1073,42 +1064,9 @@ ${recText}
   private async handleCapitalFlowLiquidity(language: string, creditBalance: number): Promise<ConciergeResponse> {
     try {
       const liquidity = await capitalFlowService.getGlobalLiquidity();
-      const isTr = language === 'tr';
 
-      const message = isTr
-        ? `═══════════════════════════════════
-📊 KATMAN 1: KÜRESEL LİKİDİTE
-═══════════════════════════════════
-
-🏦 FED BİLANÇOSU
-Değer: $${(liquidity.fedBalanceSheet.value / 1e12).toFixed(2)} Trilyon
-30 Günlük Değişim: ${liquidity.fedBalanceSheet.change30d > 0 ? '+' : ''}${liquidity.fedBalanceSheet.change30d.toFixed(2)}%
-Trend: ${liquidity.fedBalanceSheet.trend === 'expanding' ? '📈 GENİŞLİYOR (Likidite artıyor)' : liquidity.fedBalanceSheet.trend === 'contracting' ? '📉 DARALIYOR (Likidite azalıyor)' : '➡️ STABİL'}
-
-💵 M2 PARA ARZI
-Değer: $${(liquidity.m2MoneySupply.value / 1e12).toFixed(2)} Trilyon
-30 Günlük Değişim: ${liquidity.m2MoneySupply.change30d > 0 ? '+' : ''}${liquidity.m2MoneySupply.change30d.toFixed(2)}%
-Yıllık Büyüme (YoY): ${liquidity.m2MoneySupply.yoyGrowth > 0 ? '+' : ''}${liquidity.m2MoneySupply.yoyGrowth.toFixed(2)}%
-
-💱 DXY (DOLAR ENDEKSİ)
-Değer: ${liquidity.dxy.value.toFixed(2)}
-7 Günlük Değişim: ${liquidity.dxy.change7d > 0 ? '+' : ''}${liquidity.dxy.change7d.toFixed(2)}%
-Trend: ${liquidity.dxy.trend === 'weakening' ? '📉 ZAYIFLIYOR → Risk varlıkları için olumlu ✅' : liquidity.dxy.trend === 'strengthening' ? '📈 GÜÇLENIYOR → Risk varlıkları için olumsuz ⚠️' : '➡️ STABİL'}
-
-😱 VIX (KORKU ENDEKSİ)
-Değer: ${liquidity.vix.value.toFixed(2)}
-Seviye: ${liquidity.vix.level === 'low' ? '🟢 DÜŞÜK (Sakin piyasa, rehavet)' : liquidity.vix.level === 'elevated' ? '🟡 YÜKSELEN (Artan endişe)' : '🔴 YÜKSEK (Panik modu)'}
-
-📈 VERİM EĞRİSİ (10Y-2Y)
-Spread: ${liquidity.yieldCurve.spread10y2y.toFixed(2)} baz puan
-Durum: ${liquidity.yieldCurve.inverted ? '⚠️ TERS EĞRİ - Resesyon sinyali!' : '✅ NORMAL EĞRİ'}
-Yorum: ${liquidity.yieldCurve.interpretation}
-
-═══════════════════════════════════
-📌 SONUÇ
-═══════════════════════════════════
-${liquidity.fedBalanceSheet.trend === 'expanding' && liquidity.dxy.trend === 'weakening' ? '✅ RISK-ON ortamı: Risk varlıkları (kripto, hisse) için olumlu' : liquidity.fedBalanceSheet.trend === 'contracting' || liquidity.dxy.trend === 'strengthening' ? '⚠️ RISK-OFF ortamı: Güvenli limanlar (tahvil, altın) tercih edilebilir' : '➡️ KARIŞIK sinyaller: Dikkatli yaklaşım önerilir'}`
-        : `═══════════════════════════════════
+      // Build English message
+      const messageEn = `═══════════════════════════════════
 📊 LAYER 1: GLOBAL LIQUIDITY
 ═══════════════════════════════════
 
@@ -1141,6 +1099,9 @@ Interpretation: ${liquidity.yieldCurve.interpretation}
 ═══════════════════════════════════
 ${liquidity.fedBalanceSheet.trend === 'expanding' && liquidity.dxy.trend === 'weakening' ? '✅ RISK-ON environment: Favorable for risk assets (crypto, stocks)' : liquidity.fedBalanceSheet.trend === 'contracting' || liquidity.dxy.trend === 'strengthening' ? '⚠️ RISK-OFF environment: Safe havens (bonds, gold) may be preferred' : '➡️ MIXED signals: Cautious approach recommended'}`;
 
+      // Translate to target language if needed (supports 18 languages)
+      const message = await this.translateIfNeeded(messageEn, language);
+
       return {
         success: true,
         intent: 'CAPITAL_FLOW_LIQUIDITY',
@@ -1151,12 +1112,14 @@ ${liquidity.fedBalanceSheet.trend === 'expanding' && liquidity.dxy.trend === 'we
       };
     } catch (error) {
       console.error('[Concierge] Capital flow liquidity error:', error);
+      const errorMessage = await this.translateIfNeeded(
+        'Could not fetch liquidity data. Please try again.',
+        language
+      );
       return {
         success: false,
         intent: 'CAPITAL_FLOW_LIQUIDITY',
-        message: language === 'tr'
-          ? 'Likidite verileri alınamadı. Lütfen tekrar deneyin.'
-          : 'Could not fetch liquidity data. Please try again.',
+        message: errorMessage,
         creditsSpent: 0,
         creditsRemaining: creditBalance,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -1167,27 +1130,15 @@ ${liquidity.fedBalanceSheet.trend === 'expanding' && liquidity.dxy.trend === 'we
   private async handleCapitalFlowMarkets(language: string, creditBalance: number): Promise<ConciergeResponse> {
     try {
       const markets = await capitalFlowService.getAllMarketFlows();
-      const isTr = language === 'tr';
 
+      // Build English market cards
       const marketCards = markets.map(m => {
         const phaseEmoji = m.phase === 'early' ? '🟢' : m.phase === 'mid' ? '🟡' : m.phase === 'late' ? '🟠' : '🔴';
         const rotationEmoji = m.rotationSignal === 'entering' ? '📥' : m.rotationSignal === 'exiting' ? '📤' : '➡️';
         const flow7dSign = m.flow7d > 0 ? '+' : '';
         const flow30dSign = m.flow30d > 0 ? '+' : '';
 
-        return isTr
-          ? `═══════════════════════════════════
-${m.market.toUpperCase()} PİYASASI
-═══════════════════════════════════
-📊 Akış (7G): ${flow7dSign}${m.flow7d.toFixed(2)}%
-📊 Akış (30G): ${flow30dSign}${m.flow30d.toFixed(2)}%
-🚀 Hız: ${m.flowVelocity > 0 ? 'Hızlanıyor ↑' : m.flowVelocity < 0 ? 'Yavaşlıyor ↓' : 'Sabit'}
-
-${phaseEmoji} Faz: ${m.phase.toUpperCase()} (${m.daysInPhase} gün)
-${rotationEmoji} Rotasyon: ${m.rotationSignal === 'entering' ? 'PARA GİRİYOR' : m.rotationSignal === 'exiting' ? 'PARA ÇIKIYOR' : 'STABİL'}
-
-${m.phase === 'early' ? '✅ OPTİMAL GİRİŞ ZAMANI' : m.phase === 'mid' ? '⚠️ GİRİŞ YAPILABİLİR (dikkatli)' : m.phase === 'late' ? '⛔ YENİ GİRİŞ ÖNERİLMEZ' : '🚫 KESİNLİKLE GİRME'}`
-          : `═══════════════════════════════════
+        return `═══════════════════════════════════
 ${m.market.toUpperCase()} MARKET
 ═══════════════════════════════════
 📊 Flow (7D): ${flow7dSign}${m.flow7d.toFixed(2)}%
@@ -1205,19 +1156,8 @@ ${m.phase === 'early' ? '✅ OPTIMAL ENTRY TIMING' : m.phase === 'mid' ? '⚠️
         m.flow7d > best.flow7d && (m.phase === 'early' || m.phase === 'mid') ? m : best
       , markets[0]);
 
-      const message = isTr
-        ? `═══════════════════════════════════
-📊 KATMAN 2: PİYASA AKIŞI
-"Para nereye gidiyor?"
-═══════════════════════════════════
-
-${marketCards.join('\n\n')}
-
-═══════════════════════════════════
-🎯 EN İYİ FIRSAT: ${bestMarket.market.toUpperCase()}
-${bestMarket.flow7d > 0 ? `+${bestMarket.flow7d.toFixed(2)}% haftalık giriş` : 'Göreceli güçlü'} | ${bestMarket.phase.toUpperCase()} fazında
-═══════════════════════════════════`
-        : `═══════════════════════════════════
+      // Build English message
+      const messageEn = `═══════════════════════════════════
 📊 LAYER 2: MARKET FLOW
 "Where is money going?"
 ═══════════════════════════════════
@@ -1229,6 +1169,9 @@ ${marketCards.join('\n\n')}
 ${bestMarket.flow7d > 0 ? `+${bestMarket.flow7d.toFixed(2)}% weekly inflow` : 'Relatively strong'} | ${bestMarket.phase.toUpperCase()} phase
 ═══════════════════════════════════`;
 
+      // Translate to target language if needed (supports 18 languages)
+      const message = await this.translateIfNeeded(messageEn, language);
+
       return {
         success: true,
         intent: 'CAPITAL_FLOW_MARKETS',
@@ -1239,12 +1182,14 @@ ${bestMarket.flow7d > 0 ? `+${bestMarket.flow7d.toFixed(2)}% weekly inflow` : 'R
       };
     } catch (error) {
       console.error('[Concierge] Capital flow markets error:', error);
+      const errorMessage = await this.translateIfNeeded(
+        'Could not fetch market flow data. Please try again.',
+        language
+      );
       return {
         success: false,
         intent: 'CAPITAL_FLOW_MARKETS',
-        message: language === 'tr'
-          ? 'Piyasa akış verileri alınamadı. Lütfen tekrar deneyin.'
-          : 'Could not fetch market flow data. Please try again.',
+        message: errorMessage,
         creditsSpent: 0,
         creditsRemaining: creditBalance,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -1255,48 +1200,35 @@ ${bestMarket.flow7d > 0 ? `+${bestMarket.flow7d.toFixed(2)}% weekly inflow` : 'R
   private async handleCapitalFlowSectors(market: string, language: string, creditBalance: number): Promise<ConciergeResponse> {
     try {
       const marketFlow = await capitalFlowService.getMarketFlow(market as 'crypto' | 'stocks' | 'bonds' | 'metals');
-      const isTr = language === 'tr';
 
       if (!marketFlow.sectors || marketFlow.sectors.length === 0) {
+        const noDataMessage = await this.translateIfNeeded(
+          `No sector data available for ${market.toUpperCase()} market.`,
+          language
+        );
         return {
           success: true,
           intent: 'CAPITAL_FLOW_SECTORS',
-          message: isTr
-            ? `${market.toUpperCase()} piyasası için sektör verisi bulunamadı.`
-            : `No sector data available for ${market.toUpperCase()} market.`,
+          message: noDataMessage,
           creditsSpent: 0,
           creditsRemaining: creditBalance,
           detectedLanguage: language,
         };
       }
 
+      // Build English sector cards
       const sectorCards = marketFlow.sectors
         .sort((a, b) => b.flow7d - a.flow7d)
         .map((s, i) => {
           const rankEmoji = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  ';
           const flowSign = s.flow7d > 0 ? '+' : '';
-          return isTr
-            ? `${rankEmoji} ${s.name}: ${flowSign}${s.flow7d.toFixed(2)}% (7G) | TVL: $${(s.tvl / 1e9).toFixed(2)}B`
-            : `${rankEmoji} ${s.name}: ${flowSign}${s.flow7d.toFixed(2)}% (7D) | TVL: $${(s.tvl / 1e9).toFixed(2)}B`;
+          return `${rankEmoji} ${s.name}: ${flowSign}${s.flow7d.toFixed(2)}% (7D) | TVL: $${(s.tvl / 1e9).toFixed(2)}B`;
         });
 
       const topSector = marketFlow.sectors.sort((a, b) => b.flow7d - a.flow7d)[0];
 
-      const message = isTr
-        ? `═══════════════════════════════════
-📊 KATMAN 3: ${market.toUpperCase()} SEKTÖR AKIŞI
-═══════════════════════════════════
-
-${sectorCards.join('\n')}
-
-═══════════════════════════════════
-🎯 EN GÜÇLÜ SEKTÖR: ${topSector.name}
-${topSector.flow7d > 0 ? `+${topSector.flow7d.toFixed(2)}% haftalık giriş` : 'Göreceli güçlü'}
-═══════════════════════════════════
-
-💡 Sonraki adım: Bu sektördeki varlıkları analiz et
-Örnek: "${topSector.topAssets?.[0] || 'BTC'} analiz"`
-        : `═══════════════════════════════════
+      // Build English message
+      const messageEn = `═══════════════════════════════════
 📊 LAYER 3: ${market.toUpperCase()} SECTOR FLOW
 ═══════════════════════════════════
 
@@ -1310,6 +1242,9 @@ ${topSector.flow7d > 0 ? `+${topSector.flow7d.toFixed(2)}% weekly inflow` : 'Rel
 💡 Next step: Analyze assets in this sector
 Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
 
+      // Translate to target language if needed (supports 18 languages)
+      const message = await this.translateIfNeeded(messageEn, language);
+
       return {
         success: true,
         intent: 'CAPITAL_FLOW_SECTORS',
@@ -1320,12 +1255,14 @@ Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
       };
     } catch (error) {
       console.error('[Concierge] Capital flow sectors error:', error);
+      const errorMessage = await this.translateIfNeeded(
+        'Could not fetch sector data. Please try again.',
+        language
+      );
       return {
         success: false,
         intent: 'CAPITAL_FLOW_SECTORS',
-        message: language === 'tr'
-          ? 'Sektör verileri alınamadı. Lütfen tekrar deneyin.'
-          : 'Could not fetch sector data. Please try again.',
+        message: errorMessage,
         creditsSpent: 0,
         creditsRemaining: creditBalance,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -1336,41 +1273,30 @@ Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
   private async handleCapitalFlowRecommendation(language: string, creditBalance: number): Promise<ConciergeResponse> {
     try {
       const recommendation = await capitalFlowService.getFlowRecommendation();
-      const isTr = language === 'tr';
 
       const actionEmoji = recommendation.action === 'analyze' ? '✅' : recommendation.action === 'wait' ? '⏳' : '⛔';
       const confidenceBar = '█'.repeat(Math.floor(recommendation.confidence / 10)) + '░'.repeat(10 - Math.floor(recommendation.confidence / 10));
 
-      const message = isTr
-        ? `═══════════════════════════════════
-🎯 AI TAVSİYESİ
-"Para nereye akıyorsa potansiyel oradadır"
-═══════════════════════════════════
+      // Determine next steps based on action (English base)
+      let nextSteps: string;
+      if (recommendation.action === 'analyze') {
+        nextSteps = `1. "${recommendation.primaryMarket} sectors" - Sector analysis
+2. Select an asset from strong sector
+3. "Analyze BTC" or "BTC mlis pro" - Asset analysis`;
+      } else if (recommendation.action === 'wait') {
+        nextSteps = `Wait for now:
+• Liquidity conditions uncertain
+• Clear direction signal pending
+• Monitor with "Where is money flowing?"`;
+      } else {
+        nextSteps = `Risk management advised:
+• Reduce positions
+• Tighten stop-losses
+• Consider safe havens (gold, bonds)`;
+      }
 
-📊 ÖNERİLEN PİYASA: ${recommendation.primaryMarket.toUpperCase()}
-
-${actionEmoji} AKSİYON: ${recommendation.action === 'analyze' ? 'ANALİZ YAP' : recommendation.action === 'wait' ? 'BEKLE' : 'KAÇIN'}
-
-📈 GÜVEN: ${recommendation.confidence}%
-[${confidenceBar}]
-
-💡 NEDEN:
-${recommendation.reasoning}
-
-═══════════════════════════════════
-📌 SONRAKİ ADIMLAR
-═══════════════════════════════════
-${recommendation.action === 'analyze' ? `1. "${recommendation.primaryMarket === 'crypto' ? 'kripto sektörleri' : recommendation.primaryMarket + ' sektörleri'}" - Sektör analizi
-2. Güçlü sektörden bir varlık seç
-3. "BTC analiz" veya "BTC mlis pro" - Varlık analizi` : recommendation.action === 'wait' ? `Şu an için bekleyin:
-• Likidite koşulları belirsiz
-• Net yön sinyali bekleniyor
-• "Para nereye akıyor?" ile takip edin` : `Risk yönetimi önerilir:
-• Pozisyonları küçültün
-• Stop-loss'ları sıkılaştırın
-• Güvenli limanları değerlendirin (altın, tahvil)`}
-═══════════════════════════════════`
-        : `═══════════════════════════════════
+      // Build English message
+      const messageEn = `═══════════════════════════════════
 🎯 AI RECOMMENDATION
 "Where money flows, potential exists"
 ═══════════════════════════════════
@@ -1388,16 +1314,11 @@ ${recommendation.reasoning}
 ═══════════════════════════════════
 📌 NEXT STEPS
 ═══════════════════════════════════
-${recommendation.action === 'analyze' ? `1. "${recommendation.primaryMarket} sectors" - Sector analysis
-2. Select an asset from strong sector
-3. "Analyze BTC" or "BTC mlis pro" - Asset analysis` : recommendation.action === 'wait' ? `Wait for now:
-• Liquidity conditions uncertain
-• Clear direction signal pending
-• Monitor with "Where is money flowing?"` : `Risk management advised:
-• Reduce positions
-• Tighten stop-losses
-• Consider safe havens (gold, bonds)`}
+${nextSteps}
 ═══════════════════════════════════`;
+
+      // Translate to target language if needed (supports 18 languages)
+      const message = await this.translateIfNeeded(messageEn, language);
 
       return {
         success: true,
@@ -1409,12 +1330,14 @@ ${recommendation.action === 'analyze' ? `1. "${recommendation.primaryMarket} sec
       };
     } catch (error) {
       console.error('[Concierge] Capital flow recommendation error:', error);
+      const errorMessage = await this.translateIfNeeded(
+        'Could not generate recommendation. Please try again.',
+        language
+      );
       return {
         success: false,
         intent: 'CAPITAL_FLOW_RECOMMENDATION',
-        message: language === 'tr'
-          ? 'Tavsiye oluşturulamadı. Lütfen tekrar deneyin.'
-          : 'Could not generate recommendation. Please try again.',
+        message: errorMessage,
         creditsSpent: 0,
         creditsRemaining: creditBalance,
         error: error instanceof Error ? error.message : 'Unknown error',
