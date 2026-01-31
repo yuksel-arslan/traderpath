@@ -7,6 +7,9 @@ import { prisma } from '../../core/database';
 import { creditService } from '../credits/credit.service';
 import { DailyPassType } from '@prisma/client';
 
+// Admin emails - same as auth.routes.ts
+const ADMIN_EMAILS = ['contact@yukselarslan.com'];
+
 // Pass pricing configuration
 export const DAILY_PASS_CONFIG = {
   CAPITAL_FLOW_L3: {
@@ -76,14 +79,14 @@ class DailyPassService {
   }
 
   /**
-   * Check if user is admin
+   * Check if user is admin (by email, same as auth.routes.ts)
    */
   private async isUserAdmin(userId: string): Promise<boolean> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { isAdmin: true },
+      select: { email: true },
     });
-    return user?.isAdmin || false;
+    return user ? ADMIN_EMAILS.includes(user.email.toLowerCase()) : false;
   }
 
   /**
