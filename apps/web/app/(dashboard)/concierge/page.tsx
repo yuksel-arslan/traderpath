@@ -569,7 +569,7 @@ export default function ConciergePage() {
           </div>
 
           {/* Capital Flow Summary Bar */}
-          {!flowLoading && capitalFlow && capitalFlow.marketFlows && capitalFlow.recommendation && (
+          {!flowLoading && capitalFlow && Array.isArray(capitalFlow.marketFlows) && capitalFlow.marketFlows.length > 0 && capitalFlow.recommendation && (
             <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 shadow-sm">
               <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                 {/* Global Liquidity Status */}
