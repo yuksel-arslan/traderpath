@@ -772,7 +772,7 @@ const FAQS = [
   },
   {
     question: 'How does the credit system work?',
-    answer: 'Capital Flow dashboard is FREE for all users. Asset analysis costs 25 credits (7-Step or MLIS Pro). You can earn free credits daily through login bonuses, quizzes, and referrals. Purchase additional credits as needed.',
+    answer: 'Layer 1-2-3 (Global Liquidity, Market Flow, Sectors) are FREE for logged-in users. Layer 4 AI Recommendations cost 5 credits/day. Full asset analysis costs 25 credits (7-Step or MLIS Pro). Earn free credits through daily login, quizzes, and referrals.',
   },
   {
     question: 'How accurate is the analysis?',

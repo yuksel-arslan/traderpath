@@ -990,6 +990,48 @@ export default function CapitalFlowPage() {
   const [correlationsExpanded, setCorrelationsExpanded] = useState(false);
   const [opportunitiesExpanded, setOpportunitiesExpanded] = useState(false);
 
+  // Layer 4 unlock state (5 credits per day)
+  const [layer4Unlocked, setLayer4Unlocked] = useState(false);
+  const [unlockingLayer4, setUnlockingLayer4] = useState(false);
+
+  // Check if Layer 4 was unlocked today (localStorage)
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const unlockDate = localStorage.getItem('capitalFlow_layer4_unlockDate');
+    if (unlockDate === today) {
+      setLayer4Unlocked(true);
+    }
+  }, []);
+
+  // Unlock Layer 4 with 5 credits
+  const unlockLayer4 = async () => {
+    setUnlockingLayer4(true);
+    try {
+      const response = await authFetch('/api/credits/charge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: 5,
+          reason: 'Capital Flow Layer 4 - AI Recommendations',
+          type: 'CAPITAL_FLOW_LAYER4',
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        const today = new Date().toISOString().split('T')[0];
+        localStorage.setItem('capitalFlow_layer4_unlockDate', today);
+        setLayer4Unlocked(true);
+      } else {
+        alert(result.error?.message || 'Insufficient credits. You need 5 credits to unlock AI Recommendations.');
+      }
+    } catch (err) {
+      console.error('Failed to unlock Layer 4:', err);
+      alert('Failed to unlock. Please try again.');
+    } finally {
+      setUnlockingLayer4(false);
+    }
+  };
+
   // Market Analysis Modal state
   const [analysisMarket, setAnalysisMarket] = useState<MarketFlow | null>(null);
   const [analysisData, setAnalysisData] = useState<MarketAnalysis | null>(null);
@@ -1321,19 +1363,27 @@ export default function CapitalFlowPage() {
               );
             })()}
 
-            {/* Layer 4: Recommendation */}
+            {/* Layer 4: Recommendation - Locked until 5 credits paid */}
             <LayerSummaryBox
               layerNum={4}
               title="Recommendation"
-              status={`${data.recommendation.action.toUpperCase()} ${data.recommendation.primaryMarket.toUpperCase()}`}
+              status={layer4Unlocked
+                ? `${data.recommendation.action.toUpperCase()} ${data.recommendation.primaryMarket.toUpperCase()}`
+                : '🔒 LOCKED'
+              }
               statusType={
-                data.recommendation.action === 'analyze'
+                !layer4Unlocked
+                  ? 'warning'
+                  : data.recommendation.action === 'analyze'
                   ? 'positive'
                   : data.recommendation.action === 'wait'
                   ? 'warning'
                   : 'negative'
               }
-              details={`Phase: ${data.recommendation.phase.toUpperCase()} • Confidence: ${data.recommendation.confidence}%`}
+              details={layer4Unlocked
+                ? `Phase: ${data.recommendation.phase.toUpperCase()} • Confidence: ${data.recommendation.confidence}%`
+                : '5 credits to unlock • Valid 24h'
+              }
               icon={Target}
               color="amber"
               onClick={() => setSelectedLayer(selectedLayer === 4 ? null : 4)}
@@ -1485,33 +1535,98 @@ export default function CapitalFlowPage() {
                   <div className="flex items-center gap-2 mb-4">
                     <div className="w-6 h-6 bg-amber-500 rounded flex items-center justify-center text-white text-xs font-bold">4</div>
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">AI Recommendations</h3>
-                  </div>
-
-                  {/* BUY and SELL Recommendations Grid */}
-                  <div className={cn(
-                    "grid gap-4",
-                    data.sellRecommendation ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
-                  )}>
-                    {/* BUY Recommendation */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <TrendingUp className="w-4 h-4 text-emerald-500" />
-                        <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">BUY Opportunity</span>
-                      </div>
-                      <RecommendationCard recommendation={data.recommendation} rotation={data.activeRotation} />
-                    </div>
-
-                    {/* SELL Recommendation (if exists) */}
-                    {data.sellRecommendation && (
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <TrendingDown className="w-4 h-4 text-red-500" />
-                          <span className="text-sm font-semibold text-red-600 dark:text-red-400">SELL / Short Opportunity</span>
-                        </div>
-                        <RecommendationCard recommendation={data.sellRecommendation} showRotation={false} />
-                      </div>
+                    {!layer4Unlocked && (
+                      <span className="ml-auto px-2 py-0.5 text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">
+                        5 Credits
+                      </span>
                     )}
                   </div>
+
+                  {/* Paywall - Show when Layer 4 is NOT unlocked */}
+                  {!layer4Unlocked ? (
+                    <div className="relative">
+                      {/* Blurred Preview */}
+                      <div className="blur-sm opacity-50 pointer-events-none select-none">
+                        <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+                          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                            <div className="flex items-center gap-2 mb-2">
+                              <TrendingUp className="w-4 h-4 text-emerald-500" />
+                              <span className="text-sm font-semibold text-emerald-600">BUY Opportunity</span>
+                            </div>
+                            <div className="h-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                          </div>
+                          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                            <div className="flex items-center gap-2 mb-2">
+                              <TrendingDown className="w-4 h-4 text-red-500" />
+                              <span className="text-sm font-semibold text-red-600">SELL Opportunity</span>
+                            </div>
+                            <div className="h-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Unlock Overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-white/90 via-white/70 to-transparent dark:from-slate-900/90 dark:via-slate-900/70">
+                        <div className="text-center p-6">
+                          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
+                            <Zap className="w-8 h-8 text-white" />
+                          </div>
+                          <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                            Unlock AI Recommendations
+                          </h4>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 max-w-xs">
+                            Get specific BUY and SELL recommendations with confidence scores and target sectors.
+                          </p>
+                          <button
+                            onClick={unlockLayer4}
+                            disabled={unlockingLayer4}
+                            className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+                          >
+                            {unlockingLayer4 ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Unlocking...
+                              </>
+                            ) : (
+                              <>
+                                <Coins className="w-4 h-4" />
+                                Unlock for 5 Credits
+                              </>
+                            )}
+                          </button>
+                          <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">
+                            Valid for 24 hours
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Unlocked Content - Show BUY and SELL Recommendations */
+                    <div className={cn(
+                      "grid gap-4",
+                      data.sellRecommendation ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+                    )}>
+                      {/* BUY Recommendation */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <TrendingUp className="w-4 h-4 text-emerald-500" />
+                          <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">BUY Opportunity</span>
+                        </div>
+                        <RecommendationCard recommendation={data.recommendation} rotation={data.activeRotation} />
+                      </div>
+
+                      {/* SELL Recommendation (if exists) */}
+                      {data.sellRecommendation && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <TrendingDown className="w-4 h-4 text-red-500" />
+                            <span className="text-sm font-semibold text-red-600 dark:text-red-400">SELL / Short Opportunity</span>
+                          </div>
+                          <RecommendationCard recommendation={data.sellRecommendation} showRotation={false} />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
