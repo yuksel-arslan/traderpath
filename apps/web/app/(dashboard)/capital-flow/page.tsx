@@ -37,9 +37,8 @@ import {
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { X, Loader2, LineChart, Download, FileImage, FileText, Mail, ChevronUp } from 'lucide-react';
+import { X, Loader2, LineChart, Download, FileImage, FileText, Mail, ChevronUp, CheckCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 
 // Types
 interface GlobalLiquidity {
@@ -1083,7 +1082,7 @@ export default function CapitalFlowPage() {
   // Export states
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [exportType, setExportType] = useState<'png' | 'jpeg' | 'pdf' | 'email' | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
 
   // Ref for capturing the content
   const contentRef = useRef<HTMLDivElement>(null);
@@ -1106,95 +1105,201 @@ export default function CapitalFlowPage() {
     };
   }, [exportDropdownOpen]);
 
-  // Export handlers
-  const handleExport = async (type: 'png' | 'jpeg' | 'pdf' | 'email') => {
-    if (!contentRef.current) return;
+  // Export as PNG (using blob for reliable downloads)
+  const handleExportPNG = async () => {
+    if (!contentRef.current || exporting) return;
 
     setExporting(true);
-    setExportType(type);
     setExportDropdownOpen(false);
-
     try {
-      // Capture the content
       const canvas = await html2canvas(contentRef.current, {
-        scale: type === 'png' ? 3 : 2.5,
+        backgroundColor: '#0B1120',
+        scale: 3,
+        logging: false,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#0B1120',
         windowWidth: 1400,
-        logging: false,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-export-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+            (clonedElement as HTMLElement).style.backgroundColor = '#0B1120';
+            (clonedElement as HTMLElement).style.padding = '24px';
+          }
+        },
       });
 
-      const timestamp = new Date().toISOString().split('T')[0];
-      const filename = `capital-flow-${timestamp}`;
-
-      if (type === 'png') {
-        const link = document.createElement('a');
-        link.download = `${filename}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      } else if (type === 'jpeg') {
-        const link = document.createElement('a');
-        link.download = `${filename}.jpg`;
-        link.href = canvas.toDataURL('image/jpeg', 0.95);
-        link.click();
-      } else if (type === 'pdf') {
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        const pdf = new jsPDF({
-          orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-          unit: 'px',
-          format: [canvas.width, canvas.height],
-        });
-        pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-        pdf.save(`${filename}.pdf`);
-      } else if (type === 'email') {
-        // First download as PNG, then send via email
-        const imageData = canvas.toDataURL('image/png');
-
-        // Download the file first
-        const link = document.createElement('a');
-        link.download = `${filename}.png`;
-        link.href = imageData;
-        link.click();
-
-        // Then send via email
-        try {
-          const response = await authFetch('/api/reports/email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              subject: `Capital Flow Analysis - ${timestamp}`,
-              title: 'Capital Flow Intelligence Report',
-              symbol: 'CAPITAL_FLOW',
-              screenshot: imageData,
-              analysisData: {
-                liquidityBias: data?.liquidityBias,
-                recommendation: data?.recommendation,
-                markets: data?.markets?.map(m => ({
-                  market: m.market,
-                  flow7d: m.flow7d,
-                  phase: m.phase,
-                })),
-              },
-            }),
-          });
-          const result = await response.json();
-          if (result.success) {
-            alert('Email sent successfully!');
-          } else {
-            alert('Failed to send email: ' + (result.error?.message || 'Unknown error'));
-          }
-        } catch (err) {
-          console.error('Email error:', err);
-          alert('Failed to send email. Screenshot was downloaded.');
+      // Use blob for reliable download
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert('Failed to create image');
+          return;
         }
-      }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const date = new Date().toISOString().split('T')[0];
+        link.download = `TraderPath_CapitalFlow_${date}.png`;
+        link.href = url;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      }, 'image/png');
     } catch (err) {
-      console.error('Export error:', err);
-      alert('Failed to export. Please try again.');
+      console.error('Failed to export PNG:', err);
+      alert('Failed to export image');
     } finally {
       setExporting(false);
-      setExportType(null);
+    }
+  };
+
+  // Export as JPG (using blob for reliable downloads)
+  const handleExportJPG = async () => {
+    if (!contentRef.current || exporting) return;
+
+    setExporting(true);
+    setExportDropdownOpen(false);
+    try {
+      const canvas = await html2canvas(contentRef.current, {
+        backgroundColor: '#0B1120',
+        scale: 2.5,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: 1400,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-export-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+            (clonedElement as HTMLElement).style.backgroundColor = '#0B1120';
+            (clonedElement as HTMLElement).style.padding = '24px';
+          }
+        },
+      });
+
+      // Use blob for reliable download
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert('Failed to create image');
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const date = new Date().toISOString().split('T')[0];
+        link.download = `TraderPath_CapitalFlow_${date}.jpg`;
+        link.href = url;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      }, 'image/jpeg', 0.95);
+    } catch (err) {
+      console.error('Failed to export JPG:', err);
+      alert('Failed to export image');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Export as PDF
+  const handleExportPDF = async () => {
+    if (!contentRef.current || exporting) return;
+
+    setExporting(true);
+    setExportDropdownOpen(false);
+    try {
+      // Dynamic import jsPDF
+      const { jsPDF } = await import('jspdf');
+
+      const canvas = await html2canvas(contentRef.current, {
+        backgroundColor: '#0B1120',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: 1400,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-export-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+            (clonedElement as HTMLElement).style.backgroundColor = '#0B1120';
+            (clonedElement as HTMLElement).style.padding = '24px';
+          }
+        },
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height],
+      });
+
+      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+
+      const date = new Date().toISOString().split('T')[0];
+      pdf.save(`TraderPath_CapitalFlow_${date}.pdf`);
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+      alert('Failed to export PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Send via Email - downloads JPG and sends email
+  const handleSendEmail = async () => {
+    if (!contentRef.current || exporting) return;
+
+    setExporting(true);
+    setExportDropdownOpen(false);
+    try {
+      const canvas = await html2canvas(contentRef.current, {
+        backgroundColor: '#0B1120',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: 1200,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-export-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+          }
+        },
+      });
+
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
+
+      // Download the image first
+      const link = document.createElement('a');
+      const date = new Date().toISOString().split('T')[0];
+      link.download = `TraderPath_CapitalFlow_${date}.jpg`;
+      link.href = imageBase64;
+      link.click();
+
+      // Then send via email
+      const response = await authFetch('/api/reports/email-screenshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: 'CAPITAL_FLOW',
+          interval: 'Daily',
+          screenshot: imageBase64,
+          score: data?.recommendation?.confidence || 0,
+          direction: data?.recommendation?.direction || 'BUY',
+        }),
+      });
+
+      if (response.ok) {
+        setEmailSent(true);
+        setTimeout(() => setEmailSent(false), 3000);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Email send failed:', response.status, errorData);
+        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
+      }
+    } catch (err) {
+      console.error('Failed to send email:', err);
+      alert('Failed to send email. Screenshot was downloaded.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -1366,7 +1471,7 @@ export default function CapitalFlowPage() {
       <GrainOverlay />
       <GradientOrbs />
 
-      <div ref={contentRef} className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      <div ref={contentRef} data-export-container className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* ===== HERO SECTION with Kinetic Typography ===== */}
         <div className="text-center space-y-3 sm:space-y-4 py-4 sm:py-6 mb-8">
           <div className="relative inline-flex items-center gap-2 sm:gap-3 px-5 sm:px-8 py-3 sm:py-4 rounded-full overflow-hidden animate-blur-in group">
@@ -1468,21 +1573,21 @@ export default function CapitalFlowPage() {
               {exportDropdownOpen && (
                 <div className="absolute bottom-full left-0 mb-2 w-48 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50">
                   <button
-                    onClick={() => handleExport('png')}
+                    onClick={handleExportPNG}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                   >
                     <FileImage className="w-4 h-4 text-emerald-500" />
                     <span>Download PNG</span>
                   </button>
                   <button
-                    onClick={() => handleExport('jpeg')}
+                    onClick={handleExportJPG}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                   >
                     <FileImage className="w-4 h-4 text-blue-500" />
-                    <span>Download JPEG</span>
+                    <span>Download JPG</span>
                   </button>
                   <button
-                    onClick={() => handleExport('pdf')}
+                    onClick={handleExportPDF}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                   >
                     <FileText className="w-4 h-4 text-red-500" />
@@ -1490,11 +1595,15 @@ export default function CapitalFlowPage() {
                   </button>
                   <div className="my-1 border-t border-slate-200 dark:border-slate-700" />
                   <button
-                    onClick={() => handleExport('email')}
+                    onClick={handleSendEmail}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                   >
-                    <Mail className="w-4 h-4 text-teal-500" />
-                    <span>Send via Email</span>
+                    {emailSent ? (
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <Mail className="w-4 h-4 text-teal-500" />
+                    )}
+                    <span>{emailSent ? 'Email Sent!' : 'Send via Email'}</span>
                   </button>
                 </div>
               )}
