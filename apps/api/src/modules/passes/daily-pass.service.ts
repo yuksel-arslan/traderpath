@@ -9,15 +9,15 @@ import { DailyPassType } from '@prisma/client';
 
 // Pass pricing configuration
 export const DAILY_PASS_CONFIG = {
-  CAPITAL_FLOW_L4: {
+  CAPITAL_FLOW_L3: {
     cost: 25,
     maxUsage: 1, // Unlimited access for the day (no per-usage limit)
-    description: 'Capital Flow Layer 4 - AI Recommendations',
+    description: 'Layer 3 - Sector Activity',
   },
   ASSET_ANALYSIS: {
     cost: 100,
     maxUsage: 10, // Max 10 analyses per day
-    description: 'Asset Analysis - 7-Step/MLIS Pro',
+    description: 'Layer 4 - Asset Analysis (7-Step/MLIS Pro)',
   },
 } as const;
 
@@ -259,7 +259,7 @@ class DailyPassService {
       };
     }
 
-    // For Capital Flow L4, no usage limit
+    // For Capital Flow L3, no usage limit
     return { success: true };
   }
 
@@ -267,15 +267,15 @@ class DailyPassService {
    * Get user's active passes
    */
   async getActivePasses(userId: string): Promise<{
-    capitalFlowL4: PassCheckResult;
+    capitalFlowL3: PassCheckResult;
     assetAnalysis: PassCheckResult;
   }> {
-    const [capitalFlowL4, assetAnalysis] = await Promise.all([
-      this.checkPass(userId, 'CAPITAL_FLOW_L4'),
+    const [capitalFlowL3, assetAnalysis] = await Promise.all([
+      this.checkPass(userId, 'CAPITAL_FLOW_L3'),
       this.checkPass(userId, 'ASSET_ANALYSIS'),
     ]);
 
-    return { capitalFlowL4, assetAnalysis };
+    return { capitalFlowL3, assetAnalysis };
   }
 
   /**

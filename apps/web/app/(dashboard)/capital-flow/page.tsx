@@ -990,40 +990,75 @@ export default function CapitalFlowPage() {
   const [correlationsExpanded, setCorrelationsExpanded] = useState(false);
   const [opportunitiesExpanded, setOpportunitiesExpanded] = useState(false);
 
-  // Layer 4 unlock state (25 credits per day via Daily Pass)
+  // Layer 3 unlock state (25 credits per day via Daily Pass)
+  const [layer3Unlocked, setLayer3Unlocked] = useState(false);
+  const [unlockingLayer3, setUnlockingLayer3] = useState(false);
+
+  // Layer 4 unlock state (100 credits per day via Daily Pass - same as Asset Analysis)
   const [layer4Unlocked, setLayer4Unlocked] = useState(false);
   const [unlockingLayer4, setUnlockingLayer4] = useState(false);
 
-  // Check if Layer 4 is unlocked via Daily Pass API
+  // Check if Layers 3 and 4 are unlocked via Daily Pass API
   useEffect(() => {
-    const checkLayer4Pass = async () => {
+    const checkPasses = async () => {
       try {
-        const response = await authFetch('/api/passes/check/CAPITAL_FLOW_L4');
-        const result = await response.json();
-        if (result.success && result.data?.hasPass && result.data?.canUse) {
+        // Check Layer 3 (Sector Activity)
+        const layer3Response = await authFetch('/api/passes/check/CAPITAL_FLOW_L3');
+        const layer3Result = await layer3Response.json();
+        if (layer3Result.success && layer3Result.data?.hasPass && layer3Result.data?.canUse) {
+          setLayer3Unlocked(true);
+        }
+
+        // Check Layer 4 (Asset Analysis)
+        const layer4Response = await authFetch('/api/passes/check/ASSET_ANALYSIS');
+        const layer4Result = await layer4Response.json();
+        if (layer4Result.success && layer4Result.data?.hasPass && layer4Result.data?.canUse) {
           setLayer4Unlocked(true);
         }
       } catch (err) {
-        console.error('Failed to check Layer 4 pass:', err);
+        console.error('Failed to check passes:', err);
       }
     };
-    checkLayer4Pass();
+    checkPasses();
   }, []);
 
-  // Unlock Layer 4 with 25 credits via Daily Pass
+  // Unlock Layer 3 with 25 credits via Daily Pass
+  const unlockLayer3 = async () => {
+    setUnlockingLayer3(true);
+    try {
+      const response = await authFetch('/api/passes/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passType: 'CAPITAL_FLOW_L3' }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setLayer3Unlocked(true);
+      } else {
+        alert(result.error?.message || 'Insufficient credits. You need 25 credits to unlock Sector Activity.');
+      }
+    } catch (err) {
+      console.error('Failed to unlock Layer 3:', err);
+      alert('Failed to unlock. Please try again.');
+    } finally {
+      setUnlockingLayer3(false);
+    }
+  };
+
+  // Unlock Layer 4 with 100 credits via Daily Pass
   const unlockLayer4 = async () => {
     setUnlockingLayer4(true);
     try {
       const response = await authFetch('/api/passes/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passType: 'CAPITAL_FLOW_L4' }),
+        body: JSON.stringify({ passType: 'ASSET_ANALYSIS' }),
       });
       const result = await response.json();
       if (result.success) {
         setLayer4Unlocked(true);
       } else {
-        alert(result.error?.message || 'Insufficient credits. You need 25 credits to unlock AI Recommendations.');
+        alert(result.error?.message || 'Insufficient credits. You need 100 credits to unlock AI Recommendations.');
       }
     } catch (err) {
       console.error('Failed to unlock Layer 4:', err);
@@ -1364,7 +1399,7 @@ export default function CapitalFlowPage() {
               );
             })()}
 
-            {/* Layer 4: Recommendation - Locked until 25 credits paid */}
+            {/* Layer 4: Recommendation - Locked until 100 credits paid */}
             <LayerSummaryBox
               layerNum={4}
               title="Recommendation"
@@ -1383,7 +1418,7 @@ export default function CapitalFlowPage() {
               }
               details={layer4Unlocked
                 ? `Phase: ${data.recommendation.phase.toUpperCase()} • Confidence: ${data.recommendation.confidence}%`
-                : '25 credits to unlock • Valid 24h'
+                : '100 credits to unlock • Valid 24h'
               }
               icon={Target}
               color="amber"
@@ -1538,7 +1573,7 @@ export default function CapitalFlowPage() {
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">AI Recommendations</h3>
                     {!layer4Unlocked && (
                       <span className="ml-auto px-2 py-0.5 text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">
-                        25 Credits
+                        100 Credits
                       </span>
                     )}
                   </div>
@@ -1591,7 +1626,7 @@ export default function CapitalFlowPage() {
                             ) : (
                               <>
                                 <Coins className="w-4 h-4" />
-                                Unlock for 25 Credits
+                                Unlock for 100 Credits
                               </>
                             )}
                           </button>

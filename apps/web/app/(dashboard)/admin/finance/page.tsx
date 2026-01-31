@@ -722,15 +722,15 @@ export default function FinancePage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Capital Flow L4 */}
+              {/* Layer 3 - Sector Activity */}
               <div className="bg-card border rounded-lg p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <Globe className="w-5 h-5 text-blue-500" />
+                  <div className="p-2 bg-purple-500/10 rounded-lg">
+                    <Globe className="w-5 h-5 text-purple-500" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">Capital Flow Layer 4</p>
-                    <p className="text-xs text-muted-foreground">AI Recommendations</p>
+                    <p className="font-medium">Layer 3 - Sector Activity</p>
+                    <p className="text-xs text-muted-foreground">Sector drill-down access</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
@@ -738,8 +738,8 @@ export default function FinancePage() {
                     <input
                       type="number"
                       min="0"
-                      value={editingCosts.creditCostCapitalFlowL4Daily ?? 25}
-                      onChange={(e) => setEditingCosts({ ...editingCosts, creditCostCapitalFlowL4Daily: parseInt(e.target.value) || 0 })}
+                      value={editingCosts.creditCostCapitalFlowL3Daily ?? 25}
+                      onChange={(e) => setEditingCosts({ ...editingCosts, creditCostCapitalFlowL3Daily: parseInt(e.target.value) || 0 })}
                       className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
                     />
                     <span className="text-sm text-muted-foreground">credits/day</span>
@@ -748,15 +748,15 @@ export default function FinancePage() {
                 </div>
               </div>
 
-              {/* Asset Analysis */}
+              {/* Layer 4 - Asset Analysis */}
               <div className="bg-card border rounded-lg p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-violet-500/10 rounded-lg">
-                    <Target className="w-5 h-5 text-violet-500" />
+                  <div className="p-2 bg-amber-500/10 rounded-lg">
+                    <Target className="w-5 h-5 text-amber-500" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">Asset Analysis</p>
-                    <p className="text-xs text-muted-foreground">7-Step / MLIS Pro</p>
+                    <p className="font-medium">Layer 4 - Asset Analysis</p>
+                    <p className="text-xs text-muted-foreground">7-Step / MLIS Pro (AI Recommendations)</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
@@ -780,19 +780,19 @@ export default function FinancePage() {
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-500" />
-                    <span className="text-muted-foreground">L4:</span>
-                    <span className="font-mono font-medium">{editingCosts.creditCostCapitalFlowL4Daily ?? 25} cr/day</span>
+                    <div className="w-2 h-2 rounded-full bg-purple-500" />
+                    <span className="text-muted-foreground">L3 (Sectors):</span>
+                    <span className="font-mono font-medium">{editingCosts.creditCostCapitalFlowL3Daily ?? 25} cr/day</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-violet-500" />
-                    <span className="text-muted-foreground">Analysis:</span>
+                    <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    <span className="text-muted-foreground">L4 (Analysis):</span>
                     <span className="font-mono font-medium">{editingCosts.creditCostAssetAnalysisDaily ?? 100} cr/day</span>
                   </div>
                 </div>
                 <div className="text-muted-foreground">
                   Total daily max: <span className="font-mono font-medium text-foreground">
-                    {(editingCosts.creditCostCapitalFlowL4Daily ?? 25) + (editingCosts.creditCostAssetAnalysisDaily ?? 100)} credits
+                    {(editingCosts.creditCostCapitalFlowL3Daily ?? 25) + (editingCosts.creditCostAssetAnalysisDaily ?? 100)} credits
                   </span>
                 </div>
               </div>

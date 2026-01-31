@@ -941,6 +941,6 @@ model DailyPass {
 }
 
 enum DailyPassType {
-  CAPITAL_FLOW_L4    // 25 credits/day - AI Recommendations
-  ASSET_ANALYSIS     // 100 credits/day - 7-Step/MLIS (max 20)
+  CAPITAL_FLOW_L3    // 25 credits/day - Sector Activity (Layer 3)
+  ASSET_ANALYSIS     // 100 credits/day - Asset Analysis (Layer 4, max 10)
 }
