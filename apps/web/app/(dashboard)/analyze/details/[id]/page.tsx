@@ -666,7 +666,7 @@ export default function AnalysisDetailsPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 justify-between sm:justify-end">
+            <div className="flex items-center gap-2 sm:gap-3 justify-between sm:justify-end flex-wrap">
               {/* Show verdict badge - AVOID/WAIT takes priority over direction */}
               <div className={cn(
                 "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold",
@@ -688,6 +688,79 @@ export default function AnalysisDetailsPage() {
                  (isLong ? 'BULLISH' : 'BEARISH')}
               </div>
               <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{score}/100</div>
+
+              {/* Export Dropdown - Always visible */}
+              <div className="relative">
+                <button
+                  onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                  disabled={exporting}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition disabled:opacity-50",
+                    emailSent
+                      ? "bg-green-500 text-white"
+                      : "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white"
+                  )}
+                >
+                  {exporting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : emailSent ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  <span className="hidden sm:inline">{exporting ? 'Exporting...' : emailSent ? 'Sent!' : 'Export'}</span>
+                  <ChevronDown className={cn("w-3 h-3 transition-transform", exportDropdownOpen && "rotate-180")} />
+                </button>
+
+                {exportDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setExportDropdownOpen(false)} />
+                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 z-50 overflow-hidden">
+                      <button
+                        onClick={handleExportPNG}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                      >
+                        <Image className="w-4 h-4 text-teal-500" />
+                        <div>
+                          <div>Download PNG</div>
+                          <div className="text-xs text-gray-400">High Quality</div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={handleExportJPG}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                      >
+                        <Image className="w-4 h-4 text-blue-500" />
+                        <div>
+                          <div>Download JPG</div>
+                          <div className="text-xs text-gray-400">Smaller Size</div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={handleExportPDF}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                      >
+                        <FileText className="w-4 h-4 text-red-500" />
+                        <div>
+                          <div>Download PDF</div>
+                          <div className="text-xs text-gray-400">Full Report</div>
+                        </div>
+                      </button>
+                      <div className="border-t border-gray-200 dark:border-slate-700" />
+                      <button
+                        onClick={handleSendEmail}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                      >
+                        <Mail className="w-4 h-4 text-purple-500" />
+                        <div>
+                          <div>Send via Email</div>
+                          <div className="text-xs text-gray-400">Share Report</div>
+                        </div>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1003,83 +1076,7 @@ export default function AnalysisDetailsPage() {
           {/* Trade Plan Chart - Only for Classic (MLIS doesn't have trade plan) */}
           {!isMLIS && entryPrice && (
             <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-gray-900 dark:text-white">Trade Plan Chart</h3>
-                <div className="flex items-center gap-2">
-                  {/* Export Dropdown */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-                      disabled={exporting}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition disabled:opacity-50",
-                        emailSent
-                          ? "bg-green-500 text-white"
-                          : "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white"
-                      )}
-                    >
-                      {exporting ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : emailSent ? (
-                        <Check className="w-4 h-4" />
-                      ) : (
-                        <Download className="w-4 h-4" />
-                      )}
-                      <span className="hidden sm:inline">{exporting ? 'Exporting...' : emailSent ? 'Sent!' : 'Export'}</span>
-                      <ChevronDown className={cn("w-3 h-3 transition-transform", exportDropdownOpen && "rotate-180")} />
-                    </button>
-
-                    {exportDropdownOpen && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setExportDropdownOpen(false)} />
-                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 z-50 overflow-hidden">
-                          <button
-                            onClick={handleExportPNG}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-                          >
-                            <Image className="w-4 h-4 text-teal-500" />
-                            <div>
-                              <div>Download PNG</div>
-                              <div className="text-xs text-gray-400">High Quality</div>
-                            </div>
-                          </button>
-                          <button
-                            onClick={handleExportJPG}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-                          >
-                            <Image className="w-4 h-4 text-blue-500" />
-                            <div>
-                              <div>Download JPG</div>
-                              <div className="text-xs text-gray-400">Smaller Size</div>
-                            </div>
-                          </button>
-                          <button
-                            onClick={handleExportPDF}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-                          >
-                            <FileText className="w-4 h-4 text-red-500" />
-                            <div>
-                              <div>Download PDF</div>
-                              <div className="text-xs text-gray-400">Full Report</div>
-                            </div>
-                          </button>
-                          <div className="border-t border-gray-200 dark:border-slate-700" />
-                          <button
-                            onClick={handleSendEmail}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-                          >
-                            <Mail className="w-4 h-4 text-purple-500" />
-                            <div>
-                              <div>Send via Email</div>
-                              <div className="text-xs text-gray-400">Share Report</div>
-                            </div>
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Trade Plan Chart</h3>
               <div ref={chartRef} id="trade-plan-chart-visible" className="trade-plan-chart-container bg-white dark:bg-slate-800 rounded-xl p-2">
                 <TradePlanChart
                   symbol={analysis.symbol}

@@ -25,7 +25,6 @@ import {
   Calendar,
   Bot,
   Globe,
-  Crown,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -53,7 +52,7 @@ const dropdownNav = [
     icon: TrendingUp,
     items: [
       { name: 'New Analysis', href: '/analyze', icon: TrendingUp },
-      { name: 'Top Coins', href: '/top-coins', icon: Crown },
+      { name: 'Analysis Reports', href: '/reports', icon: FileText },
     ],
   },
   {
@@ -68,7 +67,6 @@ const dropdownNav = [
     name: 'Tools',
     icon: Settings,
     items: [
-      { name: 'History', href: '/reports', icon: FileText },
       { name: 'Scheduled', href: '/scheduled', icon: Calendar },
       { name: 'Alerts', href: '/alerts', icon: Bell },
     ],
@@ -84,10 +82,9 @@ const endNav = [
 const allNavItems = [
   ...directNav,
   { name: 'New Analysis', href: '/analyze', icon: TrendingUp },
-  { name: 'Top Coins', href: '/top-coins', icon: Crown },
+  { name: 'Analysis Reports', href: '/reports', icon: FileText },
   { name: 'Concierge', href: '/concierge', icon: Bot },
   { name: 'AI Experts', href: '/ai-expert', icon: Brain },
-  { name: 'History', href: '/reports', icon: FileText },
   { name: 'Scheduled', href: '/scheduled', icon: Calendar },
   { name: 'Alerts', href: '/alerts', icon: Bell },
   ...endNav,

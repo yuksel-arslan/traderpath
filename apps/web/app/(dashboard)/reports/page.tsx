@@ -24,17 +24,19 @@ import {
   Loader2,
   ChevronDown,
   Layers,
+  Globe,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
 
 // Trade type definitions
-type TradeType = 'scalping' | 'dayTrade' | 'swing';
+type TradeType = 'scalping' | 'dayTrade' | 'swing' | 'capital_flow';
 
 const TRADE_TYPE_CONFIG: Record<TradeType, { label: string; icon: typeof Zap; color: string }> = {
   scalping: { label: 'Scalping', icon: Zap, color: 'teal' },
   dayTrade: { label: 'Day Trade', icon: Activity, color: 'slate' },
   swing: { label: 'Swing', icon: Calendar, color: 'amber' },
+  capital_flow: { label: 'Capital Flow', icon: Globe, color: 'blue' },
 };
 
 // Verdict configuration for badges
@@ -714,10 +716,18 @@ Could you share your risk assessment and recommendations based on this analysis?
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 {/* Report Info */}
                 <div className="flex items-center gap-4 min-w-0">
-                  <CoinIcon symbol={report.symbol} size={48} className="shrink-0" />
+                  {report.symbol === 'CAPITAL_FLOW' ? (
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-teal-500 flex items-center justify-center shrink-0">
+                      <Globe className="w-6 h-6 text-white" />
+                    </div>
+                  ) : (
+                    <CoinIcon symbol={report.symbol} size={48} className="shrink-0" />
+                  )}
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-lg">{report.symbol}</h3>
+                      <h3 className="font-semibold text-lg">
+                        {report.symbol === 'CAPITAL_FLOW' ? 'Capital Flow Report' : report.symbol}
+                      </h3>
                       {report.direction && (
                         <span className={cn(
                           "px-2 py-0.5 rounded text-xs font-medium",
@@ -755,7 +765,8 @@ Could you share your risk assessment and recommendations based on this analysis?
                             "px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1",
                             config.color === 'teal' && "bg-teal-500/10 text-teal-600 dark:text-teal-400",
                             config.color === 'slate' && "bg-slate-500/10 text-slate-600 dark:text-slate-400",
-                            config.color === 'amber' && "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                            config.color === 'amber' && "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+                            config.color === 'blue' && "bg-blue-500/10 text-blue-600 dark:text-blue-400"
                           )}>
                             <Icon className="w-3 h-3" />
                             {config.label}
@@ -906,7 +917,11 @@ Could you share your risk assessment and recommendations based on this analysis?
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-center sm:justify-end">
                   {/* Details Button */}
                   <button
-                    onClick={() => router.push(`/analyze/details/${report.id}`)}
+                    onClick={() => router.push(
+                      report.symbol === 'CAPITAL_FLOW'
+                        ? `/reports/capital-flow/${report.id}`
+                        : `/analyze/details/${report.id}`
+                    )}
                     className="flex items-center gap-2 px-3 py-2 rounded-lg bg-teal-100 dark:bg-teal-500/10 hover:bg-teal-200 dark:hover:bg-teal-500/20 text-teal-600 dark:text-teal-500 transition"
                     title="View Details"
                   >
