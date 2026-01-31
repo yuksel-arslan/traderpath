@@ -673,13 +673,13 @@ function generateRecommendation(
 }
 
 /**
- * Generate SELL recommendation (markets with outflow)
+ * Generate SELL recommendation (markets with outflow or weakest performance)
  */
 function generateSellRecommendation(
   markets: MarketFlow[],
   bias: LiquidityBias
 ): FlowRecommendation | null {
-  // Sort markets by outflow strength (lowest/most negative first for SELL)
+  // Sort markets by flow strength (lowest/most negative first for SELL)
   const sortedMarkets = [...markets].sort((a, b) => {
     const scoreA = a.flow7d * 0.7 + a.flowVelocity * 0.3;
     const scoreB = b.flow7d * 0.7 + b.flowVelocity * 0.3;
@@ -687,61 +687,72 @@ function generateSellRecommendation(
   });
 
   const worstMarket = sortedMarkets[0];
+  const bestMarket = sortedMarkets[sortedMarkets.length - 1];
 
-  // Only recommend SELL if there's actual outflow
-  if (worstMarket.flow7d >= 0 && worstMarket.flowVelocity >= 0) {
-    return null; // No significant outflow detected
-  }
+  // Calculate relative weakness (difference from best performer)
+  const relativeWeakness = bestMarket.flow7d - worstMarket.flow7d;
 
   // In risk-off, SELL risky assets
   if (bias === 'risk_off') {
     const cryptoMarket = markets.find(m => m.market === 'crypto');
     const stocksMarket = markets.find(m => m.market === 'stocks');
 
-    // SELL the riskier asset with more outflow
+    // SELL the riskier asset with worse performance
     const riskyMarket = (cryptoMarket?.flow7d || 0) < (stocksMarket?.flow7d || 0)
       ? cryptoMarket || worstMarket
       : stocksMarket || worstMarket;
 
-    if (riskyMarket && riskyMarket.flow7d < -2) {
+    if (riskyMarket) {
       return {
         primaryMarket: riskyMarket.market,
         phase: riskyMarket.phase,
-        action: 'analyze',
+        action: riskyMarket.flow7d < 0 ? 'analyze' : 'wait',
         direction: 'SELL',
-        reason: `Risk-off environment. ${MARKET_CONFIG[riskyMarket.market].name} showing outflows. Consider short positions or exits.`,
-        sectors: riskyMarket.sectors?.filter(s => s.trending === 'down').slice(0, 3).map(s => s.name),
-        confidence: 75,
+        reason: `Risk-off environment. ${MARKET_CONFIG[riskyMarket.market].name} underperforming (${riskyMarket.flow7d >= 0 ? '+' : ''}${riskyMarket.flow7d.toFixed(1)}%). Consider reducing exposure or short positions.`,
+        sectors: riskyMarket.sectors?.filter(s => s.trending === 'down' || s.flow7d < (riskyMarket.flow7d / 2)).slice(0, 3).map(s => s.name),
+        confidence: riskyMarket.flow7d < 0 ? 75 : 60,
       };
     }
   }
 
-  // Determine SELL action based on outflow severity
+  // Determine SELL action based on absolute outflow or relative weakness
   let action: 'analyze' | 'wait' | 'avoid';
   let reason: string;
   let confidence: number;
 
-  const outflowStrength = Math.abs(worstMarket.flow7d);
-
-  if (worstMarket.phase === 'exit' || worstMarket.rotationSignal === 'exiting') {
-    action = 'analyze';
-    reason = `${MARKET_CONFIG[worstMarket.market].name} experiencing strong outflows (${worstMarket.flow7d.toFixed(1)}%). Look for short opportunities.`;
-    confidence = 80;
-  } else if (outflowStrength > 5) {
-    action = 'analyze';
-    reason = `${MARKET_CONFIG[worstMarket.market].name} in significant decline. Consider short positions on weak sectors.`;
-    confidence = 75;
-  } else if (outflowStrength > 2) {
+  if (worstMarket.flow7d < 0) {
+    // Actual outflow - stronger signal
+    if (worstMarket.phase === 'exit' || worstMarket.rotationSignal === 'exiting') {
+      action = 'analyze';
+      reason = `${MARKET_CONFIG[worstMarket.market].name} experiencing outflows (${worstMarket.flow7d.toFixed(1)}%). Capital rotating out. Look for short opportunities.`;
+      confidence = 80;
+    } else if (worstMarket.flow7d < -5) {
+      action = 'analyze';
+      reason = `${MARKET_CONFIG[worstMarket.market].name} in significant decline (${worstMarket.flow7d.toFixed(1)}%). Consider short positions on weak sectors.`;
+      confidence = 75;
+    } else {
+      action = 'wait';
+      reason = `${MARKET_CONFIG[worstMarket.market].name} showing mild outflows (${worstMarket.flow7d.toFixed(1)}%). Monitor for stronger short signals.`;
+      confidence = 60;
+    }
+  } else if (relativeWeakness > 5) {
+    // No absolute outflow but significantly weaker than best performer
     action = 'wait';
-    reason = `${MARKET_CONFIG[worstMarket.market].name} showing mild outflows. Monitor for stronger signals.`;
-    confidence = 60;
+    reason = `${MARKET_CONFIG[worstMarket.market].name} underperforming vs ${MARKET_CONFIG[bestMarket.market].name} (${relativeWeakness.toFixed(1)}% gap). Watch for rotation out.`;
+    confidence = 55;
+  } else if (worstMarket.flowVelocity < -1) {
+    // Slowing momentum - potential reversal
+    action = 'wait';
+    reason = `${MARKET_CONFIG[worstMarket.market].name} momentum slowing (velocity: ${worstMarket.flowVelocity.toFixed(1)}). Early warning for potential outflow.`;
+    confidence = 50;
   } else {
-    return null; // Outflow not significant enough for SELL recommendation
+    // All markets performing similarly - no clear SELL opportunity
+    return null;
   }
 
-  // Get weakest sectors (trending down)
+  // Get weakest sectors (trending down or below market average)
   const weakSectors = worstMarket.sectors
-    ?.filter(s => s.trending === 'down' || s.flow7d < 0)
+    ?.filter(s => s.trending === 'down' || s.flow7d < worstMarket.flow7d)
     .sort((a, b) => a.flow7d - b.flow7d)
     .slice(0, 3)
     .map(s => s.name);
@@ -752,7 +763,7 @@ function generateSellRecommendation(
     action,
     direction: 'SELL',
     reason,
-    sectors: weakSectors,
+    sectors: weakSectors?.length ? weakSectors : undefined,
     confidence,
   };
 }
