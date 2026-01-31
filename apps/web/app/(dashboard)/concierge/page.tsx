@@ -1,8 +1,8 @@
 'use client';
 
 // ===========================================
-// AI Concierge Page - 2026 Design Trends
-// Glassmorphism, Gradient Orbs, Grain Texture
+// AI Concierge Page - Capital Flow Integrated
+// "Where money flows, potential exists"
 // ===========================================
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -15,22 +15,25 @@ import {
   Sparkles,
   TrendingUp,
   TrendingDown,
-  BarChart3,
   Target,
   Zap,
   ArrowRight,
   ExternalLink,
   RefreshCw,
-  Volume2,
-  Clock,
+  Globe,
   Activity,
-  Brain,
-  Shield,
-  LineChart,
+  BarChart3,
+  Layers,
+  ArrowUpRight,
+  ArrowDownRight,
+  Clock,
+  AlertTriangle,
   CheckCircle2,
   Crown,
+  DollarSign,
+  PieChart,
 } from 'lucide-react';
-import { authFetch, getApiUrl } from '@/lib/api';
+import { authFetch } from '@/lib/api';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
@@ -62,82 +65,135 @@ interface ChatMessage {
   };
 }
 
-interface MarketData {
-  btcPrice: number;
-  btcChange: number;
-  ethPrice: number;
-  ethChange: number;
-  fearGreed: number;
-  fearGreedLabel: string;
+interface CapitalFlowData {
+  globalLiquidity: {
+    bias: 'risk_on' | 'risk_off' | 'neutral';
+    fedBalanceSheet: { trend: string };
+    dxy: { trend: string; value: number };
+    vix: { value: number; level: string };
+  };
+  marketFlows: Array<{
+    market: string;
+    flow7d: number;
+    flow30d: number;
+    phase: 'early' | 'mid' | 'late' | 'exit';
+    rotationSignal: 'entering' | 'stable' | 'exiting' | null;
+  }>;
+  recommendation: {
+    primaryMarket: string;
+    action: 'analyze' | 'wait' | 'avoid';
+    confidence: number;
+    reasoning: string;
+  };
 }
 
-// Grain Texture Overlay
-function GrainOverlay() {
-  return (
-    <div
-      className="pointer-events-none fixed inset-0 z-50 opacity-[0.02]"
-      style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-        backgroundRepeat: 'repeat',
-      }}
-    />
-  );
-}
+// Layer indicator component
+function LayerBreadcrumb({ activeLayer = 0 }: { activeLayer?: number }) {
+  const layers = [
+    { num: 1, label: 'Global', icon: Globe },
+    { num: 2, label: 'Market', icon: BarChart3 },
+    { num: 3, label: 'Sector', icon: PieChart },
+    { num: 4, label: 'Asset', icon: Target },
+  ];
 
-// Gradient Orbs
-function GradientOrbs() {
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-gradient-to-br from-teal-500/10 dark:from-teal-500/20 to-emerald-500/5 dark:to-emerald-500/10 rounded-full blur-3xl animate-float-slow" />
-      <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] bg-gradient-to-tr from-purple-500/10 dark:from-purple-500/15 to-blue-500/5 dark:to-blue-500/10 rounded-full blur-3xl animate-float-slow" style={{ animationDelay: '-3s' }} />
-      <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] bg-gradient-to-br from-amber-500/5 dark:from-amber-500/10 to-orange-500/5 rounded-full blur-3xl animate-orb-move" />
+    <div className="flex items-center gap-1 text-xs">
+      {layers.map((layer, idx) => (
+        <div key={layer.num} className="flex items-center">
+          <div className={cn(
+            "flex items-center gap-1 px-2 py-1 rounded-lg transition-all",
+            activeLayer >= layer.num
+              ? "bg-teal-100 dark:bg-teal-500/20 text-teal-700 dark:text-teal-400"
+              : "text-slate-400 dark:text-slate-500"
+          )}>
+            <layer.icon className="w-3 h-3" />
+            <span className="font-medium">L{layer.num}</span>
+          </div>
+          {idx < layers.length - 1 && (
+            <ArrowRight className="w-3 h-3 text-slate-300 dark:text-slate-600 mx-0.5" />
+          )}
+        </div>
+      ))}
     </div>
   );
 }
 
-// Quick Command Button
-function QuickCommand({
-  icon: Icon,
-  label,
-  onClick,
-  gradient
+// Flow Direction Indicator
+function FlowIndicator({ flow, label }: { flow: number; label: string }) {
+  const isPositive = flow >= 0;
+  return (
+    <div className="flex items-center gap-2">
+      <div className={cn(
+        "flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold",
+        isPositive
+          ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+          : "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
+      )}>
+        {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+        {isPositive ? '+' : ''}{flow.toFixed(1)}%
+      </div>
+      <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
+    </div>
+  );
+}
+
+// Phase Badge
+function PhaseBadge({ phase }: { phase: string }) {
+  const config: Record<string, { bg: string; text: string; label: string }> = {
+    early: { bg: 'bg-emerald-100 dark:bg-emerald-500/20', text: 'text-emerald-700 dark:text-emerald-400', label: 'EARLY' },
+    mid: { bg: 'bg-amber-100 dark:bg-amber-500/20', text: 'text-amber-700 dark:text-amber-400', label: 'MID' },
+    late: { bg: 'bg-orange-100 dark:bg-orange-500/20', text: 'text-orange-700 dark:text-orange-400', label: 'LATE' },
+    exit: { bg: 'bg-red-100 dark:bg-red-500/20', text: 'text-red-700 dark:text-red-400', label: 'EXIT' },
+  };
+  const c = config[phase] || config.mid;
+  return (
+    <span className={cn("px-2 py-0.5 rounded text-xs font-bold", c.bg, c.text)}>
+      {c.label}
+    </span>
+  );
+}
+
+// Market Flow Card
+function MarketFlowCard({
+  market,
+  flow7d,
+  phase,
+  isRecommended,
+  onClick
 }: {
-  icon: React.ElementType;
-  label: string;
+  market: string;
+  flow7d: number;
+  phase: string;
+  isRecommended: boolean;
   onClick: () => void;
-  gradient: string;
 }) {
+  const marketIcons: Record<string, string> = {
+    crypto: '₿',
+    stocks: '📈',
+    bonds: '📊',
+    metals: '🥇',
+  };
+
   return (
     <button
       onClick={onClick}
       className={cn(
-        "group flex items-center gap-2 px-4 py-2.5 rounded-xl",
-        "bg-gradient-to-r backdrop-blur-sm border border-slate-300 dark:border-white/10 shadow-sm",
-        "hover:scale-[1.02] hover:shadow-lg transition-all duration-200",
-        gradient
+        "relative flex flex-col items-center p-3 rounded-xl border transition-all hover:scale-[1.02]",
+        isRecommended
+          ? "bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-500/10 dark:to-emerald-500/10 border-teal-300 dark:border-teal-500/30 shadow-lg shadow-teal-500/10"
+          : "bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20"
       )}
     >
-      <Icon className="w-4 h-4 text-slate-700 dark:text-white/80 group-hover:text-slate-900 dark:group-hover:text-white" />
-      <span className="text-sm font-semibold text-slate-800 dark:text-white/90 group-hover:text-slate-900 dark:group-hover:text-white">{label}</span>
+      {isRecommended && (
+        <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 flex items-center justify-center">
+          <CheckCircle2 className="w-3 h-3 text-white" />
+        </div>
+      )}
+      <span className="text-2xl mb-1">{marketIcons[market] || '📊'}</span>
+      <span className="text-xs font-bold text-slate-800 dark:text-white uppercase">{market}</span>
+      <FlowIndicator flow={flow7d} label="7d" />
+      <PhaseBadge phase={phase} />
     </button>
-  );
-}
-
-// Stat Card
-function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string; color: string }) {
-  return (
-    <div className={cn(
-      "flex items-center gap-3 px-4 py-3 rounded-xl",
-      "bg-white dark:bg-white/5 backdrop-blur-sm border border-slate-300 dark:border-white/10 shadow-sm"
-    )}>
-      <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shadow-md", color)}>
-        <Icon className="w-5 h-5 text-white" />
-      </div>
-      <div>
-        <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</p>
-        <p className="text-lg font-bold text-slate-800 dark:text-white">{value}</p>
-      </div>
-    </div>
   );
 }
 
@@ -166,6 +222,41 @@ function VerdictBadge({ verdict, score }: { verdict: string; score?: number }) {
   );
 }
 
+// Quick Command Button
+function QuickCommand({
+  icon: Icon,
+  label,
+  onClick,
+  gradient,
+  badge
+}: {
+  icon: React.ElementType;
+  label: string;
+  onClick: () => void;
+  gradient: string;
+  badge?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "group relative flex items-center gap-2 px-3 py-2 rounded-xl",
+        "bg-gradient-to-r backdrop-blur-sm border border-slate-300 dark:border-white/10 shadow-sm",
+        "hover:scale-[1.02] hover:shadow-lg transition-all duration-200",
+        gradient
+      )}
+    >
+      <Icon className="w-4 h-4 text-slate-700 dark:text-white/80" />
+      <span className="text-sm font-semibold text-slate-800 dark:text-white/90">{label}</span>
+      {badge && (
+        <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-white rounded">
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+}
+
 export default function ConciergePage() {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -173,8 +264,8 @@ export default function ConciergePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
-  const [marketData, setMarketData] = useState<MarketData | null>(null);
-  const [showWelcome, setShowWelcome] = useState(true);
+  const [capitalFlow, setCapitalFlow] = useState<CapitalFlowData | null>(null);
+  const [flowLoading, setFlowLoading] = useState(true);
   const [scanInProgress, setScanInProgress] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -182,37 +273,27 @@ export default function ConciergePage() {
   const scanPollRef = useRef<NodeJS.Timeout | null>(null);
   const scanStartTimeRef = useRef<number>(0);
 
-  // Fetch market data
+  // Fetch Capital Flow data
   useEffect(() => {
-    const fetchMarketData = async () => {
+    const fetchCapitalFlow = async () => {
       try {
-        const [btcRes, ethRes, fgRes] = await Promise.all([
-          fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT'),
-          fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT'),
-          fetch('https://api.alternative.me/fng/?limit=1'),
-        ]);
-
-        const [btcData, ethData, fgData] = await Promise.all([
-          btcRes.json(),
-          ethRes.json(),
-          fgRes.json(),
-        ]);
-
-        setMarketData({
-          btcPrice: parseFloat(btcData.lastPrice),
-          btcChange: parseFloat(btcData.priceChangePercent),
-          ethPrice: parseFloat(ethData.lastPrice),
-          ethChange: parseFloat(ethData.priceChangePercent),
-          fearGreed: parseInt(fgData.data?.[0]?.value || '50'),
-          fearGreedLabel: fgData.data?.[0]?.value_classification || 'Neutral',
-        });
+        setFlowLoading(true);
+        const res = await authFetch('/api/capital-flow/summary');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setCapitalFlow(data.data);
+          }
+        }
       } catch (error) {
-        console.error('Failed to fetch market data:', error);
+        console.error('Failed to fetch capital flow:', error);
+      } finally {
+        setFlowLoading(false);
       }
     };
 
-    fetchMarketData();
-    const interval = setInterval(fetchMarketData, 60000);
+    fetchCapitalFlow();
+    const interval = setInterval(fetchCapitalFlow, 300000); // Refresh every 5 minutes
     return () => clearInterval(interval);
   }, []);
 
@@ -280,17 +361,14 @@ export default function ConciergePage() {
     setScanInProgress(true);
     scanStartTimeRef.current = Date.now();
 
-    // Clear any existing poll
     if (scanPollRef.current) {
       clearInterval(scanPollRef.current);
     }
 
-    // Poll every 10 seconds for up to 5 minutes
     scanPollRef.current = setInterval(async () => {
       const elapsedMs = Date.now() - scanStartTimeRef.current;
       const elapsedMinutes = elapsedMs / 60000;
 
-      // Stop polling after 5 minutes
       if (elapsedMinutes > 5) {
         if (scanPollRef.current) {
           clearInterval(scanPollRef.current);
@@ -305,17 +383,14 @@ export default function ConciergePage() {
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.data && data.data.length > 0) {
-            // Check if the scan data is fresh (scanned after we started polling)
             const latestScan = new Date(data.data[0].scannedAt).getTime();
             if (latestScan > scanStartTimeRef.current) {
-              // Scan complete! Stop polling
               if (scanPollRef.current) {
                 clearInterval(scanPollRef.current);
                 scanPollRef.current = null;
               }
               setScanInProgress(false);
 
-              // Add completion message with results
               const topCoins = data.data.slice(0, 5);
               const coinList = topCoins.map((coin: any, i: number) => {
                 const emoji = coin.verdict === 'GO' ? '🟢' : coin.verdict === 'CONDITIONAL_GO' ? '🟡' : '🟠';
@@ -325,11 +400,9 @@ export default function ConciergePage() {
               const completionMessage: ChatMessage = {
                 id: Date.now().toString(),
                 role: 'assistant',
-                content: `✅ **Scan Complete!**\n\n**Top 5 High-Probability Coins:**\n${coinList}\n\n👆 Click the button below to view detailed analysis.`,
+                content: `**Scan Complete!**\n\n**Top 5 High-Probability Coins:**\n${coinList}\n\nClick below to view detailed analysis.`,
                 timestamp: new Date(),
-                data: {
-                  scanComplete: true,
-                },
+                data: { scanComplete: true },
               };
 
               setMessages(prev => [...prev, completionMessage]);
@@ -339,7 +412,7 @@ export default function ConciergePage() {
       } catch (error) {
         console.error('Error polling for scan results:', error);
       }
-    }, 10000); // Poll every 10 seconds
+    }, 10000);
   }, []);
 
   // Send message
@@ -347,7 +420,6 @@ export default function ConciergePage() {
     const messageText = text || input.trim();
     if (!messageText || isLoading) return;
 
-    setShowWelcome(false);
     setInput('');
 
     const userMessage: ChatMessage = {
@@ -390,7 +462,6 @@ export default function ConciergePage() {
         setCredits(data.creditsRemaining);
       }
 
-      // Start polling if a scan was initiated
       if (data.intent === 'TOP_COINS_SCAN' && data.success && data.creditsSpent > 0) {
         startScanPolling();
       }
@@ -418,100 +489,178 @@ export default function ConciergePage() {
     }
   };
 
-  // Quick commands
-  const quickCommands = [
-    { icon: TrendingUp, label: 'Analyze BTC', command: 'Analyze BTC 4h', gradient: 'from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30' },
-    { icon: Activity, label: 'Analyze ETH', command: 'Analyze ETH 4h', gradient: 'from-blue-500/20 to-indigo-500/20 hover:from-blue-500/30 hover:to-indigo-500/30' },
-    { icon: Zap, label: 'BTC MLIS Pro', command: 'BTC mlis pro analysis', gradient: 'from-purple-500/20 to-violet-500/20 hover:from-purple-500/30 hover:to-violet-500/30' },
-    { icon: Target, label: 'Top 5 Coins (300 Cr)', command: 'Give me top 5 highest probability coins', gradient: 'from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30' },
-    { icon: Brain, label: 'Help', command: 'What can you do?', gradient: 'from-pink-500/20 to-rose-500/20 hover:from-pink-500/30 hover:to-rose-500/30' },
-  ];
+  // Quick commands based on Capital Flow recommendation
+  const getSmartCommands = () => {
+    const baseCommands = [
+      { icon: Globe, label: 'Where is money flowing?', command: 'Where is money flowing right now?', gradient: 'from-blue-500/20 to-cyan-500/20 hover:from-blue-500/30 hover:to-cyan-500/30' },
+      { icon: Target, label: 'Best opportunity?', command: 'What is the best trading opportunity right now?', gradient: 'from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30' },
+    ];
+
+    if (capitalFlow?.recommendation?.primaryMarket) {
+      const market = capitalFlow.recommendation.primaryMarket;
+      baseCommands.push({
+        icon: TrendingUp,
+        label: `Analyze ${market.toUpperCase()}`,
+        command: `Analyze the best ${market} asset right now`,
+        gradient: 'from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30',
+      });
+    }
+
+    baseCommands.push({
+      icon: Crown,
+      label: 'Top 5 Coins',
+      command: 'Give me top 5 highest probability coins',
+      gradient: 'from-purple-500/20 to-violet-500/20 hover:from-purple-500/30 hover:to-violet-500/30',
+    });
+
+    return baseCommands;
+  };
+
+  // Get bias icon and color
+  const getBiasDisplay = (bias: string) => {
+    switch (bias) {
+      case 'risk_on':
+        return { icon: TrendingUp, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-500/20', label: 'Risk On' };
+      case 'risk_off':
+        return { icon: TrendingDown, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-500/20', label: 'Risk Off' };
+      default:
+        return { icon: Activity, color: 'text-slate-600 dark:text-slate-400', bg: 'bg-slate-100 dark:bg-slate-500/20', label: 'Neutral' };
+    }
+  };
+
+  const biasDisplay = capitalFlow ? getBiasDisplay(capitalFlow.globalLiquidity.bias) : null;
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <GrainOverlay />
-      <GradientOrbs />
-
-      <div className="relative z-10 max-w-5xl mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-2xl blur-lg opacity-50" />
-              <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-xl">
-                <Bot className="w-7 h-7 text-white" />
+    <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        {/* Header with Capital Flow Context */}
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-2xl blur-lg opacity-50" />
+                <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-xl">
+                  <Bot className="w-7 h-7 text-white" />
+                </div>
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  AI Concierge
+                  <Sparkles className="w-5 h-5 text-amber-500" />
+                </h1>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Capital Flow aware trading assistant
+                </p>
               </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                AI Concierge
-                <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-              </h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Your intelligent trading assistant</p>
+
+            <div className="flex items-center gap-3">
+              <LayerBreadcrumb activeLayer={1} />
+              {credits !== null && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-100 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
+                  <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span className="text-amber-700 dark:text-amber-400 font-semibold text-sm">{credits.toLocaleString()}</span>
+                </div>
+              )}
             </div>
           </div>
 
-          {credits !== null && (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              <Zap className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-              <span className="text-amber-600 dark:text-amber-400 font-semibold">{credits.toLocaleString()}</span>
-              <span className="text-amber-500/60 dark:text-amber-400/60 text-sm">credits</span>
+          {/* Capital Flow Summary Bar */}
+          {!flowLoading && capitalFlow && (
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 shadow-sm">
+              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                {/* Global Liquidity Status */}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className={cn("p-2 rounded-lg", biasDisplay?.bg)}>
+                    {biasDisplay && <biasDisplay.icon className={cn("w-5 h-5", biasDisplay.color)} />}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Global Liquidity</p>
+                    <p className={cn("font-bold", biasDisplay?.color)}>{biasDisplay?.label}</p>
+                  </div>
+                </div>
+
+                <div className="hidden lg:block w-px h-10 bg-slate-200 dark:bg-white/10" />
+
+                {/* Market Flows */}
+                <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {capitalFlow.marketFlows.map((market) => (
+                    <MarketFlowCard
+                      key={market.market}
+                      market={market.market}
+                      flow7d={market.flow7d}
+                      phase={market.phase}
+                      isRecommended={capitalFlow.recommendation.primaryMarket === market.market}
+                      onClick={() => sendMessage(`Analyze ${market.market} market`)}
+                    />
+                  ))}
+                </div>
+
+                <div className="hidden lg:block w-px h-10 bg-slate-200 dark:bg-white/10" />
+
+                {/* Recommendation */}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className={cn(
+                    "p-2 rounded-lg",
+                    capitalFlow.recommendation.action === 'analyze'
+                      ? "bg-emerald-100 dark:bg-emerald-500/20"
+                      : capitalFlow.recommendation.action === 'wait'
+                      ? "bg-amber-100 dark:bg-amber-500/20"
+                      : "bg-red-100 dark:bg-red-500/20"
+                  )}>
+                    {capitalFlow.recommendation.action === 'analyze' ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                    ) : capitalFlow.recommendation.action === 'wait' ? (
+                      <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                    ) : (
+                      <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Recommendation</p>
+                    <p className="font-bold text-slate-800 dark:text-white capitalize">
+                      {capitalFlow.recommendation.action} {capitalFlow.recommendation.primaryMarket.toUpperCase()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {flowLoading && (
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 animate-pulse">
+              <div className="h-16 bg-slate-200 dark:bg-slate-700 rounded-xl" />
             </div>
           )}
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Chat Area */}
-          <div className="lg:col-span-2">
-            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900/50 backdrop-blur-xl border border-slate-300 dark:border-white/10 shadow-xl">
+          <div className="lg:col-span-3">
+            <div className="rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
               {/* Messages */}
-              <div className="h-[500px] overflow-y-auto p-6 space-y-4">
-                {/* Welcome Screen */}
-                {showWelcome && messages.length === 0 && (
+              <div className="h-[450px] overflow-y-auto p-6 space-y-4">
+                {/* Welcome State */}
+                {messages.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-full text-center">
                     <div className="relative mb-6">
                       <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full blur-2xl opacity-30 animate-pulse" />
-                      <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
-                        <Bot className="w-12 h-12 text-white" />
+                      <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
+                        <DollarSign className="w-10 h-10 text-white" />
                       </div>
                     </div>
 
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
-                      Welcome to AI Concierge
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
+                      Follow The Money
                     </h2>
-                    <p className="text-slate-600 dark:text-slate-400 max-w-md mb-8">
-                      Ask me to analyze any coin, check market conditions, or get trading insights.
+                    <p className="text-slate-600 dark:text-slate-400 max-w-md mb-6">
+                      {capitalFlow?.recommendation.reasoning || 'Ask me about market flows, trading opportunities, or analyze any asset.'}
                     </p>
 
-                    {/* Market Overview */}
-                    {marketData && (
-                      <div className="grid grid-cols-3 gap-3 w-full max-w-lg mb-8">
-                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10">
-                          <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">BTC</p>
-                          <p className="text-lg font-bold text-slate-800 dark:text-white">${marketData.btcPrice.toLocaleString()}</p>
-                          <p className={cn("text-sm font-semibold", marketData.btcChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
-                            {marketData.btcChange >= 0 ? '+' : ''}{marketData.btcChange.toFixed(2)}%
-                          </p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10">
-                          <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">ETH</p>
-                          <p className="text-lg font-bold text-slate-800 dark:text-white">${marketData.ethPrice.toLocaleString()}</p>
-                          <p className={cn("text-sm font-semibold", marketData.ethChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
-                            {marketData.ethChange >= 0 ? '+' : ''}{marketData.ethChange.toFixed(2)}%
-                          </p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10">
-                          <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Fear & Greed</p>
-                          <p className="text-lg font-bold text-slate-800 dark:text-white">{marketData.fearGreed}</p>
-                          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{marketData.fearGreedLabel}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Quick Commands */}
+                    {/* Smart Quick Commands */}
                     <div className="flex flex-wrap justify-center gap-2">
-                      {quickCommands.map((cmd, i) => (
+                      {getSmartCommands().map((cmd, i) => (
                         <QuickCommand
                           key={i}
                           icon={cmd.icon}
@@ -537,19 +686,19 @@ export default function ConciergePage() {
                       "max-w-[85%] rounded-2xl px-4 py-3",
                       msg.role === 'user'
                         ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white"
-                        : "bg-white dark:bg-white/10 backdrop-blur-sm border border-slate-300 dark:border-white/10 shadow-sm"
+                        : "bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10"
                     )}>
                       {msg.role === 'assistant' && (
                         <div className="flex items-center gap-2 mb-2">
-                          <Bot className="w-4 h-4 text-teal-700 dark:text-teal-400" />
-                          <span className="text-xs font-semibold text-teal-700 dark:text-teal-400">AI Concierge</span>
+                          <Bot className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                          <span className="text-xs font-semibold text-teal-600 dark:text-teal-400">AI Concierge</span>
                         </div>
                       )}
                       <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-200">{msg.content}</p>
 
                       {/* Verdict Card */}
                       {msg.data?.verdict && (
-                        <div className="mt-4 p-4 rounded-xl bg-slate-100 dark:bg-black/20 border border-slate-300 dark:border-white/10">
+                        <div className="mt-4 p-4 rounded-xl bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10">
                           <div className="flex items-center justify-between mb-3">
                             <VerdictBadge verdict={msg.data.verdict} score={msg.data.score} />
                             {msg.data.direction && (
@@ -567,7 +716,7 @@ export default function ConciergePage() {
                           {msg.data.analysisId && (
                             <Link
                               href={`/analyze/details/${msg.data.analysisId}`}
-                              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-teal-100 hover:bg-teal-200 dark:bg-teal-500/10 dark:hover:bg-teal-500/20 text-teal-700 dark:text-white font-semibold transition-colors border border-teal-300 dark:border-teal-500/20"
+                              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-teal-100 hover:bg-teal-200 dark:bg-teal-500/10 dark:hover:bg-teal-500/20 text-teal-700 dark:text-teal-400 font-semibold transition-colors border border-teal-200 dark:border-teal-500/20"
                             >
                               <ExternalLink className="w-4 h-4" />
                               View Full Analysis
@@ -578,7 +727,7 @@ export default function ConciergePage() {
 
                       {/* Chart */}
                       {msg.data?.chartData && msg.data?.tradePlan && (
-                        <div className="mt-4 rounded-xl overflow-hidden bg-slate-200/50 dark:bg-black/20">
+                        <div className="mt-4 rounded-xl overflow-hidden bg-slate-50 dark:bg-black/20">
                           <TradePlanChart
                             symbol="Analysis"
                             direction={(msg.data.direction?.toLowerCase() || 'long') as 'long' | 'short'}
@@ -595,15 +744,15 @@ export default function ConciergePage() {
                         </div>
                       )}
 
-                      {/* Scan Complete - View Results Button */}
+                      {/* Scan Complete Button */}
                       {msg.data?.scanComplete && (
                         <div className="mt-4">
                           <button
-                            onClick={() => router.push('/analyze')}
-                            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold transition-all shadow-lg hover:shadow-amber-500/30"
+                            onClick={() => router.push('/top-coins')}
+                            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold transition-all shadow-lg"
                           >
                             <Crown className="w-5 h-5" />
-                            View Top 5 Coins on Analyze Page
+                            View All Top Coins
                             <ArrowRight className="w-4 h-4" />
                           </button>
                         </div>
@@ -615,14 +764,14 @@ export default function ConciergePage() {
                 {/* Loading */}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-white dark:bg-white/10 backdrop-blur-sm border border-slate-300 dark:border-white/10 rounded-2xl px-4 py-3 shadow-sm">
+                    <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="flex gap-1">
-                          <div className="w-2 h-2 rounded-full bg-teal-600 dark:bg-teal-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-2 h-2 rounded-full bg-teal-600 dark:bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-2 h-2 rounded-full bg-teal-600 dark:bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                          <div className="w-2 h-2 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
-                        <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Thinking...</span>
+                        <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Analyzing flows...</span>
                       </div>
                     </div>
                   </div>
@@ -631,12 +780,12 @@ export default function ConciergePage() {
                 {/* Scan in Progress */}
                 {scanInProgress && !isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 backdrop-blur-sm border border-amber-200 dark:border-amber-500/20 rounded-2xl px-4 py-3 shadow-sm">
+                    <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl px-4 py-3">
                       <div className="flex items-center gap-3">
                         <RefreshCw className="w-4 h-4 text-amber-600 dark:text-amber-400 animate-spin" />
                         <div>
-                          <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Scanning top 30 coins...</span>
-                          <p className="text-xs text-amber-600/70 dark:text-amber-400/70 mt-0.5">Results will appear automatically when ready</p>
+                          <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Scanning markets...</span>
+                          <p className="text-xs text-amber-600/70 dark:text-amber-400/70">Results will appear automatically</p>
                         </div>
                       </div>
                     </div>
@@ -647,15 +796,14 @@ export default function ConciergePage() {
               </div>
 
               {/* Input Area */}
-              <div className="p-4 border-t border-slate-300 dark:border-white/10 bg-slate-100/80 dark:bg-slate-900/50">
-                {/* Quick Commands (shown after first message) */}
-                {!showWelcome && messages.length > 0 && (
+              <div className="p-4 border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/30">
+                {messages.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
-                    {quickCommands.slice(0, 3).map((cmd, i) => (
+                    {getSmartCommands().slice(0, 3).map((cmd, i) => (
                       <button
                         key={i}
                         onClick={() => sendMessage(cmd.command)}
-                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-300 dark:border-white/10 transition-colors shadow-sm"
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/10 transition-colors"
                       >
                         {cmd.label}
                       </button>
@@ -674,7 +822,7 @@ export default function ConciergePage() {
                       "p-3 rounded-xl transition-all border",
                       isListening
                         ? "bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse border-red-400"
-                        : "bg-white dark:bg-white/10 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/20 hover:text-slate-800 dark:hover:text-white border-slate-300 dark:border-white/10"
+                        : "bg-white dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/10 border-slate-200 dark:border-white/10"
                     )}
                   >
                     {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
@@ -685,8 +833,8 @@ export default function ConciergePage() {
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Ask me anything about trading..."
-                    className="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 text-slate-800 dark:text-white placeholder-slate-500 dark:placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition-colors shadow-sm"
+                    placeholder="Ask about market flows, opportunities, or analyze assets..."
+                    className="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-colors"
                     disabled={isLoading}
                   />
 
@@ -697,7 +845,7 @@ export default function ConciergePage() {
                       "p-3 rounded-xl transition-all",
                       input.trim() && !isLoading
                         ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/30 hover:shadow-xl"
-                        : "bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-transparent"
+                        : "bg-slate-200 dark:bg-white/10 text-slate-400 cursor-not-allowed"
                     )}
                   >
                     <Send className="w-5 h-5" />
@@ -709,66 +857,72 @@ export default function ConciergePage() {
 
           {/* Sidebar */}
           <div className="space-y-4">
-            {/* Features Card */}
-            <div className="rounded-2xl bg-white dark:bg-slate-900/50 backdrop-blur-xl border border-slate-300 dark:border-white/10 p-5 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                What I Can Do
+            {/* Capital Flow Link */}
+            <Link
+              href="/capital-flow"
+              className="block p-4 rounded-2xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-500/10 dark:to-emerald-500/10 border border-teal-200 dark:border-teal-500/20 hover:border-teal-300 dark:hover:border-teal-500/30 transition-all group"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-lg">
+                  <Layers className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-800 dark:text-white">Capital Flow Radar</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">See full 4-layer analysis</p>
+                </div>
+              </div>
+              <div className="flex items-center text-teal-600 dark:text-teal-400 text-sm font-medium group-hover:translate-x-1 transition-transform">
+                Open Radar <ArrowRight className="w-4 h-4 ml-1" />
+              </div>
+            </Link>
+
+            {/* Flow Philosophy */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/10">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
+                <Globe className="w-4 h-4 text-teal-500" />
+                Follow The Money
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+                <p><span className="font-semibold text-teal-600 dark:text-teal-400">L1:</span> Global Liquidity (Fed, DXY, VIX)</p>
+                <p><span className="font-semibold text-teal-600 dark:text-teal-400">L2:</span> Market Flows (Crypto, Stocks...)</p>
+                <p><span className="font-semibold text-teal-600 dark:text-teal-400">L3:</span> Sector Drill-Down</p>
+                <p><span className="font-semibold text-teal-600 dark:text-teal-400">L4:</span> Asset Analysis</p>
+              </div>
+            </div>
+
+            {/* Phase Legend */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/10">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-3">Market Phases</h3>
+              <div className="space-y-2">
                 {[
-                  { icon: BarChart3, label: '7-Step Analysis', desc: 'Full technical analysis' },
-                  { icon: Target, label: 'Trade Plans', desc: 'Entry, SL, TP levels' },
-                  { icon: Brain, label: 'AI Experts', desc: '4 specialized experts' },
-                  { icon: Shield, label: 'Risk Assessment', desc: 'Safety checks' },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors border border-slate-200 dark:border-transparent">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500/30 to-emerald-500/30 dark:from-teal-500/20 dark:to-emerald-500/20 flex items-center justify-center">
-                      <item.icon className="w-5 h-5 text-teal-700 dark:text-teal-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800 dark:text-white">{item.label}</p>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">{item.desc}</p>
+                  { phase: 'early', label: 'EARLY', desc: 'Best entry', color: 'text-emerald-600 dark:text-emerald-400' },
+                  { phase: 'mid', label: 'MID', desc: 'Caution', color: 'text-amber-600 dark:text-amber-400' },
+                  { phase: 'late', label: 'LATE', desc: 'No entry', color: 'text-orange-600 dark:text-orange-400' },
+                  { phase: 'exit', label: 'EXIT', desc: 'Avoid', color: 'text-red-600 dark:text-red-400' },
+                ].map((item) => (
+                  <div key={item.phase} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <PhaseBadge phase={item.phase} />
+                      <span className="text-xs text-slate-600 dark:text-slate-400">{item.desc}</span>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Example Prompts */}
-            <div className="rounded-2xl bg-white dark:bg-slate-900/50 backdrop-blur-xl border border-slate-300 dark:border-white/10 p-5 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Try Asking</h3>
-              <div className="space-y-2">
-                {[
-                  'Analyze SOL for day trading',
-                  'What is the RSI indicator?',
-                  'Show me the top 5 coins',
-                  'BTC 4h analysis',
-                ].map((prompt, i) => (
-                  <button
-                    key={i}
-                    onClick={() => sendMessage(prompt)}
-                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors font-medium"
-                  >
-                    "{prompt}"
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="rounded-2xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-500/10 dark:to-emerald-500/10 backdrop-blur-xl border border-teal-300 dark:border-teal-500/20 p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-teal-500/30">
+            {/* Analysis Cost */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 border border-amber-200 dark:border-amber-500/20">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
                   <Zap className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Analysis Cost</p>
+                  <p className="text-xs font-medium text-slate-600 dark:text-slate-400">Analysis Cost</p>
                   <p className="text-xl font-bold text-slate-800 dark:text-white">25 credits</p>
                 </div>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-400">
-                Each full analysis uses 25 credits. Questions and help are free!
+                Flow questions and insights are free!
               </p>
             </div>
           </div>
