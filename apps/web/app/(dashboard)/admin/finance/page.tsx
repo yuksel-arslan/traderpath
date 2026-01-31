@@ -3,12 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   DollarSign,
-  TrendingUp,
-  TrendingDown,
   RefreshCw,
-  Settings,
   Zap,
-  BarChart3,
   Package,
   Plus,
   Edit3,
@@ -32,40 +28,6 @@ import { authFetch } from '../../../../lib/api';
 // ===========================================
 // Types
 // ===========================================
-
-interface CostSummary {
-  settings: {
-    creditPriceUsd: number;
-    targetProfitMargin: number;
-    autoPricingEnabled: boolean;
-    autoPricingInterval: number;
-    lastPriceUpdate: string;
-  };
-  today: {
-    cost: number;
-    apiCalls: number;
-  };
-  monthly: {
-    totalCost: number;
-    totalRevenue: number;
-    profit: number;
-    profitMargin: number;
-    operationBreakdown: Record<string, { count: number; cost: number; avgCost: number }>;
-    serviceBreakdown: Record<string, { count: number; cost: number }>;
-  };
-  cumulative?: {
-    totalCost: number;
-    totalRevenue: number;
-    profit: number;
-  };
-  pricing: {
-    currentPrice: number;
-    recommendedPrice: number;
-    avgCostPerCredit: number;
-    shouldUpdate: boolean;
-    reason: string;
-  };
-}
 
 interface CreditPackage {
   id: string;
@@ -104,14 +66,11 @@ const emptyPackage: EditingPackage = {
 
 export default function FinancePage() {
   // State
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'economy' | 'packages' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'economy' | 'packages'>('economy');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  // Cost data
-  const [summary, setSummary] = useState<CostSummary | null>(null);
 
   // Credit costs (economy)
   const [creditCosts, setCreditCosts] = useState<Record<string, number> | null>(null);
@@ -124,15 +83,6 @@ export default function FinancePage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Settings
-  const [editSettings, setEditSettings] = useState({
-    creditPriceUsd: 0.10,
-    targetProfitMargin: 50,
-    autoPricingEnabled: false,
-    autoPricingInterval: 24,
-    minCreditPriceUsd: 0.05,
-    maxCreditPriceUsd: 0.50,
-  });
 
   // ===========================================
   // Data Fetching
@@ -143,21 +93,14 @@ export default function FinancePage() {
     setError(null);
 
     try {
-      const [summaryRes, costsRes, packagesRes, settingsRes] = await Promise.all([
-        authFetch('/api/costs/summary'),
+      const [costsRes, packagesRes] = await Promise.all([
         authFetch('/api/admin/credit-costs'),
         authFetch('/api/admin/packages'),
-        authFetch('/api/costs/settings'),
       ]);
 
-      if (summaryRes.status === 403) {
+      if (costsRes.status === 403) {
         setError('Admin access required');
         return;
-      }
-
-      if (summaryRes.ok) {
-        const data = await summaryRes.json();
-        setSummary(data.data);
       }
 
       if (costsRes.ok) {
@@ -171,18 +114,6 @@ export default function FinancePage() {
       if (packagesRes.ok) {
         const data = await packagesRes.json();
         setPackages(data.data.packages || []);
-      }
-
-      if (settingsRes.ok) {
-        const data = await settingsRes.json();
-        setEditSettings({
-          creditPriceUsd: Number(data.data.creditPriceUsd) || 0.10,
-          targetProfitMargin: Number(data.data.targetProfitMargin) || 50,
-          autoPricingEnabled: data.data.autoPricingEnabled || false,
-          autoPricingInterval: data.data.autoPricingInterval || 24,
-          minCreditPriceUsd: Number(data.data.minCreditPriceUsd) || 0.05,
-          maxCreditPriceUsd: Number(data.data.maxCreditPriceUsd) || 0.50,
-        });
       }
     } catch (err) {
       setError('Failed to fetch data');
@@ -324,44 +255,6 @@ export default function FinancePage() {
   };
 
   // ===========================================
-  // Settings Handlers
-  // ===========================================
-
-  const handleSaveSettings = async () => {
-    setIsSaving(true);
-    try {
-      const response = await authFetch('/api/costs/settings', {
-        method: 'PATCH',
-        body: JSON.stringify(editSettings),
-      });
-
-      if (response.ok) {
-        showSuccess('Settings saved');
-        fetchData();
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleApplyRecommendation = async () => {
-    if (!confirm('Apply recommended price? This will update credit packages too.')) return;
-
-    try {
-      const response = await authFetch('/api/costs/apply-recommendation', { method: 'POST' });
-      if (response.ok) {
-        const data = await response.json();
-        showSuccess(data.data.updated ? `Price updated to $${data.data.newPrice}` : data.data.reason);
-        fetchData(true);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // ===========================================
   // Helpers
   // ===========================================
 
@@ -369,9 +262,6 @@ export default function FinancePage() {
     setSuccessMessage(message);
     setTimeout(() => setSuccessMessage(null), 3000);
   };
-
-  const profitColor = (margin: number) =>
-    margin >= 40 ? 'text-green-500' : margin >= 20 ? 'text-yellow-500' : 'text-red-500';
 
   // ===========================================
   // Render
@@ -443,10 +333,8 @@ export default function FinancePage() {
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b border-border overflow-x-auto">
         {[
-          { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
           { id: 'economy', label: 'Credit Economy', icon: Zap },
           { id: 'packages', label: 'Packages', icon: Package },
-          { id: 'settings', label: 'Settings', icon: Settings },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -462,220 +350,6 @@ export default function FinancePage() {
           </button>
         ))}
       </div>
-
-      {/* Dashboard Tab */}
-      {activeTab === 'dashboard' && summary && (
-        <>
-          {/* Monthly Metrics */}
-          <h3 className="text-lg font-semibold mb-4 text-muted-foreground">Bu Ay (30 gün)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-card border rounded-lg p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-red-500/10 rounded-lg">
-                  <TrendingDown className="w-5 h-5 text-red-500" />
-                </div>
-                <span className="text-sm text-muted-foreground">Aylık Gider</span>
-              </div>
-              <p className="text-3xl font-bold text-red-500">${summary.monthly.totalCost.toFixed(2)}</p>
-              <p className="text-sm text-muted-foreground">Bugün: ${summary.today.cost.toFixed(4)}</p>
-            </div>
-
-            <div className="bg-card border rounded-lg p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-green-500/10 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-green-500" />
-                </div>
-                <span className="text-sm text-muted-foreground">Aylık Gelir</span>
-              </div>
-              <p className="text-3xl font-bold text-green-500">${summary.monthly.totalRevenue.toFixed(2)}</p>
-              <p className="text-sm text-muted-foreground">API çağrıları: {summary.today.apiCalls}</p>
-            </div>
-
-            <div className="bg-card border rounded-lg p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-blue-500/10 rounded-lg">
-                  <DollarSign className="w-5 h-5 text-blue-500" />
-                </div>
-                <span className="text-sm text-muted-foreground">Aylık Kar</span>
-              </div>
-              <p className={`text-3xl font-bold ${summary.monthly.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                ${summary.monthly.profit.toFixed(2)}
-              </p>
-              <p className={`text-sm ${profitColor(summary.monthly.profitMargin)}`}>
-                Marj: {summary.monthly.profitMargin.toFixed(1)}%
-              </p>
-            </div>
-          </div>
-
-          {/* Cumulative Metrics */}
-          <h3 className="text-lg font-semibold mb-4 text-muted-foreground">Kümüle (Toplam)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-card border rounded-lg p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-red-500/10 rounded-lg">
-                  <TrendingDown className="w-5 h-5 text-red-500" />
-                </div>
-                <span className="text-sm text-muted-foreground">Toplam Gider</span>
-              </div>
-              <p className="text-3xl font-bold text-red-500">
-                ${((summary.cumulative?.totalCost ?? summary.monthly.totalCost)).toFixed(2)}
-              </p>
-            </div>
-
-            <div className="bg-card border rounded-lg p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-green-500/10 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-green-500" />
-                </div>
-                <span className="text-sm text-muted-foreground">Toplam Gelir</span>
-              </div>
-              <p className="text-3xl font-bold text-green-500">
-                ${((summary.cumulative?.totalRevenue ?? summary.monthly.totalRevenue)).toFixed(2)}
-              </p>
-            </div>
-
-            <div className="bg-card border rounded-lg p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-blue-500/10 rounded-lg">
-                  <DollarSign className="w-5 h-5 text-blue-500" />
-                </div>
-                <span className="text-sm text-muted-foreground">Toplam Kar</span>
-              </div>
-              <p className={`text-3xl font-bold ${(summary.cumulative?.profit ?? summary.monthly.profit) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                ${((summary.cumulative?.profit ?? summary.monthly.profit)).toFixed(2)}
-              </p>
-            </div>
-          </div>
-
-          {/* Pricing Recommendation & Cost Breakdown */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-card border rounded-lg p-6">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Calculator className="w-5 h-5 text-primary" />
-                Fiyat Önerisi
-              </h3>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Mevcut Fiyat</span>
-                  <span className="font-mono text-lg">${summary.pricing.currentPrice.toFixed(4)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Önerilen Fiyat</span>
-                  <span className={`font-mono text-lg ${
-                    summary.pricing.recommendedPrice > summary.pricing.currentPrice ? 'text-red-500' :
-                    summary.pricing.recommendedPrice < summary.pricing.currentPrice ? 'text-green-500' : ''
-                  }`}>
-                    ${summary.pricing.recommendedPrice.toFixed(4)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Ort. Kredi Maliyeti</span>
-                  <span className="font-mono">${summary.pricing.avgCostPerCredit.toFixed(4)}</span>
-                </div>
-                <div className="pt-4 border-t">
-                  <p className="text-sm text-muted-foreground mb-4">{summary.pricing.reason}</p>
-                  {summary.pricing.shouldUpdate && (
-                    <button
-                      onClick={handleApplyRecommendation}
-                      className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90"
-                    >
-                      Önerilen Fiyatı Uygula
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-card border rounded-lg p-6">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-primary" />
-                Sabit Gider Dağılımı
-              </h3>
-              <div className="overflow-hidden rounded-lg border">
-                <table className="w-full text-sm">
-                  <thead className="bg-accent/50">
-                    <tr>
-                      <th className="text-left p-3 font-medium">Servis</th>
-                      <th className="text-right p-3 font-medium">Aylık Maliyet</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    <tr>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-purple-500" />
-                          Claude Code
-                        </div>
-                      </td>
-                      <td className="p-3 text-right font-mono">$100.00</td>
-                    </tr>
-                    <tr>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-blue-500" />
-                          Vercel
-                        </div>
-                      </td>
-                      <td className="p-3 text-right font-mono">$20.00</td>
-                    </tr>
-                    <tr>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                          Railway
-                        </div>
-                      </td>
-                      <td className="p-3 text-right font-mono">$20.00</td>
-                    </tr>
-                    <tr>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-green-500" />
-                          Neon DB
-                        </div>
-                      </td>
-                      <td className="p-3 text-right font-mono">$20.00</td>
-                    </tr>
-                  </tbody>
-                  <tfoot className="bg-accent/30 border-t-2">
-                    <tr>
-                      <td className="p-3 font-semibold">Toplam</td>
-                      <td className="p-3 text-right font-mono font-semibold">$160.00</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-              {/* Cost per Analysis */}
-              {(() => {
-                const MONTHLY_FIXED_COST = 160;
-                const analysisCount = Object.entries(summary.monthly.operationBreakdown)
-                  .filter(([key]) => key.toLowerCase().includes('analysis'))
-                  .reduce((sum, [, data]) => sum + data.count, 0) || 1;
-                const costPerAnalysis = MONTHLY_FIXED_COST / analysisCount;
-
-                return (
-                  <div className="mt-4 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border border-primary/20">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-foreground">Analiz Başına Maliyet</p>
-                        <p className="text-sm text-muted-foreground">
-                          Bu ay {analysisCount} analiz yapıldı
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold font-mono text-primary">
-                          ${costPerAnalysis.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">analiz başına</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-        </>
-      )}
 
       {/* Credit Economy Tab */}
       {activeTab === 'economy' && (
@@ -1162,107 +836,6 @@ export default function FinancePage() {
                 )}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {/* Settings Tab */}
-      {activeTab === 'settings' && (
-        <div className="max-w-2xl">
-          <div className="bg-card border rounded-lg p-6">
-            <h3 className="text-lg font-semibold mb-6">Pricing & Auto-Pricing Settings</h3>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">Credit Price (USD)</label>
-                <input
-                  type="number"
-                  step="0.0001"
-                  min="0.01"
-                  value={editSettings.creditPriceUsd}
-                  onChange={(e) => setEditSettings({ ...editSettings, creditPriceUsd: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-2 bg-background border rounded-lg"
-                />
-                <p className="text-sm text-muted-foreground mt-1">Base price per credit</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Target Profit Margin (%)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="90"
-                  value={editSettings.targetProfitMargin}
-                  onChange={(e) => setEditSettings({ ...editSettings, targetProfitMargin: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2 bg-background border rounded-lg"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Min Price</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editSettings.minCreditPriceUsd}
-                    onChange={(e) => setEditSettings({ ...editSettings, minCreditPriceUsd: parseFloat(e.target.value) })}
-                    className="w-full px-4 py-2 bg-background border rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Max Price</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editSettings.maxCreditPriceUsd}
-                    onChange={(e) => setEditSettings({ ...editSettings, maxCreditPriceUsd: parseFloat(e.target.value) })}
-                    className="w-full px-4 py-2 bg-background border rounded-lg"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="font-medium">Auto-Pricing</p>
-                    <p className="text-sm text-muted-foreground">Automatically adjust based on costs</p>
-                  </div>
-                  <button
-                    onClick={() => setEditSettings({ ...editSettings, autoPricingEnabled: !editSettings.autoPricingEnabled })}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                      editSettings.autoPricingEnabled ? 'bg-primary' : 'bg-muted'
-                    }`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                      editSettings.autoPricingEnabled ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
-                  </button>
-                </div>
-
-                {editSettings.autoPricingEnabled && (
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Update Interval (hours)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="168"
-                      value={editSettings.autoPricingInterval}
-                      onChange={(e) => setEditSettings({ ...editSettings, autoPricingInterval: parseInt(e.target.value) })}
-                      className="w-full px-4 py-2 bg-background border rounded-lg"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-4 border-t">
-                <button
-                  onClick={handleSaveSettings}
-                  disabled={isSaving}
-                  className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {isSaving ? 'Saving...' : 'Save Settings'}
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}

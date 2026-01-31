@@ -511,6 +511,10 @@ Kullanıcı Hakları Aktif:
 | 2026-01-31 | AI Concierge analiz sonucu verdict kartı ve TradePlanChart görüntülenmiyor | handleAnalysis fonksiyonu direction ve tradePlan döndürmüyordu. Analiz DB'den çekilip step5Result ve step7Result'tan direction/tradePlan eklendi | `concierge.service.ts` |
 | 2026-01-31 | Dil değişikliği sayfa yenilemesi gerektiriyordu | Google Translate combo box doğrudan manipüle ediliyor (fireEvent ile change tetikleme). triggerTranslation ve resetToEnglish fonksiyonları eklendi. Sayfa yenileme yerine anlık çeviri | `LanguageSelector.tsx` |
 | 2026-01-31 | Concierge sayfasında TradePlanChart "Application error" hatası veriyordu | Çoklu sorun düzeltildi: 1) tradePlan interface uyumsuzluğu (`averageEntry` vs `entry`, `stopLoss` object vs number), 2) `capitalFlow.recommendation` ve `capitalFlow.globalLiquidity.bias` null check eksikti, 3) `flow.toFixed()` NaN kontrolü eklendi, 4) `.toUpperCase()` null kontrolü eklendi, 5) TradePlanChart try-catch ile sarmalandı, 6) Tüm Number() dönüşümleri güvenli hale getirildi | `concierge/page.tsx` |
+| 2026-01-31 | Reports sayfasında verdict GO görünürken detay sayfasında AVOID görünüyordu | `normalizeVerdict` fonksiyonları 'long'/'short' (direction) değerlerini yanlışlıkla 'go' (verdict) olarak işliyordu. Direction ve verdict ayrı kavramlar - düzeltildi | `reports/page.tsx`, `RecentAnalyses.tsx` |
+| 2026-01-31 | Concierge sayfasında TradePlanChart "Application error" hatası veriyordu | Frontend tradePlan interface'i backend'den gelen veri yapısıyla uyumsuzdu. `averageEntry` vs `entry`, `stopLoss` object vs number, `takeProfits` object array vs number array. Her iki yapıyı da destekleyecek şekilde düzeltildi | `concierge/page.tsx` |
+| 2026-01-31 | Settings Billing sayfasında Payment Methods eklenemiyor, Transaction History görünmüyordu | 1) Transaction History API (`/api/credits/history`) zaten mevcuttu ama frontend bağlı değildi - useEffect ile fetch eklendi, 2) Buy Credits butonu onClick handler'sızdı - /pricing'e yönlendirme eklendi, 3) Payment Methods stub idi - Lemon Squeezy secure checkout açıklaması eklendi (saved cards desteklenmiyor), 4) Transaction listesi loading/empty/data state'leri ile güncellendi | `settings/page.tsx` |
+| 2026-01-31 | Capital Flow Market Flow Analyzer grafik etiketleri Türkçe yazılmıştı | "Para Akışı (30g)" → "Money Flow (30d)", "Akış Hızı (30g)" → "Flow Velocity (30d)" olarak İngilizce'ye çevrildi | `capital-flow/page.tsx` |
 
 ---
 
@@ -558,6 +562,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-28 | Login sayfası: Tema uyumlu marketing paneli | Sol panel artık light/dark mode'a uygun görünüyor |
 | 2026-01-31 | Analyze sayfası: LAYER 4 minimalist tasarım | Karmaşık animasyonlar kaldırıldı, Capital Flow context eklendi, 4 adımlı akış |
 | 2026-01-31 | Dashboard: Platform + My Performance bölümleri | Capital Flow entegrasyonu, her layer için özet kartları, platform ve kişisel AI stats |
+| 2026-01-31 | Scheduled sayfası: Kurumsal stil tasarımı | Glassmorphism kartlar, gradient orbs, animasyonlu status badge'leri, progress bar, hover efektleri |
 
 ---
 
@@ -1529,6 +1534,21 @@ Kullanıcı Hakları Aktif:
     - Hata durumunda fallback SVG
     - Lazy loading ve error handling
   - Dosyalar: `apps/api/src/modules/asset-logos/`, `apps/web/lib/asset-logos-cache.ts`, `apps/web/hooks/useAssetLogos.ts`
+- **Scheduled Reports Page Corporate Styling**:
+  - Glassmorphism kartlar backdrop-blur efektleri ile
+  - Gradient orbs arka plan (teal, orange, blue)
+  - Animasyonlu status badge'leri (ACTIVE/PAUSED with pulse)
+  - Progress bar aktif schedule sayısı için
+  - Timeframe badge'leri gradient renklerle (15m kırmızı, 1H amber, 4H teal, 1D mavi)
+  - Frequency badge'leri (DAILY/WEEKLY/MONTHLY)
+  - Delivery channel ikonları aktif durumlarla
+  - Modal tasarımı sticky header/footer ile
+  - Tüm interaktif elementlerde hover efektleri
+  - Kurumsal teal/coral renk şeması tutarlı şekilde
+  - Geliştirilmiş empty state gradient dekorasyonlarla
+  - Info box amber gradient tema ile
+  - Geliştirilmiş loading state glowing spinner ile
+  - Dosya: `apps/web/app/(dashboard)/scheduled/page.tsx`
 
 ---
 

@@ -595,7 +595,7 @@ function MarketCard({ market, onClick, onAnalyze }: { market: MarketFlow; onClic
           <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
             <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1">
               <TrendingUp className="w-3 h-3" />
-              Para Akışı (30g)
+              Money Flow (30d)
             </p>
             <MiniSparkline
               data={market.flowHistory}
@@ -607,7 +607,7 @@ function MarketCard({ market, onClick, onAnalyze }: { market: MarketFlow; onClic
           <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
             <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1">
               <Activity className="w-3 h-3" />
-              Akış Hızı (30g)
+              Flow Velocity (30d)
             </p>
             {market.velocityHistory && (
               <MiniSparkline

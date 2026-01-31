@@ -68,6 +68,19 @@ interface TwoFactorSetup {
   backupCodes: string[];
 }
 
+interface CreditTransaction {
+  id: string;
+  type: 'PURCHASE' | 'REWARD' | 'SPEND' | 'REFUND' | 'BONUS';
+  amount: number;
+  description: string;
+  createdAt: string;
+  metadata?: {
+    analysisId?: string;
+    packageName?: string;
+    rewardType?: string;
+  };
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -132,6 +145,11 @@ export default function SettingsPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
   const [profileSaveError, setProfileSaveError] = useState('');
+
+  // Billing state
+  const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
+  const [totalTransactions, setTotalTransactions] = useState(0);
 
   const handleAvatarButtonClick = useCallback(() => {
     fileInputRef.current?.click();
@@ -269,6 +287,31 @@ export default function SettingsPage() {
 
     checkPushStatus();
   }, []);
+
+  // Fetch transaction history when billing section is active
+  useEffect(() => {
+    if (activeSection !== 'billing') return;
+
+    const fetchTransactions = async () => {
+      setIsLoadingTransactions(true);
+      try {
+        const response = await authFetch('/api/credits/history?limit=5');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setTransactions(data.data.transactions || []);
+            setTotalTransactions(data.data.total || 0);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch transactions:', error);
+      } finally {
+        setIsLoadingTransactions(false);
+      }
+    };
+
+    fetchTransactions();
+  }, [activeSection]);
 
   // Handle push notification toggle
   const handlePushToggle = async () => {
@@ -1592,13 +1635,16 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-muted-foreground">Current Plan</p>
-                        <p className="text-xl font-bold">Free Tier</p>
+                        <p className="text-xl font-bold">Credit-Based</p>
                         <p className="text-sm text-muted-foreground">
-                          5 free analyses per day
+                          Pay-as-you-go with Daily Passes
                         </p>
                       </div>
-                      <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition">
-                        Upgrade
+                      <button
+                        onClick={() => router.push('/pricing')}
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition"
+                      >
+                        View Plans
                       </button>
                     </div>
                   </div>
@@ -1610,7 +1656,10 @@ export default function SettingsPage() {
                         <p className="text-sm text-muted-foreground">Credit Balance</p>
                         <p className="text-2xl font-bold">{formatCredits(user?.credits ?? 0)} Credits</p>
                       </div>
-                      <button className="px-4 py-2 border rounded-lg hover:bg-accent transition">
+                      <button
+                        onClick={() => router.push('/pricing')}
+                        className="px-4 py-2 border rounded-lg hover:bg-accent transition"
+                      >
                         Buy Credits
                       </button>
                     </div>
@@ -1620,27 +1669,96 @@ export default function SettingsPage() {
                   <div className="p-4 bg-background rounded-lg">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-medium">Payment Methods</h3>
-                      <button className="text-sm text-primary hover:underline">
-                        Add New
-                      </button>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      No payment methods added yet
-                    </p>
+                    <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                      <Info className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-muted-foreground">
+                        <p className="font-medium text-foreground mb-1">Secure Checkout</p>
+                        <p>
+                          We use Lemon Squeezy for secure payment processing. Your payment details are handled directly by our payment provider - we never store your card information.
+                        </p>
+                        <button
+                          onClick={() => router.push('/pricing')}
+                          className="mt-2 text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          Purchase Credits
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Transaction History */}
                   <div className="p-4 bg-background rounded-lg">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-medium">Transaction History</h3>
-                      <button className="text-sm text-primary hover:underline flex items-center gap-1">
-                        View All
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
+                      {totalTransactions > 5 && (
+                        <button
+                          onClick={() => router.push('/transactions')}
+                          className="text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          View All ({totalTransactions})
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      No transactions yet
-                    </p>
+
+                    {isLoadingTransactions ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : transactions.length === 0 ? (
+                      <div className="text-center py-6">
+                        <Clock className="w-10 h-10 mx-auto text-muted-foreground/50 mb-2" />
+                        <p className="text-sm text-muted-foreground">No transactions yet</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Your credit purchases and usage will appear here
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {transactions.map((tx) => (
+                          <div
+                            key={tx.id}
+                            className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                tx.type === 'PURCHASE' || tx.type === 'REWARD' || tx.type === 'BONUS' || tx.type === 'REFUND'
+                                  ? 'bg-green-500/10 text-green-500'
+                                  : 'bg-red-500/10 text-red-500'
+                              }`}>
+                                {tx.type === 'PURCHASE' || tx.type === 'REWARD' || tx.type === 'BONUS' || tx.type === 'REFUND' ? (
+                                  <span className="text-lg font-bold">+</span>
+                                ) : (
+                                  <span className="text-lg font-bold">-</span>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">{tx.description}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(tx.createdAt).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`font-semibold ${
+                              tx.type === 'PURCHASE' || tx.type === 'REWARD' || tx.type === 'BONUS' || tx.type === 'REFUND'
+                                ? 'text-green-500'
+                                : 'text-red-500'
+                            }`}>
+                              {tx.type === 'PURCHASE' || tx.type === 'REWARD' || tx.type === 'BONUS' || tx.type === 'REFUND' ? '+' : '-'}
+                              {formatCredits(Math.abs(tx.amount))}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

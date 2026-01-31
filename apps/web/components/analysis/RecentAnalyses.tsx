@@ -150,12 +150,13 @@ export function RecentAnalyses() {
 
         // Map to RecentAnalysis format
         const mapped = liveAnalyses.map((a: any) => {
-          // Normalize verdict - include direction-based verdicts (long/short)
+          // Normalize verdict - NOTE: 'long'/'short' are DIRECTIONS, not verdicts!
           const rawVerdict = (a.verdict || '').toLowerCase().replace(/[^a-z_]/g, '');
           let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
-          if (rawVerdict === 'go' || rawVerdict === 'go!' || rawVerdict === 'long' || rawVerdict === 'short') verdict = 'go';
-          else if (rawVerdict === 'conditional_go' || rawVerdict === 'conditionalgo') verdict = 'conditional_go';
+          if (rawVerdict === 'go') verdict = 'go';
+          else if (rawVerdict === 'conditional_go' || rawVerdict === 'conditionalgo' || rawVerdict === 'cond') verdict = 'conditional_go';
           else if (rawVerdict === 'avoid' || rawVerdict === 'no_go' || rawVerdict === 'nogo') verdict = 'avoid';
+          else if (rawVerdict === 'wait') verdict = 'wait';
 
           // Map interval to trade type
           let tradeType: TradeType | undefined;
