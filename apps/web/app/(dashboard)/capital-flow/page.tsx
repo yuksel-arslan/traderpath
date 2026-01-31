@@ -1048,12 +1048,12 @@ export default function CapitalFlowPage() {
 
           <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold">
             <span className="bg-gradient-to-r from-teal-500 via-emerald-400 to-teal-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">
-              Capital Flow
+              Follow the Money
             </span>
             <br />
             <span className="relative inline-block">
               <span className="bg-gradient-to-r from-coral-500 via-red-400 to-coral-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer" style={{ animationDelay: '0.5s' }}>
-                Radar
+                Flow
               </span>
               <span className="absolute -bottom-1 sm:-bottom-2 left-0 right-0 h-0.5 sm:h-1 bg-gradient-to-r from-teal-500 via-coral-500 to-teal-500 rounded-full opacity-50 animate-pulse" />
             </span>
