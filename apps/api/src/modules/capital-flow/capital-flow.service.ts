@@ -715,7 +715,7 @@ function generateSellRecommendation(
     }
   }
 
-  // Determine SELL action based on absolute outflow or relative weakness
+  // Determine SELL action based on absolute outflow, relative weakness, or being the underperformer
   let action: 'analyze' | 'wait' | 'avoid';
   let reason: string;
   let confidence: number;
@@ -745,9 +745,16 @@ function generateSellRecommendation(
     action = 'wait';
     reason = `${MARKET_CONFIG[worstMarket.market].name} momentum slowing (velocity: ${worstMarket.flowVelocity.toFixed(1)}). Early warning for potential outflow.`;
     confidence = 50;
+  } else if (relativeWeakness > 0) {
+    // Even small underperformance - show as "avoid" opportunity
+    action = 'avoid';
+    reason = `${MARKET_CONFIG[worstMarket.market].name} is the relative underperformer (${worstMarket.flow7d >= 0 ? '+' : ''}${worstMarket.flow7d.toFixed(1)}% vs ${MARKET_CONFIG[bestMarket.market].name} +${bestMarket.flow7d.toFixed(1)}%). Not ideal for new longs.`;
+    confidence = 40;
   } else {
-    // All markets performing similarly - no clear SELL opportunity
-    return null;
+    // All markets exactly equal - extremely rare
+    action = 'avoid';
+    reason = `All markets performing similarly. No clear underperformer for short opportunities.`;
+    confidence = 30;
   }
 
   // Get weakest sectors (trending down or below market average)
