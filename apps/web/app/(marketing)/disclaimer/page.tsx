@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, AlertTriangle, TrendingDown, DollarSign, BookOpen, Shield, Scale, Mail } from 'lucide-react';
 import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
+import { Footer } from '../../../components/common/Footer';
 
 export default function DisclaimerPage() {
   const lastUpdated = 'January 26, 2026';
@@ -332,26 +333,7 @@ export default function DisclaimerPage() {
       </main>
 
       {/* Footer */}
-      <footer className="py-8 border-t mt-12">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-muted-foreground text-sm">
-              © 2025 <span className="text-red-500 font-semibold">Trader</span><span className="text-green-500 font-semibold">Path</span>. All rights reserved.
-            </p>
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <Link href="/privacy" className="hover:text-foreground transition">
-                Privacy Policy
-              </Link>
-              <Link href="/terms" className="hover:text-foreground transition">
-                Terms of Service
-              </Link>
-              <Link href="/contact" className="hover:text-foreground transition">
-                Contact
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer variant="minimal" />
     </div>
   );
 }

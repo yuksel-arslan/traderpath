@@ -191,6 +191,22 @@ const nextConfig = {
         source: '/api/security/:path*',
         destination: 'http://127.0.0.1:4000/api/security/:path*',
       },
+      {
+        source: '/api/concierge/:path*',
+        destination: 'http://127.0.0.1:4000/api/concierge/:path*',
+      },
+      {
+        source: '/api/capital-flow/:path*',
+        destination: 'http://127.0.0.1:4000/api/capital-flow/:path*',
+      },
+      {
+        source: '/api/passes/:path*',
+        destination: 'http://127.0.0.1:4000/api/passes/:path*',
+      },
+      {
+        source: '/api/scheduled/:path*',
+        destination: 'http://127.0.0.1:4000/api/scheduled/:path*',
+      },
     ];
   },
 
