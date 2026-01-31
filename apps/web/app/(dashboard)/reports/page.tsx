@@ -48,11 +48,16 @@ const VERDICT_CONFIG: Record<string, { label: string; bg: string; text: string }
 };
 
 // Helper to normalize verdict string
+// NOTE: 'long'/'short' are DIRECTIONS, not verdicts - they should NOT be treated as 'go'
 function normalizeVerdict(verdict: string): string {
   const v = (verdict || '').toLowerCase().replace(/[^a-z_]/g, '');
-  if (v === 'go' || v === 'long' || v === 'short') return 'go';
+  if (v === 'go') return 'go';
   if (v === 'conditional_go' || v === 'conditionalgo' || v === 'cond' || v === 'conditional') return 'conditional_go';
   if (v === 'avoid' || v === 'no_go' || v === 'nogo') return 'avoid';
+  if (v === 'wait') return 'wait';
+  // Fallback: try to determine from the string content
+  if (v.includes('go') && !v.includes('avoid') && !v.includes('nogo')) return 'go';
+  if (v.includes('avoid') || v.includes('nogo')) return 'avoid';
   return 'wait';
 }
 
