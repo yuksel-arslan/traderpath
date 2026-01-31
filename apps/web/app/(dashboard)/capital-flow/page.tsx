@@ -106,6 +106,7 @@ interface FlowRecommendation {
   primaryMarket: string;
   phase: string;
   action: 'analyze' | 'wait' | 'avoid';
+  direction: 'BUY' | 'SELL';
   reason: string;
   sectors?: string[];
   confidence: number;
@@ -207,6 +208,7 @@ interface CapitalFlowSummary {
   correlations?: CorrelationMatrix;
   tradeOpportunities?: TradeOpportunities;
   recommendation: FlowRecommendation;
+  sellRecommendation?: FlowRecommendation;
   activeRotation: ActiveRotation | null;
   insights?: LayerInsights;
   cacheExpiry: string;
@@ -863,11 +865,17 @@ function LayerSummaryBox({
 }
 
 // Recommendation Card
-function RecommendationCard({ recommendation, rotation }: { recommendation: FlowRecommendation; rotation: ActiveRotation | null }) {
+function RecommendationCard({ recommendation, rotation, showRotation = true }: { recommendation: FlowRecommendation; rotation?: ActiveRotation | null; showRotation?: boolean }) {
+  const isSell = recommendation.direction === 'SELL';
+
   const actionConfig: Record<string, { bg: string; color: string; icon: any }> = {
-    analyze: { bg: 'from-emerald-500 to-teal-500', color: 'text-white', icon: Target },
+    analyze: {
+      bg: isSell ? 'from-red-500 to-rose-600' : 'from-emerald-500 to-teal-500',
+      color: 'text-white',
+      icon: isSell ? TrendingDown : Target
+    },
     wait: { bg: 'from-yellow-500 to-amber-500', color: 'text-white', icon: Clock },
-    avoid: { bg: 'from-red-500 to-rose-500', color: 'text-white', icon: AlertTriangle },
+    avoid: { bg: 'from-slate-500 to-slate-600', color: 'text-white', icon: AlertTriangle },
   };
 
   const config = actionConfig[recommendation.action] || actionConfig.wait;
@@ -878,7 +886,19 @@ function RecommendationCard({ recommendation, rotation }: { recommendation: Flow
       <div className={cn('bg-gradient-to-r p-4', config.bg)}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <config.icon className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-2">
+              {isSell ? (
+                <TrendingDown className="w-6 h-6 text-white" />
+              ) : (
+                <TrendingUp className="w-6 h-6 text-white" />
+              )}
+              <span className={cn(
+                "px-2 py-0.5 rounded text-xs font-bold",
+                isSell ? "bg-white/20 text-white" : "bg-white/20 text-white"
+              )}>
+                {recommendation.direction || 'BUY'}
+              </span>
+            </div>
             <div>
               <h3 className="font-bold text-white text-lg">{recommendation.action.toUpperCase()}: {recommendation.primaryMarket.toUpperCase()}</h3>
               <p className="text-white/80 text-sm">Phase: {recommendation.phase.toUpperCase()}</p>
@@ -895,13 +915,21 @@ function RecommendationCard({ recommendation, rotation }: { recommendation: Flow
       <div className="p-4">
         <p className="text-slate-700 dark:text-slate-300 mb-4">{recommendation.reason}</p>
 
-        {/* Recommended Sectors */}
+        {/* Recommended/Weak Sectors */}
         {recommendation.sectors && recommendation.sectors.length > 0 && (
           <div className="mb-4">
-            <p className="text-xs text-slate-500 mb-2">Recommended Sectors</p>
+            <p className="text-xs text-slate-500 mb-2">{isSell ? 'Weak Sectors (Short Targets)' : 'Recommended Sectors'}</p>
             <div className="flex flex-wrap gap-2">
               {recommendation.sectors.map((sector) => (
-                <span key={sector} className="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
+                <span
+                  key={sector}
+                  className={cn(
+                    "px-3 py-1 rounded-full text-sm font-medium",
+                    isSell
+                      ? "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300"
+                      : "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300"
+                  )}
+                >
                   {sector}
                 </span>
               ))}
@@ -910,7 +938,7 @@ function RecommendationCard({ recommendation, rotation }: { recommendation: Flow
         )}
 
         {/* Active Rotation */}
-        {rotation && (
+        {showRotation && rotation && (
           <div className="bg-gradient-to-r from-purple-100 dark:from-purple-500/20 to-blue-100 dark:to-blue-500/20 rounded-xl p-3">
             <div className="flex items-center gap-2 mb-2">
               <Activity className="w-4 h-4 text-purple-600 dark:text-purple-400" />
@@ -934,10 +962,15 @@ function RecommendationCard({ recommendation, rotation }: { recommendation: Flow
         {recommendation.action === 'analyze' && (
           <Link
             href="/analyze"
-            className="mt-4 flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-emerald-500/20 transition-all"
+            className={cn(
+              "mt-4 flex items-center justify-center gap-2 w-full py-3 text-white font-bold rounded-xl hover:shadow-lg transition-all",
+              isSell
+                ? "bg-gradient-to-r from-red-500 to-rose-500 hover:shadow-red-500/20"
+                : "bg-gradient-to-r from-teal-500 to-emerald-500 hover:shadow-emerald-500/20"
+            )}
           >
             <Zap className="w-4 h-4" />
-            Start Analysis
+            {isSell ? 'Find Short Opportunities' : 'Start Analysis'}
           </Link>
         )}
       </div>
@@ -1451,9 +1484,34 @@ export default function CapitalFlowPage() {
                 <div className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-amber-200/50 dark:border-amber-700/50 rounded-2xl p-4">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="w-6 h-6 bg-amber-500 rounded flex items-center justify-center text-white text-xs font-bold">4</div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">AI Recommendation</h3>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">AI Recommendations</h3>
                   </div>
-                  <RecommendationCard recommendation={data.recommendation} rotation={data.activeRotation} />
+
+                  {/* BUY and SELL Recommendations Grid */}
+                  <div className={cn(
+                    "grid gap-4",
+                    data.sellRecommendation ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+                  )}>
+                    {/* BUY Recommendation */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="w-4 h-4 text-emerald-500" />
+                        <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">BUY Opportunity</span>
+                      </div>
+                      <RecommendationCard recommendation={data.recommendation} rotation={data.activeRotation} />
+                    </div>
+
+                    {/* SELL Recommendation (if exists) */}
+                    {data.sellRecommendation && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <TrendingDown className="w-4 h-4 text-red-500" />
+                          <span className="text-sm font-semibold text-red-600 dark:text-red-400">SELL / Short Opportunity</span>
+                        </div>
+                        <RecommendationCard recommendation={data.sellRecommendation} showRotation={false} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

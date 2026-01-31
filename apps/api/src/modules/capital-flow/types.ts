@@ -192,6 +192,7 @@ export interface FlowRecommendation {
   primaryMarket: MarketType;
   phase: Phase;
   action: FlowAction;
+  direction: TradeDirection;  // BUY or SELL
   reason: string;
   sectors?: string[];
   confidence: number;
@@ -214,8 +215,9 @@ export interface CapitalFlowSummary {
   // Trade Opportunities (multi-market)
   tradeOpportunities?: TradeOpportunities;
 
-  // Recommendation
-  recommendation: FlowRecommendation;
+  // Recommendations
+  recommendation: FlowRecommendation;       // Primary BUY recommendation
+  sellRecommendation?: FlowRecommendation;  // SELL recommendation for outflow markets
 
   // Rotation
   activeRotation: ActiveRotation | null;
