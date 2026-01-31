@@ -513,6 +513,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-31 | Reports sayfasında verdict GO görünürken detay sayfasında AVOID görünüyordu | `normalizeVerdict` fonksiyonları 'long'/'short' (direction) değerlerini yanlışlıkla 'go' (verdict) olarak işliyordu. Direction ve verdict ayrı kavramlar - düzeltildi | `reports/page.tsx`, `RecentAnalyses.tsx` |
 | 2026-01-31 | Concierge sayfasında TradePlanChart "Application error" hatası veriyordu | Frontend tradePlan interface'i backend'den gelen veri yapısıyla uyumsuzdu. `averageEntry` vs `entry`, `stopLoss` object vs number, `takeProfits` object array vs number array. Her iki yapıyı da destekleyecek şekilde düzeltildi | `concierge/page.tsx` |
 | 2026-01-31 | Settings Billing sayfasında Payment Methods eklenemiyor, Transaction History görünmüyordu | 1) Transaction History API (`/api/credits/history`) zaten mevcuttu ama frontend bağlı değildi - useEffect ile fetch eklendi, 2) Buy Credits butonu onClick handler'sızdı - /pricing'e yönlendirme eklendi, 3) Payment Methods stub idi - Lemon Squeezy secure checkout açıklaması eklendi (saved cards desteklenmiyor), 4) Transaction listesi loading/empty/data state'leri ile güncellendi | `settings/page.tsx` |
+| 2026-01-31 | Capital Flow Market Flow Analyzer grafik etiketleri Türkçe yazılmıştı | "Para Akışı (30g)" → "Money Flow (30d)", "Akış Hızı (30g)" → "Flow Velocity (30d)" olarak İngilizce'ye çevrildi | `capital-flow/page.tsx` |
 
 ---
 
