@@ -30,6 +30,17 @@ import { economicCalendarService, EconomicEvent } from './services/economic-cale
 // NEW: MLIS (Multi-Layer Intelligence System) import
 import { MLISService, MLISConfig, MLISResult, getMLISService, analyzeMLIS } from './services/mlis.service';
 
+// NEW: Multi-Asset Data Provider import
+import {
+  fetchCandles as fetchMultiAssetCandles,
+  fetchTicker as fetchMultiAssetTicker,
+  getAssetClass,
+  isSymbolSupported,
+  CandleData,
+  TickerData,
+  AssetClass,
+} from './providers/multi-asset-data-provider';
+
 // ===========================================
 // RAG Gate Evaluation with Gemini
 // ===========================================
@@ -2139,7 +2150,9 @@ const CACHE_TTL = {
 };
 
 // ===========================================
-// Binance API Functions
+// Multi-Asset Data Functions
+// Uses multi-asset-data-provider for routing to correct API
+// Crypto: Binance, Stocks/Bonds/Metals: Yahoo Finance
 // ===========================================
 
 async function fetchKlines(
@@ -2151,22 +2164,27 @@ async function fetchKlines(
   const cached = getCached<Candle[]>(cacheKey);
   if (cached) return cached;
 
-  const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=${interval}&limit=${limit}`;
-  const response = await fetchWithRetry(url);
-  const data = await safeJsonParse<(string | number)[][]>(response);
+  try {
+    // Use multi-asset provider which routes to correct API based on asset class
+    const candles = await fetchMultiAssetCandles(symbol, interval, limit);
 
-  const candles: Candle[] = data.map((k: (string | number)[]) => ({
-    openTime: k[0] as number,
-    open: parseFloat(k[1] as string),
-    high: parseFloat(k[2] as string),
-    low: parseFloat(k[3] as string),
-    close: parseFloat(k[4] as string),
-    volume: parseFloat(k[5] as string),
-    closeTime: k[6] as number,
-  }));
+    // Convert to Candle format
+    const result: Candle[] = candles.map((c) => ({
+      openTime: c.timestamp,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: c.volume,
+      closeTime: c.timestamp + 60000, // Approximate close time
+    }));
 
-  setCache(cacheKey, candles, CACHE_TTL.KLINES);
-  return candles;
+    setCache(cacheKey, result, CACHE_TTL.KLINES);
+    return result;
+  } catch (error) {
+    console.error(`[AnalysisEngine] Failed to fetch klines for ${symbol}:`, error);
+    throw error;
+  }
 }
 
 async function fetch24hTicker(symbol: string): Promise<MarketData> {
@@ -2174,32 +2192,33 @@ async function fetch24hTicker(symbol: string): Promise<MarketData> {
   const cached = getCached<MarketData>(cacheKey);
   if (cached) return cached;
 
-  const url = `https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}USDT`;
-  const response = await fetchWithRetry(url);
-  const data = await safeJsonParse<{
-    lastPrice: string;
-    priceChange: string;
-    priceChangePercent: string;
-    highPrice: string;
-    lowPrice: string;
-    volume: string;
-    quoteVolume: string;
-  }>(response);
+  try {
+    // Use multi-asset provider which routes to correct API based on asset class
+    const ticker = await fetchMultiAssetTicker(symbol);
 
-  const result: MarketData = {
-    symbol,
-    price: parseFloat(data.lastPrice),
-    priceChange24h: parseFloat(data.priceChange),
-    priceChangePercent24h: parseFloat(data.priceChangePercent),
-    high24h: parseFloat(data.highPrice),
-    low24h: parseFloat(data.lowPrice),
-    volume24h: parseFloat(data.volume),
-    quoteVolume24h: parseFloat(data.quoteVolume),
-  };
+    const result: MarketData = {
+      symbol: ticker.symbol,
+      price: ticker.price,
+      priceChange24h: ticker.change24h,
+      priceChangePercent24h: ticker.changePercent24h,
+      high24h: ticker.high24h,
+      low24h: ticker.low24h,
+      volume24h: ticker.volume24h,
+      quoteVolume24h: ticker.volume24h * ticker.price, // Approximate quote volume
+    };
 
-  setCache(cacheKey, result, CACHE_TTL.TICKER);
-  return result;
+    setCache(cacheKey, result, CACHE_TTL.TICKER);
+    return result;
+  } catch (error) {
+    console.error(`[AnalysisEngine] Failed to fetch ticker for ${symbol}:`, error);
+    throw error;
+  }
 }
+
+// ===========================================
+// Crypto-Specific API Functions (Binance)
+// These are only used for crypto assets
+// ===========================================
 
 async function fetchOrderBook(
   symbol: string,
@@ -3483,20 +3502,26 @@ export const analysisEngine = {
   async scanAsset(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<AssetScanResult> {
     const tf = getTimeframesForTradeType(tradeType);
 
+    // Detect asset class for conditional analysis
+    const assetClass = getAssetClass(symbol);
+    const isCrypto = assetClass === 'crypto';
+
     // Extract base symbol for tokenomics (e.g., BTCUSDT -> BTC)
     const baseSymbol = symbol.replace('USDT', '').replace('BUSD', '').replace('USDC', '');
 
-    // Fetch candles and tokenomics in parallel
+    // Fetch candles and tokenomics in parallel (tokenomics only for crypto)
     const [ticker, candlesPrimary, candlesSecondary, candlesConfirmation, tokenomicsData] = await Promise.all([
       fetch24hTicker(symbol),
       fetchKlines(symbol, tf.primary, tf.candleCounts.primary),
       fetchKlines(symbol, tf.secondary, tf.candleCounts.secondary),
       fetchKlines(symbol, tf.confirmation, tf.candleCounts.confirmation),
-      // NEW: Fetch tokenomics analysis (financial structure)
-      analyzeTokenomics(baseSymbol).catch(err => {
-        console.warn(`Tokenomics analysis failed for ${baseSymbol}:`, err);
-        return null;
-      }),
+      // Tokenomics analysis only for crypto assets
+      isCrypto
+        ? analyzeTokenomics(baseSymbol).catch(err => {
+            console.warn(`Tokenomics analysis failed for ${baseSymbol}:`, err);
+            return null;
+          })
+        : Promise.resolve(null), // Skip tokenomics for non-crypto assets
     ]);
 
     // For higher timeframe analysis (needed for trends), also fetch daily candles if not already
@@ -3760,12 +3785,26 @@ export const analysisEngine = {
   async safetyCheck(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<SafetyCheckResult> {
     const tf = getTimeframesForTradeType(tradeType);
 
+    // Detect asset class for conditional analysis
+    const assetClass = getAssetClass(symbol);
+    const isCrypto = assetClass === 'crypto';
+
+    // Fetch data - order book and trades only for crypto
     const [ticker, candlesPrimary, orderBook, recentTrades, newsSentiment] = await Promise.all([
       fetch24hTicker(symbol),
       fetchKlines(symbol, tf.primary, tf.candleCounts.primary),
-      fetchOrderBook(symbol, 100),
-      fetchRecentTrades(symbol, 500),
-      fetchNewsSentiment(symbol),
+      isCrypto ? fetchOrderBook(symbol, 100) : Promise.resolve({ bids: [], asks: [] }),
+      isCrypto ? fetchRecentTrades(symbol, 500) : Promise.resolve([]),
+      isCrypto ? fetchNewsSentiment(symbol) : Promise.resolve({
+        symbol,
+        overallSentiment: 'neutral' as const,
+        sentimentScore: 0,
+        positiveCount: 0,
+        negativeCount: 0,
+        neutralCount: 0,
+        sources: [],
+        lastUpdate: new Date().toISOString(),
+      }),
     ]);
 
     // Use primary timeframe candles for safety analysis
@@ -3788,7 +3827,7 @@ export const analysisEngine = {
     const pvt = calculatePVT(candles1h);
     const historicalVol = calculateHistoricalVolatility(candles1h, 20);
 
-    // Analyze order book for manipulation signs
+    // Analyze order book for manipulation signs (crypto only)
     const bids = orderBook.bids.map((b) => ({
       price: parseFloat(b[0]),
       qty: parseFloat(b[1]),
@@ -3800,7 +3839,9 @@ export const analysisEngine = {
 
     const totalBidVolume = bids.reduce((sum, b) => sum + b.qty * b.price, 0);
     const totalAskVolume = asks.reduce((sum, a) => sum + a.qty * a.price, 0);
-    const orderBookImbalance = (totalBidVolume - totalAskVolume) / (totalBidVolume + totalAskVolume);
+    const orderBookImbalance = (totalBidVolume + totalAskVolume) > 0
+      ? (totalBidVolume - totalAskVolume) / (totalBidVolume + totalAskVolume)
+      : 0; // Default to neutral for non-crypto
 
     // Check for spoofing (large orders far from price)
     const currentPrice = ticker.price;

@@ -641,7 +641,7 @@ export default function AnalyzePage() {
     return '—';
   };
 
-  // Multi-market analysis function
+  // Multi-market analysis function - uses main analysis endpoint (Classic 7-Step or MLIS Pro)
   const runMultiMarketAnalysis = async () => {
     if (!selectedMultiMarketSymbol || assetType === 'crypto') return;
 
@@ -649,23 +649,37 @@ export default function AnalyzePage() {
     setMultiMarketResult(null);
 
     try {
-      const res = await authFetch(`/api/multi-market/analyze/${selectedMultiMarketSymbol}`, {
+      // Use the main analysis endpoint for all asset types
+      const res = await authFetch('/api/analysis/full', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          symbol: selectedMultiMarketSymbol,
           interval: timeframe,
-          limit: '200',
+          method: analysisMethod, // Use selected method (classic or mlis_pro)
+          accountSize: 10000,
         }),
       });
 
       const data = await res.json();
 
       if (data.success) {
-        setMultiMarketResult(data.data);
+        // Transform result to expected format
+        const analysisData = data.data;
+        setMultiMarketResult({
+          ...analysisData,
+          symbol: selectedMultiMarketSymbol,
+          assetClass: assetType,
+          analysisId: analysisData.analysisId,
+          method: analysisMethod,
+        });
         setShowMultiMarketResult(true);
-        notifyCreditDeduction?.(0, 'multi-market', 0); // Multi-market is free for now
+
+        // Notify credit deduction
+        const creditsUsed = data.creditsSpent || 25;
+        notifyCreditDeduction?.(creditsUsed, `${assetType}-analysis`, data.remainingCredits || 0);
       } else {
-        toast.error(data.error || 'Analysis failed');
+        toast.error(data.error?.message || data.error || 'Analysis failed');
       }
     } catch (error) {
       console.error('Multi-market analysis error:', error);
@@ -1172,6 +1186,19 @@ export default function AnalyzePage() {
                       ))}
                     </div>
 
+                    {/* Selected Method Indicator */}
+                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-2">
+                      <span>Analysis Method:</span>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-full font-medium",
+                        analysisMethod === 'mlis_pro'
+                          ? "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300"
+                          : "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300"
+                      )}>
+                        {analysisMethod === 'mlis_pro' ? 'MLIS Pro' : 'Classic 7-Step'}
+                      </span>
+                    </div>
+
                     {/* Analyze Button for Multi-Market */}
                     {selectedMultiMarketSymbol && (
                       <button
@@ -1181,7 +1208,9 @@ export default function AnalyzePage() {
                           "w-full mt-3 py-3 px-4 rounded-xl font-semibold text-white transition-all",
                           "flex items-center justify-center gap-2",
                           multiMarketLoading ? "opacity-70 cursor-not-allowed" : "hover:shadow-lg",
-                          assetType === 'stocks'
+                          analysisMethod === 'mlis_pro'
+                            ? "bg-gradient-to-r from-violet-500 to-purple-600"
+                            : assetType === 'stocks'
                             ? "bg-gradient-to-r from-blue-500 to-indigo-500"
                             : assetType === 'bonds'
                             ? "bg-gradient-to-r from-purple-500 to-violet-500"
@@ -1195,9 +1224,13 @@ export default function AnalyzePage() {
                           </>
                         ) : (
                           <>
-                            <TrendingUp className="w-4 h-4" />
+                            {analysisMethod === 'mlis_pro' ? (
+                              <Sparkles className="w-4 h-4" />
+                            ) : (
+                              <TrendingUp className="w-4 h-4" />
+                            )}
                             Analyze {selectedMultiMarketSymbol}
-                            <span className="text-xs opacity-75">(FREE)</span>
+                            <span className="text-xs opacity-75">(25 Credits)</span>
                           </>
                         )}
                       </button>
