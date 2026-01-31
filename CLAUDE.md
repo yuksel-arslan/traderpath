@@ -1488,6 +1488,22 @@ Kullanıcı Hakları Aktif:
   - capital-flow sayfasına L3 ve L4 için ayrı unlock butonları
   - Admin > Finance > Credit Economy bölümüne 3'lü Daily Pass Pricing section
   - Dosyalar: `schema.prisma`, `daily-pass.service.ts`, `daily-pass.routes.ts`, `capital-flow/page.tsx`, `admin/finance/page.tsx`
+- **Concierge Bug Fix**:
+  - `handleAnalysis` fonksiyonu `direction` ve `tradePlan` döndürmüyordu
+  - Frontend verdict kartı ve TradePlanChart için bu verileri bekliyordu
+  - Analiz DB'den çekilerek step5Result ve step7Result'tan direction/tradePlan eklendi
+  - Dosya: `concierge.service.ts`
+- **Analysis Details Export**:
+  - Export dropdown (PNG, JPG, PDF, Email) header'a taşındı
+  - MLIS Pro ve Classic analizlerin her ikisi için de görünür
+  - Tüm analiz detayları tek dropdown'dan export edilebiliyor
+  - Dosya: `analyze/details/[id]/page.tsx`
+- **Capital Flow Fullscreen Layer Modal**:
+  - Layer kartlarına tıklandığında tam ekran modal açılıyor
+  - Her layer için ayrı export dropdown (PNG, JPG, PDF, Email)
+  - Layer 1-4 tüm detayları fullscreen'de gösteriliyor
+  - Export fonksiyonları layer-specific isimlendirme ile (TraderPath_Global_Liquidity_2026-01-31.pdf)
+  - Dosya: `capital-flow/page.tsx`
 
 ---
 
