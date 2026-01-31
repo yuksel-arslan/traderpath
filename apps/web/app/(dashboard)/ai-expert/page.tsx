@@ -26,7 +26,7 @@ import { useQuery } from '@tanstack/react-query';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
 
-// AI Expert definitions - World-Class Professionals
+// AI Expert definitions - World-Class Professionals with Capital Flow Integration
 const AI_EXPERTS = [
   {
     id: 'aria',
@@ -36,7 +36,8 @@ const AI_EXPERTS = [
     yearsExperience: 15,
     background: 'Former Goldman Sachs • CMT Certified • 73% trend prediction accuracy',
     description: 'Master-level technical analysis with RSI divergence detection, MACD interpretation, and multi-timeframe confluence. Analyzes patterns others miss.',
-    specialty: ['RSI & MACD Mastery', 'Pattern Recognition', 'Multi-TF Analysis'],
+    capitalFlowRole: 'Layer 4 Specialist: Validates asset-level entries by confirming technical momentum aligns with macro capital flow direction. When money flows into a sector, ARIA finds the optimal entry timing.',
+    specialty: ['RSI & MACD Mastery', 'Pattern Recognition', 'Multi-TF Analysis', 'Flow-Aligned Entries'],
     icon: LineChart,
     color: 'text-blue-500',
     bgLight: 'bg-blue-50',
@@ -55,7 +56,8 @@ const AI_EXPERTS = [
     yearsExperience: 20,
     background: 'Former Bridgewater Associates • PhD MIT • $50B+ managed',
     description: 'Quantitative risk models for position sizing, stop loss optimization, and portfolio protection. Survived 2018, 2020, 2022 crashes.',
-    specialty: ['Position Sizing', 'Risk/Reward Calc', 'Capital Protection'],
+    capitalFlowRole: 'Phase-Aware Risk: Adjusts position sizing based on capital flow phases. EARLY phase = aggressive sizing, LATE phase = defensive positions, EXIT phase = capital protection mode.',
+    specialty: ['Position Sizing', 'Risk/Reward Calc', 'Capital Protection', 'Phase-Based Sizing'],
     icon: Target,
     color: 'text-amber-500',
     bgLight: 'bg-amber-50',
@@ -74,7 +76,8 @@ const AI_EXPERTS = [
     yearsExperience: 8,
     background: 'Founded analytics firm (acq. by Chainalysis) • Advisor to Grayscale',
     description: 'Pioneer in whale wallet tracking and exchange flow analysis. Sees institutional movements before they impact price.',
-    specialty: ['Whale Monitoring', 'Exchange Flow', 'Smart Money'],
+    capitalFlowRole: 'Smart Money Radar: Tracks where institutional capital is flowing before retail notices. Whale movements are leading indicators of sector rotation and market phase transitions.',
+    specialty: ['Whale Monitoring', 'Exchange Flow', 'Smart Money', 'Rotation Signals'],
     icon: Eye,
     color: 'text-purple-500',
     bgLight: 'bg-purple-50',
@@ -93,7 +96,8 @@ const AI_EXPERTS = [
     yearsExperience: 12,
     background: 'Former Binance Security • Prevented $500M+ in scams • White-hat hacker',
     description: 'Identified 2,000+ honeypots before they harmed users. Expert in rug pull detection, contract auditing, and manipulation patterns.',
-    specialty: ['Scam Detection', 'Contract Audit', 'Trap Analysis'],
+    capitalFlowRole: 'Flow Authenticity Guard: Distinguishes real capital flow from manipulation. Detects wash trading, fake volume, and pump schemes that create artificial flow signals.',
+    specialty: ['Scam Detection', 'Contract Audit', 'Trap Analysis', 'Flow Verification'],
     icon: ShieldAlert,
     color: 'text-red-500',
     bgLight: 'bg-red-50',
@@ -188,7 +192,7 @@ export default function AIExpertsPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold gradient-text-logo-animate">AI Expert Team</h1>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Four world-class specialists</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Capital Flow Intelligence Specialists</p>
               </div>
             </div>
 
@@ -219,6 +223,39 @@ export default function AIExpertsPage() {
             <div className="bg-amber-50 dark:bg-amber-500/10 rounded-xl p-3 text-center border border-amber-200/50 dark:border-amber-500/20">
               <div className="text-xl font-bold text-amber-600 dark:text-amber-400">{totalUsage}</div>
               <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Total Calls</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Capital Flow Philosophy Banner ===== */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-teal-500/10 via-cyan-500/5 to-emerald-500/10 dark:from-teal-500/20 dark:via-cyan-500/10 dark:to-emerald-500/20 border border-teal-500/20 dark:border-teal-500/30 p-5">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-teal-400/20 to-transparent rounded-full blur-2xl" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-2">
+            <BarChart3 className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+            <h2 className="text-sm font-bold text-teal-800 dark:text-teal-200">Capital Flow Philosophy</h2>
+          </div>
+          <p className="text-sm text-teal-700 dark:text-teal-300 leading-relaxed max-w-3xl">
+            <span className="font-semibold">&quot;Where money flows, potential exists.&quot;</span> Our AI experts are trained to follow the money across 4 layers:
+            Global Liquidity → Market Flow → Sector Activity → Asset Analysis. Each expert specializes in validating capital flow signals within their domain.
+          </p>
+          <div className="flex flex-wrap gap-3 mt-3">
+            <div className="flex items-center gap-1.5 text-xs">
+              <div className="w-2 h-2 rounded-full bg-blue-500" />
+              <span className="text-gray-600 dark:text-slate-400">ARIA: Technical Validation</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs">
+              <div className="w-2 h-2 rounded-full bg-amber-500" />
+              <span className="text-gray-600 dark:text-slate-400">NEXUS: Phase-Based Risk</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs">
+              <div className="w-2 h-2 rounded-full bg-purple-500" />
+              <span className="text-gray-600 dark:text-slate-400">ORACLE: Smart Money Tracking</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs">
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+              <span className="text-gray-600 dark:text-slate-400">SENTINEL: Flow Verification</span>
             </div>
           </div>
         </div>
@@ -279,9 +316,20 @@ export default function AIExpertsPage() {
                   </p>
 
                   {/* Description */}
-                  <p className="text-sm text-gray-600 dark:text-slate-300 mb-4 line-clamp-2">
+                  <p className="text-sm text-gray-600 dark:text-slate-300 mb-3 line-clamp-2">
                     {expert.description}
                   </p>
+
+                  {/* Capital Flow Role */}
+                  <div className="mb-4 p-3 rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-500/10 dark:to-cyan-500/10 border border-teal-200/50 dark:border-teal-500/20">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <TrendingUp className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-300">Capital Flow Role</span>
+                    </div>
+                    <p className="text-xs text-teal-800 dark:text-teal-200 leading-relaxed">
+                      {expert.capitalFlowRole}
+                    </p>
+                  </div>
 
                   {/* Specialties */}
                   <div className="flex flex-wrap gap-2 mb-4">
