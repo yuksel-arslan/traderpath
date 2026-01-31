@@ -747,28 +747,36 @@ function StatsBoxes() {
 
 const FAQS = [
   {
-    question: 'What is TraderPath and how does it work?',
-    answer: 'TraderPath is a Global Capital Flow Intelligence Platform that tracks where money is flowing across Crypto, Stocks, Bonds, and Precious Metals. Our 4-layer system first identifies which market has the strongest capital inflow, then drills down to specific sectors and assets. You get actionable trade plans with entry points, targets, and stop-losses.',
+    question: 'What is Capital Flow and why does it matter?',
+    answer: 'Capital Flow tracks where institutional money is moving across global markets. The principle is simple: "Where money flows, potential exists." By monitoring Fed Balance Sheet, M2 Money Supply, DXY, and VIX, we identify which markets are receiving capital inflows—giving you a significant edge before making any trade.',
   },
   {
-    question: 'What markets does TraderPath cover?',
-    answer: 'We track capital flows across 4 major markets: Crypto (full 7-Step and MLIS Pro analysis), Stocks, Bonds, and Precious Metals. Our Capital Flow Radar monitors Fed Balance Sheet, M2 Money Supply, DXY, VIX, and sector-specific flows to identify optimal trading opportunities.',
+    question: 'How does the 4-Layer System work?',
+    answer: 'Our top-down approach works in 4 layers: Layer 1 (Global Liquidity) checks if conditions favor risk assets. Layer 2 (Market Flow) identifies which market has strongest inflow (Crypto, Stocks, Bonds, Metals). Layer 3 (Sector Activity) pinpoints hot sectors. Layer 4 (Asset Analysis) provides detailed 7-Step or MLIS Pro analysis with entry/exit levels.',
+  },
+  {
+    question: 'What are the market phases (EARLY, MID, LATE, EXIT)?',
+    answer: 'EARLY (0-30 days): Capital just started flowing in—optimal entry time. MID (30-60 days): Trend maturing, enter with caution. LATE (60-90 days): Trend exhausting, avoid new positions. EXIT (90+ days or reversal): Capital leaving, do not enter. We display the current phase for each market.',
+  },
+  {
+    question: 'What\'s the difference between BUY and SELL recommendations?',
+    answer: 'BUY recommendations highlight markets/sectors with strong capital inflow—ideal for long positions. SELL recommendations identify markets with outflow or relative weakness—useful for short positions or avoiding certain assets. Both include confidence scores and specific sectors to focus on.',
+  },
+  {
+    question: 'Which markets does TraderPath analyze?',
+    answer: 'We track 4 major markets: Crypto (full 7-Step and MLIS Pro analysis via Binance), Stocks (SPY, QQQ, major equities via Yahoo Finance), Bonds (TLT, IEF, yield curve), and Precious Metals (Gold, Silver). Each market shows flow direction, velocity, phase, and rotation signals.',
   },
   {
     question: 'Do I need to connect my exchange or wallet?',
-    answer: 'No! TraderPath is purely an analysis tool. We never ask for your trading keys, wallet addresses, or exchange credentials. Your funds stay safe in your own accounts.',
-  },
-  {
-    question: 'How accurate is the analysis?',
-    answer: 'Our accuracy is calculated from verified trade outcomes (TP hits vs SL hits) and displayed transparently in our Platform Metrics section. We always recommend using our analysis as one input in your trading decisions, not as financial advice.',
+    answer: 'No! TraderPath is purely an analysis tool. We never ask for your trading keys, wallet addresses, or exchange credentials. Your funds stay completely safe in your own accounts.',
   },
   {
     question: 'How does the credit system work?',
-    answer: 'You purchase credits upfront and spend them as you analyze. A full 7-step analysis costs 25 credits. You can also earn free credits daily through login bonuses, quizzes, and other activities.',
+    answer: 'Capital Flow dashboard is FREE for all users. Asset analysis costs 25 credits (7-Step or MLIS Pro). You can earn free credits daily through login bonuses, quizzes, and referrals. Purchase additional credits as needed.',
   },
   {
-    question: 'Can I get a refund if I\'m not satisfied?',
-    answer: 'Yes! We offer a 7-day money-back guarantee on your first credit purchase. If TraderPath doesn\'t meet your expectations, contact support for a full refund.',
+    question: 'How accurate is the analysis?',
+    answer: 'Our accuracy is calculated from verified trade outcomes (TP hits vs SL hits) and displayed transparently in Platform Metrics. Capital Flow helps you trade WITH institutional money flow, not against it—significantly improving your odds.',
   },
 ];
 
