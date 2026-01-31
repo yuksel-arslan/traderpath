@@ -1006,14 +1006,16 @@ export default function CapitalFlowPage() {
         // Check Layer 3 (Sector Activity)
         const layer3Response = await authFetch('/api/passes/check/CAPITAL_FLOW_L3');
         const layer3Result = await layer3Response.json();
-        if (layer3Result.success && layer3Result.data?.hasPass && layer3Result.data?.canUse) {
+        // Admin users or users with valid pass get access
+        if (layer3Result.success && (layer3Result.data?.isAdmin || (layer3Result.data?.hasPass && layer3Result.data?.canUse))) {
           setLayer3Unlocked(true);
         }
 
         // Check Layer 4 (AI Recommendations)
         const layer4Response = await authFetch('/api/passes/check/CAPITAL_FLOW_L4');
         const layer4Result = await layer4Response.json();
-        if (layer4Result.success && layer4Result.data?.hasPass && layer4Result.data?.canUse) {
+        // Admin users or users with valid pass get access
+        if (layer4Result.success && (layer4Result.data?.isAdmin || (layer4Result.data?.hasPass && layer4Result.data?.canUse))) {
           setLayer4Unlocked(true);
         }
       } catch (err) {
