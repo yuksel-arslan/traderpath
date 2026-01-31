@@ -663,7 +663,7 @@ export default function AnalyzePage() {
       if (data.success) {
         setMultiMarketResult(data.data);
         setShowMultiMarketResult(true);
-        notifyCreditDeduction?.(0, 0); // Multi-market is free for now
+        notifyCreditDeduction?.(0, 'multi-market', 0); // Multi-market is free for now
       } else {
         toast.error(data.error || 'Analysis failed');
       }
