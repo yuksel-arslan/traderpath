@@ -1,362 +1,215 @@
 'use client';
 
 // ===========================================
-// Analyze Page - 2026 Design Trends
-// Kinetic Typography, Marquee, Grain, Glassmorphism, Bento Grid
+// LAYER 4: Asset Micro Analysis
+// Part of Capital Flow hierarchy
 // ===========================================
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Target,
-  FileText,
-  CheckCircle2,
-  XCircle,
   Timer,
-  LineChart,
-  ChevronDown,
+  ChevronRight,
   Sparkles,
-  Zap,
   TrendingUp,
   TrendingDown,
-  Activity,
   BarChart3,
-  Shield,
   Brain,
-  Crown,
-  RefreshCw,
-  ArrowRight,
-  Layers,
-  ExternalLink,
+  Search,
   Coins,
   Landmark,
   Gem,
   Loader2,
-  X,
+  Globe,
+  Layers,
+  ArrowRight,
+  Info,
+  Zap,
 } from 'lucide-react';
-import { useCreditNotification } from '../../../contexts/CreditNotificationContext';
+// Credit notifications handled by AnalysisDialog
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
-import type { TradeType, Timeframe } from '../../../components/analysis/TradeTypeSelector';
+import type { Timeframe } from '../../../components/analysis/TradeTypeSelector';
 
 // Lazy load components
-const TradingViewWidget = dynamic(
-  () => import('../../../components/charts/TradingViewWidget').then(mod => ({ default: mod.TradingViewWidget })),
-  { ssr: false, loading: () => <div className="h-[300px] bg-muted/30 rounded-lg animate-pulse" /> }
-);
-
-const CoinSelector = dynamic(
-  () => import('../../../components/common/CoinSelector').then(mod => ({ default: mod.CoinSelector })),
-  { ssr: false, loading: () => <div className="h-20 bg-muted/30 rounded-lg animate-pulse" /> }
-);
-
 const CoinIcon = dynamic(
   () => import('../../../components/common/CoinIcon').then(mod => ({ default: mod.CoinIcon })),
-  { ssr: false, loading: () => <div className="w-6 h-6 rounded-full bg-muted/30 animate-pulse" /> }
-);
-
-const TradeTypeSelector = dynamic(
-  () => import('../../../components/analysis/TradeTypeSelector').then(mod => ({ default: mod.TradeTypeSelector })),
-  { ssr: false, loading: () => <div className="h-10 bg-muted/30 rounded-lg animate-pulse" /> }
+  { ssr: false, loading: () => <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse" /> }
 );
 
 const RecentAnalyses = dynamic(
   () => import('../../../components/analysis/RecentAnalyses').then(mod => ({ default: mod.RecentAnalyses })),
-  { ssr: false, loading: () => <div className="h-32 bg-muted/30 rounded-lg animate-pulse" /> }
+  { ssr: false, loading: () => <div className="h-32 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" /> }
 );
 
-interface AnalysisStats {
-  totalAnalyses: number;
-  activeCount: number;
-  closedCount: number;
-  tpHits: number;
-  slHits: number;
-  accuracy: number;
-}
+const AnalysisDialog = dynamic(
+  () => import('../../../components/analysis/AnalysisDialog').then(mod => ({ default: mod.AnalysisDialog })),
+  { ssr: false }
+);
 
-interface TopCoin {
-  symbol: string;
-  reliabilityScore: number;
-  verdict: string;
-  direction: string | null;
-  price: number;
-  priceChange24h: number;
-  analysisId: string | null;
-  scannedAt: string;
-  expiresAt: string;
-  method?: 'classic' | 'mlis_pro';
-  // MLIS specific fields
-  recommendation?: string;
-  confidence?: number;
-}
-
-type ScanMethod = 'classic' | 'mlis_pro';
-
-// Marquee ticker data
-const MARQUEE_ITEMS = [
-  { symbol: 'BTC', name: 'Bitcoin', change: '+2.45%', positive: true },
-  { symbol: 'ETH', name: 'Ethereum', change: '+1.82%', positive: true },
-  { symbol: 'SOL', name: 'Solana', change: '+5.21%', positive: true },
-  { symbol: 'BNB', name: 'BNB', change: '-0.34%', positive: false },
-  { symbol: 'XRP', name: 'XRP', change: '+3.15%', positive: true },
-  { symbol: 'DOGE', name: 'Dogecoin', change: '+8.92%', positive: true },
-  { symbol: 'ADA', name: 'Cardano', change: '-1.23%', positive: false },
-  { symbol: 'AVAX', name: 'Avalanche', change: '+4.56%', positive: true },
-];
-
-const POPULAR_COINS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'DOGE'];
-
-// Kinetic Typography - Character by character animation
-function KineticText({ text, className }: { text: string; className?: string }) {
-  return (
-    <span className={cn("inline-flex", className)}>
-      {text.split('').map((char, i) => (
-        <span
-          key={i}
-          className="inline-block animate-[text-wave_2s_ease-in-out_infinite]"
-          style={{ animationDelay: `${i * 0.05}s` }}
-        >
-          {char === ' ' ? '\u00A0' : char}
-        </span>
-      ))}
-    </span>
-  );
-}
-
-// Grain Texture Overlay
-function GrainOverlay() {
-  return (
-    <div
-      className="pointer-events-none fixed inset-0 z-50 opacity-[0.015] dark:opacity-[0.03]"
-      style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-        backgroundRepeat: 'repeat',
-      }}
-    />
-  );
-}
-
-// Gradient Orbs - Floating background elements
-function GradientOrbs() {
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      {/* Teal Orb */}
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-teal-400/20 to-emerald-500/10 rounded-full blur-3xl animate-float-slow" />
-      {/* Red Orb */}
-      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-red-400/15 to-rose-500/10 rounded-full blur-3xl animate-float-slow" style={{ animationDelay: '-3s' }} />
-      {/* Purple Orb */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-purple-500/5 to-blue-500/5 rounded-full blur-3xl animate-orb-move" />
-    </div>
-  );
-}
-
-// Marquee Banner Component
-function MarqueeBanner() {
-  return (
-    <div className="relative w-full overflow-hidden bg-gradient-to-r from-slate-900/80 via-slate-800/80 to-slate-900/80 dark:from-slate-950/90 dark:via-slate-900/90 dark:to-slate-950/90 backdrop-blur-xl border-b border-white/5">
-      <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 via-transparent to-red-500/5" />
-      <div className="flex animate-marquee">
-        {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-3 px-6 py-3 border-r border-white/5"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-white">{item.symbol}</span>
-              <span className="text-xs text-slate-400">{item.name}</span>
-            </div>
-            <span className={cn(
-              "text-sm font-semibold",
-              item.positive ? "text-emerald-400" : "text-rose-400"
-            )}>
-              {item.change}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Glass Card Component
-function GlassCard({
-  children,
-  className,
-  hover = true,
-  allowOverflow = false,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  hover?: boolean;
-  allowOverflow?: boolean;
-}) {
-  return (
-    <div className={cn(
-      "relative rounded-2xl",
-      !allowOverflow && "overflow-hidden",
-      "bg-white/70 dark:bg-slate-900/50",
-      "backdrop-blur-xl backdrop-saturate-150",
-      "border border-white/20 dark:border-white/10",
-      "shadow-xl shadow-black/5 dark:shadow-black/20",
-      hover && "transition-all duration-500 hover:shadow-2xl hover:shadow-teal-500/10 hover:-translate-y-1 hover:border-teal-500/20",
-      className
-    )}>
-      {children}
-    </div>
-  );
-}
-
-// Stat Card with animation
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  color,
-  delay = 0,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-  color: string;
-  delay?: number;
-}) {
-  const [isVisible, setIsVisible] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setTimeout(() => setIsVisible(true), delay);
-        }
-      },
-      { threshold: 0.1 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [delay]);
-
-  const colorClasses: Record<string, { bg: string; text: string; icon: string; glow: string }> = {
-    gray: {
-      bg: 'bg-slate-100/80 dark:bg-slate-800/50',
-      text: 'text-slate-700 dark:text-slate-200',
-      icon: 'text-slate-500',
-      glow: '',
-    },
-    blue: {
-      bg: 'bg-blue-50/80 dark:bg-blue-500/10',
-      text: 'text-blue-600 dark:text-blue-400',
-      icon: 'text-blue-500',
-      glow: 'shadow-blue-500/20',
-    },
-    green: {
-      bg: 'bg-emerald-50/80 dark:bg-emerald-500/10',
-      text: 'text-emerald-600 dark:text-emerald-400',
-      icon: 'text-emerald-500',
-      glow: 'shadow-emerald-500/20',
-    },
-    red: {
-      bg: 'bg-rose-50/80 dark:bg-rose-500/10',
-      text: 'text-rose-600 dark:text-rose-400',
-      icon: 'text-rose-500',
-      glow: 'shadow-rose-500/20',
-    },
-    teal: {
-      bg: 'bg-teal-50/80 dark:bg-teal-500/10',
-      text: 'text-teal-600 dark:text-teal-400',
-      icon: 'text-teal-500',
-      glow: 'shadow-teal-500/20',
-    },
-  };
-
-  const colors = colorClasses[color] || colorClasses.gray;
-
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "relative overflow-hidden rounded-xl p-3 sm:p-4 transition-all duration-700",
-        "backdrop-blur-sm border border-white/10",
-        colors.bg,
-        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
-        "hover:scale-105 hover:shadow-lg",
-        colors.glow
-      )}
-    >
-      <div className="flex items-center gap-1.5 sm:gap-2 mb-1 sm:mb-2">
-        <Icon className={cn("w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0", colors.icon)} />
-        <span className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 truncate">{label}</span>
-      </div>
-      <p className={cn("text-lg sm:text-2xl font-bold tabular-nums", colors.text)}>
-        {value}
-      </p>
-    </div>
-  );
-}
-
-// Feature Badge
-function FeatureBadge({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
-  return (
-    <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-white/50 dark:bg-white/5 backdrop-blur-sm border border-white/20 dark:border-white/10">
-      <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-teal-500 flex-shrink-0" />
-      <span className="text-[10px] sm:text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">{text}</span>
-    </div>
-  );
-}
-
-// Asset type for multi-market analysis
+// Types
 type AssetType = 'crypto' | 'stocks' | 'bonds' | 'metals';
-
-// Analysis method type
 type AnalysisMethod = 'classic' | 'mlis_pro';
 
-// Asset Type Configuration
-const ASSET_TYPES: {
-  id: AssetType;
+interface CapitalFlowContext {
+  liquidity: {
+    bias: 'risk_on' | 'risk_off' | 'neutral';
+    expanding: boolean;
+  };
+  recommendedMarket: AssetType | null;
+  recommendedSector: string | null;
+  phase: 'early' | 'mid' | 'late' | 'exit' | null;
+  recommendation: string;
+}
+
+interface SuggestedAsset {
+  symbol: string;
   name: string;
-  description: string;
+  change24h: number;
+  score?: number;
+  verdict?: string;
+}
+
+// Asset configurations
+const ASSET_CONFIGS: Record<AssetType, {
+  name: string;
   icon: React.ElementType;
   color: string;
-  available: boolean;
-}[] = [
-  {
-    id: 'crypto',
+  gradient: string;
+}> = {
+  crypto: {
     name: 'Crypto',
-    description: '7-Step & MLIS Pro analysis',
     icon: Coins,
-    color: 'from-orange-500 to-amber-500',
-    available: true,
+    color: 'text-amber-500',
+    gradient: 'from-amber-500 to-orange-500'
   },
-  {
-    id: 'stocks',
+  stocks: {
     name: 'Stocks',
-    description: 'Technical + Fundamental',
     icon: BarChart3,
-    color: 'from-blue-500 to-indigo-500',
-    available: true,
+    color: 'text-blue-500',
+    gradient: 'from-blue-500 to-indigo-500'
   },
-  {
-    id: 'bonds',
+  bonds: {
     name: 'Bonds',
-    description: 'Yield & Duration analysis',
     icon: Landmark,
-    color: 'from-purple-500 to-violet-500',
-    available: true,
+    color: 'text-purple-500',
+    gradient: 'from-purple-500 to-violet-500'
   },
-  {
-    id: 'metals',
+  metals: {
     name: 'Metals',
-    description: 'Gold, Silver, Commodities',
     icon: Gem,
-    color: 'from-yellow-500 to-amber-400',
-    available: true,
+    color: 'text-yellow-500',
+    gradient: 'from-yellow-500 to-amber-400'
   },
-];
+};
 
-// Symbol lists for each asset type
-const MULTI_MARKET_SYMBOLS: Record<Exclude<AssetType, 'crypto'>, { symbol: string; name: string; }[]> = {
+// Default suggested assets per market
+const DEFAULT_SUGGESTIONS: Record<AssetType, SuggestedAsset[]> = {
+  crypto: [
+    { symbol: 'BTC', name: 'Bitcoin', change24h: 0 },
+    { symbol: 'ETH', name: 'Ethereum', change24h: 0 },
+    { symbol: 'SOL', name: 'Solana', change24h: 0 },
+    { symbol: 'BNB', name: 'BNB', change24h: 0 },
+    { symbol: 'XRP', name: 'XRP', change24h: 0 },
+  ],
+  stocks: [
+    { symbol: 'SPY', name: 'S&P 500 ETF', change24h: 0 },
+    { symbol: 'QQQ', name: 'Nasdaq 100', change24h: 0 },
+    { symbol: 'AAPL', name: 'Apple', change24h: 0 },
+    { symbol: 'MSFT', name: 'Microsoft', change24h: 0 },
+    { symbol: 'NVDA', name: 'NVIDIA', change24h: 0 },
+  ],
+  bonds: [
+    { symbol: 'TLT', name: '20+ Year Treasury', change24h: 0 },
+    { symbol: 'IEF', name: '7-10 Year Treasury', change24h: 0 },
+    { symbol: 'BND', name: 'Total Bond Market', change24h: 0 },
+    { symbol: 'LQD', name: 'Investment Grade', change24h: 0 },
+    { symbol: 'HYG', name: 'High Yield Corp', change24h: 0 },
+  ],
+  metals: [
+    { symbol: 'GLD', name: 'Gold ETF', change24h: 0 },
+    { symbol: 'SLV', name: 'Silver ETF', change24h: 0 },
+    { symbol: 'IAU', name: 'Gold Trust', change24h: 0 },
+    { symbol: 'PPLT', name: 'Platinum ETF', change24h: 0 },
+    { symbol: 'GDX', name: 'Gold Miners', change24h: 0 },
+  ],
+};
+
+// Sector-based suggestions for crypto
+const SECTOR_SUGGESTIONS: Record<string, SuggestedAsset[]> = {
+  defi: [
+    { symbol: 'AAVE', name: 'Aave', change24h: 0 },
+    { symbol: 'UNI', name: 'Uniswap', change24h: 0 },
+    { symbol: 'MKR', name: 'Maker', change24h: 0 },
+    { symbol: 'CRV', name: 'Curve', change24h: 0 },
+    { symbol: 'COMP', name: 'Compound', change24h: 0 },
+  ],
+  layer2: [
+    { symbol: 'ARB', name: 'Arbitrum', change24h: 0 },
+    { symbol: 'OP', name: 'Optimism', change24h: 0 },
+    { symbol: 'MATIC', name: 'Polygon', change24h: 0 },
+    { symbol: 'IMX', name: 'Immutable X', change24h: 0 },
+    { symbol: 'STRK', name: 'Starknet', change24h: 0 },
+  ],
+  ai: [
+    { symbol: 'FET', name: 'Fetch.ai', change24h: 0 },
+    { symbol: 'RNDR', name: 'Render', change24h: 0 },
+    { symbol: 'AGIX', name: 'SingularityNET', change24h: 0 },
+    { symbol: 'TAO', name: 'Bittensor', change24h: 0 },
+    { symbol: 'WLD', name: 'Worldcoin', change24h: 0 },
+  ],
+  meme: [
+    { symbol: 'DOGE', name: 'Dogecoin', change24h: 0 },
+    { symbol: 'SHIB', name: 'Shiba Inu', change24h: 0 },
+    { symbol: 'PEPE', name: 'Pepe', change24h: 0 },
+    { symbol: 'WIF', name: 'dogwifhat', change24h: 0 },
+    { symbol: 'BONK', name: 'Bonk', change24h: 0 },
+  ],
+};
+
+// All searchable symbols
+const ALL_SYMBOLS: Record<AssetType, { symbol: string; name: string }[]> = {
+  crypto: [
+    { symbol: 'BTC', name: 'Bitcoin' },
+    { symbol: 'ETH', name: 'Ethereum' },
+    { symbol: 'SOL', name: 'Solana' },
+    { symbol: 'BNB', name: 'BNB' },
+    { symbol: 'XRP', name: 'XRP' },
+    { symbol: 'ADA', name: 'Cardano' },
+    { symbol: 'AVAX', name: 'Avalanche' },
+    { symbol: 'DOGE', name: 'Dogecoin' },
+    { symbol: 'DOT', name: 'Polkadot' },
+    { symbol: 'LINK', name: 'Chainlink' },
+    { symbol: 'MATIC', name: 'Polygon' },
+    { symbol: 'UNI', name: 'Uniswap' },
+    { symbol: 'AAVE', name: 'Aave' },
+    { symbol: 'MKR', name: 'Maker' },
+    { symbol: 'CRV', name: 'Curve' },
+    { symbol: 'COMP', name: 'Compound' },
+    { symbol: 'ARB', name: 'Arbitrum' },
+    { symbol: 'OP', name: 'Optimism' },
+    { symbol: 'FET', name: 'Fetch.ai' },
+    { symbol: 'RNDR', name: 'Render' },
+    { symbol: 'NEAR', name: 'NEAR Protocol' },
+    { symbol: 'APT', name: 'Aptos' },
+    { symbol: 'SUI', name: 'Sui' },
+    { symbol: 'INJ', name: 'Injective' },
+    { symbol: 'TIA', name: 'Celestia' },
+    { symbol: 'PEPE', name: 'Pepe' },
+    { symbol: 'SHIB', name: 'Shiba Inu' },
+    { symbol: 'WIF', name: 'dogwifhat' },
+    { symbol: 'BONK', name: 'Bonk' },
+    { symbol: 'LTC', name: 'Litecoin' },
+    { symbol: 'BCH', name: 'Bitcoin Cash' },
+    { symbol: 'ETC', name: 'Ethereum Classic' },
+    { symbol: 'ATOM', name: 'Cosmos' },
+    { symbol: 'FIL', name: 'Filecoin' },
+    { symbol: 'LDO', name: 'Lido DAO' },
+    { symbol: 'IMX', name: 'Immutable X' },
+  ],
   stocks: [
     { symbol: 'SPY', name: 'S&P 500 ETF' },
     { symbol: 'QQQ', name: 'Nasdaq 100 ETF' },
@@ -373,6 +226,11 @@ const MULTI_MARKET_SYMBOLS: Record<Exclude<AssetType, 'crypto'>, { symbol: strin
     { symbol: 'V', name: 'Visa Inc.' },
     { symbol: 'JNJ', name: 'Johnson & Johnson' },
     { symbol: 'WMT', name: 'Walmart Inc.' },
+    { symbol: 'PG', name: 'Procter & Gamble' },
+    { symbol: 'MA', name: 'Mastercard' },
+    { symbol: 'HD', name: 'Home Depot' },
+    { symbol: 'BAC', name: 'Bank of America' },
+    { symbol: 'XOM', name: 'Exxon Mobil' },
   ],
   bonds: [
     { symbol: 'TLT', name: '20+ Year Treasury ETF' },
@@ -383,8 +241,8 @@ const MULTI_MARKET_SYMBOLS: Record<Exclude<AssetType, 'crypto'>, { symbol: strin
     { symbol: 'HYG', name: 'High Yield Corp ETF' },
     { symbol: 'AGG', name: 'Core U.S. Aggregate Bond' },
     { symbol: 'GOVT', name: 'U.S. Treasury Bond ETF' },
-    { symbol: 'US10Y', name: '10-Year Treasury Yield' },
-    { symbol: 'US2Y', name: '2-Year Treasury Yield' },
+    { symbol: 'TIP', name: 'TIPS Bond ETF' },
+    { symbol: 'MUB', name: 'Municipal Bonds ETF' },
   ],
   metals: [
     { symbol: 'GLD', name: 'Gold ETF (SPDR)' },
@@ -392,1217 +250,596 @@ const MULTI_MARKET_SYMBOLS: Record<Exclude<AssetType, 'crypto'>, { symbol: strin
     { symbol: 'IAU', name: 'Gold Trust (iShares)' },
     { symbol: 'PPLT', name: 'Platinum ETF' },
     { symbol: 'PALL', name: 'Palladium ETF' },
-    { symbol: 'XAUUSD', name: 'Gold Spot Price' },
-    { symbol: 'XAGUSD', name: 'Silver Spot Price' },
     { symbol: 'GDX', name: 'Gold Miners ETF' },
     { symbol: 'GDXJ', name: 'Junior Gold Miners ETF' },
+    { symbol: 'SIL', name: 'Silver Miners ETF' },
+    { symbol: 'COPX', name: 'Copper Miners ETF' },
   ],
 };
+
+// Timeframe options
+const TIMEFRAMES: { value: Timeframe; label: string; type: string }[] = [
+  { value: '15m', label: '15m', type: 'Scalp' },
+  { value: '1h', label: '1H', type: 'Day' },
+  { value: '4h', label: '4H', type: 'Day' },
+  { value: '1d', label: '1D', type: 'Swing' },
+];
 
 export default function AnalyzePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { showCelebration, notifyCreditDeduction } = useCreditNotification();
 
-  const [stats, setStats] = useState<AnalysisStats | null>(null);
-  const [assetType, setAssetType] = useState<AssetType>(() => {
-    // Check URL params for asset type from Capital Flow recommendation
-    const assetParam = searchParams.get('asset') as AssetType | null;
-    if (assetParam && ['crypto', 'stocks', 'bonds', 'metals'].includes(assetParam)) {
-      return assetParam;
-    }
-    return 'crypto';
-  });
+  // URL params from Capital Flow
+  const marketParam = searchParams.get('market') as AssetType | null;
+  const sectorParam = searchParams.get('sector');
+  const symbolParam = searchParams.get('symbol');
+
+  // State
+  const [assetType, setAssetType] = useState<AssetType>(marketParam || 'crypto');
+  const [selectedSymbol, setSelectedSymbol] = useState<string>(symbolParam || '');
   const [timeframe, setTimeframe] = useState<Timeframe>('4h');
-  const [analysisMethod, setAnalysisMethod] = useState<AnalysisMethod>('classic');
-  const [chartSymbol, setChartSymbol] = useState('BINANCE:BTCUSDT');
-  const [isDarkMode, setIsDarkMode] = useState(true);
-  const [showChart, setShowChart] = useState(false);
+  const [method, setMethod] = useState<AnalysisMethod>('classic');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
 
-  // Top 5 Coins state
-  const [topCoins, setTopCoins] = useState<TopCoin[]>([]);
-  const [topCoinsLoading, setTopCoinsLoading] = useState(false);
-  const [topCoinsScanning, setTopCoinsScanning] = useState(false);
-  const [scanMethod, setScanMethod] = useState<ScanMethod>('classic');
-  const [scanError, setScanError] = useState<string | null>(null);
-  const [scanProgress, setScanProgress] = useState<{ current: number; total: number } | null>(null);
-  const [lastScanTime, setLastScanTime] = useState<string | null>(null);
-  const scanPollRef = useRef<NodeJS.Timeout | null>(null);
+  // Capital Flow context
+  const [flowContext, setFlowContext] = useState<CapitalFlowContext | null>(null);
+  const [flowLoading, setFlowLoading] = useState(true);
+  const [suggestions, setSuggestions] = useState<SuggestedAsset[]>([]);
 
-  // Multi-market analysis state
-  const [selectedMultiMarketSymbol, setSelectedMultiMarketSymbol] = useState<string>('');
-  const [multiMarketLoading, setMultiMarketLoading] = useState(false);
-  const [multiMarketResult, setMultiMarketResult] = useState<any>(null);
-  const [showMultiMarketResult, setShowMultiMarketResult] = useState(false);
-
-  // Detect theme
+  // Fetch Capital Flow context
   useEffect(() => {
-    const checkTheme = () => {
-      setIsDarkMode(document.documentElement.classList.contains('dark'));
-    };
-    checkTheme();
-    const observer = new MutationObserver(checkTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
+    const fetchFlowContext = async () => {
+      setFlowLoading(true);
+      try {
+        const res = await authFetch('/api/capital-flow/summary');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.data) {
+            const { liquidityBias, recommendation, markets } = data.data;
 
-  const fetchStats = useCallback(async () => {
-    try {
-      const statsRes = await authFetch('/api/analysis/statistics');
+            // Find best market
+            let bestMarket: AssetType | null = null;
+            let bestPhase: string | null = null;
 
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats({
-          totalAnalyses: statsData.totalAnalyses || 0,
-          activeCount: statsData.activeCount || statsData.pendingAnalyses || 0,
-          closedCount: statsData.verifiedAnalyses || 0,
-          tpHits: statsData.correctAnalyses || 0,
-          slHits: (statsData.verifiedAnalyses || 0) - (statsData.correctAnalyses || 0),
-          accuracy: statsData.accuracy || 0,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to fetch stats:', error);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
-
-  // Fetch top coins from cache
-  const fetchTopCoins = useCallback(async (method: ScanMethod = 'classic') => {
-    setTopCoinsLoading(true);
-    setScanError(null);
-    try {
-      const res = await authFetch(`/api/analysis/top-coins?limit=5&tradeableOnly=true&method=${method}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.data) {
-          setTopCoins(data.data.coins || []);
-          // Set last scan time from cache info
-          if (data.data.cacheInfo?.lastUpdated) {
-            setLastScanTime(data.data.cacheInfo.lastUpdated);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch top coins:', error);
-    } finally {
-      setTopCoinsLoading(false);
-    }
-  }, []);
-
-  // Scroll to top coins section
-  const scrollToTopCoins = useCallback(() => {
-    const topCoinsSection = document.getElementById('top-coins-section');
-    if (topCoinsSection) {
-      topCoinsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, []);
-
-  // Cleanup poll on unmount
-  useEffect(() => {
-    return () => {
-      if (scanPollRef.current) {
-        clearInterval(scanPollRef.current);
-      }
-    };
-  }, []);
-
-  // Start paid scan with selected method (300 credits)
-  const startTopCoinsScan = async () => {
-    setTopCoinsScanning(true);
-    setScanError(null);
-    setScanProgress({ current: 0, total: 30 });
-
-    try {
-      // Use the dedicated scan endpoint with method parameter
-      const res = await authFetch('/api/analysis/top-coins/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ method: scanMethod }),
-      });
-      const data = await res.json();
-
-      if (!data.success) {
-        setScanError(data.error?.message || 'Failed to start scan');
-        setTopCoinsScanning(false);
-        setScanProgress(null);
-        return;
-      }
-
-      // Start polling for results using scan session progress
-      let pollCount = 0;
-      const maxPolls = 120; // 120 polls × 5 seconds = 10 minutes max (scan takes ~6-8 mins)
-
-      scanPollRef.current = setInterval(async () => {
-        pollCount++;
-
-        try {
-          const statusRes = await authFetch(`/api/analysis/top-coins/status?method=${scanMethod}`);
-          const statusData = await statusRes.json();
-
-          if (statusData.success) {
-            const scanProgress = statusData.data?.scanProgress;
-            const isScanning = statusData.data?.isScanning;
-            const coinsAnalyzed = scanProgress?.coinsAnalyzed || 0;
-            const totalCoins = scanProgress?.totalCoins || 30;
-
-            // Update progress using actual scan session data
-            setScanProgress({ current: coinsAnalyzed, total: totalCoins });
-
-            // Fetch results periodically (every 5 coins analyzed)
-            if (coinsAnalyzed >= 5 && coinsAnalyzed % 5 === 0) {
-              await fetchTopCoins(scanMethod);
-            }
-
-            // Check if scan is complete (not scanning anymore OR all coins analyzed)
-            if (!isScanning && coinsAnalyzed > 0) {
-              clearInterval(scanPollRef.current!);
-              scanPollRef.current = null;
-              setTopCoinsScanning(false);
-              setScanProgress(null);
-              await fetchTopCoins(scanMethod);
-
-              // Show scan complete notification
-              showCelebration({
-                credits: 0,
-                reason: 'scan_complete',
-                title: 'Scan Complete!',
-                subtitle: `Found ${totalCoins} coins analyzed with ${scanMethod === 'classic' ? 'Classic' : 'MLIS Pro'} method`,
-              });
-
-              // Show toast with View All button
-              toast.success(
-                <div className="flex flex-col gap-1">
-                  <span className="font-medium">Top Coins Scan Complete!</span>
-                  <span className="text-sm text-slate-400">{totalCoins} coins analyzed successfully</span>
-                </div>,
-                {
-                  duration: 8000,
-                  action: {
-                    label: 'View All Results',
-                    onClick: () => router.push('/top-coins'),
-                  },
+            if (markets) {
+              const marketOrder: AssetType[] = ['crypto', 'stocks', 'metals', 'bonds'];
+              for (const m of marketOrder) {
+                if (markets[m]?.phase === 'early' || markets[m]?.phase === 'mid') {
+                  bestMarket = m;
+                  bestPhase = markets[m].phase;
+                  break;
                 }
-              );
+              }
+            }
 
-              scrollToTopCoins();
-              return;
+            setFlowContext({
+              liquidity: {
+                bias: liquidityBias || 'neutral',
+                expanding: liquidityBias === 'risk_on',
+              },
+              recommendedMarket: marketParam || bestMarket,
+              recommendedSector: sectorParam || null,
+              phase: bestPhase as any,
+              recommendation: recommendation?.text || 'Select an asset to analyze',
+            });
+
+            // Update asset type if from URL
+            if (marketParam) {
+              setAssetType(marketParam);
+            } else if (bestMarket) {
+              setAssetType(bestMarket);
             }
           }
-        } catch (pollError) {
-          console.error('Poll error:', pollError);
         }
-
-        // Timeout after max polls
-        if (pollCount >= maxPolls) {
-          clearInterval(scanPollRef.current!);
-          scanPollRef.current = null;
-          setTopCoinsScanning(false);
-          setScanProgress(null);
-          await fetchTopCoins(scanMethod);
-
-          // Show completion notification even on timeout
-          toast.success(
-            <div className="flex flex-col gap-1">
-              <span className="font-medium">Scan Complete!</span>
-              <span className="text-sm text-slate-400">Results are ready to view</span>
-            </div>,
-            {
-              duration: 8000,
-              action: {
-                label: 'View All Results',
-                onClick: () => router.push('/top-coins'),
-              },
-            }
-          );
-
-          scrollToTopCoins();
-        }
-      }, 5000);
-
-    } catch (error) {
-      console.error('Failed to start scan:', error);
-      setScanError('Failed to start scan. Please try again.');
-      setTopCoinsScanning(false);
-      setScanProgress(null);
-    }
-  };
-
-  // Fetch top coins on mount and when scan method changes
-  useEffect(() => {
-    fetchTopCoins(scanMethod);
-  }, [fetchTopCoins, scanMethod]);
-
-  const getAccuracyDisplay = (value: number) => {
-    if (value > 0) return `${value.toFixed(0)}%`;
-    return '—';
-  };
-
-  // Multi-market analysis function - uses main analysis endpoint (Classic 7-Step or MLIS Pro)
-  const runMultiMarketAnalysis = async () => {
-    if (!selectedMultiMarketSymbol || assetType === 'crypto') return;
-
-    setMultiMarketLoading(true);
-    setMultiMarketResult(null);
-
-    try {
-      // Use the main analysis endpoint for all asset types
-      const res = await authFetch('/api/analysis/full', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          symbol: selectedMultiMarketSymbol,
-          interval: timeframe,
-          method: analysisMethod, // Use selected method (classic or mlis_pro)
-          accountSize: 10000,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        // Transform result to expected format
-        const analysisData = data.data;
-        setMultiMarketResult({
-          ...analysisData,
-          symbol: selectedMultiMarketSymbol,
-          assetClass: assetType,
-          analysisId: analysisData.analysisId,
-          method: analysisMethod,
-        });
-        setShowMultiMarketResult(true);
-
-        // Notify credit deduction
-        const creditsUsed = data.creditsSpent || 25;
-        notifyCreditDeduction?.(creditsUsed, `${assetType}-analysis`, data.remainingCredits || 0);
-      } else {
-        toast.error(data.error?.message || data.error || 'Analysis failed');
+      } catch (error) {
+        console.error('Failed to fetch capital flow:', error);
+      } finally {
+        setFlowLoading(false);
       }
-    } catch (error) {
-      console.error('Multi-market analysis error:', error);
-      toast.error('Failed to run analysis. Please try again.');
-    } finally {
-      setMultiMarketLoading(false);
+    };
+
+    fetchFlowContext();
+  }, [marketParam, sectorParam]);
+
+  // Update suggestions based on asset type and sector
+  useEffect(() => {
+    if (sectorParam && assetType === 'crypto' && SECTOR_SUGGESTIONS[sectorParam]) {
+      setSuggestions(SECTOR_SUGGESTIONS[sectorParam]);
+    } else {
+      setSuggestions(DEFAULT_SUGGESTIONS[assetType] || []);
     }
+  }, [assetType, sectorParam]);
+
+  // Filter symbols for search
+  const filteredSymbols = searchQuery.length > 0
+    ? ALL_SYMBOLS[assetType].filter(
+        s => s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+             s.name.toLowerCase().includes(searchQuery.toLowerCase())
+      ).slice(0, 10)
+    : [];
+
+  // Handle symbol selection
+  const handleSelectSymbol = (symbol: string) => {
+    setSelectedSymbol(symbol);
+    setSearchQuery('');
+    setShowSearch(false);
   };
 
-  // Reset multi-market state when asset type changes
-  useEffect(() => {
-    setSelectedMultiMarketSymbol('');
-    setMultiMarketResult(null);
-    setShowMultiMarketResult(false);
-  }, [assetType]);
+  // Run analysis
+  const runAnalysis = async () => {
+    if (!selectedSymbol) {
+      toast.error('Please select an asset to analyze');
+      return;
+    }
+
+    setShowAnalysisDialog(true);
+  };
+
+  const hasFlowContext = marketParam || sectorParam;
 
   return (
-    <div className="relative min-h-screen">
-      {/* Grain Texture Overlay */}
-      <GrainOverlay />
-
-      {/* Gradient Orbs Background */}
-      <GradientOrbs />
-
-      {/* Marquee Banner */}
-      <MarqueeBanner />
-
-      {/* Main Content */}
-      <div className="relative w-full px-3 sm:px-4 md:px-8 lg:px-12 py-4 sm:py-8 space-y-4 sm:space-y-8">
-        {/* ===== HERO SECTION with Kinetic Typography ===== */}
-        <div className="text-center space-y-3 sm:space-y-4 py-4 sm:py-6">
-          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-red-500/10 border border-teal-500/20 backdrop-blur-sm animate-blur-in">
-            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-teal-500 animate-pulse" />
-            <span className="text-xs sm:text-sm font-medium bg-gradient-to-r from-teal-500 to-red-500 bg-clip-text text-transparent">
-              AI-Powered Analysis Engine
-            </span>
-          </div>
-
-          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold">
-            <span className="bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">
-              Trade Smarter with
-            </span>
-            <br />
-            <span className="relative inline-block">
-              <span className="bg-gradient-to-r from-teal-500 via-red-400 to-teal-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer" style={{ animationDelay: '0.5s' }}>
-                <KineticText text="TraderPath" />
-              </span>
-              <span className="absolute -bottom-1 sm:-bottom-2 left-0 right-0 h-0.5 sm:h-1 bg-gradient-to-r from-teal-500 via-red-400 to-teal-500 rounded-full opacity-50 animate-pulse" />
-            </span>
-          </h1>
-
-          <p className="text-sm sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto animate-slide-up px-2">
-            Professional-grade analysis powered by 40+ technical indicators
-          </p>
-
-          {/* Feature Badges */}
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-2 sm:pt-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <FeatureBadge icon={Brain} text="AI Analysis" />
-            <FeatureBadge icon={Shield} text="Risk Assessment" />
-            <FeatureBadge icon={BarChart3} text="40+ Indicators" />
-            <FeatureBadge icon={Zap} text="Real-time Data" />
-          </div>
-        </div>
-
-        {/* ===== BENTO GRID LAYOUT ===== */}
-        <div className="grid grid-cols-12 gap-3 sm:gap-4 lg:gap-6">
-          {/* Live Chart Card - Full Width at Top */}
-          <div className="col-span-12">
-            <GlassCard>
-              <button
-                onClick={() => setShowChart(!showChart)}
-                className="w-full flex items-center justify-between p-3 sm:p-4 hover:bg-white/50 dark:hover:bg-white/5 transition-colors"
-              >
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
-                    <LineChart className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  </div>
-                  <div className="text-left">
-                    <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Live Chart</span>
-                    <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">{chartSymbol.split(':')[1]}</p>
-                  </div>
-                </div>
-                <div className={cn(
-                  "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all duration-300",
-                  showChart ? "bg-violet-500/20 rotate-180" : "bg-slate-100 dark:bg-slate-800"
-                )}>
-                  <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />
-                </div>
-              </button>
-
-              {showChart && (
-                <div className="border-t border-white/10">
-                  <div className="flex flex-wrap gap-1.5 sm:gap-2 p-2 sm:p-3 bg-slate-50/50 dark:bg-slate-900/30">
-                    {POPULAR_COINS.map((coin) => (
-                      <button
-                        key={coin}
-                        onClick={() => setChartSymbol(`BINANCE:${coin}USDT`)}
-                        className={cn(
-                          'px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium rounded-lg transition-all duration-300',
-                          chartSymbol === `BINANCE:${coin}USDT`
-                            ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30 scale-105'
-                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:scale-105 border border-white/20 dark:border-slate-700'
-                        )}
-                      >
-                        {coin}
-                      </button>
-                    ))}
-                  </div>
-                  <TradingViewWidget
-                    symbol={chartSymbol}
-                    theme={isDarkMode ? 'dark' : 'light'}
-                    height={300}
-                  />
-                </div>
-              )}
-            </GlassCard>
-          </div>
-
-          {/* Stats Row - Full Width */}
-          <div className="col-span-12">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <StatCard icon={FileText} label="Total Analyses" value={stats?.totalAnalyses || 0} color="gray" delay={0} />
-              <StatCard icon={Timer} label="Active" value={stats?.activeCount || 0} color="blue" delay={100} />
-              <StatCard icon={FileText} label="Closed" value={stats?.closedCount || 0} color="gray" delay={200} />
-              <StatCard icon={CheckCircle2} label="TP Hit" value={stats?.tpHits || 0} color="green" delay={300} />
-              <StatCard icon={XCircle} label="SL Hit" value={stats?.slHits || 0} color="red" delay={400} />
-              <StatCard icon={Target} label="Accuracy" value={getAccuracyDisplay(stats?.accuracy || 0)} color="teal" delay={500} />
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      {/* Header */}
+      <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
+                <Layers className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-slate-900 dark:text-white">
+                  LAYER 4: Asset Analysis
+                </h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Micro-level technical analysis
+                </p>
+              </div>
             </div>
-          </div>
-
-          {/* Top 5 High-Probability Coins - Dual Method Support */}
-          <div id="top-coins-section" className="col-span-12">
-            <GlassCard className="p-3 sm:p-4 md:p-6">
-              <div className="space-y-4">
-                {/* Header with Method Toggle */}
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="flex flex-col gap-1">
-                      <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 flex-shrink-0" />
-                        Top 5 High-Probability Coins
-                      </h3>
-                      {lastScanTime && (
-                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
-                          Last scan: {new Date(lastScanTime).toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {/* View All Results Button */}
-                      {topCoins.length > 0 && (
-                        <button
-                          onClick={() => router.push('/top-coins')}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white/50 dark:bg-slate-800/50 border border-white/20 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all"
-                        >
-                          <span className="hidden sm:inline">View All</span>
-                          <ExternalLink className="w-4 h-4" />
-                        </button>
-                      )}
-
-                      {/* Scan Button */}
-                      <button
-                        onClick={startTopCoinsScan}
-                        disabled={topCoinsScanning}
-                        className={cn(
-                          "flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
-                          scanMethod === 'classic'
-                            ? "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 shadow-teal-500/30"
-                            : "bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 shadow-violet-500/30",
-                          "text-white hover:shadow-lg",
-                          "disabled:opacity-50 disabled:cursor-not-allowed"
-                        )}
-                      >
-                        {topCoinsScanning ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 animate-spin" />
-                            <span>
-                              {scanProgress
-                                ? `${scanProgress.current}/${scanProgress.total}`
-                                : 'Starting...'}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCw className="w-4 h-4" />
-                            <span>Scan (300 Cr)</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Method Toggle */}
-                  <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl">
-                    <button
-                      onClick={() => setScanMethod('classic')}
-                      disabled={topCoinsScanning}
-                      className={cn(
-                        "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all",
-                        scanMethod === 'classic'
-                          ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg"
-                          : "text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700/50",
-                        "disabled:opacity-50"
-                      )}
-                    >
-                      <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      <span>Classic (7-Step)</span>
-                    </button>
-                    <button
-                      onClick={() => setScanMethod('mlis_pro')}
-                      disabled={topCoinsScanning}
-                      className={cn(
-                        "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all",
-                        scanMethod === 'mlis_pro'
-                          ? "bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg"
-                          : "text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700/50",
-                        "disabled:opacity-50"
-                      )}
-                    >
-                      <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      <span>MLIS Pro (5-Layer)</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Error Message */}
-                {scanError && (
-                  <div className="text-sm text-red-500 bg-red-50 dark:bg-red-500/10 px-4 py-3 rounded-xl">
-                    {scanError}
-                  </div>
-                )}
-
-                {/* Progress Bar */}
-                {topCoinsScanning && scanProgress && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                      <span>Analyzing coins with {scanMethod === 'classic' ? 'Classic' : 'MLIS Pro'}...</span>
-                      <span>{Math.round((scanProgress.current / scanProgress.total) * 100)}%</span>
-                    </div>
-                    <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                      <div
-                        className={cn(
-                          "h-full rounded-full transition-all duration-500",
-                          scanMethod === 'classic'
-                            ? "bg-gradient-to-r from-teal-500 to-emerald-500"
-                            : "bg-gradient-to-r from-violet-500 to-purple-500"
-                        )}
-                        style={{ width: `${(scanProgress.current / scanProgress.total) * 100}%` }}
-                      />
-                    </div>
-                    <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 text-center">
-                      This may take 2-3 minutes. Results will appear as coins are analyzed.
-                    </p>
-                  </div>
-                )}
-
-                {/* Coins Grid */}
-                {topCoinsLoading ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                    {[...Array(5)].map((_, i) => (
-                      <div key={i} className="h-36 bg-slate-100 dark:bg-slate-800/50 rounded-xl animate-pulse" />
-                    ))}
-                  </div>
-                ) : topCoins.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                    {topCoins.map((coin, index) => {
-                      const isMLIS = coin.method === 'mlis_pro' || scanMethod === 'mlis_pro';
-
-                      // Classic verdict colors
-                      const classicVerdictColor = {
-                        'GO': 'from-emerald-500 to-green-600',
-                        'CONDITIONAL_GO': 'from-amber-500 to-yellow-600',
-                        'WAIT': 'from-slate-500 to-gray-600',
-                        'AVOID': 'from-red-500 to-rose-600',
-                      }[coin.verdict] || 'from-slate-500 to-gray-600';
-
-                      // MLIS recommendation colors
-                      const mlisRecommendationColor = {
-                        'STRONG_BUY': 'from-emerald-500 to-green-600',
-                        'BUY': 'from-teal-500 to-cyan-600',
-                        'HOLD': 'from-amber-500 to-yellow-600',
-                        'SELL': 'from-orange-500 to-red-500',
-                        'STRONG_SELL': 'from-red-500 to-rose-600',
-                      }[coin.recommendation || ''] || classicVerdictColor;
-
-                      const verdictColor = isMLIS ? mlisRecommendationColor : classicVerdictColor;
-
-                      const verdictLabel = isMLIS
-                        ? (coin.recommendation || coin.verdict || 'N/A').replace('_', ' ')
-                        : {
-                            'GO': 'GO',
-                            'CONDITIONAL_GO': 'COND',
-                            'WAIT': 'WAIT',
-                            'AVOID': 'AVOID',
-                          }[coin.verdict] || coin.verdict;
-
-                      return (
-                        <div
-                          key={coin.symbol}
-                          className={cn(
-                            "relative p-3 sm:p-4 rounded-xl border-2 transition-all cursor-pointer group",
-                            "hover:shadow-xl hover:scale-[1.02]",
-                            isMLIS
-                              ? "bg-gradient-to-br from-violet-50/50 to-purple-50/50 dark:from-violet-900/20 dark:to-purple-900/20 border-violet-200/50 dark:border-violet-700/50 hover:border-violet-400 dark:hover:border-violet-500"
-                              : "bg-gradient-to-br from-teal-50/50 to-emerald-50/50 dark:from-teal-900/20 dark:to-emerald-900/20 border-teal-200/50 dark:border-teal-700/50 hover:border-teal-400 dark:hover:border-teal-500"
-                          )}
-                          onClick={() => {
-                            if (coin.analysisId) {
-                              window.location.href = `/analyze/details/${coin.analysisId}`;
-                            }
-                          }}
-                        >
-                          {/* Rank Badge */}
-                          <div className={cn(
-                            "absolute -top-2 -left-2 w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg z-10",
-                            isMLIS
-                              ? "bg-gradient-to-br from-violet-500 to-purple-600"
-                              : "bg-gradient-to-br from-amber-400 to-orange-500"
-                          )}>
-                            {index + 1}
-                          </div>
-
-                          {/* Method Badge */}
-                          <div className={cn(
-                            "absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold text-white shadow-lg z-10",
-                            isMLIS
-                              ? "bg-gradient-to-r from-violet-500 to-purple-500"
-                              : "bg-gradient-to-r from-teal-500 to-emerald-500"
-                          )}>
-                            {isMLIS ? 'MLIS' : '7-Step'}
-                          </div>
-
-                          <div className="flex items-center gap-2 mb-3 pt-1">
-                            <CoinIcon symbol={coin.symbol} size={28} className="flex-shrink-0" />
-                            <span className="text-base font-bold text-slate-900 dark:text-white">{coin.symbol}</span>
-                          </div>
-
-                          {/* Verdict/Recommendation Badge */}
-                          <div className={cn(
-                            "px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r text-center mb-3",
-                            verdictColor
-                          )}>
-                            {verdictLabel}
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-slate-500 dark:text-slate-400">
-                                {isMLIS ? 'Confidence' : 'Score'}
-                              </span>
-                              <span className="font-semibold text-slate-700 dark:text-slate-200">
-                                {isMLIS && coin.confidence
-                                  ? `${coin.confidence}%`
-                                  : coin.reliabilityScore}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-slate-500 dark:text-slate-400">24h</span>
-                              <span className={cn(
-                                "font-semibold flex items-center gap-1",
-                                coin.priceChange24h >= 0 ? "text-emerald-500" : "text-red-500"
-                              )}>
-                                {coin.priceChange24h >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                                {coin.priceChange24h >= 0 ? '+' : ''}{coin.priceChange24h.toFixed(1)}%
-                              </span>
-                            </div>
-                            {coin.direction && (
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-500 dark:text-slate-400">Direction</span>
-                                <span className={cn(
-                                  "font-semibold",
-                                  coin.direction === 'LONG' ? "text-emerald-500" : "text-red-500"
-                                )}>
-                                  {coin.direction}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="mt-3 flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                              View Details <ArrowRight className="w-3 h-3" />
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-                    <Crown className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm font-medium">No cached data available</p>
-                    <p className="text-xs mt-1">
-                      Select a method and click "Scan Now" to analyze top 30 coins (300 credits)
-                    </p>
-                  </div>
-                )}
-              </div>
-            </GlassCard>
-          </div>
-
-          {/* Asset Type Selection - Full Width */}
-          <div className="col-span-12">
-            <GlassCard className="p-3 sm:p-4 md:p-6">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500" />
-                    Select Asset Type
-                  </h3>
-                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
-                    LAYER 4 Analysis
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                  {ASSET_TYPES.map((asset) => {
-                    const Icon = asset.icon;
-                    const isSelected = assetType === asset.id;
-
-                    return (
-                      <button
-                        key={asset.id}
-                        onClick={() => asset.available && setAssetType(asset.id)}
-                        disabled={!asset.available}
-                        className={cn(
-                          "relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-300",
-                          "flex flex-col items-center text-center gap-2",
-                          asset.available ? "cursor-pointer hover:shadow-lg" : "cursor-not-allowed opacity-60",
-                          isSelected
-                            ? `border-transparent bg-gradient-to-br ${asset.color} text-white shadow-lg`
-                            : "border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600"
-                        )}
-                      >
-                        {/* Coming Soon Badge */}
-                        {!asset.available && (
-                          <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-slate-500 text-white text-[9px] font-bold rounded-full shadow-lg">
-                            SOON
-                          </div>
-                        )}
-
-                        <div className={cn(
-                          "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center",
-                          isSelected
-                            ? "bg-white/20"
-                            : `bg-gradient-to-br ${asset.color}`
-                        )}>
-                          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                        </div>
-
-                        <div>
-                          <span className={cn(
-                            "font-semibold text-sm",
-                            isSelected ? "text-white" : "text-slate-900 dark:text-white"
-                          )}>
-                            {asset.name}
-                          </span>
-                          <p className={cn(
-                            "text-[10px] sm:text-xs mt-0.5",
-                            isSelected ? "text-white/80" : "text-slate-500 dark:text-slate-400"
-                          )}>
-                            {asset.description}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Multi-Market Symbol Selector */}
-                {assetType !== 'crypto' && (
-                  <div className="space-y-3 p-4 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 border border-slate-200 dark:border-slate-700">
-                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                      {assetType === 'stocks' && <BarChart3 className="w-4 h-4 text-blue-500" />}
-                      {assetType === 'bonds' && <Landmark className="w-4 h-4 text-purple-500" />}
-                      {assetType === 'metals' && <Gem className="w-4 h-4 text-yellow-500" />}
-                      Select {ASSET_TYPES.find(a => a.id === assetType)?.name} Symbol
-                    </h4>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                      {MULTI_MARKET_SYMBOLS[assetType as Exclude<AssetType, 'crypto'>]?.map((item) => (
-                        <button
-                          key={item.symbol}
-                          onClick={() => setSelectedMultiMarketSymbol(item.symbol)}
-                          className={cn(
-                            "p-2 rounded-lg border text-left transition-all",
-                            selectedMultiMarketSymbol === item.symbol
-                              ? assetType === 'stocks'
-                                ? "border-blue-500 bg-blue-50 dark:bg-blue-500/20"
-                                : assetType === 'bonds'
-                                ? "border-purple-500 bg-purple-50 dark:bg-purple-500/20"
-                                : "border-yellow-500 bg-yellow-50 dark:bg-yellow-500/20"
-                              : "border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 bg-white dark:bg-slate-800"
-                          )}
-                        >
-                          <div className="font-semibold text-xs text-slate-900 dark:text-white">
-                            {item.symbol}
-                          </div>
-                          <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                            {item.name}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Selected Method Indicator */}
-                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-2">
-                      <span>Analysis Method:</span>
-                      <span className={cn(
-                        "px-2 py-0.5 rounded-full font-medium",
-                        analysisMethod === 'mlis_pro'
-                          ? "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300"
-                          : "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300"
-                      )}>
-                        {analysisMethod === 'mlis_pro' ? 'MLIS Pro' : 'Classic 7-Step'}
-                      </span>
-                    </div>
-
-                    {/* Analyze Button for Multi-Market */}
-                    {selectedMultiMarketSymbol && (
-                      <button
-                        onClick={runMultiMarketAnalysis}
-                        disabled={multiMarketLoading}
-                        className={cn(
-                          "w-full mt-3 py-3 px-4 rounded-xl font-semibold text-white transition-all",
-                          "flex items-center justify-center gap-2",
-                          multiMarketLoading ? "opacity-70 cursor-not-allowed" : "hover:shadow-lg",
-                          analysisMethod === 'mlis_pro'
-                            ? "bg-gradient-to-r from-violet-500 to-purple-600"
-                            : assetType === 'stocks'
-                            ? "bg-gradient-to-r from-blue-500 to-indigo-500"
-                            : assetType === 'bonds'
-                            ? "bg-gradient-to-r from-purple-500 to-violet-500"
-                            : "bg-gradient-to-r from-yellow-500 to-amber-500"
-                        )}
-                      >
-                        {multiMarketLoading ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Analyzing {selectedMultiMarketSymbol}...
-                          </>
-                        ) : (
-                          <>
-                            {analysisMethod === 'mlis_pro' ? (
-                              <Sparkles className="w-4 h-4" />
-                            ) : (
-                              <TrendingUp className="w-4 h-4" />
-                            )}
-                            Analyze {selectedMultiMarketSymbol}
-                            <span className="text-xs opacity-75">(25 Credits)</span>
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </GlassCard>
-          </div>
-
-          {/* Timeframe & Method Selection - Full Width */}
-          <div className="col-span-12">
-            <GlassCard className="p-3 sm:p-4 md:p-6">
-              <div className="space-y-4 sm:space-y-6">
-                {/* Timeframe Selection */}
-                <div className="space-y-3">
-                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500" />
-                    Select Timeframe
-                  </h3>
-                  <TradeTypeSelector
-                    value={timeframe}
-                    onChange={(tf) => setTimeframe(tf)}
-                    variant="tabs"
-                    showCreditCost
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Analysis Method Selection */}
-                <div className="space-y-3">
-                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Brain className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
-                    Analysis Method
-                  </h3>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    {/* Classic Method */}
-                    <button
-                      onClick={() => setAnalysisMethod('classic')}
-                      className={cn(
-                        "flex-1 relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-300",
-                        "hover:shadow-lg",
-                        analysisMethod === 'classic'
-                          ? "border-teal-500 bg-teal-50/50 dark:bg-teal-500/10 shadow-teal-500/20"
-                          : "border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 hover:border-teal-300 dark:hover:border-teal-700"
-                      )}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={cn(
-                          "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
-                          analysisMethod === 'classic'
-                            ? "border-teal-500 bg-teal-500"
-                            : "border-slate-300 dark:border-slate-600"
-                        )}>
-                          {analysisMethod === 'classic' && (
-                            <div className="w-2 h-2 rounded-full bg-white" />
-                          )}
-                        </div>
-                        <div className="text-left">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm text-slate-900 dark:text-white">Classic (7-Step)</span>
-                          </div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                            Full 7-step analysis with 40+ indicators, trade plan, and AI expert insights
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* MLIS Pro Method */}
-                    <button
-                      onClick={() => setAnalysisMethod('mlis_pro')}
-                      className={cn(
-                        "flex-1 relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-300",
-                        "hover:shadow-lg",
-                        analysisMethod === 'mlis_pro'
-                          ? "border-violet-500 bg-violet-50/50 dark:bg-violet-500/10 shadow-violet-500/20"
-                          : "border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 hover:border-violet-300 dark:hover:border-violet-700"
-                      )}
-                    >
-                      {/* NEW Badge */}
-                      <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-[10px] font-bold rounded-full shadow-lg animate-pulse">
-                        NEW
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className={cn(
-                          "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
-                          analysisMethod === 'mlis_pro'
-                            ? "border-violet-500 bg-violet-500"
-                            : "border-slate-300 dark:border-slate-600"
-                        )}>
-                          {analysisMethod === 'mlis_pro' && (
-                            <div className="w-2 h-2 rounded-full bg-white" />
-                          )}
-                        </div>
-                        <div className="text-left">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm text-slate-900 dark:text-white">MLIS Pro</span>
-                            <Sparkles className="w-3.5 h-3.5 text-violet-500" />
-                          </div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                            Multi-Layer Intelligence: Technical, Momentum, Volatility, Volume & Sentiment layers
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-
-                  {/* Method Info Tooltip */}
-                  {analysisMethod === 'mlis_pro' && (
-                    <div className="flex items-start gap-2 p-3 rounded-lg bg-violet-50/50 dark:bg-violet-500/10 border border-violet-200/50 dark:border-violet-500/20">
-                      <Sparkles className="w-4 h-4 text-violet-500 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-violet-700 dark:text-violet-300">
-                        <strong>MLIS Pro</strong> uses 5-layer analysis: Technical (EMA, MACD, ADX), Momentum (RSI, StochRSI, CCI), Volatility (ATR, Bollinger), Volume (OBV, CMF), and Sentiment (Fear &amp; Greed). Returns a confidence score and clear recommendation.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </GlassCard>
-          </div>
-
-          {/* Coin Selector - Full Width with dynamic height (Crypto only) */}
-          {assetType === 'crypto' && (
-            <div className="col-span-12 relative z-20">
-              <GlassCard className="p-3 sm:p-4 md:p-6" allowOverflow>
-                <div className="space-y-3 sm:space-y-4">
-                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
-                    Select Coin to Analyze
-                  </h3>
-                  <CoinSelector timeframe={timeframe} analysisMethod={analysisMethod} />
-                </div>
-              </GlassCard>
-            </div>
-          )}
-
-          {/* Recent Analyses - Full Width */}
-          <div id="recent-analyses" className="col-span-12 relative z-10">
-            <GlassCard className="p-3 sm:p-4 md:p-6">
-              <RecentAnalyses />
-            </GlassCard>
+            <button
+              onClick={() => router.push('/capital-flow')}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <Globe className="w-4 h-4" />
+              <span className="hidden sm:inline">Capital Flow</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Multi-Market Analysis Result Modal */}
-      {showMultiMarketResult && multiMarketResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl">
-            {/* Close Button */}
-            <button
-              onClick={() => {
-                setShowMultiMarketResult(false);
-                setMultiMarketResult(null);
-              }}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              <X className="w-5 h-5 text-slate-500" />
-            </button>
-
-            {/* Header */}
-            <div className={cn(
-              "p-6 border-b border-slate-200 dark:border-slate-700",
-              "bg-gradient-to-r",
-              multiMarketResult.assetClass === 'stocks'
-                ? "from-blue-500/10 to-indigo-500/10"
-                : multiMarketResult.assetClass === 'bonds'
-                ? "from-purple-500/10 to-violet-500/10"
-                : "from-yellow-500/10 to-amber-500/10"
-            )}>
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+        {/* Capital Flow Context */}
+        <div className={cn(
+          "rounded-2xl border overflow-hidden transition-all",
+          hasFlowContext
+            ? "bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20 border-teal-200 dark:border-teal-800"
+            : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+        )}>
+          <div className="p-4">
+            {flowLoading ? (
               <div className="flex items-center gap-3">
-                {multiMarketResult.assetClass === 'stocks' && <BarChart3 className="w-8 h-8 text-blue-500" />}
-                {multiMarketResult.assetClass === 'bonds' && <Landmark className="w-8 h-8 text-purple-500" />}
-                {multiMarketResult.assetClass === 'metals' && <Gem className="w-8 h-8 text-yellow-500" />}
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                    {multiMarketResult.symbol}
-                  </h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">
-                    {multiMarketResult.assetClass} Analysis • {multiMarketResult.interval}
-                  </p>
-                </div>
+                <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+                <span className="text-sm text-slate-500">Loading Capital Flow context...</span>
               </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-6 space-y-6">
-              {/* Price & Change */}
-              <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800">
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Current Price</p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                    ${multiMarketResult.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
+            ) : hasFlowContext ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-xs font-medium text-teal-600 dark:text-teal-400">
+                  <Globe className="w-3.5 h-3.5" />
+                  CAPITAL FLOW CONTEXT
                 </div>
-                <div className={cn(
-                  "px-3 py-1.5 rounded-lg font-semibold",
-                  (multiMarketResult.change24h || 0) >= 0
-                    ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400"
-                    : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                )}>
-                  {(multiMarketResult.change24h || 0) >= 0 ? '+' : ''}
-                  {(multiMarketResult.change24h || 0).toFixed(2)}%
-                </div>
-              </div>
 
-              {/* Analysis Summary */}
-              {multiMarketResult.analysis && (
-                <div className="space-y-4">
-                  {/* Verdict */}
-                  <div className={cn(
-                    "p-4 rounded-xl text-center",
-                    multiMarketResult.analysis.verdict === 'GO'
-                      ? "bg-green-100 dark:bg-green-500/20"
-                      : multiMarketResult.analysis.verdict === 'CONDITIONAL_GO'
-                      ? "bg-yellow-100 dark:bg-yellow-500/20"
-                      : multiMarketResult.analysis.verdict === 'WAIT'
-                      ? "bg-orange-100 dark:bg-orange-500/20"
-                      : "bg-red-100 dark:bg-red-500/20"
-                  )}>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Verdict</p>
-                    <p className={cn(
-                      "text-2xl font-bold",
-                      multiMarketResult.analysis.verdict === 'GO'
-                        ? "text-green-600 dark:text-green-400"
-                        : multiMarketResult.analysis.verdict === 'CONDITIONAL_GO'
-                        ? "text-yellow-600 dark:text-yellow-400"
-                        : multiMarketResult.analysis.verdict === 'WAIT'
-                        ? "text-orange-600 dark:text-orange-400"
-                        : "text-red-600 dark:text-red-400"
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Layer 1 */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">L1</span>
+                    <span className={cn(
+                      "text-xs font-semibold",
+                      flowContext?.liquidity.bias === 'risk_on' ? "text-emerald-600 dark:text-emerald-400" :
+                      flowContext?.liquidity.bias === 'risk_off' ? "text-red-600 dark:text-red-400" :
+                      "text-amber-600 dark:text-amber-400"
                     )}>
-                      {multiMarketResult.analysis.verdict?.replace('_', ' ')}
-                    </p>
-                    <div className="flex items-center justify-center gap-2 mt-2">
-                      <span className="text-sm text-slate-600 dark:text-slate-300">
-                        Direction: <strong>{multiMarketResult.analysis.direction}</strong>
-                      </span>
-                      <span className="text-sm text-slate-600 dark:text-slate-300">
-                        Score: <strong>{multiMarketResult.analysis.score}/100</strong>
-                      </span>
-                    </div>
+                      {flowContext?.liquidity.bias === 'risk_on' ? 'Risk-On' :
+                       flowContext?.liquidity.bias === 'risk_off' ? 'Risk-Off' : 'Neutral'}
+                    </span>
                   </div>
 
-                  {/* Signals */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 rounded-lg bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30">
-                      <p className="text-xs text-green-600 dark:text-green-400 font-medium">Bullish Signals</p>
-                      <p className="text-xl font-bold text-green-700 dark:text-green-300">
-                        {multiMarketResult.analysis.bullishSignals || 0}
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30">
-                      <p className="text-xs text-red-600 dark:text-red-400 font-medium">Bearish Signals</p>
-                      <p className="text-xl font-bold text-red-700 dark:text-red-300">
-                        {multiMarketResult.analysis.bearishSignals || 0}
-                      </p>
-                    </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+
+                  {/* Layer 2 */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">L2</span>
+                    <span className="text-xs font-semibold text-slate-900 dark:text-white capitalize">
+                      {flowContext?.recommendedMarket || assetType}
+                    </span>
+                    {flowContext?.phase && (
+                      <span className={cn(
+                        "text-[10px] font-medium px-1.5 py-0.5 rounded",
+                        flowContext.phase === 'early' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" :
+                        flowContext.phase === 'mid' ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400" :
+                        "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400"
+                      )}>
+                        {flowContext.phase.toUpperCase()}
+                      </span>
+                    )}
                   </div>
 
-                  {/* Notes */}
-                  {multiMarketResult.analysis.assetSpecificNotes?.length > 0 && (
-                    <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                      <p className="text-sm font-medium text-slate-900 dark:text-white mb-2">Analysis Notes</p>
-                      <ul className="space-y-1">
-                        {multiMarketResult.analysis.assetSpecificNotes.map((note: string, i: number) => (
-                          <li key={i} className="text-sm text-slate-600 dark:text-slate-400 flex items-start gap-2">
-                            <span className="text-teal-500">•</span>
-                            {note}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                  {sectorParam && (
+                    <>
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+
+                      {/* Layer 3 */}
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">L3</span>
+                        <span className="text-xs font-semibold text-slate-900 dark:text-white capitalize">
+                          {sectorParam}
+                        </span>
+                      </div>
+                    </>
                   )}
-                </div>
-              )}
 
-              {/* Indicators */}
-              {multiMarketResult.indicators && (
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-slate-900 dark:text-white">Technical Indicators</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    {multiMarketResult.indicators.trend && (
-                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-                        <p className="text-slate-500 dark:text-slate-400">Trend</p>
-                        <p className={cn(
-                          "font-semibold capitalize",
-                          multiMarketResult.indicators.trend.direction === 'up'
-                            ? "text-green-600"
-                            : multiMarketResult.indicators.trend.direction === 'down'
-                            ? "text-red-600"
-                            : "text-yellow-600"
-                        )}>
-                          {multiMarketResult.indicators.trend.direction}
-                        </p>
-                      </div>
-                    )}
-                    {multiMarketResult.indicators.momentum?.rsi && (
-                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-                        <p className="text-slate-500 dark:text-slate-400">RSI</p>
-                        <p className={cn(
-                          "font-semibold",
-                          multiMarketResult.indicators.momentum.rsi < 30
-                            ? "text-green-600"
-                            : multiMarketResult.indicators.momentum.rsi > 70
-                            ? "text-red-600"
-                            : "text-slate-900 dark:text-white"
-                        )}>
-                          {multiMarketResult.indicators.momentum.rsi.toFixed(1)}
-                        </p>
-                      </div>
-                    )}
-                    {multiMarketResult.indicators.volatility?.atr && (
-                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-                        <p className="text-slate-500 dark:text-slate-400">ATR</p>
-                        <p className="font-semibold text-slate-900 dark:text-white">
-                          {multiMarketResult.indicators.volatility.atr.toFixed(2)}
-                        </p>
-                      </div>
-                    )}
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+
+                  {/* Layer 4 */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-teal-500 text-white">
+                    <span className="text-[10px] font-medium opacity-80">L4</span>
+                    <span className="text-xs font-semibold">Asset Analysis</span>
                   </div>
                 </div>
-              )}
 
-              {/* Fundamentals */}
-              {multiMarketResult.fundamentals && (
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-slate-900 dark:text-white">Fundamentals</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    {multiMarketResult.fundamentals.marketCap && (
-                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-                        <p className="text-slate-500 dark:text-slate-400">Market Cap</p>
-                        <p className="font-semibold text-slate-900 dark:text-white">
-                          ${(multiMarketResult.fundamentals.marketCap / 1e9).toFixed(2)}B
-                        </p>
-                      </div>
-                    )}
-                    {multiMarketResult.fundamentals.peRatio && (
-                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-                        <p className="text-slate-500 dark:text-slate-400">P/E Ratio</p>
-                        <p className="font-semibold text-slate-900 dark:text-white">
-                          {multiMarketResult.fundamentals.peRatio.toFixed(2)}
-                        </p>
-                      </div>
-                    )}
-                    {multiMarketResult.fundamentals.yield && (
-                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-                        <p className="text-slate-500 dark:text-slate-400">Yield</p>
-                        <p className="font-semibold text-slate-900 dark:text-white">
-                          {multiMarketResult.fundamentals.yield.toFixed(2)}%
-                        </p>
-                      </div>
-                    )}
+                {flowContext?.recommendation && (
+                  <p className="text-sm text-slate-600 dark:text-slate-400 flex items-start gap-2">
+                    <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-teal-500" />
+                    {flowContext.recommendation}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                    <Globe className="w-5 h-5 text-slate-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">
+                      No Capital Flow Context
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Start from Capital Flow for optimal market timing
+                    </p>
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowMultiMarketResult(false);
-                  setMultiMarketResult(null);
-                }}
-                className="px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-              >
-                Close
-              </button>
-            </div>
+                <button
+                  onClick={() => router.push('/capital-flow')}
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-gradient-to-r from-teal-500 to-emerald-600 text-white hover:shadow-lg hover:shadow-teal-500/20 transition-all"
+                >
+                  <Globe className="w-4 h-4" />
+                  Go to Capital Flow
+                </button>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Asset Selection */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+              <Target className="w-4 h-4 text-teal-500" />
+              Select Asset
+            </h2>
+          </div>
+
+          <div className="p-4 space-y-4">
+            {/* Market Tabs */}
+            <div className="flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+              {(Object.keys(ASSET_CONFIGS) as AssetType[]).map((type) => {
+                const config = ASSET_CONFIGS[type];
+                const Icon = config.icon;
+                const isSelected = assetType === type;
+
+                return (
+                  <button
+                    key={type}
+                    onClick={() => {
+                      setAssetType(type);
+                      setSelectedSymbol('');
+                    }}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                      isSelected
+                        ? `bg-gradient-to-r ${config.gradient} text-white shadow-lg`
+                        : "text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700/50"
+                    )}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="hidden sm:inline">{config.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Suggested Assets */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                {sectorParam ? `Suggested ${sectorParam.toUpperCase()} Assets` : 'Popular Assets'}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {suggestions.map((asset) => (
+                  <button
+                    key={asset.symbol}
+                    onClick={() => handleSelectSymbol(asset.symbol)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-xl border transition-all",
+                      selectedSymbol === asset.symbol
+                        ? "border-teal-500 bg-teal-50 dark:bg-teal-500/10"
+                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800"
+                    )}
+                  >
+                    {assetType === 'crypto' && (
+                      <CoinIcon symbol={asset.symbol} size={20} />
+                    )}
+                    <span className={cn(
+                      "text-sm font-semibold",
+                      selectedSymbol === asset.symbol
+                        ? "text-teal-700 dark:text-teal-400"
+                        : "text-slate-900 dark:text-white"
+                    )}>
+                      {asset.symbol}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSearch(true);
+                  }}
+                  onFocus={() => setShowSearch(true)}
+                  placeholder={`Search ${ASSET_CONFIGS[assetType].name.toLowerCase()}...`}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Search Results */}
+              {showSearch && filteredSymbols.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl z-50 max-h-64 overflow-y-auto">
+                  {filteredSymbols.map((item) => (
+                    <button
+                      key={item.symbol}
+                      onClick={() => handleSelectSymbol(item.symbol)}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      {assetType === 'crypto' && (
+                        <CoinIcon symbol={item.symbol} size={24} />
+                      )}
+                      <div className="text-left">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                          {item.symbol}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {item.name}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Selected Asset Display */}
+            {selectedSymbol && (
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20 border border-teal-200 dark:border-teal-800">
+                {assetType === 'crypto' && (
+                  <CoinIcon symbol={selectedSymbol} size={32} />
+                )}
+                <div>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">
+                    {selectedSymbol}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {ALL_SYMBOLS[assetType].find(s => s.symbol === selectedSymbol)?.name || 'Selected asset'}
+                  </p>
+                </div>
+                <div className="ml-auto">
+                  <span className="text-xs font-medium text-teal-600 dark:text-teal-400">
+                    Ready to analyze
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Analysis Parameters */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+              <Timer className="w-4 h-4 text-teal-500" />
+              Analysis Parameters
+            </h2>
+          </div>
+
+          <div className="p-4 space-y-4">
+            {/* Timeframe */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Timeframe</p>
+              <div className="flex gap-2">
+                {TIMEFRAMES.map((tf) => (
+                  <button
+                    key={tf.value}
+                    onClick={() => setTimeframe(tf.value)}
+                    className={cn(
+                      "flex-1 flex flex-col items-center gap-1 px-3 py-3 rounded-xl border transition-all",
+                      timeframe === tf.value
+                        ? "border-teal-500 bg-teal-50 dark:bg-teal-500/10"
+                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                    )}
+                  >
+                    <span className={cn(
+                      "text-sm font-bold",
+                      timeframe === tf.value
+                        ? "text-teal-700 dark:text-teal-400"
+                        : "text-slate-900 dark:text-white"
+                    )}>
+                      {tf.label}
+                    </span>
+                    <span className={cn(
+                      "text-[10px]",
+                      timeframe === tf.value
+                        ? "text-teal-600 dark:text-teal-500"
+                        : "text-slate-500 dark:text-slate-400"
+                    )}>
+                      {tf.type}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Method */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Analysis Method</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Classic */}
+                <button
+                  onClick={() => setMethod('classic')}
+                  className={cn(
+                    "relative p-4 rounded-xl border text-left transition-all",
+                    method === 'classic'
+                      ? "border-teal-500 bg-teal-50 dark:bg-teal-500/10"
+                      : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
+                      method === 'classic'
+                        ? "border-teal-500 bg-teal-500"
+                        : "border-slate-300 dark:border-slate-600"
+                    )}>
+                      {method === 'classic' && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-teal-500" />
+                        <span className="font-semibold text-sm text-slate-900 dark:text-white">
+                          Classic 7-Step
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        40+ indicators, trade plan, AI expert insights
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                {/* MLIS Pro */}
+                <button
+                  onClick={() => setMethod('mlis_pro')}
+                  className={cn(
+                    "relative p-4 rounded-xl border text-left transition-all",
+                    method === 'mlis_pro'
+                      ? "border-violet-500 bg-violet-50 dark:bg-violet-500/10"
+                      : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                  )}
+                >
+                  <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-[10px] font-bold rounded-full">
+                    NEW
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
+                      method === 'mlis_pro'
+                        ? "border-violet-500 bg-violet-500"
+                        : "border-slate-300 dark:border-slate-600"
+                    )}>
+                      {method === 'mlis_pro' && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-violet-500" />
+                        <span className="font-semibold text-sm text-slate-900 dark:text-white">
+                          MLIS Pro
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        5-layer neural analysis, confidence score
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Run Analysis Button */}
+            <button
+              onClick={runAnalysis}
+              disabled={!selectedSymbol}
+              className={cn(
+                "w-full flex items-center justify-center gap-3 py-4 rounded-xl font-semibold text-white transition-all",
+                selectedSymbol
+                  ? method === 'mlis_pro'
+                    ? "bg-gradient-to-r from-violet-500 to-purple-600 hover:shadow-lg hover:shadow-violet-500/20"
+                    : "bg-gradient-to-r from-teal-500 to-emerald-600 hover:shadow-lg hover:shadow-teal-500/20"
+                  : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed"
+              )}
+            >
+              <Zap className="w-5 h-5" />
+              <span>Run {method === 'mlis_pro' ? 'MLIS Pro' : '7-Step'} Analysis</span>
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                25 Credits
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Recent Analyses */}
+        <div id="recent-analyses" className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-teal-500" />
+              Your Layer 4 Analyses
+            </h2>
+            <button
+              onClick={() => router.push('/reports')}
+              className="text-xs font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 flex items-center gap-1"
+            >
+              View All <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="p-4">
+            <RecentAnalyses />
+          </div>
+        </div>
+      </div>
+
+      {/* Analysis Dialog */}
+      {showAnalysisDialog && selectedSymbol && (
+        <AnalysisDialog
+          isOpen={showAnalysisDialog}
+          symbol={selectedSymbol}
+          coinName={ALL_SYMBOLS[assetType].find(s => s.symbol === selectedSymbol)?.name || selectedSymbol}
+          timeframe={timeframe}
+          analysisMethod={method}
+          onClose={() => setShowAnalysisDialog(false)}
+          onComplete={() => {
+            setShowAnalysisDialog(false);
+            // Scroll to recent analyses
+            setTimeout(() => {
+              document.getElementById('recent-analyses')?.scrollIntoView({ behavior: 'smooth' });
+            }, 500);
+          }}
+        />
       )}
     </div>
   );
