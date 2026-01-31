@@ -42,6 +42,8 @@ interface ConciergeResponse {
   analysisId?: string;
   verdict?: string;
   score?: number;
+  direction?: string;  // LONG or SHORT
+  tradePlan?: TradePlan;  // Trade plan with entry, SL, TPs
   voltranSynthesis?: string;
   fromCache?: boolean;  // True if result came from pre-computed cache (free)
   cacheExpiresAt?: Date;  // When the cached result expires
@@ -2989,6 +2991,47 @@ Type "top coins" to see results when complete.`;
 
       const synthesis = this.generateNaturalResponse(upperSymbol, interval, verdict, score, language);
 
+      // Fetch the saved analysis to get direction and trade plan
+      let direction: string | undefined;
+      let tradePlan: any | undefined;
+
+      if (panelResult.analysisId) {
+        try {
+          const savedAnalysis = await prisma.analysis.findUnique({
+            where: { id: panelResult.analysisId },
+            select: {
+              step5Result: true,
+              step7Result: true,
+            },
+          });
+
+          if (savedAnalysis) {
+            const step5 = savedAnalysis.step5Result as any;
+            const step7 = savedAnalysis.step7Result as any;
+
+            // Get direction from step7 (final verdict)
+            direction = step7?.direction || step7?.verdict?.direction;
+
+            // Get trade plan from step5
+            if (step5) {
+              tradePlan = {
+                averageEntry: step5.averageEntry,
+                stopLoss: step5.stopLoss,
+                takeProfits: step5.takeProfits,
+                direction: step5.direction || direction,
+                riskRewardRatio: step5.riskRewardRatio,
+              };
+              // Also update direction from tradePlan if not set
+              if (!direction && step5.direction) {
+                direction = step5.direction;
+              }
+            }
+          }
+        } catch (fetchError) {
+          console.error('Error fetching analysis details:', fetchError);
+        }
+      }
+
       // Localized labels
       const verdictLabel = verdict === 'GO' ? 'GO'
         : verdict === 'AVOID' ? (isTurkish ? 'KAÇIN' : 'AVOID')
@@ -3018,6 +3061,8 @@ ${synthesis}`;
         analysisId: panelResult.analysisId,
         verdict: verdict,
         score: score,
+        direction: direction,
+        tradePlan: tradePlan,
         voltranSynthesis: synthesis,
         detectedLanguage: language,
       };
@@ -3189,6 +3234,7 @@ ${mlisResult.keySignals.slice(0, 3).map(s => `• ${s}`).join('\n')}`;
         verdict: mlisResult.recommendation === 'STRONG_BUY' || mlisResult.recommendation === 'BUY' ? 'go' :
                  mlisResult.recommendation === 'HOLD' ? 'wait' : 'avoid',
         score: mlisResult.overallScore / 10,
+        direction: mlisResult.direction,  // LONG or SHORT
         detectedLanguage: language,
         mlisResult: {
           recommendation: mlisResult.recommendation,
