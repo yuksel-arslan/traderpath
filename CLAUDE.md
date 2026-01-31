@@ -510,6 +510,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-31 | Analyze sayfasında Recent bölümü iç içe geçmişti | Wrapper'daki gereksiz header kaldırıldı (RecentAnalyses zaten kendi header'ına sahip) | `analyze/page.tsx` |
 | 2026-01-31 | AI Concierge analiz sonucu verdict kartı ve TradePlanChart görüntülenmiyor | handleAnalysis fonksiyonu direction ve tradePlan döndürmüyordu. Analiz DB'den çekilip step5Result ve step7Result'tan direction/tradePlan eklendi | `concierge.service.ts` |
 | 2026-01-31 | Dil değişikliği sayfa yenilemesi gerektiriyordu | Google Translate combo box doğrudan manipüle ediliyor (fireEvent ile change tetikleme). triggerTranslation ve resetToEnglish fonksiyonları eklendi. Sayfa yenileme yerine anlık çeviri | `LanguageSelector.tsx` |
+| 2026-01-31 | Concierge sayfasında TradePlanChart "Application error" hatası veriyordu | Frontend tradePlan interface'i backend'den gelen veri yapısıyla uyumsuzdu. `averageEntry` vs `entry`, `stopLoss` object vs number, `takeProfits` object array vs number array. Her iki yapıyı da destekleyecek şekilde düzeltildi | `concierge/page.tsx` |
 
 ---
 

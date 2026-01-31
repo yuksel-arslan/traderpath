@@ -58,9 +58,11 @@ interface ChatMessage {
     scanComplete?: boolean;
     chartData?: Array<{ time: number; open: number; high: number; low: number; close: number }>;
     tradePlan?: {
-      entry: number;
-      stopLoss: number;
-      takeProfits: number[];
+      entry?: number;
+      averageEntry?: number;
+      stopLoss?: number | { price: number };
+      takeProfits?: Array<number | { price: number; percentage?: number; riskReward?: number }>;
+      direction?: string;
     };
   };
 }
@@ -726,22 +728,36 @@ export default function ConciergePage() {
                       )}
 
                       {/* Chart */}
-                      {msg.data?.chartData && msg.data?.tradePlan && (
-                        <div className="mt-4 rounded-xl overflow-hidden bg-slate-50 dark:bg-black/20">
-                          <TradePlanChart
-                            symbol="Analysis"
-                            direction={(msg.data.direction?.toLowerCase() || 'long') as 'long' | 'short'}
-                            entries={[{ price: msg.data.tradePlan.entry, percentage: 100 }]}
-                            stopLoss={{ price: msg.data.tradePlan.stopLoss, percentage: 0 }}
-                            takeProfits={msg.data.tradePlan.takeProfits.map((tp, i) => ({
-                              price: tp,
-                              percentage: 0,
-                              riskReward: i + 1,
-                            }))}
-                            currentPrice={msg.data.tradePlan.entry}
-                            analysisTime={msg.timestamp}
-                          />
-                        </div>
+                      {msg.data?.tradePlan && (
+                        (() => {
+                          // Handle both simple and full tradePlan structures
+                          const tp = msg.data.tradePlan;
+                          const entryPrice = tp.averageEntry || tp.entry || 0;
+                          const slPrice = typeof tp.stopLoss === 'object' ? tp.stopLoss?.price : tp.stopLoss;
+                          const tpArr = (tp.takeProfits || []).map((item, i) => ({
+                            price: typeof item === 'object' ? (item as any).price : item,
+                            percentage: typeof item === 'object' ? ((item as any).percentage || 0) : 0,
+                            riskReward: typeof item === 'object' ? ((item as any).riskReward || (i + 1)) : (i + 1),
+                          }));
+                          const dir = (msg.data.direction || tp.direction || 'long').toLowerCase() as 'long' | 'short';
+
+                          // Only render if we have valid entry and stopLoss prices
+                          if (!entryPrice || !slPrice) return null;
+
+                          return (
+                            <div className="mt-4 rounded-xl overflow-hidden bg-slate-50 dark:bg-black/20">
+                              <TradePlanChart
+                                symbol="Analysis"
+                                direction={dir}
+                                entries={[{ price: entryPrice, percentage: 100 }]}
+                                stopLoss={{ price: slPrice || 0, percentage: 0 }}
+                                takeProfits={tpArr}
+                                currentPrice={entryPrice}
+                                analysisTime={msg.timestamp}
+                              />
+                            </div>
+                          );
+                        })()
                       )}
 
                       {/* Scan Complete Button */}
