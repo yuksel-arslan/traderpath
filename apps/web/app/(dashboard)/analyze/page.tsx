@@ -842,16 +842,7 @@ export default function AnalyzePage() {
           {/* Right: Recent Analyses */}
           <div className="lg:col-span-1">
             <div id="recent-analyses" className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden h-full">
-              <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-teal-500" />
-                  Recent
-                </h2>
-                <button onClick={() => router.push('/reports')} className="text-xs font-medium text-teal-600 dark:text-teal-400 flex items-center gap-1">
-                  All <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-              <div className="p-4 overflow-y-auto" style={{ maxHeight: '400px' }}>
+              <div className="p-4 overflow-y-auto" style={{ maxHeight: '500px' }}>
                 <RecentAnalyses />
               </div>
             </div>
