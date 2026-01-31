@@ -2,7 +2,6 @@
 
 // ===========================================
 // Capital Flow Dashboard
-// "Para nereye akıyorsa potansiyel oradadır"
 // Global Capital Flow Intelligence Platform
 // ===========================================
 
@@ -1060,7 +1059,7 @@ export default function CapitalFlowPage() {
           </h1>
 
           <p className="text-sm sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto animate-slide-up px-2">
-            "Para nereye akıyorsa potansiyel oradadır" - Where money flows, potential exists
+            Where money flows, potential exists
           </p>
 
           {/* Feature Badges */}
