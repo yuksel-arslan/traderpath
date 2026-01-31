@@ -240,20 +240,17 @@ function SystemFlowChart() {
       <div className="absolute bottom-1/4 left-1/4 w-48 h-48 bg-gradient-to-br from-coral-500/10 to-orange-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1.5s' }} />
 
       <div className="container mx-auto px-4 relative z-10">
-        {/* Header - Architecture Title with Corporate Gradient */}
+        {/* Header - Follow The Money Principle */}
         <div className={`text-center mb-8 md:mb-12 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="inline-block backdrop-blur-xl bg-white/90 dark:bg-slate-800/90 border-2 border-transparent bg-clip-padding rounded-2xl px-6 py-4 shadow-xl relative overflow-hidden">
             {/* Gradient border effect */}
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-teal-500 via-emerald-500 to-orange-500 opacity-20" />
             <div className="absolute inset-[2px] rounded-2xl bg-white dark:bg-slate-800" />
             <div className="relative">
-              <h2 className="text-lg md:text-xl font-bold bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-600 dark:from-teal-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent mb-1">
-                TRADERPATH 2.0 ARCHITECTURE
-              </h2>
-              <p className="text-sm bg-gradient-to-r from-teal-500 to-orange-500 bg-clip-text text-transparent font-bold">
+              <p className="text-lg md:text-xl bg-gradient-to-r from-teal-500 to-orange-500 bg-clip-text text-transparent font-bold mb-1">
                 "Follow The Money" Principle
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Click each layer to expand/collapse
               </p>
             </div>
