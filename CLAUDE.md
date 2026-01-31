@@ -476,6 +476,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-28 | Kredi Bildirimi: Toast notification sistemi | Kredi harcama/kazanma anında kullanıcıyı bilgilendirme |
 | 2026-01-28 | Login sayfası: Tema uyumlu marketing paneli | Sol panel artık light/dark mode'a uygun görünüyor |
 | 2026-01-31 | Analyze sayfası: LAYER 4 minimalist tasarım | Karmaşık animasyonlar kaldırıldı, Capital Flow context eklendi, 4 adımlı akış |
+| 2026-01-31 | Dashboard: Platform + My Performance bölümleri | Capital Flow entegrasyonu, her layer için özet kartları, platform ve kişisel AI stats |
 
 ---
 
@@ -1329,6 +1330,24 @@ Kullanıcı Hakları Aktif:
     3. Timeframe ve method seç (Classic 7-Step / MLIS Pro)
     4. Analiz çalıştır
   - Dosya: `apps/web/app/(dashboard)/analyze/page.tsx`
+- **Dashboard Capital Flow Entegrasyonu**:
+  - Dashboard sayfası Platform Performance ve My Performance olarak yeniden düzenlendi
+  - **Platform Performance Bölümü**:
+    - 4-Layer Capital Flow summary kartları (Global Liquidity, Market Flow, Sector Activity, Recommendation)
+    - Platform P/L grafiği (tüm doğrulanmış trade'ler)
+    - Platform istatistikleri (Accuracy, Total Analyses, Platform Users)
+    - AI Concierge Stats (Platform) - toplam mesaj, kullanıcı başına ortalama
+    - AI Experts Stats (Platform) - toplam soru, haftalık soru
+  - **My Performance Bölümü**:
+    - Kişisel P/L grafiği Today/Week/Month toggle ile
+    - Kişisel istatistikler (Accuracy, GO Signals, Active Trades)
+    - Analiz özet kartları (Total, Active, Closed, TP Hit, SL Hit)
+    - My AI Concierge Usage - gönderilen mesaj, chat üzerinden analiz
+    - My AI Expert Usage - sorulan soru, kalan ücretsiz
+  - **Active Trades Bölümü**: Yatay scroll ile aktif pozisyonlar
+  - **Empty State**: Yeni kullanıcılar için Capital Flow CTA
+  - Capital Flow API entegrasyonu (`/api/capital-flow/summary`)
+  - Dosya: `apps/web/app/(dashboard)/dashboard/page.tsx`
 
 ---
 
