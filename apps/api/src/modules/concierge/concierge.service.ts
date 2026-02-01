@@ -4,6 +4,9 @@ import { aiExpertService } from '../ai-expert/ai-expert.service';
 import { callGeminiWithRetry } from '../../core/gemini';
 import { INTENT_DETECTION_PROMPT, RESPONSE_TEMPLATES } from './system-prompt';
 import { coinScoreCacheService, CoinScore } from '../analysis/services/coin-score-cache.service';
+import * as capitalFlowService from '../capital-flow/capital-flow.service';
+import { translationService, SUPPORTED_LANGUAGES } from '../translation/translation.service';
+import { logger } from '../../core/logger';
 
 interface ConciergeRequest {
   message: string;
@@ -25,7 +28,6 @@ interface TradePlan {
   stopLoss: number;
   takeProfit1: number;
   takeProfit2?: number;
-  takeProfit3?: number;
   direction: 'long' | 'short';
 }
 
@@ -41,6 +43,8 @@ interface ConciergeResponse {
   analysisId?: string;
   verdict?: string;
   score?: number;
+  direction?: string;  // LONG or SHORT
+  tradePlan?: TradePlan;  // Trade plan with entry, SL, TPs
   voltranSynthesis?: string;
   fromCache?: boolean;  // True if result came from pre-computed cache (free)
   cacheExpiresAt?: Date;  // When the cached result expires
@@ -54,8 +58,9 @@ interface ConciergeResponse {
   };
 }
 
-// Expanded coin list - 50+ popular coins
-const SUPPORTED_COINS = [
+// Expanded asset list - 80+ assets including crypto, stocks, bonds, metals
+const SUPPORTED_ASSETS = [
+  // ===== CRYPTO =====
   // Top 20 by market cap
   'btc', 'eth', 'bnb', 'xrp', 'ada', 'doge', 'sol', 'trx', 'dot', 'matic',
   'shib', 'ltc', 'avax', 'link', 'atom', 'uni', 'xlm', 'etc', 'xmr', 'bch',
@@ -70,11 +75,34 @@ const SUPPORTED_COINS = [
   // AI tokens
   'fet', 'agix', 'ocean', 'rndr',
   // Others
-  'vet', 'hbar', 'qnt', 'inj', 'ldo', 'rune', 'grt', 'fil', 'theta', 'icp'
+  'vet', 'hbar', 'qnt', 'inj', 'ldo', 'rune', 'grt', 'fil', 'theta', 'icp',
+
+  // ===== STOCKS =====
+  // Major indices ETFs
+  'spy', 'qqq', 'dia', 'iwm', 'voo',
+  // Tech giants
+  'aapl', 'msft', 'googl', 'amzn', 'meta', 'nvda', 'tsla', 'nflx',
+  // Other popular stocks
+  'amd', 'intc', 'crm', 'adbe', 'pypl', 'v', 'ma', 'jpm', 'bac', 'wfc',
+
+  // ===== BONDS =====
+  // Treasury ETFs
+  'tlt', 'ief', 'shy', 'bnd', 'agg', 'tip',
+  // Corporate bonds
+  'lqd', 'hyg', 'jnk',
+
+  // ===== METALS =====
+  // Gold
+  'gld', 'iau', 'xauusd', 'gold',
+  // Silver
+  'slv', 'xagusd', 'silver',
+  // Other metals
+  'pplt', 'pall', 'dba'
 ];
 
-// Coin name aliases for natural language
-const COIN_ALIASES: Record<string, string> = {
+// Asset name aliases for natural language (Turkish and English)
+const ASSET_ALIASES: Record<string, string> = {
+  // Crypto aliases
   'bitcoin': 'btc',
   'ethereum': 'eth',
   'binance': 'bnb',
@@ -97,6 +125,36 @@ const COIN_ALIASES: Record<string, string> = {
   'render': 'rndr',
   'fetch': 'fet',
   'singularity': 'agix',
+
+  // Metal aliases (Turkish and English)
+  'altın': 'gld',
+  'altin': 'gld',
+  'gold': 'gld',
+  'gümüş': 'slv',
+  'gumus': 'slv',
+  'silver': 'slv',
+  'platin': 'pplt',
+  'platinum': 'pplt',
+  'paladyum': 'pall',
+  'palladium': 'pall',
+
+  // Stock aliases (Turkish)
+  'apple': 'aapl',
+  'microsoft': 'msft',
+  'google': 'googl',
+  'amazon': 'amzn',
+  'nvidia': 'nvda',
+  'tesla': 'tsla',
+  'sp500': 'spy',
+  's&p': 'spy',
+  's&p500': 'spy',
+  'nasdaq': 'qqq',
+
+  // Bond aliases (Turkish)
+  'tahvil': 'tlt',
+  'treasury': 'tlt',
+  'hazine': 'tlt',
+  'bono': 'shy',
 };
 
 // Intent detection with advanced pattern matching
@@ -105,8 +163,165 @@ function detectIntent(message: string): {
   symbol?: string;
   interval?: string;
   expertType?: string;
+  market?: string;
 } {
   const lower = message.toLowerCase().trim();
+
+  // ===== CAPITAL FLOW INTENTS (Priority - Check First) =====
+
+  // CAPITAL_FLOW_SUMMARY - Full 4-layer overview
+  if (
+    lower.includes('capital flow') ||
+    lower.includes('sermaye akış') ||
+    lower.includes('para akış') ||
+    lower.includes('para nereye') ||
+    lower.includes('money flow') ||
+    lower.includes('where is money') ||
+    lower.includes('4 layer') ||
+    lower.includes('4 katman') ||
+    lower.includes('dört katman') ||
+    lower.includes('follow the money') ||
+    lower.includes('parayı takip') ||
+    (lower.includes('akış') && lower.includes('özet')) ||
+    (lower.includes('flow') && lower.includes('summary'))
+  ) {
+    return { intent: 'CAPITAL_FLOW_SUMMARY' };
+  }
+
+  // CAPITAL_FLOW_LIQUIDITY - Layer 1 (Fed, M2, DXY, VIX, Yield)
+  if (
+    lower.includes('fed balance') ||
+    lower.includes('fed bilanço') ||
+    lower.includes('m2 money') ||
+    lower.includes('m2 para') ||
+    lower.includes('dxy') ||
+    lower.includes('dolar endeks') ||
+    lower.includes('dollar index') ||
+    lower.includes('vix') ||
+    lower.includes('korku endeks') ||
+    lower.includes('fear index') ||
+    lower.includes('yield curve') ||
+    lower.includes('verim eğri') ||
+    lower.includes('global liquidity') ||
+    lower.includes('küresel likidite') ||
+    lower.includes('makro') ||
+    lower.includes('macro') ||
+    (lower.includes('likidite') && !lower.includes('piyasa'))
+  ) {
+    return { intent: 'CAPITAL_FLOW_LIQUIDITY' };
+  }
+
+  // CAPITAL_FLOW_MARKETS - Layer 2 (Crypto/Stocks/Bonds/Metals flow)
+  if (
+    lower.includes('market flow') ||
+    lower.includes('piyasa akış') ||
+    lower.includes('hangi piyasa') ||
+    lower.includes('which market') ||
+    lower.includes('rotasyon') ||
+    lower.includes('rotation') ||
+    lower.includes('crypto vs') ||
+    lower.includes('kripto mu') ||
+    lower.includes('hisse mi') ||
+    lower.includes('stocks vs') ||
+    lower.includes('para nereye gidiyor') ||
+    lower.includes('where is capital going') ||
+    lower.includes('market leading') ||
+    lower.includes('öne çıkan piyasa') ||
+    lower.includes('en iyi piyasa') ||
+    lower.includes('best market')
+  ) {
+    return { intent: 'CAPITAL_FLOW_MARKETS' };
+  }
+
+  // CAPITAL_FLOW_SECTORS - Layer 3 (Sector breakdown)
+  if (
+    lower.includes('sektör') ||
+    lower.includes('sector') ||
+    lower.includes('defi') ||
+    lower.includes('layer2') ||
+    lower.includes('l2') ||
+    lower.includes('meme coin') ||
+    lower.includes('ai token') ||
+    lower.includes('gaming') ||
+    lower.includes('tech stock') ||
+    lower.includes('teknoloji hisse') ||
+    lower.includes('finans sektör') ||
+    lower.includes('finance sector')
+  ) {
+    // Detect market from context
+    let market: string | undefined;
+    if (lower.includes('crypto') || lower.includes('kripto') || lower.includes('defi') || lower.includes('layer2') || lower.includes('meme')) {
+      market = 'crypto';
+    } else if (lower.includes('stock') || lower.includes('hisse') || lower.includes('tech') || lower.includes('finance')) {
+      market = 'stocks';
+    } else if (lower.includes('metal') || lower.includes('gold') || lower.includes('altın') || lower.includes('silver') || lower.includes('gümüş')) {
+      market = 'metals';
+    }
+    return { intent: 'CAPITAL_FLOW_SECTORS', market };
+  }
+
+  // CAPITAL_FLOW_RECOMMENDATION - AI recommendation based on flow
+  // Also handles "alınır mı?", "satmalı mıyım?", "should I buy?" style questions
+  if (
+    lower.includes('ne yapmalı') ||
+    lower.includes('what should i') ||
+    lower.includes('nereye yatırım') ||
+    lower.includes('where to invest') ||
+    lower.includes('best opportunity') ||
+    lower.includes('en iyi fırsat') ||
+    lower.includes('trade yapmalı') ||
+    lower.includes('should i trade') ||
+    lower.includes('öner') ||
+    lower.includes('recommend') ||
+    lower.includes('tavsiye') ||
+    (lower.includes('şimdi') && (lower.includes('ne') || lower.includes('what'))) ||
+    // Buy/sell question patterns (Turkish)
+    lower.includes('alınır mı') ||
+    lower.includes('satmalı mı') ||
+    lower.includes('satılmalı mı') ||
+    lower.includes('almalı mı') ||
+    lower.includes('gireyim mi') ||
+    lower.includes('girilir mi') ||
+    lower.includes('yatırım yap') ||
+    lower.includes('al mı') ||
+    lower.includes('sat mı') ||
+    // Buy/sell question patterns (English)
+    lower.includes('should i buy') ||
+    lower.includes('should i sell') ||
+    lower.includes('is it good to buy') ||
+    lower.includes('worth buying') ||
+    lower.includes('worth investing') ||
+    lower.includes('good investment') ||
+    lower.includes('iyi yatırım')
+  ) {
+    // Try to detect asset from the question
+    let assetHint: string | undefined;
+
+    // Check for metals (Turkish and English)
+    if (lower.includes('altın') || lower.includes('gold') || lower.includes('gld') || lower.includes('xau')) {
+      assetHint = 'GOLD';
+    } else if (lower.includes('gümüş') || lower.includes('silver') || lower.includes('slv') || lower.includes('xag')) {
+      assetHint = 'SILVER';
+    }
+    // Check for crypto aliases
+    else if (lower.includes('bitcoin') || lower.match(/\bbtc\b/)) {
+      assetHint = 'BTC';
+    } else if (lower.includes('ethereum') || lower.match(/\beth\b/)) {
+      assetHint = 'ETH';
+    }
+    // Check for stocks
+    else if (lower.includes('hisse') || lower.includes('stock') || lower.includes('spy') || lower.includes('qqq')) {
+      assetHint = 'STOCKS';
+    }
+    // Check for bonds
+    else if (lower.includes('tahvil') || lower.includes('bond') || lower.includes('tlt')) {
+      assetHint = 'BONDS';
+    }
+
+    return { intent: 'CAPITAL_FLOW_RECOMMENDATION', symbol: assetHint };
+  }
+
+  // ===== OTHER INTENTS =====
 
   // Platform info intent - questions about the platform itself
   if (
@@ -356,7 +571,7 @@ function detectIntent(message: string): {
   ) {
     // Try to extract coin from message
     let scheduleCoin: string | null = null;
-    for (const [alias, symbol] of Object.entries(COIN_ALIASES)) {
+    for (const [alias, symbol] of Object.entries(ASSET_ALIASES)) {
       if (lower.includes(alias)) {
         scheduleCoin = symbol;
         break;
@@ -371,7 +586,7 @@ function detectIntent(message: string): {
         .replace(/\/usdt/gi, ' ')
         .replace(/\/busd/gi, ' ');
 
-      for (const coin of SUPPORTED_COINS) {
+      for (const coin of SUPPORTED_ASSETS) {
         const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
         if (coinRegex.test(cleanedMessage) || coinRegex.test(lower)) {
           scheduleCoin = coin;
@@ -411,7 +626,7 @@ function detectIntent(message: string): {
     let chartSymbol: string | null = null;
 
     // Check for coin in the chart request
-    for (const [alias, symbol] of Object.entries(COIN_ALIASES)) {
+    for (const [alias, symbol] of Object.entries(ASSET_ALIASES)) {
       if (lower.includes(alias)) {
         chartSymbol = symbol;
         break;
@@ -426,7 +641,7 @@ function detectIntent(message: string): {
         .replace(/\/usdt/gi, ' ')
         .replace(/\/busd/gi, ' ');
 
-      for (const coin of SUPPORTED_COINS) {
+      for (const coin of SUPPORTED_ASSETS) {
         const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
         if (coinRegex.test(cleanedMessage) || coinRegex.test(lower)) {
           chartSymbol = coin;
@@ -441,7 +656,7 @@ function detectIntent(message: string): {
   // Check for coin aliases first
   let detectedCoin: string | null = null;
 
-  for (const [alias, symbol] of Object.entries(COIN_ALIASES)) {
+  for (const [alias, symbol] of Object.entries(ASSET_ALIASES)) {
     if (lower.includes(alias)) {
       detectedCoin = symbol;
       break;
@@ -458,7 +673,7 @@ function detectIntent(message: string): {
       .replace(/\/usdt/gi, ' ')
       .replace(/\/busd/gi, ' ');
 
-    for (const coin of SUPPORTED_COINS) {
+    for (const coin of SUPPORTED_ASSETS) {
       // Match coin symbol with word boundaries in cleaned message
       const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
       if (coinRegex.test(cleanedMessage) || coinRegex.test(lower)) {
@@ -549,6 +764,7 @@ async function detectIntentWithGemini(message: string): Promise<{
   expertType?: string;
   targetPrice?: number;
   direction?: string;
+  market?: string;
   language?: string;
 }> {
   try {
@@ -585,6 +801,7 @@ async function detectIntentWithGemini(message: string): Promise<{
       expertType: parsed.entities?.expertType,
       targetPrice: parsed.entities?.targetPrice,
       direction: parsed.entities?.direction,
+      market: parsed.entities?.market,
       language: parsed.language,
     };
   } catch (error) {
@@ -670,6 +887,7 @@ class ConciergeService {
       let expertType: string | undefined;
       let targetPrice: number | undefined;
       let direction: string | undefined;
+      let market: string | undefined;
 
       // PRIMARY: Use Gemini AI for intelligent intent detection
       // Cost: ~$0.0002 per request (~$5/month for 1000 daily requests)
@@ -689,6 +907,7 @@ class ConciergeService {
           expertType = geminiResult.expertType;
           targetPrice = geminiResult.targetPrice;
           direction = geminiResult.direction;
+          market = geminiResult.market;
           // Use Gemini's language detection if available
           if (geminiResult.language) {
             detectedLanguage = geminiResult.language;
@@ -706,10 +925,28 @@ class ConciergeService {
         symbol = ruleResult.symbol || symbol;
         interval = ruleResult.interval || interval;
         expertType = ruleResult.expertType || expertType;
+        market = ruleResult.market || market;
       }
 
       // Handle different intents - ALL handlers use detectedLanguage
       switch (intent) {
+        // ===== CAPITAL FLOW INTENTS =====
+        case 'CAPITAL_FLOW_SUMMARY':
+          return await this.handleCapitalFlowSummary(detectedLanguage, creditBalance);
+
+        case 'CAPITAL_FLOW_LIQUIDITY':
+          return await this.handleCapitalFlowLiquidity(detectedLanguage, creditBalance);
+
+        case 'CAPITAL_FLOW_MARKETS':
+          return await this.handleCapitalFlowMarkets(detectedLanguage, creditBalance);
+
+        case 'CAPITAL_FLOW_SECTORS':
+          return await this.handleCapitalFlowSectors(market || 'crypto', detectedLanguage, creditBalance);
+
+        case 'CAPITAL_FLOW_RECOMMENDATION':
+          return await this.handleCapitalFlowRecommendation(detectedLanguage, creditBalance, symbol);
+
+        // ===== PLATFORM INTENTS =====
         case 'PLATFORM_INFO':
           return this.handlePlatformInfo(detectedLanguage, creditBalance);
 
@@ -778,6 +1015,9 @@ class ConciergeService {
         case 'ANALYSIS':
           return await this.handleAnalysis(userId, symbol!, interval || '4h', detectedLanguage, creditBalance);
 
+        case 'MLIS_ANALYSIS':
+          return await this.handleMLISAnalysis(userId, symbol!, interval || '4h', detectedLanguage, creditBalance);
+
         case 'ANALYSIS_NEEDS_CLARIFICATION':
           return this.handleAnalysisClarification(symbol!, detectedLanguage, creditBalance);
 
@@ -805,6 +1045,585 @@ class ConciergeService {
       };
     }
   }
+
+  // ===== MULTI-LANGUAGE TRANSLATION HELPER =====
+
+  /**
+   * Translates message to target language if not English
+   * Uses Google Translate API (primary) with Gemini fallback
+   * Supports 18 languages: en, tr, es, de, fr, pt, ru, zh, ja, ko, ar, it, nl, pl, vi, th, id, hi
+   */
+  private async translateIfNeeded(message: string, targetLanguage: string): Promise<string> {
+    // No translation needed for English
+    if (targetLanguage === 'en' || !targetLanguage) {
+      return message;
+    }
+
+    // Check if language is supported
+    if (!SUPPORTED_LANGUAGES[targetLanguage as keyof typeof SUPPORTED_LANGUAGES]) {
+      console.warn(`[Concierge] Unsupported language: ${targetLanguage}, falling back to English`);
+      return message;
+    }
+
+    try {
+      const translated = await translationService.translate(message, targetLanguage);
+      return translated;
+    } catch (error) {
+      console.error(`[Concierge] Translation error for language ${targetLanguage}:`, error);
+      return message; // Return original English message on error
+    }
+  }
+
+  // ===== CAPITAL FLOW HANDLERS =====
+
+  private async handleCapitalFlowSummary(language: string, creditBalance: number): Promise<ConciergeResponse> {
+    try {
+      const summary = await capitalFlowService.getCapitalFlowSummary();
+
+      // Format global liquidity (English base)
+      const liquidity = summary.globalLiquidity;
+      const liquidityText = `📊 LAYER 1: GLOBAL LIQUIDITY
+
+Fed Balance Sheet: $${(liquidity.fedBalanceSheet.value / 1e12).toFixed(2)}T (${liquidity.fedBalanceSheet.change30d > 0 ? '+' : ''}${liquidity.fedBalanceSheet.change30d.toFixed(1)}% 30D)
+→ Status: ${liquidity.fedBalanceSheet.trend === 'expanding' ? 'Expanding ✅' : liquidity.fedBalanceSheet.trend === 'contracting' ? 'Contracting ⚠️' : 'Stable'}
+
+M2 Money Supply: $${(liquidity.m2MoneySupply.value / 1e12).toFixed(2)}T (YoY: ${liquidity.m2MoneySupply.yoyGrowth > 0 ? '+' : ''}${liquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%)
+
+DXY (Dollar): ${liquidity.dxy.value.toFixed(2)} (${liquidity.dxy.trend === 'weakening' ? 'Weakening → Risk-On ✅' : liquidity.dxy.trend === 'strengthening' ? 'Strengthening → Risk-Off ⚠️' : 'Stable'})
+
+VIX (Fear): ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level === 'low' ? 'Low → Calm Market' : liquidity.vix.level === 'elevated' ? 'Elevated → Caution' : 'High → Panic ⚠️'})
+
+Yield Curve (10Y-2Y): ${liquidity.yieldCurve.spread10y2y.toFixed(2)}bp ${liquidity.yieldCurve.inverted ? '⚠️ INVERTED (Recession signal)' : '✅ Normal'}`;
+
+      // Format market flows (English base)
+      const marketsText = summary.markets.map(m => {
+        const phaseEmoji = m.phase === 'early' ? '🟢' : m.phase === 'mid' ? '🟡' : m.phase === 'late' ? '🟠' : '🔴';
+        const flowSign = m.flow7d > 0 ? '+' : '';
+        return `${m.market.toUpperCase()}: ${flowSign}${m.flow7d.toFixed(1)}% 7D | ${phaseEmoji} ${m.phase.toUpperCase()} phase (${m.daysInPhase}D)`;
+      }).join('\n');
+
+      // Format recommendation (English base)
+      const rec = summary.recommendation;
+      const recText = `🎯 RECOMMENDATION: ${rec.primaryMarket.toUpperCase()} market (${rec.confidence}% confidence)
+Action: ${rec.action === 'analyze' ? '✅ ANALYZE' : rec.action === 'wait' ? '⏳ WAIT' : '⛔ AVOID'}
+${rec.reason}`;
+
+      const biasText = `\n📈 Liquidity Bias: ${summary.liquidityBias === 'risk_on' ? 'RISK-ON ✅' : summary.liquidityBias === 'risk_off' ? 'RISK-OFF ⚠️' : 'NEUTRAL'}`;
+
+      // Build English message
+      const messageEn = `═══════════════════════════════════
+CAPITAL FLOW RADAR 🌐
+"Where money flows, potential exists"
+═══════════════════════════════════
+
+${liquidityText}
+${biasText}
+
+═══════════════════════════════════
+📊 LAYER 2: MARKET FLOW
+═══════════════════════════════════
+${marketsText}
+
+═══════════════════════════════════
+${recText}
+═══════════════════════════════════
+
+💡 For more details:
+• "Global liquidity status" - Layer 1 detail
+• "Which market is leading?" - Layer 2 detail
+• "${rec.primaryMarket} sectors" - Layer 3 detail`;
+
+      // Translate to target language if needed (supports 18 languages)
+      const message = await this.translateIfNeeded(messageEn, language);
+
+      return {
+        success: true,
+        intent: 'CAPITAL_FLOW_SUMMARY',
+        message,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        detectedLanguage: language,
+      };
+    } catch (error) {
+      console.error('[Concierge] Capital flow summary error:', error);
+      const errorMessage = await this.translateIfNeeded(
+        'Could not fetch capital flow data. Please try again.',
+        language
+      );
+      return {
+        success: false,
+        intent: 'CAPITAL_FLOW_SUMMARY',
+        message: errorMessage,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  private async handleCapitalFlowLiquidity(language: string, creditBalance: number): Promise<ConciergeResponse> {
+    try {
+      const liquidity = await capitalFlowService.getGlobalLiquidity();
+
+      // Build English message
+      const messageEn = `═══════════════════════════════════
+📊 LAYER 1: GLOBAL LIQUIDITY
+═══════════════════════════════════
+
+🏦 FED BALANCE SHEET
+Value: $${(liquidity.fedBalanceSheet.value / 1e12).toFixed(2)} Trillion
+30D Change: ${liquidity.fedBalanceSheet.change30d > 0 ? '+' : ''}${liquidity.fedBalanceSheet.change30d.toFixed(2)}%
+Trend: ${liquidity.fedBalanceSheet.trend === 'expanding' ? '📈 EXPANDING (Liquidity increasing)' : liquidity.fedBalanceSheet.trend === 'contracting' ? '📉 CONTRACTING (Liquidity decreasing)' : '➡️ STABLE'}
+
+💵 M2 MONEY SUPPLY
+Value: $${(liquidity.m2MoneySupply.value / 1e12).toFixed(2)} Trillion
+30D Change: ${liquidity.m2MoneySupply.change30d > 0 ? '+' : ''}${liquidity.m2MoneySupply.change30d.toFixed(2)}%
+YoY Growth: ${liquidity.m2MoneySupply.yoyGrowth > 0 ? '+' : ''}${liquidity.m2MoneySupply.yoyGrowth.toFixed(2)}%
+
+💱 DXY (DOLLAR INDEX)
+Value: ${liquidity.dxy.value.toFixed(2)}
+7D Change: ${liquidity.dxy.change7d > 0 ? '+' : ''}${liquidity.dxy.change7d.toFixed(2)}%
+Trend: ${liquidity.dxy.trend === 'weakening' ? '📉 WEAKENING → Bullish for risk assets ✅' : liquidity.dxy.trend === 'strengthening' ? '📈 STRENGTHENING → Bearish for risk assets ⚠️' : '➡️ STABLE'}
+
+😱 VIX (FEAR INDEX)
+Value: ${liquidity.vix.value.toFixed(2)}
+Level: ${liquidity.vix.level === 'low' ? '🟢 LOW (Calm market, complacency)' : liquidity.vix.level === 'elevated' ? '🟡 ELEVATED (Rising concern)' : '🔴 HIGH (Panic mode)'}
+
+📈 YIELD CURVE (10Y-2Y)
+Spread: ${liquidity.yieldCurve.spread10y2y.toFixed(2)} basis points
+Status: ${liquidity.yieldCurve.inverted ? '⚠️ INVERTED - Recession signal!' : '✅ NORMAL CURVE'}
+Interpretation: ${liquidity.yieldCurve.interpretation}
+
+═══════════════════════════════════
+📌 CONCLUSION
+═══════════════════════════════════
+${liquidity.fedBalanceSheet.trend === 'expanding' && liquidity.dxy.trend === 'weakening' ? '✅ RISK-ON environment: Favorable for risk assets (crypto, stocks)' : liquidity.fedBalanceSheet.trend === 'contracting' || liquidity.dxy.trend === 'strengthening' ? '⚠️ RISK-OFF environment: Safe havens (bonds, gold) may be preferred' : '➡️ MIXED signals: Cautious approach recommended'}`;
+
+      // Translate to target language if needed (supports 18 languages)
+      const message = await this.translateIfNeeded(messageEn, language);
+
+      return {
+        success: true,
+        intent: 'CAPITAL_FLOW_LIQUIDITY',
+        message,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        detectedLanguage: language,
+      };
+    } catch (error) {
+      console.error('[Concierge] Capital flow liquidity error:', error);
+      const errorMessage = await this.translateIfNeeded(
+        'Could not fetch liquidity data. Please try again.',
+        language
+      );
+      return {
+        success: false,
+        intent: 'CAPITAL_FLOW_LIQUIDITY',
+        message: errorMessage,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  private async handleCapitalFlowMarkets(language: string, creditBalance: number): Promise<ConciergeResponse> {
+    try {
+      const markets = await capitalFlowService.getAllMarketFlows();
+
+      // Build English market cards
+      const marketCards = markets.map(m => {
+        const phaseEmoji = m.phase === 'early' ? '🟢' : m.phase === 'mid' ? '🟡' : m.phase === 'late' ? '🟠' : '🔴';
+        const rotationEmoji = m.rotationSignal === 'entering' ? '📥' : m.rotationSignal === 'exiting' ? '📤' : '➡️';
+        const flow7dSign = m.flow7d > 0 ? '+' : '';
+        const flow30dSign = m.flow30d > 0 ? '+' : '';
+
+        return `═══════════════════════════════════
+${m.market.toUpperCase()} MARKET
+═══════════════════════════════════
+📊 Flow (7D): ${flow7dSign}${m.flow7d.toFixed(2)}%
+📊 Flow (30D): ${flow30dSign}${m.flow30d.toFixed(2)}%
+🚀 Velocity: ${m.flowVelocity > 0 ? 'Accelerating ↑' : m.flowVelocity < 0 ? 'Decelerating ↓' : 'Stable'}
+
+${phaseEmoji} Phase: ${m.phase.toUpperCase()} (${m.daysInPhase} days)
+${rotationEmoji} Rotation: ${m.rotationSignal === 'entering' ? 'CAPITAL ENTERING' : m.rotationSignal === 'exiting' ? 'CAPITAL EXITING' : 'STABLE'}
+
+${m.phase === 'early' ? '✅ OPTIMAL ENTRY TIMING' : m.phase === 'mid' ? '⚠️ CAN ENTER (carefully)' : m.phase === 'late' ? '⛔ NEW ENTRY NOT RECOMMENDED' : '🚫 NEVER ENTER'}`;
+      });
+
+      // Find best market
+      const bestMarket = markets.reduce((best, m) =>
+        m.flow7d > best.flow7d && (m.phase === 'early' || m.phase === 'mid') ? m : best
+      , markets[0]);
+
+      // Build English message
+      const messageEn = `═══════════════════════════════════
+📊 LAYER 2: MARKET FLOW
+"Where is money going?"
+═══════════════════════════════════
+
+${marketCards.join('\n\n')}
+
+═══════════════════════════════════
+🎯 BEST OPPORTUNITY: ${bestMarket.market.toUpperCase()}
+${bestMarket.flow7d > 0 ? `+${bestMarket.flow7d.toFixed(2)}% weekly inflow` : 'Relatively strong'} | ${bestMarket.phase.toUpperCase()} phase
+═══════════════════════════════════`;
+
+      // Translate to target language if needed (supports 18 languages)
+      const message = await this.translateIfNeeded(messageEn, language);
+
+      return {
+        success: true,
+        intent: 'CAPITAL_FLOW_MARKETS',
+        message,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        detectedLanguage: language,
+      };
+    } catch (error) {
+      console.error('[Concierge] Capital flow markets error:', error);
+      const errorMessage = await this.translateIfNeeded(
+        'Could not fetch market flow data. Please try again.',
+        language
+      );
+      return {
+        success: false,
+        intent: 'CAPITAL_FLOW_MARKETS',
+        message: errorMessage,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  private async handleCapitalFlowSectors(market: string, language: string, creditBalance: number): Promise<ConciergeResponse> {
+    try {
+      const marketFlow = await capitalFlowService.getMarketFlow(market as 'crypto' | 'stocks' | 'bonds' | 'metals');
+
+      if (!marketFlow.sectors || marketFlow.sectors.length === 0) {
+        const noDataMessage = await this.translateIfNeeded(
+          `No sector data available for ${market.toUpperCase()} market.`,
+          language
+        );
+        return {
+          success: true,
+          intent: 'CAPITAL_FLOW_SECTORS',
+          message: noDataMessage,
+          creditsSpent: 0,
+          creditsRemaining: creditBalance,
+          detectedLanguage: language,
+        };
+      }
+
+      // Build English sector cards
+      const sectorCards = marketFlow.sectors
+        .sort((a, b) => b.flow7d - a.flow7d)
+        .map((s, i) => {
+          const rankEmoji = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  ';
+          const flowSign = s.flow7d > 0 ? '+' : '';
+          return `${rankEmoji} ${s.name}: ${flowSign}${s.flow7d.toFixed(2)}% (7D) | TVL: $${(s.tvl / 1e9).toFixed(2)}B`;
+        });
+
+      const topSector = marketFlow.sectors.sort((a, b) => b.flow7d - a.flow7d)[0];
+
+      // Build English message
+      const messageEn = `═══════════════════════════════════
+📊 LAYER 3: ${market.toUpperCase()} SECTOR FLOW
+═══════════════════════════════════
+
+${sectorCards.join('\n')}
+
+═══════════════════════════════════
+🎯 STRONGEST SECTOR: ${topSector.name}
+${topSector.flow7d > 0 ? `+${topSector.flow7d.toFixed(2)}% weekly inflow` : 'Relatively strong'}
+═══════════════════════════════════
+
+💡 Next step: Analyze assets in this sector
+Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
+
+      // Translate to target language if needed (supports 18 languages)
+      const message = await this.translateIfNeeded(messageEn, language);
+
+      return {
+        success: true,
+        intent: 'CAPITAL_FLOW_SECTORS',
+        message,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        detectedLanguage: language,
+      };
+    } catch (error) {
+      console.error('[Concierge] Capital flow sectors error:', error);
+      const errorMessage = await this.translateIfNeeded(
+        'Could not fetch sector data. Please try again.',
+        language
+      );
+      return {
+        success: false,
+        intent: 'CAPITAL_FLOW_SECTORS',
+        message: errorMessage,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  private async handleCapitalFlowRecommendation(language: string, creditBalance: number, assetHint?: string): Promise<ConciergeResponse> {
+    try {
+      const recommendation = await capitalFlowService.getFlowRecommendation();
+
+      const actionEmoji = recommendation.action === 'analyze' ? '✅' : recommendation.action === 'wait' ? '⏳' : '⛔';
+      const confidenceBar = '█'.repeat(Math.floor(recommendation.confidence / 10)) + '░'.repeat(10 - Math.floor(recommendation.confidence / 10));
+
+      // Determine next steps based on action (English base)
+      let nextSteps: string;
+      if (recommendation.action === 'analyze') {
+        nextSteps = `1. "${recommendation.primaryMarket} sectors" - Sector analysis
+2. Select an asset from strong sector
+3. "Analyze BTC" or "BTC mlis pro" - Asset analysis`;
+      } else if (recommendation.action === 'wait') {
+        nextSteps = `Wait for now:
+• Liquidity conditions uncertain
+• Clear direction signal pending
+• Monitor with "Where is money flowing?"`;
+      } else {
+        nextSteps = `Risk management advised:
+• Reduce positions
+• Tighten stop-losses
+• Consider safe havens (gold, bonds)`;
+      }
+
+      // Build asset-specific advice if assetHint is provided
+      let assetAdvice = '';
+      if (assetHint) {
+        const assetName = assetHint === 'GOLD' ? 'Gold' : assetHint === 'SILVER' ? 'Silver' : assetHint;
+        const assetNameTr = assetHint === 'GOLD' ? 'Altın' : assetHint === 'SILVER' ? 'Gümüş' : assetHint;
+
+        // Determine asset market
+        let assetMarket = 'crypto';
+        if (assetHint === 'GOLD' || assetHint === 'SILVER') {
+          assetMarket = 'metals';
+        } else if (assetHint === 'STOCKS' || assetHint === 'SPY' || assetHint === 'QQQ') {
+          assetMarket = 'stocks';
+        } else if (assetHint === 'BONDS' || assetHint === 'TLT') {
+          assetMarket = 'bonds';
+        }
+
+        // Check if the asset's market is favorable
+        const isAssetMarketFavorable = recommendation.primaryMarket.toLowerCase() === assetMarket;
+
+        if (assetHint === 'GOLD' || assetHint === 'SILVER') {
+          // Gold/Silver specific advice based on Capital Flow
+          const reasonText = recommendation.reason || '';
+          const dxyTrend = reasonText.toLowerCase().includes('dxy');
+          const isRiskOff = recommendation.action === 'avoid' || reasonText.toLowerCase().includes('risk-off');
+
+          if (isRiskOff || (recommendation.primaryMarket.toLowerCase() === 'metals')) {
+            assetAdvice = language === 'tr'
+              ? `
+
+═══════════════════════════════════
+🥇 ${assetNameTr.toUpperCase()} İÇİN ANALİZ
+═══════════════════════════════════
+${isRiskOff ? '✅ Risk-off ortamı: Altın/Gümüş için olumlu koşullar.' : '✅ Metal piyasasına para akışı tespit edildi.'}
+${dxyTrend ? '• DXY zayıflıyor - Değerli metaller için olumlu' : '• Dolar güçlü - Metaller baskı altında kalabilir'}
+
+📌 ÖNERİ: Detaylı teknik analiz için:
+• "GLD analiz" veya "GLD mlis pro" yazın
+• (GLD = Gold ETF)`
+              : `
+
+═══════════════════════════════════
+🥇 ${assetName.toUpperCase()} ANALYSIS
+═══════════════════════════════════
+${isRiskOff ? '✅ Risk-off environment: Favorable conditions for Gold/Silver.' : '✅ Capital flow detected into metals market.'}
+${dxyTrend ? '• DXY weakening - Positive for precious metals' : '• Dollar strong - Metals may face pressure'}
+
+📌 RECOMMENDATION: For detailed technical analysis:
+• Type "GLD analysis" or "GLD mlis pro"
+• (GLD = Gold ETF)`;
+          } else {
+            assetAdvice = language === 'tr'
+              ? `
+
+═══════════════════════════════════
+🥇 ${assetNameTr.toUpperCase()} İÇİN ANALİZ
+═══════════════════════════════════
+⚠️ Şu an önerilen piyasa: ${recommendation.primaryMarket.toUpperCase()}
+Metal piyasası ${isAssetMarketFavorable ? 'güçlü' : 'para akışı açısından zayıf'}.
+
+📌 Yine de analiz etmek isterseniz:
+• "GLD analiz" veya "GLD mlis pro" yazın`
+              : `
+
+═══════════════════════════════════
+🥇 ${assetName.toUpperCase()} ANALYSIS
+═══════════════════════════════════
+⚠️ Currently recommended market: ${recommendation.primaryMarket.toUpperCase()}
+Metals market is ${isAssetMarketFavorable ? 'strong' : 'not showing significant inflow'}.
+
+📌 If you still want to analyze:
+• Type "GLD analysis" or "GLD mlis pro"`;
+          }
+        } else if (assetHint === 'STOCKS' || assetHint === 'BONDS') {
+          const marketName = assetHint === 'STOCKS' ? 'stocks' : 'bonds';
+          const marketNameTr = assetHint === 'STOCKS' ? 'Hisse' : 'Tahvil';
+
+          assetAdvice = language === 'tr'
+            ? `
+
+═══════════════════════════════════
+📈 ${marketNameTr.toUpperCase()} PİYASASI
+═══════════════════════════════════
+${isAssetMarketFavorable ? '✅ Bu piyasaya sermaye akışı var!' : '⚠️ Şu an önerilen piyasa: ' + recommendation.primaryMarket.toUpperCase()}
+
+📌 Analiz için: "SPY analiz" veya "QQQ analiz" yazın`
+            : `
+
+═══════════════════════════════════
+📈 ${assetHint} MARKET
+═══════════════════════════════════
+${isAssetMarketFavorable ? '✅ Capital flowing into this market!' : '⚠️ Currently recommended market: ' + recommendation.primaryMarket.toUpperCase()}
+
+📌 For analysis: Type "SPY analysis" or "QQQ analysis"`;
+        } else {
+          // Crypto asset
+          assetAdvice = language === 'tr'
+            ? `
+
+═══════════════════════════════════
+🪙 ${assetHint} ANALİZİ
+═══════════════════════════════════
+${isAssetMarketFavorable ? '✅ Kripto piyasasına sermaye akışı var!' : '⚠️ Şu an önerilen piyasa: ' + recommendation.primaryMarket.toUpperCase()}
+
+📌 Detaylı analiz için:
+• "${assetHint} analiz" veya "${assetHint} mlis pro" yazın`
+            : `
+
+═══════════════════════════════════
+🪙 ${assetHint} ANALYSIS
+═══════════════════════════════════
+${isAssetMarketFavorable ? '✅ Capital flowing into crypto market!' : '⚠️ Currently recommended market: ' + recommendation.primaryMarket.toUpperCase()}
+
+📌 For detailed analysis:
+• Type "${assetHint} analysis" or "${assetHint} mlis pro"`;
+        }
+      }
+
+      // Build English message
+      const messageEn = `═══════════════════════════════════
+🎯 AI RECOMMENDATION
+"Where money flows, potential exists"
+═══════════════════════════════════
+
+📊 RECOMMENDED MARKET: ${recommendation.primaryMarket.toUpperCase()}
+
+${actionEmoji} ACTION: ${recommendation.action === 'analyze' ? 'ANALYZE' : recommendation.action === 'wait' ? 'WAIT' : 'AVOID'}
+
+📈 CONFIDENCE: ${recommendation.confidence}%
+[${confidenceBar}]
+
+💡 REASONING:
+${recommendation.reason}
+
+═══════════════════════════════════
+📌 NEXT STEPS
+═══════════════════════════════════
+${nextSteps}
+═══════════════════════════════════`;
+
+      // Translate main message to target language if needed
+      let message = await this.translateIfNeeded(messageEn, language);
+
+      // Add asset-specific advice (already localized)
+      if (assetAdvice) {
+        message += assetAdvice;
+      }
+
+      return {
+        success: true,
+        intent: 'CAPITAL_FLOW_RECOMMENDATION',
+        message,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        detectedLanguage: language,
+      };
+    } catch (error) {
+      console.error('[Concierge] Capital flow recommendation error:', error);
+
+      // If we have an asset hint, provide a helpful fallback response
+      if (assetHint) {
+        const assetName = assetHint === 'GOLD' ? 'Gold' : assetHint === 'SILVER' ? 'Silver' : assetHint;
+        const assetNameTr = assetHint === 'GOLD' ? 'Altın' : assetHint === 'SILVER' ? 'Gümüş' : assetHint;
+        const analysisSymbol = assetHint === 'GOLD' ? 'GLD' : assetHint === 'SILVER' ? 'SLV' : assetHint;
+
+        const fallbackMessage = language === 'tr'
+          ? `🔍 ${assetNameTr} Hakkında
+
+Capital Flow verileri şu an yüklenemiyor, ancak size yardımcı olabilirim:
+
+📊 **Teknik Analiz İçin:**
+• "${analysisSymbol} analiz" yazarak detaylı teknik analiz alabilirsiniz
+• "${analysisSymbol} mlis pro" yazarak AI destekli gelişmiş analiz alabilirsiniz
+
+💡 **Genel Bilgi:**
+${assetHint === 'GOLD' || assetHint === 'SILVER' ? `• Değerli metaller genellikle dolar zayıfladığında ve belirsizlik dönemlerinde yükselir
+• Risk-off ortamlarında güvenli liman olarak tercih edilir` : `• Detaylı analiz için yukarıdaki komutları kullanın`}
+
+Analiz maliyeti: 25 kredi`
+          : `🔍 About ${assetName}
+
+Capital Flow data is currently unavailable, but I can still help:
+
+📊 **For Technical Analysis:**
+• Type "${analysisSymbol} analysis" for detailed technical analysis
+• Type "${analysisSymbol} mlis pro" for AI-powered advanced analysis
+
+💡 **General Info:**
+${assetHint === 'GOLD' || assetHint === 'SILVER' ? `• Precious metals typically rise when dollar weakens and during uncertainty
+• Preferred as safe haven in risk-off environments` : `• Use the commands above for detailed analysis`}
+
+Analysis cost: 25 credits`;
+
+        return {
+          success: true,
+          intent: 'CAPITAL_FLOW_RECOMMENDATION',
+          message: fallbackMessage,
+          creditsSpent: 0,
+          creditsRemaining: creditBalance,
+          detectedLanguage: language,
+        };
+      }
+
+      // Generic error response
+      const errorMessage = language === 'tr'
+        ? `Capital Flow verileri şu an yüklenemiyor.
+
+Şunları deneyebilirsiniz:
+• "BTC analiz" - Teknik analiz
+• "Para nereye akıyor?" - Capital Flow özeti
+• "yardım" - Tüm komutlar`
+        : `Capital Flow data is currently unavailable.
+
+You can try:
+• "BTC analysis" - Technical analysis
+• "Where is money flowing?" - Capital Flow summary
+• "help" - All commands`;
+
+      return {
+        success: false,
+        intent: 'CAPITAL_FLOW_RECOMMENDATION',
+        message: errorMessage,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  // ===== PLATFORM HANDLERS =====
 
   private handleHelp(language: string, creditBalance: number): ConciergeResponse {
     const lang = language === 'tr' ? 'tr' : 'en';
@@ -1531,7 +2350,7 @@ Visit /analyze/details/{id} for details.`;
 
     // Find coin
     let alertCoin: string | null = null;
-    for (const coin of SUPPORTED_COINS) {
+    for (const coin of SUPPORTED_ASSETS) {
       if (lower.includes(coin)) {
         alertCoin = coin.toUpperCase();
         break;
@@ -1717,7 +2536,6 @@ Total: ${alerts.length} alerts active`;
           stopLoss: Number(step5.stopLoss?.price) || 0,
           takeProfit1: Number(step5.takeProfits?.[0]?.price) || 0,
           takeProfit2: step5.takeProfits?.[1]?.price ? Number(step5.takeProfits[1].price) : undefined,
-          takeProfit3: step5.takeProfits?.[2]?.price ? Number(step5.takeProfits[2].price) : undefined,
           direction: step5.direction || 'long',
         };
       }
@@ -2066,7 +2884,7 @@ Each analysis costs 25 credits. Visit /scheduled to edit details.`,
     const lower = message.toLowerCase();
     let targetCoin: string | null = null;
 
-    for (const coin of SUPPORTED_COINS) {
+    for (const coin of SUPPORTED_ASSETS) {
       const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
       if (coinRegex.test(lower)) {
         targetCoin = coin.toUpperCase();
@@ -2449,6 +3267,48 @@ Type "top coins" to see results when complete.`;
 
       const synthesis = this.generateNaturalResponse(upperSymbol, interval, verdict, score, language);
 
+      // Fetch the saved analysis to get direction and trade plan
+      let direction: string | undefined;
+      let tradePlan: any | undefined;
+
+      if (panelResult.analysisId) {
+        try {
+          const savedAnalysis = await prisma.analysis.findUnique({
+            where: { id: panelResult.analysisId },
+            select: {
+              step5Result: true,
+              step7Result: true,
+            },
+          });
+
+          if (savedAnalysis) {
+            const step5 = savedAnalysis.step5Result as Record<string, unknown> | null;
+            const step7 = savedAnalysis.step7Result as Record<string, unknown> | null;
+
+            // Get direction from step7 (final verdict)
+            const verdict = step7?.verdict as Record<string, unknown> | undefined;
+            direction = (step7?.direction as string) || (verdict?.direction as string);
+
+            // Get trade plan from step5
+            if (step5) {
+              tradePlan = {
+                averageEntry: step5.averageEntry as number | undefined,
+                stopLoss: step5.stopLoss as { price: number } | number | undefined,
+                takeProfits: step5.takeProfits as Array<{ price: number }> | undefined,
+                direction: (step5.direction as string) || direction,
+                riskRewardRatio: step5.riskRewardRatio as number | undefined,
+              };
+              // Also update direction from tradePlan if not set
+              if (!direction && step5.direction) {
+                direction = step5.direction as string;
+              }
+            }
+          }
+        } catch (fetchError) {
+          logger.error({ error: fetchError }, 'Error fetching analysis details');
+        }
+      }
+
       // Localized labels
       const verdictLabel = verdict === 'GO' ? 'GO'
         : verdict === 'AVOID' ? (isTurkish ? 'KAÇIN' : 'AVOID')
@@ -2478,6 +3338,8 @@ ${synthesis}`;
         analysisId: panelResult.analysisId,
         verdict: verdict,
         score: score,
+        direction: direction,
+        tradePlan: tradePlan,
         voltranSynthesis: synthesis,
         detectedLanguage: language,
       };
@@ -2493,6 +3355,186 @@ ${synthesis}`;
         creditsSpent: 0,
         creditsRemaining: creditBalance,
         error: error instanceof Error ? error.message : 'Analysis failed',
+      };
+    }
+  }
+
+  /**
+   * Handle MLIS Pro analysis request
+   * Multi-Layer Intelligence System analysis
+   */
+  private async handleMLISAnalysis(
+    userId: string,
+    symbol: string,
+    interval: string,
+    language: string,
+    creditBalance: number
+  ): Promise<ConciergeResponse> {
+    const ANALYSIS_COST = 25;
+    const upperSymbol = symbol.toUpperCase();
+    const isTurkish = language === 'tr';
+
+    // Check credits
+    if (creditBalance < ANALYSIS_COST) {
+      return {
+        success: false,
+        intent: 'MLIS_ANALYSIS',
+        message: isTurkish
+          ? `Yetersiz kredi. MLIS Pro analizi için ${ANALYSIS_COST} kredi gerekli, bakiyeniz: ${creditBalance}`
+          : `Insufficient credits. MLIS Pro analysis requires ${ANALYSIS_COST} credits, you have: ${creditBalance}`,
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: 'INSUFFICIENT_CREDITS',
+      };
+    }
+
+    try {
+      // Import MLIS service dynamically to avoid circular imports
+      const { analyzeMLIS } = await import('../analysis/services/mlis.service');
+
+      console.log(`[Concierge] MLIS Analysis request: symbol=${upperSymbol}, interval=${interval}, language=${language}`);
+
+      // Run MLIS analysis
+      const mlisResult = await analyzeMLIS(upperSymbol, interval);
+
+      // Charge credits
+      await creditService.charge(userId, ANALYSIS_COST, 'mlis_analysis', {
+        symbol: upperSymbol,
+        interval,
+      });
+
+      // Save to database with MLIS method
+      const savedAnalysis = await prisma.analysis.create({
+        data: {
+          userId,
+          symbol: upperSymbol,
+          interval: interval,
+          method: 'mlis_pro', // MLIS Pro method
+          stepsCompleted: [1, 2, 3, 4, 5], // MLIS has 5 layers, not 7
+          step1Result: {
+            mlis: true,
+            layer: 'technical',
+            score: mlisResult.layers.technical.score,
+            signals: mlisResult.layers.technical.signals
+          } as object,
+          step2Result: {
+            mlis: true,
+            layer: 'momentum',
+            score: mlisResult.layers.momentum.score,
+            signals: mlisResult.layers.momentum.signals
+          } as object,
+          step3Result: {
+            mlis: true,
+            layer: 'volatility',
+            score: mlisResult.layers.volatility.score,
+            signals: mlisResult.layers.volatility.signals
+          } as object,
+          step4Result: {
+            mlis: true,
+            layer: 'volume',
+            score: mlisResult.layers.volume.score,
+            signals: mlisResult.layers.volume.signals
+          } as object,
+          step5Result: {
+            mlis: true,
+            layer: 'verdict',
+            overallScore: mlisResult.overallScore,
+            confidence: mlisResult.confidence,
+            recommendation: mlisResult.recommendation,
+            direction: mlisResult.direction,
+            riskLevel: mlisResult.riskLevel,
+            keySignals: mlisResult.keySignals,
+            riskFactors: mlisResult.riskFactors,
+            verdict: mlisResult.recommendation === 'STRONG_BUY' || mlisResult.recommendation === 'BUY' ? 'go' :
+                     mlisResult.recommendation === 'HOLD' ? 'wait' : 'avoid',
+          } as object,
+          totalScore: mlisResult.overallScore / 10,
+          creditsSpent: ANALYSIS_COST,
+        },
+      });
+
+      // Build response message
+      const recommendationLabel = {
+        'STRONG_BUY': isTurkish ? 'GÜÇLÜ AL' : 'STRONG BUY',
+        'BUY': isTurkish ? 'AL' : 'BUY',
+        'HOLD': isTurkish ? 'TUT/BEKLE' : 'HOLD',
+        'SELL': isTurkish ? 'SAT' : 'SELL',
+        'STRONG_SELL': isTurkish ? 'GÜÇLÜ SAT' : 'STRONG SELL',
+      }[mlisResult.recommendation] || mlisResult.recommendation;
+
+      const directionEmoji = mlisResult.direction === 'LONG' ? '🟢' : mlisResult.direction === 'SHORT' ? '🔴' : '⚪';
+
+      const analysisMessage = isTurkish
+        ? `🧠 ${upperSymbol} MLIS Pro Analizi (${interval.toUpperCase()})
+
+${directionEmoji} Tavsiye: ${recommendationLabel}
+📊 Skor: ${mlisResult.overallScore}/100
+🎯 Güven: ${mlisResult.confidence}%
+⚡ Yön: ${mlisResult.direction}
+⚠️ Risk: ${mlisResult.riskLevel}
+
+📈 Katman Skorları:
+• Teknik: ${mlisResult.layers.technical.score}/100
+• Momentum: ${mlisResult.layers.momentum.score}/100
+• Volatilite: ${mlisResult.layers.volatility.score}/100
+• Hacim: ${mlisResult.layers.volume.score}/100
+
+🔑 Temel Sinyaller:
+${mlisResult.keySignals.slice(0, 3).map(s => `• ${s}`).join('\n')}`
+
+        : `🧠 ${upperSymbol} MLIS Pro Analysis (${interval.toUpperCase()})
+
+${directionEmoji} Recommendation: ${recommendationLabel}
+📊 Score: ${mlisResult.overallScore}/100
+🎯 Confidence: ${mlisResult.confidence}%
+⚡ Direction: ${mlisResult.direction}
+⚠️ Risk: ${mlisResult.riskLevel}
+
+📈 Layer Scores:
+• Technical: ${mlisResult.layers.technical.score}/100
+• Momentum: ${mlisResult.layers.momentum.score}/100
+• Volatility: ${mlisResult.layers.volatility.score}/100
+• Volume: ${mlisResult.layers.volume.score}/100
+
+🔑 Key Signals:
+${mlisResult.keySignals.slice(0, 3).map(s => `• ${s}`).join('\n')}`;
+
+      const newBalance = creditBalance - ANALYSIS_COST;
+
+      return {
+        success: true,
+        intent: 'MLIS_ANALYSIS',
+        message: analysisMessage,
+        creditsSpent: ANALYSIS_COST,
+        creditsRemaining: newBalance,
+        analysisId: savedAnalysis.id,
+        verdict: mlisResult.recommendation === 'STRONG_BUY' || mlisResult.recommendation === 'BUY' ? 'go' :
+                 mlisResult.recommendation === 'HOLD' ? 'wait' : 'avoid',
+        score: mlisResult.overallScore / 10,
+        direction: mlisResult.direction,  // LONG or SHORT
+        detectedLanguage: language,
+        mlisResult: {
+          recommendation: mlisResult.recommendation,
+          direction: mlisResult.direction,
+          confidence: mlisResult.confidence,
+          riskLevel: mlisResult.riskLevel,
+          layers: mlisResult.layers,
+          keySignals: mlisResult.keySignals,
+          riskFactors: mlisResult.riskFactors,
+        },
+      };
+
+    } catch (error) {
+      console.error('MLIS Analysis error:', error);
+      return {
+        success: false,
+        intent: 'MLIS_ANALYSIS',
+        message: isTurkish
+          ? 'MLIS analizi sırasında hata oluştu. Lütfen tekrar deneyin.'
+          : 'Error during MLIS analysis. Please try again.',
+        creditsSpent: 0,
+        creditsRemaining: creditBalance,
+        error: error instanceof Error ? error.message : 'MLIS Analysis failed',
       };
     }
   }

@@ -7,7 +7,7 @@ import { randomUUID } from 'crypto';
 import { config } from '../../core/config';
 import { callGeminiWithRetry } from '../../core/gemini';
 import { contractSecurityService } from '../security/contract-security.service';
-import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig } from './config/trade-config';
+import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig, getMaxStopLossPercent, getMaxTakeProfitPercent } from './config/trade-config';
 import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/indicator-interpreter.service';
 import { IndicatorAnalysis } from '@traderpath/types';
 import { IndicatorsService, OHLCV, IndicatorResult } from './services/indicators.service';
@@ -26,6 +26,20 @@ import {
 
 // NEW: Economic Calendar import
 import { economicCalendarService, EconomicEvent } from './services/economic-calendar.service';
+
+// NEW: MLIS (Multi-Layer Intelligence System) import
+import { MLISService, MLISConfig, MLISResult, getMLISService, analyzeMLIS } from './services/mlis.service';
+
+// NEW: Multi-Asset Data Provider import
+import {
+  fetchCandles as fetchMultiAssetCandles,
+  fetchTicker as fetchMultiAssetTicker,
+  getAssetClass,
+  isSymbolSupported,
+  CandleData,
+  TickerData,
+  AssetClass,
+} from './providers/multi-asset-data-provider';
 
 // ===========================================
 // RAG Gate Evaluation with Gemini
@@ -226,6 +240,10 @@ interface AssetGateEvaluationInput {
   resistanceLevels: number[];
   leadingIndicatorsSignal?: string;
   signalConfidence?: number;
+  // Candlestick pattern confirmation
+  bullishPatternCount?: number;
+  bearishPatternCount?: number;
+  highSignificancePatterns?: string[];
 }
 
 interface AssetGateEvaluationResult {
@@ -247,6 +265,11 @@ async function evaluateAssetGateWithRAG(input: AssetGateEvaluationInput): Promis
   try {
     const tradingKnowledge = getTradingKnowledgeForAI();
 
+    const patternInfo = input.highSignificancePatterns && input.highSignificancePatterns.length > 0
+      ? `High-significance patterns: ${input.highSignificancePatterns.join(', ')}`
+      : 'No high-significance patterns detected';
+    const patternBalance = (input.bullishPatternCount || 0) - (input.bearishPatternCount || 0);
+
     const prompt = `You are a professional crypto trader. Based on the asset data below, evaluate whether this specific asset is suitable for trading.
 
 IMPORTANT: You MUST respond in English only.
@@ -264,6 +287,7 @@ IMPORTANT: You MUST respond in English only.
 - ATR: ${input.atr.toFixed(2)} (volatility measure)
 - Support Levels: ${input.supportLevels.slice(0, 2).map(s => '$' + s.toLocaleString()).join(', ')}
 - Resistance Levels: ${input.resistanceLevels.slice(0, 2).map(r => '$' + r.toLocaleString()).join(', ')}
+- Candlestick Patterns: ${patternInfo} (Bullish: ${input.bullishPatternCount || 0}, Bearish: ${input.bearishPatternCount || 0})
 
 ## Trading Knowledge:
 ${tradingKnowledge}
@@ -373,6 +397,28 @@ function evaluateAssetGateRuleBased(input: AssetGateEvaluationInput): AssetGateE
     directionScore += 15;
   } else if (input.leadingIndicatorsSignal === 'bearish' && (input.signalConfidence || 0) >= 60) {
     directionScore -= 15;
+  }
+
+  // Candlestick pattern confirmation for direction
+  const bullishPatterns = input.bullishPatternCount || 0;
+  const bearishPatterns = input.bearishPatternCount || 0;
+  const hasHighSigPatterns = (input.highSignificancePatterns?.length || 0) > 0;
+
+  if (hasHighSigPatterns) {
+    score += 10; // High-significance patterns are valuable
+    if (bullishPatterns > bearishPatterns && input.trendDirection === 'bullish') {
+      // Bullish patterns confirm bullish trend
+      directionScore += 15;
+    } else if (bearishPatterns > bullishPatterns && input.trendDirection === 'bearish') {
+      // Bearish patterns confirm bearish trend
+      directionScore -= 15;
+    } else if (bullishPatterns > bearishPatterns) {
+      // Bullish patterns against trend - potential reversal
+      directionScore += 10;
+    } else if (bearishPatterns > bullishPatterns) {
+      // Bearish patterns against trend - potential reversal
+      directionScore -= 10;
+    }
   }
 
   // 24h price change - extreme moves are risky
@@ -2104,7 +2150,9 @@ const CACHE_TTL = {
 };
 
 // ===========================================
-// Binance API Functions
+// Multi-Asset Data Functions
+// Uses multi-asset-data-provider for routing to correct API
+// Crypto: Binance, Stocks/Bonds/Metals: Yahoo Finance
 // ===========================================
 
 async function fetchKlines(
@@ -2116,22 +2164,27 @@ async function fetchKlines(
   const cached = getCached<Candle[]>(cacheKey);
   if (cached) return cached;
 
-  const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=${interval}&limit=${limit}`;
-  const response = await fetchWithRetry(url);
-  const data = await safeJsonParse<(string | number)[][]>(response);
+  try {
+    // Use multi-asset provider which routes to correct API based on asset class
+    const candles = await fetchMultiAssetCandles(symbol, interval, limit);
 
-  const candles: Candle[] = data.map((k: (string | number)[]) => ({
-    openTime: k[0] as number,
-    open: parseFloat(k[1] as string),
-    high: parseFloat(k[2] as string),
-    low: parseFloat(k[3] as string),
-    close: parseFloat(k[4] as string),
-    volume: parseFloat(k[5] as string),
-    closeTime: k[6] as number,
-  }));
+    // Convert to Candle format
+    const result: Candle[] = candles.map((c) => ({
+      openTime: c.timestamp,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: c.volume,
+      closeTime: c.timestamp + 60000, // Approximate close time
+    }));
 
-  setCache(cacheKey, candles, CACHE_TTL.KLINES);
-  return candles;
+    setCache(cacheKey, result, CACHE_TTL.KLINES);
+    return result;
+  } catch (error) {
+    console.error(`[AnalysisEngine] Failed to fetch klines for ${symbol}:`, error);
+    throw error;
+  }
 }
 
 async function fetch24hTicker(symbol: string): Promise<MarketData> {
@@ -2139,32 +2192,33 @@ async function fetch24hTicker(symbol: string): Promise<MarketData> {
   const cached = getCached<MarketData>(cacheKey);
   if (cached) return cached;
 
-  const url = `https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}USDT`;
-  const response = await fetchWithRetry(url);
-  const data = await safeJsonParse<{
-    lastPrice: string;
-    priceChange: string;
-    priceChangePercent: string;
-    highPrice: string;
-    lowPrice: string;
-    volume: string;
-    quoteVolume: string;
-  }>(response);
+  try {
+    // Use multi-asset provider which routes to correct API based on asset class
+    const ticker = await fetchMultiAssetTicker(symbol);
 
-  const result: MarketData = {
-    symbol,
-    price: parseFloat(data.lastPrice),
-    priceChange24h: parseFloat(data.priceChange),
-    priceChangePercent24h: parseFloat(data.priceChangePercent),
-    high24h: parseFloat(data.highPrice),
-    low24h: parseFloat(data.lowPrice),
-    volume24h: parseFloat(data.volume),
-    quoteVolume24h: parseFloat(data.quoteVolume),
-  };
+    const result: MarketData = {
+      symbol: ticker.symbol,
+      price: ticker.price,
+      priceChange24h: ticker.change24h,
+      priceChangePercent24h: ticker.changePercent24h,
+      high24h: ticker.high24h,
+      low24h: ticker.low24h,
+      volume24h: ticker.volume24h,
+      quoteVolume24h: ticker.volume24h * ticker.price, // Approximate quote volume
+    };
 
-  setCache(cacheKey, result, CACHE_TTL.TICKER);
-  return result;
+    setCache(cacheKey, result, CACHE_TTL.TICKER);
+    return result;
+  } catch (error) {
+    console.error(`[AnalysisEngine] Failed to fetch ticker for ${symbol}:`, error);
+    throw error;
+  }
 }
+
+// ===========================================
+// Crypto-Specific API Functions (Binance)
+// These are only used for crypto assets
+// ===========================================
 
 async function fetchOrderBook(
   symbol: string,
@@ -3448,20 +3502,26 @@ export const analysisEngine = {
   async scanAsset(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<AssetScanResult> {
     const tf = getTimeframesForTradeType(tradeType);
 
+    // Detect asset class for conditional analysis
+    const assetClass = getAssetClass(symbol);
+    const isCrypto = assetClass === 'crypto';
+
     // Extract base symbol for tokenomics (e.g., BTCUSDT -> BTC)
     const baseSymbol = symbol.replace('USDT', '').replace('BUSD', '').replace('USDC', '');
 
-    // Fetch candles and tokenomics in parallel
+    // Fetch candles and tokenomics in parallel (tokenomics only for crypto)
     const [ticker, candlesPrimary, candlesSecondary, candlesConfirmation, tokenomicsData] = await Promise.all([
       fetch24hTicker(symbol),
       fetchKlines(symbol, tf.primary, tf.candleCounts.primary),
       fetchKlines(symbol, tf.secondary, tf.candleCounts.secondary),
       fetchKlines(symbol, tf.confirmation, tf.candleCounts.confirmation),
-      // NEW: Fetch tokenomics analysis (financial structure)
-      analyzeTokenomics(baseSymbol).catch(err => {
-        console.warn(`Tokenomics analysis failed for ${baseSymbol}:`, err);
-        return null;
-      }),
+      // Tokenomics analysis only for crypto assets
+      isCrypto
+        ? analyzeTokenomics(baseSymbol).catch(err => {
+            console.warn(`Tokenomics analysis failed for ${baseSymbol}:`, err);
+            return null;
+          })
+        : Promise.resolve(null), // Skip tokenomics for non-crypto assets
     ]);
 
     // For higher timeframe analysis (needed for trends), also fetch daily candles if not already
@@ -3596,6 +3656,13 @@ export const analysisEngine = {
       movingAverages: { ma50, ma200 },
     });
 
+    // Candlestick pattern detection for direction confirmation
+    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candles4h);
+    const patterns = candlestickPatterns.metadata?.patterns || [];
+    const bullishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bullish');
+    const bearishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bearish');
+    const highSigPatterns = patterns.filter((p: { significance: string }) => p.significance === 'high');
+
     // Gate evaluation for Asset Scanner
     const gateInput: AssetGateEvaluationInput = {
       symbol,
@@ -3612,6 +3679,10 @@ export const analysisEngine = {
       resistanceLevels: levels.resistance,
       leadingIndicatorsSignal: indicatorAnalysis.summary?.leadingIndicatorsSignal,
       signalConfidence: indicatorAnalysis.summary?.signalConfidence,
+      // Candlestick pattern confirmation for direction
+      bullishPatternCount: bullishPatterns.length,
+      bearishPatternCount: bearishPatterns.length,
+      highSignificancePatterns: highSigPatterns.map((p: { name: string }) => p.name),
     };
 
     const gateResult = await evaluateAssetGateWithRAG(gateInput);
@@ -3667,6 +3738,18 @@ export const analysisEngine = {
           lower: roundPrice(bb.lower),
         },
         atr: parseFloat(atr.toFixed(2)),
+        // Candlestick patterns for direction confirmation
+        candlestickPatterns: {
+          total: patterns.length,
+          bullish: bullishPatterns.length,
+          bearish: bearishPatterns.length,
+          highSignificance: highSigPatterns.map((p: { name: string }) => p.name),
+          all: patterns.slice(0, 5).map((p: { name: string; direction: string; significance: string }) => ({
+            name: p.name,
+            direction: p.direction,
+            significance: p.significance,
+          })),
+        },
       },
       // Build detailed indicator analysis with ALL configured indicators
       // Uses full 40+ indicators from trade-config.ts for rich analysis
@@ -3702,12 +3785,26 @@ export const analysisEngine = {
   async safetyCheck(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<SafetyCheckResult> {
     const tf = getTimeframesForTradeType(tradeType);
 
+    // Detect asset class for conditional analysis
+    const assetClass = getAssetClass(symbol);
+    const isCrypto = assetClass === 'crypto';
+
+    // Fetch data - order book and trades only for crypto
     const [ticker, candlesPrimary, orderBook, recentTrades, newsSentiment] = await Promise.all([
       fetch24hTicker(symbol),
       fetchKlines(symbol, tf.primary, tf.candleCounts.primary),
-      fetchOrderBook(symbol, 100),
-      fetchRecentTrades(symbol, 500),
-      fetchNewsSentiment(symbol),
+      isCrypto ? fetchOrderBook(symbol, 100) : Promise.resolve({ bids: [], asks: [] }),
+      isCrypto ? fetchRecentTrades(symbol, 500) : Promise.resolve([]),
+      isCrypto ? fetchNewsSentiment(symbol) : Promise.resolve({
+        symbol,
+        overallSentiment: 'neutral' as const,
+        sentimentScore: 0,
+        positiveCount: 0,
+        negativeCount: 0,
+        neutralCount: 0,
+        sources: [],
+        lastUpdate: new Date().toISOString(),
+      }),
     ]);
 
     // Use primary timeframe candles for safety analysis
@@ -3730,7 +3827,7 @@ export const analysisEngine = {
     const pvt = calculatePVT(candles1h);
     const historicalVol = calculateHistoricalVolatility(candles1h, 20);
 
-    // Analyze order book for manipulation signs
+    // Analyze order book for manipulation signs (crypto only)
     const bids = orderBook.bids.map((b) => ({
       price: parseFloat(b[0]),
       qty: parseFloat(b[1]),
@@ -3742,7 +3839,9 @@ export const analysisEngine = {
 
     const totalBidVolume = bids.reduce((sum, b) => sum + b.qty * b.price, 0);
     const totalAskVolume = asks.reduce((sum, a) => sum + a.qty * a.price, 0);
-    const orderBookImbalance = (totalBidVolume - totalAskVolume) / (totalBidVolume + totalAskVolume);
+    const orderBookImbalance = (totalBidVolume + totalAskVolume) > 0
+      ? (totalBidVolume - totalAskVolume) / (totalBidVolume + totalAskVolume)
+      : 0; // Default to neutral for non-crypto
 
     // Check for spoofing (large orders far from price)
     const currentPrice = ticker.price;
@@ -4089,6 +4188,13 @@ export const analysisEngine = {
     const pvt = calculatePVT(candles4h);
     const volumeSpike = detectVolumeSpike(candles1h, 15, 2.0);
 
+    // Candlestick pattern detection for entry confirmation
+    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candles4h);
+    const patterns = candlestickPatterns.metadata?.patterns || [];
+    const bullishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bullish');
+    const bearishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bearish');
+    const highSigPatterns = patterns.filter((p: { significance: string }) => p.significance === 'high');
+
     const currentPrice = ticker.price;
 
     // Entry conditions
@@ -4133,10 +4239,25 @@ export const analysisEngine = {
              (trend.direction === 'bearish' && pvt.trend === 'bearish'),
         details: `PVT trend: ${pvt.trend}, momentum: ${pvt.momentum > 0 ? '+' : ''}${(pvt.momentum * 100).toFixed(2)}%`,
       },
+      {
+        name: 'Candlestick Pattern',
+        met: highSigPatterns.length > 0 && (
+          (trend.direction === 'bullish' && bullishPatterns.length >= bearishPatterns.length) ||
+          (trend.direction === 'bearish' && bearishPatterns.length >= bullishPatterns.length)
+        ),
+        details: patterns.length > 0
+          ? `${patterns.length} pattern(s): ${highSigPatterns.map((p: { name: string }) => p.name).join(', ') || 'None high-significance'}`
+          : 'No candlestick patterns detected',
+      },
     ];
 
     const conditionsMet = conditions.filter((c) => c.met).length;
-    // Need at least 4 out of 7 conditions met, RSI not overbought, and no volume spike
+    // Need at least 4 out of 8 conditions met, RSI not overbought, and no volume spike
+    // Bonus: If high-significance bullish/bearish pattern aligns with trend, more confidence
+    const patternAligned = highSigPatterns.length > 0 && (
+      (trend.direction === 'bullish' && bullishPatterns.length > bearishPatterns.length) ||
+      (trend.direction === 'bearish' && bearishPatterns.length > bullishPatterns.length)
+    );
     const tradeNow = conditionsMet >= 4 && rsi4h < 65 && !volumeSpike.isSpike;
 
     // Calculate optimal entry
@@ -4146,14 +4267,17 @@ export const analysisEngine = {
     // Entry zones
     const entryZones: TimingResult['entryZones'] = [];
 
+    // Pattern quality bonus - if high-significance patterns align with trend, zones are higher quality
+    const patternQualityBonus = patternAligned ? 1 : 0;
+
     // Zone 1: Aggressive entry
     if (currentPrice <= bb.middle) {
       entryZones.push({
         priceLow: roundPrice(currentPrice * 0.99),
         priceHigh: roundPrice(currentPrice * 1.01),
-        probability: 70,
+        probability: patternAligned ? 80 : 70,
         eta: 'Now',
-        quality: 4,
+        quality: Math.min(5, 4 + patternQualityBonus),
       });
     }
 
@@ -4162,7 +4286,7 @@ export const analysisEngine = {
       entryZones.push({
         priceLow: roundPrice(levels.support[0] * 0.99),
         priceHigh: roundPrice(levels.support[0] * 1.01),
-        probability: 60,
+        probability: patternAligned ? 70 : 60,
         eta: '4-12 hours',
         quality: 5,
       });
@@ -4173,7 +4297,7 @@ export const analysisEngine = {
       entryZones.push({
         priceLow: roundPrice(levels.support[1] * 0.99),
         priceHigh: roundPrice(levels.support[1] * 1.01),
-        probability: 40,
+        probability: patternAligned ? 50 : 40,
         eta: '1-3 days',
         quality: 5,
       });
@@ -4192,6 +4316,11 @@ export const analysisEngine = {
           event: 'Price dropping below upper BB band',
           estimatedTime: '2-6 hours',
         };
+      } else if (highSigPatterns.length === 0 && patterns.length < 2) {
+        waitFor = {
+          event: 'Candlestick pattern confirmation (e.g., Hammer, Engulfing)',
+          estimatedTime: '1-4 hours',
+        };
       } else if (conditionsMet < 3) {
         waitFor = {
           event: 'More conditions to be met',
@@ -4203,13 +4332,18 @@ export const analysisEngine = {
     // Reason
     let reason = '';
     if (tradeNow) {
-      reason = `${conditionsMet}/5 conditions met. `;
+      reason = `${conditionsMet}/8 conditions met. `;
       if (rsi4h < 40) reason += 'RSI low - good buying opportunity. ';
       if (currentPrice < bb.middle) reason += 'Price below BB middle. ';
+      if (patternAligned) {
+        const patternNames = highSigPatterns.slice(0, 2).map((p: { name: string }) => p.name).join(', ');
+        reason += `Candlestick confirmation: ${patternNames}. `;
+      }
     } else {
-      reason = `${conditionsMet}/5 conditions met - not enough. `;
+      reason = `${conditionsMet}/8 conditions met - not enough. `;
       if (rsi4h > 70) reason += 'RSI in overbought zone. ';
       if (currentPrice > bb.upper) reason += 'Price above upper BB band. ';
+      if (patterns.length === 0) reason += 'No candlestick patterns for entry confirmation. ';
     }
 
     // Score calculation
@@ -4217,6 +4351,8 @@ export const analysisEngine = {
     score += conditionsMet * 0.8;
     if (tradeNow) score += 1;
     if (rsi4h >= 30 && rsi4h <= 50) score += 0.5;
+    // Bonus for candlestick pattern alignment with trend
+    if (patternAligned) score += 0.8;
     score = Math.max(1, Math.min(10, parseFloat(score.toFixed(1))));
 
     // Gate evaluation
@@ -4315,26 +4451,20 @@ export const analysisEngine = {
       safetyAdjusted: false,
     };
 
-    // Take profit levels (R:R based)
+    // Take profit levels (R:R based) - only 2 TPs at 1.5R and 2.5R
     const riskAmount = Math.abs(averageEntry - stopPrice);
     const takeProfits: TradePlanResult['takeProfits'] = [
       {
         price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 1.5 : averageEntry - riskAmount * 1.5),
-        percentage: 30,
+        percentage: 50,
         reason: '1.5R - First take profit',
         source: '1.5R calculation',
       },
       {
         price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 2.5 : averageEntry - riskAmount * 2.5),
-        percentage: 40,
+        percentage: 50,
         reason: '2.5R - Main target',
         source: '2.5R calculation',
-      },
-      {
-        price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 4 : averageEntry - riskAmount * 4),
-        percentage: 30,
-        reason: '4R - Extended target',
-        source: '4R calculation',
       },
     ];
 
@@ -5047,63 +5177,150 @@ export const analysisEngine = {
       targets: []
     };
 
-    // ===== ENTRY LEVELS (from Timing + Asset Scanner) =====
+    // ===== ENTRY LEVELS (based on Support/Resistance) =====
+    // Key principle: Entry should be at key support/resistance levels
+    // LONG: Enter near support (buy low)
+    // SHORT: Enter near resistance (sell high)
     const entries: TradePlanResult['entries'] = [];
-
-    // Primary entry from Timing's optimal entry
-    if (timing.optimalEntry) {
-      entries.push({
-        price: roundPrice(timing.optimalEntry),
-        percentage: 50,
-        type: 'limit',
-        source: 'Timing optimal entry'
-      });
-      sources.entries.push('Timing optimal entry');
-    } else {
-      entries.push({
-        price: roundPrice(currentPrice),
-        percentage: 50,
-        type: 'limit',
-        source: 'Current price'
-      });
-      sources.entries.push('Current price');
-    }
-
-    // Secondary entries from Timing's entry zones
-    if (timing.entryZones && timing.entryZones.length > 0) {
-      const sortedZones = [...timing.entryZones].sort((a, b) => b.quality - a.quality);
-      const bestZone = sortedZones[0];
-      if (bestZone) {
-        const zoneEntry = direction === 'long' ? bestZone.priceLow : bestZone.priceHigh;
-        entries.push({
-          price: roundPrice(zoneEntry),
-          percentage: 30,
-          type: 'limit',
-          source: 'Timing entry zone'
-        });
-        sources.entries.push('Timing entry zone');
-      }
-    }
-
-    // Third entry from support/resistance levels
     const supportLevel = assetScan.levels.support[0];
+    const supportLevel2 = assetScan.levels.support[1];
     const resistanceLevel = assetScan.levels.resistance[0];
-    if (direction === 'long' && supportLevel !== undefined) {
-      entries.push({
-        price: roundPrice(supportLevel),
-        percentage: 20,
-        type: 'stop_limit',
-        source: 'Asset Scanner support'
-      });
-      sources.entries.push('Asset Scanner support');
-    } else if (direction === 'short' && resistanceLevel !== undefined) {
-      entries.push({
-        price: roundPrice(resistanceLevel),
-        percentage: 20,
-        type: 'stop_limit',
-        source: 'Asset Scanner resistance'
-      });
-      sources.entries.push('Asset Scanner resistance');
+    const resistanceLevel2 = assetScan.levels.resistance[1];
+    const atrForEntry = assetScan.indicators.atr || currentPrice * 0.02;
+
+    // Proximity threshold: price is "near" a level if within 1 ATR
+    const isNearLevel = (price: number, level: number) => Math.abs(price - level) <= atrForEntry;
+
+    if (direction === 'long') {
+      // LONG: Primary entry at support level
+      if (supportLevel !== undefined) {
+        // Check if current price is near support (good entry) or above support (wait for pullback)
+        const priceNearSupport = isNearLevel(currentPrice, supportLevel);
+
+        if (priceNearSupport) {
+          // Price is at support - enter now
+          entries.push({
+            price: roundPrice(currentPrice),
+            percentage: 70,
+            type: 'limit',
+            source: 'Current price at support zone'
+          });
+          sources.entries.push('Current price at support');
+        } else if (currentPrice > supportLevel) {
+          // Price above support - use support as limit order entry (wait for pullback)
+          entries.push({
+            price: roundPrice(supportLevel),
+            percentage: 70,
+            type: 'limit',
+            source: 'Support level (wait for pullback)'
+          });
+          sources.entries.push('Support level entry');
+        } else {
+          // Price below support (breakdown) - use current price
+          entries.push({
+            price: roundPrice(currentPrice),
+            percentage: 70,
+            type: 'limit',
+            source: 'Current price'
+          });
+          sources.entries.push('Current price');
+        }
+
+        // Secondary entry at second support if available
+        if (supportLevel2 !== undefined && supportLevel2 < supportLevel) {
+          entries.push({
+            price: roundPrice(supportLevel2),
+            percentage: 30,
+            type: 'limit',
+            source: 'Second support level (DCA)'
+          });
+          sources.entries.push('Second support DCA');
+        } else {
+          // Fallback: slightly below primary entry
+          const dcaEntry = entries[0].price * 0.98;
+          entries.push({
+            price: roundPrice(dcaEntry),
+            percentage: 30,
+            type: 'limit',
+            source: 'DCA entry (-2%)'
+          });
+          sources.entries.push('DCA entry');
+        }
+      } else {
+        // No support level found - use current price
+        entries.push({
+          price: roundPrice(currentPrice),
+          percentage: 100,
+          type: 'limit',
+          source: 'Current price (no support level)'
+        });
+        sources.entries.push('Current price');
+      }
+    } else {
+      // SHORT: Primary entry at resistance level
+      if (resistanceLevel !== undefined) {
+        // Check if current price is near resistance (good entry) or below resistance (wait for rally)
+        const priceNearResistance = isNearLevel(currentPrice, resistanceLevel);
+
+        if (priceNearResistance) {
+          // Price is at resistance - enter now
+          entries.push({
+            price: roundPrice(currentPrice),
+            percentage: 70,
+            type: 'limit',
+            source: 'Current price at resistance zone'
+          });
+          sources.entries.push('Current price at resistance');
+        } else if (currentPrice < resistanceLevel) {
+          // Price below resistance - use resistance as limit order entry (wait for rally)
+          entries.push({
+            price: roundPrice(resistanceLevel),
+            percentage: 70,
+            type: 'limit',
+            source: 'Resistance level (wait for rally)'
+          });
+          sources.entries.push('Resistance level entry');
+        } else {
+          // Price above resistance (breakout) - use current price
+          entries.push({
+            price: roundPrice(currentPrice),
+            percentage: 70,
+            type: 'limit',
+            source: 'Current price'
+          });
+          sources.entries.push('Current price');
+        }
+
+        // Secondary entry at second resistance if available
+        if (resistanceLevel2 !== undefined && resistanceLevel2 > resistanceLevel) {
+          entries.push({
+            price: roundPrice(resistanceLevel2),
+            percentage: 30,
+            type: 'limit',
+            source: 'Second resistance level (DCA)'
+          });
+          sources.entries.push('Second resistance DCA');
+        } else {
+          // Fallback: slightly above primary entry
+          const dcaEntry = entries[0].price * 1.02;
+          entries.push({
+            price: roundPrice(dcaEntry),
+            percentage: 30,
+            type: 'limit',
+            source: 'DCA entry (+2%)'
+          });
+          sources.entries.push('DCA entry');
+        }
+      } else {
+        // No resistance level found - use current price
+        entries.push({
+          price: roundPrice(currentPrice),
+          percentage: 100,
+          type: 'limit',
+          source: 'Current price (no resistance level)'
+        });
+        sources.entries.push('Current price');
+      }
     }
 
     // Normalize percentages if needed
@@ -5116,6 +5333,10 @@ export const analysisEngine = {
     const averageEntry = roundPrice(
       entries.reduce((sum, e) => sum + e.price * (e.percentage / 100), 0)
     );
+
+    // Check if current price is far from entry (need to wait)
+    const entryDistancePercent = Math.abs((currentPrice - averageEntry) / averageEntry * 100);
+    const needsToWaitForEntry = entryDistancePercent > 1; // More than 1% away from entry
 
     // ===== STOP LOSS (from Safety Check + ATR + Trap Check) =====
     const atr = assetScan.indicators.atr;
@@ -5219,6 +5440,25 @@ export const analysisEngine = {
       }
     }
 
+    // ===== MAXIMUM STOP LOSS DISTANCE (cap at 10% to prevent unrealistic stops) =====
+    const maxStopPercent = 10; // Maximum 10% stop loss for any trade type
+    const maxStopDistanceLong = averageEntry * (maxStopPercent / 100);
+    const maxStopDistanceShort = averageEntry * (maxStopPercent / 100);
+
+    if (direction === 'long') {
+      const maxAllowedStopPrice = averageEntry - maxStopDistanceLong;
+      if (stopPrice < maxAllowedStopPrice) {
+        stopPrice = maxAllowedStopPrice;
+        sources.stopLoss.push(`Maximum ${maxStopPercent}% stop distance applied`);
+      }
+    } else {
+      const maxAllowedStopPrice = averageEntry + maxStopDistanceShort;
+      if (stopPrice > maxAllowedStopPrice) {
+        stopPrice = maxAllowedStopPrice;
+        sources.stopLoss.push(`Maximum ${maxStopPercent}% stop distance applied`);
+      }
+    }
+
     const stopPercentage = Math.abs((stopPrice - averageEntry) / averageEntry * 100);
 
     // ===== TAKE PROFIT (from Asset Scanner levels) =====
@@ -5226,7 +5466,7 @@ export const analysisEngine = {
     const riskAmount = Math.abs(averageEntry - stopPrice);
 
     if (direction === 'long') {
-      // TP1: First resistance or 1.5R
+      // TP1: First resistance or 1.5R (50% of position)
       const tp1FromResistance = assetScan.levels.resistance[0];
       const tp1From15R = averageEntry + (riskAmount * 1.5);
       const tp1 = tp1FromResistance && tp1FromResistance > averageEntry
@@ -5234,13 +5474,13 @@ export const analysisEngine = {
         : tp1From15R;
       takeProfits.push({
         price: roundPrice(tp1),
-        percentage: 40,
+        percentage: 50,
         reason: '1.5R or first resistance',
         source: tp1FromResistance ? 'Asset Scanner resistance' : '1.5R calculation'
       });
       sources.targets.push(tp1FromResistance ? 'Asset Scanner resistance 1' : '1.5R');
 
-      // TP2: Second resistance or 2.5R
+      // TP2: Second resistance or 2.5R (50% of position)
       const tp2FromResistance = assetScan.levels.resistance[1];
       const tp2From25R = averageEntry + (riskAmount * 2.5);
       const tp2 = tp2FromResistance && tp2FromResistance > tp1
@@ -5248,22 +5488,14 @@ export const analysisEngine = {
         : tp2From25R;
       takeProfits.push({
         price: roundPrice(tp2),
-        percentage: 35,
+        percentage: 50,
         reason: '2.5R or second resistance',
         source: tp2FromResistance ? 'Asset Scanner resistance' : '2.5R calculation'
       });
       sources.targets.push(tp2FromResistance ? 'Asset Scanner resistance 2' : '2.5R');
-
-      // TP3: 4R extended target
-      takeProfits.push({
-        price: roundPrice(averageEntry + (riskAmount * 4)),
-        percentage: 25,
-        reason: '4R extended target',
-        source: '4R calculation'
-      });
-      sources.targets.push('4R extended');
     } else {
       // Short direction - use support levels
+      // TP1: First support or 1.5R (50% of position)
       const tp1FromSupport = assetScan.levels.support[0];
       const tp1From15R = averageEntry - (riskAmount * 1.5);
       const tp1 = tp1FromSupport && tp1FromSupport < averageEntry
@@ -5271,12 +5503,13 @@ export const analysisEngine = {
         : tp1From15R;
       takeProfits.push({
         price: roundPrice(tp1),
-        percentage: 40,
+        percentage: 50,
         reason: '1.5R or first support',
         source: tp1FromSupport ? 'Asset Scanner support' : '1.5R calculation'
       });
       sources.targets.push(tp1FromSupport ? 'Asset Scanner support 1' : '1.5R');
 
+      // TP2: Second support or 2.5R (50% of position)
       const tp2FromSupport = assetScan.levels.support[1];
       const tp2From25R = averageEntry - (riskAmount * 2.5);
       const tp2 = tp2FromSupport && tp2FromSupport < tp1
@@ -5284,20 +5517,26 @@ export const analysisEngine = {
         : tp2From25R;
       takeProfits.push({
         price: roundPrice(tp2),
-        percentage: 35,
+        percentage: 50,
         reason: '2.5R or second support',
         source: tp2FromSupport ? 'Asset Scanner support' : '2.5R calculation'
       });
       sources.targets.push(tp2FromSupport ? 'Asset Scanner support 2' : '2.5R');
-
-      takeProfits.push({
-        price: roundPrice(averageEntry - (riskAmount * 4)),
-        percentage: 25,
-        reason: '4R extended target',
-        source: '4R calculation'
-      });
-      sources.targets.push('4R extended');
     }
+
+    // ===== MAXIMUM TAKE PROFIT DISTANCE (cap at 20% to prevent unrealistic targets) =====
+    const maxTPPercent = 20; // Maximum 20% take profit for any trade type
+    takeProfits.forEach(tp => {
+      const tpDistance = Math.abs((tp.price - averageEntry) / averageEntry * 100);
+      if (tpDistance > maxTPPercent) {
+        if (direction === 'long') {
+          tp.price = roundPrice(averageEntry * (1 + maxTPPercent / 100));
+        } else {
+          tp.price = roundPrice(averageEntry * (1 - maxTPPercent / 100));
+        }
+        tp.reason += ` (capped at ${maxTPPercent}%)`;
+      }
+    });
 
     // ===== RISK/REWARD CALCULATION =====
     const avgTP = takeProfits.reduce(
@@ -5547,6 +5786,80 @@ export const analysisEngine = {
       timing,
       trapCheck
     }, tradePlan, 'dayTrade');
+  },
+
+  // =========================================
+  // MLIS Pro Analysis Method
+  // Multi-Layer Intelligence System
+  // =========================================
+
+  /**
+   * Analyze with specified method (classic 7-step or MLIS Pro)
+   *
+   * @param symbol - Trading pair symbol (e.g., 'BTC', 'BTCUSDT')
+   * @param timeframe - Analysis timeframe ('5m', '15m', '1h', '4h', '1d', '1W')
+   * @param method - Analysis method ('classic' for 7-step, 'mlis_pro' for MLIS)
+   * @param options - Additional options for MLIS analysis
+   * @returns Analysis result (varies by method)
+   */
+  async analyzeWithMethod(
+    symbol: string,
+    timeframe: string,
+    method: 'classic' | 'mlis_pro' = 'classic',
+    options?: {
+      includeOnchain?: boolean;
+      includeSentiment?: boolean;
+      confidenceThreshold?: number;
+    }
+  ): Promise<any> {
+    if (method === 'mlis_pro') {
+      const config: MLISConfig = {
+        symbol,
+        timeframe,
+        includeOnchain: options?.includeOnchain ?? true,
+        includeSentiment: options?.includeSentiment ?? true,
+        confidenceThreshold: options?.confidenceThreshold ?? 0.65,
+      };
+      return analyzeMLIS(symbol, timeframe, config);
+    }
+
+    // Mevcut classic analysis - run the full 7-step analysis
+    // Note: For classic analysis, caller should use the individual step methods
+    // This is a convenience wrapper that returns just the asset scan for quick analysis
+    const tradeType = this.getTradeTypeFromTimeframe(timeframe);
+    return this.getAssetScan(symbol, tradeType);
+  },
+
+  /**
+   * Get MLIS service instance for advanced usage
+   */
+  getMLISService(): MLISService {
+    return getMLISService();
+  },
+
+  /**
+   * Quick MLIS analysis (convenience method)
+   */
+  async quickMLISAnalysis(symbol: string, timeframe: string): Promise<MLISResult> {
+    return analyzeMLIS(symbol, timeframe);
+  },
+
+  /**
+   * Helper: Map timeframe to trade type
+   */
+  getTradeTypeFromTimeframe(timeframe: string): TradeType {
+    const mapping: Record<string, TradeType> = {
+      '5m': 'scalp',
+      '15m': 'scalp',
+      '30m': 'dayTrade',
+      '1h': 'dayTrade',
+      '2h': 'dayTrade',
+      '4h': 'dayTrade',
+      '1d': 'swing',
+      '1D': 'swing',
+      '1W': 'swing',
+    };
+    return mapping[timeframe] || 'dayTrade';
   },
 };
 

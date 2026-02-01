@@ -7,6 +7,7 @@ import { PrismaClient } from '@prisma/client';
 import { analysisEngine } from '../analysis.engine';
 import { getTradeTypeFromInterval } from '../config/trade-config';
 import { smartCoinsService } from './smart-coins.service';
+import { logger } from '../../../core/logger';
 
 const prisma = new PrismaClient();
 
@@ -22,6 +23,24 @@ const CACHE_EXPIRY_MS = 2 * 60 * 60 * 1000;
 
 // Rate limiting between analyses (to avoid API overload)
 const ANALYSIS_DELAY_MS = 5000; // 5 seconds between each coin
+
+// Scan session tracking
+interface ScanSession {
+  isScanning: boolean;
+  coinsAnalyzed: number;
+  totalCoins: number;
+  startedAt: Date | null;
+  lastAnalyzedCoin: string | null;
+}
+
+// Global scan state (in-memory tracking)
+let currentScanSession: ScanSession = {
+  isScanning: false,
+  coinsAnalyzed: 0,
+  totalCoins: TOP_COINS_TO_SCAN.length,
+  startedAt: null,
+  lastAnalyzedCoin: null,
+};
 
 export interface CoinScore {
   symbol: string;
@@ -57,12 +76,49 @@ export interface FullAnalysisResult {
 // ===========================================
 
 class CoinScoreCacheService {
+  private systemUserId: string | null = null;
+
+  /**
+   * Get or create a system user ID for platform-generated analyses
+   */
+  private async getSystemUserId(): Promise<string> {
+    if (this.systemUserId) return this.systemUserId;
+
+    try {
+      // Try to find an admin user first
+      const adminUser = await prisma.user.findFirst({
+        where: { isAdmin: true },
+        select: { id: true },
+      });
+
+      if (adminUser) {
+        this.systemUserId = adminUser.id;
+        return adminUser.id;
+      }
+
+      // If no admin, find any user
+      const anyUser = await prisma.user.findFirst({
+        select: { id: true },
+      });
+
+      if (anyUser) {
+        this.systemUserId = anyUser.id;
+        return anyUser.id;
+      }
+
+      throw new Error('No users found in the database');
+    } catch (error) {
+      logger.error('[CoinScoreCache] Error getting system user ID:', error);
+      throw error;
+    }
+  }
+
   /**
    * Run FULL analysis for a single coin using analysisEngine
    */
   async runFullAnalysis(symbol: string, interval: string = '4h'): Promise<FullAnalysisResult> {
     try {
-      console.log(`[CoinScoreCache] Running FULL analysis for ${symbol}...`);
+      logger.info(`[CoinScoreCache] Running FULL analysis for ${symbol}...`);
 
       const tradeType = getTradeTypeFromInterval(interval);
 
@@ -106,17 +162,21 @@ class CoinScoreCacheService {
 
       const confidence = Math.min(10, Math.max(1, Math.round(reliabilityScore / 10)));
 
+      // Get system user ID for platform-generated analyses
+      const systemUserId = await this.getSystemUserId();
+
       // Save to database
       const analysisRecord = await prisma.analysis.create({
         data: {
-          userId: 'system', // System-generated analysis
+          userId: systemUserId, // Use admin/system user ID
           symbol,
           interval,
+          method: 'classic', // Explicitly set method for system scans
           stepsCompleted: [1, 2, 3, 4],
-          step1Result: marketPulse as any,
-          step2Result: assetScan as any,
-          step3Result: safetyCheck as any,
-          step4Result: timing as any,
+          step1Result: marketPulse as object,
+          step2Result: assetScan as object,
+          step3Result: safetyCheck as object,
+          step4Result: timing as object,
           totalScore: reliabilityScore,
           creditsSpent: 0, // Platform covers cost
         },
@@ -143,11 +203,11 @@ class CoinScoreCacheService {
         expiresAt: new Date(Date.now() + CACHE_EXPIRY_MS),
       };
 
-      console.log(`[CoinScoreCache] ${symbol} analysis complete. Score: ${reliabilityScore}, Verdict: ${verdict}`);
+      logger.info(`[CoinScoreCache] ${symbol} analysis complete. Score: ${reliabilityScore}, Verdict: ${verdict}`);
 
       return { symbol, success: true, score, analysisId: analysisRecord.id };
     } catch (error) {
-      console.error(`[CoinScoreCache] Error analyzing ${symbol}:`, error);
+      logger.error(`[CoinScoreCache] Error analyzing ${symbol}:`, error);
       return { symbol, success: false, error: String(error) };
     }
   }
@@ -288,11 +348,33 @@ class CoinScoreCacheService {
   }
 
   /**
+   * Get current scan session state
+   */
+  getScanSession(): ScanSession {
+    return { ...currentScanSession };
+  }
+
+  /**
    * Scan all top coins with REAL analysis and update cache
    */
   async scanAllCoins(interval: string = '4h'): Promise<{ success: number; failed: number; results: CoinScore[] }> {
-    console.log(`[CoinScoreCache] Starting FULL analysis scan of ${TOP_COINS_TO_SCAN.length} coins...`);
-    console.log(`[CoinScoreCache] This will take approximately ${(TOP_COINS_TO_SCAN.length * ANALYSIS_DELAY_MS / 1000 / 60).toFixed(1)} minutes`);
+    // Prevent multiple simultaneous scans
+    if (currentScanSession.isScanning) {
+      logger.info('[CoinScoreCache] Scan already in progress, skipping...');
+      return { success: 0, failed: 0, results: [] };
+    }
+
+    // Initialize scan session
+    currentScanSession = {
+      isScanning: true,
+      coinsAnalyzed: 0,
+      totalCoins: TOP_COINS_TO_SCAN.length,
+      startedAt: new Date(),
+      lastAnalyzedCoin: null,
+    };
+
+    logger.info(`[CoinScoreCache] Starting FULL analysis scan of ${TOP_COINS_TO_SCAN.length} coins...`);
+    logger.info(`[CoinScoreCache] This will take approximately ${(TOP_COINS_TO_SCAN.length * ANALYSIS_DELAY_MS / 1000 / 60).toFixed(1)} minutes`);
 
     const results: CoinScore[] = [];
     let success = 0;
@@ -300,6 +382,10 @@ class CoinScoreCacheService {
 
     for (const symbol of TOP_COINS_TO_SCAN) {
       const result = await this.runFullAnalysis(symbol, interval);
+
+      // Update scan session progress
+      currentScanSession.coinsAnalyzed++;
+      currentScanSession.lastAnalyzedCoin = symbol;
 
       if (result.success && result.score) {
         results.push(result.score);
@@ -350,21 +436,30 @@ class CoinScoreCacheService {
             },
           });
         } catch (dbError) {
-          console.error(`[CoinScoreCache] Failed to save ${symbol} to cache:`, dbError);
+          logger.error(`[CoinScoreCache] Failed to save ${symbol} to cache:`, dbError);
         }
       } else {
         failed++;
-        console.error(`[CoinScoreCache] Failed to analyze ${symbol}: ${result.error}`);
+        logger.error(`[CoinScoreCache] Failed to analyze ${symbol}: ${result.error}`);
       }
 
       // Rate limiting between analyses
       if (TOP_COINS_TO_SCAN.indexOf(symbol) < TOP_COINS_TO_SCAN.length - 1) {
-        console.log(`[CoinScoreCache] Waiting ${ANALYSIS_DELAY_MS / 1000}s before next analysis...`);
+        logger.info(`[CoinScoreCache] Waiting ${ANALYSIS_DELAY_MS / 1000}s before next analysis...`);
         await new Promise(resolve => setTimeout(resolve, ANALYSIS_DELAY_MS));
       }
     }
 
-    console.log(`[CoinScoreCache] Full scan complete. Success: ${success}, Failed: ${failed}`);
+    // Reset scan session when done
+    currentScanSession = {
+      isScanning: false,
+      coinsAnalyzed: TOP_COINS_TO_SCAN.length,
+      totalCoins: TOP_COINS_TO_SCAN.length,
+      startedAt: currentScanSession.startedAt,
+      lastAnalyzedCoin: TOP_COINS_TO_SCAN[TOP_COINS_TO_SCAN.length - 1],
+    };
+
+    logger.info(`[CoinScoreCache] Full scan complete. Success: ${success}, Failed: ${failed}`);
     return { success, failed, results };
   }
 
@@ -402,7 +497,7 @@ class CoinScoreCacheService {
         expiresAt: coin.expiresAt,
       }));
     } catch (error) {
-      console.error('[CoinScoreCache] Error fetching top coins:', error);
+      logger.error('[CoinScoreCache] Error fetching top coins:', error);
       return [];
     }
   }
@@ -442,7 +537,7 @@ class CoinScoreCacheService {
         expiresAt: coin.expiresAt,
       }));
     } catch (error) {
-      console.error('[CoinScoreCache] Error fetching tradeable coins:', error);
+      logger.error('[CoinScoreCache] Error fetching tradeable coins:', error);
       return [];
     }
   }
@@ -527,7 +622,7 @@ class CoinScoreCacheService {
         expiresAt: coin.expiresAt,
       };
     } catch (error) {
-      console.error(`[CoinScoreCache] Error fetching ${symbol} from cache:`, error);
+      logger.error(`[CoinScoreCache] Error fetching ${symbol} from cache:`, error);
       return null;
     }
   }
@@ -574,7 +669,7 @@ class CoinScoreCacheService {
         tradePlan: analysis.step5Result,
       };
     } catch (error) {
-      console.error(`[CoinScoreCache] Error fetching analysis data for ${symbol}:`, error);
+      logger.error(`[CoinScoreCache] Error fetching analysis data for ${symbol}:`, error);
       return null;
     }
   }

@@ -1182,7 +1182,97 @@ export const TRADEPATH_ANALYSIS = {
 };
 
 // ============================================================================
-// 12. PRO TRADING TIPS
+// 12. CAPITAL FLOW 4-LAYER SYSTEM
+// ============================================================================
+
+export const CAPITAL_FLOW = {
+  philosophy: {
+    core: 'Follow the money - where capital flows, potential exists',
+    approach: 'Top-Down analysis: Global → Market → Sector → Asset',
+    principle: 'Understanding flow direction is MORE important than individual asset analysis',
+  },
+
+  layer1_globalLiquidity: {
+    name: 'Global Liquidity',
+    purpose: 'Macro environment that drives ALL markets',
+    indicators: {
+      fedBalanceSheet: {
+        description: 'Central bank asset levels',
+        bullish: 'Expanding (liquidity injection)',
+        bearish: 'Contracting (quantitative tightening)',
+      },
+      m2MoneySupply: {
+        description: 'Total money in economy',
+        bullish: 'Growing (inflation, risk-on)',
+        bearish: 'Shrinking (deflation, risk-off)',
+      },
+      dxy: {
+        description: 'US Dollar Index',
+        bullish: 'Weakening (risk assets rally)',
+        bearish: 'Strengthening (risk assets fall)',
+      },
+      vix: {
+        description: 'Fear/Volatility Index',
+        low: '<15 = Complacent, potential complacency risk',
+        normal: '15-25 = Normal market conditions',
+        high: '>25 = Fear, potential capitulation',
+      },
+      yieldCurve: {
+        description: '10Y-2Y Treasury spread',
+        normal: 'Positive = Healthy economy',
+        inverted: 'Negative = Recession warning',
+      },
+    },
+    signals: {
+      riskOn: 'Fed expanding + M2 growing + DXY falling + VIX low',
+      riskOff: 'Fed contracting + DXY rising + VIX spiking',
+    },
+  },
+
+  layer2_marketFlow: {
+    name: 'Market Flow',
+    purpose: 'Capital rotation between major asset classes',
+    markets: ['Crypto', 'Stocks', 'Bonds', 'Metals'],
+    metrics: {
+      flow7d: 'Short-term capital movement (%)',
+      flow30d: 'Medium-term trend (%)',
+      flowVelocity: 'Acceleration of flow',
+    },
+    phases: {
+      early: { days: '0-30', action: 'Optimal entry timing' },
+      mid: { days: '30-60', action: 'Can enter carefully' },
+      late: { days: '60-90', action: 'Avoid new positions' },
+      exit: { days: '90+', action: 'Never enter' },
+    },
+    rotationSignals: ['entering', 'stable', 'exiting'],
+  },
+
+  layer3_sectorFlow: {
+    name: 'Sector Flow',
+    purpose: 'Drill-down into sectors within each market',
+    cryptoSectors: ['DeFi', 'Layer2', 'AI tokens', 'Meme coins', 'Gaming'],
+    stockSectors: ['Technology', 'Finance', 'Energy', 'Healthcare'],
+    strategy: 'Analyze assets in sectors with strongest capital inflow',
+  },
+
+  layer4_assetAnalysis: {
+    name: 'Asset Analysis',
+    purpose: 'Individual asset analysis with flow context',
+    methods: ['Classic 7-Step Analysis', 'MLIS Pro'],
+    principle: 'Higher probability trades when capital flow supports the position',
+  },
+
+  decisionTree: [
+    '1. Is global liquidity expanding? NO → Risk-off mode, focus on bonds/gold',
+    '2. Is Dollar weakening? NO → Risk assets may underperform',
+    '3. Which market has strongest flow? → Analyze that market',
+    '4. What phase is market in? LATE/EXIT → Avoid new positions',
+    '5. Which sector is leading? → Analyze assets in that sector',
+  ],
+};
+
+// ============================================================================
+// 13. PRO TRADING TIPS
 // ============================================================================
 
 export const PRO_TIPS = {
@@ -1282,6 +1372,47 @@ RISK MANAGEMENT RULES:
 • Minimum 1:2 risk/reward ratio
 • Always use stop losses - never mental stops
 
+CAPITAL FLOW 4-LAYER SYSTEM (NEW - TOP-DOWN ANALYSIS):
+TraderPath follows the money with a 4-Layer Capital Flow approach:
+
+LAYER 1 - GLOBAL LIQUIDITY:
+• Fed Balance Sheet: Expanding = risk-on, Contracting = risk-off
+• M2 Money Supply: Growing = more liquidity, Shrinking = tighter conditions
+• DXY (Dollar Index): Weak = bullish for risk assets, Strong = bearish
+• VIX (Fear Index): <15 = complacent, 15-25 = normal, >25 = fear
+• Yield Curve: Normal = healthy, Inverted = recession warning
+
+LAYER 2 - MARKET FLOW:
+• Capital rotates between: Crypto, Stocks, Bonds, Metals
+• 7D Flow: Short-term momentum
+• 30D Flow: Medium-term trend
+• Flow Velocity: Positive = accelerating inflow
+• Phase Detection: EARLY (0-30d) → MID (30-60d) → LATE (60-90d) → EXIT (90+d)
+• Rotation Signal: entering | stable | exiting
+
+LAYER 3 - SECTOR FLOW (within each market):
+• Crypto sectors: DeFi, Layer2, AI tokens, Meme coins, Gaming
+• Stock sectors: Technology, Finance, Energy, Healthcare
+• Capital flows to hot sectors → analyze assets in those sectors
+
+LAYER 4 - ASSET ANALYSIS:
+• After understanding L1-L3, analyze specific assets
+• Classic 7-Step Analysis or MLIS Pro
+• Higher probability when capital flows support the trade
+
+CAPITAL FLOW DECISION TREE:
+1. Is global liquidity expanding? YES → Continue, NO → Risk-off mode
+2. Is Dollar weakening? YES → Risk assets bullish, NO → Caution
+3. Which market has strongest flow? → Analyze that market
+4. What phase? EARLY/MID → Trade, LATE/EXIT → Avoid new positions
+5. Which sector is leading? → Analyze assets in that sector
+
+PHASE-BASED STRATEGY:
+• EARLY: Optimal entry, full position size, technical setups reliable
+• MID: Good entry, 75% size, use tighter stops
+• LATE: Avoid new entries, take profits, high manipulation risk
+• EXIT: No new positions, protect capital, exit remaining positions
+
 When users ask about any trading concept, explain with:
 1. What it is (definition)
 2. How to interpret it (signals)
@@ -1302,6 +1433,7 @@ export default {
   MACRO_FACTORS,
   CRYPTO_CONCEPTS,
   TRADEPATH_ANALYSIS,
+  CAPITAL_FLOW,
   PRO_TIPS,
   getTradingKnowledgeForAI,
 };

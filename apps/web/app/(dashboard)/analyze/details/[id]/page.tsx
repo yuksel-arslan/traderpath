@@ -25,11 +25,15 @@ import {
   Download,
   ChevronDown,
   Image,
+  FileText,
+  Mail,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { cn } from '../../../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../../lib/coin-icons';
 import { TradePlanChart } from '../../../../../components/analysis/TradePlanChart';
+import { TradeDecisionVisual } from '../../../../../components/analysis/TradeDecisionVisual';
+import { StarLogo } from '../../../../../components/common/TraderPathLogo';
 import { authFetch } from '../../../../../lib/api';
 
 interface AnalysisData {
@@ -40,13 +44,14 @@ interface AnalysisData {
   createdAt: string;
   expiresAt: string;
   outcome?: string;
-  step1Result?: any; // Market Pulse
-  step2Result?: any; // Asset Scanner
-  step3Result?: any; // Safety Check
-  step4Result?: any; // Timing Analysis
-  step5Result?: any; // Trade Plan
-  step6Result?: any; // Trap Check
-  step7Result?: any; // Final Verdict
+  method?: 'classic' | 'mlis_pro'; // Analysis method
+  step1Result?: any; // Market Pulse (Classic) or Technical (MLIS)
+  step2Result?: any; // Asset Scanner (Classic) or Momentum (MLIS)
+  step3Result?: any; // Safety Check (Classic) or Volatility (MLIS)
+  step4Result?: any; // Timing Analysis (Classic) or Volume (MLIS)
+  step5Result?: any; // Trade Plan (Classic) or Verdict (MLIS)
+  step6Result?: any; // Trap Check (Classic only)
+  step7Result?: any; // Final Verdict (Classic only)
 }
 
 function formatPrice(price: number): string {
@@ -74,6 +79,9 @@ export default function AnalysisDetailsPage() {
   const [autoEmailInProgress, setAutoEmailInProgress] = useState(false);
   const [autoEmailDone, setAutoEmailDone] = useState(false);
   const autoEmailTriggered = useRef(false);
+  const [autoPdfInProgress, setAutoPdfInProgress] = useState(false);
+  const [autoPdfDone, setAutoPdfDone] = useState(false);
+  const autoPdfTriggered = useRef(false);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -168,6 +176,70 @@ export default function AnalysisDetailsPage() {
     }
   }, [searchParams, analysis, loading, handleAutoEmail]);
 
+  // Auto-PDF handler for ?pdf=true parameter
+  const handleAutoPdf = useCallback(async () => {
+    if (!pageRef.current || !analysis || autoPdfTriggered.current) return;
+
+    autoPdfTriggered.current = true;
+    setAutoPdfInProgress(true);
+
+    try {
+      // Wait for chart to render
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Dynamic import jsPDF
+      const { jsPDF } = await import('jspdf');
+
+      const canvas = await html2canvas(pageRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: 1400,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-export-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+            (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+            (clonedElement as HTMLElement).style.padding = '24px';
+          }
+        },
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height],
+      });
+
+      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+
+      const symbol = analysis.symbol || 'Analysis';
+      const date = new Date().toISOString().split('T')[0];
+      pdf.save(`TraderPath_${symbol}_${date}.pdf`);
+
+      setAutoPdfDone(true);
+      // Redirect back to analyze page after showing success
+      setTimeout(() => {
+        router.push('/analyze#recent-analyses');
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to auto generate PDF:', err);
+      alert('Failed to generate PDF. Please try again.');
+      setAutoPdfInProgress(false);
+    }
+  }, [analysis, router]);
+
+  // Trigger auto-PDF when analysis is loaded and pdf=true parameter is present
+  useEffect(() => {
+    const shouldAutoPdf = searchParams.get('pdf') === 'true';
+    if (shouldAutoPdf && analysis && !loading && !autoPdfTriggered.current) {
+      handleAutoPdf();
+    }
+  }, [searchParams, analysis, loading, handleAutoPdf]);
+
   // Export as PNG (using blob for reliable downloads)
   const handleExportPNG = async () => {
     if (!pageRef.current || exporting || !analysis) return;
@@ -177,15 +249,18 @@ export default function AnalysisDetailsPage() {
     try {
       const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#ffffff',
-        scale: 2,
+        scale: 3, // Higher quality for PNG
         logging: false,
         useCORS: true,
         allowTaint: true,
-        windowWidth: 1200,
+        windowWidth: 1400,
         onclone: (clonedDoc) => {
           const clonedElement = clonedDoc.querySelector('[data-export-container]');
           if (clonedElement) {
             (clonedElement as HTMLElement).style.overflow = 'visible';
+            // Ensure proper background for export
+            (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+            (clonedElement as HTMLElement).style.padding = '24px';
           }
         },
       });
@@ -223,15 +298,18 @@ export default function AnalysisDetailsPage() {
     try {
       const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#ffffff',
-        scale: 2,
+        scale: 2.5, // Good quality for JPG
         logging: false,
         useCORS: true,
         allowTaint: true,
-        windowWidth: 1200,
+        windowWidth: 1400,
         onclone: (clonedDoc) => {
           const clonedElement = clonedDoc.querySelector('[data-export-container]');
           if (clonedElement) {
             (clonedElement as HTMLElement).style.overflow = 'visible';
+            // Ensure proper background for export
+            (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+            (clonedElement as HTMLElement).style.padding = '24px';
           }
         },
       });
@@ -250,10 +328,57 @@ export default function AnalysisDetailsPage() {
         link.href = url;
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 100);
-      }, 'image/jpeg', 0.92);
+      }, 'image/jpeg', 0.95); // Higher quality
     } catch (err) {
       console.error('Failed to export JPG:', err);
       alert('Failed to export image');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Export as PDF
+  const handleExportPDF = async () => {
+    if (!pageRef.current || exporting || !analysis) return;
+
+    setExporting(true);
+    setExportDropdownOpen(false);
+    try {
+      // Dynamic import jsPDF
+      const { jsPDF } = await import('jspdf');
+
+      const canvas = await html2canvas(pageRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: 1400,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-export-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+            (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+            (clonedElement as HTMLElement).style.padding = '24px';
+          }
+        },
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height],
+      });
+
+      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+
+      const symbol = analysis.symbol || 'Analysis';
+      const date = new Date().toISOString().split('T')[0];
+      pdf.save(`TraderPath_${symbol}_${date}.pdf`);
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+      alert('Failed to export PDF');
     } finally {
       setExporting(false);
     }
@@ -347,6 +472,9 @@ export default function AnalysisDetailsPage() {
   }
 
 
+  // Detect if this is MLIS Pro analysis
+  const isMLIS = analysis.method === 'mlis_pro' || analysis.step1Result?.mlis === true;
+
   // Extract data from steps
   const step1 = analysis.step1Result || {};
   const step2 = analysis.step2Result || {};
@@ -356,36 +484,85 @@ export default function AnalysisDetailsPage() {
   const step6 = analysis.step6Result || {};
   const step7 = analysis.step7Result || {};
 
-  const direction = step5.direction || step7.direction || 'long';
-  const isLong = direction === 'long';
+  // For MLIS: step5 is the verdict with direction
+  // For Classic: step5 is trade plan, step7 is verdict
+  const direction = isMLIS
+    ? (step5.direction || 'long')
+    : (step5.direction || step7.direction || 'long');
+  const isLong = direction.toLowerCase() === 'long';
   const score = (analysis.totalScore || 0) * 10;
 
-  // Status labels
-  const marketStatus = step1.trend?.direction === 'bullish' ? 'Bullish' :
-                       step1.trend?.direction === 'bearish' ? 'Bearish' : 'Neutral';
+  // MLIS-specific data
+  const mlisRecommendation = isMLIS ? step5.recommendation : null;
+  const mlisConfidence = isMLIS ? step5.confidence : null;
+  const mlisRiskLevel = isMLIS ? step5.riskLevel : null;
+  const mlisKeySignals = isMLIS ? step5.keySignals : [];
+  const mlisRiskFactors = isMLIS ? step5.riskFactors : [];
 
-  const assetStatus = (step2.priceChange24h || 0) >= 2 ? 'Strong' :
-                      (step2.priceChange24h || 0) >= 0 ? 'Stable' :
-                      (step2.priceChange24h || 0) >= -2 ? 'Weak' : 'Declining';
+  // Determine verdict for display
+  const getVerdict = () => {
+    if (isMLIS) {
+      if (mlisRecommendation === 'STRONG_BUY' || mlisRecommendation === 'BUY') return 'GO';
+      if (mlisRecommendation === 'HOLD') return 'WAIT';
+      if (mlisRecommendation === 'SELL' || mlisRecommendation === 'STRONG_SELL') return 'AVOID';
+      return 'WAIT';
+    }
+    // Classic analysis
+    const classicScore = Number(step7.overallScore) || 0;
+    if (step7.verdict) return step7.verdict.toUpperCase();
+    if (classicScore >= 7) return 'GO';
+    if (classicScore >= 5) return 'COND';
+    if (classicScore >= 3) return 'WAIT';
+    return 'AVOID';
+  };
+  const verdict = getVerdict();
+  const isAvoidOrWait = verdict === 'AVOID' || verdict === 'WAIT';
 
-  const safetyStatus = step3.riskLevel === 'low' ? 'Safe' :
-                       step3.riskLevel === 'high' ? 'Risky' : 'Caution';
+  // Status labels - different for MLIS vs Classic
+  let marketStatus, assetStatus, safetyStatus, timingStatus;
 
-  const timingStatus = step4.tradeNow ? 'Good' : 'Wait';
+  if (isMLIS) {
+    // MLIS: Technical, Momentum, Volatility, Volume layers
+    const technicalSignal = step1.signal?.toUpperCase() || 'NEUTRAL';
+    const momentumSignal = step2.signal?.toUpperCase() || 'NEUTRAL';
+    const volatilitySignal = step3.signal?.toUpperCase() || 'NEUTRAL';
+    const volumeSignal = step4.signal?.toUpperCase() || 'NEUTRAL';
 
-  const entryPrice = step5.averageEntry || step5.entryPrice;
-  const planStatus = entryPrice ? 'Ready' : 'Pending';
+    marketStatus = technicalSignal === 'BULLISH' ? 'Bullish' :
+                   technicalSignal === 'BEARISH' ? 'Bearish' : 'Neutral';
+    assetStatus = momentumSignal === 'BULLISH' ? 'Strong' :
+                  momentumSignal === 'BEARISH' ? 'Weak' : 'Neutral';
+    safetyStatus = volatilitySignal === 'LOW' || step3.score >= 60 ? 'Stable' :
+                   volatilitySignal === 'HIGH' || step3.score < 40 ? 'Volatile' : 'Moderate';
+    timingStatus = volumeSignal === 'BULLISH' || step4.score >= 60 ? 'Good' : 'Wait';
+  } else {
+    // Classic: Market Pulse, Asset Scanner, Safety Check, Timing
+    marketStatus = step1.trend?.direction === 'bullish' ? 'Bullish' :
+                   step1.trend?.direction === 'bearish' ? 'Bearish' : 'Neutral';
+    assetStatus = (step2.priceChange24h || 0) >= 2 ? 'Strong' :
+                  (step2.priceChange24h || 0) >= 0 ? 'Stable' :
+                  (step2.priceChange24h || 0) >= -2 ? 'Weak' : 'Declining';
+    safetyStatus = step3.riskLevel === 'low' ? 'Safe' :
+                   step3.riskLevel === 'high' ? 'Risky' : 'Caution';
+    timingStatus = step4.tradeNow ? 'Good' : 'Wait';
+  }
 
-  const trapStatus = step6.traps?.bullTrap || step6.traps?.bearTrap ? 'Warning' :
-                     step6.traps?.fakeoutRisk === 'high' ? 'Caution' : 'Clear';
+  // Entry price - for MLIS it might not have a trade plan
+  const entryPrice = isMLIS ? null : (step5.averageEntry || step5.entryPrice);
+  const planStatus = entryPrice ? 'Ready' : (isMLIS ? 'N/A' : 'Pending');
+
+  // Trap status - only for Classic
+  const trapStatus = isMLIS ? 'N/A' : (
+    step6.traps?.bullTrap || step6.traps?.bearTrap ? 'Warning' :
+    step6.traps?.fakeoutRisk === 'high' ? 'Caution' : 'Clear'
+  );
 
   const macdDesc = (step2.indicators?.macd?.histogram || 0) > 0 ? 'Bullish crossover' : 'Bearish momentum';
 
-  // Trade plan data
+  // Trade plan data (only 2 TPs: TP1 and TP2)
   const stopLossPrice = step5.stopLoss?.price || step5.stopLoss;
   const tp1 = step5.takeProfits?.[0]?.price || step5.takeProfit1;
   const tp2 = step5.takeProfits?.[1]?.price || step5.takeProfit2;
-  const tp3 = step5.takeProfits?.[2]?.price || step5.takeProfit3;
 
   return (
     <>
@@ -412,19 +589,127 @@ export default function AnalysisDetailsPage() {
         </div>
       )}
 
+      {/* Auto-PDF overlay - shows on top of page content */}
+      {autoPdfInProgress && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl text-center max-w-md mx-4">
+            {autoPdfDone ? (
+              <>
+                <div className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <Check className="w-8 h-8 text-green-500" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">PDF Downloaded!</h2>
+                <p className="text-gray-500 dark:text-slate-400">Your analysis report has been saved as PDF. Redirecting...</p>
+              </>
+            ) : (
+              <>
+                <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-red-500" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Generating PDF...</h2>
+                <p className="text-gray-500 dark:text-slate-400">Creating your analysis report as PDF. This may take a moment...</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-center min-h-[calc(100vh-200px)] p-4">
         <div className="w-full max-w-4xl">
-          {/* Back Button */}
-        <Link href="/analyze" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4">
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Analyze</span>
-        </Link>
+          {/* Header with Back Button and Export - OUTSIDE pageRef for clean screenshots */}
+          <div className="flex items-center justify-between mb-4">
+            <Link href="/analyze" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Analyze</span>
+            </Link>
+
+            {/* Export Dropdown - Outside modal for clean screenshots */}
+            <div className="relative">
+              <button
+                onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                disabled={exporting}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50",
+                  emailSent
+                    ? "bg-green-500 text-white"
+                    : "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg"
+                )}
+              >
+                {exporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : emailSent ? (
+                  <Check className="w-4 h-4" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                <span>{exporting ? 'Exporting...' : emailSent ? 'Sent!' : 'Export'}</span>
+                <ChevronDown className={cn("w-4 h-4 transition-transform", exportDropdownOpen && "rotate-180")} />
+              </button>
+
+              {exportDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setExportDropdownOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 z-50 overflow-hidden">
+                    <button
+                      onClick={handleExportPNG}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                    >
+                      <Image className="w-4 h-4 text-teal-500" />
+                      <div>
+                        <div>Download PNG</div>
+                        <div className="text-xs text-gray-400">High Quality</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={handleExportJPG}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                    >
+                      <Image className="w-4 h-4 text-blue-500" />
+                      <div>
+                        <div>Download JPG</div>
+                        <div className="text-xs text-gray-400">Smaller Size</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={handleExportPDF}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                    >
+                      <FileText className="w-4 h-4 text-red-500" />
+                      <div>
+                        <div>Download PDF</div>
+                        <div className="text-xs text-gray-400">Full Report</div>
+                      </div>
+                    </button>
+                    <div className="border-t border-gray-200 dark:border-slate-700" />
+                    <button
+                      onClick={handleSendEmail}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                    >
+                      <Mail className="w-4 h-4 text-purple-500" />
+                      <div>
+                        <div>Send via Email</div>
+                        <div className="text-xs text-gray-400">Share Report</div>
+                      </div>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
 
         {/* Main Card */}
         <div
           ref={pageRef}
           data-export-container
           className="bg-white dark:bg-slate-800/80 rounded-2xl p-4 sm:p-6 shadow-xl border border-gray-200 dark:border-transparent">
+          {/* Export Header - TraderPath Branding (visible in export) */}
+          <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-slate-700">
+            <div className="flex items-center gap-2">
+              {/* TraderPath Logo - Star */}
+              <StarLogo size={32} uniqueId="export-header" animated={false} />
+              <span className="text-lg font-bold bg-gradient-to-r from-teal-500 via-emerald-400 to-coral-500 bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(135deg, #14B8A6, #2DD4BF, #F87171, #EF5A6F)' }}>TraderPath</span>
+            </div>
+            <span className="text-xs text-gray-500 dark:text-slate-400">traderpath.io</span>
+          </div>
+
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
@@ -437,7 +722,14 @@ export default function AnalysisDetailsPage() {
                 }}
               />
               <div>
-                <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{analysis.symbol}/USDT Analysis</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{analysis.symbol}/USDT Analysis</h1>
+                  {isMLIS && (
+                    <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-full">
+                      MLIS Pro
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">
                   {new Date(analysis.createdAt).toLocaleDateString('en-US', {
                     day: 'numeric',
@@ -449,215 +741,351 @@ export default function AnalysisDetailsPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 justify-between sm:justify-end">
+            <div className="flex items-center gap-2 sm:gap-3 justify-between sm:justify-end flex-wrap">
+              {/* Show verdict badge - AVOID/WAIT takes priority over direction */}
               <div className={cn(
                 "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold",
-                isLong ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400" : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                verdict === 'GO' ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400" :
+                verdict === 'COND' ? "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400" :
+                verdict === 'WAIT' ? "bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400" :
+                verdict === 'AVOID' ? "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400" :
+                (isLong ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400" : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400")
               )}>
-                {isLong ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                {isLong ? 'BULLISH' : 'BEARISH'}
+                {verdict === 'GO' ? <TrendingUp className="w-4 h-4" /> :
+                 verdict === 'AVOID' ? <AlertTriangle className="w-4 h-4" /> :
+                 verdict === 'WAIT' ? <Clock className="w-4 h-4" /> :
+                 verdict === 'COND' ? <Target className="w-4 h-4" /> :
+                 (isLong ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />)}
+                {verdict === 'GO' ? 'GO' :
+                 verdict === 'COND' ? 'CONDITIONAL' :
+                 verdict === 'WAIT' ? 'WAIT' :
+                 verdict === 'AVOID' ? 'AVOID' :
+                 (isLong ? 'BULLISH' : 'BEARISH')}
               </div>
               <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{score}/100</div>
             </div>
           </div>
 
-          {/* 6 Info Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
-            {/* 1. Market Pulse */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-                  <span className="font-medium text-gray-900 dark:text-white">Market Pulse</span>
+          {/* Info Cards - Different layouts for MLIS vs Classic */}
+          {isMLIS ? (
+            /* MLIS Pro: 5 Layer Cards */
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+              {/* 1. Technical Layer */}
+              <div className="bg-violet-50 dark:bg-violet-500/10 rounded-xl p-4 border border-violet-200 dark:border-violet-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-violet-500 dark:text-violet-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Technical</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    step1.signal?.toUpperCase() === 'BULLISH' ? 'text-green-600 dark:text-green-400' :
+                    step1.signal?.toUpperCase() === 'BEARISH' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{step1.signal || 'Neutral'}</span>
                 </div>
-                <span className={cn(
-                  "text-sm font-semibold",
-                  marketStatus === 'Bullish' ? 'text-green-600 dark:text-green-400' : marketStatus === 'Bearish' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
-                )}>{marketStatus}</span>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  Score: {typeof step1.score === 'number' ? step1.score.toFixed(0) : (Number(step1.score) || 0)}/100 • {step1.reasoning || 'Technical analysis complete'}
+                </p>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
-                Fear & Greed: {step1.fearGreedIndex || 0} ({step1.fearGreedLabel || 'N/A'}) • BTC Dom: {step1.btcDominance?.toFixed(1) || '0'}%
-              </p>
-            </div>
 
-            {/* 2. Asset Scan */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Search className="w-4 h-4 text-purple-500 dark:text-purple-400" />
-                  <span className="font-medium text-gray-900 dark:text-white">Asset Scan</span>
+              {/* 2. Momentum Layer */}
+              <div className="bg-purple-50 dark:bg-purple-500/10 rounded-xl p-4 border border-purple-200 dark:border-purple-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-purple-500 dark:text-purple-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Momentum</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    step2.signal?.toUpperCase() === 'BULLISH' ? 'text-green-600 dark:text-green-400' :
+                    step2.signal?.toUpperCase() === 'BEARISH' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{step2.signal || 'Neutral'}</span>
                 </div>
-                <span className={cn(
-                  "text-sm font-semibold",
-                  assetStatus === 'Strong' ? 'text-green-600 dark:text-green-400' :
-                  assetStatus === 'Stable' ? 'text-blue-600 dark:text-blue-400' :
-                  assetStatus === 'Weak' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
-                )}>{assetStatus}</span>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  Score: {typeof step2.score === 'number' ? step2.score.toFixed(0) : (Number(step2.score) || 0)}/100 • {step2.reasoning || 'Momentum analysis complete'}
+                </p>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
-                Price: {formatPrice(step2.currentPrice)} • 24h: {(step2.priceChange24h || 0) >= 0 ? '+' : ''}{step2.priceChange24h?.toFixed(2) || '0'}%
-              </p>
-            </div>
 
-            {/* 3. Safety Check */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-                  <span className="font-medium text-gray-900 dark:text-white">Safety Check</span>
+              {/* 3. Volatility Layer */}
+              <div className="bg-indigo-50 dark:bg-indigo-500/10 rounded-xl p-4 border border-indigo-200 dark:border-indigo-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Volatility</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    step3.signal?.toUpperCase() === 'LOW' || step3.score >= 60 ? 'text-green-600 dark:text-green-400' :
+                    step3.signal?.toUpperCase() === 'HIGH' || step3.score < 40 ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{step3.signal || 'Moderate'}</span>
                 </div>
-                <span className={cn(
-                  "text-sm font-semibold",
-                  safetyStatus === 'Safe' ? 'text-green-600 dark:text-green-400' : safetyStatus === 'Risky' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
-                )}>{safetyStatus}</span>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  Score: {typeof step3.score === 'number' ? step3.score.toFixed(0) : (Number(step3.score) || 0)}/100 • {step3.reasoning || 'Volatility analysis complete'}
+                </p>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
-                {step3.manipulation?.pumpDumpRisk === 'low' ? 'No manipulation' : 'Manipulation risk'} • Whale: {step3.whaleActivity?.bias || 'neutral'}
-              </p>
-            </div>
 
-            {/* 4. Timing Analysis */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-                  <span className="font-medium text-gray-900 dark:text-white">Timing Analysis</span>
+              {/* 4. Volume Layer */}
+              <div className="bg-fuchsia-50 dark:bg-fuchsia-500/10 rounded-xl p-4 border border-fuchsia-200 dark:border-fuchsia-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-fuchsia-500 dark:text-fuchsia-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Volume</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    step4.signal?.toUpperCase() === 'BULLISH' ? 'text-green-600 dark:text-green-400' :
+                    step4.signal?.toUpperCase() === 'BEARISH' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{step4.signal || 'Neutral'}</span>
                 </div>
-                <span className={cn(
-                  "text-sm font-semibold",
-                  timingStatus === 'Good' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
-                )}>{timingStatus}</span>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  Score: {typeof step4.score === 'number' ? step4.score.toFixed(0) : (Number(step4.score) || 0)}/100 • {step4.reasoning || 'Volume analysis complete'}
+                </p>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
-                RSI: {step2.indicators?.rsi?.toFixed(0) || 'N/A'} • MACD: {macdDesc}
-              </p>
-            </div>
 
-            {/* 5. Trade Plan */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Target className="w-4 h-4 text-cyan-500 dark:text-cyan-400" />
-                  <span className="font-medium text-gray-900 dark:text-white">Trade Plan</span>
+              {/* 5. MLIS Confidence & Risk */}
+              <div className="sm:col-span-2 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-500/10 dark:to-purple-500/10 rounded-xl p-4 border border-violet-200 dark:border-violet-500/20">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">MLIS Verdict</span>
+                  </div>
+                  <span className={cn(
+                    "px-3 py-1 rounded-full text-sm font-bold",
+                    mlisRecommendation === 'STRONG_BUY' ? 'bg-green-500 text-white' :
+                    mlisRecommendation === 'BUY' ? 'bg-green-400 text-white' :
+                    mlisRecommendation === 'HOLD' ? 'bg-yellow-400 text-black' :
+                    mlisRecommendation === 'SELL' ? 'bg-orange-500 text-white' : 'bg-red-500 text-white'
+                  )}>{mlisRecommendation || 'HOLD'}</span>
                 </div>
-                <span className={cn(
-                  "text-sm font-semibold",
-                  planStatus === 'Ready' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
-                )}>{planStatus}</span>
-              </div>
-              <div className="text-sm text-gray-500 dark:text-slate-400 space-y-0.5 sm:space-y-0">
-                <span className="block sm:inline">Entry: {formatPrice(entryPrice)}</span>
-                <span className="hidden sm:inline"> • </span>
-                <span className="block sm:inline">TP: {formatPrice(tp1)}</span>
-                <span className="hidden sm:inline"> • </span>
-                <span className="block sm:inline">SL: {formatPrice(stopLossPrice)}</span>
-              </div>
-            </div>
-
-            {/* 6. Trap Check */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Crosshair className="w-4 h-4 text-red-500 dark:text-red-400" />
-                  <span className="font-medium text-gray-900 dark:text-white">Trap Check</span>
-                </div>
-                <span className={cn(
-                  "text-sm font-semibold",
-                  trapStatus === 'Clear' ? 'text-green-600 dark:text-green-400' : trapStatus === 'Warning' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
-                )}>{trapStatus}</span>
-              </div>
-              <div className="text-sm text-gray-500 dark:text-slate-400 space-y-0.5 sm:space-y-0">
-                <span className="block sm:inline">Bull trap: {step6.traps?.bullTrap ? 'Yes' : 'No'}</span>
-                <span className="hidden sm:inline"> • </span>
-                <span className="block sm:inline">Bear trap: {step6.traps?.bearTrap ? 'Yes' : 'No'}</span>
-                <span className="hidden sm:inline"> • </span>
-                <span className="block sm:inline">Fakeout: {step6.traps?.fakeoutRisk || 'low'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 7. Final Verdict */}
-          <div className={cn(
-            "rounded-xl p-4 mb-6",
-            isLong ? "bg-green-50 dark:bg-green-500/20" : "bg-red-50 dark:bg-red-500/20"
-          )}>
-            <div className="flex items-center gap-2 mb-2">
-              <CheckCircle className={cn("w-5 h-5", isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")} />
-              <span className={cn("font-semibold", isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
-                Final Verdict: {direction.toUpperCase()} Recommended
-              </span>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-slate-300">
-              {step7.aiSummary || step7.summary || `Market conditions favor ${isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(entryPrice)} with ${step5.riskReward?.toFixed(1) || '2.0'}:1 risk-reward ratio. Set stop-loss at ${formatPrice(stopLossPrice)} to protect against downside.`}
-            </p>
-          </div>
-
-          {/* Trade Plan Chart */}
-          {entryPrice && (
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-gray-900 dark:text-white">Trade Plan Chart</h3>
-                <div className="flex items-center gap-2">
-                  {/* Export Dropdown */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-                      disabled={exporting}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition disabled:opacity-50",
-                        emailSent
-                          ? "bg-green-500 text-white"
-                          : "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white"
-                      )}
-                    >
-                      {exporting ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : emailSent ? (
-                        <Check className="w-4 h-4" />
-                      ) : (
-                        <Download className="w-4 h-4" />
-                      )}
-                      <span className="hidden sm:inline">{exporting ? 'Exporting...' : emailSent ? 'Sent!' : 'Export'}</span>
-                      <ChevronDown className={cn("w-3 h-3 transition-transform", exportDropdownOpen && "rotate-180")} />
-                    </button>
-
-                    {exportDropdownOpen && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setExportDropdownOpen(false)} />
-                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 z-50 overflow-hidden">
-                          <button
-                            onClick={handleExportPNG}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-                          >
-                            <Image className="w-4 h-4 text-teal-500" />
-                            <div>
-                              <div>Download PNG</div>
-                              <div className="text-xs text-gray-400">High Quality</div>
-                            </div>
-                          </button>
-                          <button
-                            onClick={handleExportJPG}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-                          >
-                            <Image className="w-4 h-4 text-blue-500" />
-                            <div>
-                              <div>Download JPG</div>
-                              <div className="text-xs text-gray-400">Smaller Size</div>
-                            </div>
-                          </button>
-                        </div>
-                      </>
-                    )}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500 dark:text-slate-400">Confidence</span>
+                    <p className="font-semibold text-gray-900 dark:text-white">{typeof mlisConfidence === 'number' ? mlisConfidence.toFixed(0) : (Number(mlisConfidence) || 0)}%</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-slate-400">Risk Level</span>
+                    <p className={cn(
+                      "font-semibold",
+                      mlisRiskLevel === 'low' ? 'text-green-600 dark:text-green-400' :
+                      mlisRiskLevel === 'high' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                    )}>{mlisRiskLevel || 'Medium'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-slate-400">Direction</span>
+                    <p className={cn(
+                      "font-semibold",
+                      isLong ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                    )}>{isLong ? 'LONG' : 'SHORT'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-slate-400">Score</span>
+                    <p className="font-semibold text-violet-600 dark:text-violet-400">{score}/100</p>
                   </div>
                 </div>
               </div>
+            </div>
+          ) : (
+            /* Classic: 6 Step Cards */
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+              {/* 1. Market Pulse */}
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Market Pulse</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    marketStatus === 'Bullish' ? 'text-green-600 dark:text-green-400' : marketStatus === 'Bearish' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{marketStatus}</span>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  Fear & Greed: {step1.fearGreedIndex || 0} ({step1.fearGreedLabel || 'N/A'}) • BTC Dom: {step1.btcDominance?.toFixed(1) || '0'}%
+                </p>
+              </div>
+
+              {/* 2. Asset Scan */}
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Search className="w-4 h-4 text-purple-500 dark:text-purple-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Asset Scan</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    assetStatus === 'Strong' ? 'text-green-600 dark:text-green-400' :
+                    assetStatus === 'Stable' ? 'text-blue-600 dark:text-blue-400' :
+                    assetStatus === 'Weak' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
+                  )}>{assetStatus}</span>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  Price: {formatPrice(step2.currentPrice)} • 24h: {(step2.priceChange24h || 0) >= 0 ? '+' : ''}{step2.priceChange24h?.toFixed(2) || '0'}%
+                </p>
+              </div>
+
+              {/* 3. Safety Check */}
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Safety Check</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    safetyStatus === 'Safe' ? 'text-green-600 dark:text-green-400' : safetyStatus === 'Risky' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{safetyStatus}</span>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  {step3.manipulation?.pumpDumpRisk === 'low' ? 'No manipulation' : 'Manipulation risk'} • Whale: {step3.whaleActivity?.bias || 'neutral'}
+                </p>
+              </div>
+
+              {/* 4. Timing Analysis */}
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Timing Analysis</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    timingStatus === 'Good' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{timingStatus}</span>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  RSI: {step2.indicators?.rsi?.toFixed(0) || 'N/A'} • MACD: {macdDesc}
+                </p>
+              </div>
+
+              {/* 5. Trade Plan */}
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-cyan-500 dark:text-cyan-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Trade Plan</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    planStatus === 'Ready' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{planStatus}</span>
+                </div>
+                <div className="text-sm text-gray-500 dark:text-slate-400 space-y-0.5 sm:space-y-0">
+                  <span className="block sm:inline">Entry: {formatPrice(entryPrice)}</span>
+                  <span className="hidden sm:inline"> • </span>
+                  <span className="block sm:inline">TP: {formatPrice(tp1)}</span>
+                  <span className="hidden sm:inline"> • </span>
+                  <span className="block sm:inline">SL: {formatPrice(stopLossPrice)}</span>
+                </div>
+              </div>
+
+              {/* 6. Trap Check */}
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Crosshair className="w-4 h-4 text-red-500 dark:text-red-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Trap Check</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    trapStatus === 'Clear' ? 'text-green-600 dark:text-green-400' : trapStatus === 'Warning' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+                  )}>{trapStatus}</span>
+                </div>
+                <div className="text-sm text-gray-500 dark:text-slate-400 space-y-0.5 sm:space-y-0">
+                  <span className="block sm:inline">Bull trap: {step6.traps?.bullTrap ? 'Yes' : 'No'}</span>
+                  <span className="hidden sm:inline"> • </span>
+                  <span className="block sm:inline">Bear trap: {step6.traps?.bearTrap ? 'Yes' : 'No'}</span>
+                  <span className="hidden sm:inline"> • </span>
+                  <span className="block sm:inline">Fakeout: {step6.traps?.fakeoutRisk || 'low'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Final Verdict - Visual Trade Decision */}
+          <div className="mb-6">
+            {isMLIS ? (
+              <TradeDecisionVisual
+                verdict={mlisRecommendation === 'STRONG_BUY' || mlisRecommendation === 'BUY' ? 'go' :
+                         mlisRecommendation === 'HOLD' ? 'wait' : 'avoid'}
+                direction={direction.toLowerCase() as 'long' | 'short'}
+                score={Number(step5.overallScore) || Number(analysis.totalScore) || 5}
+                recommendation={mlisRecommendation}
+                confidence={typeof mlisConfidence === 'number' ? mlisConfidence : Number(mlisConfidence) || 0}
+                riskLevel={mlisRiskLevel}
+                symbol={analysis.symbol}
+                size="lg"
+              />
+            ) : (
+              <TradeDecisionVisual
+                verdict={(step7.verdict || (Number(step7.overallScore) >= 7 ? 'go' : Number(step7.overallScore) >= 5 ? 'conditional_go' : Number(step7.overallScore) >= 3 ? 'wait' : 'avoid')) as 'go' | 'conditional_go' | 'wait' | 'avoid'}
+                direction={direction as 'long' | 'short'}
+                score={Number(step7.overallScore) || Number(analysis.totalScore) * 10 || 5}
+                symbol={analysis.symbol}
+                size="lg"
+              />
+            )}
+          </div>
+
+          {/* AI Recommendation / Key Signals */}
+          <div className={cn(
+            "rounded-xl p-4 mb-6",
+            isMLIS
+              ? "bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-500/10 dark:to-purple-500/10 border border-violet-200 dark:border-violet-500/20"
+              : (isLong ? "bg-green-50 dark:bg-green-500/10 border border-green-500/20" : "bg-red-50 dark:bg-red-500/10 border border-red-500/20")
+          )}>
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle className={cn("w-5 h-5", isMLIS ? "text-violet-600 dark:text-violet-400" : (isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"))} />
+              <span className={cn("font-semibold", isMLIS ? "text-violet-600 dark:text-violet-400" : (isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"))}>
+                {isMLIS ? 'MLIS Pro Analysis' : 'AI Recommendation'}
+              </span>
+            </div>
+            {isMLIS ? (
+              <div className="space-y-3">
+                {mlisKeySignals && mlisKeySignals.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Key Signals:</p>
+                    <ul className="text-sm text-gray-600 dark:text-slate-300 list-disc list-inside">
+                      {mlisKeySignals.slice(0, 3).map((signal: string, idx: number) => (
+                        <li key={idx}>{signal}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {mlisRiskFactors && mlisRiskFactors.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Risk Factors:</p>
+                    <ul className="text-sm text-gray-600 dark:text-slate-300 list-disc list-inside">
+                      {mlisRiskFactors.slice(0, 3).map((factor: string, idx: number) => (
+                        <li key={idx}>{factor}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {!mlisKeySignals?.length && !mlisRiskFactors?.length && (
+                  <p className="text-sm text-gray-600 dark:text-slate-300">
+                    MLIS Pro analysis recommends <strong>{mlisRecommendation || 'HOLD'}</strong> with {typeof mlisConfidence === 'number' ? mlisConfidence.toFixed(0) : (Number(mlisConfidence) || 0)}% confidence.
+                    Direction: <strong>{isLong ? 'LONG' : 'SHORT'}</strong>. Risk level: <strong>{mlisRiskLevel || 'Medium'}</strong>.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600 dark:text-slate-300">
+                {step7.aiSummary || step7.summary || `Market conditions favor ${isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(entryPrice)} with ${typeof step5.riskReward === 'number' ? step5.riskReward.toFixed(1) : '2.0'}:1 risk-reward ratio. Set stop-loss at ${formatPrice(stopLossPrice)} to protect against downside.`}
+              </p>
+            )}
+          </div>
+
+          {/* Trade Plan Chart - Only for Classic (MLIS doesn't have trade plan) */}
+          {!isMLIS && entryPrice && (
+            <div className="mb-6">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Trade Plan Chart</h3>
               <div ref={chartRef} id="trade-plan-chart-visible" className="trade-plan-chart-container bg-white dark:bg-slate-800 rounded-xl p-2">
                 <TradePlanChart
                   symbol={analysis.symbol}
                   direction={direction as 'long' | 'short'}
                   entries={[{ price: entryPrice, percentage: 100 }]}
                   stopLoss={{ price: stopLossPrice || 0, percentage: 0 }}
-                  takeProfits={[tp1, tp2, tp3].filter(Boolean).map((tp, i) => ({
+                  takeProfits={[tp1, tp2].filter(Boolean).map((tp, i) => ({
                     price: tp,
                     percentage: 0,
                     riskReward: step5.riskReward || (i + 1),
@@ -677,7 +1105,7 @@ export default function AnalysisDetailsPage() {
           {/* Footer - Copyright */}
           <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-700">
             <p className="text-center text-xs text-gray-500 dark:text-slate-400">
-              © 2025 <span className="font-semibold text-teal-500">TraderPath</span>. All rights reserved.
+              © 2026 <span className="font-semibold text-teal-500">TraderPath</span>. All rights reserved.
             </p>
             <p className="text-center text-xs text-gray-400 dark:text-slate-500 mt-1">
               Trading involves risk. Not financial advice.

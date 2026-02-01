@@ -238,8 +238,8 @@ export function LiveAnalysisPreview() {
         const data: MarketData = {
           btcPrice: parseFloat(priceData.lastPrice),
           btcChange24h: parseFloat(priceData.priceChangePercent),
-          fearGreedIndex: parseInt(fgData.data[0].value),
-          fearGreedLabel: fgData.data[0].value_classification,
+          fearGreedIndex: fgData?.data?.length > 0 ? parseInt(fgData.data[0].value) : 50,
+          fearGreedLabel: fgData?.data?.length > 0 ? fgData.data[0].value_classification : 'Neutral',
           btcDominance,
         };
 

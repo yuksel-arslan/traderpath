@@ -8,7 +8,6 @@ import {
   Bell,
   Shield,
   Palette,
-  Globe,
   CreditCard,
   LogOut,
   ChevronRight,
@@ -67,6 +66,19 @@ interface TwoFactorSetup {
   qrCodeUrl: string;
   secret: string;
   backupCodes: string[];
+}
+
+interface CreditTransaction {
+  id: string;
+  type: 'PURCHASE' | 'REWARD' | 'SPEND' | 'REFUND' | 'BONUS';
+  amount: number;
+  description: string;
+  createdAt: string;
+  metadata?: {
+    analysisId?: string;
+    packageName?: string;
+    rewardType?: string;
+  };
 }
 
 export default function SettingsPage() {
@@ -134,19 +146,10 @@ export default function SettingsPage() {
   const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
   const [profileSaveError, setProfileSaveError] = useState('');
 
-  // Language state
-  interface Language {
-    code: string;
-    name: string;
-    nativeName: string;
-    direction: 'ltr' | 'rtl';
-    flag: string;
-  }
-  const [languages, setLanguages] = useState<Language[]>([]);
-  const [selectedLanguage, setSelectedLanguage] = useState('en');
-  const [isSavingLanguage, setIsSavingLanguage] = useState(false);
-  const [languageSaveSuccess, setLanguageSaveSuccess] = useState(false);
-  const [isDetectingLanguage, setIsDetectingLanguage] = useState(false);
+  // Billing state
+  const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
+  const [totalTransactions, setTotalTransactions] = useState(0);
 
   const handleAvatarButtonClick = useCallback(() => {
     fileInputRef.current?.click();
@@ -190,12 +193,11 @@ export default function SettingsPage() {
     const fetchUserData = async () => {
       try {
         // Fetch all data in parallel for faster loading
-        const [userResponse, settingsResponse, alertSettingsResponse, twoFactorResponse, languagesResponse] = await Promise.all([
+        const [userResponse, settingsResponse, alertSettingsResponse, twoFactorResponse] = await Promise.all([
           authFetch('/api/auth/me'),
           authFetch('/api/user/settings'),
           authFetch('/api/alerts/settings'),
           authFetch('/api/auth/2fa/status').catch(() => null),
-          authFetch('/api/user/languages').catch(() => null),
         ]);
 
         // Process user profile
@@ -225,17 +227,6 @@ export default function SettingsPage() {
             if (settingsData.data.reportValidityPeriods) {
               setReportValidityPeriods(settingsData.data.reportValidityPeriods);
             }
-            if (settingsData.data.preferredLanguage) {
-              setSelectedLanguage(settingsData.data.preferredLanguage);
-            }
-          }
-        }
-
-        // Process languages
-        if (languagesResponse?.ok) {
-          const languagesData = await languagesResponse.json();
-          if (languagesData.success && languagesData.data?.languages) {
-            setLanguages(languagesData.data.languages);
           }
         }
 
@@ -296,6 +287,31 @@ export default function SettingsPage() {
 
     checkPushStatus();
   }, []);
+
+  // Fetch transaction history when billing section is active
+  useEffect(() => {
+    if (activeSection !== 'billing') return;
+
+    const fetchTransactions = async () => {
+      setIsLoadingTransactions(true);
+      try {
+        const response = await authFetch('/api/credits/history?limit=5');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setTransactions(data.data.transactions || []);
+            setTotalTransactions(data.data.total || 0);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch transactions:', error);
+      } finally {
+        setIsLoadingTransactions(false);
+      }
+    };
+
+    fetchTransactions();
+  }, [activeSection]);
 
   // Handle push notification toggle
   const handlePushToggle = async () => {
@@ -566,45 +582,6 @@ export default function SettingsPage() {
       console.error('Failed to save report settings:', error);
     } finally {
       setIsSavingReportSettings(false);
-    }
-  };
-
-  const handleSaveLanguage = async (languageCode: string) => {
-    setIsSavingLanguage(true);
-    setLanguageSaveSuccess(false);
-    try {
-      const response = await authFetch('/api/user/language', {
-        method: 'PATCH',
-        body: JSON.stringify({ preferredLanguage: languageCode }),
-      });
-
-      if (response.ok) {
-        setSelectedLanguage(languageCode);
-        setLanguageSaveSuccess(true);
-        setTimeout(() => setLanguageSaveSuccess(false), 3000);
-      }
-    } catch (error) {
-      console.error('Failed to save language:', error);
-    } finally {
-      setIsSavingLanguage(false);
-    }
-  };
-
-  const handleDetectLanguage = async () => {
-    setIsDetectingLanguage(true);
-    try {
-      const response = await authFetch('/api/user/detect-language');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data?.detected) {
-          // Auto-save the detected language
-          await handleSaveLanguage(data.data.detected);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to detect language:', error);
-    } finally {
-      setIsDetectingLanguage(false);
     }
   };
 
@@ -1643,89 +1620,6 @@ export default function SettingsPage() {
                     <h3 className="font-medium mb-4">Theme</h3>
                     <ThemeToggle variant="buttons" />
                   </div>
-
-                  {/* Language */}
-                  <div className="p-4 bg-background rounded-lg">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-accent rounded-full">
-                          <Globe className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium">Language</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Choose your preferred language for the interface
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={handleDetectLanguage}
-                        disabled={isDetectingLanguage}
-                        className="text-sm text-primary hover:underline flex items-center gap-1 disabled:opacity-50"
-                      >
-                        {isDetectingLanguage ? (
-                          <>
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                            Detecting...
-                          </>
-                        ) : (
-                          'Auto-detect'
-                        )}
-                      </button>
-                    </div>
-
-                    <div className="space-y-3">
-                      <select
-                        value={selectedLanguage}
-                        onChange={(e) => handleSaveLanguage(e.target.value)}
-                        disabled={isSavingLanguage}
-                        className="w-full px-4 py-3 bg-card border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none disabled:opacity-50"
-                      >
-                        {languages.length > 0 ? (
-                          languages.map((lang) => (
-                            <option key={lang.code} value={lang.code}>
-                              {lang.flag} {lang.nativeName} ({lang.name})
-                            </option>
-                          ))
-                        ) : (
-                          <>
-                            <option value="en">🇺🇸 English (English)</option>
-                            <option value="tr">🇹🇷 Türkçe (Turkish)</option>
-                            <option value="ar">🇸🇦 العربية (Arabic)</option>
-                            <option value="es">🇪🇸 Español (Spanish)</option>
-                            <option value="de">🇩🇪 Deutsch (German)</option>
-                            <option value="fr">🇫🇷 Français (French)</option>
-                            <option value="pt">🇧🇷 Português (Portuguese)</option>
-                            <option value="ru">🇷🇺 Русский (Russian)</option>
-                            <option value="zh">🇨🇳 简体中文 (Chinese)</option>
-                            <option value="ja">🇯🇵 日本語 (Japanese)</option>
-                            <option value="ko">🇰🇷 한국어 (Korean)</option>
-                          </>
-                        )}
-                      </select>
-
-                      {isSavingLanguage && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Saving...
-                        </div>
-                      )}
-
-                      {languageSaveSuccess && (
-                        <div className="flex items-center gap-2 text-sm text-green-500">
-                          <Check className="w-4 h-4" />
-                          Language saved successfully!
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-2 p-3 bg-blue-500/10 rounded-lg">
-                        <Info className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                        <p className="text-xs text-blue-600 dark:text-blue-400">
-                          Your language preference will be used across the platform, including AI Concierge responses.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             )}
@@ -1741,13 +1635,16 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-muted-foreground">Current Plan</p>
-                        <p className="text-xl font-bold">Free Tier</p>
+                        <p className="text-xl font-bold">Credit-Based</p>
                         <p className="text-sm text-muted-foreground">
-                          5 free analyses per day
+                          Pay-as-you-go with Daily Passes
                         </p>
                       </div>
-                      <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition">
-                        Upgrade
+                      <button
+                        onClick={() => router.push('/pricing')}
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition"
+                      >
+                        View Plans
                       </button>
                     </div>
                   </div>
@@ -1759,7 +1656,10 @@ export default function SettingsPage() {
                         <p className="text-sm text-muted-foreground">Credit Balance</p>
                         <p className="text-2xl font-bold">{formatCredits(user?.credits ?? 0)} Credits</p>
                       </div>
-                      <button className="px-4 py-2 border rounded-lg hover:bg-accent transition">
+                      <button
+                        onClick={() => router.push('/pricing')}
+                        className="px-4 py-2 border rounded-lg hover:bg-accent transition"
+                      >
                         Buy Credits
                       </button>
                     </div>
@@ -1769,27 +1669,96 @@ export default function SettingsPage() {
                   <div className="p-4 bg-background rounded-lg">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-medium">Payment Methods</h3>
-                      <button className="text-sm text-primary hover:underline">
-                        Add New
-                      </button>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      No payment methods added yet
-                    </p>
+                    <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                      <Info className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-muted-foreground">
+                        <p className="font-medium text-foreground mb-1">Secure Checkout</p>
+                        <p>
+                          We use Lemon Squeezy for secure payment processing. Your payment details are handled directly by our payment provider - we never store your card information.
+                        </p>
+                        <button
+                          onClick={() => router.push('/pricing')}
+                          className="mt-2 text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          Purchase Credits
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Transaction History */}
                   <div className="p-4 bg-background rounded-lg">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-medium">Transaction History</h3>
-                      <button className="text-sm text-primary hover:underline flex items-center gap-1">
-                        View All
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
+                      {totalTransactions > 5 && (
+                        <button
+                          onClick={() => router.push('/transactions')}
+                          className="text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          View All ({totalTransactions})
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      No transactions yet
-                    </p>
+
+                    {isLoadingTransactions ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : transactions.length === 0 ? (
+                      <div className="text-center py-6">
+                        <Clock className="w-10 h-10 mx-auto text-muted-foreground/50 mb-2" />
+                        <p className="text-sm text-muted-foreground">No transactions yet</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Your credit purchases and usage will appear here
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {transactions.map((tx) => (
+                          <div
+                            key={tx.id}
+                            className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                tx.type === 'PURCHASE' || tx.type === 'REWARD' || tx.type === 'BONUS' || tx.type === 'REFUND'
+                                  ? 'bg-green-500/10 text-green-500'
+                                  : 'bg-red-500/10 text-red-500'
+                              }`}>
+                                {tx.type === 'PURCHASE' || tx.type === 'REWARD' || tx.type === 'BONUS' || tx.type === 'REFUND' ? (
+                                  <span className="text-lg font-bold">+</span>
+                                ) : (
+                                  <span className="text-lg font-bold">-</span>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">{tx.description}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(tx.createdAt).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`font-semibold ${
+                              tx.type === 'PURCHASE' || tx.type === 'REWARD' || tx.type === 'BONUS' || tx.type === 'REFUND'
+                                ? 'text-green-500'
+                                : 'text-red-500'
+                            }`}>
+                              {tx.type === 'PURCHASE' || tx.type === 'REWARD' || tx.type === 'BONUS' || tx.type === 'REFUND' ? '+' : '-'}
+                              {formatCredits(Math.abs(tx.amount))}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

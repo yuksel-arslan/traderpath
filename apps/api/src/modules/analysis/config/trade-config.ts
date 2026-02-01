@@ -118,6 +118,9 @@ export interface TradeTypeConfig {
   riskTolerance: 'high' | 'medium' | 'low';
   steps: StepConfig[];
   creditCost: number;
+  // Maximum stop loss and take profit distances (percentage from entry)
+  maxStopLossPercent: number;
+  maxTakeProfitPercent: number;
 }
 
 // ============================================================================
@@ -390,6 +393,16 @@ export const INDICATORS = {
       weight: 0.85
     }),
   },
+
+  // PATTERN INDICATORS (Candlestick patterns)
+  pattern: {
+    CANDLESTICK_PATTERNS: (): IndicatorConfig => ({
+      name: 'CANDLESTICK_PATTERNS',
+      category: 'pattern',
+      params: {},
+      weight: 0.9  // High weight - patterns are crucial for timing
+    }),
+  },
 } as const;
 
 // ============================================================================
@@ -403,6 +416,8 @@ const SCALPING_CONFIG: TradeTypeConfig = {
   holdingPeriod: '1-15 minutes',
   riskTolerance: 'high',
   creditCost: 3,
+  maxStopLossPercent: 3,     // Max 3% stop loss for scalping
+  maxTakeProfitPercent: 6,   // Max 6% take profit for scalping
   steps: [
     // Step 1: Market Pulse
     {
@@ -478,8 +493,9 @@ const SCALPING_CONFIG: TradeTypeConfig = {
         INDICATORS.trend.MACD(12, 26, 9),
         INDICATORS.trend.SUPERTREND(7, 2),
         INDICATORS.volatility.KELTNER(20, 10, 1.5),
+        INDICATORS.pattern.CANDLESTICK_PATTERNS(),  // Candlestick pattern confirmation
       ],
-      aiPromptFocus: 'Identify optimal entry point with tight stop-loss for scalping',
+      aiPromptFocus: 'Identify optimal entry point with tight stop-loss for scalping. Use candlestick patterns for entry confirmation',
     },
     // Step 5: Trade Plan
     {
@@ -547,6 +563,8 @@ const DAY_TRADE_CONFIG: TradeTypeConfig = {
   holdingPeriod: '1-8 hours',
   riskTolerance: 'medium',
   creditCost: 2,
+  maxStopLossPercent: 8,     // Max 8% stop loss for day trade
+  maxTakeProfitPercent: 15,  // Max 15% take profit for day trade
   steps: [
     // Step 1: Market Pulse
     {
@@ -627,8 +645,9 @@ const DAY_TRADE_CONFIG: TradeTypeConfig = {
         INDICATORS.trend.SUPERTREND(10, 3),
         INDICATORS.momentum.CCI(20),
         INDICATORS.momentum.WILLIAMS_R(14),
+        INDICATORS.pattern.CANDLESTICK_PATTERNS(),  // Candlestick pattern confirmation
       ],
-      aiPromptFocus: 'Identify optimal intraday entry with momentum confirmation',
+      aiPromptFocus: 'Identify optimal intraday entry with momentum and candlestick pattern confirmation',
     },
     // Step 5: Trade Plan
     {
@@ -700,6 +719,8 @@ const SWING_CONFIG: TradeTypeConfig = {
   holdingPeriod: '2-14 days',
   riskTolerance: 'low',
   creditCost: 1,
+  maxStopLossPercent: 15,    // Max 15% stop loss for swing trade
+  maxTakeProfitPercent: 25,  // Max 25% take profit for swing trade
   steps: [
     // Step 1: Market Pulse
     {
@@ -783,8 +804,9 @@ const SWING_CONFIG: TradeTypeConfig = {
         INDICATORS.trend.SUPERTREND(10, 3),
         INDICATORS.momentum.TSI(25, 13, 13),
         INDICATORS.momentum.ULTIMATE(7, 14, 28),
+        INDICATORS.pattern.CANDLESTICK_PATTERNS(),  // Candlestick pattern confirmation
       ],
-      aiPromptFocus: 'Find optimal swing entry at support/resistance with trend confirmation',
+      aiPromptFocus: 'Find optimal swing entry at support/resistance with trend and candlestick pattern confirmation',
     },
     // Step 5: Trade Plan
     {
@@ -936,6 +958,20 @@ export function getDataRequirements(type: TradeType): {
  */
 export function getCreditCost(type: TradeType): number {
   return TRADE_CONFIG[type].creditCost;
+}
+
+/**
+ * Get max stop loss percentage for a trade type
+ */
+export function getMaxStopLossPercent(type: TradeType): number {
+  return TRADE_CONFIG[type].maxStopLossPercent;
+}
+
+/**
+ * Get max take profit percentage for a trade type
+ */
+export function getMaxTakeProfitPercent(type: TradeType): number {
+  return TRADE_CONFIG[type].maxTakeProfitPercent;
 }
 
 // ============================================================================

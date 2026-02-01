@@ -42,6 +42,14 @@ import smartCoinsRoutes from './modules/analysis/smart-coins.routes';
 import { scheduledReportsService } from './modules/scheduled/scheduled-reports.service';
 import { conciergeRoutes } from './modules/concierge/concierge.routes';
 import { startCoinScoreCacheJob, stopCoinScoreCacheJob } from './modules/analysis/coin-score-cache.job';
+import { capitalFlowRoutes } from './modules/capital-flow/capital-flow.routes';
+import { multiMarketRoutes } from './modules/analysis/multi-market.routes';
+import dailyPassRoutes from './modules/passes/daily-pass.routes';
+import assetLogosRoutes from './modules/asset-logos/asset-logos.routes';
+import { initializeAssetLogos } from './modules/asset-logos/asset-logos.service';
+import { bilgeRoutes } from './modules/bilge/bilge.routes';
+import { initializeBilgeService, collectError } from './modules/bilge/bilge.service';
+import { startBilgeWeeklyReportJob, stopBilgeWeeklyReportJob } from './modules/bilge/bilge-cron.job';
 
 // ===========================================
 // Server Configuration
@@ -267,7 +275,7 @@ app.addHook('onResponse', async (request, reply) => {
   }
 });
 
-// Error logging
+// Error logging and BILGE collection
 app.addHook('onError', async (request, reply, error) => {
   logger.error({
     error: error.message,
@@ -277,6 +285,21 @@ app.addHook('onError', async (request, reply, error) => {
     requestId: request.headers['x-request-id'],
     userId: (request as any).user?.id,
   }, 'Request error');
+
+  // Collect error with BILGE Guardian (fire and forget)
+  collectError({
+    message: error.message,
+    stack: error.stack,
+    code: (error as TradepathError).code,
+    endpoint: request.url,
+    method: request.method,
+    userId: (request as any).user?.id,
+    requestId: request.headers['x-request-id'] as string,
+    project: 'traderpath',
+  }).catch((bilgeErr) => {
+    // Don't let BILGE errors affect the response
+    logger.warn({ bilgeErr }, 'BILGE error collection failed');
+  });
 });
 
 // ===========================================
@@ -350,6 +373,25 @@ app.register(smartCoinsRoutes);
 // AI Concierge routes (chat-based interface)
 app.register(conciergeRoutes, { prefix: '/api/v1/concierge' });
 app.register(conciergeRoutes, { prefix: '/api/concierge' }); // Legacy
+
+// Capital Flow routes (Global Capital Flow Intelligence)
+app.register(capitalFlowRoutes, { prefix: '/api/v1/capital-flow' });
+app.register(capitalFlowRoutes, { prefix: '/api/capital-flow' }); // Legacy
+
+// Multi-Market Analysis routes (Stocks, Bonds, Metals, Crypto)
+app.register(multiMarketRoutes, { prefix: '/api/v1/multi-market' });
+app.register(multiMarketRoutes, { prefix: '/api/multi-market' }); // Legacy
+
+// Daily Pass routes (Capital Flow L4 and Asset Analysis passes)
+app.register(dailyPassRoutes, { prefix: '/api/v1/passes' });
+app.register(dailyPassRoutes, { prefix: '/api/passes' }); // Legacy
+
+// Asset Logos routes (public)
+app.register(assetLogosRoutes, { prefix: '/api/v1/asset-logos' });
+app.register(assetLogosRoutes, { prefix: '/api/asset-logos' }); // Legacy
+
+// BILGE Guardian System routes (admin)
+app.register(bilgeRoutes);
 
 // ===========================================
 // 404 Handler
@@ -502,6 +544,18 @@ const start = async () => {
     startCoinScoreCacheJob();
     logger.info('✓ Coin score cache cron started');
 
+    // Initialize asset logos in database
+    await initializeAssetLogos();
+    logger.info('✓ Asset logos initialized');
+
+    // Initialize BILGE Guardian System
+    initializeBilgeService(redis);
+    logger.info('✓ BILGE Guardian initialized');
+
+    // Start BILGE weekly report cron job (Sunday 21:00 UTC+3)
+    startBilgeWeeklyReportJob();
+    logger.info('✓ BILGE weekly report cron started');
+
     // Start server
     await app.listen({
       port: config.port,
@@ -520,8 +574,7 @@ const start = async () => {
     logger.info(`   API:       http://localhost:${config.port}/api/v1`);
     logger.info('');
   } catch (error) {
-    console.error('STARTUP ERROR:', error);
-    logger.error('Failed to start server:', error);
+    logger.error({ error }, 'STARTUP ERROR: Failed to start server');
     process.exit(1);
   }
 };
@@ -551,6 +604,10 @@ const shutdown = async (signal: string) => {
     // Stop coin score cache cron
     stopCoinScoreCacheJob();
     logger.info('✓ Coin score cache cron stopped');
+
+    // Stop BILGE weekly report cron
+    stopBilgeWeeklyReportJob();
+    logger.info('✓ BILGE weekly report cron stopped');
 
     // Stop accepting new connections
     await app.close();

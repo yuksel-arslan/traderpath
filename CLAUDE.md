@@ -59,6 +59,229 @@
 
 ---
 
+## 🌍 CAPITAL FLOW PRENSİBİ (TEMEL FELSEFİ)
+
+> **"Para nereye akıyorsa potansiyel oradadır"**
+
+### Temel Yaklaşım
+
+TraderPath artık **Top-Down** yaklaşımla çalışır:
+
+```
+ESKİ (Bottom-Up):
+  Kullanıcı coin seçer → 7 adım analiz → Karar
+
+YENİ (Top-Down):
+  Global Likidite → Hangi Piyasa? → Hangi Sektör? → Hangi Asset? → Mikro Analiz
+```
+
+### Para Akış Hiyerarşisi
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    LAYER 1: GLOBAL LİKİDİTE                     │
+│         Fed Balance Sheet, M2 Money Supply, DXY, VIX            │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        ▼                     ▼                     ▼
+   ┌─────────┐          ┌─────────┐          ┌─────────┐
+   │ STOCKS  │          │  BONDS  │          │ CRYPTO  │
+   │ METALS  │          │         │          │         │
+   └────┬────┘          └────┬────┘          └────┬────┘
+        │                    │                    │
+   SPX, NDX              10Y, 2Y            Total MCap
+   XAU, XAG              Yield Curve        BTC Dominance
+                                                  │
+                                         ┌────────┴────────┐
+                                         ▼                 ▼
+                                      BTC/ETH          ALTCOINS
+                                                           │
+                                              ┌────────────┼────────────┐
+                                              ▼            ▼            ▼
+                                           DeFi        Layer2       Meme/AI
+```
+
+### Cevaplanması Gereken Sorular
+
+| Soru | Kaynak | Güncelleme |
+|------|--------|------------|
+| Para nereye akıyor? | Flow hızı ve yönü | Günlük |
+| Ne kadar hızla akıyor? | 7d/30d flow değişimi | Günlük |
+| Ne zamandır orada? | Faz tespiti (gün sayısı) | Günlük |
+| Ne kadar daha kalacak? | Tarihsel faz süreleri | Haftalık |
+| Sonra nereye gidecek? | Rotasyon pattern'leri | Haftalık |
+
+### Piyasa Fazları
+
+| Faz | Süre | Anlam | Aksiyon |
+|-----|------|-------|---------|
+| **EARLY** | 0-30 gün | Para yeni girmeye başladı | ✅ EN İYİ GİRİŞ |
+| **MID** | 30-60 gün | Trend olgunlaşıyor | ⚠️ Dikkatli giriş |
+| **LATE** | 60-90 gün | Trend yoruluyor | ⛔ Yeni giriş yapma |
+| **EXIT** | 90+ gün / tersine dönüş | Para çıkıyor | 🚫 ASLA GİRME |
+
+### Desteklenen Piyasalar
+
+| Piyasa | Veri Kaynağı | Analiz Tipi |
+|--------|--------------|-------------|
+| **Crypto** | Binance, CoinGecko, DefiLlama | Full 7-Step / MLIS |
+| **Stocks** | Yahoo Finance | Temel Trend Analizi |
+| **Bonds** | FRED API | Yield Curve, Flow |
+| **Metals** | Yahoo Finance | XAU/XAG Trend |
+
+### Flow Hesaplama Metrikleri
+
+```typescript
+interface MarketFlow {
+  market: 'crypto' | 'stocks' | 'bonds' | 'metals';
+
+  // Flow Metrikleri
+  flow7d: number;          // 7 günlük % değişim
+  flow30d: number;         // 30 günlük % değişim
+  flowVelocity: number;    // Hız (flow7d - önceki 7d)
+
+  // Faz Tespiti
+  phase: 'early' | 'mid' | 'late' | 'exit';
+  daysInPhase: number;
+  avgPhaseDuration: number; // Tarihsel ortalama
+
+  // Rotasyon Sinyali
+  rotationSignal: 'entering' | 'stable' | 'exiting' | null;
+  rotationTarget: string | null; // Örn: 'crypto', 'bonds'
+}
+```
+
+### Karar Ağacı (ZORUNLU)
+
+```
+1. Global Likidite Genişliyor mu? (Fed, M2)
+   ├── HAYIR → "Risk-off ortam, sadece BONDS/GOLD analiz et"
+   └── EVET → Devam
+
+2. DXY (Dolar) Zayıflıyor mu?
+   ├── HAYIR → "Risk varlıkları zayıf, dikkatli ol"
+   └── EVET → Devam
+
+3. Hangi Piyasaya Para Akıyor? (En yüksek flow)
+   ├── STOCKS → Stock analizi öner
+   ├── CRYPTO → Crypto analizi öner
+   ├── METALS → Gold/Silver analizi öner
+   └── BONDS → "Safe haven modu, bekle"
+
+4. Piyasa Hangi Fazda?
+   ├── EARLY → ✅ "Optimal giriş zamanı"
+   ├── MID → ⚠️ "Giriş yapılabilir, dikkatli"
+   ├── LATE → ⛔ "Yeni giriş önerilmez"
+   └── EXIT → 🚫 "Kesinlikle girme"
+
+5. Seçilen Piyasada Sektör Seçimi → Mikro Analiz
+```
+
+### API Endpoint'ler
+
+| Endpoint | Method | Açıklama | Maliyet |
+|----------|--------|----------|---------|
+| `/api/capital-flow` | GET | Tüm piyasalar flow özeti | FREE |
+| `/api/capital-flow/:market` | GET | Tek piyasa detay | FREE |
+| `/api/capital-flow/recommendation` | GET | Hangi piyasada fırsat var? | FREE |
+| `/api/capital-flow/rotation-history` | GET | Tarihsel rotasyon verileri | FREE |
+
+### Kod Lokasyonları
+
+| Servis | Dosya |
+|--------|-------|
+| Capital Flow Service | `apps/api/src/modules/capital-flow/capital-flow.service.ts` |
+| FRED API Integration | `apps/api/src/modules/capital-flow/providers/fred.provider.ts` |
+| Yahoo Finance Integration | `apps/api/src/modules/capital-flow/providers/yahoo.provider.ts` |
+| DefiLlama Integration | `apps/api/src/modules/capital-flow/providers/defillama.provider.ts` |
+| Flow Calculator | `apps/api/src/modules/capital-flow/flow-calculator.ts` |
+
+### ENV Variables
+
+```env
+# Capital Flow APIs
+FRED_API_KEY=           # Federal Reserve Economic Data
+ALPHA_VANTAGE_KEY=      # Stocks fallback (optional)
+```
+
+---
+
+## 💰 DAILY PASS FİYATLANDIRMA MODELİ (2026-01-31)
+
+### Katmanlı Erişim Sistemi
+
+| Katman | Fiyat | İçerik | Limit |
+|--------|-------|--------|-------|
+| **Layer 1-2** | FREE | Global Likidite, Market Flow | Sınırsız |
+| **Layer 3** | 25 kredi/gün | Sector Activity | Sınırsız erişim |
+| **Layer 4** | 25 kredi/gün | AI Recommendations (BUY/SELL) | Sınırsız erişim |
+| **Asset Analysis** | 100 kredi/gün | 7-Step / MLIS Pro | Günlük max 10 analiz |
+
+> **Toplam:** 150 kredi/aktif gün (25 + 25 + 100)
+> **Not:** Sadece kullanıcının giriş yaptığı günler hesaba katılır.
+
+### Daily Pass Mantığı
+
+```typescript
+// Günlük Pass Konfigürasyonu
+DAILY_PASS_CONFIG = {
+  CAPITAL_FLOW_L3: {
+    cost: 25,           // Kredi
+    maxUsage: 1,        // Sınırsız erişim (tek pass)
+    expiresAt: 'EOD',   // Gece 00:00 UTC sıfırlanır
+  },
+  CAPITAL_FLOW_L4: {
+    cost: 25,           // Kredi
+    maxUsage: 1,        // Sınırsız erişim (tek pass)
+    expiresAt: 'EOD',   // Gece 00:00 UTC sıfırlanır
+  },
+  ASSET_ANALYSIS: {
+    cost: 100,          // Kredi
+    maxUsage: 10,       // Max 10 analiz/gün
+    expiresAt: 'EOD',   // Gece 00:00 UTC sıfırlanır
+  },
+}
+```
+
+### API Endpoint'ler
+
+| Endpoint | Method | Açıklama |
+|----------|--------|----------|
+| `/api/passes/status` | GET | Kullanıcının aktif pass'leri |
+| `/api/passes/purchase` | POST | Pass satın al |
+| `/api/passes/check/:type` | GET | Belirli pass tipini kontrol et |
+| `/api/passes/config` | GET | Pass fiyat konfigürasyonu |
+
+### Kod Lokasyonları
+
+| Dosya | Açıklama |
+|-------|----------|
+| `apps/api/src/modules/passes/daily-pass.service.ts` | Pass yönetim servisi |
+| `apps/api/src/modules/passes/daily-pass.routes.ts` | API routes |
+| `apps/api/prisma/schema.prisma` | DailyPass model |
+| `apps/web/app/(dashboard)/analyze/page.tsx` | Frontend pass UI |
+| `apps/web/app/(dashboard)/capital-flow/page.tsx` | Layer 4 paywall |
+
+### Maliyet Analizi (Aylık $200 API Bütçesi)
+
+```
+Günlük API Bütçesi: $200/30 = $6.67/gün
+
+Asset Analysis (100 kredi/gün, max 10 analiz):
+- Analiz başına API maliyeti: ~$0.05 (Gemini + Binance/Yahoo)
+- En kötü senaryo: 10 analiz × $0.05 = $0.50/kullanıcı/gün
+- Kar marjı: $5+ (100 kredi ≈ $10 değer)
+
+Capital Flow L4 (25 kredi/gün):
+- API maliyeti: ~$0.01/gün (cache + minimal API)
+- Kar marjı: %99+
+
+✅ Model, $200/ay bütçe ile sürdürülebilir
+```
+
+---
+
 ## 📊 Analiz Veri Gereksinimleri (ZORUNLU)
 
 ### Timeframe Seçenekleri
@@ -267,6 +490,37 @@ Kullanıcı Hakları Aktif:
 | 2026-01-26 | Grafikteki "Current" çizgisi eski fiyatı gösteriyordu | `livePrice` state eklendi - son mumun close fiyatı kullanılıyor. Prop'tan gelen stale fiyat yerine canlı fiyat gösteriliyor | `TradePlanChart.tsx:116,249-258,358` |
 | 2026-01-26 | AI Expert yorumları raw tag'lerle gösteriliyordu | `renderAIExpertComment` parser fonksiyonu eklendi - [EXPERT:ARIA], [VOLTRAN] vb. tag'ler emoji ve renklerle düzgün formatlaniyor | `reports/[id]/page.tsx:36-104` |
 | 2026-01-28 | Landing page P/L Dashboard ile uyuşmuyordu (119.9% vs 120.7%) | `platform-performance-history` endpoint'i artık `allTimeTotalPnL` döndürüyor - 30 günlük filtre all-time toplamı etkilemiyordu | `analysis.routes.ts:1395-1414`, `LandingPerformanceChart.tsx:34,167-168,216-220` |
+| 2026-01-28 | Login sayfası dark/light mode uyumsuzluğu - sol panel her zaman koyu | Sol marketing paneli artık tema tercihini takip ediyor. Light/dark mode'a uygun renkler kullanılıyor | `apps/web/app/(auth)/layout.tsx` |
+| 2026-01-28 | Top 5 Coins "Scan Now" butonu çalışmıyordu - analiz yapılmıyordu | 1) Yeni API endpoint eklendi: `POST /api/analysis/top-coins/scan` (300 kredi), 2) Frontend concierge yerine dedicated endpoint kullanıyor, 3) Doğru polling ile progress gösterimi (2-3 dakika), 4) Status endpoint eklendi: `GET /api/analysis/top-coins/status` | `analysis.routes.ts:4758-4850`, `analyze/page.tsx:368-454` |
+| 2026-01-28 | Dil seçimi sadece landing page'de çalışıyordu, Settings'teki çalışmıyordu | Settings'teki dil seçici kaldırıldı (sadece backend için kullanılıyordu, UI çevirmiyordu). Google Translate-based LanguageSelector tüm dashboard sayfalarına eklendi (header + mobile menu) | `settings/page.tsx`, `layout.tsx:31,361,486-492` |
+| 2026-01-28 | TP3 anlamsız seviyelere konumlanıyordu (ETH'de 393$) | 1) TP3 kaldırıldı (sadece TP1/TP2, %60/%40), 2) Max SL sınırı eklendi (%10), 3) Max TP sınırı eklendi (%20), 4) Entry destek/direnç bazlı yapıldı (LONG→support, SHORT→resistance) | `analysis.engine.ts:5050-5320`, `trade-config.ts` |
+| 2026-01-29 | MLIS Pro analizi "Failed to complete analysis" hatası | 1) `method: 'mlis_pro'` DB'ye kaydedilmiyordu - eklendi, 2) AnalysisProgressBar 5-layer desteği eklendi, 3) AnalysisDialog MLIS sonuçlarını doğru işliyor, 4) saveReportToDatabase MLIS için 5 adım bekliyor | `AnalysisDialog.tsx`, `AnalysisProgressBar.tsx`, `analysis.routes.ts:516` |
+| 2026-01-29 | MLIS Pro analizi detay sayfasında 7-step formatında gösteriliyordu | 1) `isMLIS` detection eklendi (method veya mlis flag), 2) 5-layer MLIS kartları (Technical, Momentum, Volatility, Volume, Verdict) eklendi, 3) MLIS Verdict badge ve confidence/risk gösterimi, 4) Trade plan chart MLIS için gizlendi, 5) Key signals ve risk factors gösterimi | `analyze/details/[id]/page.tsx` |
+| 2026-01-29 | Details sayfası "o.toFixed is not a function" TypeError hatası | 1) `ScoreGauge` komponentine `safeScore` validasyonu eklendi (non-number input'ları 0'a çeviriyor), 2) Tüm score prop'ları `Number()` ile dönüştürülüyor, 3) Step score gösterimleri (step1-4) ve mlisConfidence için type checking eklendi | `TradeDecisionVisual.tsx`, `details/[id]/page.tsx` |
+| 2026-01-29 | Export header'da yanlış 4-kare logo görünüyordu | `StarLogo` komponenti kullanılıyor, gradient TraderPath metni eklendi | `details/[id]/page.tsx` |
+| 2026-01-29 | Verdict AVOID olduğunda BULLISH gösteriliyordu | `getVerdict()` fonksiyonu eklendi, GO/COND/WAIT/AVOID badge'leri doğru renk ve ikonla gösteriliyor | `details/[id]/page.tsx` |
+| 2026-01-29 | Scan Now dual method yapısı nedeniyle hata veriyordu | 1) `coin-score-cache.service.ts`'de `method: 'classic'` açıkça set ediliyor, 2) System scan'ler Classic metod kullanıyor | `coin-score-cache.service.ts:115` |
+| 2026-01-29 | MLIS Pro analiz tamamlandığında layers undefined olabiliyordu | 1) Default layer değerleri eklendi, 2) Null/undefined için fallback'ler, 3) Classic analiz için steps validasyonu | `AnalysisDialog.tsx:520-566` |
+| 2026-01-29 | Top 5 Coins "Scan Now" cache'den gelen veriyi yanlış işliyordu | Backend `{ coins, cacheInfo }` döndürüyordu ama frontend tüm objeyi `topCoins` array'ine set ediyordu. `data.data.coins` olarak düzeltildi | `analyze/page.tsx:354` |
+| 2026-01-29 | Dil değişikliğinde sayfa boş geliyor veya hata veriyor | 1) `window.location.reload()` yerine `router.refresh()` kullanıldı, 2) Loading state eklendi, 3) Google Translate iframe yöntemi öncelikli, 4) Soft reload fallback (500ms delay), 5) Hata durumunda graceful degradation | `LanguageSelector.tsx:99-158` |
+| 2026-01-29 | Reports sayfası hata durumunda sessizce başarısız oluyordu | 1) `error` state eklendi, 2) API hata mesajları gösteriliyor, 3) "Try Again" butonu ile yeniden deneme, 4) Connection error için özel mesaj | `reports/page.tsx:125-151,509-526` |
+| 2026-01-29 | Top 5 Coins scan başlıyor ama tamamlanmıyordu | 1) Scan session tracking eklendi (isScanning, coinsAnalyzed, totalCoins), 2) Status endpoint gerçek scan progress döndürüyor, 3) Frontend polling doğru koşulları kontrol ediyor, 4) Timeout 5 dakikadan 10 dakikaya çıkarıldı, 5) Duplicate scan'ler engellendi | `coin-score-cache.service.ts`, `analysis.routes.ts:5004-5032`, `analyze/page.tsx:391-470` |
+| 2026-01-31 | SLV ve diğer non-crypto varlıklar için analiz hatası (Binance SLVUSDT yok) | Multi-Asset Data Provider oluşturuldu: Crypto→Binance, Stocks/Bonds/Metals→Yahoo Finance. analysis.engine.ts ve mlis.service.ts güncellendi. Asset class detection ile doğru API'ye yönlendirme | `multi-asset-data-provider.ts`, `analysis.engine.ts`, `mlis.service.ts` |
+| 2026-01-31 | Capital Flow Sectors butonu çalışmıyordu | onClick handler'a `setSelectedLayer(3)` eklendi - artık sektörler görünüyor | `capital-flow/page.tsx` |
+| 2026-01-31 | Capital Flow SELL önerisi gösterilmiyordu (tüm marketler pozitifken) | Relative weakness detection eklendi (>5% gap), slowing momentum check eklendi (<-1 velocity), risk-off için her zaman gösterim | `capital-flow.service.ts` |
+| 2026-01-31 | Analyze sayfasında Recent bölümü iç içe geçmişti | Wrapper'daki gereksiz header kaldırıldı (RecentAnalyses zaten kendi header'ına sahip) | `analyze/page.tsx` |
+| 2026-01-31 | AI Concierge analiz sonucu verdict kartı ve TradePlanChart görüntülenmiyor | handleAnalysis fonksiyonu direction ve tradePlan döndürmüyordu. Analiz DB'den çekilip step5Result ve step7Result'tan direction/tradePlan eklendi | `concierge.service.ts` |
+| 2026-01-31 | Dil değişikliği sayfa yenilemesi gerektiriyordu | Google Translate combo box doğrudan manipüle ediliyor (fireEvent ile change tetikleme). triggerTranslation ve resetToEnglish fonksiyonları eklendi. Sayfa yenileme yerine anlık çeviri | `LanguageSelector.tsx` |
+| 2026-01-31 | Concierge sayfasında TradePlanChart "Application error" hatası veriyordu | Çoklu sorun düzeltildi: 1) tradePlan interface uyumsuzluğu (`averageEntry` vs `entry`, `stopLoss` object vs number), 2) `capitalFlow.recommendation` ve `capitalFlow.globalLiquidity.bias` null check eksikti, 3) `flow.toFixed()` NaN kontrolü eklendi, 4) `.toUpperCase()` null kontrolü eklendi, 5) TradePlanChart try-catch ile sarmalandı, 6) Tüm Number() dönüşümleri güvenli hale getirildi | `concierge/page.tsx` |
+| 2026-01-31 | Reports sayfasında verdict GO görünürken detay sayfasında AVOID görünüyordu | `normalizeVerdict` fonksiyonları 'long'/'short' (direction) değerlerini yanlışlıkla 'go' (verdict) olarak işliyordu. Direction ve verdict ayrı kavramlar - düzeltildi | `reports/page.tsx`, `RecentAnalyses.tsx` |
+| 2026-01-31 | Concierge sayfasında TradePlanChart "Application error" hatası veriyordu | Frontend tradePlan interface'i backend'den gelen veri yapısıyla uyumsuzdu. `averageEntry` vs `entry`, `stopLoss` object vs number, `takeProfits` object array vs number array. Her iki yapıyı da destekleyecek şekilde düzeltildi | `concierge/page.tsx` |
+| 2026-01-31 | GLD/SLV gibi metal ETF'ler için "Analiz tamamlanamadı" hatası | Yahoo Finance intraday veri (1H, 4H) döndürmeyebiliyordu. Fallback mekanizması eklendi: intraday yetersizse günlük veriye geçiş, minimum 50 mum validasyonu, detaylı hata mesajları ve loglama | `multi-asset-data-provider.ts` |
+| 2026-01-31 | Settings Billing sayfasında Payment Methods eklenemiyor, Transaction History görünmüyordu | 1) Transaction History API (`/api/credits/history`) zaten mevcuttu ama frontend bağlı değildi - useEffect ile fetch eklendi, 2) Buy Credits butonu onClick handler'sızdı - /pricing'e yönlendirme eklendi, 3) Payment Methods stub idi - Lemon Squeezy secure checkout açıklaması eklendi (saved cards desteklenmiyor), 4) Transaction listesi loading/empty/data state'leri ile güncellendi | `settings/page.tsx` |
+| 2026-01-31 | Capital Flow Market Flow Analyzer grafik etiketleri Türkçe yazılmıştı | "Para Akışı (30g)" → "Money Flow (30d)", "Akış Hızı (30g)" → "Flow Velocity (30d)" olarak İngilizce'ye çevrildi | `capital-flow/page.tsx` |
+| 2026-01-31 | Concierge sayfasında "TypeError: Cannot read properties of undefined (reading 'map')" hatası | `capitalFlow.marketFlows` API'den undefined veya non-array gelebiliyordu. `Array.isArray(capitalFlow.marketFlows) && capitalFlow.marketFlows.length > 0` kontrolü eklendi | `concierge/page.tsx:572` |
+| 2026-02-01 | Landing page FAQ'da kredi fiyatları yanlıştı (Layer 3 FREE, Layer 4 5 kredi, Asset 25 kredi) | Doğru fiyatlar eklendi: Layer 1-2 FREE, Layer 3 ve Layer 4 her biri 25 kredi/gün, Asset Analysis 100 kredi/gün (max 10 analiz) | `apps/web/app/(marketing)/page.tsx:771-774` |
+| 2026-02-01 | AI Concierge "Altın alınır mı?" sorusuna eksik yanıt veriyordu | 1) "alınır mı?", "satmalı mı?", "should I buy?" pattern'leri CAPITAL_FLOW_RECOMMENDATION intent'ine eklendi, 2) Gold/Silver/BTC/ETH gibi asset'ler tespit edilip assetHint olarak aktarılıyor, 3) handleCapitalFlowRecommendation fonksiyonuna asset-specific advice eklendi (Türkçe/İngilizce), 4) Gemini prompt'a örnek sorgular eklendi | `concierge.service.ts`, `system-prompt.ts` |
+| 2026-02-01 | AI Concierge "Öneri oluşturulamadı" hatası (Capital Flow recommendation çalışmıyordu) | `FlowRecommendation` interface'inde alan adı `reason` ama kod `reasoning` kullanıyordu. `undefined.toLowerCase()` çağrısı hata fırlatıyordu. 3 yerde düzeltildi: 1) `recommendation.reasoning` → `recommendation.reason`, 2) `getFlowRecommendation()` fallback'te yanlış alan adları düzeltildi (`reasoning`→`reason`, `marketPhase`→`phase`, `suggestedSectors`→`sectors`, eksik `direction` eklendi) | `concierge.service.ts:1418-1420,1528`, `capital-flow.service.ts:832-840` |
 
 ---
 
@@ -309,6 +563,12 @@ Kullanıcı Hakları Aktif:
 | 2026-01-27 | Testimonials → Platform Metrics | Sahte yorumlar yerine gerçek API verileri - şeffaflık ve güvenilirlik |
 | 2026-01-27 | Feature 1 → AI-Powered Market Scanner | 7-Step Analysis Suite formatında, "Find Your Next Winning Trade" yerine |
 | 2026-01-27 | Real Results section Hero altına taşındı | Metrikler daha erken görünsün |
+| 2026-01-28 | Kutlama Modal: Confetti ve balon animasyonları | Kullanıcı ödül kazandığında mutlu etme - gamification |
+| 2026-01-28 | Kredi Bildirimi: Toast notification sistemi | Kredi harcama/kazanma anında kullanıcıyı bilgilendirme |
+| 2026-01-28 | Login sayfası: Tema uyumlu marketing paneli | Sol panel artık light/dark mode'a uygun görünüyor |
+| 2026-01-31 | Analyze sayfası: LAYER 4 minimalist tasarım | Karmaşık animasyonlar kaldırıldı, Capital Flow context eklendi, 4 adımlı akış |
+| 2026-01-31 | Dashboard: Platform + My Performance bölümleri | Capital Flow entegrasyonu, her layer için özet kartları, platform ve kişisel AI stats |
+| 2026-01-31 | Scheduled sayfası: Kurumsal stil tasarımı | Glassmorphism kartlar, gradient orbs, animasyonlu status badge'leri, progress bar, hover efektleri |
 
 ---
 
@@ -928,6 +1188,461 @@ Kullanıcı Hakları Aktif:
   - Landing page "All" görünümünde all-time toplam P/L gösteriyor (dashboard ile aynı)
   - View mode seçenekleri: Today, Week, All (önceden Month idi)
   - Period-specific ve all-time veriler ayrı hesaplanıyor
+- **Login sayfası dark/light mode uyumu düzeltildi**:
+  - Sol marketing paneli artık tema tercihini takip ediyor
+  - Light mode'da açık renkler, dark mode'da koyu renkler kullanılıyor
+  - Feature kartları, istatistikler ve trust badge'ler tema uyumlu
+  - Dosya: `apps/web/app/(auth)/layout.tsx`
+- **Kutlama Bildirimleri Sistemi eklendi**:
+  - Yeni bileşen: `apps/web/components/modals/CelebrationModal.tsx`
+  - Confetti, balon ve yıldız animasyonları
+  - 10 farklı kutlama türü: daily_login, streak_bonus, spin_jackpot, quiz_correct, achievement_unlocked, level_up, trade_type_bonus, referral_bonus, first_analysis, analysis_milestone
+  - Otomatik 5 saniye sonra kapanma
+  - Her tür için özel renk gradient'i ve ikon
+- **Kredi Bildirim Sistemi eklendi**:
+  - Yeni context: `apps/web/contexts/CreditNotificationContext.tsx`
+  - `notifyCreditDeduction`: Kredi harcandığında toast bildirimi (miktar + kalan bakiye)
+  - `notifyCreditAddition`: Kredi kazanıldığında toast bildirimi
+  - `showCelebration`: Kutlama modal'ı gösterme
+  - `notifyInsufficientCredits`: Yetersiz kredi uyarısı + "Buy Credits" butonu
+  - providers.tsx'e `CreditNotificationProvider` eklendi
+- **Analiz tamamlandığında kredi bildirimi**:
+  - AnalysisDialog'da kredi harcama bildirimi gösteriliyor
+  - Trade type bonus için kutlama modal'ı gösteriliyor (Scalping: +3, Day Trade: +2, Swing: +1)
+  - Yetersiz kredi durumunda özel hata mesajı ve yönlendirme
+- **Rewards sayfası kutlama entegrasyonu**:
+  - Daily Login claim edildiğinde kutlama modal'ı
+  - Streak milestone'larında özel kutlama (7, 14, 21, 28, 30 gün)
+  - Lucky Spin sonrası kutlama (jackpot için özel)
+  - Quiz doğru cevapta kutlama (+5 kredi)
+- **Dil seçimi birleştirildi ve tüm sayfalarda çalışır hale getirildi**:
+  - Settings'teki dil seçici kaldırıldı (sadece backend özelliklerini etkiliyordu, UI çevirmiyordu)
+  - Google Translate-based LanguageSelector tüm dashboard sayfalarına eklendi
+  - Header'da (masaüstü) ThemeToggle yanında gösteriliyor
+  - Mobile menüde ayrı bölümde gösteriliyor
+  - 8 dil destekleniyor: English, Türkçe, Deutsch, Español, Italiano, Français, 中文, 日本語
+  - Dosyalar: `settings/page.tsx`, `layout.tsx`
+
+### 2026-01-29
+- **MLIS Pro analizi "Failed to complete analysis" hatası düzeltildi**:
+  - `method: 'mlis_pro'` veritabanına kaydedilmiyordu - eklendi
+  - AnalysisProgressBar artık dinamik adım sayısını destekliyor (5-layer MLIS vs 7-step Classic)
+  - AnalysisDialog MLIS sonuçlarını doğru işliyor ve görüntülüyor
+  - saveReportToDatabase MLIS için 5 adım, Classic için 7 adım bekliyor
+  - Detaylı console logging eklendi (hata ayıklama için)
+  - Hata mesajları artık gerçek hata detaylarını içeriyor
+- **MLIS Frontend Bileşenleri**:
+  - `MLIS_STEPS` export'u eklendi (Technical, Momentum, Volatility, Volume, Verdict)
+  - `MLISLayerResult` komponenti: Layer skorları ve sinyalleri gösteriyor
+  - `MLISVerdictResult` komponenti: STRONG_BUY/BUY/HOLD/SELL önerileri gösteriyor
+  - Progress bar "X/5 Complete" gösteriyor (MLIS için)
+  - Purple tema MLIS Pro için kullanılıyor
+  - Dosyalar: `AnalysisDialog.tsx`, `AnalysisProgressBar.tsx`, `analysis.routes.ts`
+- **AI Concierge MLIS Pro Entegrasyonu**:
+  - "BTC MLIS Pro" quick command butonu eklendi (purple gradient, Zap icon)
+  - `handleMLISAnalysis` düzeltildi: `method: 'mlis_pro'` ve 5-layer doğru kaydediliyor
+  - system-prompt.ts güncellendi: MLIS_ANALYSIS intent dokumentasyonu eklendi
+  - HELP_TEXT (TR/EN) MLIS Pro komut örnekleriyle güncellendi
+  - Dosyalar: `concierge/page.tsx`, `concierge.service.ts`, `system-prompt.ts`
+- **Marketing Sayfası Feature 2 - Dual Analysis System**:
+  - Feature 2 başlığı "Dual Analysis System" olarak güncellendi
+  - 7-Step Classic (teal) ve MLIS Pro (violet) yan yana gösteriliyor
+  - MLIS Pro için "NEW" badge eklendi
+  - Eski Feature 8 (ayrı MLIS Pro section) kaldırıldı (birleştirildi)
+  - Dosya: `apps/web/app/(marketing)/page.tsx`
+- **"How TraderPath Works" Step 2 Güncellendi**:
+  - "Run 7-Step Analysis" → "Choose Analysis Method" olarak değiştirildi
+  - Her iki yöntem (Classic + MLIS Pro) karşılaştırmalı olarak gösteriliyor
+  - Classic: 7 adım, 40+ indikatör, GO/WAIT/AVOID verdict
+  - MLIS Pro: 5 layer, neural signals, STRONG_BUY/SELL recommendations
+- **Performance Chart Dual-Line Desteği**:
+  - API endpoint (`platform-performance-history`) Classic ve MLIS Pro verilerini ayrı döndürüyor
+  - `dailyClassic` ve `dailyMlis` ayrı diziler olarak döndürülüyor
+  - Summary'de `classicTrades`, `mlisTrades`, `allTimeClassicPnL`, `allTimeMlisPnL` eklendi
+  - LandingPerformanceChart.tsx iki çizgi gösteriyor (teal: Classic, violet: MLIS Pro)
+  - Legend eklendi (Classic Analysis, MLIS Pro)
+  - MLIS verisi varsa dual-line, yoksa tek line gösteriliyor
+  - Dosyalar: `analysis.routes.ts`, `LandingPerformanceChart.tsx`
+- **Visual Trade Decision Component (TradeDecisionVisual)**:
+  - Yeni bileşen: `apps/web/components/analysis/TradeDecisionVisual.tsx`
+  - **Görsel Bileşenler**:
+    - `SignalIndicator`: 4 ışıklı trafik lambası (GO/COND/WAIT/AVOID veya BUY/HOLD/SELL)
+    - `DirectionArrow`: LONG (yeşil yukarı ok) / SHORT (kırmızı aşağı ok) yön göstergesi
+    - `ScoreGauge`: Animasyonlu dairesel skor göstergesi (0-10 veya 0-100%)
+    - `VerdictBadge`: Gradient renkli karar etiketi (GO, CONDITIONAL GO, WAIT, AVOID)
+    - `RiskMeter`: 3 seviyeli risk göstergesi (low/medium/high)
+  - **Entegre Edilen Sayfalar**:
+    - FinalVerdict component: Ana analiz sonuç kartı
+    - AnalysisDialog footer: Analiz tamamlandığında verdict özeti
+    - MLISVerdictResult: MLIS Pro sonuçları için görsel karar
+    - analyze/details/[id]: Analiz detay sayfası
+    - reports/[id]: Rapor detay sayfası
+  - **Özellikler**:
+    - Responsive boyutlar (sm, md, lg)
+    - Dark mode uyumlu
+    - Animasyonlu glow efektleri
+    - Classic ve MLIS Pro desteği
+  - Dosyalar: `TradeDecisionVisual.tsx`, `FinalVerdict.tsx`, `AnalysisDialog.tsx`, `details/[id]/page.tsx`, `reports/[id]/page.tsx`
+- **Export Dropdown Genişletildi**:
+  - PNG, JPG, PDF, Email seçenekleri tek dropdown'da
+  - PDF export: jsPDF ile dinamik import, tam sayfa capture
+  - Email export: Screenshot gönderimi, mail butonu
+  - FileText ve Mail ikonları eklendi
+  - Dosya: `analyze/details/[id]/page.tsx`
+- **Otomatik PDF Oluşturma (Analiz Tamamlandığında)**:
+  - Analiz tamamlandığında otomatik PDF oluşturma ve indirme
+  - AnalysisDialog'da `?pdf=true` parametresi ile detay sayfasına yönlendirme
+  - Detay sayfasında auto-PDF handler ve overlay UI
+  - PDF generating status mesajı modal'da gösteriliyor
+  - Tamamlandığında "PDF Downloaded!" mesajı ve otomatik yönlendirme
+  - State'ler: `savedAnalysisId`, `pdfGenerating`, `autoPdfInProgress`, `autoPdfDone`
+  - Dosyalar: `AnalysisDialog.tsx`, `details/[id]/page.tsx`
+- **PNG/JPEG Export Kalitesi Artırıldı**:
+  - PNG: scale 3, windowWidth 1400
+  - JPG: scale 2.5, quality 0.95
+  - TraderPath branding header eklendi (logo + text)
+  - Proper background ve padding export container'da
+- **MLIS Pro Detay Sayfası Düzeltildi**:
+  - Detay sayfası MLIS Pro analizlerini 5-layer formatında gösteriyor
+  - `isMLIS` detection: `method === 'mlis_pro'` veya `step1Result.mlis === true`
+  - **MLIS Layer Kartları**: Technical, Momentum, Volatility, Volume (violet/purple tema)
+  - **MLIS Verdict Kartı**: Recommendation badge (STRONG_BUY/BUY/HOLD/SELL), Confidence %, Risk Level, Direction
+  - Key Signals ve Risk Factors listesi
+  - Trade Plan Chart MLIS için gizleniyor (MLIS trade plan üretmiyor)
+  - TradeDecisionVisual MLIS için recommendation ve confidence prop'ları eklendi
+  - Dosya: `analyze/details/[id]/page.tsx`
+- **Export Header ve Verdict Badge Düzeltmeleri**:
+  - Export header'da 4-kare logo yerine `StarLogo` komponenti kullanılıyor
+  - TraderPath metni kurumsal renklerle gradient gösteriliyor (teal→coral)
+  - Verdict badge artık GO/COND/WAIT/AVOID gösteriyor (BULLISH/BEARISH yerine)
+  - `getVerdict()` fonksiyonu MLIS ve Classic için doğru verdict hesaplıyor
+  - Her verdict için uygun ikon (TrendingUp/Target/Clock/AlertTriangle) gösteriliyor
+  - Dosya: `details/[id]/page.tsx`
+- **Scan Now ve MLIS Pro Robustness Artırıldı**:
+  - `coin-score-cache.service.ts`'de `method: 'classic'` açıkça set ediliyor
+  - System scan'ler için analiz kaydı method bilgisi içeriyor
+  - MLIS Pro layers için default değerler eklendi (undefined durumları için)
+  - Classic analiz steps için null/undefined kontrolleri eklendi
+  - Verdict hesaplamasında overallScore için Number() dönüşümü eklendi
+  - Dosyalar: `coin-score-cache.service.ts`, `AnalysisDialog.tsx`
+- **Top 5 Coins tarama tamamlandığında bildirim eklendi**:
+  - CelebrationModal'a `scan_complete` reason'ı eklendi
+  - Tarama tamamlandığında celebration modal gösteriliyor
+  - Toast bildiriminde "View All Results" butonu eklendi
+  - Son tarama zamanı Top 5 bölümünde gösteriliyor
+  - Dosyalar: `CelebrationModal.tsx`, `analyze/page.tsx`
+- **Top Coins sayfası oluşturuldu (/top-coins)**:
+  - Tüm taranan coinlerin listesi (30 coin)
+  - Filtreler: Verdict (GO/COND/WAIT/AVOID), Method (Classic/MLIS), Direction (LONG/SHORT)
+  - Sıralama: Score, 24h Change, Price, Symbol
+  - Search ile coin arama
+  - Her coin için detaylı kart (method badge, verdict, score, direction)
+  - Cache bilgisi ve son tarama zamanı gösterimi
+  - Glassmorphism ve gradient orbs tasarımı
+  - Dosya: `apps/web/app/(dashboard)/top-coins/page.tsx`
+- **Sidebar'a Top Coins linki eklendi**:
+  - Crown ikonu ile Analyze'dan sonra eklendi
+  - Dosya: `apps/web/app/(dashboard)/layout.tsx`
+
+### 2026-01-30
+- **Capital Flow System Implemented** (Global Capital Flow Intelligence Platform):
+  - Temel prensip: "Para nereye akıyorsa potansiyel oradadır" (Where money flows, potential exists)
+  - **4 LAYER mimarisi**:
+    - LAYER 1: Global Liquidity Tracker (Fed Balance Sheet, M2, DXY, VIX, Yield Curve)
+    - LAYER 2: Market Flow Analyzer (Crypto, Stocks, Bonds, Metals)
+    - LAYER 3: Sector Drill-Down (DeFi, L2, Tech, Finance, etc.)
+    - LAYER 4: Asset Analysis (7-Step/MLIS bağlantısı)
+  - **Backend Files**:
+    - `apps/api/src/modules/capital-flow/types.ts` - Tüm type tanımlamaları
+    - `apps/api/src/modules/capital-flow/providers/fred.provider.ts` - FRED API (Fed Balance Sheet, M2, Treasury)
+    - `apps/api/src/modules/capital-flow/providers/yahoo.provider.ts` - Yahoo Finance (DXY, VIX, Stocks, Metals)
+    - `apps/api/src/modules/capital-flow/providers/defillama.provider.ts` - DefiLlama API (DeFi TVL, Chains, Stablecoins)
+    - `apps/api/src/modules/capital-flow/capital-flow.service.ts` - Ana servis
+    - `apps/api/src/modules/capital-flow/capital-flow.routes.ts` - API routes
+  - **Frontend Files**:
+    - `apps/web/app/(dashboard)/capital-flow/page.tsx` - Capital Flow Radar dashboard
+  - **API Endpoints**:
+    - `GET /api/capital-flow/summary` - Full summary with recommendation
+    - `GET /api/capital-flow/liquidity` - Global liquidity only
+    - `GET /api/capital-flow/markets` - All market flows
+    - `GET /api/capital-flow/markets/:market` - Single market with sectors
+    - `POST /api/capital-flow/refresh` - Force cache refresh
+  - **Phase Detection**: Early (0-30d), Mid (30-60d), Late (60-90d), Exit (90+d)
+  - **Rotation Detection**: entering, stable, exiting signals
+  - **Liquidity Bias**: risk_on, risk_off, neutral
+  - **Recommendation Engine**: Primary market, action (analyze/wait/avoid), confidence %
+  - Sidebar'a "Capital Flow" linki eklendi (Globe ikonu)
+
+### 2026-01-31
+- **Multi-Asset Analysis Support (Unified Analysis Engine)**:
+  - SLV ve diğer non-crypto varlıklar için analiz hatası düzeltildi
+  - **Yeni Dosya**: `apps/api/src/modules/analysis/providers/multi-asset-data-provider.ts`
+  - **Unified Data Provider**:
+    - Crypto varlıklar → Binance API
+    - Stocks/Bonds/Metals → Yahoo Finance API
+    - `fetchCandles()` ve `fetchTicker()` fonksiyonları asset class'a göre doğru API'ye yönlendiriyor
+  - **Analysis Engine Güncellemeleri**:
+    - `analysis.engine.ts`'e multi-asset provider import edildi
+    - `scanAsset()`: Tokenomics sadece crypto için çağrılıyor
+    - `safetyCheck()`: Order book ve trades sadece crypto için çağrılıyor
+    - Non-crypto varlıklar için default değerler kullanılıyor
+  - **MLIS Service Güncellemeleri**:
+    - `mlis.service.ts`'e multi-asset provider import edildi
+    - `fetchCandles()` yeni provider kullanıyor
+    - Tüm asset class'ları için MLIS Pro analizi destekleniyor
+  - **Frontend Güncellemeleri**:
+    - Non-crypto varlıklar için ana analiz endpoint'i (`/api/analysis/full`) kullanılıyor
+    - Metod seçimi (Classic 7-Step vs MLIS Pro) tüm asset türleri için gösteriliyor
+    - Analyze butonu seçilen metodu ve kredi maliyetini gösteriyor
+  - **Desteklenen Asset Class'lar**:
+    - Crypto: BTC, ETH, SOL, vb. (Binance üzerinden)
+    - Stocks: AAPL, MSFT, SPY, QQQ, vb. (Yahoo Finance)
+    - Bonds: TLT, IEF, SHY, BND, vb. (Yahoo Finance)
+    - Metals: GLD, SLV, IAU, XAUUSD, XAGUSD, vb. (Yahoo Finance)
+- **Analyze Sayfası LAYER 4 Olarak Yeniden Tasarlandı**:
+  - Sayfa artık Capital Flow hiyerarşisinin LAYER 4'ü olarak konumlandırıldı
+  - **Kaldırılan Bileşenler** (1600→~860 satır):
+    - MarqueeBanner (kayan kripto fiyatları)
+    - KineticText (karakter animasyonları)
+    - GradientOrbs (arka plan küreleri)
+    - GrainOverlay (grenli doku)
+    - StatCards (6 istatistik kartı - dashboard'da var)
+    - Top 5 Coins Scan (ayrı /top-coins sayfasına taşındı)
+    - Live Chart collapse
+    - Feature badges
+  - **Yeni Bileşenler**:
+    - Capital Flow Context Bar: L1→L2→L3→L4 breadcrumb gösterimi
+    - Sector-based suggestions: Capital Flow'dan gelen sektöre göre asset önerileri
+    - Unified search: Tüm marketlerde tek arama kutusu
+    - Flow warning: Context olmadan girişte uyarı
+  - **URL Parametreleri**: `?market=crypto&sector=defi&symbol=AAVE`
+  - **Akış**:
+    1. Capital Flow'dan market/sector önerisi al
+    2. Önerilen asset'lerden seç veya arama yap
+    3. Timeframe ve method seç (Classic 7-Step / MLIS Pro)
+    4. Analiz çalıştır
+  - Dosya: `apps/web/app/(dashboard)/analyze/page.tsx`
+- **Dashboard Capital Flow Entegrasyonu**:
+  - Dashboard sayfası Platform Performance ve My Performance olarak yeniden düzenlendi
+  - **Platform Performance Bölümü**:
+    - 4-Layer Capital Flow summary kartları (Global Liquidity, Market Flow, Sector Activity, Recommendation)
+    - Platform P/L grafiği (tüm doğrulanmış trade'ler)
+    - Platform istatistikleri (Accuracy, Total Analyses, Platform Users)
+    - AI Concierge Stats (Platform) - toplam mesaj, kullanıcı başına ortalama
+    - AI Experts Stats (Platform) - toplam soru, haftalık soru
+  - **My Performance Bölümü**:
+    - Kişisel P/L grafiği Today/Week/Month toggle ile
+    - Kişisel istatistikler (Accuracy, GO Signals, Active Trades)
+    - Analiz özet kartları (Total, Active, Closed, TP Hit, SL Hit)
+    - My AI Concierge Usage - gönderilen mesaj, chat üzerinden analiz
+    - My AI Expert Usage - sorulan soru, kalan ücretsiz
+  - **Active Trades Bölümü**: Yatay scroll ile aktif pozisyonlar
+  - **Empty State**: Yeni kullanıcılar için Capital Flow CTA
+  - Capital Flow API entegrasyonu (`/api/capital-flow/summary`)
+  - Dosya: `apps/web/app/(dashboard)/dashboard/page.tsx`
+- **Capital Flow SELL Recommendation Improved**:
+  - SELL önerisi artık sadece mutlak çıkış (negative flow) değil, görece zayıflık da dikkate alıyor
+  - Relative weakness detection: En iyi ve en kötü performans gösteren market arasında %5+ fark varsa SELL önerisi
+  - Slowing momentum detection: flowVelocity < -1 ise erken uyarı sinyali
+  - Risk-off modunda SELL her zaman gösteriliyor (gerçek çıkış olmasa bile)
+  - Sector filtering iyileştirildi: trending down veya market ortalamasının altındaki sektörler
+  - Confidence skorlaması sinyal gücüne göre ayarlandı (50-80 arası)
+  - Dosya: `apps/api/src/modules/capital-flow/capital-flow.service.ts`
+- **Market Flow Analyzer Charts Added**:
+  - Her market kartına zamana bağlı Para Akışı (Money Flow) çizgi grafiği eklendi
+  - Her market kartına zamana bağlı Akış Hızı (Flow Velocity) çizgi grafiği eklendi
+  - MiniSparkline SVG komponenti oluşturuldu (gradient fill, responsive)
+  - 30 günlük sentetik tarihsel veri üretimi (flowHistory, velocityHistory)
+  - FlowDataPoint interface eklendi types.ts'e
+  - Dosya: `apps/web/app/(dashboard)/capital-flow/page.tsx`, `capital-flow.service.ts`, `types.ts`
+- **Sectors Button Fixed**:
+  - Market Flow kartındaki Sectors butonu Layer 3'e geçmiyor sorunu düzeltildi
+  - onClick handler'a `setSelectedLayer(3)` eklendi
+- **Analyze Page Recent Section Fixed**:
+  - İç içe geçmiş "Recent" header sorunu düzeltildi
+  - Wrapper'daki gereksiz header kaldırıldı (RecentAnalyses zaten kendi header'ına sahip)
+- **Daily Pass Pricing System Implemented**:
+  - **Yeni Tablo**: `DailyPass` - günlük pass'ları takip eder
+  - **Yeni Servis**: `apps/api/src/modules/passes/daily-pass.service.ts`
+  - **Yeni Routes**: `apps/api/src/modules/passes/daily-pass.routes.ts`
+  - **Fiyatlandırma Modeli**:
+    - Layer 1-2-3: FREE (tüm kullanıcılar)
+    - Layer 4 (AI Recommendations): 25 kredi/gün
+    - Asset Analysis: 100 kredi/gün (max 10 analiz)
+  - **Frontend Güncellemeleri**:
+    - Capital Flow page: Layer 4 unlock için 25 kredi (5'ten değiştirildi)
+    - Analyze page: Daily Pass status bar ve satın alma butonu
+    - Pass olmadan analiz yapılamaz (paywall)
+  - **Backend Güncellemeleri**:
+    - `/api/analysis/full`: Daily Pass kontrolü eklendi
+    - Pass yoksa `DAILY_PASS_REQUIRED` hatası döner
+    - Limit aşılırsa `DAILY_LIMIT_REACHED` hatası döner
+    - Admin kullanıcılar bypass eder
+  - **API Endpoint'ler**:
+    - `GET /api/passes/status` - Aktif pass'leri listele
+    - `POST /api/passes/purchase` - Pass satın al
+    - `GET /api/passes/check/:type` - Belirli pass'ı kontrol et
+  - Migration: `apps/api/prisma/migrations/add_daily_passes_table.sql`
+- **Auth Page Marketing Panel Updated**:
+  - Sol panel Capital Flow yaklaşımına göre güncellendi
+  - 4-Layer flow sistemi gösterimi
+  - "Follow the Money" mottosu
+  - Phase badges (EARLY, MID, LATE, EXIT)
+  - Stats: 4 Markets, BUY Signals, SELL Signals
+- **Landing Page FAQ Updated**:
+  - 8 soru Capital Flow yaklaşımına göre güncellendi
+  - What is Capital Flow, 4-Layer System, Phases, BUY/SELL recommendations
+- **Daily Pass Pricing System (3 Tier)**:
+  - 3 ayrı Daily Pass tipi tanımlandı:
+    - **CAPITAL_FLOW_L3**: 25 kredi/gün - Sector Activity
+    - **CAPITAL_FLOW_L4**: 25 kredi/gün - AI Recommendations
+    - **ASSET_ANALYSIS**: 100 kredi/gün - 7-Step/MLIS Pro (max 10 analiz)
+  - **Toplam: 150 kredi/aktif gün** (sadece giriş yapılan günler)
+  - capital-flow sayfasına L3 ve L4 için ayrı unlock butonları
+  - Admin > Finance > Credit Economy bölümüne 3'lü Daily Pass Pricing section
+  - Dosyalar: `schema.prisma`, `daily-pass.service.ts`, `daily-pass.routes.ts`, `capital-flow/page.tsx`, `admin/finance/page.tsx`
+- **Concierge Bug Fix**:
+  - `handleAnalysis` fonksiyonu `direction` ve `tradePlan` döndürmüyordu
+  - Frontend verdict kartı ve TradePlanChart için bu verileri bekliyordu
+  - Analiz DB'den çekilerek step5Result ve step7Result'tan direction/tradePlan eklendi
+  - Dosya: `concierge.service.ts`
+- **Analysis Details Export**:
+  - Export dropdown (PNG, JPG, PDF, Email) header'a taşındı
+  - MLIS Pro ve Classic analizlerin her ikisi için de görünür
+  - Tüm analiz detayları tek dropdown'dan export edilebiliyor
+  - Dosya: `analyze/details/[id]/page.tsx`
+- **Capital Flow Fullscreen Layer Modal**:
+  - Layer kartlarına tıklandığında tam ekran modal açılıyor
+  - Her layer için ayrı export dropdown (PNG, JPG, PDF, Email)
+  - Layer 1-4 tüm detayları fullscreen'de gösteriliyor
+  - Export fonksiyonları layer-specific isimlendirme ile (TraderPath_Global_Liquidity_2026-01-31.pdf)
+  - Dosya: `capital-flow/page.tsx`
+- **Asset Logos Database System**:
+  - **Yeni Tablo**: `AssetLogos` - JSON olarak tüm asset logolarını saklar
+  - **Kapsamlı Logo Verileri**:
+    - Crypto: 80+ coin (CoinGecko CDN)
+    - Stocks: 60+ şirket (Clearbit Logo API)
+    - Metals: 13 metal ETF/commodity
+    - Bonds: 14 bond ETF/treasury
+  - **API Endpoint'leri**:
+    - `GET /api/asset-logos` - Tüm logolar
+    - `GET /api/asset-logos/:assetClass` - Asset class bazında
+    - `GET /api/asset-logos/symbol/:symbol` - Tek sembol
+    - `POST /api/asset-logos/batch` - Çoklu sembol
+    - `PUT /api/asset-logos/admin/update` - Logo güncelleme (admin)
+    - `PUT /api/asset-logos/admin/bulk` - Toplu güncelleme (admin)
+  - **Frontend Cache Sistemi**:
+    - Memory cache + localStorage (24 saat TTL)
+    - `useAssetLogo` ve `useAssetLogos` React hooks
+    - Fallback SVG generation (logo yüklenemezse)
+  - **CoinIcon Komponenti Güncellendi**:
+    - API cache'den logo çekiyor
+    - Hata durumunda fallback SVG
+    - Lazy loading ve error handling
+  - Dosyalar: `apps/api/src/modules/asset-logos/`, `apps/web/lib/asset-logos-cache.ts`, `apps/web/hooks/useAssetLogos.ts`
+- **Scheduled Reports Page Corporate Styling**:
+  - Glassmorphism kartlar backdrop-blur efektleri ile
+  - Gradient orbs arka plan (teal, orange, blue)
+  - Animasyonlu status badge'leri (ACTIVE/PAUSED with pulse)
+  - Progress bar aktif schedule sayısı için
+  - Timeframe badge'leri gradient renklerle (15m kırmızı, 1H amber, 4H teal, 1D mavi)
+  - Frequency badge'leri (DAILY/WEEKLY/MONTHLY)
+  - Delivery channel ikonları aktif durumlarla
+  - Modal tasarımı sticky header/footer ile
+  - Tüm interaktif elementlerde hover efektleri
+  - Kurumsal teal/coral renk şeması tutarlı şekilde
+  - Geliştirilmiş empty state gradient dekorasyonlarla
+  - Info box amber gradient tema ile
+  - Geliştirilmiş loading state glowing spinner ile
+  - Dosya: `apps/web/app/(dashboard)/scheduled/page.tsx`
+
+### 2026-02-01
+- **AI Concierge "Altın alınır mı?" fix**:
+  - Capital Flow recommendation'da field name mismatch düzeltildi
+  - `FlowRecommendation` interface `reason` kullanıyor ama kod `reasoning` erişiyordu
+  - `undefined.toLowerCase()` TypeError'a neden oluyordu
+  - 3 yerde düzeltme: `concierge.service.ts:1418-1420,1528`, `capital-flow.service.ts:832-840`
+  - Fallback structure interface'e uygun hale getirildi
+- **BILGE Guardian System - Backend Implementation**:
+  - **Yeni Modül**: `apps/api/src/modules/bilge/`
+  - **Bileşenler**:
+    - `types.ts` - Tüm type tanımlamaları
+    - `pattern-database.ts` - 10 başlangıç error pattern'i
+    - `notification.service.ts` - Slack, Discord, SMS, WhatsApp bildirimleri
+    - `bilge.service.ts` - Ana servis (error collection, pattern matching)
+    - `bilge.routes.ts` - Fastify API routes
+    - `error-collector.middleware.ts` - Error collector utilities
+    - `index.ts` - Module exports
+  - **Error Pattern'leri** (10 adet):
+    1. Database Connection Error (critical)
+    2. API Rate Limit Exceeded (medium)
+    3. Authentication Failure (high)
+    4. External Service Timeout (medium)
+    5. Gemini API Error (high)
+    6. Input Validation Error (low)
+    7. Memory/Resource Exhaustion (critical)
+    8. Binance API Error (medium)
+    9. Payment/Credit Error (high)
+    10. Security/CORS Error (high)
+  - **Bildirim Kanalları**:
+    - Slack (webhook)
+    - Discord (webhook)
+    - SMS (Twilio)
+    - WhatsApp (Twilio)
+  - **API Endpoint'leri**:
+    - `GET /api/bilge/health` - Guardian sağlık durumu
+    - `GET /api/bilge/dashboard` - Dashboard özeti
+    - `GET /api/bilge/errors` - Hata listesi
+    - `POST /api/bilge/errors/:id/resolve` - Hata çözme
+    - `POST /api/bilge/errors/report` - Manuel hata bildirimi
+    - `GET /api/bilge/patterns` - Error pattern'leri
+    - `GET /api/bilge/reports/weekly` - Haftalık rapor
+    - `POST /api/bilge/feedback` - Kullanıcı feedback'i
+    - `GET /api/bilge/feedback` - Feedback listesi (admin)
+    - `POST /api/bilge/feedback/:id/approve|reject|respond`
+    - `GET /api/bilge/ideas` - Innovation fikirleri
+    - `POST /api/bilge/ideas/generate` - Fikir üretme
+  - **Özellikler**:
+    - Otomatik error collection (onError hook)
+    - Pattern matching ile error classification
+    - Severity-based notification (critical=tüm kanallar)
+    - Redis storage (1000 error limit)
+    - Weekly report generation (Gemini AI)
+    - User feedback with AI analysis
+    - Innovation idea generation
+  - **Env Variables**:
+    - `BILGE_SLACK_WEBHOOK_URL`
+    - `BILGE_DISCORD_WEBHOOK_URL`
+    - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`
+    - `BILGE_ADMIN_PHONE_NUMBERS` (virgülle ayrılmış)
+  - Dosyalar: `apps/api/src/modules/bilge/*`, `apps/api/src/index.ts`
+- **BILGE.md Documentation**:
+  - Kapsamlı 900+ satırlık dokümantasyon oluşturuldu
+  - BILGE kimliği ve değerleri (Bilge Kağan'dan ilham)
+  - Guardian System mimarisi
+  - 10 başlangıç error pattern'i
+  - Haftalık rapor formatı (Pazar 21:00)
+  - Innovation Engine
+  - User Feedback System (admin onayı ile)
+  - Maliyet analizi ($2.50-$32/ay)
+  - 4 haftalık uygulama yol haritası
+- **BILGE Admin Dashboard eklendi**:
+  - Yeni sayfa: `apps/web/app/(dashboard)/admin/bilge/page.tsx`
+  - **Dashboard Tab**: Guardian sağlık durumu, son 24 saat hataları, kritik hata sayısı, aktif issue'lar, uptime
+  - **Errors Tab**: Hata listesi, severity/status filtreleri, arama, error detay modal, resolve işlevi
+  - **Patterns Tab**: 10 error pattern kartları, match count, suggested fix görüntüleme
+  - **Feedback Tab**: Kullanıcı feedback listesi, BILGE AI analizi, approve/reject/respond işlevleri
+  - **Ideas Tab**: Innovation fikirleri, Gemini ile yeni fikir üretme
+  - **Reports Tab**: Haftalık rapor görüntüleme, trend analizi, BILGE recommendations
+  - Admin navigation'a BILGE linki eklendi (teal renkli Shield ikonu)
+  - Dosya: `apps/web/app/(dashboard)/admin/page.tsx` güncellendi
+- **BILGE Weekly Report Cron Job eklendi**:
+  - Yeni dosya: `apps/api/src/modules/bilge/bilge-cron.job.ts`
+  - Her Pazar 21:00 UTC+3 (18:00 UTC) çalışır
+  - Haftalık rapor oluşturur ve Slack/Discord'a gönderir
+  - `startBilgeWeeklyReportJob()` ve `stopBilgeWeeklyReportJob()` fonksiyonları
+  - Server startup/shutdown'a entegre edildi
+  - Dosyalar: `bilge-cron.job.ts`, `index.ts`
 
 ---
 

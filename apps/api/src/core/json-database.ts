@@ -5,6 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { logger } from './logger';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
@@ -72,11 +73,11 @@ function generateUUID(): string {
 // Prisma-like interface
 export const jsonDb = {
   $connect: async () => {
-    console.log('JSON Database connected');
+    logger.debug('JSON Database connected');
   },
 
   $disconnect: async () => {
-    console.log('JSON Database disconnected');
+    logger.debug('JSON Database disconnected');
   },
 
   $queryRaw: async () => [],

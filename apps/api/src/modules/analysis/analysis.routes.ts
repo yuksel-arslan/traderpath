@@ -16,6 +16,8 @@ import { economicCalendarService } from './services/economic-calendar.service';
 import { getCautionRate, calculateCautionOutcomes, calculateExpiredOutcomes } from '../reports/outcome.service';
 import { prisma } from '../../core/database';
 import { coinScoreCacheService, CoinScore } from './services/coin-score-cache.service';
+import { analyzeMLIS, MLISResult } from './services/mlis.service';
+import { logger } from '../../core/logger';
 
 // User type from JWT
 interface JwtUser {
@@ -37,6 +39,14 @@ interface GeminiResult {
   inputTokens: number;
   outputTokens: number;
   costUsd: number;
+}
+
+// Safe integer parsing with bounds checking
+function safeParseInt(value: string | undefined, defaultValue: number, min: number = 0, max: number = Number.MAX_SAFE_INTEGER): number {
+  if (!value) return defaultValue;
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed)) return defaultValue;
+  return Math.max(min, Math.min(parsed, max));
 }
 
 // Gemini AI for generating insights with cost tracking
@@ -85,11 +95,11 @@ async function getGeminiInsight(
       symbol,
       durationMs,
       metadata: { operation },
-    }).catch(err => console.error('Failed to log cost:', err));
+    }).catch(err => logger.error({ error: err }, 'Failed to log cost'));
 
     return { text, inputTokens, outputTokens, costUsd };
   } catch (error) {
-    console.error('Gemini error:', error);
+    logger.error({ error }, 'Gemini error');
     return { text: 'AI analysis temporarily unavailable', inputTokens: 0, outputTokens: 0, costUsd: 0 };
   }
 }
@@ -122,7 +132,7 @@ Be concise and actionable.`;
         data: { ...data, aiSummary },
       });
     } catch (error) {
-      console.error('Market Pulse error:', error);
+      logger.error({ error }, 'Market Pulse error');
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: 'Failed to fetch market data' },
@@ -159,7 +169,7 @@ Be concise and actionable.`;
         },
       });
     } catch (error) {
-      console.error('Economic Calendar error:', error);
+      logger.error({ error }, 'Economic Calendar error');
       return reply.status(500).send({
         success: false,
         error: { code: 'CALENDAR_ERROR', message: 'Failed to fetch economic calendar' },
@@ -228,7 +238,7 @@ Be concise and give a trading perspective.`;
         remainingCredits: chargeResult.newBalance,
       });
     } catch (error) {
-      console.error('Asset Scan error:', error);
+      logger.error({ error }, 'Asset Scan error');
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: 'Failed to scan asset' },
@@ -282,7 +292,7 @@ Focus on risk assessment and trading implications.`;
         remainingCredits: chargeResult.newBalance,
       });
     } catch (error) {
-      console.error('Safety Check error:', error);
+      logger.error({ error }, 'Safety Check error');
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: 'Failed to perform safety check' },
@@ -336,7 +346,7 @@ Be specific about when to enter.`;
         remainingCredits: chargeResult.newBalance,
       });
     } catch (error) {
-      console.error('Timing error:', error);
+      logger.error({ error }, 'Timing error');
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: 'Failed to calculate timing' },
@@ -400,7 +410,7 @@ Give practical trading advice.`;
         remainingCredits: chargeResult.newBalance,
       });
     } catch (error) {
-      console.error('Trade Plan error:', error);
+      logger.error({ error }, 'Trade Plan error');
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: 'Failed to generate trade plan' },
@@ -454,7 +464,7 @@ Warn about potential traps and give protective advice.`;
         remainingCredits: chargeResult.newBalance,
       });
     } catch (error) {
-      console.error('Trap Check error:', error);
+      logger.error({ error }, 'Trap Check error');
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: 'Failed to check for traps' },
@@ -466,17 +476,22 @@ Warn about potential traps and give protective advice.`;
    * POST /api/analysis/full
    * Full Analysis Bundle (15 credits)
    */
+  // Analysis method schema
+  const analysisMethodSchema = z.enum(['classic', 'mlis_pro']).optional().default('classic');
+
   const fullAnalysisSchema = z.object({
     symbol: z.string().toUpperCase(),
     accountSize: z.number().optional().default(10000),
     interval: intervalSchema,
     tradeType: tradeTypeSchema.optional(),
+    method: analysisMethodSchema,
   });
 
   app.post('/full', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = getUser(request).id;
+    const isAdmin = getUser(request).isAdmin || false;
     const body = fullAnalysisSchema.parse(request.body);
     // Resolve tradeType from interval if provided
     const tradeType = resolveTradeType(body.interval, body.tradeType as TradeType);
@@ -484,19 +499,175 @@ Warn about potential traps and give protective advice.`;
     // Mapping: scalping=15m, dayTrade=1h, swing=1d
     const interval = body.interval || (tradeType === 'scalping' ? '15m' : tradeType === 'dayTrade' ? '1h' : '1d');
 
-    const cost = await creditCostsService.getCreditCost('BUNDLE_FULL_ANALYSIS');
-    const chargeResult = await creditService.charge(userId, cost, 'analysis_full', {
-      symbol: body.symbol,
-    });
+    // Check for Daily Pass system (100 credits/day, max 10 analyses)
+    // Admin users bypass the daily pass system
+    let usedDailyPass = false;
+    if (!isAdmin) {
+      const { dailyPassService } = await import('../passes/daily-pass.service');
+      const passCheck = await dailyPassService.checkPass(userId, 'ASSET_ANALYSIS');
 
-    if (!chargeResult.success) {
-      return reply.status(402).send({
-        success: false,
-        error: { code: 'CREDIT_001', message: 'Insufficient credits', required: cost },
-      });
+      if (!passCheck.hasPass) {
+        // User doesn't have a daily pass - they need to purchase one
+        return reply.status(402).send({
+          success: false,
+          error: {
+            code: 'DAILY_PASS_REQUIRED',
+            message: 'A Daily Analysis Pass is required. Purchase for 100 credits to get 10 analyses today.',
+            required: 100,
+            passType: 'ASSET_ANALYSIS',
+            purchaseUrl: '/api/passes/purchase',
+          },
+        });
+      }
+
+      if (!passCheck.canUse) {
+        // User has a pass but reached daily limit
+        return reply.status(402).send({
+          success: false,
+          error: {
+            code: 'DAILY_LIMIT_REACHED',
+            message: 'Daily analysis limit reached (10/10). Your pass will reset at midnight UTC.',
+            usageCount: passCheck.pass?.usageCount || 0,
+            maxUsage: passCheck.pass?.maxUsage || 10,
+            expiresAt: passCheck.pass?.expiresAt,
+          },
+        });
+      }
+
+      // Use the daily pass
+      const useResult = await dailyPassService.usePass(userId, 'ASSET_ANALYSIS');
+      if (!useResult.success) {
+        return reply.status(402).send({
+          success: false,
+          error: {
+            code: 'PASS_USE_FAILED',
+            message: useResult.error || 'Failed to use daily pass',
+          },
+        });
+      }
+      usedDailyPass = true;
     }
 
+    // For admin users, still log the cost but don't charge (legacy behavior)
+    const cost = isAdmin ? 0 : 0; // No per-analysis cost when using daily pass
+
     try {
+      // Check if MLIS Pro method is requested
+      if (body.method === 'mlis_pro') {
+        logger.info({ symbol: body.symbol, interval }, '[MLIS] Starting analysis');
+
+        // Run MLIS Pro analysis
+        let mlisResult: MLISResult;
+        try {
+          mlisResult = await analyzeMLIS(body.symbol, interval);
+          logger.info({
+            symbol: body.symbol,
+            overallScore: mlisResult.overallScore,
+            recommendation: mlisResult.recommendation,
+            direction: mlisResult.direction,
+            hasLayers: !!mlisResult.layers,
+          }, '[MLIS] Analysis completed');
+        } catch (mlisError) {
+          logger.error({ symbol: body.symbol, error: mlisError }, '[MLIS] Analysis failed');
+          throw new Error(`MLIS analysis failed: ${mlisError instanceof Error ? mlisError.message : 'Unknown error'}`);
+        }
+
+        // Save MLIS analysis to database with adapted format
+        const savedAnalysis = await prisma.analysis.create({
+          data: {
+            userId,
+            symbol: body.symbol,
+            interval: interval,
+            method: 'mlis_pro', // Explicitly set method for MLIS
+            stepsCompleted: [1, 2, 3, 4, 5, 6, 7], // Mark all steps as completed
+            step1Result: { mlis: true, layer: 'technical', ...mlisResult.layers.technical } as object,
+            step2Result: { mlis: true, layer: 'momentum', ...mlisResult.layers.momentum } as object,
+            step3Result: { mlis: true, layer: 'volatility', ...mlisResult.layers.volatility } as object,
+            step4Result: { mlis: true, layer: 'volume', ...mlisResult.layers.volume } as object,
+            step5Result: { mlis: true, layer: 'sentiment', score: mlisResult.layers.sentiment?.score || 50 } as object,
+            step6Result: { mlis: true, layer: 'onchain', score: mlisResult.layers.onchain?.score || 50 } as object,
+            step7Result: {
+              mlis: true,
+              overallScore: mlisResult.overallScore,
+              confidence: mlisResult.confidence,
+              recommendation: mlisResult.recommendation,
+              direction: mlisResult.direction,
+              riskLevel: mlisResult.riskLevel,
+              volatilityRegime: mlisResult.volatilityRegime,
+              keySignals: mlisResult.keySignals,
+              riskFactors: mlisResult.riskFactors,
+              verdict: mlisResult.recommendation === 'STRONG_BUY' || mlisResult.recommendation === 'BUY' ? 'go' :
+                       mlisResult.recommendation === 'HOLD' ? 'wait' : 'avoid',
+            } as object,
+            totalScore: mlisResult.overallScore / 10, // Convert 0-100 to 0-10 scale
+            creditsSpent: cost,
+          },
+        });
+
+        // Check for daily analysis bonus
+        await creditService.checkDailyAnalysisBonus(userId);
+
+        // Trade type completion bonus
+        const tradeTypeBonus = tradeType === 'scalping' ? 3 : tradeType === 'dayTrade' ? 2 : 1;
+        await creditService.add(
+          userId,
+          tradeTypeBonus,
+          'BONUS',
+          'trade_type_completion_bonus',
+          {
+            tradeType,
+            symbol: body.symbol,
+            analysisId: savedAnalysis.id,
+          }
+        );
+
+        logger.info({ analysisId: savedAnalysis.id }, '[MLIS] Analysis saved to database');
+
+        // Return MLIS result
+        const responseData = {
+          analysisId: savedAnalysis.id,
+          method: 'mlis_pro',
+          symbol: body.symbol,
+          interval,
+          tradeType,
+          ...mlisResult,
+          // Add compatibility fields for existing UI
+          step1Result: { mlis: true, score: mlisResult.layers.technical.score },
+          step2Result: { mlis: true, score: mlisResult.layers.momentum.score },
+          step3Result: { mlis: true, score: mlisResult.layers.volatility.score },
+          step4Result: { mlis: true, score: mlisResult.layers.volume.score },
+          step5Result: { mlis: true, score: mlisResult.layers.sentiment?.score || 50 },
+          step6Result: { mlis: true, score: mlisResult.layers.onchain?.score || 50 },
+          step7Result: {
+            overallScore: mlisResult.overallScore / 10,
+            verdict: mlisResult.recommendation === 'STRONG_BUY' || mlisResult.recommendation === 'BUY' ? 'go' :
+                     mlisResult.recommendation === 'HOLD' ? 'wait' : 'avoid',
+            recommendation: mlisResult.recommendation,
+            direction: mlisResult.direction,
+          },
+          tradePlan: null, // MLIS doesn't generate trade plans
+          creditsUsed: cost,
+          bonusCredits: tradeTypeBonus,
+        };
+
+        logger.info({ symbol: body.symbol }, '[MLIS] Sending response');
+
+        // Get current credit balance
+        const creditBalance = await prisma.creditBalance.findUnique({
+          where: { userId },
+          select: { balance: true },
+        });
+
+        return reply.send({
+          success: true,
+          data: responseData,
+          creditsSpent: cost,
+          remainingCredits: creditBalance?.balance ?? 0,
+          dailyPassUsed: usedDailyPass,
+        });
+      }
+
+      // Classic 7-step analysis
       // Step 1-5: Run all prerequisite analysis steps in parallel
       // All steps use trade type specific timeframes and indicators
       const [marketPulse, assetScan, safetyCheck, timing, trapCheck] = await Promise.all([
@@ -604,7 +775,7 @@ Warn about potential traps and give protective advice.`;
           const { socialNotificationService } = await import('../notifications/social-notification.service');
           await socialNotificationService.sendAnalysisSummaryNotifications(userWithNotifs, notifData);
         } catch (notifError) {
-          console.error('[Analysis] Notification error:', notifError);
+          logger.error({ error: notifError, symbol: body.symbol }, '[Analysis] Notification error');
         }
       })();
 
@@ -679,6 +850,12 @@ Explain the key risks and what conditions would need to change before trading th
       const aiResult = await getGeminiInsight(aiPrompt, 'analysis_full', userId, body.symbol);
       const aiVerdict = aiResult.text;
 
+      // Get current credit balance
+      const creditBalance = await prisma.creditBalance.findUnique({
+        where: { userId },
+        select: { balance: true },
+      });
+
       return reply.send({
         success: true,
         data: {
@@ -703,13 +880,15 @@ Explain the key risks and what conditions would need to change before trading th
           },
         },
         creditsSpent: cost,
-        remainingCredits: chargeResult.newBalance,
+        remainingCredits: creditBalance?.balance ?? 0,
+        dailyPassUsed: usedDailyPass,
       });
     } catch (error) {
-      console.error('Full Analysis error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error({ error, errorMessage }, 'Full Analysis error');
       return reply.status(500).send({
         success: false,
-        error: { code: 'ANALYSIS_ERROR', message: 'Failed to complete analysis' },
+        error: { code: 'ANALYSIS_ERROR', message: `Failed to complete analysis: ${errorMessage}` },
       });
     }
   });
@@ -723,8 +902,8 @@ Explain the key risks and what conditions would need to change before trading th
   }, async (request: FastifyRequest<{ Querystring: { limit?: string; offset?: string } }>, reply: FastifyReply) => {
     try {
       const userId = getUser(request).id;
-      const limit = Math.min(parseInt(request.query.limit || '20'), 50);
-      const offset = parseInt(request.query.offset || '0');
+      const limit = safeParseInt(request.query.limit, 20, 1, 50);
+      const offset = safeParseInt(request.query.offset, 0, 0, 10000);
 
       const analyses = await prisma.analysis.findMany({
         where: { userId },
@@ -780,7 +959,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Analysis history error:', error);
+      logger.error({ error }, 'Analysis history error');
       return reply.status(500).send({
         success: false,
         error: { code: 'FETCH_ERROR', message: 'Failed to fetch analysis history' },
@@ -851,7 +1030,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Get analysis error:', error);
+      logger.error({ error }, 'Get analysis error');
       return reply.status(500).send({
         success: false,
         error: { code: 'FETCH_ERROR', message: 'Failed to fetch analysis' },
@@ -882,6 +1061,7 @@ Explain the key risks and what conditions would need to change before trading th
           id: true,
           symbol: true,
           interval: true,
+          method: true, // 'classic' or 'mlis_pro'
           totalScore: true,
           step5Result: true, // tradePlan
           step7Result: true, // verdict
@@ -921,7 +1101,7 @@ Explain the key risks and what conditions would need to change before trading th
           }
         }
       } catch (err) {
-        console.error('Failed to fetch prices:', err);
+        logger.warn({ error: err }, 'Failed to fetch prices');
       }
 
       // Calculate next candle close time based on intervals present
@@ -1030,6 +1210,7 @@ Explain the key risks and what conditions would need to change before trading th
           id: a.id,
           symbol: a.symbol,
           interval: a.interval,
+          method: a.method || 'classic', // Analysis method: 'classic' or 'mlis_pro'
           totalScore: finalScore,
           direction,
           entryPrice,
@@ -1067,7 +1248,7 @@ Explain the key risks and what conditions would need to change before trading th
               },
             })
           )
-        ).catch(err => console.error('Failed to update analysis outcomes:', err));
+        ).catch(err => logger.warn({ error: err }, 'Failed to update analysis outcomes'));
       }
 
       return reply.send({
@@ -1081,7 +1262,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Live prices error:', error);
+      logger.error({ error }, 'Live prices error');
       return reply.status(500).send({
         success: false,
         error: { code: 'FETCH_ERROR', message: 'Failed to fetch live prices' },
@@ -1304,7 +1485,7 @@ Explain the key risks and what conditions would need to change before trading th
         }
       });
     } catch (error) {
-      console.error('Platform stats error:', error);
+      logger.error({ error }, 'Platform stats error');
       return reply.status(500).send({
         success: false,
         error: { code: 'PLATFORM_STATS_ERROR', message: 'Failed to fetch platform statistics' }
@@ -1315,17 +1496,17 @@ Explain the key risks and what conditions would need to change before trading th
   /**
    * GET /api/analysis/platform-performance-history
    * Platform-wide performance history for landing page chart (public)
-   * Returns daily cumulative P/L from all closed analyses
+   * Returns daily cumulative P/L from all closed analyses, split by method (Classic vs MLIS Pro)
    */
   app.get('/platform-performance-history', async (request: FastifyRequest<{ Querystring: { days?: string } }>, reply: FastifyReply) => {
     try {
       const query = request.query;
-      const days = Math.min(90, Math.max(7, parseInt(query.days || '30', 10)));
+      const days = safeParseInt(query.days, 30, 7, 90);
       const now = new Date();
       const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
       startDate.setHours(0, 0, 0, 0);
 
-      // Get ALL closed analyses (for all-time total)
+      // Get ALL closed analyses (for all-time total) - includes method field
       const allClosedAnalyses = await prisma.analysis.findMany({
         where: {
           outcome: { in: ['tp1_hit', 'tp2_hit', 'tp3_hit', 'sl_hit'] },
@@ -1335,81 +1516,131 @@ Explain the key risks and what conditions would need to change before trading th
           outcomeAt: true,
           outcomePrice: true,
           step5Result: true,
+          method: true, // Include method to distinguish Classic vs MLIS Pro
         },
         orderBy: { outcomeAt: 'asc' }
       });
+
+      // Separate by method
+      const classicAnalyses = allClosedAnalyses.filter(a => a.method !== 'mlis_pro');
+      const mlisAnalyses = allClosedAnalyses.filter(a => a.method === 'mlis_pro');
 
       // Filter for period-specific data
       const closedAnalyses = allClosedAnalyses.filter(a =>
         a.outcomeAt && a.outcomeAt >= startDate
       );
 
-      // Initialize daily data structure
-      const dailyData: Record<string, { realized: number; trades: number }> = {};
+      // Helper function to calculate P/L from analysis
+      const calculatePnL = (analysis: { step5Result: unknown; outcomePrice: unknown }) => {
+        const step5 = analysis.step5Result as Record<string, unknown> | null;
+        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
+        const outcomePrice = analysis.outcomePrice ? Number(analysis.outcomePrice) : 0;
+        const direction = ((step5?.direction as string) || 'long').toLowerCase();
+
+        if (entryPrice > 0 && outcomePrice > 0) {
+          if (direction === 'short') {
+            return ((entryPrice - outcomePrice) / entryPrice) * 100;
+          } else {
+            return ((outcomePrice - entryPrice) / entryPrice) * 100;
+          }
+        }
+        return 0;
+      };
+
+      // Initialize daily data structure for both methods
+      const dailyDataClassic: Record<string, { realized: number; trades: number }> = {};
+      const dailyDataMlis: Record<string, { realized: number; trades: number }> = {};
+      const dailyDataCombined: Record<string, { realized: number; trades: number }> = {};
+
       for (let i = 0; i < days; i++) {
         const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
         const dateStr = d.toISOString().split('T')[0];
-        dailyData[dateStr] = { realized: 0, trades: 0 };
+        dailyDataClassic[dateStr] = { realized: 0, trades: 0 };
+        dailyDataMlis[dateStr] = { realized: 0, trades: 0 };
+        dailyDataCombined[dateStr] = { realized: 0, trades: 0 };
       }
 
       // Calculate P/L for each closed trade and assign to outcomeAt date
       closedAnalyses.forEach(analysis => {
         if (!analysis.outcomeAt) return;
         const dateStr = analysis.outcomeAt.toISOString().split('T')[0];
-        if (!dailyData[dateStr]) return;
+        if (!dailyDataCombined[dateStr]) return;
 
-        const step5 = analysis.step5Result as Record<string, unknown> | null;
-        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
-        const outcomePrice = analysis.outcomePrice ? Number(analysis.outcomePrice) : 0;
-        const direction = ((step5?.direction as string) || 'long').toLowerCase();
+        const pnl = calculatePnL(analysis);
+        if (pnl !== 0) {
+          dailyDataCombined[dateStr].realized += pnl;
+          dailyDataCombined[dateStr].trades++;
 
-        if (entryPrice > 0 && outcomePrice > 0) {
-          let pnl = 0;
-          if (direction === 'short') {
-            pnl = ((entryPrice - outcomePrice) / entryPrice) * 100;
+          // Split by method
+          if (analysis.method === 'mlis_pro') {
+            dailyDataMlis[dateStr].realized += pnl;
+            dailyDataMlis[dateStr].trades++;
           } else {
-            pnl = ((outcomePrice - entryPrice) / entryPrice) * 100;
+            dailyDataClassic[dateStr].realized += pnl;
+            dailyDataClassic[dateStr].trades++;
           }
-          dailyData[dateStr].realized += pnl;
-          dailyData[dateStr].trades++;
         }
       });
 
-      // Convert to array and calculate cumulative P/L
-      const sortedDates = Object.keys(dailyData).sort();
+      // Convert to arrays with cumulative P/L
+      const sortedDates = Object.keys(dailyDataCombined).sort();
+
       let cumulativePnL = 0;
       const daily = sortedDates.map(date => {
-        cumulativePnL += dailyData[date].realized;
+        cumulativePnL += dailyDataCombined[date].realized;
         return {
           date,
-          realized: Number(dailyData[date].realized.toFixed(2)),
-          trades: dailyData[date].trades,
+          realized: Number(dailyDataCombined[date].realized.toFixed(2)),
+          trades: dailyDataCombined[date].trades,
           cumulative: Number(cumulativePnL.toFixed(2)),
+        };
+      });
+
+      let cumulativeClassic = 0;
+      const dailyClassic = sortedDates.map(date => {
+        cumulativeClassic += dailyDataClassic[date].realized;
+        return {
+          date,
+          realized: Number(dailyDataClassic[date].realized.toFixed(2)),
+          trades: dailyDataClassic[date].trades,
+          cumulative: Number(cumulativeClassic.toFixed(2)),
+        };
+      });
+
+      let cumulativeMlis = 0;
+      const dailyMlis = sortedDates.map(date => {
+        cumulativeMlis += dailyDataMlis[date].realized;
+        return {
+          date,
+          realized: Number(dailyDataMlis[date].realized.toFixed(2)),
+          trades: dailyDataMlis[date].trades,
+          cumulative: Number(cumulativeMlis.toFixed(2)),
         };
       });
 
       // Summary stats (period-filtered)
       const totalRealizedPnL = Number(cumulativePnL.toFixed(2));
       const totalTrades = closedAnalyses.length;
+      const classicTrades = closedAnalyses.filter(a => a.method !== 'mlis_pro').length;
+      const mlisTrades = closedAnalyses.filter(a => a.method === 'mlis_pro').length;
 
       // Calculate ALL-TIME total P/L (same formula as platform-stats)
       let allTimePnLSum = 0;
-      allClosedAnalyses.forEach(analysis => {
-        const step5 = analysis.step5Result as Record<string, unknown> | null;
-        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
-        const outcomePrice = analysis.outcomePrice ? Number(analysis.outcomePrice) : 0;
-        const direction = ((step5?.direction as string) || 'long').toLowerCase();
+      let allTimeClassicPnL = 0;
+      let allTimeMlisPnL = 0;
 
-        if (entryPrice > 0 && outcomePrice > 0) {
-          let pnl = 0;
-          if (direction === 'short') {
-            pnl = ((entryPrice - outcomePrice) / entryPrice) * 100;
-          } else {
-            pnl = ((outcomePrice - entryPrice) / entryPrice) * 100;
-          }
+      allClosedAnalyses.forEach(analysis => {
+        const pnl = calculatePnL(analysis);
+        if (pnl !== 0) {
           allTimePnLSum += pnl;
+          if (analysis.method === 'mlis_pro') {
+            allTimeMlisPnL += pnl;
+          } else {
+            allTimeClassicPnL += pnl;
+          }
         }
       });
+
       const allTimeTotalPnL = Number(allTimePnLSum.toFixed(1));
       const allTimeTotalTrades = allClosedAnalyses.length;
 
@@ -1417,18 +1648,26 @@ Explain the key risks and what conditions would need to change before trading th
         success: true,
         data: {
           daily,
+          dailyClassic,
+          dailyMlis,
           summary: {
             totalRealizedPnL,
             totalTrades,
+            classicTrades,
+            mlisTrades,
             period: days,
             // All-time totals (same as platform-stats)
             allTimeTotalPnL,
             allTimeTotalTrades,
+            allTimeClassicPnL: Number(allTimeClassicPnL.toFixed(1)),
+            allTimeMlisPnL: Number(allTimeMlisPnL.toFixed(1)),
+            allTimeClassicTrades: classicAnalyses.length,
+            allTimeMlisTrades: mlisAnalyses.length,
           }
         }
       });
     } catch (error) {
-      console.error('Platform performance history error:', error);
+      logger.error({ error }, 'Platform performance history error');
       return reply.status(500).send({
         success: false,
         error: { code: 'PLATFORM_PERFORMANCE_ERROR', message: 'Failed to fetch platform performance history' }
@@ -1461,9 +1700,16 @@ Explain the key risks and what conditions would need to change before trading th
           outcome: true,
           expiresAt: true,
           createdAt: true,
+          aiExpertQuestionsUsed: true,
         },
         orderBy: { createdAt: 'desc' }
       });
+
+      // Calculate total AI Expert questions used
+      const aiExpertQuestionsTotal = userAnalyses.reduce(
+        (sum, a) => sum + (a.aiExpertQuestionsUsed || 0),
+        0
+      );
 
       // Calculate statistics from analyses
       const totalAnalyses = userAnalyses.length;
@@ -1535,7 +1781,7 @@ Explain the key risks and what conditions would need to change before trading th
             }
           }
         } catch (err) {
-          console.error('Failed to fetch prices for active performance:', err);
+          logger.warn({ error: err }, 'Failed to fetch prices for active performance');
         }
 
         // Calculate how many active analyses are profitable
@@ -1592,9 +1838,11 @@ Explain the key risks and what conditions would need to change before trading th
         goSignals,
         avoidSignals,
         lastAnalysisDate,
+        // AI Expert stats
+        aiExpertQuestionsTotal,
       });
     } catch (error) {
-      console.error('Statistics error:', error);
+      logger.error({ error }, 'Statistics error');
       return reply.status(500).send({
         success: false,
         error: { code: 'STATS_ERROR', message: 'Failed to fetch statistics' },
@@ -1723,7 +1971,7 @@ Explain the key risks and what conditions would need to change before trading th
             }
           }
         } catch (err) {
-          console.error('Failed to fetch prices for outcomes:', err);
+          logger.warn({ error: err }, 'Failed to fetch prices for outcomes');
         }
       }
 
@@ -1805,7 +2053,7 @@ Explain the key risks and what conditions would need to change before trading th
         bestStreak: user?.streakDays || 0,
       });
     } catch (error) {
-      console.error('Performance error:', error);
+      logger.error({ error }, 'Performance error');
       return reply.status(500).send({
         success: false,
         error: { code: 'PERF_ERROR', message: 'Failed to fetch performance data' },
@@ -1878,7 +2126,7 @@ Explain the key risks and what conditions would need to change before trading th
         data: analyses,
       });
     } catch (error) {
-      console.error('Recent analyses error:', error);
+      logger.error({ error }, 'Recent analyses error');
       return reply.status(500).send({
         success: false,
         error: { code: 'RECENT_ERROR', message: 'Failed to fetch recent analyses' },
@@ -4395,7 +4643,7 @@ Explain the key risks and what conditions would need to change before trading th
         }
       });
     } catch (error) {
-      console.error('Indicator charts error:', error);
+      logger.error({ error }, 'Indicator charts error');
       return reply.status(500).send({
         success: false,
         error: { code: 'CHART_ERROR', message: 'Failed to generate indicator charts' }
@@ -4539,7 +4787,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Check available analysis error:', error);
+      logger.error({ error }, 'Check available analysis error');
       return reply.status(500).send({
         success: false,
         error: { code: 'CHECK_ERROR', message: 'Failed to check available analysis' },
@@ -4657,7 +4905,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Purchase analysis error:', error);
+      logger.error({ error }, 'Purchase analysis error');
       return reply.status(500).send({
         success: false,
         error: { code: 'PURCHASE_ERROR', message: 'Failed to purchase analysis' },
@@ -4681,7 +4929,7 @@ Explain the key risks and what conditions would need to change before trading th
         tradeableOnly?: string;
       };
 
-      const limit = Math.min(20, Math.max(1, parseInt(query.limit || '5', 10)));
+      const limit = safeParseInt(query.limit, 5, 1, 20);
       const sortBy = (query.sortBy === 'totalScore' ? 'totalScore' : 'reliabilityScore') as 'reliabilityScore' | 'totalScore';
       const tradeableOnly = query.tradeableOnly === 'true';
 
@@ -4709,7 +4957,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Get top coins error:', error);
+      logger.error({ error }, 'Get top coins error');
       return reply.status(500).send({
         success: false,
         error: { code: 'TOP_COINS_ERROR', message: 'Failed to get top coins' },
@@ -4735,9 +4983,9 @@ Explain the key risks and what conditions would need to change before trading th
 
       // Trigger scan in background
       coinScoreCacheService.scanAllCoins('4h').then((result) => {
-        console.log(`[TopCoins] Manual refresh complete. Success: ${result.success}, Failed: ${result.failed}`);
+        logger.info({ success: result.success, failed: result.failed }, '[TopCoins] Manual refresh complete');
       }).catch((error) => {
-        console.error('[TopCoins] Manual refresh failed:', error);
+        logger.error({ error }, '[TopCoins] Manual refresh failed');
       });
 
       return reply.send({
@@ -4747,10 +4995,345 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Refresh top coins error:', error);
+      logger.error({ error }, 'Refresh top coins error');
       return reply.status(500).send({
         success: false,
         error: { code: 'REFRESH_ERROR', message: 'Failed to start refresh' },
+      });
+    }
+  });
+
+  /**
+   * POST /api/analysis/top-coins/scan
+   * Start a paid scan of top 30 coins (300 credits)
+   * Returns scan status and estimated completion time
+   */
+  app.post('/top-coins/scan', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const SCAN_COST = 300;
+    const COINS_TO_SCAN = 30;
+    const SECONDS_PER_COIN = 5;
+
+    try {
+      const user = getUser(request);
+      const userId = user.id;
+
+      // Check credit balance
+      const balanceResult = await creditService.getBalance(userId);
+      if (balanceResult.balance < SCAN_COST) {
+        return reply.status(402).send({
+          success: false,
+          error: {
+            code: 'INSUFFICIENT_CREDITS',
+            message: `Insufficient credits. Scan requires ${SCAN_COST} credits, you have ${balanceResult.balance}`,
+          },
+          creditsRequired: SCAN_COST,
+          creditsAvailable: balanceResult.balance,
+        });
+      }
+
+      // Charge credits
+      const chargeResult = await creditService.charge(userId, SCAN_COST, 'top_coins_scan', {
+        description: 'Top 30 coins analysis scan',
+      });
+
+      if (!chargeResult.success) {
+        return reply.status(402).send({
+          success: false,
+          error: { code: 'CHARGE_FAILED', message: 'Failed to charge credits' },
+        });
+      }
+
+      // Start scan in background (don't await)
+      coinScoreCacheService.scanAllCoins('4h').then((result) => {
+        logger.info({ userId, success: result.success, failed: result.failed }, '[TopCoins] Paid scan complete');
+      }).catch((error) => {
+        logger.error({ userId, error }, '[TopCoins] Paid scan failed');
+      });
+
+      const estimatedMinutes = Math.ceil((COINS_TO_SCAN * SECONDS_PER_COIN) / 60);
+
+      return reply.send({
+        success: true,
+        data: {
+          message: `Scan started. Analyzing ${COINS_TO_SCAN} coins...`,
+          estimatedMinutes,
+          coinsToScan: COINS_TO_SCAN,
+          creditsCharged: SCAN_COST,
+          creditsRemaining: chargeResult.newBalance,
+        },
+      });
+    } catch (error) {
+      logger.error({ error }, 'Paid scan error');
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'SCAN_ERROR', message: 'Failed to start scan' },
+      });
+    }
+  });
+
+  /**
+   * GET /api/analysis/top-coins/status
+   * Check the status of the coin score cache
+   */
+  app.get('/top-coins/status', async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const stats = await coinScoreCacheService.getCacheStats();
+      const isStale = await coinScoreCacheService.isCacheStale();
+      const scanSession = coinScoreCacheService.getScanSession();
+
+      return reply.send({
+        success: true,
+        data: {
+          ...stats,
+          isStale,
+          // Use actual scan session state instead of rough estimate
+          isScanning: scanSession.isScanning,
+          scanProgress: {
+            coinsAnalyzed: scanSession.coinsAnalyzed,
+            totalCoins: scanSession.totalCoins,
+            lastAnalyzedCoin: scanSession.lastAnalyzedCoin,
+            startedAt: scanSession.startedAt,
+          },
+        },
+      });
+    } catch (error) {
+      logger.error({ error }, 'Cache status error');
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'STATUS_ERROR', message: 'Failed to get cache status' },
+      });
+    }
+  });
+
+  // ===========================================
+  // Multi-Asset Scan Endpoints (Stocks, Bonds, Metals)
+  // ===========================================
+
+  /**
+   * GET /api/analysis/multi-asset/:market
+   * Get top assets for a market (stocks, bonds, metals)
+   */
+  app.get('/multi-asset/:market', async (request: FastifyRequest<{
+    Params: { market: string };
+    Querystring: { limit?: string; sortBy?: string; tradeableOnly?: string };
+  }>, reply: FastifyReply) => {
+    const { multiAssetScoreCacheService } = await import('./services/multi-asset-score-cache.service');
+
+    const { market } = request.params;
+    const { limit, sortBy = 'reliabilityScore', tradeableOnly = 'false' } = request.query;
+
+    const validMarkets = ['stocks', 'bonds', 'metals'];
+    if (!validMarkets.includes(market)) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'INVALID_MARKET', message: `Market must be one of: ${validMarkets.join(', ')}` },
+      });
+    }
+
+    try {
+      const limitNum = safeParseInt(limit, 5, 1, 30);
+      const marketType = market as 'stocks' | 'bonds' | 'metals';
+
+      let assets;
+      if (tradeableOnly === 'true') {
+        assets = await multiAssetScoreCacheService.getTopTradeableAssets(marketType, limitNum);
+      } else {
+        assets = await multiAssetScoreCacheService.getTopAssetsByScore(marketType, limitNum);
+      }
+
+      const cacheStats = await multiAssetScoreCacheService.getCacheStats(marketType);
+
+      return reply.send({
+        success: true,
+        data: {
+          market,
+          assets,
+          cacheInfo: {
+            ...cacheStats,
+            sortBy,
+          },
+        },
+      });
+    } catch (error) {
+      logger.error({ market, error }, 'Multi-asset fetch error');
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'FETCH_ERROR', message: 'Failed to get assets' },
+      });
+    }
+  });
+
+  /**
+   * POST /api/analysis/multi-asset/:market/scan
+   * Start a paid scan of a market (stocks, bonds, metals)
+   * Cost: 300 credits
+   */
+  app.post('/multi-asset/:market/scan', { preHandler: [authenticate] }, async (request: FastifyRequest<{
+    Params: { market: string };
+  }>, reply: FastifyReply) => {
+    const { multiAssetScoreCacheService, STOCKS_TO_SCAN, BONDS_TO_SCAN, METALS_TO_SCAN } = await import('./services/multi-asset-score-cache.service');
+
+    const SCAN_COST = 300;
+    const SECONDS_PER_ASSET = 3;
+    const { market } = request.params;
+
+    const validMarkets = ['stocks', 'bonds', 'metals'];
+    if (!validMarkets.includes(market)) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'INVALID_MARKET', message: `Market must be one of: ${validMarkets.join(', ')}` },
+      });
+    }
+
+    const marketType = market as 'stocks' | 'bonds' | 'metals';
+    const assetLists = { stocks: STOCKS_TO_SCAN, bonds: BONDS_TO_SCAN, metals: METALS_TO_SCAN };
+    const assetsToScan = assetLists[marketType].length;
+
+    try {
+      const user = getUser(request);
+      const userId = user.id;
+
+      // Check credit balance
+      const balanceResult = await creditService.getBalance(userId);
+      if (balanceResult.balance < SCAN_COST) {
+        return reply.status(402).send({
+          success: false,
+          error: {
+            code: 'INSUFFICIENT_CREDITS',
+            message: `Insufficient credits. Scan requires ${SCAN_COST} credits, you have ${balanceResult.balance}`,
+          },
+          creditsRequired: SCAN_COST,
+          creditsAvailable: balanceResult.balance,
+        });
+      }
+
+      // Charge credits
+      const chargeResult = await creditService.charge(userId, SCAN_COST, `${market}_scan`, {
+        description: `Top ${assetsToScan} ${market} analysis scan`,
+      });
+
+      if (!chargeResult.success) {
+        return reply.status(402).send({
+          success: false,
+          error: { code: 'CHARGE_FAILED', message: 'Failed to charge credits' },
+        });
+      }
+
+      // Start scan in background (don't await)
+      multiAssetScoreCacheService.scanMarket(marketType).then((result) => {
+        logger.info({ market, userId, success: result.success, failed: result.failed }, '[MultiAsset] Paid scan complete');
+      }).catch((error) => {
+        logger.error({ market, userId, error }, '[MultiAsset] Paid scan failed');
+      });
+
+      const estimatedMinutes = Math.ceil((assetsToScan * SECONDS_PER_ASSET) / 60);
+
+      return reply.send({
+        success: true,
+        data: {
+          message: `Scan started. Analyzing ${assetsToScan} ${market}...`,
+          market,
+          estimatedMinutes,
+          assetsToScan,
+          creditsCharged: SCAN_COST,
+          creditsRemaining: chargeResult.newBalance,
+        },
+      });
+    } catch (error) {
+      logger.error({ market, error }, 'Multi-asset scan error');
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'SCAN_ERROR', message: 'Failed to start scan' },
+      });
+    }
+  });
+
+  /**
+   * GET /api/analysis/multi-asset/:market/status
+   * Check the status of a market scan
+   */
+  app.get('/multi-asset/:market/status', async (request: FastifyRequest<{
+    Params: { market: string };
+  }>, reply: FastifyReply) => {
+    const { multiAssetScoreCacheService } = await import('./services/multi-asset-score-cache.service');
+
+    const { market } = request.params;
+    const validMarkets = ['stocks', 'bonds', 'metals'];
+    if (!validMarkets.includes(market)) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'INVALID_MARKET', message: `Market must be one of: ${validMarkets.join(', ')}` },
+      });
+    }
+
+    const marketType = market as 'stocks' | 'bonds' | 'metals';
+
+    try {
+      const stats = await multiAssetScoreCacheService.getCacheStats(marketType);
+      const isStale = await multiAssetScoreCacheService.isCacheStale(marketType);
+      const scanSession = multiAssetScoreCacheService.getScanSession(marketType);
+
+      return reply.send({
+        success: true,
+        data: {
+          market,
+          ...stats,
+          isStale,
+          isScanning: scanSession.isScanning,
+          scanProgress: {
+            assetsAnalyzed: scanSession.assetsAnalyzed,
+            totalAssets: scanSession.totalAssets,
+            lastAnalyzedAsset: scanSession.lastAnalyzedAsset,
+            startedAt: scanSession.startedAt,
+          },
+        },
+      });
+    } catch (error) {
+      logger.error({ market, error }, 'Multi-asset status error');
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'STATUS_ERROR', message: 'Failed to get cache status' },
+      });
+    }
+  });
+
+  /**
+   * GET /api/analysis/multi-asset/:market/all
+   * Get all cached assets for a market
+   */
+  app.get('/multi-asset/:market/all', async (request: FastifyRequest<{
+    Params: { market: string };
+  }>, reply: FastifyReply) => {
+    const { multiAssetScoreCacheService } = await import('./services/multi-asset-score-cache.service');
+
+    const { market } = request.params;
+    const validMarkets = ['stocks', 'bonds', 'metals'];
+    if (!validMarkets.includes(market)) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: 'INVALID_MARKET', message: `Market must be one of: ${validMarkets.join(', ')}` },
+      });
+    }
+
+    const marketType = market as 'stocks' | 'bonds' | 'metals';
+
+    try {
+      const assets = await multiAssetScoreCacheService.getAllCachedAssets(marketType);
+      const stats = await multiAssetScoreCacheService.getCacheStats(marketType);
+
+      return reply.send({
+        success: true,
+        data: {
+          market,
+          assets,
+          cacheInfo: stats,
+        },
+      });
+    } catch (error) {
+      logger.error({ market, error }, 'Multi-asset all fetch error');
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'FETCH_ERROR', message: 'Failed to get all assets' },
       });
     }
   });
@@ -4766,7 +5349,7 @@ Explain the key risks and what conditions would need to change before trading th
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = getUser(request).id;
     const query = request.query as { days?: string };
-    const days = Math.min(90, Math.max(7, parseInt(query.days || '30', 10)));
+    const days = safeParseInt(query.days, 30, 7, 90);
 
     try {
       const now = new Date();
@@ -4888,7 +5471,7 @@ Explain the key risks and what conditions would need to change before trading th
             }
           }
         } catch (err) {
-          console.error('Failed to fetch prices:', err);
+          logger.warn({ error: err }, 'Failed to fetch prices for performance history');
         }
 
         // Calculate unrealized P/L for today
@@ -4946,7 +5529,7 @@ Explain the key risks and what conditions would need to change before trading th
         }
       });
     } catch (error) {
-      console.error('Performance history error:', error);
+      logger.error({ error }, 'Performance history error');
       return reply.status(500).send({
         success: false,
         error: { code: 'PERFORMANCE_HISTORY_ERROR', message: 'Failed to fetch performance history' },

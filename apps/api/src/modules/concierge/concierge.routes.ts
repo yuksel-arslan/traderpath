@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { authenticate } from '../../core/auth/middleware';
 import { conciergeService } from './concierge.service';
 import { prisma } from '../../core/database';
+import { logger } from '../../core/logger';
 import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from '../../config/languages';
 import { synthesizeSpeech, isGoogleTTSAvailable, getSupportedTTSLanguages } from '../../core/google-tts';
 
@@ -55,7 +56,7 @@ export async function conciergeRoutes(app: FastifyInstance) {
 
       return reply.send(response);
     } catch (error) {
-      console.error('Concierge chat error:', error);
+      logger.error({ error }, 'Concierge chat error');
 
       // Handle Zod validation errors
       if (error instanceof z.ZodError) {

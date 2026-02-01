@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
+import { Footer } from '../../../components/common/Footer';
 
 const CONTACT_OPTIONS = [
   {
@@ -330,26 +331,7 @@ export default function ContactPage() {
       </main>
 
       {/* Footer */}
-      <footer className="py-8 border-t mt-12">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-muted-foreground text-sm">
-              © 2025 <span className="text-red-500 font-semibold">Trader</span><span className="text-green-500 font-semibold">Path</span>. All rights reserved.
-            </p>
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <Link href="/privacy" className="hover:text-foreground transition">
-                Privacy Policy
-              </Link>
-              <Link href="/terms" className="hover:text-foreground transition">
-                Terms of Service
-              </Link>
-              <Link href="/help" className="hover:text-foreground transition">
-                Help Center
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer variant="minimal" />
     </div>
   );
 }

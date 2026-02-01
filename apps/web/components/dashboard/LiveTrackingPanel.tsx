@@ -18,7 +18,7 @@ import Link from 'next/link';
 import { getAuthToken, getApiUrl } from '../../lib/api';
 
 interface TakeProfit {
-  level: 'TP1' | 'TP2' | 'TP3';
+  level: 'TP1' | 'TP2';
   price: number;
   distance: number;
   hit: boolean;
@@ -39,7 +39,7 @@ interface LiveTrade {
   };
   takeProfits: TakeProfit[];
   status: 'active' | 'tp_hit' | 'sl_hit' | 'expired';
-  hitLevel?: 'TP1' | 'TP2' | 'TP3' | 'SL';
+  hitLevel?: 'TP1' | 'TP2' | 'SL';
   unrealizedPnL: number;
   analysisDate: string;
   expiresAt: string;
@@ -215,7 +215,7 @@ export function LiveTrackingPanel({ className = '' }: LiveTrackingPanelProps) {
                 <div className="flex justify-between text-xs text-muted-foreground mb-1">
                   <span>SL: ${formatPrice(trade.stopLoss.price)}</span>
                   <span>Entry: ${formatPrice(trade.entryPrice)}</span>
-                  <span>TP1: ${formatPrice(trade.takeProfits[0]?.price || 0)}</span>
+                  <span>TP1: ${formatPrice(trade.takeProfits?.[0]?.price || 0)}</span>
                 </div>
                 <div className="h-2 bg-accent rounded-full overflow-hidden relative">
                   {/* SL Zone */}
@@ -230,7 +230,7 @@ export function LiveTrackingPanel({ className = '' }: LiveTrackingPanelProps) {
                     style={{
                       left: `${Math.min(Math.max(
                         ((trade.currentPrice - trade.stopLoss.price) /
-                        (trade.takeProfits[0]?.price - trade.stopLoss.price)) * 100,
+                        ((trade.takeProfits?.[0]?.price || trade.entryPrice) - trade.stopLoss.price)) * 100,
                         0
                       ), 100)}%`,
                     }}

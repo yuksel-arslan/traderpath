@@ -5,6 +5,7 @@
 
 import { Pool, PoolClient } from 'pg';
 import { config } from './config';
+import { logger } from './logger';
 
 // Create connection pool
 const pool = new Pool({
@@ -16,7 +17,7 @@ const pool = new Pool({
 
 // Log pool errors
 pool.on('error', (err) => {
-  console.error('Unexpected database pool error:', err);
+  logger.error({ error: err }, 'Unexpected database pool error');
 });
 
 // Query helper with automatic connection management
@@ -29,11 +30,11 @@ export async function query<T = any>(
     const result = await pool.query(text, params);
     const duration = Date.now() - start;
     if (duration > 100) {
-      console.log('Slow query:', { text, duration, rows: result.rowCount });
+      logger.warn({ query: text.substring(0, 100), duration, rows: result.rowCount }, 'Slow database query');
     }
     return { rows: result.rows as T[], rowCount: result.rowCount || 0 };
   } catch (error) {
-    console.error('Database query error:', { text, error });
+    logger.error({ query: text.substring(0, 100), error }, 'Database query error');
     throw error;
   }
 }
