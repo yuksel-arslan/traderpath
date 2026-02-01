@@ -79,7 +79,9 @@ export function ChatInput({
         recognition.onresult = (event: SpeechRecognitionEvent) => {
           let transcript = '';
           for (let i = 0; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript;
+            if (event.results[i]?.length > 0 && event.results[i][0]?.transcript) {
+              transcript += event.results[i][0].transcript;
+            }
           }
           setMessage(transcript);
         };

@@ -574,8 +574,7 @@ const start = async () => {
     logger.info(`   API:       http://localhost:${config.port}/api/v1`);
     logger.info('');
   } catch (error) {
-    console.error('STARTUP ERROR:', error);
-    logger.error('Failed to start server:', error);
+    logger.error({ error }, 'STARTUP ERROR: Failed to start server');
     process.exit(1);
   }
 };

@@ -5,6 +5,7 @@
  */
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { logger } from '../../core/logger';
 import {
   getErrors,
   getPatterns,
@@ -55,10 +56,10 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
 
         return { success: true, data: health };
       } catch (error: any) {
-        console.error('[BILGE] Health check error:', error);
+        logger.error({ error }, '[BILGE] Health check error');
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to get health status',
+          error: 'Failed to get health status',
         });
       }
     }
@@ -98,10 +99,10 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
           },
         };
       } catch (error: any) {
-        console.error('[BILGE] Dashboard error:', error);
+        logger.error({ error }, '[BILGE] Dashboard error');
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to get dashboard data',
+          error: 'Failed to get dashboard data',
         });
       }
     }
@@ -144,10 +145,10 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
           total: errors.length,
         };
       } catch (error: any) {
-        console.error('[BILGE] Get errors error:', error);
+        logger.error({ error }, '[BILGE] Get errors error');
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to get errors',
+          error: 'Failed to get errors',
         });
       }
     }
@@ -197,10 +198,10 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
 
         return { success: true, data: error };
       } catch (error: any) {
-        console.error('[BILGE] Resolve error error:', error);
+        logger.error({ error }, '[BILGE] Resolve error error');
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to resolve error',
+          error: 'Failed to resolve error',
         });
       }
     }
@@ -237,10 +238,10 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
 
         return { success: true, data: { id: error.id } };
       } catch (error: any) {
-        console.error('[BILGE] Report error error:', error);
+        logger.error({ error }, '[BILGE] Report error error');
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to report error',
+          error: 'Failed to report error',
         });
       }
     }
@@ -266,10 +267,10 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
         const patterns = await getPatterns();
         return { success: true, data: patterns };
       } catch (error: any) {
-        console.error('[BILGE] Get patterns error:', error);
+        logger.error({ error }, '[BILGE] Get patterns error');
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to get patterns',
+          error: 'Failed to get patterns',
         });
       }
     }
@@ -297,10 +298,10 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
 
         return { success: true, data: report };
       } catch (error: any) {
-        console.error('[BILGE] Weekly report error:', error);
+        logger.error({ error }, '[BILGE] Weekly report error');
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to generate weekly report',
+          error: 'Failed to generate weekly report',
         });
       }
     }
@@ -366,10 +367,10 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
           message: 'Thank you for your feedback!',
         };
       } catch (error: any) {
-        console.error('[BILGE] Submit feedback error:', error);
+        logger.error({ error }, '[BILGE] Submit feedback error');
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to submit feedback',
+          error: 'Failed to submit feedback',
         });
       }
     }
@@ -406,10 +407,10 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
           total: feedbacks.length,
         };
       } catch (error: any) {
-        console.error('[BILGE] Get feedback error:', error);
+        logger.error({ error }, '[BILGE] Get feedback error');
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to get feedback',
+          error: 'Failed to get feedback',
         });
       }
     }
@@ -444,10 +445,10 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
 
         return { success: true, data: feedback };
       } catch (error: any) {
-        console.error('[BILGE] Approve feedback error:', error);
+        logger.error({ error }, '[BILGE] Approve feedback error');
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to approve feedback',
+          error: 'Failed to approve feedback',
         });
       }
     }
@@ -482,10 +483,10 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
 
         return { success: true, data: feedback };
       } catch (error: any) {
-        console.error('[BILGE] Reject feedback error:', error);
+        logger.error({ error }, '[BILGE] Reject feedback error');
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to reject feedback',
+          error: 'Failed to reject feedback',
         });
       }
     }
@@ -537,10 +538,10 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
           message: 'Response sent to user',
         };
       } catch (error: any) {
-        console.error('[BILGE] Respond to feedback error:', error);
+        logger.error({ error }, '[BILGE] Respond to feedback error');
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to respond to feedback',
+          error: 'Failed to respond to feedback',
         });
       }
     }
@@ -579,10 +580,10 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
           total: ideas.length,
         };
       } catch (error: any) {
-        console.error('[BILGE] Get ideas error:', error);
+        logger.error({ error }, '[BILGE] Get ideas error');
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to get ideas',
+          error: 'Failed to get ideas',
         });
       }
     }
@@ -624,10 +625,10 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
 
         return { success: true, data: idea };
       } catch (error: any) {
-        console.error('[BILGE] Generate idea error:', error);
+        logger.error({ error }, '[BILGE] Generate idea error');
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to generate idea',
+          error: 'Failed to generate idea',
         });
       }
     }

@@ -3,6 +3,14 @@
 // Production-grade error management
 // ===========================================
 
+import { ZodError } from 'zod';
+
+// Prisma error type for better type safety
+interface PrismaKnownError extends Error {
+  code: string;
+  meta?: { target?: string[] };
+}
+
 /**
  * Base error class for all TradePath errors
  */
@@ -326,30 +334,34 @@ export function errorHandler(
     });
   }
 
-  // Handle Zod validation errors
-  if (error.name === 'ZodError') {
+  // Handle Zod validation errors - sanitize to prevent schema exposure
+  if (error instanceof ZodError) {
+    // Only expose field names and messages, not internal validation details
+    const sanitizedErrors = error.errors.map((e) => ({
+      field: e.path[0] || 'unknown',
+      message: e.message,
+    }));
     return reply.status(400).send({
       success: false,
       error: {
         code: 'VALIDATION_001',
         message: 'Validation failed',
-        details: (error as any).errors,
+        details: sanitizedErrors,
       },
     });
   }
 
-  // Handle Prisma errors
+  // Handle Prisma errors with proper typing
   if (error.name === 'PrismaClientKnownRequestError') {
-    const prismaError = error as any;
+    const prismaError = error as PrismaKnownError;
 
-    // Unique constraint violation
+    // Unique constraint violation - don't expose field names
     if (prismaError.code === 'P2002') {
       return reply.status(409).send({
         success: false,
         error: {
           code: 'RESOURCE_002',
-          message: 'Resource already exists',
-          details: { fields: prismaError.meta?.target },
+          message: 'A resource with this value already exists',
         },
       });
     }
