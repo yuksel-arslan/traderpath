@@ -521,6 +521,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-01 | AI Concierge "Altın alınır mı?" sorusuna eksik yanıt veriyordu | 1) "alınır mı?", "satmalı mı?", "should I buy?" pattern'leri CAPITAL_FLOW_RECOMMENDATION intent'ine eklendi, 2) Gold/Silver/BTC/ETH gibi asset'ler tespit edilip assetHint olarak aktarılıyor, 3) handleCapitalFlowRecommendation fonksiyonuna asset-specific advice eklendi (Türkçe/İngilizce), 4) Gemini prompt'a örnek sorgular eklendi | `concierge.service.ts`, `system-prompt.ts` |
 | 2026-02-01 | AI Concierge "Öneri oluşturulamadı" hatası (Capital Flow recommendation çalışmıyordu) | `FlowRecommendation` interface'inde alan adı `reason` ama kod `reasoning` kullanıyordu. `undefined.toLowerCase()` çağrısı hata fırlatıyordu. 3 yerde düzeltildi: 1) `recommendation.reasoning` → `recommendation.reason`, 2) `getFlowRecommendation()` fallback'te yanlış alan adları düzeltildi (`reasoning`→`reason`, `marketPhase`→`phase`, `suggestedSectors`→`sectors`, eksik `direction` eklendi) | `concierge.service.ts:1418-1420,1528`, `capital-flow.service.ts:832-840` |
 | 2026-02-01 | Asset ikonları görünmüyordu (CoinIcon component) | `asset-logos-cache.ts` public API için `authFetch` kullanıyordu, giriş yapmamış kullanıcılarda başarısız oluyordu. 1) `authFetch` yerine doğrudan `fetch` kullanıldı, 2) API başarısız olunca boş cache yerine FALLBACK_CACHE döndürülüyor (26 crypto, 9 stock, 3 metal, 3 bond logo), 3) 10s timeout eklendi | `apps/web/lib/asset-logos-cache.ts` |
+| 2026-02-01 | MLIS Pro analiz sonuçları çelişkili (WAIT/HOLD/AVOID 3 farklı verdict, 0% confidence, 8.1/10 vs 81/100) | 5 kritik hata düzeltildi: 1) Frontend step5 yerine step7'den MLIS verilerini okuyor (confidence, recommendation, direction), 2) VerdictBadge tutarlı (recommendation prop kaldırıldı, isMLISPro flag eklendi), 3) getDirection() artık confidence threshold'a saygı duyuyor (NEUTRAL döner), 4) <30% confidence'ta HOLD ve NEUTRAL döner, 5) Tüm skorlar 0-100 ölçeğinde normalize edildi | `mlis.service.ts`, `details/[id]/page.tsx`, `TradeDecisionVisual.tsx` |
 
 ---
 
@@ -1653,6 +1654,14 @@ Kullanıcı Hakları Aktif:
   - Email ücretsiz (Daily Pass sisteminin parçası)
   - Fullscreen modal export UI da aynı şekilde güncellendi
   - Kullanılmayan import'lar ve state'ler temizlendi
+- **MLIS Pro Analiz Çelişkileri Düzeltildi** (5 kritik hata):
+  - **Hata 1**: Frontend MLIS verilerini yanlış step'ten okuyordu (step5 → step7)
+  - **Hata 2**: VerdictBadge 3 farklı değer gösteriyordu (WAIT/HOLD/AVOID)
+  - **Hata 3**: Direction ve Verdict farklı skorlar kullanıyordu
+  - **Hata 4**: 0% confidence ile öneri veriliyordu
+  - **Hata 5**: Skor ölçekleri tutarsızdı (8.1/10 vs 81/100)
+  - Artık düşük güven (<30%) olduğunda: HOLD öneri + NEUTRAL yön + açıklayıcı mesaj
+  - Tüm skorlar 0-100 ölçeğinde standartlaştırıldı
 
 ---
 
