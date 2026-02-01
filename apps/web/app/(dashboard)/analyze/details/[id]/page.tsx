@@ -25,7 +25,6 @@ import {
   Check,
   Download,
   ChevronDown,
-  Image,
   FileText,
   Mail,
 } from 'lucide-react';
@@ -240,127 +239,6 @@ export default function AnalysisDetailsPage() {
       handleAutoPdf();
     }
   }, [searchParams, analysis, loading, handleAutoPdf]);
-
-  // Export as PNG (using blob for reliable downloads)
-  const handleExportPNG = async () => {
-    if (!pageRef.current || exporting || !analysis) return;
-
-    setExporting(true);
-    setExportDropdownOpen(false);
-    try {
-      // Wait for content to stabilize
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const canvas = await html2canvas(pageRef.current, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        logging: true, // Enable logging for debugging
-        useCORS: true,
-        allowTaint: true,
-        foreignObjectRendering: false,
-        removeContainer: true,
-        imageTimeout: 5000,
-        onclone: (clonedDoc) => {
-          // Remove external images that might cause CORS issues
-          const images = clonedDoc.querySelectorAll('img');
-          images.forEach(img => {
-            if (img.src.includes('cryptoicons') || img.src.includes('coingecko')) {
-              img.style.display = 'none';
-            }
-          });
-          const clonedElement = clonedDoc.querySelector('[data-export-container]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.overflow = 'visible';
-            (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-          }
-        },
-      });
-
-      // Use blob for reliable download
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          console.error('PNG blob is null');
-          alert('Failed to create image. Please try again.');
-          setExporting(false);
-          return;
-        }
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const symbol = analysis.symbol || 'Analysis';
-        const date = new Date().toISOString().split('T')[0];
-        link.download = `TraderPath_${symbol}_${date}.png`;
-        link.href = url;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        setExporting(false);
-      }, 'image/png');
-    } catch (err) {
-      console.error('Failed to export PNG:', err);
-      alert('Failed to export image: ' + (err instanceof Error ? err.message : 'Unknown error'));
-      setExporting(false);
-    }
-  };
-
-  // Export as JPG (using blob for reliable downloads)
-  const handleExportJPG = async () => {
-    if (!pageRef.current || exporting || !analysis) return;
-
-    setExporting(true);
-    setExportDropdownOpen(false);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const canvas = await html2canvas(pageRef.current, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        logging: true,
-        useCORS: true,
-        allowTaint: true,
-        foreignObjectRendering: false,
-        removeContainer: true,
-        imageTimeout: 5000,
-        onclone: (clonedDoc) => {
-          const images = clonedDoc.querySelectorAll('img');
-          images.forEach(img => {
-            if (img.src.includes('cryptoicons') || img.src.includes('coingecko')) {
-              img.style.display = 'none';
-            }
-          });
-          const clonedElement = clonedDoc.querySelector('[data-export-container]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.overflow = 'visible';
-            (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-          }
-        },
-      });
-
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          console.error('JPG blob is null');
-          alert('Failed to create image. Please try again.');
-          setExporting(false);
-          return;
-        }
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const symbol = analysis.symbol || 'Analysis';
-        const date = new Date().toISOString().split('T')[0];
-        link.download = `TraderPath_${symbol}_${date}.jpg`;
-        link.href = url;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        setExporting(false);
-      }, 'image/jpeg', 0.92);
-    } catch (err) {
-      console.error('Failed to export JPG:', err);
-      alert('Failed to export image: ' + (err instanceof Error ? err.message : 'Unknown error'));
-      setExporting(false);
-    }
-  };
 
   // Export as PDF
   const handleExportPDF = async () => {
@@ -697,47 +575,20 @@ export default function AnalysisDetailsPage() {
               {exportDropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setExportDropdownOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 z-50 overflow-hidden">
-                    <button
-                      onClick={handleExportPNG}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-                    >
-                      <Image className="w-4 h-4 text-teal-500" />
-                      <div>
-                        <div>Download PNG</div>
-                        <div className="text-xs text-gray-400">High Quality</div>
-                      </div>
-                    </button>
-                    <button
-                      onClick={handleExportJPG}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-                    >
-                      <Image className="w-4 h-4 text-blue-500" />
-                      <div>
-                        <div>Download JPG</div>
-                        <div className="text-xs text-gray-400">Smaller Size</div>
-                      </div>
-                    </button>
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 z-50 overflow-hidden">
                     <button
                       onClick={handleExportPDF}
                       className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
                     >
-                      <FileText className="w-4 h-4 text-red-500" />
-                      <div>
-                        <div>Download PDF</div>
-                        <div className="text-xs text-gray-400">Full Report</div>
-                      </div>
+                      <FileText className="w-4 h-4 text-teal-500" />
+                      <span>Download Report</span>
                     </button>
-                    <div className="border-t border-gray-200 dark:border-slate-700" />
                     <button
                       onClick={handleSendEmail}
                       className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
                     >
-                      <Mail className="w-4 h-4 text-purple-500" />
-                      <div>
-                        <div>Send via Email</div>
-                        <div className="text-xs text-gray-400">Share Report</div>
-                      </div>
+                      <Mail className="w-4 h-4 text-teal-500" />
+                      <span>Email Report</span>
                     </button>
                   </div>
                 </>
