@@ -819,10 +819,26 @@ function detectActiveRotation(markets: MarketFlow[]): ActiveRotation | null {
 
 /**
  * Get flow recommendation only
+ * Returns a default recommendation if data is unavailable
  */
 export async function getFlowRecommendation(): Promise<FlowRecommendation> {
-  const summary = await getCapitalFlowSummary();
-  return summary.recommendation;
+  try {
+    const summary = await getCapitalFlowSummary();
+    return summary.recommendation;
+  } catch (error) {
+    console.error('[CapitalFlow] Error getting recommendation, returning default:', error);
+
+    // Return a safe default recommendation (matching FlowRecommendation interface)
+    return {
+      primaryMarket: 'crypto',
+      phase: 'mid',
+      action: 'wait',
+      direction: 'BUY',
+      reason: 'Capital flow data is temporarily unavailable. Please check the Capital Flow Radar for detailed analysis when data is restored.',
+      sectors: [],
+      confidence: 30,
+    };
+  }
 }
 
 /**
