@@ -1625,6 +1625,23 @@ Kullanıcı Hakları Aktif:
   - User Feedback System (admin onayı ile)
   - Maliyet analizi ($2.50-$32/ay)
   - 4 haftalık uygulama yol haritası
+- **BILGE Admin Dashboard eklendi**:
+  - Yeni sayfa: `apps/web/app/(dashboard)/admin/bilge/page.tsx`
+  - **Dashboard Tab**: Guardian sağlık durumu, son 24 saat hataları, kritik hata sayısı, aktif issue'lar, uptime
+  - **Errors Tab**: Hata listesi, severity/status filtreleri, arama, error detay modal, resolve işlevi
+  - **Patterns Tab**: 10 error pattern kartları, match count, suggested fix görüntüleme
+  - **Feedback Tab**: Kullanıcı feedback listesi, BILGE AI analizi, approve/reject/respond işlevleri
+  - **Ideas Tab**: Innovation fikirleri, Gemini ile yeni fikir üretme
+  - **Reports Tab**: Haftalık rapor görüntüleme, trend analizi, BILGE recommendations
+  - Admin navigation'a BILGE linki eklendi (teal renkli Shield ikonu)
+  - Dosya: `apps/web/app/(dashboard)/admin/page.tsx` güncellendi
+- **BILGE Weekly Report Cron Job eklendi**:
+  - Yeni dosya: `apps/api/src/modules/bilge/bilge-cron.job.ts`
+  - Her Pazar 21:00 UTC+3 (18:00 UTC) çalışır
+  - Haftalık rapor oluşturur ve Slack/Discord'a gönderir
+  - `startBilgeWeeklyReportJob()` ve `stopBilgeWeeklyReportJob()` fonksiyonları
+  - Server startup/shutdown'a entegre edildi
+  - Dosyalar: `bilge-cron.job.ts`, `index.ts`
 
 ---
 
