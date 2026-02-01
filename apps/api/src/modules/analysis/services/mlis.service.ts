@@ -161,8 +161,9 @@ export class MLISService {
       );
 
       // Determine recommendation and direction
+      // Both should respect confidence threshold for consistency
       const recommendation = this.getRecommendation(overallScore, confidence, confidenceThreshold);
-      const direction = this.getDirection(signals, overallScore);
+      const direction = this.getDirection(signals, overallScore, confidence, confidenceThreshold);
 
       // Assess risk
       const riskLevel = this.assessRiskLevel(volatilityLayer, signals);
@@ -587,6 +588,13 @@ export class MLISService {
     confidence: number,
     threshold: number
   ): MLISResult['recommendation'] {
+    // If confidence is very low (< 30%), always return HOLD regardless of score
+    // This prevents giving strong signals with unreliable data
+    if (confidence < 30) {
+      return 'HOLD';
+    }
+
+    // If confidence is below threshold but >= 30%, use dampened score
     const effectiveScore = confidence >= threshold * 100 ? score : 50;
 
     if (effectiveScore >= 80) return 'STRONG_BUY';
@@ -596,7 +604,17 @@ export class MLISService {
     return 'STRONG_SELL';
   }
 
-  private getDirection(signals: MLISSignals, score: number): MLISResult['direction'] {
+  private getDirection(
+    signals: MLISSignals,
+    score: number,
+    confidence: number,
+    threshold: number
+  ): MLISResult['direction'] {
+    // If confidence is below threshold, return NEUTRAL (consistent with recommendation logic)
+    if (confidence < threshold * 100) {
+      return 'NEUTRAL';
+    }
+
     const avgSignal = (signals.momentum + signals.trend + signals.volume) / 3;
 
     if (score >= 60 && avgSignal > 20) return 'LONG';
