@@ -1550,10 +1550,66 @@ ${nextSteps}
       };
     } catch (error) {
       console.error('[Concierge] Capital flow recommendation error:', error);
-      const errorMessage = await this.translateIfNeeded(
-        'Could not generate recommendation. Please try again.',
-        language
-      );
+
+      // If we have an asset hint, provide a helpful fallback response
+      if (assetHint) {
+        const assetName = assetHint === 'GOLD' ? 'Gold' : assetHint === 'SILVER' ? 'Silver' : assetHint;
+        const assetNameTr = assetHint === 'GOLD' ? 'Altın' : assetHint === 'SILVER' ? 'Gümüş' : assetHint;
+        const analysisSymbol = assetHint === 'GOLD' ? 'GLD' : assetHint === 'SILVER' ? 'SLV' : assetHint;
+
+        const fallbackMessage = language === 'tr'
+          ? `🔍 ${assetNameTr} Hakkında
+
+Capital Flow verileri şu an yüklenemiyor, ancak size yardımcı olabilirim:
+
+📊 **Teknik Analiz İçin:**
+• "${analysisSymbol} analiz" yazarak detaylı teknik analiz alabilirsiniz
+• "${analysisSymbol} mlis pro" yazarak AI destekli gelişmiş analiz alabilirsiniz
+
+💡 **Genel Bilgi:**
+${assetHint === 'GOLD' || assetHint === 'SILVER' ? `• Değerli metaller genellikle dolar zayıfladığında ve belirsizlik dönemlerinde yükselir
+• Risk-off ortamlarında güvenli liman olarak tercih edilir` : `• Detaylı analiz için yukarıdaki komutları kullanın`}
+
+Analiz maliyeti: 25 kredi`
+          : `🔍 About ${assetName}
+
+Capital Flow data is currently unavailable, but I can still help:
+
+📊 **For Technical Analysis:**
+• Type "${analysisSymbol} analysis" for detailed technical analysis
+• Type "${analysisSymbol} mlis pro" for AI-powered advanced analysis
+
+💡 **General Info:**
+${assetHint === 'GOLD' || assetHint === 'SILVER' ? `• Precious metals typically rise when dollar weakens and during uncertainty
+• Preferred as safe haven in risk-off environments` : `• Use the commands above for detailed analysis`}
+
+Analysis cost: 25 credits`;
+
+        return {
+          success: true,
+          intent: 'CAPITAL_FLOW_RECOMMENDATION',
+          message: fallbackMessage,
+          creditsSpent: 0,
+          creditsRemaining: creditBalance,
+          detectedLanguage: language,
+        };
+      }
+
+      // Generic error response
+      const errorMessage = language === 'tr'
+        ? `Capital Flow verileri şu an yüklenemiyor.
+
+Şunları deneyebilirsiniz:
+• "BTC analiz" - Teknik analiz
+• "Para nereye akıyor?" - Capital Flow özeti
+• "yardım" - Tüm komutlar`
+        : `Capital Flow data is currently unavailable.
+
+You can try:
+• "BTC analysis" - Technical analysis
+• "Where is money flowing?" - Capital Flow summary
+• "help" - All commands`;
+
       return {
         success: false,
         intent: 'CAPITAL_FLOW_RECOMMENDATION',
