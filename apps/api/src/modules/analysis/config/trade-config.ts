@@ -118,6 +118,9 @@ export interface TradeTypeConfig {
   riskTolerance: 'high' | 'medium' | 'low';
   steps: StepConfig[];
   creditCost: number;
+  // Maximum stop loss and take profit distances (percentage from entry)
+  maxStopLossPercent: number;
+  maxTakeProfitPercent: number;
 }
 
 // ============================================================================
@@ -413,6 +416,8 @@ const SCALPING_CONFIG: TradeTypeConfig = {
   holdingPeriod: '1-15 minutes',
   riskTolerance: 'high',
   creditCost: 3,
+  maxStopLossPercent: 3,     // Max 3% stop loss for scalping
+  maxTakeProfitPercent: 6,   // Max 6% take profit for scalping
   steps: [
     // Step 1: Market Pulse
     {
@@ -558,6 +563,8 @@ const DAY_TRADE_CONFIG: TradeTypeConfig = {
   holdingPeriod: '1-8 hours',
   riskTolerance: 'medium',
   creditCost: 2,
+  maxStopLossPercent: 8,     // Max 8% stop loss for day trade
+  maxTakeProfitPercent: 15,  // Max 15% take profit for day trade
   steps: [
     // Step 1: Market Pulse
     {
@@ -712,6 +719,8 @@ const SWING_CONFIG: TradeTypeConfig = {
   holdingPeriod: '2-14 days',
   riskTolerance: 'low',
   creditCost: 1,
+  maxStopLossPercent: 15,    // Max 15% stop loss for swing trade
+  maxTakeProfitPercent: 25,  // Max 25% take profit for swing trade
   steps: [
     // Step 1: Market Pulse
     {
@@ -949,6 +958,20 @@ export function getDataRequirements(type: TradeType): {
  */
 export function getCreditCost(type: TradeType): number {
   return TRADE_CONFIG[type].creditCost;
+}
+
+/**
+ * Get max stop loss percentage for a trade type
+ */
+export function getMaxStopLossPercent(type: TradeType): number {
+  return TRADE_CONFIG[type].maxStopLossPercent;
+}
+
+/**
+ * Get max take profit percentage for a trade type
+ */
+export function getMaxTakeProfitPercent(type: TradeType): number {
+  return TRADE_CONFIG[type].maxTakeProfitPercent;
 }
 
 // ============================================================================
