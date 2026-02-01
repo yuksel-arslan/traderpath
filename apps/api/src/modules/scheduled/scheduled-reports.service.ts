@@ -10,6 +10,7 @@ import { creditService } from '../credits/credit.service';
 import { creditCostsService } from '../costs/credit-costs.service';
 import { emailService } from '../email/email.service';
 import { notificationService } from '../notifications/notification.service';
+import { logger } from '../../core/logger';
 import cron from 'node-cron';
 
 // Cost for scheduled analysis - fetched dynamically from settings
@@ -29,17 +30,17 @@ class ScheduledReportsService {
    */
   start() {
     if (this.cronJob) {
-      console.log('[ScheduledReports] Cron job already running');
+      logger.info('[ScheduledReports] Cron job already running');
       return;
     }
 
     // Run every hour at minute 0
     this.cronJob = cron.schedule('0 * * * *', async () => {
-      console.log('[ScheduledReports] Running hourly check...');
+      logger.info('[ScheduledReports] Running hourly check...');
       await this.processScheduledReports();
     });
 
-    console.log('[ScheduledReports] Cron job started - runs every hour');
+    logger.info('[ScheduledReports] Cron job started - runs every hour');
   }
 
   /**
@@ -49,7 +50,7 @@ class ScheduledReportsService {
     if (this.cronJob) {
       this.cronJob.stop();
       this.cronJob = null;
-      console.log('[ScheduledReports] Cron job stopped');
+      logger.info('[ScheduledReports] Cron job stopped');
     }
   }
 
@@ -79,17 +80,17 @@ class ScheduledReportsService {
         },
       });
 
-      console.log(`[ScheduledReports] Found ${dueReports.length} reports due for execution`);
+      logger.info(`[ScheduledReports] Found ${dueReports.length} reports due for execution`);
 
       for (const report of dueReports) {
         try {
           await this.runScheduledAnalysis(report);
         } catch (error) {
-          console.error(`[ScheduledReports] Failed to run analysis for ${report.symbol}:`, error);
+          logger.error(`[ScheduledReports] Failed to run analysis for ${report.symbol}:`, error);
         }
       }
     } catch (error) {
-      console.error('[ScheduledReports] Error processing scheduled reports:', error);
+      logger.error('[ScheduledReports] Error processing scheduled reports:', error);
     }
   }
 
@@ -99,7 +100,7 @@ class ScheduledReportsService {
   private async runScheduledAnalysis(report: any): Promise<ScheduledReportResult> {
     const { id, userId, symbol, user, deliverEmail, deliverTelegram, deliverDiscord } = report;
 
-    console.log(`[ScheduledReports] Running analysis for ${symbol} (user: ${user.email})`);
+    logger.info(`[ScheduledReports] Running analysis for ${symbol} (user: ${user.email})`);
 
     // Get cost from settings (same as normal analysis)
     const analysisCost = await creditCostsService.getCreditCost('BUNDLE_FULL_ANALYSIS');
@@ -113,7 +114,7 @@ class ScheduledReportsService {
       const userBalance = typeof balanceInfo === 'number' ? balanceInfo : balanceInfo.balance;
 
       if (userBalance < analysisCost) {
-        console.log(`[ScheduledReports] User ${user.email} has insufficient credits (${userBalance})`);
+        logger.info(`[ScheduledReports] User ${user.email} has insufficient credits (${userBalance})`);
 
         // Notify user about insufficient credits
         if (deliverEmail && user.email) {
@@ -144,13 +145,13 @@ class ScheduledReportsService {
       });
 
       if (!chargeResult.success) {
-        console.log(`[ScheduledReports] Failed to charge credits for ${symbol}`);
+        logger.info(`[ScheduledReports] Failed to charge credits for ${symbol}`);
         await this.updateNextRunTime(id, report.frequency, report.scheduleHour, report.scheduleDayOfWeek);
         return { success: false, error: 'Failed to charge credits' };
       }
 
       creditsCharged = true;
-      console.log(`[ScheduledReports] Charged ${analysisCost} credits for ${symbol}`);
+      logger.info(`[ScheduledReports] Charged ${analysisCost} credits for ${symbol}`);
 
       // Run analysis with user's selected interval
       const interval = report.interval || '4h';
@@ -218,11 +219,11 @@ class ScheduledReportsService {
         },
       });
 
-      console.log(`[ScheduledReports] Analysis completed for ${symbol} - ${verdict.action}`);
+      logger.info(`[ScheduledReports] Analysis completed for ${symbol} - ${verdict.action}`);
 
       return { success: true, analysisId: savedAnalysis.id };
     } catch (error) {
-      console.error(`[ScheduledReports] Error running analysis for ${symbol}:`, error);
+      logger.error(`[ScheduledReports] Error running analysis for ${symbol}:`, error);
 
       // Only refund if credits were actually charged
       if (creditsCharged) {
@@ -233,9 +234,9 @@ class ScheduledReportsService {
             reason: 'Analysis failed - credits refunded',
             error: String(error),
           });
-          console.log(`[ScheduledReports] Refunded ${analysisCost} credits for failed ${symbol} analysis`);
+          logger.info(`[ScheduledReports] Refunded ${analysisCost} credits for failed ${symbol} analysis`);
         } catch (refundError) {
-          console.error('[ScheduledReports] Failed to refund credits:', refundError);
+          logger.error('[ScheduledReports] Failed to refund credits:', refundError);
         }
       }
 
@@ -285,7 +286,7 @@ class ScheduledReportsService {
           text: `${symbol}/USDT - ${action} (${score}/100) - ${direction}`,
         });
       } catch (error) {
-        console.error('[ScheduledReports] Failed to send email:', error);
+        logger.error('[ScheduledReports] Failed to send email:', error);
       }
     }
 
@@ -302,7 +303,7 @@ class ScheduledReportsService {
           takeProfit1: tradePlan?.takeProfit1,
         });
       } catch (error) {
-        console.error('[ScheduledReports] Failed to send Telegram:', error);
+        logger.error('[ScheduledReports] Failed to send Telegram:', error);
       }
     }
 
@@ -319,7 +320,7 @@ class ScheduledReportsService {
           takeProfit1: tradePlan?.takeProfit1,
         });
       } catch (error) {
-        console.error('[ScheduledReports] Failed to send Discord:', error);
+        logger.error('[ScheduledReports] Failed to send Discord:', error);
       }
     }
   }

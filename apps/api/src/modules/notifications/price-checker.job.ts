@@ -5,6 +5,7 @@
 
 import { prisma } from '../../core/database';
 import { notificationService } from './notification.service';
+import { logger } from '../../core/logger';
 
 interface BinanceTickerResponse {
   symbol: string;
@@ -33,7 +34,7 @@ async function fetchCurrentPrices(symbols: string[]): Promise<Map<string, number
       }
     }
   } catch (error) {
-    console.error('[PriceChecker] Failed to fetch prices:', error);
+    logger.error('[PriceChecker] Failed to fetch prices:', error);
     // Return cached prices on error
     for (const symbol of symbols) {
       const cached = priceCache.get(symbol);
@@ -74,7 +75,7 @@ export async function checkPriceAlerts(): Promise<{
     });
 
     if (alerts.length === 0) {
-      console.log('[PriceChecker] No active alerts to check');
+      logger.info('[PriceChecker] No active alerts to check');
       return stats;
     }
 
@@ -86,7 +87,7 @@ export async function checkPriceAlerts(): Promise<{
     // Fetch current prices
     const prices = await fetchCurrentPrices(symbols);
 
-    console.log(`[PriceChecker] Checking ${alerts.length} alerts for ${symbols.length} symbols`);
+    logger.info(`[PriceChecker] Checking ${alerts.length} alerts for ${symbols.length} symbols`);
 
     // Check each alert
     for (const alert of alerts) {
@@ -94,7 +95,7 @@ export async function checkPriceAlerts(): Promise<{
         const currentPrice = prices.get(alert.symbol);
 
         if (!currentPrice) {
-          console.warn(`[PriceChecker] No price for ${alert.symbol}`);
+          logger.warn(`[PriceChecker] No price for ${alert.symbol}`);
           continue;
         }
 
@@ -109,7 +110,7 @@ export async function checkPriceAlerts(): Promise<{
         }
 
         if (isTriggered) {
-          console.log(`[PriceChecker] Alert triggered: ${alert.symbol} ${alert.direction} ${targetPrice} (current: ${currentPrice})`);
+          logger.info(`[PriceChecker] Alert triggered: ${alert.symbol} ${alert.direction} ${targetPrice} (current: ${currentPrice})`);
 
           // Mark alert as triggered
           await prisma.priceAlert.update({
@@ -148,14 +149,14 @@ export async function checkPriceAlerts(): Promise<{
           stats.triggered++;
         }
       } catch (error) {
-        console.error(`[PriceChecker] Error processing alert ${alert.id}:`, error);
+        logger.error(`[PriceChecker] Error processing alert ${alert.id}:`, error);
         stats.errors++;
       }
     }
 
-    console.log(`[PriceChecker] Results: ${stats.triggered} triggered, ${stats.errors} errors`);
+    logger.info(`[PriceChecker] Results: ${stats.triggered} triggered, ${stats.errors} errors`);
   } catch (error) {
-    console.error('[PriceChecker] Fatal error:', error);
+    logger.error('[PriceChecker] Fatal error:', error);
     stats.errors++;
   }
 
@@ -172,18 +173,18 @@ let intervalId: NodeJS.Timeout | null = null;
  */
 export function startPriceChecker(): void {
   if (intervalId) {
-    console.log('[PriceChecker] Already running');
+    logger.info('[PriceChecker] Already running');
     return;
   }
 
-  console.log(`[PriceChecker] Starting (interval: ${CHECK_INTERVAL}ms)`);
+  logger.info(`[PriceChecker] Starting (interval: ${CHECK_INTERVAL}ms)`);
 
   // Run immediately on start
-  checkPriceAlerts().catch(console.error);
+  checkPriceAlerts().catch(logger.error);
 
   // Then run at interval
   intervalId = setInterval(() => {
-    checkPriceAlerts().catch(console.error);
+    checkPriceAlerts().catch(logger.error);
   }, CHECK_INTERVAL);
 }
 
@@ -194,7 +195,7 @@ export function stopPriceChecker(): void {
   if (intervalId) {
     clearInterval(intervalId);
     intervalId = null;
-    console.log('[PriceChecker] Stopped');
+    logger.info('[PriceChecker] Stopped');
   }
 }
 

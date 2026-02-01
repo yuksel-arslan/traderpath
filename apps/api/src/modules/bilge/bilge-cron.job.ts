@@ -6,8 +6,9 @@
 
 import cron from 'node-cron';
 import { generateWeeklyReport } from './bilge.service';
-import { sendNotification, createErrorNotificationMessage } from './notification.service';
+import { sendNotification } from './notification.service';
 import { NotificationMessage } from './types';
+import { logger } from '../../core/logger';
 
 let weeklyReportJob: cron.ScheduledTask | null = null;
 
@@ -19,7 +20,7 @@ export function startBilgeWeeklyReportJob(): void {
   // Schedule: At 18:00 UTC on Sunday (21:00 UTC+3)
   // Cron format: minute hour day-of-month month day-of-week
   weeklyReportJob = cron.schedule('0 18 * * 0', async () => {
-    console.log('[BILGE] Generating weekly report...');
+    logger.info('[BILGE] Generating weekly report...');
 
     try {
       // Generate report for TraderPath
@@ -39,15 +40,15 @@ export function startBilgeWeeklyReportJob(): void {
       // Send to Slack and Discord
       await sendNotification(message, ['slack', 'discord']);
 
-      console.log('[BILGE] Weekly report generated and sent successfully');
+      logger.info('[BILGE] Weekly report generated and sent successfully');
     } catch (error) {
-      console.error('[BILGE] Failed to generate weekly report:', error);
+      logger.error('[BILGE] Failed to generate weekly report:', error);
     }
   }, {
     timezone: 'UTC',
   });
 
-  console.log('[BILGE] Weekly report cron job started (Sunday 21:00 UTC+3)');
+  logger.info('[BILGE] Weekly report cron job started (Sunday 21:00 UTC+3)');
 }
 
 /**
@@ -57,7 +58,7 @@ export function stopBilgeWeeklyReportJob(): void {
   if (weeklyReportJob) {
     weeklyReportJob.stop();
     weeklyReportJob = null;
-    console.log('[BILGE] Weekly report cron job stopped');
+    logger.info('[BILGE] Weekly report cron job stopped');
   }
 }
 

@@ -326,14 +326,20 @@ export function errorHandler(
     });
   }
 
-  // Handle Zod validation errors
+  // Handle Zod validation errors - sanitize to prevent schema exposure
   if (error.name === 'ZodError') {
+    const zodErrors = (error as any).errors;
+    // Only expose field names and messages, not internal validation details
+    const sanitizedErrors = zodErrors?.map((e: { path: (string | number)[]; message: string }) => ({
+      field: e.path?.[0] || 'unknown',
+      message: e.message,
+    }));
     return reply.status(400).send({
       success: false,
       error: {
         code: 'VALIDATION_001',
         message: 'Validation failed',
-        details: (error as any).errors,
+        details: sanitizedErrors,
       },
     });
   }
@@ -342,14 +348,13 @@ export function errorHandler(
   if (error.name === 'PrismaClientKnownRequestError') {
     const prismaError = error as any;
 
-    // Unique constraint violation
+    // Unique constraint violation - don't expose field names
     if (prismaError.code === 'P2002') {
       return reply.status(409).send({
         success: false,
         error: {
           code: 'RESOURCE_002',
-          message: 'Resource already exists',
-          details: { fields: prismaError.meta?.target },
+          message: 'A resource with this value already exists',
         },
       });
     }

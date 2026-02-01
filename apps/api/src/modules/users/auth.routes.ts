@@ -161,7 +161,7 @@ export default async function authRoutes(app: FastifyInstance) {
           user.email,
           user.name || body.name,
           verificationUrl
-        ).catch(console.error);
+        ).catch((err) => app.log.error({ error: err }, 'Failed to send verification email'));
       }
 
       // Generate JWT token
@@ -190,16 +190,21 @@ export default async function authRoutes(app: FastifyInstance) {
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
+        // Sanitize validation errors - only expose field and message
+        const sanitizedErrors = error.errors.map(e => ({
+          field: e.path[0] || 'unknown',
+          message: e.message,
+        }));
         return reply.status(400).send({
           success: false,
           error: {
             code: 'VALIDATION_ERROR',
             message: error.errors[0]?.message || 'Invalid input',
-            details: error.errors,
+            details: sanitizedErrors,
           },
         });
       }
-      console.error('Register error:', error);
+      app.log.error({ error }, 'Registration error');
       return reply.status(500).send({
         success: false,
         error: {
