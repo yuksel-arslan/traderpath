@@ -462,7 +462,10 @@ export default function ReportViewPage() {
     );
   }
 
-  const isLong = report.tradePlan?.direction === 'long';
+  const direction = report.tradePlan?.direction?.toLowerCase() || 'neutral';
+  const isNeutral = direction === 'neutral';
+  const isLong = direction === 'long';
+  const isShort = direction === 'short';
   const isBullish = isLong;
   const score = (report.verdict?.overallScore || 0) * 10; // Convert to 100 scale
 
@@ -679,7 +682,7 @@ export default function ReportViewPage() {
                 (report.verdict?.overallScore >= 7 ? 'go' : report.verdict?.overallScore >= 5 ? 'conditional_go' : report.verdict?.overallScore >= 3 ? 'wait' : 'avoid')
               ) as 'go' | 'conditional_go' | 'wait' | 'avoid'}
               direction={(report.tradePlan?.direction?.toLowerCase() || null) as 'long' | 'short' | null}
-              score={report.verdict?.overallScore || 5}
+              score={(report.verdict?.overallScore || 5) * 10}
               symbol={report.symbol}
               size="lg"
             />
@@ -688,21 +691,22 @@ export default function ReportViewPage() {
           {/* AI Recommendation */}
           <div className={cn(
             "rounded-xl p-4 mb-6",
+            isNeutral ? "bg-gray-50 dark:bg-gray-500/10 border border-gray-500/20" :
             isLong ? "bg-green-50 dark:bg-green-500/10 border border-green-500/20" : "bg-red-50 dark:bg-red-500/10 border border-red-500/20"
           )}>
             <div className="flex items-center gap-2 mb-2">
-              <CheckCircle className={cn("w-5 h-5", isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")} />
-              <span className={cn("font-semibold", isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
+              <CheckCircle className={cn("w-5 h-5", isNeutral ? "text-gray-600 dark:text-gray-400" : isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")} />
+              <span className={cn("font-semibold", isNeutral ? "text-gray-600 dark:text-gray-400" : isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
                 AI Recommendation
               </span>
             </div>
             <p className="text-sm text-gray-600 dark:text-slate-300">
-              {report.verdict?.aiSummary || `Market conditions favor ${isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(report.tradePlan?.averageEntry)} with ${report.tradePlan?.riskReward?.toFixed(1) || '0'}:1 risk-reward ratio. Set stop-loss at ${formatPrice(report.tradePlan?.stopLoss?.price)} to protect against downside.`}
+              {report.verdict?.aiSummary || `Market conditions favor ${isNeutral ? 'sideways' : isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(report.tradePlan?.averageEntry)} with ${report.tradePlan?.riskReward?.toFixed(1) || '0'}:1 risk-reward ratio. Set stop-loss at ${formatPrice(report.tradePlan?.stopLoss?.price)} to protect against downside.`}
             </p>
           </div>
 
-          {/* Trade Plan Chart */}
-          {report.tradePlan && (
+          {/* Trade Plan Chart - Only shown when direction is not neutral */}
+          {report.tradePlan && !isNeutral && (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-gray-900 dark:text-white">Trade Plan Chart</h3>
@@ -761,7 +765,7 @@ export default function ReportViewPage() {
               <div ref={chartRef} className="bg-white dark:bg-slate-800 rounded-xl p-2">
                 <TradePlanChart
                   symbol={report.symbol}
-                  direction={report.tradePlan.direction as 'long' | 'short'}
+                  direction={(isLong ? 'long' : 'short') as 'long' | 'short'}
                   entries={report.tradePlan.averageEntry ? [{ price: report.tradePlan.averageEntry, percentage: 100 }] : []}
                   stopLoss={{ price: report.tradePlan.stopLoss?.price || 0, percentage: 0 }}
                   takeProfits={report.tradePlan.takeProfits?.map((tp, i) => ({

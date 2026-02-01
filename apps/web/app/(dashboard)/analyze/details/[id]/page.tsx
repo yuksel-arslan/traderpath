@@ -531,10 +531,14 @@ export default function AnalysisDetailsPage() {
 
   // For MLIS: step7 contains the final verdict with direction
   // For Classic: step5 is trade plan, step7 is verdict
-  const direction = isMLIS
-    ? (step7.direction || step5.direction || 'long')
+  // Note: MLIS can return 'neutral' direction when confidence is low
+  const rawDirection = isMLIS
+    ? (step7.direction || step5.direction || 'neutral')
     : (step5.direction || step7.direction || 'long');
-  const isLong = direction.toLowerCase() === 'long';
+  const direction = rawDirection.toLowerCase();
+  const isNeutral = direction === 'neutral';
+  const isLong = direction === 'long';
+  const isShort = direction === 'short';
   const score = (analysis.totalScore || 0) * 10;
 
   // MLIS-specific data - MUST read from step7Result where verdict data is stored
@@ -794,17 +798,20 @@ export default function AnalysisDetailsPage() {
                 verdict === 'COND' ? "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400" :
                 verdict === 'WAIT' ? "bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400" :
                 verdict === 'AVOID' ? "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400" :
+                isNeutral ? "bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400" :
                 (isLong ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400" : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400")
               )}>
                 {verdict === 'GO' ? <TrendingUp className="w-4 h-4" /> :
                  verdict === 'AVOID' ? <AlertTriangle className="w-4 h-4" /> :
                  verdict === 'WAIT' ? <Clock className="w-4 h-4" /> :
                  verdict === 'COND' ? <Target className="w-4 h-4" /> :
+                 isNeutral ? <Minus className="w-4 h-4" /> :
                  (isLong ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />)}
                 {verdict === 'GO' ? 'GO' :
                  verdict === 'COND' ? 'CONDITIONAL' :
                  verdict === 'WAIT' ? 'WAIT' :
                  verdict === 'AVOID' ? 'AVOID' :
+                 isNeutral ? 'NEUTRAL' :
                  (isLong ? 'BULLISH' : 'BEARISH')}
               </div>
               <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{score}/100</div>
@@ -919,8 +926,9 @@ export default function AnalysisDetailsPage() {
                     <span className="text-gray-500 dark:text-slate-400">Direction</span>
                     <p className={cn(
                       "font-semibold",
+                      isNeutral ? 'text-gray-600 dark:text-gray-400' :
                       isLong ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                    )}>{isLong ? 'LONG' : 'SHORT'}</p>
+                    )}>{isNeutral ? 'NEUTRAL' : isLong ? 'LONG' : 'SHORT'}</p>
                   </div>
                   <div>
                     <span className="text-gray-500 dark:text-slate-400">Score</span>
@@ -1052,7 +1060,7 @@ export default function AnalysisDetailsPage() {
               <TradeDecisionVisual
                 verdict={mlisRecommendation === 'STRONG_BUY' || mlisRecommendation === 'BUY' ? 'go' :
                          mlisRecommendation === 'HOLD' ? 'wait' : 'avoid'}
-                direction={direction.toLowerCase() as 'long' | 'short'}
+                direction={isNeutral ? null : (isLong ? 'long' : 'short')}
                 score={Number(step7.overallScore) || Number(analysis.totalScore) * 10 || 50}
                 confidence={typeof mlisConfidence === 'number' ? mlisConfidence : Number(mlisConfidence) || 0}
                 riskLevel={mlisRiskLevel}
@@ -1063,7 +1071,7 @@ export default function AnalysisDetailsPage() {
             ) : (
               <TradeDecisionVisual
                 verdict={(step7.verdict || (Number(step7.overallScore) >= 7 ? 'go' : Number(step7.overallScore) >= 5 ? 'conditional_go' : Number(step7.overallScore) >= 3 ? 'wait' : 'avoid')) as 'go' | 'conditional_go' | 'wait' | 'avoid'}
-                direction={direction as 'long' | 'short'}
+                direction={isNeutral ? null : (isLong ? 'long' : 'short')}
                 score={Number(step7.overallScore) * 10 || Number(analysis.totalScore) * 10 || 50}
                 symbol={analysis.symbol}
                 size="lg"
@@ -1111,26 +1119,26 @@ export default function AnalysisDetailsPage() {
                     {(mlisConfidence ?? 0) < 30 ? (
                       <>MLIS Pro analysis has <strong>low confidence ({(mlisConfidence ?? 0).toFixed(0)}%)</strong>. Insufficient data for reliable recommendation. Consider waiting for better market conditions.</>
                     ) : (
-                      <>MLIS Pro analysis recommends <strong>{mlisRecommendation || 'HOLD'}</strong> with {(mlisConfidence ?? 0).toFixed(0)}% confidence. Direction: <strong>{isLong ? 'LONG' : 'SHORT'}</strong>. Risk level: <strong>{mlisRiskLevel || 'Medium'}</strong>.</>
+                      <>MLIS Pro analysis recommends <strong>{mlisRecommendation || 'HOLD'}</strong> with {(mlisConfidence ?? 0).toFixed(0)}% confidence. Direction: <strong>{isNeutral ? 'NEUTRAL' : isLong ? 'LONG' : 'SHORT'}</strong>. Risk level: <strong>{mlisRiskLevel || 'Medium'}</strong>.</>
                     )}
                   </p>
                 )}
               </div>
             ) : (
               <p className="text-sm text-gray-600 dark:text-slate-300">
-                {step7.aiSummary || step7.summary || `Market conditions favor ${isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(entryPrice)} with ${typeof step5.riskReward === 'number' ? step5.riskReward.toFixed(1) : '2.0'}:1 risk-reward ratio. Set stop-loss at ${formatPrice(stopLossPrice)} to protect against downside.`}
+                {step7.aiSummary || step7.summary || `Market conditions favor ${isNeutral ? 'sideways' : isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(entryPrice)} with ${typeof step5.riskReward === 'number' ? step5.riskReward.toFixed(1) : '2.0'}:1 risk-reward ratio. Set stop-loss at ${formatPrice(stopLossPrice)} to protect against downside.`}
               </p>
             )}
           </div>
 
           {/* Trade Plan Chart - Only for Classic (MLIS doesn't have trade plan) */}
-          {!isMLIS && entryPrice && (
+          {!isMLIS && entryPrice && !isNeutral && (
             <div className="mb-6">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Trade Plan Chart</h3>
               <div ref={chartRef} id="trade-plan-chart-visible" className="trade-plan-chart-container bg-white dark:bg-slate-800 rounded-xl p-2">
                 <TradePlanChart
                   symbol={analysis.symbol}
-                  direction={direction as 'long' | 'short'}
+                  direction={(isLong ? 'long' : 'short') as 'long' | 'short'}
                   entries={[{ price: entryPrice, percentage: 100 }]}
                   stopLoss={{ price: stopLossPrice || 0, percentage: 0 }}
                   takeProfits={[tp1, tp2].filter(Boolean).map((tp, i) => ({

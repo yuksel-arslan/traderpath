@@ -6,6 +6,7 @@ import {
   Clock,
   TrendingUp,
   TrendingDown,
+  Minus,
   RefreshCw,
   Target,
   Zap,
@@ -462,12 +463,16 @@ export function RecentAnalyses() {
                             "px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-0.5",
                             analysis.direction === 'long'
                               ? "bg-teal-500/10 text-teal-600 dark:text-teal-400"
-                              : "bg-red-500/10 text-red-600 dark:text-red-400"
+                              : analysis.direction === 'short'
+                              ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                              : "bg-gray-500/10 text-gray-600 dark:text-gray-400"
                           )}>
                             {analysis.direction === 'long' ? (
                               <TrendingUp className="w-3 h-3" />
-                            ) : (
+                            ) : analysis.direction === 'short' ? (
                               <TrendingDown className="w-3 h-3" />
+                            ) : (
+                              <Minus className="w-3 h-3" />
                             )}
                             {analysis.direction.toUpperCase()}
                           </span>
