@@ -4,6 +4,7 @@
 
 import Redis from 'ioredis';
 import { config } from './config';
+import { logger } from './logger';
 
 // ===========================================
 // In-Memory Fallback Cache
@@ -109,7 +110,7 @@ function createRedisClient(): CacheClient {
   const redisUrl = config.redisUrl;
 
   if (!redisUrl) {
-    console.log('[Cache] No REDIS_URL configured, using in-memory cache');
+    logger.info('[Cache] No REDIS_URL configured, using in-memory cache');
     return memoryCacheClient;
   }
 
@@ -118,7 +119,7 @@ function createRedisClient(): CacheClient {
       maxRetriesPerRequest: 3,
       retryStrategy: (times) => {
         if (times > MAX_CONNECTION_ATTEMPTS) {
-          console.warn(`[Cache] Redis connection failed after ${times} attempts, falling back to memory cache`);
+          logger.warn({ attempts: times }, '[Cache] Redis connection failed, falling back to memory cache');
           return null; // Stop retrying
         }
         return Math.min(times * 200, 2000); // Exponential backoff
@@ -129,38 +130,37 @@ function createRedisClient(): CacheClient {
     });
 
     client.on('connect', () => {
-      console.log('[Cache] Redis connecting...');
+      logger.debug('[Cache] Redis connecting...');
     });
 
     client.on('ready', () => {
       isRedisConnected = true;
       connectionAttempts = 0;
-      console.log('[Cache] Redis connected and ready');
+      logger.info('[Cache] Redis connected and ready');
     });
 
     client.on('error', (err) => {
       connectionAttempts++;
-      console.error('[Cache] Redis error:', err.message);
+      logger.error({ error: err.message }, '[Cache] Redis error');
       if (connectionAttempts >= MAX_CONNECTION_ATTEMPTS) {
-        console.warn('[Cache] Switching to in-memory cache due to Redis errors');
+        logger.warn('[Cache] Switching to in-memory cache due to Redis errors');
         isRedisConnected = false;
       }
     });
 
     client.on('close', () => {
       isRedisConnected = false;
-      console.log('[Cache] Redis connection closed');
+      logger.debug('[Cache] Redis connection closed');
     });
 
     // Connect immediately
     client.connect().catch((err) => {
-      console.warn('[Cache] Redis initial connection failed:', err.message);
-      console.log('[Cache] Using in-memory cache as fallback');
+      logger.warn({ error: err.message }, '[Cache] Redis initial connection failed, using in-memory fallback');
     });
 
     return client;
   } catch (error) {
-    console.error('[Cache] Failed to create Redis client:', error);
+    logger.error({ error }, '[Cache] Failed to create Redis client');
     return memoryCacheClient;
   }
 }
@@ -193,7 +193,7 @@ async function safeRedisOp<T>(
   try {
     return await operation();
   } catch (error) {
-    console.warn('[Cache] Redis operation failed, using fallback:', error);
+    logger.warn({ error }, '[Cache] Redis operation failed, using fallback');
     return fallback();
   }
 }

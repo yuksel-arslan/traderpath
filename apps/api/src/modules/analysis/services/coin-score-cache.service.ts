@@ -172,10 +172,10 @@ class CoinScoreCacheService {
           interval,
           method: 'classic', // Explicitly set method for system scans
           stepsCompleted: [1, 2, 3, 4],
-          step1Result: marketPulse as any,
-          step2Result: assetScan as any,
-          step3Result: safetyCheck as any,
-          step4Result: timing as any,
+          step1Result: marketPulse as object,
+          step2Result: assetScan as object,
+          step3Result: safetyCheck as object,
+          step4Result: timing as object,
           totalScore: reliabilityScore,
           creditsSpent: 0, // Platform covers cost
         },

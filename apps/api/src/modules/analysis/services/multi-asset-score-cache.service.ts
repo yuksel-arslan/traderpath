@@ -544,7 +544,7 @@ class MultiAssetScoreCacheService {
             market,
             globalConditions: 'traditional_market',
             liquidityBias: trend === 'bullish' ? 'risk_on' : trend === 'bearish' ? 'risk_off' : 'neutral',
-          } as any,
+          } as object,
           step2Result: {
             symbol,
             market,
@@ -560,15 +560,15 @@ class MultiAssetScoreCacheService {
               sma50,
               sma200,
             },
-          } as any,
+          } as object,
           step3Result: {
             gate: { canProceed: verdict !== 'AVOID' },
             riskLevel: volatilityScore > 60 ? 'low' : volatilityScore > 40 ? 'medium' : 'high',
-          } as any,
+          } as object,
           step4Result: {
             gate: { canProceed: verdict !== 'WAIT' },
             timingQuality: momentumScore > 60 ? 'good' : momentumScore > 40 ? 'moderate' : 'poor',
-          } as any,
+          } as object,
           totalScore: reliabilityScore,
           creditsSpent: 0,
         },
