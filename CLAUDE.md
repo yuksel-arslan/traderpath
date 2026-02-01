@@ -523,6 +523,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-01 | AI Concierge "Öneri oluşturulamadı" hatası (Capital Flow recommendation çalışmıyordu) | `FlowRecommendation` interface'inde alan adı `reason` ama kod `reasoning` kullanıyordu. `undefined.toLowerCase()` çağrısı hata fırlatıyordu. 3 yerde düzeltildi: 1) `recommendation.reasoning` → `recommendation.reason`, 2) `getFlowRecommendation()` fallback'te yanlış alan adları düzeltildi (`reasoning`→`reason`, `marketPhase`→`phase`, `suggestedSectors`→`sectors`, eksik `direction` eklendi) | `concierge.service.ts:1418-1420,1528`, `capital-flow.service.ts:832-840` |
 | 2026-02-01 | Asset ikonları görünmüyordu (CoinIcon component) | `asset-logos-cache.ts` public API için `authFetch` kullanıyordu, giriş yapmamış kullanıcılarda başarısız oluyordu. 1) `authFetch` yerine doğrudan `fetch` kullanıldı, 2) API başarısız olunca boş cache yerine FALLBACK_CACHE döndürülüyor (26 crypto, 9 stock, 3 metal, 3 bond logo), 3) 10s timeout eklendi | `apps/web/lib/asset-logos-cache.ts` |
 | 2026-02-01 | MLIS Pro analiz sonuçları çelişkili (WAIT/HOLD/AVOID 3 farklı verdict, 0% confidence, 8.1/10 vs 81/100) | 5 kritik hata düzeltildi: 1) Frontend step5 yerine step7'den MLIS verilerini okuyor (confidence, recommendation, direction), 2) VerdictBadge tutarlı (recommendation prop kaldırıldı, isMLISPro flag eklendi), 3) getDirection() artık confidence threshold'a saygı duyuyor (NEUTRAL döner), 4) <30% confidence'ta HOLD ve NEUTRAL döner, 5) Tüm skorlar 0-100 ölçeğinde normalize edildi | `mlis.service.ts`, `details/[id]/page.tsx`, `TradeDecisionVisual.tsx` |
+| 2026-02-01 | 7-Step Classic analiz skor ölçek karışıklığı ve neutral direction handling | 6 kritik hata düzeltildi: 1) reports/page.tsx yanlış `/10` bölümü kaldırıldı (totalScore zaten 0-10), 2) reports/[id]/page.tsx TradeDecisionVisual'a `*10` eklendi (0-100 scale), 3) FinalVerdict.tsx TradeDecisionVisual'a `*10` eklendi, 4) details/[id]/page.tsx neutral direction desteği (isNeutral, gray renk, NEUTRAL text), 5) RecentAnalyses.tsx neutral direction badge (gray + Minus icon), 6) Tüm TradePlanChart'lar neutral olduğunda gizleniyor | `reports/page.tsx`, `reports/[id]/page.tsx`, `FinalVerdict.tsx`, `details/[id]/page.tsx`, `RecentAnalyses.tsx` |
 
 ---
 
@@ -1663,6 +1664,15 @@ Kullanıcı Hakları Aktif:
   - **Hata 5**: Skor ölçekleri tutarsızdı (8.1/10 vs 81/100)
   - Artık düşük güven (<30%) olduğunda: HOLD öneri + NEUTRAL yön + açıklayıcı mesaj
   - Tüm skorlar 0-100 ölçeğinde standartlaştırıldı
+- **7-Step Classic Analiz Skor ve Direction Hataları Düzeltildi** (6 kritik hata):
+  - **Hata 1**: `reports/page.tsx` totalScore'u yanlışlıkla `/10`'a bölüyordu (zaten 0-10 ölçeğinde)
+  - **Hata 2**: `reports/[id]/page.tsx` TradeDecisionVisual'a raw 0-10 skor gönderiyordu (0-100 bekliyor)
+  - **Hata 3**: `FinalVerdict.tsx` TradeDecisionVisual'a raw 0-10 skor gönderiyordu
+  - **Hata 4**: `details/[id]/page.tsx` neutral direction desteği yoktu (neutral → short gibi davranıyordu)
+  - **Hata 5**: `RecentAnalyses.tsx` neutral direction için yanlış renk ve ikon gösteriyordu
+  - **Hata 6**: TradePlanChart'lar neutral direction'da crash olabiliyordu
+  - Tüm sayfalar artık neutral direction'ı düzgün gösteriyor (gray renk, Minus ikon, NEUTRAL text)
+  - TradePlanChart neutral olduğunda gizleniyor (chart için direction gerekli)
 
 ---
 

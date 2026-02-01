@@ -180,7 +180,7 @@ export default function ReportsPage() {
             id: analysis.id,
             symbol: analysis.symbol,
             verdict: analysis.verdict || 'N/A',
-            score: analysis.totalScore ? Number(analysis.totalScore) / 10 : 0, // Convert to 0-10 scale
+            score: analysis.totalScore ? Number(analysis.totalScore) : 0, // Score is already 0-10 scale from backend
             direction: analysis.direction,
             interval: analysis.interval,
             hasTradePlan: analysis.hasTradePlan,

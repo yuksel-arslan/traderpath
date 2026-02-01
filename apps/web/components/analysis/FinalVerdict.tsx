@@ -486,7 +486,7 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
       <TradeDecisionVisual
         verdict={data.verdict}
         direction={tradePlan?.direction as 'long' | 'short' | undefined}
-        score={data.overallScore ?? 0}
+        score={(data.overallScore ?? 0) * 10}
         symbol={symbol}
         size="lg"
       />
