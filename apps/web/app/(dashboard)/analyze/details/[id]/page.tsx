@@ -247,28 +247,40 @@ export default function AnalysisDetailsPage() {
     setExporting(true);
     setExportDropdownOpen(false);
     try {
+      // Wait for content to stabilize
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#ffffff',
-        scale: 3, // Higher quality for PNG
-        logging: false,
+        scale: 2,
+        logging: true, // Enable logging for debugging
         useCORS: true,
         allowTaint: true,
-        windowWidth: 1400,
+        foreignObjectRendering: false,
+        removeContainer: true,
+        imageTimeout: 5000,
         onclone: (clonedDoc) => {
+          // Remove external images that might cause CORS issues
+          const images = clonedDoc.querySelectorAll('img');
+          images.forEach(img => {
+            if (img.src.includes('cryptoicons') || img.src.includes('coingecko')) {
+              img.style.display = 'none';
+            }
+          });
           const clonedElement = clonedDoc.querySelector('[data-export-container]');
           if (clonedElement) {
             (clonedElement as HTMLElement).style.overflow = 'visible';
-            // Ensure proper background for export
             (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-            (clonedElement as HTMLElement).style.padding = '24px';
           }
         },
       });
 
-      // Use blob for reliable download (data URL can fail for large images)
+      // Use blob for reliable download
       canvas.toBlob((blob) => {
         if (!blob) {
-          alert('Failed to create image');
+          console.error('PNG blob is null');
+          alert('Failed to create image. Please try again.');
+          setExporting(false);
           return;
         }
         const url = URL.createObjectURL(blob);
@@ -277,14 +289,15 @@ export default function AnalysisDetailsPage() {
         const date = new Date().toISOString().split('T')[0];
         link.download = `TraderPath_${symbol}_${date}.png`;
         link.href = url;
+        document.body.appendChild(link);
         link.click();
-        // Clean up the URL object
-        setTimeout(() => URL.revokeObjectURL(url), 100);
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setExporting(false);
       }, 'image/png');
     } catch (err) {
       console.error('Failed to export PNG:', err);
-      alert('Failed to export image');
-    } finally {
+      alert('Failed to export image: ' + (err instanceof Error ? err.message : 'Unknown error'));
       setExporting(false);
     }
   };
@@ -296,28 +309,37 @@ export default function AnalysisDetailsPage() {
     setExporting(true);
     setExportDropdownOpen(false);
     try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#ffffff',
-        scale: 2.5, // Good quality for JPG
-        logging: false,
+        scale: 2,
+        logging: true,
         useCORS: true,
         allowTaint: true,
-        windowWidth: 1400,
+        foreignObjectRendering: false,
+        removeContainer: true,
+        imageTimeout: 5000,
         onclone: (clonedDoc) => {
+          const images = clonedDoc.querySelectorAll('img');
+          images.forEach(img => {
+            if (img.src.includes('cryptoicons') || img.src.includes('coingecko')) {
+              img.style.display = 'none';
+            }
+          });
           const clonedElement = clonedDoc.querySelector('[data-export-container]');
           if (clonedElement) {
             (clonedElement as HTMLElement).style.overflow = 'visible';
-            // Ensure proper background for export
             (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-            (clonedElement as HTMLElement).style.padding = '24px';
           }
         },
       });
 
-      // Use blob for reliable download
       canvas.toBlob((blob) => {
         if (!blob) {
-          alert('Failed to create image');
+          console.error('JPG blob is null');
+          alert('Failed to create image. Please try again.');
+          setExporting(false);
           return;
         }
         const url = URL.createObjectURL(blob);
@@ -326,13 +348,15 @@ export default function AnalysisDetailsPage() {
         const date = new Date().toISOString().split('T')[0];
         link.download = `TraderPath_${symbol}_${date}.jpg`;
         link.href = url;
+        document.body.appendChild(link);
         link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 100);
-      }, 'image/jpeg', 0.95); // Higher quality
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setExporting(false);
+      }, 'image/jpeg', 0.92);
     } catch (err) {
       console.error('Failed to export JPG:', err);
-      alert('Failed to export image');
-    } finally {
+      alert('Failed to export image: ' + (err instanceof Error ? err.message : 'Unknown error'));
       setExporting(false);
     }
   };
@@ -344,27 +368,36 @@ export default function AnalysisDetailsPage() {
     setExporting(true);
     setExportDropdownOpen(false);
     try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Dynamic import jsPDF
       const { jsPDF } = await import('jspdf');
 
       const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#ffffff',
         scale: 2,
-        logging: false,
+        logging: true,
         useCORS: true,
         allowTaint: true,
-        windowWidth: 1400,
+        foreignObjectRendering: false,
+        removeContainer: true,
+        imageTimeout: 5000,
         onclone: (clonedDoc) => {
+          const images = clonedDoc.querySelectorAll('img');
+          images.forEach(img => {
+            if (img.src.includes('cryptoicons') || img.src.includes('coingecko')) {
+              img.style.display = 'none';
+            }
+          });
           const clonedElement = clonedDoc.querySelector('[data-export-container]');
           if (clonedElement) {
             (clonedElement as HTMLElement).style.overflow = 'visible';
             (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-            (clonedElement as HTMLElement).style.padding = '24px';
           }
         },
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
       const pdf = new jsPDF({
         orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
         unit: 'px',
@@ -378,7 +411,7 @@ export default function AnalysisDetailsPage() {
       pdf.save(`TraderPath_${symbol}_${date}.pdf`);
     } catch (err) {
       console.error('Failed to export PDF:', err);
-      alert('Failed to export PDF');
+      alert('Failed to export PDF: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setExporting(false);
     }
@@ -391,14 +424,24 @@ export default function AnalysisDetailsPage() {
     setExporting(true);
     setExportDropdownOpen(false);
     try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#ffffff',
-        scale: 2,
-        logging: false,
+        scale: 1.5,
+        logging: true,
         useCORS: true,
         allowTaint: true,
-        windowWidth: 1200,
+        foreignObjectRendering: false,
+        removeContainer: true,
+        imageTimeout: 5000,
         onclone: (clonedDoc) => {
+          const images = clonedDoc.querySelectorAll('img');
+          images.forEach(img => {
+            if (img.src.includes('cryptoicons') || img.src.includes('coingecko')) {
+              img.style.display = 'none';
+            }
+          });
           const clonedElement = clonedDoc.querySelector('[data-export-container]');
           if (clonedElement) {
             (clonedElement as HTMLElement).style.overflow = 'visible';
@@ -406,7 +449,7 @@ export default function AnalysisDetailsPage() {
         },
       });
 
-      const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.85);
 
       // Download the image first
       const link = document.createElement('a');
@@ -414,7 +457,9 @@ export default function AnalysisDetailsPage() {
       const date = new Date().toISOString().split('T')[0];
       link.download = `TraderPath_${symbol}_${date}.jpg`;
       link.href = imageBase64;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
 
       // Then send via email
       const response = await authFetch('/api/reports/email-screenshot', {
@@ -436,11 +481,11 @@ export default function AnalysisDetailsPage() {
       } else {
         const errorData = await response.json().catch(() => ({}));
         console.error('Email send failed:', response.status, errorData);
-        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
+        alert(errorData?.error?.message || 'Image downloaded. Email failed - please check your email settings.');
       }
     } catch (err) {
       console.error('Failed to send email:', err);
-      alert('Failed to send email');
+      alert('Failed to send email: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setExporting(false);
     }
