@@ -517,6 +517,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-31 | Settings Billing sayfasında Payment Methods eklenemiyor, Transaction History görünmüyordu | 1) Transaction History API (`/api/credits/history`) zaten mevcuttu ama frontend bağlı değildi - useEffect ile fetch eklendi, 2) Buy Credits butonu onClick handler'sızdı - /pricing'e yönlendirme eklendi, 3) Payment Methods stub idi - Lemon Squeezy secure checkout açıklaması eklendi (saved cards desteklenmiyor), 4) Transaction listesi loading/empty/data state'leri ile güncellendi | `settings/page.tsx` |
 | 2026-01-31 | Capital Flow Market Flow Analyzer grafik etiketleri Türkçe yazılmıştı | "Para Akışı (30g)" → "Money Flow (30d)", "Akış Hızı (30g)" → "Flow Velocity (30d)" olarak İngilizce'ye çevrildi | `capital-flow/page.tsx` |
 | 2026-01-31 | Concierge sayfasında "TypeError: Cannot read properties of undefined (reading 'map')" hatası | `capitalFlow.marketFlows` API'den undefined veya non-array gelebiliyordu. `Array.isArray(capitalFlow.marketFlows) && capitalFlow.marketFlows.length > 0` kontrolü eklendi | `concierge/page.tsx:572` |
+| 2026-02-01 | Landing page FAQ'da kredi fiyatları yanlıştı (Layer 3 FREE, Layer 4 5 kredi, Asset 25 kredi) | Doğru fiyatlar eklendi: Layer 1-2 FREE, Layer 3 ve Layer 4 her biri 25 kredi/gün, Asset Analysis 100 kredi/gün (max 10 analiz) | `apps/web/app/(marketing)/page.tsx:771-774` |
 
 ---
 
