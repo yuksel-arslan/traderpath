@@ -10,6 +10,7 @@ import { calculateExpiredOutcomes, getRealAccuracy, calculateReportOutcome } fro
 import { notificationService } from '../notifications/notification.service';
 import { emailService } from '../email/email.service';
 import { creditService } from '../credits/credit.service';
+import { logger } from '../../core/logger';
 
 // Constants for free usage limits per analysis
 const FREE_PDF_DOWNLOADS_PER_ANALYSIS = 2;
@@ -396,7 +397,9 @@ export async function reportRoutes(fastify: FastifyInstance) {
               prisma.report.update({
                 where: { id: report.id },
                 data: { entryPrice: extractedPrice },
-              }).catch(() => {}); // Fire and forget
+              }).catch((err) => {
+                logger.warn({ reportId: report.id, error: err }, 'Failed to update report entry price');
+              }); // Fire and forget with logging
             }
           }
 

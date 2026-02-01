@@ -17,6 +17,7 @@ import { getCautionRate, calculateCautionOutcomes, calculateExpiredOutcomes } fr
 import { prisma } from '../../core/database';
 import { coinScoreCacheService, CoinScore } from './services/coin-score-cache.service';
 import { analyzeMLIS, MLISResult } from './services/mlis.service';
+import { logger } from '../../core/logger';
 
 // User type from JWT
 interface JwtUser {
@@ -545,20 +546,21 @@ Warn about potential traps and give protective advice.`;
     try {
       // Check if MLIS Pro method is requested
       if (body.method === 'mlis_pro') {
-        console.log(`[MLIS] Starting analysis for ${body.symbol} on ${interval}`);
+        logger.info({ symbol: body.symbol, interval }, '[MLIS] Starting analysis');
 
         // Run MLIS Pro analysis
         let mlisResult: MLISResult;
         try {
           mlisResult = await analyzeMLIS(body.symbol, interval);
-          console.log(`[MLIS] Analysis completed for ${body.symbol}:`, {
+          logger.info({
+            symbol: body.symbol,
             overallScore: mlisResult.overallScore,
             recommendation: mlisResult.recommendation,
             direction: mlisResult.direction,
             hasLayers: !!mlisResult.layers,
-          });
+          }, '[MLIS] Analysis completed');
         } catch (mlisError) {
-          console.error(`[MLIS] Analysis failed for ${body.symbol}:`, mlisError);
+          logger.error({ symbol: body.symbol, error: mlisError }, '[MLIS] Analysis failed');
           throw new Error(`MLIS analysis failed: ${mlisError instanceof Error ? mlisError.message : 'Unknown error'}`);
         }
 
@@ -765,7 +767,7 @@ Warn about potential traps and give protective advice.`;
           const { socialNotificationService } = await import('../notifications/social-notification.service');
           await socialNotificationService.sendAnalysisSummaryNotifications(userWithNotifs, notifData);
         } catch (notifError) {
-          console.error('[Analysis] Notification error:', notifError);
+          logger.error({ error: notifError, symbol: body.symbol }, '[Analysis] Notification error');
         }
       })();
 

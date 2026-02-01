@@ -7,6 +7,7 @@
 import { prisma } from '../../core/database';
 import { cache, cacheKeys } from '../../core/cache';
 import { calculateReportOutcome } from './outcome.service';
+import { logger } from '../../core/logger';
 
 interface LiveTrackingStatus {
   reportId: string;
@@ -73,7 +74,7 @@ async function fetchBulkPrices(symbols: string[]): Promise<BulkPriceData> {
     try {
       data = JSON.parse(responseText);
     } catch {
-      console.error('Invalid JSON response from Binance API');
+      logger.error('Invalid JSON response from Binance API');
       return prices;
     }
 
@@ -82,7 +83,7 @@ async function fetchBulkPrices(symbols: string[]): Promise<BulkPriceData> {
       prices[symbol] = parseFloat(item.price);
     }
   } catch (error) {
-    console.error('Failed to fetch bulk prices:', error);
+    logger.error({ error }, 'Failed to fetch bulk prices');
   }
 
   return prices;
@@ -462,7 +463,7 @@ export async function checkAndUpdateOutcomes(): Promise<{
           else if (result.outcome === 'incorrect') slHits++;
         }
       } catch (error) {
-        console.error(`Failed to calculate outcome for report ${report.id}:`, error);
+        logger.error({ reportId: report.id, error }, 'Failed to calculate outcome for report');
       }
     }
   }
@@ -574,7 +575,7 @@ export async function checkAndUpdateAnalysisOutcomes(): Promise<{
         })
       )
     );
-    console.log(`[AnalysisOutcomeChecker] Updated ${updates.length} analyses (TP: ${tpHits}, SL: ${slHits})`);
+    logger.info({ updates: updates.length, tpHits, slHits }, '[AnalysisOutcomeChecker] Updated analyses');
   }
 
   return {
@@ -621,7 +622,7 @@ async function fetchKlines(
 
       const response = await fetch(url);
       if (!response.ok) {
-        console.error(`[Klines] Failed to fetch for ${symbol}: ${response.status}`);
+        logger.error({ symbol, status: response.status }, '[Klines] Failed to fetch');
         break;
       }
 
@@ -632,7 +633,7 @@ async function fetchKlines(
       try {
         data = JSON.parse(responseText);
       } catch {
-        console.error(`[Klines] Invalid JSON for ${symbol}`);
+        logger.error({ symbol }, '[Klines] Invalid JSON response');
         break;
       }
 
@@ -660,7 +661,7 @@ async function fetchKlines(
       await new Promise(resolve => setTimeout(resolve, 100));
     }
   } catch (error) {
-    console.error(`[Klines] Error fetching for ${symbol}:`, error);
+    logger.error({ symbol, error }, '[Klines] Error fetching');
   }
 
   return allKlines;
@@ -738,7 +739,7 @@ export async function checkAllHistoricalOutcomes(): Promise<{
   skipped: number;
   stillActive: number;
 }> {
-  console.log('[HistoricalOutcomeChecker] Starting full historical check with Klines API...');
+  logger.info('[HistoricalOutcomeChecker] Starting full historical check with Klines API...');
 
   // Get ALL analyses without outcomes that have trade plans
   const analyses = await prisma.analysis.findMany({
@@ -756,11 +757,11 @@ export async function checkAllHistoricalOutcomes(): Promise<{
   });
 
   if (analyses.length === 0) {
-    console.log('[HistoricalOutcomeChecker] No analyses to check');
+    logger.debug('[HistoricalOutcomeChecker] No analyses to check');
     return { checked: 0, tpHits: 0, slHits: 0, skipped: 0, stillActive: 0 };
   }
 
-  console.log(`[HistoricalOutcomeChecker] Found ${analyses.length} analyses to check`);
+  logger.info({ count: analyses.length }, '[HistoricalOutcomeChecker] Found analyses to check');
 
   let tpHits = 0;
   let slHits = 0;
@@ -771,7 +772,7 @@ export async function checkAllHistoricalOutcomes(): Promise<{
   // Process one at a time to avoid rate limiting
   for (let i = 0; i < analyses.length; i++) {
     const analysis = analyses[i];
-    console.log(`[HistoricalOutcomeChecker] Processing ${i + 1}/${analyses.length}: ${analysis.symbol}`);
+    logger.debug({ progress: `${i + 1}/${analyses.length}`, symbol: analysis.symbol }, '[HistoricalOutcomeChecker] Processing');
 
     const tradePlan = analysis.step5Result as Record<string, unknown> | null;
     if (!tradePlan) {
@@ -802,7 +803,7 @@ export async function checkAllHistoricalOutcomes(): Promise<{
     const startTime = analysis.createdAt.getTime();
     const klines = await fetchKlines(analysis.symbol, startTime, undefined, timeframe);
 
-    console.log(`[HistoricalOutcomeChecker] ${analysis.symbol} (${timeframe}): Fetched ${klines.length} klines from ${new Date(startTime).toISOString()}`);
+    logger.debug({ symbol: analysis.symbol, timeframe, klinesCount: klines.length }, '[HistoricalOutcomeChecker] Fetched klines');
 
     if (klines.length === 0) {
       skipped++;
@@ -837,7 +838,7 @@ export async function checkAllHistoricalOutcomes(): Promise<{
 
   // Apply updates
   if (updates.length > 0) {
-    console.log(`[HistoricalOutcomeChecker] Applying ${updates.length} updates...`);
+    logger.info({ count: updates.length }, '[HistoricalOutcomeChecker] Applying updates');
     await Promise.all(
       updates.map(update =>
         prisma.analysis.update({
@@ -852,7 +853,7 @@ export async function checkAllHistoricalOutcomes(): Promise<{
     );
   }
 
-  console.log(`[HistoricalOutcomeChecker] Completed - Checked: ${analyses.length}, TP Hits: ${tpHits}, SL Hits: ${slHits}, Still Active: ${stillActive}, Skipped: ${skipped}`);
+  logger.info({ checked: analyses.length, tpHits, slHits, stillActive, skipped }, '[HistoricalOutcomeChecker] Completed');
 
   return {
     checked: analyses.length,
