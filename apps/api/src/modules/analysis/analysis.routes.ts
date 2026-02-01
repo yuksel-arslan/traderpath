@@ -41,6 +41,14 @@ interface GeminiResult {
   costUsd: number;
 }
 
+// Safe integer parsing with bounds checking
+function safeParseInt(value: string | undefined, defaultValue: number, min: number = 0, max: number = Number.MAX_SAFE_INTEGER): number {
+  if (!value) return defaultValue;
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed)) return defaultValue;
+  return Math.max(min, Math.min(parsed, max));
+}
+
 // Gemini AI for generating insights with cost tracking
 // Uses centralized callGeminiWithRetry for admin-configurable model
 async function getGeminiInsight(
@@ -894,8 +902,8 @@ Explain the key risks and what conditions would need to change before trading th
   }, async (request: FastifyRequest<{ Querystring: { limit?: string; offset?: string } }>, reply: FastifyReply) => {
     try {
       const userId = getUser(request).id;
-      const limit = Math.min(parseInt(request.query.limit || '20'), 50);
-      const offset = parseInt(request.query.offset || '0');
+      const limit = safeParseInt(request.query.limit, 20, 1, 50);
+      const offset = safeParseInt(request.query.offset, 0, 0, 10000);
 
       const analyses = await prisma.analysis.findMany({
         where: { userId },
@@ -1493,7 +1501,7 @@ Explain the key risks and what conditions would need to change before trading th
   app.get('/platform-performance-history', async (request: FastifyRequest<{ Querystring: { days?: string } }>, reply: FastifyReply) => {
     try {
       const query = request.query;
-      const days = Math.min(90, Math.max(7, parseInt(query.days || '30', 10)));
+      const days = safeParseInt(query.days, 30, 7, 90);
       const now = new Date();
       const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
       startDate.setHours(0, 0, 0, 0);
@@ -4921,7 +4929,7 @@ Explain the key risks and what conditions would need to change before trading th
         tradeableOnly?: string;
       };
 
-      const limit = Math.min(20, Math.max(1, parseInt(query.limit || '5', 10)));
+      const limit = safeParseInt(query.limit, 5, 1, 20);
       const sortBy = (query.sortBy === 'totalScore' ? 'totalScore' : 'reliabilityScore') as 'reliabilityScore' | 'totalScore';
       const tradeableOnly = query.tradeableOnly === 'true';
 
@@ -5112,7 +5120,7 @@ Explain the key risks and what conditions would need to change before trading th
     const { multiAssetScoreCacheService } = await import('./services/multi-asset-score-cache.service');
 
     const { market } = request.params;
-    const { limit = '5', sortBy = 'reliabilityScore', tradeableOnly = 'false' } = request.query;
+    const { limit, sortBy = 'reliabilityScore', tradeableOnly = 'false' } = request.query;
 
     const validMarkets = ['stocks', 'bonds', 'metals'];
     if (!validMarkets.includes(market)) {
@@ -5123,7 +5131,7 @@ Explain the key risks and what conditions would need to change before trading th
     }
 
     try {
-      const limitNum = Math.min(30, Math.max(1, parseInt(limit, 10)));
+      const limitNum = safeParseInt(limit, 5, 1, 30);
       const marketType = market as 'stocks' | 'bonds' | 'metals';
 
       let assets;
@@ -5341,7 +5349,7 @@ Explain the key risks and what conditions would need to change before trading th
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = getUser(request).id;
     const query = request.query as { days?: string };
-    const days = Math.min(90, Math.max(7, parseInt(query.days || '30', 10)));
+    const days = safeParseInt(query.days, 30, 7, 90);
 
     try {
       const now = new Date();
