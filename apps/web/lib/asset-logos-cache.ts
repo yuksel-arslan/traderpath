@@ -4,8 +4,6 @@
 // Fetches from API and caches in localStorage + memory
 // ===========================================
 
-import { authFetch } from './api';
-
 // ===========================================
 // Types
 // ===========================================
@@ -40,6 +38,72 @@ const CACHE_KEY = 'traderpath_asset_logos';
 const CACHE_VERSION_KEY = 'traderpath_asset_logos_version';
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 const DEFAULT_COLOR = '#4F46E5'; // Indigo
+
+// ===========================================
+// Fallback Logo Data (used when API fails)
+// ===========================================
+
+const FALLBACK_CRYPTO_LOGOS: Record<string, AssetLogoInfo> = {
+  BTC: { logoUrl: 'https://coin-images.coingecko.com/coins/images/1/small/bitcoin.png', color: '#F7931A', name: 'Bitcoin' },
+  ETH: { logoUrl: 'https://coin-images.coingecko.com/coins/images/279/small/ethereum.png', color: '#627EEA', name: 'Ethereum' },
+  BNB: { logoUrl: 'https://coin-images.coingecko.com/coins/images/825/small/bnb-icon2_2x.png', color: '#F3BA2F', name: 'BNB' },
+  SOL: { logoUrl: 'https://coin-images.coingecko.com/coins/images/4128/small/solana.png', color: '#9945FF', name: 'Solana' },
+  XRP: { logoUrl: 'https://coin-images.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png', color: '#23292F', name: 'XRP' },
+  ADA: { logoUrl: 'https://coin-images.coingecko.com/coins/images/975/small/cardano.png', color: '#0033AD', name: 'Cardano' },
+  DOGE: { logoUrl: 'https://coin-images.coingecko.com/coins/images/5/small/dogecoin.png', color: '#C2A633', name: 'Dogecoin' },
+  AVAX: { logoUrl: 'https://coin-images.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png', color: '#E84142', name: 'Avalanche' },
+  DOT: { logoUrl: 'https://coin-images.coingecko.com/coins/images/12171/small/polkadot.png', color: '#E6007A', name: 'Polkadot' },
+  MATIC: { logoUrl: 'https://coin-images.coingecko.com/coins/images/4713/small/polygon.png', color: '#8247E5', name: 'Polygon' },
+  LINK: { logoUrl: 'https://coin-images.coingecko.com/coins/images/877/small/chainlink-new-logo.png', color: '#375BD2', name: 'Chainlink' },
+  UNI: { logoUrl: 'https://coin-images.coingecko.com/coins/images/12504/small/uniswap-uni.png', color: '#FF007A', name: 'Uniswap' },
+  ATOM: { logoUrl: 'https://coin-images.coingecko.com/coins/images/1481/small/cosmos_hub.png', color: '#2E3148', name: 'Cosmos' },
+  LTC: { logoUrl: 'https://coin-images.coingecko.com/coins/images/2/small/litecoin.png', color: '#345D9D', name: 'Litecoin' },
+  NEAR: { logoUrl: 'https://coin-images.coingecko.com/coins/images/10365/small/near.jpg', color: '#000000', name: 'NEAR' },
+  ARB: { logoUrl: 'https://coin-images.coingecko.com/coins/images/16547/small/photo_2023-03-29_21.47.00.jpeg', color: '#28A0F0', name: 'Arbitrum' },
+  OP: { logoUrl: 'https://coin-images.coingecko.com/coins/images/25244/small/Optimism.png', color: '#FF0420', name: 'Optimism' },
+  APT: { logoUrl: 'https://coin-images.coingecko.com/coins/images/26455/small/aptos_round.png', color: '#000000', name: 'Aptos' },
+  SUI: { logoUrl: 'https://coin-images.coingecko.com/coins/images/26375/small/sui_asset.jpeg', color: '#4DA2FF', name: 'Sui' },
+  INJ: { logoUrl: 'https://coin-images.coingecko.com/coins/images/12882/small/Secondary_Symbol.png', color: '#00F2FE', name: 'Injective' },
+  PEPE: { logoUrl: 'https://coin-images.coingecko.com/coins/images/29850/small/pepe-token.jpeg', color: '#529652', name: 'Pepe' },
+  SHIB: { logoUrl: 'https://coin-images.coingecko.com/coins/images/11939/small/shiba.png', color: '#FFA409', name: 'Shiba Inu' },
+  AAVE: { logoUrl: 'https://coin-images.coingecko.com/coins/images/12645/small/AAVE.png', color: '#B6509E', name: 'Aave' },
+  MKR: { logoUrl: 'https://coin-images.coingecko.com/coins/images/1364/small/Mark_Maker.png', color: '#1AAB9B', name: 'Maker' },
+  FET: { logoUrl: 'https://coin-images.coingecko.com/coins/images/5681/small/Fetch.jpg', color: '#1A1A2E', name: 'Fetch.ai' },
+  RNDR: { logoUrl: 'https://coin-images.coingecko.com/coins/images/11636/small/rndr.png', color: '#000000', name: 'Render' },
+};
+
+const FALLBACK_STOCK_LOGOS: Record<string, AssetLogoInfo> = {
+  SPY: { logoUrl: '', color: '#E31937', name: 'S&P 500 ETF' },
+  QQQ: { logoUrl: '', color: '#0066CC', name: 'Nasdaq 100 ETF' },
+  AAPL: { logoUrl: 'https://logo.clearbit.com/apple.com', color: '#A2AAAD', name: 'Apple Inc.' },
+  MSFT: { logoUrl: 'https://logo.clearbit.com/microsoft.com', color: '#00A4EF', name: 'Microsoft' },
+  NVDA: { logoUrl: 'https://logo.clearbit.com/nvidia.com', color: '#76B900', name: 'NVIDIA' },
+  GOOGL: { logoUrl: 'https://logo.clearbit.com/google.com', color: '#4285F4', name: 'Alphabet' },
+  AMZN: { logoUrl: 'https://logo.clearbit.com/amazon.com', color: '#FF9900', name: 'Amazon' },
+  META: { logoUrl: 'https://logo.clearbit.com/meta.com', color: '#0668E1', name: 'Meta' },
+  TSLA: { logoUrl: 'https://logo.clearbit.com/tesla.com', color: '#CC0000', name: 'Tesla' },
+};
+
+const FALLBACK_METAL_LOGOS: Record<string, AssetLogoInfo> = {
+  GLD: { logoUrl: '', color: '#FFD700', name: 'Gold ETF' },
+  SLV: { logoUrl: '', color: '#C0C0C0', name: 'Silver ETF' },
+  IAU: { logoUrl: '', color: '#D4AF37', name: 'Gold Trust' },
+};
+
+const FALLBACK_BOND_LOGOS: Record<string, AssetLogoInfo> = {
+  TLT: { logoUrl: '', color: '#1E3A8A', name: '20+ Year Treasury' },
+  BND: { logoUrl: '', color: '#166534', name: 'Total Bond Market' },
+  IEF: { logoUrl: '', color: '#7C3AED', name: '7-10 Year Treasury' },
+};
+
+const FALLBACK_CACHE: LogoCache = {
+  crypto: FALLBACK_CRYPTO_LOGOS,
+  stocks: FALLBACK_STOCK_LOGOS,
+  metals: FALLBACK_METAL_LOGOS,
+  bonds: FALLBACK_BOND_LOGOS,
+  version: 1,
+  lastUpdated: new Date().toISOString(),
+};
 
 // ===========================================
 // In-memory cache
@@ -91,7 +155,21 @@ function saveToLocalStorage(cache: LogoCache): void {
 
 async function fetchLogosFromAPI(): Promise<LogoCache> {
   try {
-    const response = await authFetch('/api/asset-logos');
+    // Use direct fetch for public API endpoint (no auth required)
+    const baseUrl = typeof window !== 'undefined'
+      ? window.location.origin
+      : process.env['NEXT_PUBLIC_API_URL'] || '';
+
+    // Try API URL first (production), fallback to same origin
+    const apiUrl = process.env['NEXT_PUBLIC_API_URL'] || baseUrl;
+    const response = await fetch(`${apiUrl}/api/asset-logos`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // Add timeout
+      signal: AbortSignal.timeout(10000),
+    });
 
     if (!response.ok) {
       throw new Error(`API returned ${response.status}`);
@@ -144,17 +222,10 @@ export async function loadLogosCache(): Promise<LogoCache> {
       saveToLocalStorage(apiCache);
       return apiCache;
     } catch {
-      // Return empty cache as fallback
-      const emptyCache: LogoCache = {
-        crypto: {},
-        stocks: {},
-        metals: {},
-        bonds: {},
-        version: 0,
-        lastUpdated: new Date().toISOString(),
-      };
-      memoryCache = emptyCache;
-      return emptyCache;
+      // Use fallback cache when API fails (common logos still work)
+      console.warn('[AssetLogosCache] API failed, using fallback logos');
+      memoryCache = FALLBACK_CACHE;
+      return FALLBACK_CACHE;
     }
   })();
 
@@ -173,14 +244,8 @@ export async function refreshLogosCache(): Promise<LogoCache> {
     saveToLocalStorage(apiCache);
     return apiCache;
   } catch {
-    return memoryCache || {
-      crypto: {},
-      stocks: {},
-      metals: {},
-      bonds: {},
-      version: 0,
-      lastUpdated: new Date().toISOString(),
-    };
+    // Use existing cache or fallback
+    return memoryCache || FALLBACK_CACHE;
   }
 }
 
