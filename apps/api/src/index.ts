@@ -47,6 +47,8 @@ import { multiMarketRoutes } from './modules/analysis/multi-market.routes';
 import dailyPassRoutes from './modules/passes/daily-pass.routes';
 import assetLogosRoutes from './modules/asset-logos/asset-logos.routes';
 import { initializeAssetLogos } from './modules/asset-logos/asset-logos.service';
+import { bilgeRoutes } from './modules/bilge/bilge.routes';
+import { initializeBilgeService, collectError } from './modules/bilge/bilge.service';
 
 // ===========================================
 // Server Configuration
@@ -272,7 +274,7 @@ app.addHook('onResponse', async (request, reply) => {
   }
 });
 
-// Error logging
+// Error logging and BILGE collection
 app.addHook('onError', async (request, reply, error) => {
   logger.error({
     error: error.message,
@@ -282,6 +284,21 @@ app.addHook('onError', async (request, reply, error) => {
     requestId: request.headers['x-request-id'],
     userId: (request as any).user?.id,
   }, 'Request error');
+
+  // Collect error with BILGE Guardian (fire and forget)
+  collectError({
+    message: error.message,
+    stack: error.stack,
+    code: (error as TradepathError).code,
+    endpoint: request.url,
+    method: request.method,
+    userId: (request as any).user?.id,
+    requestId: request.headers['x-request-id'] as string,
+    project: 'traderpath',
+  }).catch((bilgeErr) => {
+    // Don't let BILGE errors affect the response
+    logger.warn({ bilgeErr }, 'BILGE error collection failed');
+  });
 });
 
 // ===========================================
@@ -371,6 +388,9 @@ app.register(dailyPassRoutes, { prefix: '/api/passes' }); // Legacy
 // Asset Logos routes (public)
 app.register(assetLogosRoutes, { prefix: '/api/v1/asset-logos' });
 app.register(assetLogosRoutes, { prefix: '/api/asset-logos' }); // Legacy
+
+// BILGE Guardian System routes (admin)
+app.register(bilgeRoutes);
 
 // ===========================================
 // 404 Handler
@@ -526,6 +546,10 @@ const start = async () => {
     // Initialize asset logos in database
     await initializeAssetLogos();
     logger.info('✓ Asset logos initialized');
+
+    // Initialize BILGE Guardian System
+    initializeBilgeService(redis);
+    logger.info('✓ BILGE Guardian initialized');
 
     // Start server
     await app.listen({
