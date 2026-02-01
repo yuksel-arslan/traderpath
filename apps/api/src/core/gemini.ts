@@ -244,9 +244,9 @@ export async function callGeminiWithRetry(
           ? Math.min(apiRetryDelay + jitter, MAX_WAIT_TIME_MS)
           : waitTime;
 
-        console.warn(
-          `[Gemini Rate Limit] ${operation} - Attempt ${attempt}/${maxRetries}. ` +
-          `Waiting ${Math.round(finalWaitTime / 1000)}s before retry.`
+        logger.warn(
+          { operation, attempt, maxRetries, waitMs: finalWaitTime },
+          `[Gemini Rate Limit] Waiting ${Math.round(finalWaitTime / 1000)}s before retry`
         );
 
         if (attempt < maxRetries) {
@@ -259,9 +259,9 @@ export async function callGeminiWithRetry(
       if (errorMessage.includes('503') || errorMessage.includes('unavailable')) {
         const waitTime = Math.min(2000 * attempt + Math.random() * 1000, MAX_WAIT_TIME_MS);
 
-        console.warn(
-          `[Gemini Unavailable] ${operation} - Attempt ${attempt}/${maxRetries}. ` +
-          `Waiting ${Math.round(waitTime / 1000)}s before retry.`
+        logger.warn(
+          { operation, attempt, maxRetries, waitMs: waitTime },
+          `[Gemini Unavailable] Waiting ${Math.round(waitTime / 1000)}s before retry`
         );
 
         if (attempt < maxRetries) {
@@ -276,9 +276,9 @@ export async function callGeminiWithRetry(
         errorMessage.includes('econnreset') ||
         errorMessage.includes('timeout')
       ) {
-        console.warn(
-          `[Gemini Network Error] ${operation} - Attempt ${attempt}/${maxRetries}. ` +
-          `Error: ${lastError.message}`
+        logger.warn(
+          { operation, attempt, maxRetries, error: lastError.message },
+          '[Gemini Network Error] Retrying after network failure'
         );
 
         if (attempt < maxRetries) {
@@ -289,7 +289,7 @@ export async function callGeminiWithRetry(
       }
 
       // Don't retry on other errors
-      console.error(`[Gemini Error] ${operation} - ${lastError.message}`);
+      logger.error({ operation, error: lastError.message }, '[Gemini Error] Non-retryable error');
       throw lastError;
     }
   }

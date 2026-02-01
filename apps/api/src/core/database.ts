@@ -4,6 +4,7 @@
 // ===========================================
 
 import { PrismaClient } from '@prisma/client';
+import { logger } from './logger';
 
 // Create Prisma client
 export const prisma = new PrismaClient({
@@ -18,7 +19,7 @@ export async function testConnection(): Promise<boolean> {
     await prisma.$connect();
     return true;
   } catch (error) {
-    console.error('Database connection failed:', error);
+    logger.error({ error }, 'Database connection failed');
     return false;
   }
 }

@@ -95,11 +95,11 @@ async function getGeminiInsight(
       symbol,
       durationMs,
       metadata: { operation },
-    }).catch(err => console.error('Failed to log cost:', err));
+    }).catch(err => logger.error({ error: err }, 'Failed to log cost'));
 
     return { text, inputTokens, outputTokens, costUsd };
   } catch (error) {
-    console.error('Gemini error:', error);
+    logger.error({ error }, 'Gemini error');
     return { text: 'AI analysis temporarily unavailable', inputTokens: 0, outputTokens: 0, costUsd: 0 };
   }
 }
@@ -132,7 +132,7 @@ Be concise and actionable.`;
         data: { ...data, aiSummary },
       });
     } catch (error) {
-      console.error('Market Pulse error:', error);
+      logger.error({ error }, 'Market Pulse error');
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: 'Failed to fetch market data' },
@@ -169,7 +169,7 @@ Be concise and actionable.`;
         },
       });
     } catch (error) {
-      console.error('Economic Calendar error:', error);
+      logger.error({ error }, 'Economic Calendar error');
       return reply.status(500).send({
         success: false,
         error: { code: 'CALENDAR_ERROR', message: 'Failed to fetch economic calendar' },
@@ -238,7 +238,7 @@ Be concise and give a trading perspective.`;
         remainingCredits: chargeResult.newBalance,
       });
     } catch (error) {
-      console.error('Asset Scan error:', error);
+      logger.error({ error }, 'Asset Scan error');
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: 'Failed to scan asset' },
@@ -292,7 +292,7 @@ Focus on risk assessment and trading implications.`;
         remainingCredits: chargeResult.newBalance,
       });
     } catch (error) {
-      console.error('Safety Check error:', error);
+      logger.error({ error }, 'Safety Check error');
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: 'Failed to perform safety check' },
@@ -346,7 +346,7 @@ Be specific about when to enter.`;
         remainingCredits: chargeResult.newBalance,
       });
     } catch (error) {
-      console.error('Timing error:', error);
+      logger.error({ error }, 'Timing error');
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: 'Failed to calculate timing' },
@@ -410,7 +410,7 @@ Give practical trading advice.`;
         remainingCredits: chargeResult.newBalance,
       });
     } catch (error) {
-      console.error('Trade Plan error:', error);
+      logger.error({ error }, 'Trade Plan error');
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: 'Failed to generate trade plan' },
@@ -464,7 +464,7 @@ Warn about potential traps and give protective advice.`;
         remainingCredits: chargeResult.newBalance,
       });
     } catch (error) {
-      console.error('Trap Check error:', error);
+      logger.error({ error }, 'Trap Check error');
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: 'Failed to check for traps' },
@@ -621,7 +621,7 @@ Warn about potential traps and give protective advice.`;
           }
         );
 
-        console.log(`[MLIS] Analysis saved to database: ${savedAnalysis.id}`);
+        logger.info({ analysisId: savedAnalysis.id }, '[MLIS] Analysis saved to database');
 
         // Return MLIS result
         const responseData = {
@@ -650,7 +650,7 @@ Warn about potential traps and give protective advice.`;
           bonusCredits: tradeTypeBonus,
         };
 
-        console.log(`[MLIS] Sending response for ${body.symbol}`);
+        logger.info({ symbol: body.symbol }, '[MLIS] Sending response');
 
         // Get current credit balance
         const creditBalance = await prisma.creditBalance.findUnique({
@@ -885,7 +885,7 @@ Explain the key risks and what conditions would need to change before trading th
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Full Analysis error:', errorMessage, error);
+      logger.error({ error, errorMessage }, 'Full Analysis error');
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: `Failed to complete analysis: ${errorMessage}` },
@@ -959,7 +959,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Analysis history error:', error);
+      logger.error({ error }, 'Analysis history error');
       return reply.status(500).send({
         success: false,
         error: { code: 'FETCH_ERROR', message: 'Failed to fetch analysis history' },
@@ -1030,7 +1030,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Get analysis error:', error);
+      logger.error({ error }, 'Get analysis error');
       return reply.status(500).send({
         success: false,
         error: { code: 'FETCH_ERROR', message: 'Failed to fetch analysis' },
@@ -1101,7 +1101,7 @@ Explain the key risks and what conditions would need to change before trading th
           }
         }
       } catch (err) {
-        console.error('Failed to fetch prices:', err);
+        logger.warn({ error: err }, 'Failed to fetch prices');
       }
 
       // Calculate next candle close time based on intervals present
@@ -1248,7 +1248,7 @@ Explain the key risks and what conditions would need to change before trading th
               },
             })
           )
-        ).catch(err => console.error('Failed to update analysis outcomes:', err));
+        ).catch(err => logger.warn({ error: err }, 'Failed to update analysis outcomes'));
       }
 
       return reply.send({
@@ -1262,7 +1262,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Live prices error:', error);
+      logger.error({ error }, 'Live prices error');
       return reply.status(500).send({
         success: false,
         error: { code: 'FETCH_ERROR', message: 'Failed to fetch live prices' },
@@ -1485,7 +1485,7 @@ Explain the key risks and what conditions would need to change before trading th
         }
       });
     } catch (error) {
-      console.error('Platform stats error:', error);
+      logger.error({ error }, 'Platform stats error');
       return reply.status(500).send({
         success: false,
         error: { code: 'PLATFORM_STATS_ERROR', message: 'Failed to fetch platform statistics' }
@@ -1667,7 +1667,7 @@ Explain the key risks and what conditions would need to change before trading th
         }
       });
     } catch (error) {
-      console.error('Platform performance history error:', error);
+      logger.error({ error }, 'Platform performance history error');
       return reply.status(500).send({
         success: false,
         error: { code: 'PLATFORM_PERFORMANCE_ERROR', message: 'Failed to fetch platform performance history' }
@@ -1781,7 +1781,7 @@ Explain the key risks and what conditions would need to change before trading th
             }
           }
         } catch (err) {
-          console.error('Failed to fetch prices for active performance:', err);
+          logger.warn({ error: err }, 'Failed to fetch prices for active performance');
         }
 
         // Calculate how many active analyses are profitable
@@ -1842,7 +1842,7 @@ Explain the key risks and what conditions would need to change before trading th
         aiExpertQuestionsTotal,
       });
     } catch (error) {
-      console.error('Statistics error:', error);
+      logger.error({ error }, 'Statistics error');
       return reply.status(500).send({
         success: false,
         error: { code: 'STATS_ERROR', message: 'Failed to fetch statistics' },
@@ -1971,7 +1971,7 @@ Explain the key risks and what conditions would need to change before trading th
             }
           }
         } catch (err) {
-          console.error('Failed to fetch prices for outcomes:', err);
+          logger.warn({ error: err }, 'Failed to fetch prices for outcomes');
         }
       }
 
@@ -2053,7 +2053,7 @@ Explain the key risks and what conditions would need to change before trading th
         bestStreak: user?.streakDays || 0,
       });
     } catch (error) {
-      console.error('Performance error:', error);
+      logger.error({ error }, 'Performance error');
       return reply.status(500).send({
         success: false,
         error: { code: 'PERF_ERROR', message: 'Failed to fetch performance data' },
@@ -2126,7 +2126,7 @@ Explain the key risks and what conditions would need to change before trading th
         data: analyses,
       });
     } catch (error) {
-      console.error('Recent analyses error:', error);
+      logger.error({ error }, 'Recent analyses error');
       return reply.status(500).send({
         success: false,
         error: { code: 'RECENT_ERROR', message: 'Failed to fetch recent analyses' },
@@ -4643,7 +4643,7 @@ Explain the key risks and what conditions would need to change before trading th
         }
       });
     } catch (error) {
-      console.error('Indicator charts error:', error);
+      logger.error({ error }, 'Indicator charts error');
       return reply.status(500).send({
         success: false,
         error: { code: 'CHART_ERROR', message: 'Failed to generate indicator charts' }
@@ -4787,7 +4787,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Check available analysis error:', error);
+      logger.error({ error }, 'Check available analysis error');
       return reply.status(500).send({
         success: false,
         error: { code: 'CHECK_ERROR', message: 'Failed to check available analysis' },
@@ -4905,7 +4905,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Purchase analysis error:', error);
+      logger.error({ error }, 'Purchase analysis error');
       return reply.status(500).send({
         success: false,
         error: { code: 'PURCHASE_ERROR', message: 'Failed to purchase analysis' },
@@ -4957,7 +4957,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Get top coins error:', error);
+      logger.error({ error }, 'Get top coins error');
       return reply.status(500).send({
         success: false,
         error: { code: 'TOP_COINS_ERROR', message: 'Failed to get top coins' },
@@ -4983,9 +4983,9 @@ Explain the key risks and what conditions would need to change before trading th
 
       // Trigger scan in background
       coinScoreCacheService.scanAllCoins('4h').then((result) => {
-        console.log(`[TopCoins] Manual refresh complete. Success: ${result.success}, Failed: ${result.failed}`);
+        logger.info({ success: result.success, failed: result.failed }, '[TopCoins] Manual refresh complete');
       }).catch((error) => {
-        console.error('[TopCoins] Manual refresh failed:', error);
+        logger.error({ error }, '[TopCoins] Manual refresh failed');
       });
 
       return reply.send({
@@ -4995,7 +4995,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Refresh top coins error:', error);
+      logger.error({ error }, 'Refresh top coins error');
       return reply.status(500).send({
         success: false,
         error: { code: 'REFRESH_ERROR', message: 'Failed to start refresh' },
@@ -5045,9 +5045,9 @@ Explain the key risks and what conditions would need to change before trading th
 
       // Start scan in background (don't await)
       coinScoreCacheService.scanAllCoins('4h').then((result) => {
-        console.log(`[TopCoins] Paid scan complete for user ${userId}. Success: ${result.success}, Failed: ${result.failed}`);
+        logger.info({ userId, success: result.success, failed: result.failed }, '[TopCoins] Paid scan complete');
       }).catch((error) => {
-        console.error(`[TopCoins] Paid scan failed for user ${userId}:`, error);
+        logger.error({ userId, error }, '[TopCoins] Paid scan failed');
       });
 
       const estimatedMinutes = Math.ceil((COINS_TO_SCAN * SECONDS_PER_COIN) / 60);
@@ -5063,7 +5063,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Paid scan error:', error);
+      logger.error({ error }, 'Paid scan error');
       return reply.status(500).send({
         success: false,
         error: { code: 'SCAN_ERROR', message: 'Failed to start scan' },
@@ -5097,7 +5097,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error('Cache status error:', error);
+      logger.error({ error }, 'Cache status error');
       return reply.status(500).send({
         success: false,
         error: { code: 'STATUS_ERROR', message: 'Failed to get cache status' },
@@ -5155,7 +5155,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error(`Multi-asset fetch error (${market}):`, error);
+      logger.error({ market, error }, 'Multi-asset fetch error');
       return reply.status(500).send({
         success: false,
         error: { code: 'FETCH_ERROR', message: 'Failed to get assets' },
@@ -5221,9 +5221,9 @@ Explain the key risks and what conditions would need to change before trading th
 
       // Start scan in background (don't await)
       multiAssetScoreCacheService.scanMarket(marketType).then((result) => {
-        console.log(`[MultiAsset] Paid ${market} scan complete for user ${userId}. Success: ${result.success}, Failed: ${result.failed}`);
+        logger.info({ market, userId, success: result.success, failed: result.failed }, '[MultiAsset] Paid scan complete');
       }).catch((error) => {
-        console.error(`[MultiAsset] Paid ${market} scan failed for user ${userId}:`, error);
+        logger.error({ market, userId, error }, '[MultiAsset] Paid scan failed');
       });
 
       const estimatedMinutes = Math.ceil((assetsToScan * SECONDS_PER_ASSET) / 60);
@@ -5240,7 +5240,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error(`Multi-asset scan error (${market}):`, error);
+      logger.error({ market, error }, 'Multi-asset scan error');
       return reply.status(500).send({
         success: false,
         error: { code: 'SCAN_ERROR', message: 'Failed to start scan' },
@@ -5289,7 +5289,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error(`Multi-asset status error (${market}):`, error);
+      logger.error({ market, error }, 'Multi-asset status error');
       return reply.status(500).send({
         success: false,
         error: { code: 'STATUS_ERROR', message: 'Failed to get cache status' },
@@ -5330,7 +5330,7 @@ Explain the key risks and what conditions would need to change before trading th
         },
       });
     } catch (error) {
-      console.error(`Multi-asset all fetch error (${market}):`, error);
+      logger.error({ market, error }, 'Multi-asset all fetch error');
       return reply.status(500).send({
         success: false,
         error: { code: 'FETCH_ERROR', message: 'Failed to get all assets' },
@@ -5471,7 +5471,7 @@ Explain the key risks and what conditions would need to change before trading th
             }
           }
         } catch (err) {
-          console.error('Failed to fetch prices:', err);
+          logger.warn({ error: err }, 'Failed to fetch prices for performance history');
         }
 
         // Calculate unrealized P/L for today
@@ -5529,7 +5529,7 @@ Explain the key risks and what conditions would need to change before trading th
         }
       });
     } catch (error) {
-      console.error('Performance history error:', error);
+      logger.error({ error }, 'Performance history error');
       return reply.status(500).send({
         success: false,
         error: { code: 'PERFORMANCE_HISTORY_ERROR', message: 'Failed to fetch performance history' },
