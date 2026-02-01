@@ -26,6 +26,7 @@ import {
   Brain,
   Gift,
   X,
+  Shield,
 } from 'lucide-react';
 import Link from 'next/link';
 import { authFetch } from '../../../lib/api';
@@ -424,6 +425,13 @@ export default function AdminPage() {
         >
           <Brain className="w-4 h-4" />
           AI Models
+        </Link>
+        <Link
+          href="/admin/bilge"
+          className="flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-muted-foreground hover:text-foreground transition"
+        >
+          <Shield className="w-4 h-4 text-[#40E0D0]" />
+          BILGE
         </Link>
       </div>
 

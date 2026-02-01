@@ -57,3 +57,6 @@ export {
 
 // Routes
 export { default as bilgeRoutes } from './bilge.routes';
+
+// Cron Jobs
+export { startBilgeWeeklyReportJob, stopBilgeWeeklyReportJob } from './bilge-cron.job';
