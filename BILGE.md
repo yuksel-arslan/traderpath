@@ -108,11 +108,13 @@ içinde çalışır.
 
 ## ◆ PROJELER
 
+> **Karar**: Tüm projelerde aynı izleme seviyesi uygulanır.
+
 | Proje | Durum | URL | İzleme Seviyesi |
 |-------|-------|-----|-----------------|
-| TraderPath.io | ✅ Aktif | traderpath.io | 🔴 Kritik (7/24) |
-| SmartCon360 | 🟡 Geliştirme | smartcon360.com | 🟡 Orta |
-| FootballAI | 🔵 Planlama | footballai.com | 🟢 Düşük |
+| TraderPath.io | ✅ Aktif | traderpath.io | 🔴 Tam İzleme (7/24) |
+| SmartCon360 | 🟡 Geliştirme | smartcon360.com | 🔴 Tam İzleme (7/24) |
+| FootballAI | 🔵 Planlama | footballai.com | 🔴 Tam İzleme (7/24) |
 
 ### Gelecek Projeler İçin Ölçeklenebilirlik
 
@@ -220,11 +222,11 @@ BILGE, yeni projeler eklendiğinde otomatik olarak:
 
 | Seviye | Renk | Açıklama | Aksiyon |
 |--------|------|----------|---------|
-| 🔴 CRITICAL | Kırmızı | Sistem çökmesi, veri kaybı riski | Anında bildirim + telefon |
-| 🟠 HIGH | Turuncu | Kullanıcı etkileyen hatalar | 5 dk içinde bildirim |
+| 🔴 CRITICAL | Kırmızı | Sistem çökmesi, veri kaybı riski | Anında bildirim + SMS/WhatsApp |
+| 🟠 HIGH | Turuncu | Kullanıcı etkileyen hatalar | 5 dk içinde Slack/Discord |
 | 🟡 MEDIUM | Sarı | Fonksiyon bozukluğu | Saatlik özet |
 | 🟢 LOW | Yeşil | Kozmetik, log hataları | Günlük özet |
-| ⚪ INFO | Gri | Bilgilendirme | Haftalık rapor |
+| ⚪ INFO | Gri | Bilgilendirme | Haftalık rapor (Pazar 21:00) |
 
 ### Bilinen Pattern Database
 
@@ -486,6 +488,16 @@ cron.schedule('0 9 * * *', bilgeGuardian.generateDailyReport);
 
 ## ◆ ADMIN DASHBOARD
 
+> **Karar**: Dashboard her projenin Admin Paneli içinde yer alır.
+
+### Erişim Noktaları
+
+| Proje | Dashboard URL |
+|-------|---------------|
+| TraderPath.io | `/admin/bilge` |
+| SmartCon360 | `/admin/bilge` |
+| FootballAI | `/admin/bilge` |
+
 ### Özellikler
 
 1. **Real-time Error Feed** - Canlı hata akışı
@@ -494,10 +506,12 @@ cron.schedule('0 9 * * *', bilgeGuardian.generateDailyReport);
 4. **Performance Metrics** - Uptime, response time
 5. **Learning Center** - Çözülen hatalar ve pattern'ler
 6. **Config Panel** - Bildirim ayarları, threshold'lar
+7. **Innovation Ideas** - Yenilikçi fikirler ve öneriler
+8. **User Feedback** - Kullanıcı geri bildirimleri
 
 ### Erişim
 
-- URL: `/admin/bilge` veya `bilge.traderpath.io`
+- URL: Her proje için `/admin/bilge`
 - Auth: Admin kullanıcılar only
 - Mobile: Responsive design
 
@@ -550,6 +564,348 @@ cron.schedule('0 9 * * *', bilgeGuardian.generateDailyReport);
 | Medium priority | Saatlik batch |
 | Low priority | Günlük özet |
 | Info | Haftalık rapor |
+
+---
+
+## ◆ BİLDİRİM KANALLARI
+
+> **Karar**: Slack VE Discord birlikte kullanılır.
+
+### Kanal Yapılandırması
+
+| Kanal | Kullanım | Konfigürasyon |
+|-------|----------|---------------|
+| **Slack** | Birincil bildirim kanalı | Webhook URL |
+| **Discord** | Yedek bildirim kanalı | Webhook URL |
+| **SMS** | Kritik hatalar için | Twilio API |
+| **WhatsApp** | Kritik hatalar için | Twilio WhatsApp API |
+| **Email** | Haftalık raporlar | SMTP/SendGrid |
+
+### SMS/WhatsApp Entegrasyonu (Kritik Hatalar)
+
+```typescript
+// Twilio ile SMS/WhatsApp gönderimi
+interface CriticalAlertConfig {
+  channels: ['sms', 'whatsapp'];
+  recipients: ['+90xxxxxxxxxx']; // Admin telefon numaraları
+  provider: 'twilio';
+
+  // Sadece CRITICAL seviye için tetiklenir
+  triggerOn: 'CRITICAL';
+
+  // Spam önleme: Aynı hata için 30dk içinde tekrar gönderme
+  cooldown: 30 * 60 * 1000; // 30 dakika
+}
+
+// Örnek SMS mesajı
+const smsTemplate = `
+🔴 BILGE CRITICAL ALERT
+━━━━━━━━━━━━━━━━━━━━━
+Project: {{project}}
+Error: {{errorType}}
+Time: {{timestamp}}
+
+Dashboard: {{dashboardUrl}}
+`;
+```
+
+### Maliyet (SMS/WhatsApp)
+
+| Kanal | Birim Fiyat | Aylık Tahmin |
+|-------|-------------|--------------|
+| SMS (Twilio) | $0.0075/mesaj | ~$1-5 |
+| WhatsApp (Twilio) | $0.005/mesaj | ~$1-3 |
+
+---
+
+## ◆ HAFTALIK RAPOR
+
+> **Karar**: Her Pazar, saat 21:00'de gönderilir.
+
+### Rapor İçeriği
+
+```
+═══════════════════════════════════════════════════════════
+◆ BILGE WEEKLY REPORT
+2026-01-26 → 2026-02-01
+═══════════════════════════════════════════════════════════
+
+📊 HAFTALIK ÖZET
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total Errors: 47
+├── 🔴 Critical: 2 (all resolved)
+├── 🟠 High: 12 (10 resolved, 2 pending)
+├── 🟡 Medium: 18 (all resolved)
+└── 🟢 Low: 15 (monitoring)
+
+Average Resolution Time: 23 minutes
+Uptime: 99.87%
+Response Time: 238ms avg
+
+📈 TREND ANALİZİ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Error rate: ↓ 15% vs last week
+• Resolution time: ↓ 8 minutes improvement
+• New patterns learned: 3
+
+🏆 EN SIK ÇÖZÜLEN HATALAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. NULL_ACCESS (15 occurrences) - Auto-suggested fix
+2. RATE_LIMIT (8 occurrences) - Backoff enabled
+3. TYPE_MISMATCH (6 occurrences) - Interface fixes
+
+💡 YENİLİKÇİ FİKİRLER (Bu Hafta)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Capital Flow için WebSocket real-time update önerisi
+• Concierge'e voice-to-voice mod ekleme imkanı
+• Mobile app için push notification sistemi
+
+📬 KULLANICI GERİ BİLDİRİMLERİ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• 3 yeni feedback (2 onay bekliyor)
+• 1 feature request değerlendiriliyor
+
+═══════════════════════════════════════════════════════════
+```
+
+### Gönderim Zamanlaması
+
+```typescript
+// Her Pazar 21:00 UTC+3 (Türkiye saati)
+cron.schedule('0 21 * * 0', async () => {
+  const report = await bilgeGuardian.generateWeeklyReport();
+  await bilgeGuardian.sendToAllChannels(report);
+}, {
+  timezone: 'Europe/Istanbul'
+});
+```
+
+---
+
+## ◆ YENİLİKÇİ FİKİRLER MOTORU (Innovation Engine)
+
+> **Karar**: BILGE, sistem geliştirme için parlak ve yenilikçi fikirler önerir.
+
+### Nasıl Çalışır?
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    INNOVATION ENGINE                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  📊 VERİ TOPLAMA                                               │
+│  ├── Kullanıcı davranış analizi                                │
+│  ├── Hata pattern'leri ve çözümleri                            │
+│  ├── Performans metrikleri                                     │
+│  ├── Rakip analizi (public data)                               │
+│  └── Teknoloji trendleri                                       │
+│                                                                 │
+│  🧠 AI ANALİZ (Gemini)                                         │
+│  ├── Pattern recognition                                       │
+│  ├── Opportunity detection                                     │
+│  ├── Risk assessment                                           │
+│  └── Feasibility analysis                                      │
+│                                                                 │
+│  💡 FİKİR ÜRETİMİ                                              │
+│  ├── Özellik önerileri                                         │
+│  ├── Optimizasyon fırsatları                                   │
+│  ├── UX iyileştirmeleri                                        │
+│  ├── Yeni gelir modelleri                                      │
+│  └── Teknoloji yükseltmeleri                                   │
+│                                                                 │
+│  📋 SUNUŞ                                                      │
+│  ├── Haftalık raporda özet                                     │
+│  ├── Admin dashboard'da detay                                  │
+│  ├── Öncelik ve zorluk skorları                                │
+│  └── Tahmini ROI                                               │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Fikir Kategorileri
+
+| Kategori | Açıklama | Örnek |
+|----------|----------|-------|
+| 🚀 **Feature** | Yeni özellik önerileri | "Sesli analiz komutu ekle" |
+| ⚡ **Performance** | Hız/verimlilik iyileştirmeleri | "Redis cache stratejisi optimize et" |
+| 🎨 **UX** | Kullanıcı deneyimi | "Onboarding akışını basitleştir" |
+| 💰 **Revenue** | Gelir artırma fikirleri | "Premium tier için AI Expert paketi" |
+| 🔧 **Tech Debt** | Teknik borç temizliği | "Legacy API endpoint'lerini kaldır" |
+| 🔒 **Security** | Güvenlik iyileştirmeleri | "2FA zorunlu yap" |
+
+### Fikir Değerlendirme Kriterleri
+
+| Kriter | Ağırlık | Açıklama |
+|--------|---------|----------|
+| Etki (Impact) | 40% | Kullanıcı/gelir etkisi |
+| Zorluk (Effort) | 25% | Geliştirme süresi |
+| Risk | 20% | Teknik/iş riski |
+| Aciliyet | 15% | Zamana duyarlılık |
+
+### Örnek Fikir Formatı
+
+```
+═══════════════════════════════════════════════════════════
+💡 YENİLİKÇİ FİKİR #127
+═══════════════════════════════════════════════════════════
+
+📌 BAŞLIK: Capital Flow Real-time WebSocket
+
+📝 AÇIKLAMA:
+Mevcut polling yerine WebSocket kullanarak Capital Flow
+verilerini gerçek zamanlı güncelle. Kullanıcı sayfayı
+yenilemeden flow değişikliklerini görsün.
+
+📊 METRİKLER:
+├── Etki: ████████░░ 80%
+├── Zorluk: ████░░░░░░ 40%
+├── Risk: ██░░░░░░░░ 20%
+└── Aciliyet: ██████░░░░ 60%
+
+⏱️ TAHMİNİ SÜRE: 2 gün
+💰 TAHMİNİ ROI: API çağrısı %60 azalır, UX iyileşir
+
+🔧 TEKNİK DETAY:
+• Socket.io veya native WebSocket
+• Redis pub/sub ile broadcast
+• Fallback: 30sn polling
+
+✅ ÖNERİ: Yüksek öncelikli, Faz 2'de değerlendir
+═══════════════════════════════════════════════════════════
+```
+
+---
+
+## ◆ KULLANICI GERİ BİLDİRİM SİSTEMİ (User Feedback)
+
+> **Karar**: Kullanıcı feedback'leri değerlendirilir ve admin onayı ile yanıtlanır.
+
+### Akış
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   USER FEEDBACK FLOW                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  👤 KULLANICI                                                  │
+│     │                                                          │
+│     ▼                                                          │
+│  ┌─────────────────┐                                          │
+│  │ Feedback Gönder │ (UI: Feedback butonu, Concierge, Email)  │
+│  └────────┬────────┘                                          │
+│           │                                                    │
+│           ▼                                                    │
+│  ┌─────────────────┐                                          │
+│  │ BILGE Analiz    │                                          │
+│  │ • Kategori      │                                          │
+│  │ • Öncelik       │                                          │
+│  │ • Sentiment     │                                          │
+│  └────────┬────────┘                                          │
+│           │                                                    │
+│           ▼                                                    │
+│  ┌─────────────────┐                                          │
+│  │ Admin Dashboard │ (/admin/bilge/feedback)                  │
+│  │ • Görüntüle     │                                          │
+│  │ • Değerlendir   │                                          │
+│  │ • Onayla/Reddet │                                          │
+│  └────────┬────────┘                                          │
+│           │                                                    │
+│     ┌─────┴─────┐                                             │
+│     ▼           ▼                                             │
+│  ┌──────┐   ┌──────┐                                          │
+│  │ Onayla│   │Reddet│                                          │
+│  └───┬───┘   └───┬──┘                                          │
+│      │           │                                             │
+│      ▼           ▼                                             │
+│  ┌─────────┐ ┌─────────┐                                      │
+│  │ BILGE   │ │ BILGE   │                                      │
+│  │ Yanıt   │ │ Açıklama│                                      │
+│  │ Hazırla │ │ Hazırla │                                      │
+│  └────┬────┘ └────┬────┘                                      │
+│       │           │                                            │
+│       ▼           ▼                                            │
+│  ┌─────────────────┐                                          │
+│  │ Kullanıcıya     │ (Email/In-app notification)              │
+│  │ Bildirim Gönder │                                          │
+│  └─────────────────┘                                          │
+│                                                                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Feedback Kategorileri
+
+| Kategori | İkon | Açıklama |
+|----------|------|----------|
+| 🐛 Bug Report | 🐛 | Hata bildirimi |
+| 💡 Feature Request | 💡 | Özellik isteği |
+| 🎨 UX Feedback | 🎨 | Kullanıcı deneyimi |
+| 📚 Documentation | 📚 | Dokümantasyon eksikliği |
+| 💬 General | 💬 | Genel yorum |
+| ⭐ Praise | ⭐ | Olumlu geri bildirim |
+
+### Feedback Durumları
+
+| Durum | Renk | Açıklama |
+|-------|------|----------|
+| 🆕 New | Mavi | Yeni, değerlendirilmemiş |
+| 👀 In Review | Sarı | Admin inceliyor |
+| ✅ Approved | Yeşil | Onaylandı, yanıtlanacak |
+| ❌ Rejected | Kırmızı | Reddedildi |
+| 📬 Responded | Mor | Yanıtlandı |
+| 🔧 In Progress | Turuncu | Üzerinde çalışılıyor |
+| ✔️ Resolved | Yeşil | Tamamlandı |
+
+### Admin Onay Ekranı
+
+```
+═══════════════════════════════════════════════════════════
+📬 FEEDBACK #892
+═══════════════════════════════════════════════════════════
+
+👤 Kullanıcı: user@email.com (Premium)
+📅 Tarih: 2026-02-01 14:32
+📁 Kategori: 💡 Feature Request
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 KULLANICI MESAJI:
+"Capital Flow sayfasında birden fazla market karşılaştırması
+yapabilsek çok iyi olurdu. Yan yana grafik görüntüleme gibi."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🤖 BILGE ANALİZİ:
+• Sentiment: Pozitif (feature request)
+• Öncelik: Orta
+• Benzer feedback: 3 kullanıcı daha istemiş
+• Teknik zorluk: Orta (2-3 gün)
+• Önerilen aksiyon: Roadmap'e ekle
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 BILGE ÖNERDİĞİ YANIT:
+"Değerli öneriniz için teşekkürler! Market karşılaştırma
+özelliği geliştirme planımıza eklendi. Önümüzdeki
+güncellemede bu özelliği sunmayı hedefliyoruz.
+İlginiz için teşekkürler! 🙏"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[✅ Onayla ve Gönder]  [✏️ Düzenle]  [❌ Reddet]  [🔧 Roadmap'e Ekle]
+
+═══════════════════════════════════════════════════════════
+```
+
+### API Endpoints (Feedback)
+
+| Endpoint | Method | Açıklama |
+|----------|--------|----------|
+| `/api/bilge/feedback` | POST | Kullanıcı feedback gönder |
+| `/api/bilge/feedback/list` | GET | Admin: Tüm feedback'ler |
+| `/api/bilge/feedback/:id` | GET | Admin: Feedback detay |
+| `/api/bilge/feedback/:id/approve` | POST | Admin: Onayla |
+| `/api/bilge/feedback/:id/reject` | POST | Admin: Reddet |
+| `/api/bilge/feedback/:id/respond` | POST | Admin: Yanıtla |
 
 ---
 
