@@ -37,6 +37,18 @@
 - Platform accuracy = TP hits / (TP hits + SL hits) from Analysis.outcome
 - **Asla karıştırma!** Report, Analysis'in sonucudur, istatistik kaynağı değil
 
+### Piyasa Veri Kaynakları (ZORUNLU)
+| Asset Class | Veri Kaynağı | Not |
+|-------------|--------------|-----|
+| **Crypto** | Binance API | BTC, ETH, SOL vb. tüm kripto paralar |
+| **Stocks** | Yahoo Finance | AAPL, MSFT, SPY, QQQ vb. hisse senetleri |
+| **Metals** | Yahoo Finance | GLD, SLV, IAU, XAUUSD vb. değerli metaller |
+| **Bonds** | Yahoo Finance | TLT, IEF, BND vb. tahvil ETF'leri |
+
+- **Default timeframe: 1D** (ETF'ler ve hisse senetleri için intraday veri sınırlı olabilir)
+- Multi-asset data provider: `apps/api/src/modules/analysis/providers/multi-asset-data-provider.ts`
+- Chart endpoint: `GET /api/analysis/chart/candles?symbol=X&interval=1d&limit=100`
+
 ### Analiz ve Rapor Kuralları (ZORUNLU)
 - **Analiz çok detaylı yapılacak**: Tüm 40+ enstrüman/indikatör kullanılacak
 - **Sadece 2 rapor tipi var** (başka tip ekleme!):
@@ -525,6 +537,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-01 | MLIS Pro analiz sonuçları çelişkili (WAIT/HOLD/AVOID 3 farklı verdict, 0% confidence, 8.1/10 vs 81/100) | 5 kritik hata düzeltildi: 1) Frontend step5 yerine step7'den MLIS verilerini okuyor (confidence, recommendation, direction), 2) VerdictBadge tutarlı (recommendation prop kaldırıldı, isMLISPro flag eklendi), 3) getDirection() artık confidence threshold'a saygı duyuyor (NEUTRAL döner), 4) <30% confidence'ta HOLD ve NEUTRAL döner, 5) Tüm skorlar 0-100 ölçeğinde normalize edildi | `mlis.service.ts`, `details/[id]/page.tsx`, `TradeDecisionVisual.tsx` |
 | 2026-02-01 | 7-Step Classic analiz skor ölçek karışıklığı ve neutral direction handling | 6 kritik hata düzeltildi: 1) reports/page.tsx yanlış `/10` bölümü kaldırıldı (totalScore zaten 0-10), 2) reports/[id]/page.tsx TradeDecisionVisual'a `*10` eklendi (0-100 scale), 3) FinalVerdict.tsx TradeDecisionVisual'a `*10` eklendi, 4) details/[id]/page.tsx neutral direction desteği (isNeutral, gray renk, NEUTRAL text), 5) RecentAnalyses.tsx neutral direction badge (gray + Minus icon), 6) Tüm TradePlanChart'lar neutral olduğunda gizleniyor | `reports/page.tsx`, `reports/[id]/page.tsx`, `FinalVerdict.tsx`, `details/[id]/page.tsx`, `RecentAnalyses.tsx` |
 | 2026-02-01 | Analysis details Export dropdown'da PNG/JPG/PDF/Email yerine sadece Download Report ve Email Report olmalıydı | Export dropdown sadeleştirildi: PNG, JPG seçenekleri kaldırıldı. Sadece "Download Report" (PDF) ve "Email Report" butonları kaldı. Kullanılmayan handleExportPNG ve handleExportJPG fonksiyonları silindi, Image import'u kaldırıldı | `analyze/details/[id]/page.tsx` |
+| 2026-02-01 | GLD ve diğer non-crypto varlıklar için TradePlanChart "Failed to load chart data" hatası | TradePlanChart doğrudan Binance API çağırıyordu (Binance'de GLD yok). Yeni `/api/analysis/chart/candles` endpoint eklendi - multi-asset data provider kullanarak crypto→Binance, stocks/metals/bonds→Yahoo Finance yönlendiriyor. Frontend bu endpoint'i kullanacak şekilde güncellendi | `analysis.routes.ts`, `TradePlanChart.tsx` |
 
 ---
 
