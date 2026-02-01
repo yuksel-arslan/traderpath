@@ -770,7 +770,7 @@ const FAQS = [
   },
   {
     question: 'How does the credit system work?',
-    answer: 'Layer 1-2-3 (Global Liquidity, Market Flow, Sectors) are FREE for logged-in users. Layer 4 AI Recommendations cost 5 credits/day. Full asset analysis costs 25 credits (7-Step or MLIS Pro). Earn free credits through daily login, quizzes, and referrals.',
+    answer: 'Layer 1-2 (Global Liquidity, Market Flow) are FREE for all users. Layer 3 (Sector Activity) and Layer 4 (AI Recommendations) each cost 25 credits/day. Full asset analysis costs 100 credits/day for up to 10 analyses (7-Step or MLIS Pro). Earn free credits through daily login, quizzes, and referrals.',
   },
   {
     question: 'How accurate is the analysis?',
