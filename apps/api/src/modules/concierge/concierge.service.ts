@@ -6,6 +6,7 @@ import { INTENT_DETECTION_PROMPT, RESPONSE_TEMPLATES } from './system-prompt';
 import { coinScoreCacheService, CoinScore } from '../analysis/services/coin-score-cache.service';
 import * as capitalFlowService from '../capital-flow/capital-flow.service';
 import { translationService, SUPPORTED_LANGUAGES } from '../translation/translation.service';
+import { logger } from '../../core/logger';
 
 interface ConciergeRequest {
   message: string;
@@ -3281,29 +3282,30 @@ Type "top coins" to see results when complete.`;
           });
 
           if (savedAnalysis) {
-            const step5 = savedAnalysis.step5Result as any;
-            const step7 = savedAnalysis.step7Result as any;
+            const step5 = savedAnalysis.step5Result as Record<string, unknown> | null;
+            const step7 = savedAnalysis.step7Result as Record<string, unknown> | null;
 
             // Get direction from step7 (final verdict)
-            direction = step7?.direction || step7?.verdict?.direction;
+            const verdict = step7?.verdict as Record<string, unknown> | undefined;
+            direction = (step7?.direction as string) || (verdict?.direction as string);
 
             // Get trade plan from step5
             if (step5) {
               tradePlan = {
-                averageEntry: step5.averageEntry,
-                stopLoss: step5.stopLoss,
-                takeProfits: step5.takeProfits,
-                direction: step5.direction || direction,
-                riskRewardRatio: step5.riskRewardRatio,
+                averageEntry: step5.averageEntry as number | undefined,
+                stopLoss: step5.stopLoss as { price: number } | number | undefined,
+                takeProfits: step5.takeProfits as Array<{ price: number }> | undefined,
+                direction: (step5.direction as string) || direction,
+                riskRewardRatio: step5.riskRewardRatio as number | undefined,
               };
               // Also update direction from tradePlan if not set
               if (!direction && step5.direction) {
-                direction = step5.direction;
+                direction = step5.direction as string;
               }
             }
           }
         } catch (fetchError) {
-          console.error('Error fetching analysis details:', fetchError);
+          logger.error({ error: fetchError }, 'Error fetching analysis details');
         }
       }
 
