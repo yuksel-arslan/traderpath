@@ -1643,6 +1643,16 @@ Kullanıcı Hakları Aktif:
   - `startBilgeWeeklyReportJob()` ve `stopBilgeWeeklyReportJob()` fonksiyonları
   - Server startup/shutdown'a entegre edildi
   - Dosyalar: `bilge-cron.job.ts`, `index.ts`
+- **Capital Flow Professional Export System**:
+  - Karmaşık export dropdown (PNG, JPG, PDF, Email, Save) kaldırıldı
+  - Sadece 2 profesyonel buton: "Download Report" ve "Email Report"
+  - **Yeni Dosya**: `apps/web/lib/capital-flow-report-generator.ts`
+  - jsPDF ile profesyonel PDF rapor (renk kodları, bölümler, formatlama)
+  - Gmail uyumlu responsive HTML email şablonu
+  - **Yeni API Endpoint**: `POST /api/reports/send-capital-flow-email`
+  - Email ücretsiz (Daily Pass sisteminin parçası)
+  - Fullscreen modal export UI da aynı şekilde güncellendi
+  - Kullanılmayan import'lar ve state'ler temizlendi
 
 ---
 
