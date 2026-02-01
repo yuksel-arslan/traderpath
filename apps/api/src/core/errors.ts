@@ -3,6 +3,14 @@
 // Production-grade error management
 // ===========================================
 
+import { ZodError } from 'zod';
+
+// Prisma error type for better type safety
+interface PrismaKnownError extends Error {
+  code: string;
+  meta?: { target?: string[] };
+}
+
 /**
  * Base error class for all TradePath errors
  */
@@ -327,11 +335,10 @@ export function errorHandler(
   }
 
   // Handle Zod validation errors - sanitize to prevent schema exposure
-  if (error.name === 'ZodError') {
-    const zodErrors = (error as any).errors;
+  if (error instanceof ZodError) {
     // Only expose field names and messages, not internal validation details
-    const sanitizedErrors = zodErrors?.map((e: { path: (string | number)[]; message: string }) => ({
-      field: e.path?.[0] || 'unknown',
+    const sanitizedErrors = error.errors.map((e) => ({
+      field: e.path[0] || 'unknown',
       message: e.message,
     }));
     return reply.status(400).send({
@@ -344,9 +351,9 @@ export function errorHandler(
     });
   }
 
-  // Handle Prisma errors
+  // Handle Prisma errors with proper typing
   if (error.name === 'PrismaClientKnownRequestError') {
-    const prismaError = error as any;
+    const prismaError = error as PrismaKnownError;
 
     // Unique constraint violation - don't expose field names
     if (prismaError.code === 'P2002') {
