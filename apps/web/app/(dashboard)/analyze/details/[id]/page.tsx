@@ -529,20 +529,20 @@ export default function AnalysisDetailsPage() {
   const step6 = analysis.step6Result || {};
   const step7 = analysis.step7Result || {};
 
-  // For MLIS: step5 is the verdict with direction
+  // For MLIS: step7 contains the final verdict with direction
   // For Classic: step5 is trade plan, step7 is verdict
   const direction = isMLIS
-    ? (step5.direction || 'long')
+    ? (step7.direction || step5.direction || 'long')
     : (step5.direction || step7.direction || 'long');
   const isLong = direction.toLowerCase() === 'long';
   const score = (analysis.totalScore || 0) * 10;
 
-  // MLIS-specific data
-  const mlisRecommendation = isMLIS ? step5.recommendation : null;
-  const mlisConfidence = isMLIS ? step5.confidence : null;
-  const mlisRiskLevel = isMLIS ? step5.riskLevel : null;
-  const mlisKeySignals = isMLIS ? step5.keySignals : [];
-  const mlisRiskFactors = isMLIS ? step5.riskFactors : [];
+  // MLIS-specific data - MUST read from step7Result where verdict data is stored
+  const mlisRecommendation = isMLIS ? (step7.recommendation || step5.recommendation) : null;
+  const mlisConfidence = isMLIS ? (step7.confidence ?? step5.confidence ?? 0) : null;
+  const mlisRiskLevel = isMLIS ? (step7.riskLevel || step5.riskLevel || 'medium') : null;
+  const mlisKeySignals = isMLIS ? (step7.keySignals || step5.keySignals || []) : [];
+  const mlisRiskFactors = isMLIS ? (step7.riskFactors || step5.riskFactors || []) : [];
 
   // Determine verdict for display
   const getVerdict = () => {
@@ -1053,10 +1053,10 @@ export default function AnalysisDetailsPage() {
                 verdict={mlisRecommendation === 'STRONG_BUY' || mlisRecommendation === 'BUY' ? 'go' :
                          mlisRecommendation === 'HOLD' ? 'wait' : 'avoid'}
                 direction={direction.toLowerCase() as 'long' | 'short'}
-                score={Number(step5.overallScore) || Number(analysis.totalScore) || 5}
-                recommendation={mlisRecommendation}
+                score={Number(step7.overallScore) || Number(analysis.totalScore) * 10 || 50}
                 confidence={typeof mlisConfidence === 'number' ? mlisConfidence : Number(mlisConfidence) || 0}
                 riskLevel={mlisRiskLevel}
+                isMLISPro={true}
                 symbol={analysis.symbol}
                 size="lg"
               />
@@ -1064,7 +1064,7 @@ export default function AnalysisDetailsPage() {
               <TradeDecisionVisual
                 verdict={(step7.verdict || (Number(step7.overallScore) >= 7 ? 'go' : Number(step7.overallScore) >= 5 ? 'conditional_go' : Number(step7.overallScore) >= 3 ? 'wait' : 'avoid')) as 'go' | 'conditional_go' | 'wait' | 'avoid'}
                 direction={direction as 'long' | 'short'}
-                score={Number(step7.overallScore) || Number(analysis.totalScore) * 10 || 5}
+                score={Number(step7.overallScore) * 10 || Number(analysis.totalScore) * 10 || 50}
                 symbol={analysis.symbol}
                 size="lg"
               />
@@ -1108,8 +1108,11 @@ export default function AnalysisDetailsPage() {
                 )}
                 {!mlisKeySignals?.length && !mlisRiskFactors?.length && (
                   <p className="text-sm text-gray-600 dark:text-slate-300">
-                    MLIS Pro analysis recommends <strong>{mlisRecommendation || 'HOLD'}</strong> with {typeof mlisConfidence === 'number' ? mlisConfidence.toFixed(0) : (Number(mlisConfidence) || 0)}% confidence.
-                    Direction: <strong>{isLong ? 'LONG' : 'SHORT'}</strong>. Risk level: <strong>{mlisRiskLevel || 'Medium'}</strong>.
+                    {(mlisConfidence ?? 0) < 30 ? (
+                      <>MLIS Pro analysis has <strong>low confidence ({(mlisConfidence ?? 0).toFixed(0)}%)</strong>. Insufficient data for reliable recommendation. Consider waiting for better market conditions.</>
+                    ) : (
+                      <>MLIS Pro analysis recommends <strong>{mlisRecommendation || 'HOLD'}</strong> with {(mlisConfidence ?? 0).toFixed(0)}% confidence. Direction: <strong>{isLong ? 'LONG' : 'SHORT'}</strong>. Risk level: <strong>{mlisRiskLevel || 'Medium'}</strong>.</>
+                    )}
                   </p>
                 )}
               </div>

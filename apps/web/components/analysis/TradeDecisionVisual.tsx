@@ -12,12 +12,13 @@ interface TradeDecisionVisualProps {
   // For Classic 7-Step Analysis
   verdict?: Verdict;
   direction?: Direction;
-  score?: number; // 0-10 scale
+  score?: number; // 0-100 scale (will be displayed as X/100)
 
   // For MLIS Pro Analysis
-  recommendation?: Recommendation;
+  recommendation?: Recommendation; // Optional: if provided, shows MLIS-style badge
   confidence?: number; // 0-100 scale
   riskLevel?: 'low' | 'medium' | 'high';
+  isMLISPro?: boolean; // Explicit flag to indicate MLIS Pro analysis
 
   // Common
   symbol?: string;
@@ -490,13 +491,15 @@ export function TradeDecisionVisual({
   recommendation,
   confidence,
   riskLevel,
+  isMLISPro,
   symbol,
   showDirectionArrow = true,
   size = 'md',
   variant = 'full'
 }: TradeDecisionVisualProps) {
   // Determine if this is MLIS Pro or Classic
-  const isMLIS = !!recommendation;
+  // Use explicit flag if provided, otherwise infer from confidence/riskLevel presence
+  const isMLIS = isMLISPro ?? (confidence !== undefined || riskLevel !== undefined);
 
   if (variant === 'compact') {
     return (
@@ -549,7 +552,7 @@ export function TradeDecisionVisual({
             </div>
           )}
 
-          {/* Score Gauge */}
+          {/* Score Gauge - Always use 0-100 scale for consistency */}
           <div className="flex flex-col items-center">
             {isMLIS && confidence !== undefined ? (
               <ScoreGauge
@@ -560,7 +563,7 @@ export function TradeDecisionVisual({
                 showPercentage
               />
             ) : (
-              <ScoreGauge score={score} size={size} label="Score" />
+              <ScoreGauge score={score} maxScore={100} size={size} label="Score" />
             )}
           </div>
         </div>
