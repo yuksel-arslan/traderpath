@@ -49,6 +49,7 @@ import assetLogosRoutes from './modules/asset-logos/asset-logos.routes';
 import { initializeAssetLogos } from './modules/asset-logos/asset-logos.service';
 import { bilgeRoutes } from './modules/bilge/bilge.routes';
 import { initializeBilgeService, collectError } from './modules/bilge/bilge.service';
+import { startBilgeWeeklyReportJob, stopBilgeWeeklyReportJob } from './modules/bilge/bilge-cron.job';
 
 // ===========================================
 // Server Configuration
@@ -551,6 +552,10 @@ const start = async () => {
     initializeBilgeService(redis);
     logger.info('✓ BILGE Guardian initialized');
 
+    // Start BILGE weekly report cron job (Sunday 21:00 UTC+3)
+    startBilgeWeeklyReportJob();
+    logger.info('✓ BILGE weekly report cron started');
+
     // Start server
     await app.listen({
       port: config.port,
@@ -600,6 +605,10 @@ const shutdown = async (signal: string) => {
     // Stop coin score cache cron
     stopCoinScoreCacheJob();
     logger.info('✓ Coin score cache cron stopped');
+
+    // Stop BILGE weekly report cron
+    stopBilgeWeeklyReportJob();
+    logger.info('✓ BILGE weekly report cron stopped');
 
     // Stop accepting new connections
     await app.close();
