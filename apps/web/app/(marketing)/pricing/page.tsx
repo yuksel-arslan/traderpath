@@ -7,28 +7,25 @@ import {
   Zap,
   Star,
   TrendingUp,
-  ArrowRight,
-  HelpCircle,
+  ArrowLeft,
   Gem,
   Loader2,
   CreditCard,
   Crown,
-  Search,
-  Bot,
-  FileText,
-  Mail,
-  Bell,
+  Globe,
+  Layers,
+  BarChart3,
   Brain,
-  Gift,
-  Dices,
-  PlayCircle,
-  type LucideIcon,
+  Bell,
+  FileText,
+  Bot,
+  Check,
+  Shield,
 } from 'lucide-react';
-import { ThemeToggle } from '../../../components/common/ThemeToggle';
-import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
 import { cn } from '../../../lib/utils';
-import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost, ANALYSIS_BUNDLES } from '../../../lib/pricing-config';
+import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost } from '../../../lib/pricing-config';
 import { authFetch, getAuthToken, apiBaseUrl } from '../../../lib/api';
+import { Footer } from '../../../components/common/Footer';
 
 // Format credits with full number display (1000087 → 1,000,087)
 function formatCredits(num: number): string {
@@ -54,28 +51,6 @@ const PACKAGE_ICONS: Record<string, typeof Zap> = {
   whale: Crown,
 };
 
-const FAQS = [
-  {
-    question: 'What are credits?',
-    answer:
-      'Credits are used to run analyses on TraderPath. Each analysis uses credits, and all features (AI Expert, PDF reports, email, etc.) are included at no extra cost.',
-  },
-  {
-    question: 'Do credits expire?',
-    answer: 'No, purchased credits never expire. Use them whenever you want.',
-  },
-  {
-    question: 'What\'s included in each analysis?',
-    answer:
-      'Every analysis includes all 7 steps, AI Expert chat, PDF download, email sharing, and price alerts - everything is included!',
-  },
-  {
-    question: 'How do I earn free credits?',
-    answer:
-      'Earn free credits through daily login bonuses, the lucky spin wheel, daily quiz, and more. Up to 25 free credits every day!',
-  },
-];
-
 export default function PricingPage() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -86,6 +61,7 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(true);
   const [packages, setPackages] = useState<ApiPackage[]>([]);
   const [packagesLoading, setPackagesLoading] = useState(true);
+  const [packagesFromApi, setPackagesFromApi] = useState(false);
 
   useEffect(() => {
     checkAuthStatus();
@@ -97,12 +73,13 @@ export default function PricingPage() {
       const res = await fetch(`${apiBaseUrl}/api/payments/packages`);
       if (res.ok) {
         const data = await res.json();
-        if (data.success && data.data?.packages) {
+        if (data.success && data.data?.packages && data.data.packages.length > 0) {
           setPackages(data.data.packages);
+          setPackagesFromApi(true);
           return;
         }
       }
-      // API failed - use static fallback
+      // API failed - use static fallback (display only)
       const fallbackPackages: ApiPackage[] = CREDIT_PACKAGES.map(pkg => ({
         id: pkg.id,
         name: pkg.name,
@@ -113,8 +90,9 @@ export default function PricingPage() {
         popular: pkg.popular || false,
       }));
       setPackages(fallbackPackages);
+      setPackagesFromApi(false);
     } catch {
-      // Use static fallback on error
+      // Use static fallback on error (display only)
       const fallbackPackages: ApiPackage[] = CREDIT_PACKAGES.map(pkg => ({
         id: pkg.id,
         name: pkg.name,
@@ -125,6 +103,7 @@ export default function PricingPage() {
         popular: pkg.popular || false,
       }));
       setPackages(fallbackPackages);
+      setPackagesFromApi(false);
     } finally {
       setPackagesLoading(false);
     }
@@ -139,7 +118,6 @@ export default function PricingPage() {
         const res = await authFetch('/api/user/credits');
         if (res.ok) {
           const data = await res.json();
-          // API returns { success: true, data: { balance: number } }
           setBalance(data.data?.balance || data.credits || 0);
         }
       }
@@ -153,6 +131,12 @@ export default function PricingPage() {
   const handlePurchase = async (packageId: string) => {
     if (!isLoggedIn) {
       router.push('/register');
+      return;
+    }
+
+    // Check if packages are from API (have valid UUIDs)
+    if (!packagesFromApi) {
+      setError('Payment system is temporarily unavailable. Please try again later.');
       return;
     }
 
@@ -186,271 +170,275 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
-        <div className="w-full px-2 sm:px-4 lg:px-6 py-4 flex items-center justify-between">
-          <TraderPathLogo size="sm" showText={true} showTagline={false} href="/" className="flex sm:hidden" />
-          <TraderPathLogo size="md" showText={true} showTagline={true} href="/" className="hidden sm:flex" />
-          <nav className="hidden md:flex items-center gap-6">
-            <Link href="/#features" className="text-muted-foreground hover:text-foreground transition">
-              Features
-            </Link>
-            <Link href="/#how-it-works" className="text-muted-foreground hover:text-foreground transition">
-              How it Works
-            </Link>
-            <Link href="/pricing" className="text-foreground font-medium">
-              Pricing
-            </Link>
-          </nav>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            ) : isLoggedIn ? (
-              <>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 rounded-full border border-amber-500/20">
-                  <Gem className="w-4 h-4 text-amber-500" />
-                  <span className="text-sm font-semibold text-amber-600">{formatCredits(balance ?? 0)}</span>
-                </div>
-                <Link
-                  href="/dashboard"
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition"
-                >
-                  Dashboard
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link href="/login" className="px-4 py-2 text-muted-foreground hover:text-foreground transition">
-                  Sign In
-                </Link>
-                <Link
-                  href="/register"
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition"
-                >
-                  Get Started
-                </Link>
-              </>
-            )}
-          </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Corporate Header */}
+      <header className="py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+        <div className="container mx-auto px-4 flex items-center justify-between">
+          <Link href="/" className="inline-flex items-center gap-2">
+            <span className="text-xl font-bold">
+              <span className="text-emerald-500">Trader</span>
+              <span className="text-red-500">Path</span>
+            </span>
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Home
+          </Link>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="py-16 text-center">
-        <div className="container mx-auto px-4">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 gradient-text-logo-animate">Transparent Pricing</h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Pay only for what you use. No subscriptions, no hidden fees.
-            {!isLoggedIn && ` Start with ${FREE_SIGNUP_CREDITS} free credits.`}
-          </p>
-        </div>
-      </section>
+      <main className="flex-1">
+        {/* Hero - Corporate Style */}
+        <section className="py-16 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950">
+          <div className="container mx-auto px-4 text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full mb-6">
+              <Shield className="w-4 h-4 text-emerald-500" />
+              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                Secure Payment · No Hidden Fees
+              </span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900 dark:text-white">
+              Simple, Transparent Pricing
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+              Pay only for what you use. No subscriptions, no recurring charges.
+              {!isLoggedIn && ` Start with ${FREE_SIGNUP_CREDITS} free credits.`}
+            </p>
+          </div>
+        </section>
 
-      {/* Current Balance - Only for logged in users */}
-      {isLoggedIn && balance !== null && (
-        <section className="pb-8">
-          <div className="container mx-auto px-4">
-            <div className="max-w-md mx-auto p-6 bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-500/20 rounded-xl">
-              <div className="flex items-center justify-between">
+        {/* Current Balance - Only for logged in users */}
+        {isLoggedIn && balance !== null && (
+          <section className="py-6 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
+            <div className="container mx-auto px-4">
+              <div className="max-w-md mx-auto flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center">
-                    <Gem className="w-6 h-6 text-amber-500" />
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                    <Gem className="w-5 h-5 text-emerald-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Your Balance</p>
-                    <p className="text-2xl font-bold">{formatCredits(balance ?? 0)} Credits</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Current Balance</p>
+                    <p className="text-xl font-bold">{formatCredits(balance ?? 0)} Credits</p>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
 
-      {/* Error Message */}
-      {error && (
-        <section className="pb-8">
+        {/* Error Message */}
+        {error && (
+          <section className="py-4">
+            <div className="container mx-auto px-4">
+              <div className="max-w-md mx-auto p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-center text-sm">
+                {error}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Credit Packages */}
+        <section className="py-16">
           <div className="container mx-auto px-4">
-            <div className="max-w-md mx-auto p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500 text-center">
-              {error}
+            <div className="text-center mb-12">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                Credit Packages
+              </h2>
+              <p className="text-muted-foreground">Choose the package that fits your trading needs</p>
             </div>
-          </div>
-        </section>
-      )}
+            {packagesLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+              </div>
+            ) : packages.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                No packages available at the moment.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                {packages.map((pkg) => {
+                  const nameKey = pkg.name.toLowerCase().split(' ')[0];
+                  const Icon = PACKAGE_ICONS[nameKey] || PACKAGE_ICONS[pkg.id] || Zap;
+                  const isSelected = selectedPackage === pkg.id;
+                  const isPurchasing = purchasing && isSelected;
 
-      {/* Credit Packages */}
-      <section className="py-12 bg-accent/50">
-        <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold text-center mb-2 gradient-text-logo-animate">Credit Packages</h2>
-          <p className="text-muted-foreground text-center mb-8">Choose the package that fits your trading style</p>
-          {packagesLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          ) : packages.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              No packages available at the moment.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
-              {packages.map((pkg) => {
-                // Map package name to icon
-                const nameKey = pkg.name.toLowerCase().split(' ')[0]; // "Starter Pack" -> "starter"
-                const Icon = PACKAGE_ICONS[nameKey] || PACKAGE_ICONS[pkg.id] || Zap;
-                const isSelected = selectedPackage === pkg.id;
-                const isPurchasing = purchasing && isSelected;
-
-                return (
-                  <div
-                    key={pkg.id}
-                    className={cn(
-                      'bg-card rounded-xl border-2 p-6 relative text-center transition',
-                      pkg.popular
-                        ? 'border-amber-500 ring-2 ring-amber-500 ring-offset-2 ring-offset-background'
-                        : 'border-border hover:border-primary/50',
-                      isSelected && 'border-primary'
-                    )}
-                  >
-                    {pkg.popular && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">
-                        MOST POPULAR
-                      </div>
-                    )}
-                    <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-accent flex items-center justify-center">
-                      <Icon className="w-7 h-7 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-2 gradient-text-logo-animate">{pkg.name}</h3>
-                    <div className="text-3xl font-bold text-primary mb-1">
-                      {pkg.credits}
-                      {pkg.bonus > 0 && <span className="text-lg text-amber-500 ml-1">+{pkg.bonus}</span>}
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">credits</p>
-                    <div className="text-2xl font-bold mb-1">{pkg.price}</div>
-                    <p className="text-sm text-muted-foreground mb-6">{pkg.perCredit}/credit</p>
-                    <button
-                      onClick={() => handlePurchase(pkg.id)}
-                      disabled={purchasing}
+                  return (
+                    <div
+                      key={pkg.id}
                       className={cn(
-                        'w-full py-3 rounded-lg font-semibold text-center transition flex items-center justify-center gap-2',
+                        'bg-white dark:bg-slate-900 rounded-xl border p-6 relative transition-all duration-200',
                         pkg.popular
-                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                          : 'border hover:bg-accent',
-                        purchasing && 'opacity-50 cursor-not-allowed'
+                          ? 'border-emerald-500 shadow-lg'
+                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700',
+                        isSelected && 'border-emerald-500'
                       )}
                     >
-                      {isPurchasing ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Processing...
-                        </>
-                      ) : isLoggedIn ? (
-                        <>
-                          <CreditCard className="w-4 h-4" />
-                          Buy Now
-                        </>
-                      ) : (
-                        'Get Started'
+                      {pkg.popular && (
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-500 text-white text-xs font-semibold rounded-full">
+                          RECOMMENDED
+                        </div>
                       )}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {isLoggedIn && (
-            <p className="text-center text-xs text-muted-foreground mt-4">
-              Secure payment powered by Lemon Squeezy
+                      <div className="text-center">
+                        <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                          <Icon className="w-6 h-6 text-emerald-500" />
+                        </div>
+                        <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">{pkg.name}</h3>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
+                          {pkg.price}
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-4">{pkg.perCredit} per credit</p>
+                        <div className="py-4 border-t border-b border-slate-200 dark:border-slate-800 mb-4">
+                          <div className="text-2xl font-bold text-emerald-500">
+                            {formatCredits(pkg.credits)}
+                            {pkg.bonus > 0 && (
+                              <span className="text-base text-amber-500 ml-1">+{pkg.bonus} bonus</span>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">credits</p>
+                        </div>
+                        <button
+                          onClick={() => handlePurchase(pkg.id)}
+                          disabled={purchasing}
+                          className={cn(
+                            'w-full py-3 rounded-lg font-medium text-center transition flex items-center justify-center gap-2',
+                            pkg.popular
+                              ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700',
+                            purchasing && 'opacity-50 cursor-not-allowed'
+                          )}
+                        >
+                          {isPurchasing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Processing...
+                            </>
+                          ) : isLoggedIn ? (
+                            <>
+                              <CreditCard className="w-4 h-4" />
+                              Buy Now
+                            </>
+                          ) : (
+                            'Get Started'
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <p className="text-center text-xs text-muted-foreground mt-8">
+              Secure payment processing by Lemon Squeezy. All prices in USD.
             </p>
-          )}
-        </div>
-      </section>
-
-      {/* What's Included */}
-      <section className="py-12">
-        <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold text-center mb-8 gradient-text-logo-animate">All Packages Include</h2>
-          <div className="max-w-3xl mx-auto">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {[
-                { Icon: Gem, title: `${ANALYSIS_BUNDLES.find(b => !b.comingSoon)?.credits || 25} Credits`, desc: 'Per analysis', color: 'text-amber-500' },
-                { Icon: Search, title: '7-Step Analysis', desc: 'Complete trading analysis', color: 'text-teal-500' },
-                { Icon: Bot, title: 'AI Expert Chat', desc: 'Ask questions anytime', color: 'text-violet-500' },
-                { Icon: FileText, title: 'PDF Reports', desc: 'Download & share', color: 'text-blue-500' },
-                { Icon: Mail, title: 'Email Reports', desc: 'Send to your inbox', color: 'text-emerald-500' },
-                { Icon: Bell, title: 'Price Alerts', desc: 'Never miss a move', color: 'text-amber-500' },
-              ].map((item, index) => (
-                <div key={index} className="bg-card rounded-lg border p-4 text-center">
-                  <div className="flex justify-center mb-2">
-                    <item.Icon className={cn('w-8 h-8', item.color)} />
-                  </div>
-                  <p className="font-semibold text-sm gradient-text-logo-animate">{item.title}</p>
-                  <p className="text-xs text-muted-foreground">{item.desc}</p>
-                </div>
-              ))}
-              {/* Coming Soon Feature */}
-              <div className="bg-card rounded-lg border p-4 text-center relative overflow-hidden">
-                <div className="absolute top-1 right-1 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                  COMING SOON
-                </div>
-                <div className="flex justify-center mb-2">
-                  <Brain className="w-8 h-8 text-pink-500" />
-                </div>
-                <p className="font-semibold text-sm gradient-text-logo-animate">AI Price Prediction</p>
-                <p className="text-xs text-muted-foreground">TFT deep learning model</p>
-                <p className="text-[10px] text-amber-600 mt-1">+credits per analysis</p>
-              </div>
-            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* FAQs */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold text-center mb-8 gradient-text-logo-animate">Frequently Asked Questions</h2>
-          <div className="max-w-2xl mx-auto space-y-4">
-            {FAQS.map((faq, index) => (
-              <div key={index} className="bg-card rounded-lg border p-4">
-                <h3 className="font-semibold flex items-center gap-2 mb-2">
-                  <HelpCircle className="w-5 h-5 text-primary" />
-                  {faq.question}
-                </h3>
-                <p className="text-muted-foreground text-sm pl-7">{faq.answer}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      {!isLoggedIn && (
-        <section className="py-16 bg-accent/50">
+        {/* What Credits Get You */}
+        <section className="py-16 bg-slate-50 dark:bg-slate-900/50">
           <div className="container mx-auto px-4">
-            <div className="max-w-2xl mx-auto text-center p-8 bg-gradient-to-r from-red-500/10 via-amber-500/10 to-green-500/10 border border-green-500/20 rounded-2xl">
-              <h2 className="text-2xl font-bold mb-4 gradient-text-logo-animate">Ready to Start Trading Smarter?</h2>
-              <p className="text-muted-foreground mb-6">
-                Create your free account and get {FREE_SIGNUP_CREDITS} credits to start analyzing.
-              </p>
-              <Link
-                href="/register"
-                className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-red-500 via-amber-500 to-green-500 text-white rounded-lg font-semibold hover:opacity-90 transition"
-              >
-                Create Free Account
-                <ArrowRight className="w-5 h-5" />
-              </Link>
+            <div className="text-center mb-12">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                What Your Credits Unlock
+              </h2>
+              <p className="text-muted-foreground">Everything you need for smarter trading decisions</p>
+            </div>
+            <div className="max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { Icon: Globe, title: 'Global Capital Flow', desc: 'Layer 1-2: Track money flow across markets', badge: 'FREE', badgeColor: 'emerald' },
+                  { Icon: Layers, title: 'Sector Analysis', desc: 'Layer 3: Drill down into market sectors', badge: '25 credits/day', badgeColor: 'slate' },
+                  { Icon: Brain, title: 'AI Recommendations', desc: 'Layer 4: BUY/SELL signals with confidence scores', badge: '25 credits/day', badgeColor: 'slate' },
+                  { Icon: BarChart3, title: 'Asset Analysis', desc: 'Classic 7-Step or MLIS Pro neural analysis', badge: '100 credits/day', badgeColor: 'slate' },
+                  { Icon: Bot, title: 'AI Expert Consultation', desc: '3 free questions per analysis, then 5 credits each', badge: null, badgeColor: null },
+                  { Icon: FileText, title: 'PDF Reports', desc: 'Download and share detailed analysis reports', badge: null, badgeColor: null },
+                  { Icon: Bell, title: 'Price Alerts', desc: 'Get notified when price targets are hit', badge: null, badgeColor: null },
+                  { Icon: Gem, title: 'Daily Rewards', desc: 'Earn free credits through daily activities', badge: 'EARN FREE', badgeColor: 'amber' },
+                ].map((item, index) => (
+                  <div key={index} className="flex items-start gap-4 p-4 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                    <div className={cn(
+                      "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                      item.badgeColor === 'emerald' && "bg-emerald-500/10",
+                      item.badgeColor === 'amber' && "bg-amber-500/10",
+                      (!item.badgeColor || item.badgeColor === 'slate') && "bg-slate-100 dark:bg-slate-800"
+                    )}>
+                      <item.Icon className={cn(
+                        'w-5 h-5',
+                        item.badgeColor === 'emerald' && "text-emerald-500",
+                        item.badgeColor === 'amber' && "text-amber-500",
+                        (!item.badgeColor || item.badgeColor === 'slate') && "text-slate-500"
+                      )} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium text-slate-900 dark:text-white">{item.title}</p>
+                        {item.badge && (
+                          <span className={cn(
+                            "px-2 py-0.5 text-[10px] font-semibold rounded-full",
+                            item.badgeColor === 'emerald' && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                            item.badgeColor === 'amber' && "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+                            item.badgeColor === 'slate' && "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                          )}>
+                            {item.badge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
-      )}
 
-      {/* Footer */}
-      <footer className="py-8 border-t">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>&copy; 2024 TraderPath. All rights reserved. Trading involves risk.</p>
-        </div>
-      </footer>
+        {/* Why TraderPath */}
+        <section className="py-16">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                {[
+                  { value: 'No Subscription', desc: 'Pay once, use anytime. Credits never expire.' },
+                  { value: '4 Markets', desc: 'Crypto, Stocks, Bonds, and Precious Metals.' },
+                  { value: '40+ Indicators', desc: 'Comprehensive technical and fundamental analysis.' },
+                ].map((item, index) => (
+                  <div key={index}>
+                    <div className="text-xl font-bold text-slate-900 dark:text-white mb-2">{item.value}</div>
+                    <p className="text-sm text-muted-foreground">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA */}
+        {!isLoggedIn && (
+          <section className="py-16 bg-slate-50 dark:bg-slate-900/50">
+            <div className="container mx-auto px-4">
+              <div className="max-w-xl mx-auto text-center">
+                <h2 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">
+                  Start Trading Smarter Today
+                </h2>
+                <p className="text-muted-foreground mb-6">
+                  Create your free account and receive {FREE_SIGNUP_CREDITS} credits to get started.
+                </p>
+                <Link
+                  href="/register"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-500 text-white rounded-lg font-medium hover:bg-emerald-600 transition-colors"
+                >
+                  <Check className="w-4 h-4" />
+                  Create Free Account
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
+      </main>
+
+      <Footer />
     </div>
   );
 }

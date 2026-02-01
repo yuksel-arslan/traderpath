@@ -30,6 +30,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
 import YukselLogo from '../../../components/YukselLogo';
+import { Footer } from '../../../components/common/Footer';
 
 // Coins to display in the ticker
 const TICKER_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX'];
@@ -498,59 +499,7 @@ export default function AboutPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 border-t">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h4 className="font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-muted-foreground">
-                <li><Link href="/#features" className="hover:text-foreground transition">Features</Link></li>
-                <li><Link href="/pricing" className="hover:text-foreground transition">Pricing</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-muted-foreground">
-                <li><Link href="/about" className="hover:text-foreground transition">About</Link></li>
-                <li><Link href="/blog" className="hover:text-foreground transition">Blog</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2 text-muted-foreground">
-                <li><Link href="/privacy" className="hover:text-foreground transition">Privacy</Link></li>
-                <li><Link href="/terms" className="hover:text-foreground transition">Terms</Link></li>
-                <li><Link href="/disclaimer" className="hover:text-foreground transition">Disclaimer</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-muted-foreground">
-                <li><Link href="/help" className="hover:text-foreground transition">Help Center</Link></li>
-                <li><Link href="/contact" className="hover:text-foreground transition">Contact</Link></li>
-                <li><Link href="/status" className="hover:text-foreground transition">Status</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="pt-8 border-t flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-muted-foreground text-sm">
-              © 2025 TraderPath. All rights reserved.
-            </p>
-            <Link
-              href="/bilge"
-              className="group inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border border-cyan-500/30 rounded-full hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10 transition-all"
-            >
-              <Crown className="w-4 h-4 text-cyan-500 group-hover:scale-110 transition-transform" />
-              <span className="text-sm font-medium bg-gradient-to-r from-cyan-500 to-teal-500 bg-clip-text text-transparent">
-                Architected by BILGE
-              </span>
-            </Link>
-            <p className="text-muted-foreground text-sm">
-              Trading involves risk. Not financial advice.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -124,11 +124,15 @@ function getTradeTypeFromInterval(interval: string): TradeType | null {
   return null;
 }
 
+// Analysis method type
+type AnalysisMethod = 'classic' | 'mlis_pro';
+
 interface CoinSelectorProps {
   timeframe?: Timeframe;
+  analysisMethod?: AnalysisMethod;
 }
 
-export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
+export function CoinSelector({ timeframe = '4h', analysisMethod = 'classic' }: CoinSelectorProps) {
   // Derive trade type from timeframe
   const tradeType = TIMEFRAME_TO_TRADE_TYPE[timeframe];
   const router = useRouter();
@@ -778,6 +782,7 @@ export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
           symbol={selectedCoin.symbol}
           coinName={selectedCoin.name}
           timeframe={timeframe}
+          analysisMethod={analysisMethod}
           onComplete={handleAnalysisComplete}
         />
       )}

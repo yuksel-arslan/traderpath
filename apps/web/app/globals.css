@@ -618,6 +618,22 @@
   50% { transform: translateY(-5px); }
 }
 
+/* Capital Flow - Animated particle flow effect */
+@keyframes flow-down {
+  0% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+}
+
+.animate-flow-down {
+  animation: flow-down 1.5s ease-in-out infinite;
+}
+
 /* ===========================================
    Global Element Styles
    =========================================== */

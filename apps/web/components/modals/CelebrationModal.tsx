@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { X, Trophy, Star, Sparkles, Gift, Coins, PartyPopper, Zap } from 'lucide-react';
+import { X, Trophy, Star, Sparkles, Gift, Coins, PartyPopper, Zap, Search } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export type CelebrationReason =
@@ -14,7 +14,8 @@ export type CelebrationReason =
   | 'trade_type_bonus'
   | 'referral_bonus'
   | 'first_analysis'
-  | 'analysis_milestone';
+  | 'analysis_milestone'
+  | 'scan_complete';
 
 interface CelebrationModalProps {
   isOpen: boolean;
@@ -194,6 +195,14 @@ function getCelebrationContent(reason: CelebrationReason, credits: number, props
         subtitle: props.subtitle || `You've completed ${props.milestone} analyses!`,
         gradient: 'from-violet-500 to-purple-500',
         iconBg: 'from-violet-400 to-purple-500',
+      };
+    case 'scan_complete':
+      return {
+        icon: Search,
+        title: props.title || 'Scan Complete!',
+        subtitle: props.subtitle || 'Top coins have been analyzed successfully!',
+        gradient: 'from-amber-500 to-orange-500',
+        iconBg: 'from-amber-400 to-orange-500',
       };
     default:
       return {

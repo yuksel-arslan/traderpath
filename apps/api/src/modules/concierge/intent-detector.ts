@@ -23,6 +23,8 @@ INTENT TYPES:
   Examples: "BTC nasıl?", "ETHUSDT durumu", "ETH'ye gireyim mi?", "Ethereum'un durumunu özetle", "SOL ne durumda?", "BTC analiz"
 - SPECIFIC_ANALYSIS: Coin + specific timeframe/trade type
   Examples: "BTC 4h analizi", "ETH scalp", "SOL 1d swing"
+- MLIS_ANALYSIS: Coin + MLIS/Pro/Multi-layer analysis request
+  Examples: "BTC mlis", "ETH mlis pro", "SOL multi-layer analiz", "BTC çoklu katman", "mlis ile analiz et"
 - MULTI_ANALYSIS: Multiple coins or "top X"
   Examples: "Top 5 coin", "BTC ETH SOL analiz et", "En iyi 3 coin"
 - EXPERT_ASK: Educational question WITHOUT specific coin
@@ -258,6 +260,24 @@ function detectIntentByRules(
       entities.count = match[1] ? parseInt(match[1]) : 5;
       break;
     }
+  }
+
+  // MLIS_ANALYSIS patterns (symbol + MLIS keywords)
+  const mlisPatterns = [
+    /mlis/i,
+    /mlis pro/i,
+    /multi.?layer/i,
+    /çoklu.?katman/i,
+    /5.?layer/i,
+    /beş.?katman/i,
+    /pro analiz/i,
+    /pro analysis/i,
+    /gelişmiş analiz/i,
+    /advanced analysis/i,
+  ];
+  if (symbol && mlisPatterns.some((p) => p.test(normalizedMessage)) && intent === 'UNKNOWN') {
+    intent = 'MLIS_ANALYSIS';
+    confidence = 0.95;
   }
 
   // SPECIFIC_ANALYSIS patterns (symbol + timeframe or trade type)

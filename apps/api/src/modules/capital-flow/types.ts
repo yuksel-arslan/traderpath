@@ -1,0 +1,352 @@
+/**
+ * Capital Flow System Types
+ *
+ * Core Principle: "Para nereye akıyorsa potansiyel oradadır"
+ * (Where money flows, potential exists)
+ */
+
+// Market Types
+export type MarketType = 'crypto' | 'stocks' | 'bonds' | 'metals';
+export type Phase = 'early' | 'mid' | 'late' | 'exit';
+export type RotationSignal = 'entering' | 'stable' | 'exiting' | null;
+export type LiquidityBias = 'risk_on' | 'risk_off' | 'neutral';
+export type LiquidityTrend = 'expanding' | 'contracting' | 'stable';
+export type DxyTrend = 'strengthening' | 'weakening' | 'stable';
+export type VixLevel = 'extreme_fear' | 'fear' | 'neutral' | 'complacent';
+export type SectorTrend = 'up' | 'down' | 'stable';
+export type FlowAction = 'analyze' | 'wait' | 'avoid';
+
+// Sector Flow (within a market)
+export interface SectorFlow {
+  name: string;                // e.g., 'DeFi', 'Tech', 'Treasury'
+  flow7d: number;
+  flow30d: number;
+  dominance: number;           // % of parent market
+  trending: SectorTrend;
+  topAssets: string[];         // Top 5 assets in sector
+}
+
+// Historical Data Point
+export interface FlowDataPoint {
+  date: string;               // ISO date string
+  value: number;              // Flow percentage
+}
+
+// Market Flow Data
+export interface MarketFlow {
+  market: MarketType;
+
+  // Current State
+  currentValue: number;        // Market cap or index value
+  flow7d: number;              // 7-day % change
+  flow30d: number;             // 30-day % change
+  flowVelocity: number;        // Acceleration (flow7d - previous 7d)
+
+  // Historical Data for Charts
+  flowHistory: FlowDataPoint[];      // 30-day flow history
+  velocityHistory: FlowDataPoint[];  // 30-day velocity history
+
+  // Phase Detection
+  phase: Phase;
+  daysInPhase: number;
+  phaseStartDate: Date;
+  avgPhaseDuration: number;    // Historical average
+
+  // Rotation Signals
+  rotationSignal: RotationSignal;
+  rotationTarget: MarketType | null;
+  rotationConfidence: number;  // 0-100
+
+  // Sub-markets (for drill-down)
+  sectors?: SectorFlow[];
+
+  // Timestamps
+  lastUpdated: Date;
+}
+
+// Global Liquidity Metrics
+export interface GlobalLiquidity {
+  fedBalanceSheet: {
+    value: number;             // Trillions USD
+    change30d: number;         // % change
+    trend: LiquidityTrend;
+  };
+
+  m2MoneySupply: {
+    value: number;             // Trillions USD
+    change30d: number;
+    yoyGrowth: number;         // Year-over-year %
+  };
+
+  dxy: {
+    value: number;             // Dollar Index
+    change7d: number;
+    trend: DxyTrend;
+  };
+
+  vix: {
+    value: number;             // Fear Index
+    level: VixLevel;
+  };
+
+  yieldCurve: {
+    spread10y2y: number;       // 10Y - 2Y Treasury spread
+    inverted: boolean;
+    interpretation: string;
+  };
+
+  lastUpdated: Date;
+}
+
+// Rotation Event
+export interface RotationEvent {
+  id: string;
+  fromMarket: MarketType;
+  toMarket: MarketType;
+  startDate: Date;
+  endDate?: Date;
+  durationDays?: number;
+  flowMagnitude: number;
+}
+
+// Active Rotation
+export interface ActiveRotation {
+  from: MarketType;
+  to: MarketType;
+  confidence: number;
+  estimatedDuration: string;
+  startedAt: Date;
+}
+
+// Market Correlation
+export interface MarketCorrelation {
+  market1: MarketType;
+  market2: MarketType;
+  correlation: number;        // -1 to +1
+  strength: 'strong' | 'moderate' | 'weak' | 'none';
+  direction: 'positive' | 'negative' | 'neutral';
+  interpretation: string;     // Human-readable explanation
+}
+
+// Correlation Matrix (all market pairs)
+export interface CorrelationMatrix {
+  correlations: MarketCorrelation[];
+  strongestPositive: MarketCorrelation | null;
+  strongestNegative: MarketCorrelation | null;
+  insights: string;           // AI-generated insight about correlations
+  lastUpdated: Date;
+}
+
+// Trade Direction
+export type TradeDirection = 'BUY' | 'SELL';
+
+// Rotation Trade Opportunity
+export interface RotationTradeOpportunity {
+  market: MarketType;
+  direction: TradeDirection;
+  reason: string;
+  confidence: number;         // 0-100
+  flowSignal: 'entering' | 'exiting';
+  relatedMarkets: {
+    market: MarketType;
+    relationship: 'source' | 'destination';  // source = money coming from, destination = money going to
+  }[];
+  suggestedSectors?: string[];
+  riskLevel: 'low' | 'medium' | 'high';
+
+  // Enhanced correlation info for UI
+  correlationInfo?: {
+    strongestCorrelation: {
+      market: MarketType;
+      value: number;          // -1 to +1
+      direction: 'positive' | 'negative';
+      interpretation: string;
+    };
+    hedgeSuggestion?: {
+      market: MarketType;
+      correlation: number;
+    };
+  };
+
+  // Phase context for the opportunity
+  phaseContext: {
+    currentPhase: Phase;
+    daysInPhase: number;
+    avgDuration: number;
+    phaseProgress: number;    // 0-100%
+  };
+}
+
+// Multi-Market Trade Opportunities
+export interface TradeOpportunities {
+  opportunities: RotationTradeOpportunity[];
+  rotationSummary: string;    // Human-readable summary of the rotation
+  totalOpportunities: number;
+  buyOpportunities: number;
+  sellOpportunities: number;
+  lastUpdated: Date;
+}
+
+// Flow Recommendation
+export interface FlowRecommendation {
+  primaryMarket: MarketType;
+  phase: Phase;
+  action: FlowAction;
+  direction: TradeDirection;  // BUY or SELL
+  reason: string;
+  sectors?: string[];
+  confidence: number;
+}
+
+// Capital Flow Summary (main response)
+export interface CapitalFlowSummary {
+  timestamp: Date;
+
+  // Global Liquidity
+  globalLiquidity: GlobalLiquidity;
+  liquidityBias: LiquidityBias;
+
+  // Market Flows
+  markets: MarketFlow[];
+
+  // Market Correlations
+  correlations?: CorrelationMatrix;
+
+  // Trade Opportunities (multi-market)
+  tradeOpportunities?: TradeOpportunities;
+
+  // Recommendations
+  recommendation: FlowRecommendation;       // Primary BUY recommendation
+  sellRecommendation?: FlowRecommendation;  // SELL recommendation for outflow markets
+
+  // Rotation
+  activeRotation: ActiveRotation | null;
+
+  // AI-generated insights for each layer
+  insights?: LayerInsights;
+
+  // Cache info
+  cacheExpiry?: Date;
+}
+
+// AI-generated insights for each layer
+export interface LayerInsights {
+  layer1: string;  // Global Liquidity interpretation
+  layer2: string;  // Market Flow interpretation
+  layer3: string;  // Sector analysis
+  layer4: string;  // Overall recommendation reasoning
+  generatedAt: Date;
+}
+
+// Provider Response Types
+export interface FredSeriesData {
+  date: string;
+  value: number;
+}
+
+export interface FredResponse {
+  observations: Array<{
+    date: string;
+    value: string;
+  }>;
+}
+
+export interface YahooQuote {
+  symbol: string;
+  regularMarketPrice: number;
+  regularMarketChangePercent: number;
+  regularMarketPreviousClose: number;
+}
+
+export interface DefiLlamaTvlResponse {
+  totalLiquidity: number;
+  chains: Array<{
+    name: string;
+    tvl: number;
+    change_1d: number;
+    change_7d: number;
+  }>;
+}
+
+export interface CryptoGlobalMetrics {
+  totalMarketCap: number;
+  totalVolume24h: number;
+  btcDominance: number;
+  change24h: number;
+  change7d: number;
+  change30d: number;
+}
+
+// Sector Definitions
+export const CRYPTO_SECTORS = ['DeFi', 'Layer2', 'Meme', 'AI', 'Gaming', 'Infrastructure'] as const;
+export const STOCK_SECTORS = ['Tech', 'Finance', 'Energy', 'Healthcare', 'Consumer', 'Industrial'] as const;
+
+export type CryptoSector = typeof CRYPTO_SECTORS[number];
+export type StockSector = typeof STOCK_SECTORS[number];
+
+// Phase Configuration
+export const PHASE_CONFIG = {
+  early: {
+    minFlow7d: 3,
+    maxFlow30d: 5,
+    maxDays: 30,
+    color: '#22c55e',        // Green
+    label: 'EARLY',
+    action: 'Optimal entry window'
+  },
+  mid: {
+    minFlow7d: 0,
+    minFlow30d: 5,
+    minDays: 30,
+    maxDays: 60,
+    color: '#eab308',        // Yellow
+    label: 'MID',
+    action: 'Proceed with caution'
+  },
+  late: {
+    minDays: 60,
+    maxDays: 90,
+    color: '#f97316',        // Orange
+    label: 'LATE',
+    action: 'No new entries'
+  },
+  exit: {
+    minDays: 90,
+    color: '#ef4444',        // Red
+    label: 'EXIT',
+    action: 'Do not enter'
+  }
+} as const;
+
+// Market Display Configuration
+export const MARKET_CONFIG: Record<MarketType, {
+  name: string;
+  icon: string;
+  color: string;
+  symbols: string[];
+}> = {
+  crypto: {
+    name: 'Crypto',
+    icon: '₿',
+    color: '#f7931a',
+    symbols: ['BTC', 'ETH', 'Total MCap']
+  },
+  stocks: {
+    name: 'Stocks',
+    icon: '📈',
+    color: '#3b82f6',
+    symbols: ['SPX', 'NDX', 'DJI']
+  },
+  bonds: {
+    name: 'Bonds',
+    icon: '🏛️',
+    color: '#6366f1',
+    symbols: ['10Y', '2Y', 'TLT']
+  },
+  metals: {
+    name: 'Metals',
+    icon: '🥇',
+    color: '#fbbf24',
+    symbols: ['XAU', 'XAG', 'GLD']
+  }
+};

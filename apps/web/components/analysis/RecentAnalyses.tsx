@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   XCircle,
   ChevronDown,
+  Layers,
 } from 'lucide-react';
 import { CoinIcon } from '../common/CoinIcon';
 import { cn } from '../../lib/utils';
@@ -42,6 +43,8 @@ const TRADE_TYPE_CONFIG: Record<TradeType, { label: string; icon: typeof Zap; co
   swing: { label: 'Swing', icon: Calendar, color: 'amber' },
 };
 
+type AnalysisMethod = 'classic' | 'mlis_pro';
+
 interface RecentAnalysis {
   id: string;
   symbol: string;
@@ -49,6 +52,7 @@ interface RecentAnalysis {
   score: number | null;
   direction: string | null;
   tradeType?: TradeType;
+  method?: AnalysisMethod;
   createdAt: string;
   outcome?: 'correct' | 'incorrect' | 'pending' | null;
   entryPrice?: number;
@@ -146,12 +150,13 @@ export function RecentAnalyses() {
 
         // Map to RecentAnalysis format
         const mapped = liveAnalyses.map((a: any) => {
-          // Normalize verdict - include direction-based verdicts (long/short)
+          // Normalize verdict - NOTE: 'long'/'short' are DIRECTIONS, not verdicts!
           const rawVerdict = (a.verdict || '').toLowerCase().replace(/[^a-z_]/g, '');
           let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
-          if (rawVerdict === 'go' || rawVerdict === 'go!' || rawVerdict === 'long' || rawVerdict === 'short') verdict = 'go';
-          else if (rawVerdict === 'conditional_go' || rawVerdict === 'conditionalgo') verdict = 'conditional_go';
+          if (rawVerdict === 'go') verdict = 'go';
+          else if (rawVerdict === 'conditional_go' || rawVerdict === 'conditionalgo' || rawVerdict === 'cond') verdict = 'conditional_go';
           else if (rawVerdict === 'avoid' || rawVerdict === 'no_go' || rawVerdict === 'nogo') verdict = 'avoid';
+          else if (rawVerdict === 'wait') verdict = 'wait';
 
           // Map interval to trade type
           let tradeType: TradeType | undefined;
@@ -176,6 +181,7 @@ export function RecentAnalyses() {
             score: a.totalScore !== null && a.totalScore !== undefined ? a.totalScore : null,
             direction: a.direction,
             tradeType,
+            method: (a.method === 'mlis_pro' ? 'mlis_pro' : 'classic') as AnalysisMethod,
             createdAt: new Date(a.createdAt).toLocaleDateString('en-US', {
               day: 'numeric',
               month: 'short',
@@ -483,6 +489,13 @@ export function RecentAnalyses() {
                           )}>
                             <tradeTypeConfig.icon className="w-3 h-3" />
                             {tradeTypeConfig.label}
+                          </span>
+                        )}
+                        {/* Analysis Method Badge */}
+                        {analysis.method === 'mlis_pro' && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-0.5 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30">
+                            <Layers className="w-3 h-3" />
+                            MLIS
                           </span>
                         )}
                         {/* Outcome badges */}

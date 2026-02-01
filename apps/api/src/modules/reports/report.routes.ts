@@ -10,6 +10,7 @@ import { calculateExpiredOutcomes, getRealAccuracy, calculateReportOutcome } fro
 import { notificationService } from '../notifications/notification.service';
 import { emailService } from '../email/email.service';
 import { creditService } from '../credits/credit.service';
+import { logger } from '../../core/logger';
 
 // Constants for free usage limits per analysis
 const FREE_PDF_DOWNLOADS_PER_ANALYSIS = 2;
@@ -300,6 +301,11 @@ export async function reportRoutes(fastify: FastifyInstance) {
             analysisId: true,
             aiExpertComment: true,
             isPublic: true,
+            analysis: {
+              select: {
+                method: true,
+              },
+            },
           },
           orderBy: { generatedAt: 'desc' },
           take: Math.min(parseInt(limit), 50),
@@ -330,6 +336,11 @@ export async function reportRoutes(fastify: FastifyInstance) {
             analysisId: true,
             aiExpertComment: true,
             isPublic: true,
+            analysis: {
+              select: {
+                method: true,
+              },
+            },
           },
           orderBy: { generatedAt: 'desc' },
           take: 10, // Limit sample reports
@@ -386,7 +397,9 @@ export async function reportRoutes(fastify: FastifyInstance) {
               prisma.report.update({
                 where: { id: report.id },
                 data: { entryPrice: extractedPrice },
-              }).catch(() => {}); // Fire and forget
+              }).catch((err) => {
+                logger.warn({ reportId: report.id, error: err }, 'Failed to update report entry price');
+              }); // Fire and forget with logging
             }
           }
 
@@ -412,6 +425,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
             score: report.score,
             direction: report.direction,
             tradeType,
+            method: (report as any).analysis?.method || 'classic', // Analysis method: 'classic' or 'mlis_pro'
             generatedAt: report.generatedAt,
             expiresAt: report.expiresAt,
             downloadCount: report.downloadCount,

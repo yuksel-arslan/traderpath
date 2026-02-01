@@ -23,6 +23,24 @@ const CACHE_EXPIRY_MS = 2 * 60 * 60 * 1000;
 // Rate limiting between analyses (to avoid API overload)
 const ANALYSIS_DELAY_MS = 5000; // 5 seconds between each coin
 
+// Scan session tracking
+interface ScanSession {
+  isScanning: boolean;
+  coinsAnalyzed: number;
+  totalCoins: number;
+  startedAt: Date | null;
+  lastAnalyzedCoin: string | null;
+}
+
+// Global scan state (in-memory tracking)
+let currentScanSession: ScanSession = {
+  isScanning: false,
+  coinsAnalyzed: 0,
+  totalCoins: TOP_COINS_TO_SCAN.length,
+  startedAt: null,
+  lastAnalyzedCoin: null,
+};
+
 export interface CoinScore {
   symbol: string;
   totalScore: number;
@@ -57,6 +75,43 @@ export interface FullAnalysisResult {
 // ===========================================
 
 class CoinScoreCacheService {
+  private systemUserId: string | null = null;
+
+  /**
+   * Get or create a system user ID for platform-generated analyses
+   */
+  private async getSystemUserId(): Promise<string> {
+    if (this.systemUserId) return this.systemUserId;
+
+    try {
+      // Try to find an admin user first
+      const adminUser = await prisma.user.findFirst({
+        where: { isAdmin: true },
+        select: { id: true },
+      });
+
+      if (adminUser) {
+        this.systemUserId = adminUser.id;
+        return adminUser.id;
+      }
+
+      // If no admin, find any user
+      const anyUser = await prisma.user.findFirst({
+        select: { id: true },
+      });
+
+      if (anyUser) {
+        this.systemUserId = anyUser.id;
+        return anyUser.id;
+      }
+
+      throw new Error('No users found in the database');
+    } catch (error) {
+      console.error('[CoinScoreCache] Error getting system user ID:', error);
+      throw error;
+    }
+  }
+
   /**
    * Run FULL analysis for a single coin using analysisEngine
    */
@@ -106,17 +161,21 @@ class CoinScoreCacheService {
 
       const confidence = Math.min(10, Math.max(1, Math.round(reliabilityScore / 10)));
 
+      // Get system user ID for platform-generated analyses
+      const systemUserId = await this.getSystemUserId();
+
       // Save to database
       const analysisRecord = await prisma.analysis.create({
         data: {
-          userId: 'system', // System-generated analysis
+          userId: systemUserId, // Use admin/system user ID
           symbol,
           interval,
+          method: 'classic', // Explicitly set method for system scans
           stepsCompleted: [1, 2, 3, 4],
-          step1Result: marketPulse as any,
-          step2Result: assetScan as any,
-          step3Result: safetyCheck as any,
-          step4Result: timing as any,
+          step1Result: marketPulse as object,
+          step2Result: assetScan as object,
+          step3Result: safetyCheck as object,
+          step4Result: timing as object,
           totalScore: reliabilityScore,
           creditsSpent: 0, // Platform covers cost
         },
@@ -288,9 +347,31 @@ class CoinScoreCacheService {
   }
 
   /**
+   * Get current scan session state
+   */
+  getScanSession(): ScanSession {
+    return { ...currentScanSession };
+  }
+
+  /**
    * Scan all top coins with REAL analysis and update cache
    */
   async scanAllCoins(interval: string = '4h'): Promise<{ success: number; failed: number; results: CoinScore[] }> {
+    // Prevent multiple simultaneous scans
+    if (currentScanSession.isScanning) {
+      console.log('[CoinScoreCache] Scan already in progress, skipping...');
+      return { success: 0, failed: 0, results: [] };
+    }
+
+    // Initialize scan session
+    currentScanSession = {
+      isScanning: true,
+      coinsAnalyzed: 0,
+      totalCoins: TOP_COINS_TO_SCAN.length,
+      startedAt: new Date(),
+      lastAnalyzedCoin: null,
+    };
+
     console.log(`[CoinScoreCache] Starting FULL analysis scan of ${TOP_COINS_TO_SCAN.length} coins...`);
     console.log(`[CoinScoreCache] This will take approximately ${(TOP_COINS_TO_SCAN.length * ANALYSIS_DELAY_MS / 1000 / 60).toFixed(1)} minutes`);
 
@@ -300,6 +381,10 @@ class CoinScoreCacheService {
 
     for (const symbol of TOP_COINS_TO_SCAN) {
       const result = await this.runFullAnalysis(symbol, interval);
+
+      // Update scan session progress
+      currentScanSession.coinsAnalyzed++;
+      currentScanSession.lastAnalyzedCoin = symbol;
 
       if (result.success && result.score) {
         results.push(result.score);
@@ -363,6 +448,15 @@ class CoinScoreCacheService {
         await new Promise(resolve => setTimeout(resolve, ANALYSIS_DELAY_MS));
       }
     }
+
+    // Reset scan session when done
+    currentScanSession = {
+      isScanning: false,
+      coinsAnalyzed: TOP_COINS_TO_SCAN.length,
+      totalCoins: TOP_COINS_TO_SCAN.length,
+      startedAt: currentScanSession.startedAt,
+      lastAnalyzedCoin: TOP_COINS_TO_SCAN[TOP_COINS_TO_SCAN.length - 1],
+    };
 
     console.log(`[CoinScoreCache] Full scan complete. Success: ${success}, Failed: ${failed}`);
     return { success, failed, results };
