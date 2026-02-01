@@ -58,7 +58,7 @@ interface ConciergeResponse {
 }
 
 // Expanded asset list - 80+ assets including crypto, stocks, bonds, metals
-const SUPPORTED_COINS = [
+const SUPPORTED_ASSETS = [
   // ===== CRYPTO =====
   // Top 20 by market cap
   'btc', 'eth', 'bnb', 'xrp', 'ada', 'doge', 'sol', 'trx', 'dot', 'matic',
@@ -100,7 +100,7 @@ const SUPPORTED_COINS = [
 ];
 
 // Asset name aliases for natural language (Turkish and English)
-const COIN_ALIASES: Record<string, string> = {
+const ASSET_ALIASES: Record<string, string> = {
   // Crypto aliases
   'bitcoin': 'btc',
   'ethereum': 'eth',
@@ -570,7 +570,7 @@ function detectIntent(message: string): {
   ) {
     // Try to extract coin from message
     let scheduleCoin: string | null = null;
-    for (const [alias, symbol] of Object.entries(COIN_ALIASES)) {
+    for (const [alias, symbol] of Object.entries(ASSET_ALIASES)) {
       if (lower.includes(alias)) {
         scheduleCoin = symbol;
         break;
@@ -585,7 +585,7 @@ function detectIntent(message: string): {
         .replace(/\/usdt/gi, ' ')
         .replace(/\/busd/gi, ' ');
 
-      for (const coin of SUPPORTED_COINS) {
+      for (const coin of SUPPORTED_ASSETS) {
         const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
         if (coinRegex.test(cleanedMessage) || coinRegex.test(lower)) {
           scheduleCoin = coin;
@@ -625,7 +625,7 @@ function detectIntent(message: string): {
     let chartSymbol: string | null = null;
 
     // Check for coin in the chart request
-    for (const [alias, symbol] of Object.entries(COIN_ALIASES)) {
+    for (const [alias, symbol] of Object.entries(ASSET_ALIASES)) {
       if (lower.includes(alias)) {
         chartSymbol = symbol;
         break;
@@ -640,7 +640,7 @@ function detectIntent(message: string): {
         .replace(/\/usdt/gi, ' ')
         .replace(/\/busd/gi, ' ');
 
-      for (const coin of SUPPORTED_COINS) {
+      for (const coin of SUPPORTED_ASSETS) {
         const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
         if (coinRegex.test(cleanedMessage) || coinRegex.test(lower)) {
           chartSymbol = coin;
@@ -655,7 +655,7 @@ function detectIntent(message: string): {
   // Check for coin aliases first
   let detectedCoin: string | null = null;
 
-  for (const [alias, symbol] of Object.entries(COIN_ALIASES)) {
+  for (const [alias, symbol] of Object.entries(ASSET_ALIASES)) {
     if (lower.includes(alias)) {
       detectedCoin = symbol;
       break;
@@ -672,7 +672,7 @@ function detectIntent(message: string): {
       .replace(/\/usdt/gi, ' ')
       .replace(/\/busd/gi, ' ');
 
-    for (const coin of SUPPORTED_COINS) {
+    for (const coin of SUPPORTED_ASSETS) {
       // Match coin symbol with word boundaries in cleaned message
       const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
       if (coinRegex.test(cleanedMessage) || coinRegex.test(lower)) {
@@ -2292,7 +2292,7 @@ Visit /analyze/details/{id} for details.`;
 
     // Find coin
     let alertCoin: string | null = null;
-    for (const coin of SUPPORTED_COINS) {
+    for (const coin of SUPPORTED_ASSETS) {
       if (lower.includes(coin)) {
         alertCoin = coin.toUpperCase();
         break;
@@ -2826,7 +2826,7 @@ Each analysis costs 25 credits. Visit /scheduled to edit details.`,
     const lower = message.toLowerCase();
     let targetCoin: string | null = null;
 
-    for (const coin of SUPPORTED_COINS) {
+    for (const coin of SUPPORTED_ASSETS) {
       const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
       if (coinRegex.test(lower)) {
         targetCoin = coin.toUpperCase();
