@@ -214,48 +214,97 @@ const YAHOO_RANGE_MAP: Record<string, string> = {
 
 async function fetchYahooCandles(symbol: string, interval: string, limit: number = 500): Promise<OHLCV[]> {
   const yahooSymbol = YAHOO_SYMBOL_MAP[symbol.toUpperCase()] || symbol.toUpperCase();
-  const yahooInterval = YAHOO_INTERVAL_MAP[interval] || '1d';
-  const yahooRange = YAHOO_RANGE_MAP[interval] || '1y';
+  let yahooInterval = YAHOO_INTERVAL_MAP[interval] || '1d';
+  let yahooRange = YAHOO_RANGE_MAP[interval] || '1y';
+  const originalInterval = interval;
 
-  const cacheKey = `yahoo:candles:${yahooSymbol}:${yahooInterval}:${yahooRange}`;
+  const cacheKey = `yahoo:candles:${yahooSymbol}:${originalInterval}:${limit}`;
   const cached = getCached<OHLCV[]>(cacheKey);
-  if (cached) return cached.slice(-limit);
-
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=${yahooInterval}&range=${yahooRange}`;
-
-  const response = await fetchWithRetry(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    },
-  });
-
-  const data = await response.json();
-
-  if (!data.chart?.result?.[0]) {
-    throw new Error(`No data returned from Yahoo Finance for ${symbol}`);
+  if (cached && cached.length >= Math.min(limit, 50)) {
+    console.log(`[Yahoo] Cache hit for ${yahooSymbol} ${originalInterval}`);
+    return cached.slice(-limit);
   }
 
-  const result = data.chart.result[0];
-  const timestamps = result.timestamp || [];
-  const quotes = result.indicators?.quote?.[0] || {};
+  console.log(`[Yahoo] Fetching ${yahooSymbol} - interval: ${yahooInterval}, range: ${yahooRange}`);
 
-  const candles: OHLCV[] = timestamps.map((ts: number, i: number) => ({
-    timestamp: ts * 1000, // Convert to milliseconds
-    open: quotes.open?.[i] || 0,
-    high: quotes.high?.[i] || 0,
-    low: quotes.low?.[i] || 0,
-    close: quotes.close?.[i] || 0,
-    volume: quotes.volume?.[i] || 0,
-  })).filter((c: OHLCV) => c.open > 0 && c.close > 0);
+  // Try fetching with requested interval first
+  let candles = await tryFetchYahooData(yahooSymbol, yahooInterval, yahooRange);
 
-  // For 4h interval, aggregate from 1h candles
+  // If intraday fails or returns insufficient data, fallback to daily
+  const MIN_CANDLES_REQUIRED = 50;
+  if (candles.length < MIN_CANDLES_REQUIRED && ['5m', '15m', '30m', '60m'].includes(yahooInterval)) {
+    console.log(`[Yahoo] Insufficient intraday data (${candles.length} candles), falling back to daily for ${yahooSymbol}`);
+
+    // Try with daily data
+    candles = await tryFetchYahooData(yahooSymbol, '1d', '2y');
+
+    if (candles.length < MIN_CANDLES_REQUIRED) {
+      throw new Error(`Insufficient data for ${symbol}. Yahoo Finance returned only ${candles.length} candles. Try using 1D timeframe for better results.`);
+    }
+
+    // Note: We're returning daily data even though user requested intraday
+    // This is a fallback to allow analysis to proceed
+    console.log(`[Yahoo] Using daily data fallback for ${yahooSymbol}: ${candles.length} candles`);
+  }
+
+  // For 4h or 2h interval, aggregate from 1h candles if we have intraday data
   let finalCandles = candles;
-  if (interval === '4h' || interval === '2h') {
-    finalCandles = aggregateCandles(candles, interval === '4h' ? 4 : 2);
+  if ((originalInterval === '4h' || originalInterval === '2h') && yahooInterval === '60m' && candles.length >= MIN_CANDLES_REQUIRED) {
+    const factor = originalInterval === '4h' ? 4 : 2;
+    finalCandles = aggregateCandles(candles, factor);
+    console.log(`[Yahoo] Aggregated ${candles.length} 1h candles to ${finalCandles.length} ${originalInterval} candles for ${yahooSymbol}`);
+  }
+
+  // Final validation
+  if (finalCandles.length < 10) {
+    throw new Error(`Unable to fetch sufficient data for ${symbol}. Only ${finalCandles.length} candles available. Please try a different timeframe (1D recommended for ETFs).`);
   }
 
   setCache(cacheKey, finalCandles, CACHE_TTL.CANDLES);
+  console.log(`[Yahoo] Successfully fetched ${finalCandles.length} candles for ${yahooSymbol}`);
   return finalCandles.slice(-limit);
+}
+
+async function tryFetchYahooData(yahooSymbol: string, interval: string, range: string): Promise<OHLCV[]> {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=${interval}&range=${range}`;
+
+  try {
+    const response = await fetchWithRetry(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    });
+
+    const data = await response.json();
+
+    if (!data.chart?.result?.[0]) {
+      console.log(`[Yahoo] No data in response for ${yahooSymbol}`);
+      return [];
+    }
+
+    const result = data.chart.result[0];
+    const timestamps = result.timestamp || [];
+    const quotes = result.indicators?.quote?.[0] || {};
+
+    if (timestamps.length === 0) {
+      console.log(`[Yahoo] Empty timestamps for ${yahooSymbol}`);
+      return [];
+    }
+
+    const candles: OHLCV[] = timestamps.map((ts: number, i: number) => ({
+      timestamp: ts * 1000, // Convert to milliseconds
+      open: quotes.open?.[i] ?? 0,
+      high: quotes.high?.[i] ?? 0,
+      low: quotes.low?.[i] ?? 0,
+      close: quotes.close?.[i] ?? 0,
+      volume: quotes.volume?.[i] ?? 0,
+    })).filter((c: OHLCV) => c.open > 0 && c.close > 0 && c.high > 0 && c.low > 0);
+
+    return candles;
+  } catch (error) {
+    console.error(`[Yahoo] Error fetching ${yahooSymbol} (${interval}/${range}):`, error);
+    return [];
+  }
 }
 
 function aggregateCandles(candles: OHLCV[], factor: number): OHLCV[] {
