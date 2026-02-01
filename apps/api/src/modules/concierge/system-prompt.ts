@@ -167,9 +167,10 @@ Based on user message, classify into ONE of these intents:
    Requires: market (crypto/stocks/bonds/metals) - optional, defaults to recommended market
    Returns: Sector breakdown for specified market
 
-5. CAPITAL_FLOW_RECOMMENDATION - User wants AI recommendation
-   Keywords: recommend, öner, tavsiye, what should i, ne yapmalı, where to invest, nereye yatırım, best opportunity, en iyi fırsat, should i trade, trade yapmalı mı
-   Returns: Current recommendation (market, phase, action, confidence)
+5. CAPITAL_FLOW_RECOMMENDATION - User wants AI recommendation (including buy/sell questions)
+   Keywords: recommend, öner, tavsiye, what should i, ne yapmalı, where to invest, nereye yatırım, best opportunity, en iyi fırsat, should i trade, trade yapmalı mı, alınır mı, satmalı mı, should i buy, should i sell, worth buying, worth investing, good investment, iyi yatırım, gireyim mi, girilir mi
+   Note: Can include asset hint (symbol) for specific asset questions like "Altın alınır mı?" or "Should I buy gold?"
+   Returns: Current recommendation (market, phase, action, confidence) + asset-specific advice if symbol provided
 
 ### ANALYSIS INTENTS
 
@@ -300,6 +301,14 @@ Analyze the user message and respond with a JSON object:
 "What should I trade?" → {"intent": "CAPITAL_FLOW_RECOMMENDATION", "confidence": 0.95, "entities": {}, "language": "en"}
 "Best opportunity now?" → {"intent": "CAPITAL_FLOW_RECOMMENDATION", "confidence": 0.9, "entities": {}, "language": "en"}
 "Nereye yatırım yapmalıyım?" → {"intent": "CAPITAL_FLOW_RECOMMENDATION", "confidence": 0.95, "entities": {}, "language": "tr"}
+"Altın alınır mı?" → {"intent": "CAPITAL_FLOW_RECOMMENDATION", "confidence": 0.95, "entities": {"symbol": "GOLD"}, "language": "tr"}
+"Should I buy gold?" → {"intent": "CAPITAL_FLOW_RECOMMENDATION", "confidence": 0.95, "entities": {"symbol": "GOLD"}, "language": "en"}
+"Gümüş satmalı mıyım?" → {"intent": "CAPITAL_FLOW_RECOMMENDATION", "confidence": 0.95, "entities": {"symbol": "SILVER"}, "language": "tr"}
+"Is gold a good investment?" → {"intent": "CAPITAL_FLOW_RECOMMENDATION", "confidence": 0.9, "entities": {"symbol": "GOLD"}, "language": "en"}
+"BTC alınır mı?" → {"intent": "CAPITAL_FLOW_RECOMMENDATION", "confidence": 0.95, "entities": {"symbol": "BTC"}, "language": "tr"}
+"Should I invest in ETH?" → {"intent": "CAPITAL_FLOW_RECOMMENDATION", "confidence": 0.9, "entities": {"symbol": "ETH"}, "language": "en"}
+"Hisse almalı mıyım?" → {"intent": "CAPITAL_FLOW_RECOMMENDATION", "confidence": 0.9, "entities": {"symbol": "STOCKS"}, "language": "tr"}
+"Is it worth buying stocks?" → {"intent": "CAPITAL_FLOW_RECOMMENDATION", "confidence": 0.9, "entities": {"symbol": "STOCKS"}, "language": "en"}
 
 ### Analysis Examples
 "BTC nasıl?" → {"intent": "ANALYSIS", "confidence": 0.95, "entities": {"symbol": "BTC", "interval": "4h"}, "language": "tr"}

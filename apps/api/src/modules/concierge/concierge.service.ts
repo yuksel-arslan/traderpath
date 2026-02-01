@@ -57,8 +57,9 @@ interface ConciergeResponse {
   };
 }
 
-// Expanded coin list - 50+ popular coins
-const SUPPORTED_COINS = [
+// Expanded asset list - 80+ assets including crypto, stocks, bonds, metals
+const SUPPORTED_ASSETS = [
+  // ===== CRYPTO =====
   // Top 20 by market cap
   'btc', 'eth', 'bnb', 'xrp', 'ada', 'doge', 'sol', 'trx', 'dot', 'matic',
   'shib', 'ltc', 'avax', 'link', 'atom', 'uni', 'xlm', 'etc', 'xmr', 'bch',
@@ -73,11 +74,34 @@ const SUPPORTED_COINS = [
   // AI tokens
   'fet', 'agix', 'ocean', 'rndr',
   // Others
-  'vet', 'hbar', 'qnt', 'inj', 'ldo', 'rune', 'grt', 'fil', 'theta', 'icp'
+  'vet', 'hbar', 'qnt', 'inj', 'ldo', 'rune', 'grt', 'fil', 'theta', 'icp',
+
+  // ===== STOCKS =====
+  // Major indices ETFs
+  'spy', 'qqq', 'dia', 'iwm', 'voo',
+  // Tech giants
+  'aapl', 'msft', 'googl', 'amzn', 'meta', 'nvda', 'tsla', 'nflx',
+  // Other popular stocks
+  'amd', 'intc', 'crm', 'adbe', 'pypl', 'v', 'ma', 'jpm', 'bac', 'wfc',
+
+  // ===== BONDS =====
+  // Treasury ETFs
+  'tlt', 'ief', 'shy', 'bnd', 'agg', 'tip',
+  // Corporate bonds
+  'lqd', 'hyg', 'jnk',
+
+  // ===== METALS =====
+  // Gold
+  'gld', 'iau', 'xauusd', 'gold',
+  // Silver
+  'slv', 'xagusd', 'silver',
+  // Other metals
+  'pplt', 'pall', 'dba'
 ];
 
-// Coin name aliases for natural language
-const COIN_ALIASES: Record<string, string> = {
+// Asset name aliases for natural language (Turkish and English)
+const ASSET_ALIASES: Record<string, string> = {
+  // Crypto aliases
   'bitcoin': 'btc',
   'ethereum': 'eth',
   'binance': 'bnb',
@@ -100,6 +124,36 @@ const COIN_ALIASES: Record<string, string> = {
   'render': 'rndr',
   'fetch': 'fet',
   'singularity': 'agix',
+
+  // Metal aliases (Turkish and English)
+  'altın': 'gld',
+  'altin': 'gld',
+  'gold': 'gld',
+  'gümüş': 'slv',
+  'gumus': 'slv',
+  'silver': 'slv',
+  'platin': 'pplt',
+  'platinum': 'pplt',
+  'paladyum': 'pall',
+  'palladium': 'pall',
+
+  // Stock aliases (Turkish)
+  'apple': 'aapl',
+  'microsoft': 'msft',
+  'google': 'googl',
+  'amazon': 'amzn',
+  'nvidia': 'nvda',
+  'tesla': 'tsla',
+  'sp500': 'spy',
+  's&p': 'spy',
+  's&p500': 'spy',
+  'nasdaq': 'qqq',
+
+  // Bond aliases (Turkish)
+  'tahvil': 'tlt',
+  'treasury': 'tlt',
+  'hazine': 'tlt',
+  'bono': 'shy',
 };
 
 // Intent detection with advanced pattern matching
@@ -206,6 +260,7 @@ function detectIntent(message: string): {
   }
 
   // CAPITAL_FLOW_RECOMMENDATION - AI recommendation based on flow
+  // Also handles "alınır mı?", "satmalı mıyım?", "should I buy?" style questions
   if (
     lower.includes('ne yapmalı') ||
     lower.includes('what should i') ||
@@ -218,9 +273,51 @@ function detectIntent(message: string): {
     lower.includes('öner') ||
     lower.includes('recommend') ||
     lower.includes('tavsiye') ||
-    (lower.includes('şimdi') && (lower.includes('ne') || lower.includes('what')))
+    (lower.includes('şimdi') && (lower.includes('ne') || lower.includes('what'))) ||
+    // Buy/sell question patterns (Turkish)
+    lower.includes('alınır mı') ||
+    lower.includes('satmalı mı') ||
+    lower.includes('satılmalı mı') ||
+    lower.includes('almalı mı') ||
+    lower.includes('gireyim mi') ||
+    lower.includes('girilir mi') ||
+    lower.includes('yatırım yap') ||
+    lower.includes('al mı') ||
+    lower.includes('sat mı') ||
+    // Buy/sell question patterns (English)
+    lower.includes('should i buy') ||
+    lower.includes('should i sell') ||
+    lower.includes('is it good to buy') ||
+    lower.includes('worth buying') ||
+    lower.includes('worth investing') ||
+    lower.includes('good investment') ||
+    lower.includes('iyi yatırım')
   ) {
-    return { intent: 'CAPITAL_FLOW_RECOMMENDATION' };
+    // Try to detect asset from the question
+    let assetHint: string | undefined;
+
+    // Check for metals (Turkish and English)
+    if (lower.includes('altın') || lower.includes('gold') || lower.includes('gld') || lower.includes('xau')) {
+      assetHint = 'GOLD';
+    } else if (lower.includes('gümüş') || lower.includes('silver') || lower.includes('slv') || lower.includes('xag')) {
+      assetHint = 'SILVER';
+    }
+    // Check for crypto aliases
+    else if (lower.includes('bitcoin') || lower.match(/\bbtc\b/)) {
+      assetHint = 'BTC';
+    } else if (lower.includes('ethereum') || lower.match(/\beth\b/)) {
+      assetHint = 'ETH';
+    }
+    // Check for stocks
+    else if (lower.includes('hisse') || lower.includes('stock') || lower.includes('spy') || lower.includes('qqq')) {
+      assetHint = 'STOCKS';
+    }
+    // Check for bonds
+    else if (lower.includes('tahvil') || lower.includes('bond') || lower.includes('tlt')) {
+      assetHint = 'BONDS';
+    }
+
+    return { intent: 'CAPITAL_FLOW_RECOMMENDATION', symbol: assetHint };
   }
 
   // ===== OTHER INTENTS =====
@@ -473,7 +570,7 @@ function detectIntent(message: string): {
   ) {
     // Try to extract coin from message
     let scheduleCoin: string | null = null;
-    for (const [alias, symbol] of Object.entries(COIN_ALIASES)) {
+    for (const [alias, symbol] of Object.entries(ASSET_ALIASES)) {
       if (lower.includes(alias)) {
         scheduleCoin = symbol;
         break;
@@ -488,7 +585,7 @@ function detectIntent(message: string): {
         .replace(/\/usdt/gi, ' ')
         .replace(/\/busd/gi, ' ');
 
-      for (const coin of SUPPORTED_COINS) {
+      for (const coin of SUPPORTED_ASSETS) {
         const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
         if (coinRegex.test(cleanedMessage) || coinRegex.test(lower)) {
           scheduleCoin = coin;
@@ -528,7 +625,7 @@ function detectIntent(message: string): {
     let chartSymbol: string | null = null;
 
     // Check for coin in the chart request
-    for (const [alias, symbol] of Object.entries(COIN_ALIASES)) {
+    for (const [alias, symbol] of Object.entries(ASSET_ALIASES)) {
       if (lower.includes(alias)) {
         chartSymbol = symbol;
         break;
@@ -543,7 +640,7 @@ function detectIntent(message: string): {
         .replace(/\/usdt/gi, ' ')
         .replace(/\/busd/gi, ' ');
 
-      for (const coin of SUPPORTED_COINS) {
+      for (const coin of SUPPORTED_ASSETS) {
         const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
         if (coinRegex.test(cleanedMessage) || coinRegex.test(lower)) {
           chartSymbol = coin;
@@ -558,7 +655,7 @@ function detectIntent(message: string): {
   // Check for coin aliases first
   let detectedCoin: string | null = null;
 
-  for (const [alias, symbol] of Object.entries(COIN_ALIASES)) {
+  for (const [alias, symbol] of Object.entries(ASSET_ALIASES)) {
     if (lower.includes(alias)) {
       detectedCoin = symbol;
       break;
@@ -575,7 +672,7 @@ function detectIntent(message: string): {
       .replace(/\/usdt/gi, ' ')
       .replace(/\/busd/gi, ' ');
 
-    for (const coin of SUPPORTED_COINS) {
+    for (const coin of SUPPORTED_ASSETS) {
       // Match coin symbol with word boundaries in cleaned message
       const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
       if (coinRegex.test(cleanedMessage) || coinRegex.test(lower)) {
@@ -846,7 +943,7 @@ class ConciergeService {
           return await this.handleCapitalFlowSectors(market || 'crypto', detectedLanguage, creditBalance);
 
         case 'CAPITAL_FLOW_RECOMMENDATION':
-          return await this.handleCapitalFlowRecommendation(detectedLanguage, creditBalance);
+          return await this.handleCapitalFlowRecommendation(detectedLanguage, creditBalance, symbol);
 
         // ===== PLATFORM INTENTS =====
         case 'PLATFORM_INFO':
@@ -1272,7 +1369,7 @@ Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
     }
   }
 
-  private async handleCapitalFlowRecommendation(language: string, creditBalance: number): Promise<ConciergeResponse> {
+  private async handleCapitalFlowRecommendation(language: string, creditBalance: number, assetHint?: string): Promise<ConciergeResponse> {
     try {
       const recommendation = await capitalFlowService.getFlowRecommendation();
 
@@ -1297,6 +1394,122 @@ Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
 • Consider safe havens (gold, bonds)`;
       }
 
+      // Build asset-specific advice if assetHint is provided
+      let assetAdvice = '';
+      if (assetHint) {
+        const assetName = assetHint === 'GOLD' ? 'Gold' : assetHint === 'SILVER' ? 'Silver' : assetHint;
+        const assetNameTr = assetHint === 'GOLD' ? 'Altın' : assetHint === 'SILVER' ? 'Gümüş' : assetHint;
+
+        // Determine asset market
+        let assetMarket = 'crypto';
+        if (assetHint === 'GOLD' || assetHint === 'SILVER') {
+          assetMarket = 'metals';
+        } else if (assetHint === 'STOCKS' || assetHint === 'SPY' || assetHint === 'QQQ') {
+          assetMarket = 'stocks';
+        } else if (assetHint === 'BONDS' || assetHint === 'TLT') {
+          assetMarket = 'bonds';
+        }
+
+        // Check if the asset's market is favorable
+        const isAssetMarketFavorable = recommendation.primaryMarket.toLowerCase() === assetMarket;
+
+        if (assetHint === 'GOLD' || assetHint === 'SILVER') {
+          // Gold/Silver specific advice based on Capital Flow
+          const dxyTrend = recommendation.reasoning.toLowerCase().includes('dxy');
+          const isRiskOff = recommendation.action === 'avoid' || recommendation.reasoning.toLowerCase().includes('risk-off');
+
+          if (isRiskOff || (recommendation.primaryMarket.toLowerCase() === 'metals')) {
+            assetAdvice = language === 'tr'
+              ? `
+
+═══════════════════════════════════
+🥇 ${assetNameTr.toUpperCase()} İÇİN ANALİZ
+═══════════════════════════════════
+${isRiskOff ? '✅ Risk-off ortamı: Altın/Gümüş için olumlu koşullar.' : '✅ Metal piyasasına para akışı tespit edildi.'}
+${dxyTrend ? '• DXY zayıflıyor - Değerli metaller için olumlu' : '• Dolar güçlü - Metaller baskı altında kalabilir'}
+
+📌 ÖNERİ: Detaylı teknik analiz için:
+• "GLD analiz" veya "GLD mlis pro" yazın
+• (GLD = Gold ETF)`
+              : `
+
+═══════════════════════════════════
+🥇 ${assetName.toUpperCase()} ANALYSIS
+═══════════════════════════════════
+${isRiskOff ? '✅ Risk-off environment: Favorable conditions for Gold/Silver.' : '✅ Capital flow detected into metals market.'}
+${dxyTrend ? '• DXY weakening - Positive for precious metals' : '• Dollar strong - Metals may face pressure'}
+
+📌 RECOMMENDATION: For detailed technical analysis:
+• Type "GLD analysis" or "GLD mlis pro"
+• (GLD = Gold ETF)`;
+          } else {
+            assetAdvice = language === 'tr'
+              ? `
+
+═══════════════════════════════════
+🥇 ${assetNameTr.toUpperCase()} İÇİN ANALİZ
+═══════════════════════════════════
+⚠️ Şu an önerilen piyasa: ${recommendation.primaryMarket.toUpperCase()}
+Metal piyasası ${isAssetMarketFavorable ? 'güçlü' : 'para akışı açısından zayıf'}.
+
+📌 Yine de analiz etmek isterseniz:
+• "GLD analiz" veya "GLD mlis pro" yazın`
+              : `
+
+═══════════════════════════════════
+🥇 ${assetName.toUpperCase()} ANALYSIS
+═══════════════════════════════════
+⚠️ Currently recommended market: ${recommendation.primaryMarket.toUpperCase()}
+Metals market is ${isAssetMarketFavorable ? 'strong' : 'not showing significant inflow'}.
+
+📌 If you still want to analyze:
+• Type "GLD analysis" or "GLD mlis pro"`;
+          }
+        } else if (assetHint === 'STOCKS' || assetHint === 'BONDS') {
+          const marketName = assetHint === 'STOCKS' ? 'stocks' : 'bonds';
+          const marketNameTr = assetHint === 'STOCKS' ? 'Hisse' : 'Tahvil';
+
+          assetAdvice = language === 'tr'
+            ? `
+
+═══════════════════════════════════
+📈 ${marketNameTr.toUpperCase()} PİYASASI
+═══════════════════════════════════
+${isAssetMarketFavorable ? '✅ Bu piyasaya sermaye akışı var!' : '⚠️ Şu an önerilen piyasa: ' + recommendation.primaryMarket.toUpperCase()}
+
+📌 Analiz için: "SPY analiz" veya "QQQ analiz" yazın`
+            : `
+
+═══════════════════════════════════
+📈 ${assetHint} MARKET
+═══════════════════════════════════
+${isAssetMarketFavorable ? '✅ Capital flowing into this market!' : '⚠️ Currently recommended market: ' + recommendation.primaryMarket.toUpperCase()}
+
+📌 For analysis: Type "SPY analysis" or "QQQ analysis"`;
+        } else {
+          // Crypto asset
+          assetAdvice = language === 'tr'
+            ? `
+
+═══════════════════════════════════
+🪙 ${assetHint} ANALİZİ
+═══════════════════════════════════
+${isAssetMarketFavorable ? '✅ Kripto piyasasına sermaye akışı var!' : '⚠️ Şu an önerilen piyasa: ' + recommendation.primaryMarket.toUpperCase()}
+
+📌 Detaylı analiz için:
+• "${assetHint} analiz" veya "${assetHint} mlis pro" yazın`
+            : `
+
+═══════════════════════════════════
+🪙 ${assetHint} ANALYSIS
+═══════════════════════════════════
+${isAssetMarketFavorable ? '✅ Capital flowing into crypto market!' : '⚠️ Currently recommended market: ' + recommendation.primaryMarket.toUpperCase()}
+
+📌 For detailed analysis:
+• Type "${assetHint} analysis" or "${assetHint} mlis pro"`;
+        }
+      }
+
       // Build English message
       const messageEn = `═══════════════════════════════════
 🎯 AI RECOMMENDATION
@@ -1319,8 +1532,13 @@ ${recommendation.reasoning}
 ${nextSteps}
 ═══════════════════════════════════`;
 
-      // Translate to target language if needed (supports 18 languages)
-      const message = await this.translateIfNeeded(messageEn, language);
+      // Translate main message to target language if needed
+      let message = await this.translateIfNeeded(messageEn, language);
+
+      // Add asset-specific advice (already localized)
+      if (assetAdvice) {
+        message += assetAdvice;
+      }
 
       return {
         success: true,
@@ -2074,7 +2292,7 @@ Visit /analyze/details/{id} for details.`;
 
     // Find coin
     let alertCoin: string | null = null;
-    for (const coin of SUPPORTED_COINS) {
+    for (const coin of SUPPORTED_ASSETS) {
       if (lower.includes(coin)) {
         alertCoin = coin.toUpperCase();
         break;
@@ -2608,7 +2826,7 @@ Each analysis costs 25 credits. Visit /scheduled to edit details.`,
     const lower = message.toLowerCase();
     let targetCoin: string | null = null;
 
-    for (const coin of SUPPORTED_COINS) {
+    for (const coin of SUPPORTED_ASSETS) {
       const coinRegex = new RegExp(`\\b${coin}\\b`, 'i');
       if (coinRegex.test(lower)) {
         targetCoin = coin.toUpperCase();

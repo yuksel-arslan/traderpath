@@ -518,6 +518,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-31 | Capital Flow Market Flow Analyzer grafik etiketleri Türkçe yazılmıştı | "Para Akışı (30g)" → "Money Flow (30d)", "Akış Hızı (30g)" → "Flow Velocity (30d)" olarak İngilizce'ye çevrildi | `capital-flow/page.tsx` |
 | 2026-01-31 | Concierge sayfasında "TypeError: Cannot read properties of undefined (reading 'map')" hatası | `capitalFlow.marketFlows` API'den undefined veya non-array gelebiliyordu. `Array.isArray(capitalFlow.marketFlows) && capitalFlow.marketFlows.length > 0` kontrolü eklendi | `concierge/page.tsx:572` |
 | 2026-02-01 | Landing page FAQ'da kredi fiyatları yanlıştı (Layer 3 FREE, Layer 4 5 kredi, Asset 25 kredi) | Doğru fiyatlar eklendi: Layer 1-2 FREE, Layer 3 ve Layer 4 her biri 25 kredi/gün, Asset Analysis 100 kredi/gün (max 10 analiz) | `apps/web/app/(marketing)/page.tsx:771-774` |
+| 2026-02-01 | AI Concierge "Altın alınır mı?" sorusuna eksik yanıt veriyordu | 1) "alınır mı?", "satmalı mı?", "should I buy?" pattern'leri CAPITAL_FLOW_RECOMMENDATION intent'ine eklendi, 2) Gold/Silver/BTC/ETH gibi asset'ler tespit edilip assetHint olarak aktarılıyor, 3) handleCapitalFlowRecommendation fonksiyonuna asset-specific advice eklendi (Türkçe/İngilizce), 4) Gemini prompt'a örnek sorgular eklendi | `concierge.service.ts`, `system-prompt.ts` |
 
 ---
 
