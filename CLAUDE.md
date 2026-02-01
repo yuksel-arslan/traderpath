@@ -1555,6 +1555,77 @@ Kullanıcı Hakları Aktif:
   - Geliştirilmiş loading state glowing spinner ile
   - Dosya: `apps/web/app/(dashboard)/scheduled/page.tsx`
 
+### 2026-02-01
+- **AI Concierge "Altın alınır mı?" fix**:
+  - Capital Flow recommendation'da field name mismatch düzeltildi
+  - `FlowRecommendation` interface `reason` kullanıyor ama kod `reasoning` erişiyordu
+  - `undefined.toLowerCase()` TypeError'a neden oluyordu
+  - 3 yerde düzeltme: `concierge.service.ts:1418-1420,1528`, `capital-flow.service.ts:832-840`
+  - Fallback structure interface'e uygun hale getirildi
+- **BILGE Guardian System - Backend Implementation**:
+  - **Yeni Modül**: `apps/api/src/modules/bilge/`
+  - **Bileşenler**:
+    - `types.ts` - Tüm type tanımlamaları
+    - `pattern-database.ts` - 10 başlangıç error pattern'i
+    - `notification.service.ts` - Slack, Discord, SMS, WhatsApp bildirimleri
+    - `bilge.service.ts` - Ana servis (error collection, pattern matching)
+    - `bilge.routes.ts` - Fastify API routes
+    - `error-collector.middleware.ts` - Error collector utilities
+    - `index.ts` - Module exports
+  - **Error Pattern'leri** (10 adet):
+    1. Database Connection Error (critical)
+    2. API Rate Limit Exceeded (medium)
+    3. Authentication Failure (high)
+    4. External Service Timeout (medium)
+    5. Gemini API Error (high)
+    6. Input Validation Error (low)
+    7. Memory/Resource Exhaustion (critical)
+    8. Binance API Error (medium)
+    9. Payment/Credit Error (high)
+    10. Security/CORS Error (high)
+  - **Bildirim Kanalları**:
+    - Slack (webhook)
+    - Discord (webhook)
+    - SMS (Twilio)
+    - WhatsApp (Twilio)
+  - **API Endpoint'leri**:
+    - `GET /api/bilge/health` - Guardian sağlık durumu
+    - `GET /api/bilge/dashboard` - Dashboard özeti
+    - `GET /api/bilge/errors` - Hata listesi
+    - `POST /api/bilge/errors/:id/resolve` - Hata çözme
+    - `POST /api/bilge/errors/report` - Manuel hata bildirimi
+    - `GET /api/bilge/patterns` - Error pattern'leri
+    - `GET /api/bilge/reports/weekly` - Haftalık rapor
+    - `POST /api/bilge/feedback` - Kullanıcı feedback'i
+    - `GET /api/bilge/feedback` - Feedback listesi (admin)
+    - `POST /api/bilge/feedback/:id/approve|reject|respond`
+    - `GET /api/bilge/ideas` - Innovation fikirleri
+    - `POST /api/bilge/ideas/generate` - Fikir üretme
+  - **Özellikler**:
+    - Otomatik error collection (onError hook)
+    - Pattern matching ile error classification
+    - Severity-based notification (critical=tüm kanallar)
+    - Redis storage (1000 error limit)
+    - Weekly report generation (Gemini AI)
+    - User feedback with AI analysis
+    - Innovation idea generation
+  - **Env Variables**:
+    - `BILGE_SLACK_WEBHOOK_URL`
+    - `BILGE_DISCORD_WEBHOOK_URL`
+    - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`
+    - `BILGE_ADMIN_PHONE_NUMBERS` (virgülle ayrılmış)
+  - Dosyalar: `apps/api/src/modules/bilge/*`, `apps/api/src/index.ts`
+- **BILGE.md Documentation**:
+  - Kapsamlı 900+ satırlık dokümantasyon oluşturuldu
+  - BILGE kimliği ve değerleri (Bilge Kağan'dan ilham)
+  - Guardian System mimarisi
+  - 10 başlangıç error pattern'i
+  - Haftalık rapor formatı (Pazar 21:00)
+  - Innovation Engine
+  - User Feedback System (admin onayı ile)
+  - Maliyet analizi ($2.50-$32/ay)
+  - 4 haftalık uygulama yol haritası
+
 ---
 
 ## 🤖 Claude Code Talimatları
