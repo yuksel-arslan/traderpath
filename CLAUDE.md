@@ -37,6 +37,18 @@
 - Platform accuracy = TP hits / (TP hits + SL hits) from Analysis.outcome
 - **Asla karıştırma!** Report, Analysis'in sonucudur, istatistik kaynağı değil
 
+### Piyasa Veri Kaynakları (ZORUNLU)
+| Asset Class | Veri Kaynağı | Not |
+|-------------|--------------|-----|
+| **Crypto** | Binance API | BTC, ETH, SOL vb. tüm kripto paralar |
+| **Stocks** | Yahoo Finance | AAPL, MSFT, SPY, QQQ vb. hisse senetleri |
+| **Metals** | Yahoo Finance | GLD, SLV, IAU, XAUUSD vb. değerli metaller |
+| **Bonds** | Yahoo Finance | TLT, IEF, BND vb. tahvil ETF'leri |
+
+- **Default timeframe: 1D** (ETF'ler ve hisse senetleri için intraday veri sınırlı olabilir)
+- Multi-asset data provider: `apps/api/src/modules/analysis/providers/multi-asset-data-provider.ts`
+- Chart endpoint: `GET /api/analysis/chart/candles?symbol=X&interval=1d&limit=100`
+
 ### Analiz ve Rapor Kuralları (ZORUNLU)
 - **Analiz çok detaylı yapılacak**: Tüm 40+ enstrüman/indikatör kullanılacak
 - **Sadece 2 rapor tipi var** (başka tip ekleme!):
