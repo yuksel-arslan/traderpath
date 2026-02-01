@@ -1579,6 +1579,82 @@ export async function reportRoutes(fastify: FastifyInstance) {
       }
     }
   );
+
+  // ===========================================
+  // POST /api/reports/send-capital-flow-email - Send Capital Flow report via email
+  // ===========================================
+  interface SendCapitalFlowEmailBody {
+    htmlContent: string;
+    subject: string;
+  }
+
+  fastify.post<{ Body: SendCapitalFlowEmailBody }>(
+    '/api/reports/send-capital-flow-email',
+    { preHandler: authenticate },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const userId = getUser(request)?.id;
+        if (!userId) {
+          return reply.code(401).send({
+            error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+          });
+        }
+
+        const { htmlContent, subject } = request.body as SendCapitalFlowEmailBody;
+
+        if (!htmlContent || !subject) {
+          return reply.code(400).send({
+            error: { code: 'INVALID_INPUT', message: 'Missing required fields: htmlContent, subject' },
+          });
+        }
+
+        // Get user's email
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true, name: true, isAdmin: true },
+        });
+
+        if (!user?.email) {
+          return reply.code(400).send({
+            error: { code: 'NO_EMAIL', message: 'User email not found' },
+          });
+        }
+
+        // Capital Flow email is free for all users (part of Daily Pass system)
+        // No credit deduction required
+
+        // Send the email
+        const result = await emailService.sendEmail({
+          to: user.email,
+          subject: subject,
+          html: htmlContent,
+          text: 'Your Capital Flow analysis report from TraderPath. View this email in HTML format for best experience.',
+        });
+
+        if (!result.success) {
+          fastify.log.error({ error: result.error }, 'Failed to send Capital Flow email');
+          return reply.code(500).send({
+            error: { code: 'EMAIL_FAILED', message: 'Failed to send email', details: result.error },
+          });
+        }
+
+        fastify.log.info({ userId, email: user.email }, 'Capital Flow email sent');
+
+        return reply.send({
+          success: true,
+          message: 'Capital Flow report sent successfully to ' + user.email,
+          data: {
+            email: user.email,
+          },
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to send Capital Flow email' },
+        });
+      }
+    }
+  );
 }
 
 // Generate coin icon as base64 SVG (reliable for all email clients)

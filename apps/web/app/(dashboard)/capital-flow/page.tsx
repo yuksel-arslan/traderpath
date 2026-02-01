@@ -37,9 +37,9 @@ import {
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { X, Loader2, LineChart, Download, FileImage, FileText, Mail, ChevronUp, CheckCircle, HelpCircle, Bookmark, Save } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import { X, Loader2, LineChart, FileText, Mail, ChevronUp, CheckCircle, HelpCircle } from 'lucide-react';
 import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
+import { downloadCapitalFlowReport, generateCapitalFlowEmailHTML } from '@/lib/capital-flow-report-generator';
 
 // Types
 interface GlobalLiquidity {
@@ -1089,16 +1089,13 @@ export default function CapitalFlowPage() {
   const [scanningMarket, setScanningMarket] = useState<ScanningMarket>(null);
   const [scanProgress, setScanProgress] = useState(0);
 
-  // Export states
-  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  // Export states - simplified to Download Report and Email Report
+  const [downloadingReport, setDownloadingReport] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
-  const [savingReport, setSavingReport] = useState(false);
-  const [reportSaved, setReportSaved] = useState(false);
 
-  // Ref for capturing the content
+  // Ref for fullscreen modal
   const contentRef = useRef<HTMLDivElement>(null);
-  const exportDropdownRef = useRef<HTMLDivElement>(null);
 
   // Tour steps for Capital Flow page
   const capitalFlowTourSteps: TourStep[] = [
@@ -1140,208 +1137,57 @@ export default function CapitalFlowPage() {
     {
       target: '#tour-export',
       title: 'Export & Share',
-      content: 'Export your Capital Flow analysis as PNG, JPG, or PDF. You can also send it via email for reference or sharing.',
+      content: 'Download a professional PDF report or send it via email for reference or sharing.',
       placement: 'top',
       spotlightPadding: 8,
     },
   ];
 
-  // Close export dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target as Node)) {
-        setExportDropdownOpen(false);
-      }
-    };
+  // ===========================================
+  // Professional Report Functions
+  // ===========================================
 
-    if (exportDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+  // Download Professional PDF Report
+  const handleDownloadReport = async () => {
+    if (!data || downloadingReport) return;
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [exportDropdownOpen]);
-
-  // Export as PNG (using blob for reliable downloads)
-  const handleExportPNG = async () => {
-    if (!contentRef.current || exporting) return;
-
-    setExporting(true);
-    setExportDropdownOpen(false);
+    setDownloadingReport(true);
     try {
-      const canvas = await html2canvas(contentRef.current, {
-        backgroundColor: '#0B1120',
-        scale: 3,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        windowWidth: 1400,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('[data-export-container]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.overflow = 'visible';
-            (clonedElement as HTMLElement).style.backgroundColor = '#0B1120';
-            (clonedElement as HTMLElement).style.padding = '24px';
-          }
-        },
+      await downloadCapitalFlowReport({
+        globalLiquidity: data.globalLiquidity,
+        liquidityBias: data.liquidityBias,
+        markets: data.markets,
+        recommendation: data.recommendation,
+        timestamp: data.timestamp,
       });
-
-      // Use blob for reliable download
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          alert('Failed to create image');
-          return;
-        }
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const date = new Date().toISOString().split('T')[0];
-        link.download = `TraderPath_CapitalFlow_${date}.png`;
-        link.href = url;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 100);
-      }, 'image/png');
     } catch (err) {
-      console.error('Failed to export PNG:', err);
-      alert('Failed to export image');
+      console.error('Failed to download report:', err);
+      alert('Failed to generate report. Please try again.');
     } finally {
-      setExporting(false);
+      setDownloadingReport(false);
     }
   };
 
-  // Export as JPG (using blob for reliable downloads)
-  const handleExportJPG = async () => {
-    if (!contentRef.current || exporting) return;
+  // Send Professional Email Report
+  const handleEmailReport = async () => {
+    if (!data || sendingEmail) return;
 
-    setExporting(true);
-    setExportDropdownOpen(false);
+    setSendingEmail(true);
     try {
-      const canvas = await html2canvas(contentRef.current, {
-        backgroundColor: '#0B1120',
-        scale: 2.5,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        windowWidth: 1400,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('[data-export-container]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.overflow = 'visible';
-            (clonedElement as HTMLElement).style.backgroundColor = '#0B1120';
-            (clonedElement as HTMLElement).style.padding = '24px';
-          }
-        },
+      const emailHTML = generateCapitalFlowEmailHTML({
+        globalLiquidity: data.globalLiquidity,
+        liquidityBias: data.liquidityBias,
+        markets: data.markets,
+        recommendation: data.recommendation,
+        timestamp: data.timestamp,
       });
 
-      // Use blob for reliable download
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          alert('Failed to create image');
-          return;
-        }
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const date = new Date().toISOString().split('T')[0];
-        link.download = `TraderPath_CapitalFlow_${date}.jpg`;
-        link.href = url;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 100);
-      }, 'image/jpeg', 0.95);
-    } catch (err) {
-      console.error('Failed to export JPG:', err);
-      alert('Failed to export image');
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  // Export as PDF
-  const handleExportPDF = async () => {
-    if (!contentRef.current || exporting) return;
-
-    setExporting(true);
-    setExportDropdownOpen(false);
-    try {
-      // Dynamic import jsPDF
-      const { jsPDF } = await import('jspdf');
-
-      const canvas = await html2canvas(contentRef.current, {
-        backgroundColor: '#0B1120',
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        windowWidth: 1400,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('[data-export-container]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.overflow = 'visible';
-            (clonedElement as HTMLElement).style.backgroundColor = '#0B1120';
-            (clonedElement as HTMLElement).style.padding = '24px';
-          }
-        },
-      });
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
-
-      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-
-      const date = new Date().toISOString().split('T')[0];
-      pdf.save(`TraderPath_CapitalFlow_${date}.pdf`);
-    } catch (err) {
-      console.error('Failed to export PDF:', err);
-      alert('Failed to export PDF');
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  // Send via Email - downloads JPG and sends email
-  const handleSendEmail = async () => {
-    if (!contentRef.current || exporting) return;
-
-    setExporting(true);
-    setExportDropdownOpen(false);
-    try {
-      const canvas = await html2canvas(contentRef.current, {
-        backgroundColor: '#0B1120',
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        windowWidth: 1200,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('[data-export-container]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.overflow = 'visible';
-          }
-        },
-      });
-
-      const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
-
-      // Download the image first
-      const link = document.createElement('a');
-      const date = new Date().toISOString().split('T')[0];
-      link.download = `TraderPath_CapitalFlow_${date}.jpg`;
-      link.href = imageBase64;
-      link.click();
-
-      // Then send via email
-      const response = await authFetch('/api/reports/email-screenshot', {
+      const response = await authFetch('/api/reports/send-capital-flow-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          symbol: 'CAPITAL_FLOW',
-          interval: 'Daily',
-          screenshot: imageBase64,
-          score: data?.recommendation?.confidence || 0,
-          direction: data?.recommendation?.direction || 'BUY',
+          htmlContent: emailHTML,
+          subject: `TraderPath Capital Flow Report - ${data.recommendation?.direction || 'Analysis'} Signal`,
         }),
       });
 
@@ -1350,14 +1196,13 @@ export default function CapitalFlowPage() {
         setTimeout(() => setEmailSent(false), 3000);
       } else {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Email send failed:', response.status, errorData);
-        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
+        throw new Error(errorData?.error?.message || 'Failed to send email');
       }
     } catch (err) {
       console.error('Failed to send email:', err);
-      alert('Failed to send email. Screenshot was downloaded.');
+      alert('Failed to send email. Please try again.');
     } finally {
-      setExporting(false);
+      setSendingEmail(false);
     }
   };
 
@@ -1367,248 +1212,6 @@ export default function CapitalFlowPage() {
     2: 'Market_Flow',
     3: 'Sector_Activity',
     4: 'AI_Recommendations',
-  };
-
-  // Fullscreen modal export functions
-  const handleFullscreenExportPNG = async () => {
-    if (!fullscreenRef.current || exporting) return;
-
-    setExporting(true);
-    setExportDropdownOpen(false);
-    try {
-      const canvas = await html2canvas(fullscreenRef.current, {
-        backgroundColor: '#0B1120',
-        scale: 3,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        windowWidth: 1400,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('[data-fullscreen-container]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.overflow = 'visible';
-            (clonedElement as HTMLElement).style.backgroundColor = '#0B1120';
-            (clonedElement as HTMLElement).style.padding = '24px';
-          }
-        },
-      });
-
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          alert('Failed to create image');
-          return;
-        }
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const date = new Date().toISOString().split('T')[0];
-        const layerName = fullscreenLayer ? layerNames[fullscreenLayer] : 'Layer';
-        link.download = `TraderPath_${layerName}_${date}.png`;
-        link.href = url;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 100);
-      }, 'image/png');
-    } catch (err) {
-      console.error('Failed to export PNG:', err);
-      alert('Failed to export image');
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const handleFullscreenExportJPG = async () => {
-    if (!fullscreenRef.current || exporting) return;
-
-    setExporting(true);
-    setExportDropdownOpen(false);
-    try {
-      const canvas = await html2canvas(fullscreenRef.current, {
-        backgroundColor: '#0B1120',
-        scale: 2.5,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        windowWidth: 1400,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('[data-fullscreen-container]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.overflow = 'visible';
-            (clonedElement as HTMLElement).style.backgroundColor = '#0B1120';
-            (clonedElement as HTMLElement).style.padding = '24px';
-          }
-        },
-      });
-
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          alert('Failed to create image');
-          return;
-        }
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const date = new Date().toISOString().split('T')[0];
-        const layerName = fullscreenLayer ? layerNames[fullscreenLayer] : 'Layer';
-        link.download = `TraderPath_${layerName}_${date}.jpg`;
-        link.href = url;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 100);
-      }, 'image/jpeg', 0.95);
-    } catch (err) {
-      console.error('Failed to export JPG:', err);
-      alert('Failed to export image');
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const handleFullscreenExportPDF = async () => {
-    if (!fullscreenRef.current || exporting) return;
-
-    setExporting(true);
-    setExportDropdownOpen(false);
-    try {
-      const { jsPDF } = await import('jspdf');
-
-      const canvas = await html2canvas(fullscreenRef.current, {
-        backgroundColor: '#0B1120',
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        windowWidth: 1400,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('[data-fullscreen-container]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.overflow = 'visible';
-            (clonedElement as HTMLElement).style.backgroundColor = '#0B1120';
-            (clonedElement as HTMLElement).style.padding = '24px';
-          }
-        },
-      });
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
-
-      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-
-      const date = new Date().toISOString().split('T')[0];
-      const layerName = fullscreenLayer ? layerNames[fullscreenLayer] : 'Layer';
-      pdf.save(`TraderPath_${layerName}_${date}.pdf`);
-    } catch (err) {
-      console.error('Failed to export PDF:', err);
-      alert('Failed to export PDF');
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const handleFullscreenSendEmail = async () => {
-    if (!fullscreenRef.current || exporting) return;
-
-    setExporting(true);
-    setExportDropdownOpen(false);
-    try {
-      const canvas = await html2canvas(fullscreenRef.current, {
-        backgroundColor: '#0B1120',
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        windowWidth: 1200,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('[data-fullscreen-container]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.overflow = 'visible';
-          }
-        },
-      });
-
-      const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
-      const layerName = fullscreenLayer ? layerNames[fullscreenLayer] : 'Layer';
-
-      // Download the image first
-      const link = document.createElement('a');
-      const date = new Date().toISOString().split('T')[0];
-      link.download = `TraderPath_${layerName}_${date}.jpg`;
-      link.href = imageBase64;
-      link.click();
-
-      // Then send via email
-      const response = await authFetch('/api/reports/email-screenshot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          symbol: `CAPITAL_FLOW_L${fullscreenLayer}`,
-          interval: 'Daily',
-          screenshot: imageBase64,
-          score: data?.recommendation?.confidence || 0,
-          direction: data?.recommendation?.direction || 'BUY',
-        }),
-      });
-
-      if (response.ok) {
-        setEmailSent(true);
-        setTimeout(() => setEmailSent(false), 3000);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Email send failed:', response.status, errorData);
-        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
-      }
-    } catch (err) {
-      console.error('Failed to send email:', err);
-      alert('Failed to send email. Screenshot was downloaded.');
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  // Save Capital Flow report to history
-  const handleSaveToReports = async () => {
-    if (!data || savingReport) return;
-
-    setSavingReport(true);
-    setExportDropdownOpen(false);
-    try {
-      // Get sectors from the first market (crypto) if available
-      const cryptoMarket = data.markets.find(m => m.market === 'crypto');
-      const sectors = cryptoMarket?.sectors || [];
-
-      const reportData = {
-        liquidity: data.globalLiquidity,
-        markets: data.markets,
-        sectors: sectors,
-        recommendation: data.recommendation,
-        sellRecommendation: data.sellRecommendation,
-        liquidityBias: data.liquidityBias,
-        activeRotation: data.activeRotation,
-        correlations: data.correlations,
-        tradeOpportunities: data.tradeOpportunities,
-        timestamp: data.timestamp,
-      };
-
-      const response = await authFetch('/api/capital-flow/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reportData }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setReportSaved(true);
-        setTimeout(() => setReportSaved(false), 3000);
-      } else {
-        throw new Error(result.error || 'Failed to save report');
-      }
-    } catch (err) {
-      console.error('Failed to save report:', err);
-      alert('Failed to save report. Please try again.');
-    } finally {
-      setSavingReport(false);
-    }
   };
 
   // Generic scan handler for all markets
@@ -1805,103 +1408,45 @@ export default function CapitalFlowPage() {
                 </h2>
               </div>
               <div className="flex items-center gap-2">
-                {/* Export Dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-                    disabled={exporting}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition disabled:opacity-50",
-                      emailSent
-                        ? "bg-green-500 text-white"
-                        : "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white"
-                    )}
-                  >
-                    {exporting ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : emailSent ? (
-                      <CheckCircle className="w-4 h-4" />
-                    ) : (
-                      <Download className="w-4 h-4" />
-                    )}
-                    <span>{exporting ? 'Exporting...' : emailSent ? 'Sent!' : 'Export'}</span>
-                    <ChevronDown className={cn("w-3 h-3 transition-transform", exportDropdownOpen && "rotate-180")} />
-                  </button>
-
-                  {exportDropdownOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setExportDropdownOpen(false)} />
-                      <div className="absolute right-0 mt-2 w-48 bg-slate-800 rounded-xl shadow-2xl border border-slate-700 z-50 overflow-hidden">
-                        <button
-                          onClick={handleFullscreenExportPNG}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-slate-200 hover:bg-slate-700 transition"
-                        >
-                          <FileImage className="w-4 h-4 text-teal-500" />
-                          <div>
-                            <div>Download PNG</div>
-                            <div className="text-xs text-slate-400">High Quality</div>
-                          </div>
-                        </button>
-                        <button
-                          onClick={handleFullscreenExportJPG}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-slate-200 hover:bg-slate-700 transition"
-                        >
-                          <FileImage className="w-4 h-4 text-blue-500" />
-                          <div>
-                            <div>Download JPG</div>
-                            <div className="text-xs text-slate-400">Smaller Size</div>
-                          </div>
-                        </button>
-                        <button
-                          onClick={handleFullscreenExportPDF}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-slate-200 hover:bg-slate-700 transition"
-                        >
-                          <FileText className="w-4 h-4 text-red-500" />
-                          <div>
-                            <div>Download PDF</div>
-                            <div className="text-xs text-slate-400">Full Report</div>
-                          </div>
-                        </button>
-                        <div className="border-t border-slate-700" />
-                        <button
-                          onClick={handleFullscreenSendEmail}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-slate-200 hover:bg-slate-700 transition"
-                        >
-                          <Mail className="w-4 h-4 text-purple-500" />
-                          <div>
-                            <div>Send via Email</div>
-                            <div className="text-xs text-slate-400">Share Report</div>
-                          </div>
-                        </button>
-                        <div className="border-t border-slate-700" />
-                        <button
-                          onClick={handleSaveToReports}
-                          disabled={savingReport || reportSaved}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-slate-200 hover:bg-slate-700 transition disabled:opacity-50"
-                        >
-                          {savingReport ? (
-                            <Loader2 className="w-4 h-4 text-emerald-500 animate-spin" />
-                          ) : reportSaved ? (
-                            <CheckCircle className="w-4 h-4 text-emerald-500" />
-                          ) : (
-                            <Bookmark className="w-4 h-4 text-emerald-500" />
-                          )}
-                          <div>
-                            <div>{reportSaved ? 'Saved!' : savingReport ? 'Saving...' : 'Save to Reports'}</div>
-                            <div className="text-xs text-slate-400">Add to My Reports history</div>
-                          </div>
-                        </button>
-                      </div>
-                    </>
+                {/* Professional Export Buttons */}
+                <button
+                  onClick={handleDownloadReport}
+                  disabled={downloadingReport || !data}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-all disabled:opacity-50",
+                    "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-md hover:shadow-lg"
                   )}
-                </div>
+                >
+                  {downloadingReport ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileText className="w-4 h-4" />
+                  )}
+                  <span>{downloadingReport ? 'Generating...' : 'Download Report'}</span>
+                </button>
+                <button
+                  onClick={handleEmailReport}
+                  disabled={sendingEmail || !data}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-all disabled:opacity-50",
+                    emailSent
+                      ? "bg-green-500 text-white"
+                      : "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md hover:shadow-lg"
+                  )}
+                >
+                  {sendingEmail ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : emailSent ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : (
+                    <Mail className="w-4 h-4" />
+                  )}
+                  <span>{sendingEmail ? 'Sending...' : emailSent ? 'Sent!' : 'Email Report'}</span>
+                </button>
 
                 {/* Close Button */}
                 <button
-                  onClick={() => {
-                    setFullscreenLayer(null);
-                    setExportDropdownOpen(false);
-                  }}
+                  onClick={() => setFullscreenLayer(null)}
                   className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
                 >
                   <X className="w-5 h-5" />
@@ -2218,68 +1763,48 @@ export default function CapitalFlowPage() {
               <RefreshCw className={cn("w-5 h-5 text-slate-500", refreshing && "animate-spin")} />
             </button>
 
-            {/* Export Dropdown */}
-            <div id="tour-export" className="relative" ref={exportDropdownRef}>
+            {/* Professional Export Buttons */}
+            <div id="tour-export" className="flex items-center gap-2">
+              {/* Download Report Button */}
               <button
-                onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-                disabled={exporting}
+                onClick={handleDownloadReport}
+                disabled={downloadingReport || !data}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm",
-                  exporting && "opacity-50 cursor-not-allowed"
+                  "flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all",
+                  "bg-gradient-to-r from-teal-500 to-emerald-600 text-white",
+                  "hover:shadow-lg hover:shadow-teal-500/25 hover:scale-[1.02]",
+                  "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
                 )}
               >
-                {exporting ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+                {downloadingReport ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <Download className="w-4 h-4 text-slate-500" />
+                  <FileText className="w-4 h-4" />
                 )}
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                  {exporting ? 'Exporting...' : 'Export'}
-                </span>
-                <ChevronUp className={cn(
-                  "w-4 h-4 text-slate-400 transition-transform",
-                  exportDropdownOpen && "rotate-180"
-                )} />
+                <span>{downloadingReport ? 'Generating...' : 'Download Report'}</span>
               </button>
 
-              {/* Dropdown Menu */}
-              {exportDropdownOpen && (
-                <div className="absolute bottom-full left-0 mb-2 w-48 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50">
-                  <button
-                    onClick={handleExportPNG}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                  >
-                    <FileImage className="w-4 h-4 text-emerald-500" />
-                    <span>Download PNG</span>
-                  </button>
-                  <button
-                    onClick={handleExportJPG}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                  >
-                    <FileImage className="w-4 h-4 text-blue-500" />
-                    <span>Download JPG</span>
-                  </button>
-                  <button
-                    onClick={handleExportPDF}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                  >
-                    <FileText className="w-4 h-4 text-red-500" />
-                    <span>Download PDF</span>
-                  </button>
-                  <div className="my-1 border-t border-slate-200 dark:border-slate-700" />
-                  <button
-                    onClick={handleSendEmail}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                  >
-                    {emailSent ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <Mail className="w-4 h-4 text-teal-500" />
-                    )}
-                    <span>{emailSent ? 'Email Sent!' : 'Send via Email'}</span>
-                  </button>
-                </div>
-              )}
+              {/* Email Report Button */}
+              <button
+                onClick={handleEmailReport}
+                disabled={sendingEmail || !data}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all",
+                  "bg-gradient-to-r from-violet-500 to-purple-600 text-white",
+                  "hover:shadow-lg hover:shadow-violet-500/25 hover:scale-[1.02]",
+                  "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none",
+                  emailSent && "from-green-500 to-emerald-600"
+                )}
+              >
+                {sendingEmail ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : emailSent ? (
+                  <CheckCircle className="w-4 h-4" />
+                ) : (
+                  <Mail className="w-4 h-4" />
+                )}
+                <span>{sendingEmail ? 'Sending...' : emailSent ? 'Email Sent!' : 'Email Report'}</span>
+              </button>
             </div>
 
             {/* Tour Trigger Button */}
