@@ -44,6 +44,49 @@ function getCategoryColor(category: string): { color: string; bg: string; border
   }
 }
 
+// Parse inline markdown (bold and code) to React elements - XSS safe
+function parseInlineMarkdown(text: string, keyPrefix: string): React.ReactNode[] {
+  const result: React.ReactNode[] = [];
+  // Match **bold** and `code` patterns
+  const regex = /(\*\*.*?\*\*|`.*?`)/g;
+  let lastIndex = 0;
+  let match;
+  let matchIndex = 0;
+
+  while ((match = regex.exec(text)) !== null) {
+    // Add text before the match
+    if (match.index > lastIndex) {
+      result.push(text.slice(lastIndex, match.index));
+    }
+
+    const matchText = match[0];
+    if (matchText.startsWith('**') && matchText.endsWith('**')) {
+      // Bold text
+      result.push(
+        <strong key={`${keyPrefix}-bold-${matchIndex}`}>
+          {matchText.slice(2, -2)}
+        </strong>
+      );
+    } else if (matchText.startsWith('`') && matchText.endsWith('`')) {
+      // Code text
+      result.push(
+        <code key={`${keyPrefix}-code-${matchIndex}`} className="bg-accent px-1.5 py-0.5 rounded text-sm">
+          {matchText.slice(1, -1)}
+        </code>
+      );
+    }
+    lastIndex = regex.lastIndex;
+    matchIndex++;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    result.push(text.slice(lastIndex));
+  }
+
+  return result.length > 0 ? result : [text];
+}
+
 function MarkdownContent({ content }: { content: string }) {
   const lines = content.split('\n');
   const elements: React.ReactNode[] = [];
@@ -86,7 +129,7 @@ function MarkdownContent({ content }: { content: string }) {
     } else if (line.startsWith('- ')) {
       elements.push(
         <li key={index} className="ml-4 text-muted-foreground">
-          {line.replace('- ', '')}
+          {parseInlineMarkdown(line.replace('- ', ''), `li-${index}`)}
         </li>
       );
     } else if (line.startsWith('**') && line.endsWith('**')) {
@@ -98,15 +141,11 @@ function MarkdownContent({ content }: { content: string }) {
     } else if (line.trim() === '') {
       elements.push(<br key={index} />);
     } else {
-      const formattedLine = line
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/`(.*?)`/g, '<code class="bg-accent px-1.5 py-0.5 rounded text-sm">$1</code>');
+      // Use safe React elements instead of dangerouslySetInnerHTML
       elements.push(
-        <p
-          key={index}
-          className="text-muted-foreground leading-relaxed mb-4"
-          dangerouslySetInnerHTML={{ __html: formattedLine }}
-        />
+        <p key={index} className="text-muted-foreground leading-relaxed mb-4">
+          {parseInlineMarkdown(line, `p-${index}`)}
+        </p>
       );
     }
   });

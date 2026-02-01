@@ -7,13 +7,20 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../../core/database';
 import { redis } from '../../core/cache';
 import { authenticate } from '../../core/auth/middleware';
+import { config } from '../../core/config';
+import { logger } from '../../core/logger';
 import os from 'os';
 
 // Admin emails with access
 const ADMIN_EMAILS = ['contact@yukselarslan.com'];
 
 // Admin API Secret for service-to-service communication
-const ADMIN_API_SECRET = process.env.ADMIN_API_SECRET || 'tft-service-secret-key';
+// In production, this MUST be set via environment variable
+const ADMIN_API_SECRET = process.env['ADMIN_API_SECRET'];
+if (!ADMIN_API_SECRET && !config.isDev) {
+  logger.error('CRITICAL: ADMIN_API_SECRET environment variable is not set in production');
+  throw new Error('ADMIN_API_SECRET must be set in production environment');
+}
 
 // Admin authentication middleware
 async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
