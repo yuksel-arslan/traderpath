@@ -3461,7 +3461,7 @@ export const analysisEngine = {
         newsCount: btcNewsSentiment.newsCount,
         positiveCount: btcNewsSentiment.positiveCount,
         negativeCount: btcNewsSentiment.negativeCount,
-        topHeadlines: btcNewsSentiment.topNews.slice(0, 3).map(n => ({
+        topHeadlines: (btcNewsSentiment.topNews || []).slice(0, 3).map(n => ({
           title: n.title,
           source: n.source,
           sentiment: n.sentiment,
@@ -3802,6 +3802,8 @@ export const analysisEngine = {
         positiveCount: 0,
         negativeCount: 0,
         neutralCount: 0,
+        newsCount: 0,
+        topNews: [], // Required for .slice() calls
         sources: [],
         lastUpdate: new Date().toISOString(),
       }),
@@ -4104,10 +4106,10 @@ export const analysisEngine = {
       newsSentiment: {
         overall: newsSentiment.overallSentiment,
         score: newsSentiment.sentimentScore,
-        newsCount: newsSentiment.newsCount,
-        positiveCount: newsSentiment.positiveCount,
-        negativeCount: newsSentiment.negativeCount,
-        topHeadlines: newsSentiment.topNews.slice(0, 3).map(n => ({
+        newsCount: newsSentiment.newsCount || 0,
+        positiveCount: newsSentiment.positiveCount || 0,
+        negativeCount: newsSentiment.negativeCount || 0,
+        topHeadlines: (newsSentiment.topNews || []).slice(0, 3).map(n => ({
           title: n.title,
           source: n.source,
           sentiment: n.sentiment,
