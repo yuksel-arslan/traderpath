@@ -1415,8 +1415,9 @@ Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
 
         if (assetHint === 'GOLD' || assetHint === 'SILVER') {
           // Gold/Silver specific advice based on Capital Flow
-          const dxyTrend = recommendation.reasoning.toLowerCase().includes('dxy');
-          const isRiskOff = recommendation.action === 'avoid' || recommendation.reasoning.toLowerCase().includes('risk-off');
+          const reasonText = recommendation.reason || '';
+          const dxyTrend = reasonText.toLowerCase().includes('dxy');
+          const isRiskOff = recommendation.action === 'avoid' || reasonText.toLowerCase().includes('risk-off');
 
           if (isRiskOff || (recommendation.primaryMarket.toLowerCase() === 'metals')) {
             assetAdvice = language === 'tr'
@@ -1524,7 +1525,7 @@ ${actionEmoji} ACTION: ${recommendation.action === 'analyze' ? 'ANALYZE' : recom
 [${confidenceBar}]
 
 💡 REASONING:
-${recommendation.reasoning}
+${recommendation.reason}
 
 ═══════════════════════════════════
 📌 NEXT STEPS
