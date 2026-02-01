@@ -18,6 +18,7 @@ import { prisma } from '../../core/database';
 import { coinScoreCacheService, CoinScore } from './services/coin-score-cache.service';
 import { analyzeMLIS, MLISResult } from './services/mlis.service';
 import { logger } from '../../core/logger';
+import { fetchCandles, getAssetClass } from './providers/multi-asset-data-provider';
 
 // User type from JWT
 interface JwtUser {
@@ -5559,6 +5560,69 @@ Explain the key risks and what conditions would need to change before trading th
     ];
 
     return reply.send({ success: true, data: symbols });
+  });
+
+  /**
+   * GET /api/analysis/chart/candles
+   * Fetch chart candle data for any supported asset (crypto, stocks, metals, bonds)
+   * Uses multi-asset data provider to route to correct API (Binance for crypto, Yahoo for others)
+   * PUBLIC endpoint - no auth required (data is publicly available)
+   */
+  const chartCandlesSchema = z.object({
+    symbol: z.string().min(1),
+    interval: z.enum(['5m', '15m', '30m', '1h', '2h', '4h', '1d', '1D', '1w', '1W']).default('1h'),
+    limit: z.coerce.number().min(10).max(500).default(100),
+  });
+
+  app.get('/chart/candles', async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const query = chartCandlesSchema.parse(request.query);
+      const { symbol, interval, limit } = query;
+
+      // Clean symbol (remove USDT suffix if present for display)
+      let cleanSymbol = symbol.toUpperCase().trim();
+      const suffixes = ['USDT', 'BUSD', 'USD', 'PERP', 'USDC'];
+      for (const suffix of suffixes) {
+        if (cleanSymbol.endsWith(suffix)) {
+          cleanSymbol = cleanSymbol.slice(0, -suffix.length);
+          break;
+        }
+      }
+
+      // Detect asset class
+      const assetClass = getAssetClass(cleanSymbol);
+      logger.info({ symbol: cleanSymbol, assetClass, interval, limit }, 'Chart candles request');
+
+      // Fetch candles using multi-asset provider
+      const candles = await fetchCandles(cleanSymbol, interval, limit);
+
+      // Transform to frontend format
+      const chartData = candles.map(c => ({
+        time: Math.floor(c.timestamp / 1000), // Convert to seconds for lightweight-charts
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+        volume: c.volume,
+      }));
+
+      return reply.send({
+        success: true,
+        data: {
+          symbol: cleanSymbol,
+          assetClass,
+          interval,
+          candles: chartData,
+        },
+      });
+    } catch (error) {
+      logger.error({ error }, 'Chart candles error');
+      const message = error instanceof Error ? error.message : 'Failed to fetch chart data';
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'CHART_ERROR', message },
+      });
+    }
   });
 
 }

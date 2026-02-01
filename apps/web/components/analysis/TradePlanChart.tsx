@@ -367,37 +367,35 @@ export function TradePlanChart({
       setLoading(true);
       setError(null);
 
-      // Fetch 100 candles for chart display with the specified interval
+      // Use TraderPath API which supports multiple asset classes (crypto, stocks, metals, bonds)
+      // This routes to Binance for crypto and Yahoo Finance for stocks/metals/bonds
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io';
       const response = await fetch(
-        `https://api.binance.com/api/v3/klines?symbol=${sym}USDT&interval=${interval}&limit=100`
+        `${apiBaseUrl}/api/analysis/chart/candles?symbol=${encodeURIComponent(sym)}&interval=${interval}&limit=100`
       );
 
       if (!response.ok) {
-        throw new Error('Failed to fetch chart data');
+        // Try to get error message from response
+        const errorData = await response.json().catch(() => null);
+        const errorMessage = errorData?.error?.message || 'Failed to fetch chart data';
+        throw new Error(errorMessage);
       }
 
-      // Safely parse JSON response
-      const responseText = await response.text();
-      if (!responseText || responseText.trim() === '') {
-        throw new Error('Empty response from Binance API');
-      }
+      const result = await response.json();
 
-      let data: number[][];
-      try {
-        data = JSON.parse(responseText);
-      } catch {
-        throw new Error('Invalid JSON response from Binance API');
+      if (!result.success || !result.data?.candles) {
+        throw new Error(result.error?.message || 'No chart data available');
       }
 
       // Check if chart was disposed during async fetch
       if (isDisposedRef.current) return;
 
-      const candleData: CandlestickData<Time>[] = data.map((k: number[]) => ({
-        time: (k[0] / 1000) as Time,
-        open: parseFloat(k[1] as unknown as string),
-        high: parseFloat(k[2] as unknown as string),
-        low: parseFloat(k[3] as unknown as string),
-        close: parseFloat(k[4] as unknown as string),
+      const candleData: CandlestickData<Time>[] = result.data.candles.map((k: { time: number; open: number; high: number; low: number; close: number }) => ({
+        time: k.time as Time,
+        open: k.open,
+        high: k.high,
+        low: k.low,
+        close: k.close,
       }));
 
       // Find the candle closest to analysis time for marker placement
