@@ -183,6 +183,22 @@ await app.register(rawBody, {
   routes: ['/api/payments/webhook', '/api/v1/payments/webhook'],
 });
 
+// Custom JSON parser that handles empty bodies gracefully
+// This prevents "Body cannot be empty when content-type is set to 'application/json'" errors
+app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
+  try {
+    // Treat empty body as empty object
+    if (!body || body === '') {
+      done(null, {});
+      return;
+    }
+    const json = JSON.parse(body as string);
+    done(null, json);
+  } catch (err) {
+    done(err as Error, undefined);
+  }
+});
+
 // ===========================================
 // Decorators
 // ===========================================
