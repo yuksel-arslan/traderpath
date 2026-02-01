@@ -6,7 +6,7 @@
  */
 
 import { Redis } from 'ioredis';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import {
   CollectedError,
   ErrorPattern,
@@ -110,7 +110,7 @@ export async function collectError(params: {
         isRecurring: true,
       }
     : {
-        id: uuidv4(),
+        id: randomUUID(),
         timestamp: new Date(),
         project,
         message: params.message,
@@ -513,7 +513,7 @@ export async function generateWeeklyReport(project: string): Promise<WeeklyRepor
   const recommendations = await generateRecommendations(topIssues, patterns);
 
   const report: WeeklyReport = {
-    id: uuidv4(),
+    id: randomUUID(),
     project,
     weekStart,
     weekEnd: now,
@@ -627,7 +627,7 @@ export async function submitFeedback(params: {
   attachments?: string[];
 }): Promise<UserFeedback> {
   const feedback: UserFeedback = {
-    id: uuidv4(),
+    id: randomUUID(),
     project: params.project,
     userId: params.userId,
     userEmail: params.userEmail,
@@ -825,7 +825,7 @@ Respond in JSON format:
     const ideaData = JSON.parse(jsonMatch[0]);
 
     const idea: InnovationIdea = {
-      id: uuidv4(),
+      id: randomUUID(),
       project,
       title: ideaData.title,
       description: ideaData.description,
