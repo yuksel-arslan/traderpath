@@ -1435,10 +1435,11 @@ export class AIExpertService {
   // ===========================================
 
   /**
-   * Supported coin symbols for analysis
+   * Supported asset symbols for analysis (crypto, stocks, bonds, metals)
+   * Synced with concierge.service.ts SUPPORTED_COINS
    */
-  // Supported coin symbols for analysis - synced with concierge.service.ts SUPPORTED_COINS
   private readonly SUPPORTED_SYMBOLS = [
+    // ===== CRYPTO =====
     // Top coins by market cap
     'BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOGE',
     'DOT', 'MATIC', 'LINK', 'UNI', 'ATOM', 'LTC', 'TRX', 'BCH',
@@ -1454,6 +1455,28 @@ export class AIExpertService {
     'FET', 'AGIX', 'OCEAN', 'RNDR', 'TAO', 'WLD',
     // Others
     'INJ', 'TIA', 'VET', 'HBAR', 'QNT', 'LDO', 'RUNE', 'GRT', 'FIL', 'THETA', 'ICP',
+
+    // ===== STOCKS =====
+    // Major indices ETFs
+    'SPY', 'QQQ', 'DIA', 'IWM', 'VOO',
+    // Tech giants
+    'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'NFLX',
+    // Other popular stocks
+    'AMD', 'INTC', 'CRM', 'ADBE', 'PYPL', 'V', 'MA', 'JPM', 'BAC', 'WFC',
+
+    // ===== BONDS =====
+    // Treasury ETFs
+    'TLT', 'IEF', 'SHY', 'BND', 'AGG', 'TIP',
+    // Corporate bonds
+    'LQD', 'HYG', 'JNK',
+
+    // ===== METALS =====
+    // Gold
+    'GLD', 'IAU', 'XAUUSD', 'GOLD',
+    // Silver
+    'SLV', 'XAGUSD', 'SILVER',
+    // Other metals
+    'PPLT', 'PALL', 'DBA',
   ];
 
   /**
