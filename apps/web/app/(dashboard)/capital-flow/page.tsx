@@ -1201,10 +1201,7 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
             {/* Layer Header - Corporate Teal Gradient */}
             <div
               className="flex justify-center cursor-pointer group"
-              onClick={() => {
-                toggleLayer(1);
-                onLayerClick?.(1);
-              }}
+              onClick={() => toggleLayer(1)}
             >
               <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-teal-500/20 ${expandedLayers[1] ? 'ring-2 ring-teal-500/30' : ''}`}>
                 {/* Gradient border */}
@@ -1351,6 +1348,18 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
                   </p>
                 </div>
               </div>
+
+              {/* View Full Details Button */}
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => onLayerClick?.(1)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-teal-500/30 hover:shadow-xl hover:shadow-teal-500/40 hover:scale-105 transition-all duration-300"
+                >
+                  <Landmark className="w-4 h-4" />
+                  View Full Details
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1362,10 +1371,7 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
             {/* Layer Header */}
             <div
               className="flex justify-center cursor-pointer group"
-              onClick={() => {
-                toggleLayer(2);
-                onLayerClick?.(2);
-              }}
+              onClick={() => toggleLayer(2)}
             >
               <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-cyan-500/20 ${expandedLayers[2] ? 'ring-2 ring-cyan-500/30' : ''}`}>
                 {/* Gradient border */}
@@ -1468,6 +1474,18 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
                   </div>
                 </div>
               </div>
+
+              {/* View Full Details Button */}
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => onLayerClick?.(2)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/40 hover:scale-105 transition-all duration-300"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  View Full Details
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1479,10 +1497,7 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
             {/* Layer Header */}
             <div
               className="flex justify-center cursor-pointer group"
-              onClick={() => {
-                toggleLayer(3);
-                onLayerClick?.(3);
-              }}
+              onClick={() => toggleLayer(3)}
             >
               <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/20 ${expandedLayers[3] ? 'ring-2 ring-purple-500/30' : ''}`}>
                 {/* Gradient border */}
@@ -1551,6 +1566,18 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
                   <p className="text-sm text-slate-500">Select a market to view sector breakdown</p>
                 </div>
               )}
+
+              {/* View Full Details Button */}
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => onLayerClick?.(3)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 hover:scale-105 transition-all duration-300"
+                >
+                  <Layers className="w-4 h-4" />
+                  View Full Details
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1562,10 +1589,7 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
             {/* Layer Header */}
             <div
               className="flex justify-center cursor-pointer group"
-              onClick={() => {
-                toggleLayer(4);
-                onLayerClick?.(4);
-              }}
+              onClick={() => toggleLayer(4)}
             >
               <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/20 ${expandedLayers[4] ? 'ring-2 ring-amber-500/30' : ''}`}>
                 {/* Gradient border */}
@@ -1654,6 +1678,18 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* View Full Details Button */}
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => onLayerClick?.(4)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-amber-500/30 hover:shadow-xl hover:shadow-amber-500/40 hover:scale-105 transition-all duration-300"
+                >
+                  <Brain className="w-4 h-4" />
+                  View Full Details
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
