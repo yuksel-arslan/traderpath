@@ -27,6 +27,7 @@ import {
   ChevronDown,
   FileText,
   Mail,
+  Zap,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { cn } from '../../../../../lib/utils';
@@ -485,6 +486,12 @@ export default function AnalysisDetailsPage() {
     step6.traps?.fakeoutRisk === 'high' ? 'Caution' : 'Clear'
   );
 
+  // MLIS Confirmation data (Step 8) - only for Classic with trade plan
+  const mlisConfirmationData = !isMLIS && step7.mlisConfirmation ? step7.mlisConfirmation : null;
+  const confirmationStatus = mlisConfirmationData?.confirmationStatus || null;
+  const agreementLevel = mlisConfirmationData?.agreementLevel || null;
+  const confidenceChange = mlisConfirmationData?.confidenceChange || 0;
+
   const macdDesc = (step2.indicators?.macd?.histogram || 0) > 0 ? 'Bullish crossover' : 'Bearish momentum';
 
   // Trade plan data (only 2 TPs: TP1 and TP2)
@@ -903,6 +910,63 @@ export default function AnalysisDetailsPage() {
                   <span className="block sm:inline">Fakeout: {step6.traps?.fakeoutRisk || 'low'}</span>
                 </div>
               </div>
+
+              {/* 8. ML Confirmation - MLIS validation of 7-Step verdict */}
+              {mlisConfirmationData && (
+                <div className={cn(
+                  "bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border-2",
+                  confirmationStatus === 'CONFIRMED' ? 'border-green-500/50 bg-green-50/50 dark:bg-green-500/10' :
+                  confirmationStatus === 'PARTIALLY_CONFIRMED' ? 'border-blue-500/50 bg-blue-50/50 dark:bg-blue-500/10' :
+                  confirmationStatus === 'CONTRADICTED' ? 'border-red-500/50 bg-red-50/50 dark:bg-red-500/10' :
+                  'border-gray-200 dark:border-transparent'
+                )}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Zap className={cn(
+                        "w-4 h-4",
+                        confirmationStatus === 'CONFIRMED' ? 'text-green-500' :
+                        confirmationStatus === 'PARTIALLY_CONFIRMED' ? 'text-blue-500' :
+                        confirmationStatus === 'CONTRADICTED' ? 'text-red-500' :
+                        'text-gray-500'
+                      )} />
+                      <span className="font-medium text-gray-900 dark:text-white">ML Confirmation</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300">Step 8</span>
+                    </div>
+                    <span className={cn(
+                      "text-sm font-semibold",
+                      confirmationStatus === 'CONFIRMED' ? 'text-green-600 dark:text-green-400' :
+                      confirmationStatus === 'PARTIALLY_CONFIRMED' ? 'text-blue-600 dark:text-blue-400' :
+                      confirmationStatus === 'CONTRADICTED' ? 'text-red-600 dark:text-red-400' :
+                      'text-yellow-600 dark:text-yellow-400'
+                    )}>
+                      {confirmationStatus === 'CONFIRMED' ? '✓ Confirmed' :
+                       confirmationStatus === 'PARTIALLY_CONFIRMED' ? '~ Partial' :
+                       confirmationStatus === 'CONTRADICTED' ? '✗ Contradicted' :
+                       '○ Unconfirmed'}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-slate-400 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span>MLIS: {mlisConfirmationData.mlisRecommendation} ({mlisConfirmationData.mlisDirection})</span>
+                      {confidenceChange !== 0 && (
+                        <span className={cn(
+                          "text-xs font-medium px-1.5 py-0.5 rounded",
+                          confidenceChange > 0 ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300' :
+                          'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300'
+                        )}>
+                          {confidenceChange > 0 ? '+' : ''}{confidenceChange.toFixed(0)}% conf
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs">{mlisConfirmationData.agreementReason}</p>
+                    {mlisConfirmationData.warningMessage && (
+                      <p className="text-xs text-red-600 dark:text-red-400 font-medium mt-1">
+                        {mlisConfirmationData.warningMessage}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
