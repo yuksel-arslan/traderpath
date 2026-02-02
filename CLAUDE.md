@@ -1718,6 +1718,118 @@ Kullanıcı Hakları Aktif:
     - `generateFallbackRagLayer4()`: Aksiyon önerisi yorumu
   - RAG yorumları veriden spesifik rakamlar cite ediyor
   - Dosyalar: `capital-flow.service.ts`, `types.ts`
+- **Asset-Specific Analysis System Eklendi (Non-Crypto Varlıklar İçin)**:
+  - **Sorun**: GLD/SPY/TLT gibi non-crypto varlıklar kripto metrikleri (Fear & Greed, BTC dominance) ile analiz ediliyordu → çelişkili sonuçlar
+  - **Çözüm**: Her varlık sınıfı için kendine özgü metrikler ve ağırlıklar
+  - **Yeni Dosyalar**:
+    - `apps/api/src/modules/analysis/types/asset-metrics.types.ts` - Tüm asset-specific type'lar
+    - `apps/api/src/modules/analysis/services/asset-specific/metals-analyzer.service.ts` - Altın/Gümüş analizi
+    - `apps/api/src/modules/analysis/services/asset-specific/stocks-analyzer.service.ts` - Hisse senedi analizi
+    - `apps/api/src/modules/analysis/services/asset-specific/bonds-analyzer.service.ts` - Tahvil analizi
+    - `apps/api/src/modules/analysis/services/asset-specific/asset-analyzer-orchestrator.ts` - Router ve inter-market validation
+  - **Metals Metrikleri** (GLD, SLV, XAUUSD):
+    - DXY (25%) - USD endeksi, ters korelasyon
+    - Real Yields (20%) - TIPS yield, reel faiz
+    - VIX (15%) - Korku endeksi, güvenli liman talebi
+    - Inflation Expectations (15%) - Breakeven enflasyon
+    - ETF Flows (10%) - GLD/SLV akışları
+    - Central Bank Activity (10%) - MB alımları
+  - **Stocks Metrikleri** (SPY, QQQ, AAPL):
+    - VIX (20%) - Volatilite/korku
+    - Put/Call Ratio (15%) - Kontrarian sinyal
+    - Market Breadth (15%) - SPY vs RSP
+    - Sector Rotation (15%) - Cyclical vs Defensive
+    - 10Y Yield (10%) - Faiz etkisi
+    - DXY (10%) - Dolar etkisi
+  - **Bonds Metrikleri** (TLT, IEF, BND):
+    - Yield Curve (25%) - 10Y-2Y spread
+    - Fed Policy (20%) - Fed Funds Rate
+    - Inflation (15%) - CPI/PCE/Breakeven
+    - Credit Spreads (15%) - LQD vs TLT
+    - Flight to Safety (15%) - SPY vs TLT
+  - **Inter-Market Context**:
+    - Market regime detection: risk_on, risk_off, inflation, deflation, liquidity_crisis, transitioning
+    - Expected behavior per regime (altın risk_off'ta bullish olmalı gibi)
+    - Anomaly detection (beklentiden sapma uyarıları)
+  - **Frontend**:
+    - Analiz detay sayfasına Asset-Specific Context kartı eklendi
+    - Key drivers, inter-market regime, warnings gösterimi
+    - Sentiment bazlı gradient arka plan (bullish/bearish/neutral)
+  - Dosyalar: `analysis.engine.ts`, `analyze/details/[id]/page.tsx`
+
+---
+
+## 🎯 ASSET-SPECIFIC ANALYSIS SYSTEM
+
+### Neden Gerekli?
+Kripto için Fear & Greed, BTC dominance gibi metrikler anlamlıyken, GLD (altın) için:
+- Dolar (DXY) güçlendiğinde altın genellikle düşer (ters korelasyon)
+- VIX yükseldiğinde altın güvenli liman olarak yükselir
+- Real yield negatifken altın cazibe kazanır
+
+Bu metrikler kripto ile aynı değil, bu yüzden her varlık sınıfı kendi analizörüne sahip.
+
+### Mimari
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    ASSET ANALYZER ORCHESTRATOR                   │
+│            detectAssetClass() → Route to Analyzer                │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+        ┌───────────────────┼───────────────────┐
+        ▼                   ▼                   ▼
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   METALS    │     │   STOCKS    │     │   BONDS     │
+│  Analyzer   │     │  Analyzer   │     │  Analyzer   │
+├─────────────┤     ├─────────────┤     ├─────────────┤
+│ • DXY       │     │ • VIX       │     │ • Yield     │
+│ • Real Yld  │     │ • Put/Call  │     │   Curve     │
+│ • VIX       │     │ • Breadth   │     │ • Fed       │
+│ • Inflation │     │ • Sectors   │     │ • Inflation │
+│ • ETF Flow  │     │ • 10Y Yield │     │ • Credit    │
+│ • CB Demand │     │ • DXY       │     │ • Flight    │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+### Inter-Market Validation
+
+```typescript
+// Regime Detection
+const regime = detectMarketRegime(metals, stocks, bonds);
+// Örn: VIX > 25 && goldBullish && bondsBullish → 'risk_off'
+
+// Expected Behavior
+REGIME_EXPECTATIONS = {
+  risk_on:  { crypto: 'bullish', stocks: 'bullish', metals: 'bearish', bonds: 'bearish' },
+  risk_off: { crypto: 'bearish', stocks: 'bearish', metals: 'bullish', bonds: 'bullish' },
+  inflation:{ crypto: 'neutral', stocks: 'bearish', metals: 'bullish', bonds: 'bearish' },
+  deflation:{ crypto: 'bearish', stocks: 'bearish', metals: 'neutral', bonds: 'bullish' },
+};
+
+// Anomaly Detection
+if (expected !== actual) {
+  warnings.push(`⚠️ ${asset} showing ${actual}, expected ${expected} in ${regime} regime`);
+}
+```
+
+### Kullanım
+
+```typescript
+// analysis.engine.ts içinde
+const assetContext = await getAssetSpecificContext(symbol);
+
+// Non-crypto varlıklar için özel metrikler
+if (assetContext.metrics) {
+  // Verdict hesaplamasında %25 ağırlık
+  directionSources.push({
+    source: 'Metals Analysis',
+    direction: assetContext.metrics.sentiment === 'bullish' ? 'long' : 'short',
+    weight: 0.25,
+    reason: `Metals sentiment: bullish (72/100)`
+  });
+}
+```
 
 ---
 
