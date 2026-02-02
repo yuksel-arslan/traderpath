@@ -17,7 +17,6 @@ import {
   LogOut,
   User,
   ChevronDown,
-  FileText,
   Server,
   Brain,
   TrendingDown,
@@ -42,18 +41,11 @@ const PriceTicker = dynamic(
 const directNav = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Capital Flow', href: '/capital-flow', icon: Globe },
+  { name: 'Analyze', href: '/analyze', icon: TrendingUp },
 ];
 
 // Dropdown navigation groups
 const dropdownNav = [
-  {
-    name: 'Analyze',
-    icon: TrendingUp,
-    items: [
-      { name: 'New Analysis', href: '/analyze', icon: TrendingUp },
-      { name: 'Analysis Reports', href: '/reports', icon: FileText },
-    ],
-  },
   {
     name: 'AI Chat',
     icon: Brain,
@@ -80,8 +72,6 @@ const endNav = [
 // All flat items for mobile menu
 const allNavItems = [
   ...directNav,
-  { name: 'New Analysis', href: '/analyze', icon: TrendingUp },
-  { name: 'Analysis Reports', href: '/reports', icon: FileText },
   { name: 'Concierge', href: '/concierge', icon: Bot },
   { name: 'AI Experts', href: '/ai-expert', icon: Brain },
   { name: 'Scheduled', href: '/scheduled', icon: Calendar },
