@@ -106,7 +106,7 @@ export default function LoginPage() {
           setWelcomeName(data.data.user?.name || '');
           setShowWelcomeModal(true);
         } else {
-          router.push('/dashboard');
+          router.push('/capital-flow');
           router.refresh();
         }
       }
@@ -133,7 +133,7 @@ export default function LoginPage() {
   // Handle welcome modal close
   const handleWelcomeModalClose = () => {
     setShowWelcomeModal(false);
-    router.push('/dashboard');
+    router.push('/capital-flow');
     router.refresh();
   };
 

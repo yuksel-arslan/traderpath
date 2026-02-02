@@ -37,7 +37,7 @@ import {
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { X, Loader2, LineChart, FileText, Mail, ChevronUp, CheckCircle, HelpCircle } from 'lucide-react';
+import { X, Loader2, LineChart, FileText, Mail, ChevronUp, CheckCircle, HelpCircle, Lock, Search, Bot, MessageSquare } from 'lucide-react';
 import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
 import { downloadCapitalFlowReport, generateCapitalFlowEmailHTML } from '@/lib/capital-flow-report-generator';
 
@@ -983,6 +983,674 @@ function RecommendationCard({ recommendation, rotation, showRotation = true }: {
   );
 }
 
+// ============================================
+// Capital Flow Mind Map Components (from Landing)
+// ============================================
+
+// Typewriter Effect Component
+function TypewriterText({ text, delay = 0, speed = 30, className = '' }: { text: string; delay?: number; speed?: number; className?: string }) {
+  const [displayText, setDisplayText] = useState('');
+  const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    const startTimer = setTimeout(() => setStarted(true), delay);
+    return () => clearTimeout(startTimer);
+  }, [delay]);
+
+  useEffect(() => {
+    if (!started) return;
+    let i = 0;
+    const timer = setInterval(() => {
+      if (i < text.length) {
+        setDisplayText(text.slice(0, i + 1));
+        i++;
+      } else {
+        clearInterval(timer);
+      }
+    }, speed);
+    return () => clearInterval(timer);
+  }, [started, text, speed]);
+
+  return <span className={className}>{displayText}<span className="animate-pulse">|</span></span>;
+}
+
+// Animated Flow Line Component
+function FlowLine({ expanded, color1, color2 }: { expanded: boolean; color1: string; color2: string }) {
+  return (
+    <div className={`flex justify-center mb-4 transition-all duration-500 ${expanded ? 'opacity-100 h-12' : 'opacity-50 h-6'}`}>
+      <div className="relative">
+        {/* Main line */}
+        <div className={`w-1 h-full bg-gradient-to-b ${color1} ${color2} rounded-full shadow-lg`} />
+        {/* Animated flowing particles */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-white shadow-lg animate-flow-down" style={{ animationDuration: '1.5s' }} />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-white/80 shadow-md animate-flow-down" style={{ animationDuration: '1.5s', animationDelay: '0.5s' }} />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white/60 shadow animate-flow-down" style={{ animationDuration: '1.5s', animationDelay: '1s' }} />
+      </div>
+    </div>
+  );
+}
+
+// Live Capital Flow Data Interface for Mind Map
+interface MindMapFlowData {
+  liquidity: {
+    fedStatus: string;
+    m2Change: string;
+    dxyStatus: string;
+    vixLevel: string;
+    bias: string;
+  };
+  markets: {
+    name: string;
+    flow7d: number;
+    phase: string;
+    isSelected: boolean;
+  }[];
+  lastUpdated: string;
+}
+
+// Format flow percentage to max 2 decimal places
+function formatMindMapFlow(value: number): string {
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${value.toFixed(2)}%`;
+}
+
+// System Flow Chart - Mind Map Component
+function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [expandedLayers, setExpandedLayers] = useState<{ [key: number]: boolean }>({
+    1: true,
+    2: false,
+    3: false,
+    4: false,
+  });
+  const [showTypewriter, setShowTypewriter] = useState<{ [key: number]: boolean }>({});
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  // Transform API data to mind map format
+  const flowData: MindMapFlowData | null = apiData ? {
+    liquidity: {
+      fedStatus: apiData.globalLiquidity.fedBalanceSheet.trend === 'expanding' ? 'Expanding' : 'Contracting',
+      m2Change: apiData.globalLiquidity.m2MoneySupply.yoyGrowth != null
+        ? `${apiData.globalLiquidity.m2MoneySupply.yoyGrowth > 0 ? '+' : ''}${apiData.globalLiquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%`
+        : '+2.1%',
+      dxyStatus: apiData.globalLiquidity.dxy.trend === 'weakening' ? 'Weak ↓' : 'Strong ↑',
+      vixLevel: apiData.globalLiquidity.vix.value ? `${apiData.globalLiquidity.vix.level?.replace('_', ' ') || 'low'} (${Math.round(apiData.globalLiquidity.vix.value)})` : 'Low (14)',
+      bias: apiData.liquidityBias || 'risk_on',
+    },
+    markets: apiData.markets?.map((m) => ({
+      name: m.market.toUpperCase(),
+      flow7d: m.flow7d || 0,
+      phase: m.phase || 'mid',
+      isSelected: m.market === apiData.recommendation?.primaryMarket,
+    })) || [],
+    lastUpdated: new Date().toLocaleTimeString(),
+  } : null;
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (chartRef.current) {
+      observer.observe(chartRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Auto-expand layers sequentially when visible
+  useEffect(() => {
+    if (isVisible) {
+      const timers = [
+        setTimeout(() => {
+          setExpandedLayers(prev => ({ ...prev, 1: true }));
+          setShowTypewriter(prev => ({ ...prev, 1: true }));
+        }, 500),
+        setTimeout(() => {
+          setExpandedLayers(prev => ({ ...prev, 2: true }));
+          setShowTypewriter(prev => ({ ...prev, 2: true }));
+        }, 1500),
+        setTimeout(() => {
+          setExpandedLayers(prev => ({ ...prev, 3: true }));
+          setShowTypewriter(prev => ({ ...prev, 3: true }));
+        }, 2500),
+        setTimeout(() => {
+          setExpandedLayers(prev => ({ ...prev, 4: true }));
+          setShowTypewriter(prev => ({ ...prev, 4: true }));
+        }, 3500),
+      ];
+      return () => timers.forEach(t => clearTimeout(t));
+    }
+  }, [isVisible]);
+
+  const toggleLayer = (layer: number) => {
+    const newExpanded = !expandedLayers[layer];
+    setExpandedLayers(prev => ({ ...prev, [layer]: newExpanded }));
+    if (newExpanded) {
+      setShowTypewriter(prev => ({ ...prev, [layer]: true }));
+    }
+  };
+
+  // Helper to get phase badge color
+  const getPhaseColor = (phase: string) => {
+    switch (phase) {
+      case 'early': return 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400';
+      case 'mid': return 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400';
+      case 'late': return 'bg-amber-500/20 text-amber-600 dark:text-amber-400';
+      case 'exit': return 'bg-red-500/20 text-red-600 dark:text-red-400';
+      default: return 'bg-slate-500/20 text-slate-600 dark:text-slate-400';
+    }
+  };
+
+  const isLoadingData = !apiData;
+
+  return (
+    <section className="py-8 md:py-12 relative overflow-hidden" ref={chartRef}>
+      <div className="relative z-10">
+        {/* Header - Follow The Money Principle */}
+        <div className={`text-center mb-6 md:mb-8 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className="inline-block backdrop-blur-xl bg-white/90 dark:bg-slate-800/90 border-2 border-transparent bg-clip-padding rounded-2xl px-6 py-4 shadow-xl relative overflow-hidden">
+            {/* Gradient border effect */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-teal-500 via-emerald-500 to-orange-500 opacity-20" />
+            <div className="absolute inset-[2px] rounded-2xl bg-white dark:bg-slate-800" />
+            <div className="relative">
+              <p className="text-lg md:text-xl bg-gradient-to-r from-teal-500 to-orange-500 bg-clip-text text-transparent font-bold mb-1">
+                "Follow The Money" Principle
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Click each layer to expand/collapse
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* MIND MAP LAYOUT */}
+        <div className="relative max-w-6xl mx-auto">
+
+          {/* CENTER: Main Question - Corporate Gradient */}
+          <div className={`flex justify-center mb-6 transition-all duration-700 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
+            <div className="relative">
+              {/* Multiple pulsing rings with teal/coral */}
+              <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-teal-500/30 via-emerald-500/20 to-orange-500/30 animate-ping" style={{ animationDuration: '3s' }} />
+              <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-teal-500/20 to-orange-500/20 animate-pulse" />
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-500/10 via-transparent to-teal-500/10 animate-spin" style={{ animationDuration: '8s' }} />
+
+              <div className="relative backdrop-blur-xl bg-gradient-to-br from-teal-500 via-emerald-500 to-teal-600 rounded-full p-6 md:p-8 shadow-2xl shadow-teal-500/40 border border-white/20">
+                <div className="text-center">
+                  <DollarSign className="w-8 h-8 md:w-10 md:h-10 text-white mx-auto mb-2 drop-shadow-lg" />
+                  <p className="text-white/90 font-bold text-sm md:text-base">Where Is</p>
+                  <p className="text-white font-bold text-lg md:text-xl drop-shadow-md">Money Flowing?</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Connector from center - Gradient */}
+          <div className={`flex justify-center mb-4 transition-all duration-700 delay-100 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+            <div className="w-1 h-8 bg-gradient-to-b from-teal-500 via-emerald-500 to-teal-400 rounded-full shadow-lg shadow-teal-500/30" />
+          </div>
+
+          {/* LAYER 1: Global Liquidity - Collapsible */}
+          <div className={`mb-4 transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            {/* Layer Header - Corporate Teal Gradient */}
+            <div
+              className="flex justify-center cursor-pointer group"
+              onClick={() => toggleLayer(1)}
+            >
+              <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-teal-500/20 ${expandedLayers[1] ? 'ring-2 ring-teal-500/30' : ''}`}>
+                {/* Gradient border */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-teal-500 via-emerald-500 to-teal-400 opacity-30 group-hover:opacity-50 transition-opacity" />
+                <div className="absolute inset-[2px] rounded-2xl bg-white/95 dark:bg-slate-800/95" />
+                <div className="relative flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 shadow-lg shadow-teal-500/30">
+                    <Activity className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-bold bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-400 dark:to-emerald-400 bg-clip-text text-transparent">LAYER 1: Global Liquidity</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">"Is liquidity expanding or contracting?"</p>
+                  </div>
+                  <div className={`ml-2 transition-transform duration-300 ${expandedLayers[1] ? 'rotate-180' : ''}`}>
+                    <ChevronDown className="w-5 h-5 text-teal-500" />
+                  </div>
+                  {/* Quick Answer Badge - Gradient */}
+                  {!expandedLayers[1] && (
+                    <span className={cn(
+                      "ml-2 px-3 py-1 text-white text-xs font-bold rounded-full shadow-lg animate-pulse",
+                      flowData?.liquidity.bias === 'risk_on' ? 'bg-emerald-500 shadow-emerald-500/30' :
+                      flowData?.liquidity.bias === 'risk_off' ? 'bg-red-500 shadow-red-500/30' :
+                      'bg-yellow-500 shadow-yellow-500/30'
+                    )}>
+                      {flowData?.liquidity.bias === 'risk_on' ? 'RISK ON' : flowData?.liquidity.bias === 'risk_off' ? 'RISK OFF' : 'NEUTRAL'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Layer Content - Collapsible with Typewriter Effect */}
+            <div className={`overflow-hidden transition-all duration-500 ${expandedLayers[1] ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+              <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+                {/* Data Points with Live Data & Typewriter */}
+                <div className="backdrop-blur-xl bg-slate-100/80 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                  {isLoadingData ? (
+                    <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+                      {[1,2,3,4].map(i => (
+                        <div key={i} className="h-4 bg-slate-300 dark:bg-slate-600 rounded animate-pulse" />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-slate-500">Fed:</span>
+                        {showTypewriter[1] ? (
+                          <TypewriterText
+                            text={flowData?.liquidity.fedStatus || 'Expanding'}
+                            delay={0}
+                            speed={50}
+                            className="text-emerald-500 font-bold"
+                          />
+                        ) : (
+                          <span className="text-emerald-500 font-bold">{flowData?.liquidity.fedStatus || 'Expanding'}</span>
+                        )}
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-slate-500">M2:</span>
+                        {showTypewriter[1] ? (
+                          <TypewriterText
+                            text={flowData?.liquidity.m2Change || '+2.1%'}
+                            delay={200}
+                            speed={50}
+                            className="text-emerald-500 font-bold"
+                          />
+                        ) : (
+                          <span className="text-emerald-500 font-bold">{flowData?.liquidity.m2Change || '+2.1%'}</span>
+                        )}
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-slate-500">DXY:</span>
+                        {showTypewriter[1] ? (
+                          <TypewriterText
+                            text={flowData?.liquidity.dxyStatus || 'Weak ↓'}
+                            delay={400}
+                            speed={50}
+                            className="text-emerald-500 font-bold"
+                          />
+                        ) : (
+                          <span className="text-emerald-500 font-bold">{flowData?.liquidity.dxyStatus || 'Weak ↓'}</span>
+                        )}
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-slate-500">VIX:</span>
+                        {showTypewriter[1] ? (
+                          <TypewriterText
+                            text={flowData?.liquidity.vixLevel || 'Low (14)'}
+                            delay={600}
+                            speed={50}
+                            className="text-emerald-500 font-bold"
+                          />
+                        ) : (
+                          <span className="text-emerald-500 font-bold">{flowData?.liquidity.vixLevel || 'Low (14)'}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {flowData?.lastUpdated && (
+                    <p className="text-[10px] text-slate-400 mt-2 text-center">
+                      Live • Updated {flowData.lastUpdated}
+                    </p>
+                  )}
+                </div>
+
+                {/* Animated Arrow */}
+                <div className="hidden md:block relative">
+                  <ArrowRight className="w-6 h-6 text-teal-500 animate-pulse" />
+                  <div className="absolute inset-0 bg-teal-500/20 rounded-full blur-md animate-ping" style={{ animationDuration: '2s' }} />
+                </div>
+
+                {/* Answer */}
+                <div className={cn(
+                  "backdrop-blur-xl border-2 rounded-xl p-4 shadow-lg ring-2",
+                  flowData?.liquidity.bias === 'risk_on'
+                    ? "bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 border-emerald-500/50 ring-emerald-500/20"
+                    : flowData?.liquidity.bias === 'risk_off'
+                    ? "bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/30 dark:to-rose-900/30 border-red-500/50 ring-red-500/20"
+                    : "bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/30 dark:to-amber-900/30 border-yellow-500/50 ring-yellow-500/20"
+                )}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className={cn(
+                      "w-5 h-5",
+                      flowData?.liquidity.bias === 'risk_on' ? 'text-emerald-500' :
+                      flowData?.liquidity.bias === 'risk_off' ? 'text-red-500' :
+                      'text-yellow-500'
+                    )} />
+                    <span className={`px-3 py-1 text-white text-sm font-bold rounded-full ${
+                      flowData?.liquidity.bias === 'risk_on'
+                        ? 'bg-emerald-500'
+                        : flowData?.liquidity.bias === 'risk_off'
+                        ? 'bg-red-500'
+                        : 'bg-yellow-500'
+                    }`}>
+                      {flowData?.liquidity.bias === 'risk_on' ? 'RISK ON' : flowData?.liquidity.bias === 'risk_off' ? 'RISK OFF' : 'NEUTRAL'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    {flowData?.liquidity.bias === 'risk_on'
+                      ? 'Liquidity expanding → Risk assets favored'
+                      : flowData?.liquidity.bias === 'risk_off'
+                      ? 'Liquidity contracting → Safe havens favored'
+                      : 'Mixed signals → Wait for clarity'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Connector to Layer 2 - Animated Flow Line */}
+          <FlowLine expanded={expandedLayers[1]} color1="from-teal-400" color2="to-cyan-500" />
+
+          {/* LAYER 2: Market Selection - Corporate Blue/Cyan Gradient */}
+          <div className={`mb-4 transition-all duration-700 delay-400 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            {/* Layer Header */}
+            <div
+              className="flex justify-center cursor-pointer group"
+              onClick={() => toggleLayer(2)}
+            >
+              <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-cyan-500/20 ${expandedLayers[2] ? 'ring-2 ring-cyan-500/30' : ''}`}>
+                {/* Gradient border */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-400 opacity-30 group-hover:opacity-50 transition-opacity" />
+                <div className="absolute inset-[2px] rounded-2xl bg-white/95 dark:bg-slate-800/95" />
+                <div className="relative flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 shadow-lg shadow-cyan-500/30">
+                    <TrendingUp className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-bold bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-400 dark:to-blue-400 bg-clip-text text-transparent">LAYER 2: Market Flow</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">"Which market is receiving the most flow?"</p>
+                  </div>
+                  <div className={`ml-2 transition-transform duration-300 ${expandedLayers[2] ? 'rotate-180' : ''}`}>
+                    <ChevronDown className="w-5 h-5 text-cyan-500" />
+                  </div>
+                  {!expandedLayers[2] && flowData?.markets.find(m => m.isSelected) && (
+                    <span className="ml-2 px-3 py-1 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-xs font-bold rounded-full shadow-lg shadow-emerald-500/30 animate-pulse">
+                      {flowData.markets.find(m => m.isSelected)?.name} {formatMindMapFlow(flowData.markets.find(m => m.isSelected)?.flow7d || 0)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Layer Content with Live Market Data */}
+            <div className={`overflow-hidden transition-all duration-500 ${expandedLayers[2] ? 'max-h-[500px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+              {/* Market Options - Dynamic from API */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto mb-4">
+                {isLoadingData ? (
+                  // Loading skeleton
+                  [1,2,3,4].map(i => (
+                    <div key={i} className="backdrop-blur-xl bg-slate-100/80 dark:bg-slate-700/50 rounded-xl p-3 animate-pulse">
+                      <div className="h-4 bg-slate-300 dark:bg-slate-600 rounded mb-2" />
+                      <div className="h-3 bg-slate-300 dark:bg-slate-600 rounded w-1/2 mx-auto" />
+                    </div>
+                  ))
+                ) : (
+                  // Fallback markets if API fails
+                  (flowData?.markets.length ? flowData.markets : [
+                    { name: 'STOCKS', flow7d: 5, phase: 'mid', isSelected: false },
+                    { name: 'BONDS', flow7d: -2, phase: 'exit', isSelected: false },
+                    { name: 'CRYPTO', flow7d: 8, phase: 'early', isSelected: true },
+                    { name: 'METALS', flow7d: 1, phase: 'late', isSelected: false },
+                  ]).map((market, idx) => (
+                    <div
+                      key={market.name}
+                      className={`backdrop-blur-xl rounded-xl p-3 text-center transition-all duration-500 ${
+                        market.isSelected
+                          ? 'bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 border-2 border-emerald-500 ring-4 ring-emerald-500/20 shadow-lg scale-105'
+                          : 'bg-slate-100/80 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 opacity-60 hover:opacity-80'
+                      }`}
+                      style={{ animationDelay: `${idx * 100}ms` }}
+                    >
+                      <div className={`font-bold text-sm mb-1 ${market.isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                        {showTypewriter[2] ? (
+                          <TypewriterText text={market.name} delay={idx * 150} speed={40} />
+                        ) : market.name}
+                      </div>
+                      <div className={`text-xs font-mono font-bold ${
+                        market.flow7d > 0 ? 'text-emerald-500' : market.flow7d < 0 ? 'text-red-500' : 'text-slate-500'
+                      }`}>
+                        {showTypewriter[2] ? (
+                          <TypewriterText
+                            text={formatMindMapFlow(market.flow7d)}
+                            delay={idx * 150 + 200}
+                            speed={60}
+                          />
+                        ) : formatMindMapFlow(market.flow7d)}
+                      </div>
+                      <div className={`mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold inline-block ${getPhaseColor(market.phase)}`}>
+                        {market.phase.toUpperCase()}
+                      </div>
+                      {market.isSelected && <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto mt-1 animate-bounce" />}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Answer with Selected Market */}
+              <div className="flex justify-center">
+                <div className="backdrop-blur-xl bg-gradient-to-r from-blue-500/10 to-emerald-500/10 border border-emerald-500/30 rounded-xl p-3">
+                  <div className="flex items-center justify-center gap-3 flex-wrap">
+                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    <span className="px-3 py-1 bg-emerald-500 text-white text-sm font-bold rounded-full">
+                      {flowData?.markets.find(m => m.isSelected)?.name || 'CRYPTO'}
+                    </span>
+                    {showTypewriter[2] ? (
+                      <TypewriterText
+                        text={`${flowData?.markets.find(m => m.isSelected)?.phase || 'early'} phase • ${formatMindMapFlow(flowData?.markets.find(m => m.isSelected)?.flow7d ?? 8)} flow`}
+                        delay={800}
+                        speed={30}
+                        className="text-xs text-slate-600 dark:text-slate-300 font-mono"
+                      />
+                    ) : (
+                      <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">
+                        {flowData?.markets.find(m => m.isSelected)?.phase || 'early'} phase • {formatMindMapFlow(flowData?.markets.find(m => m.isSelected)?.flow7d ?? 8)} flow
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Connector to Layer 3 - Animated Flow Line */}
+          <FlowLine expanded={expandedLayers[2]} color1="from-cyan-500" color2="to-violet-500" />
+
+          {/* LAYER 3: Sector Drill-Down - UNLOCKED */}
+          <div className={`mb-4 transition-all duration-700 delay-600 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            {/* Layer Header */}
+            <div
+              className="flex justify-center cursor-pointer group"
+              onClick={() => toggleLayer(3)}
+            >
+              <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/20 ${expandedLayers[3] ? 'ring-2 ring-purple-500/30' : ''}`}>
+                {/* Gradient border */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 opacity-30 group-hover:opacity-50 transition-opacity" />
+                <div className="absolute inset-[2px] rounded-2xl bg-white/95 dark:bg-slate-800/95" />
+                <div className="relative flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 shadow-lg shadow-purple-500/30">
+                    <Layers className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-bold bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent">LAYER 3: Sector Drill-Down</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">"Which sector within the market?"</p>
+                  </div>
+                  <div className={`ml-2 transition-transform duration-300 ${expandedLayers[3] ? 'rotate-180' : ''}`}>
+                    <ChevronDown className="w-5 h-5 text-purple-500" />
+                  </div>
+                  {!expandedLayers[3] && (
+                    <span className="ml-2 px-3 py-1 bg-gradient-to-r from-purple-500 to-violet-500 text-white text-xs font-bold rounded-full shadow-lg shadow-purple-500/30">
+                      SECTOR ACTIVITY
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Layer Content - Sector Data */}
+            <div className={`overflow-hidden transition-all duration-500 ${expandedLayers[3] ? 'max-h-[500px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+              {apiData?.markets.find(m => m.market === apiData.recommendation?.primaryMarket)?.sectors ? (
+                <div className="max-w-3xl mx-auto">
+                  <p className="text-xs text-center text-slate-500 mb-3">
+                    Showing sectors for <strong className="text-purple-600 dark:text-purple-400 capitalize">{apiData.recommendation?.primaryMarket}</strong>
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {apiData.markets.find(m => m.market === apiData.recommendation?.primaryMarket)?.sectors?.slice(0, 6).map((sector, idx) => (
+                      <div
+                        key={idx}
+                        className={cn(
+                          "backdrop-blur-xl rounded-xl p-3 border transition-all",
+                          sector.trending === 'up'
+                            ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-500/30"
+                            : sector.trending === 'down'
+                            ? "bg-red-50 dark:bg-red-500/10 border-red-500/30"
+                            : "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700"
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-semibold text-sm text-slate-900 dark:text-white">{sector.name}</span>
+                          <span className={cn(
+                            "text-xs font-bold",
+                            sector.flow7d > 0 ? "text-emerald-600" : "text-red-600"
+                          )}>
+                            {sector.flow7d > 0 ? '+' : ''}{sector.flow7d.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                          <span className={`px-1.5 py-0.5 rounded ${getPhaseColor(sector.phase)}`}>{sector.phase.toUpperCase()}</span>
+                          <span className="capitalize">{sector.trending}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <Activity className="w-10 h-10 text-purple-400 mx-auto mb-2" />
+                  <p className="text-sm text-slate-500">Select a market to view sector breakdown</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Connector to Layer 4 - Animated Flow Line */}
+          <FlowLine expanded={expandedLayers[3]} color1="from-violet-500" color2="to-amber-500" />
+
+          {/* LAYER 4: AI Recommendations - UNLOCKED */}
+          <div className={`mb-6 transition-all duration-700 delay-800 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            {/* Layer Header */}
+            <div
+              className="flex justify-center cursor-pointer group"
+              onClick={() => toggleLayer(4)}
+            >
+              <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/20 ${expandedLayers[4] ? 'ring-2 ring-amber-500/30' : ''}`}>
+                {/* Gradient border */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 opacity-30 group-hover:opacity-50 transition-opacity" />
+                <div className="absolute inset-[2px] rounded-2xl bg-white/95 dark:bg-slate-800/95" />
+                <div className="relative flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 shadow-lg shadow-amber-500/30">
+                    <Brain className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-bold bg-gradient-to-r from-amber-600 to-orange-600 dark:from-amber-400 dark:to-orange-400 bg-clip-text text-transparent">LAYER 4: AI Recommendations</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">"BUY/SELL signals with confidence"</p>
+                  </div>
+                  <div className={`ml-2 transition-transform duration-300 ${expandedLayers[4] ? 'rotate-180' : ''}`}>
+                    <ChevronDown className="w-5 h-5 text-amber-500" />
+                  </div>
+                  {!expandedLayers[4] && apiData?.recommendation && (
+                    <span className={cn(
+                      "ml-2 px-3 py-1 text-white text-xs font-bold rounded-full shadow-lg",
+                      apiData.recommendation.direction === 'BUY'
+                        ? "bg-emerald-500 shadow-emerald-500/30"
+                        : "bg-red-500 shadow-red-500/30"
+                    )}>
+                      {apiData.recommendation.direction} {apiData.recommendation.primaryMarket.toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Layer Content - AI Recommendations */}
+            <div className={`overflow-hidden transition-all duration-500 ${expandedLayers[4] ? 'max-h-[600px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+              <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* BUY Opportunity */}
+                {apiData?.recommendation && (
+                  <div className="backdrop-blur-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-2 border-emerald-500/30 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-emerald-500" />
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">BUY Opportunity</span>
+                      </div>
+                      <span className="text-2xl font-bold text-emerald-600">{apiData.recommendation.confidence}%</span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Market</span>
+                        <span className="font-semibold text-slate-900 dark:text-white capitalize">{apiData.recommendation.primaryMarket}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Phase</span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${getPhaseColor(apiData.recommendation.phase)}`}>
+                          {apiData.recommendation.phase.toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pt-2 border-t border-emerald-500/20">
+                        {apiData.recommendation.reason}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* SELL Opportunity */}
+                {apiData?.sellRecommendation && (
+                  <div className="backdrop-blur-xl bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-2 border-red-500/30 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <TrendingDown className="w-5 h-5 text-red-500" />
+                        <span className="font-bold text-red-600 dark:text-red-400">SELL Opportunity</span>
+                      </div>
+                      <span className="text-2xl font-bold text-red-600">{apiData.sellRecommendation.confidence}%</span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Market</span>
+                        <span className="font-semibold text-slate-900 dark:text-white capitalize">{apiData.sellRecommendation.primaryMarket}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Phase</span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${getPhaseColor(apiData.sellRecommendation.phase)}`}>
+                          {apiData.sellRecommendation.phase.toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pt-2 border-t border-red-500/20">
+                        {apiData.sellRecommendation.reason}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // Main Component
 export default function CapitalFlowPage() {
   const router = useRouter();
@@ -995,89 +1663,13 @@ export default function CapitalFlowPage() {
   const [correlationsExpanded, setCorrelationsExpanded] = useState(false);
   const [opportunitiesExpanded, setOpportunitiesExpanded] = useState(false);
 
-  // Layer 3 unlock state (25 credits per day via Daily Pass)
-  const [layer3Unlocked, setLayer3Unlocked] = useState(false);
-  const [unlockingLayer3, setUnlockingLayer3] = useState(false);
-
-  // Layer 4 unlock state (25 credits per day via Daily Pass)
-  const [layer4Unlocked, setLayer4Unlocked] = useState(false);
-  const [unlockingLayer4, setUnlockingLayer4] = useState(false);
+  // All layers are now unlocked by default (no paywall)
+  const layer3Unlocked = true;
+  const layer4Unlocked = true;
 
   // Fullscreen layer modal state
   const [fullscreenLayer, setFullscreenLayer] = useState<number | null>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
-
-  // Check if Layers 3 and 4 are unlocked via Daily Pass API
-  useEffect(() => {
-    const checkPasses = async () => {
-      try {
-        // Check Layer 3 (Sector Activity)
-        const layer3Response = await authFetch('/api/passes/check/CAPITAL_FLOW_L3');
-        const layer3Result = await layer3Response.json();
-        // Admin users or users with valid pass get access
-        if (layer3Result.success && (layer3Result.data?.isAdmin || (layer3Result.data?.hasPass && layer3Result.data?.canUse))) {
-          setLayer3Unlocked(true);
-        }
-
-        // Check Layer 4 (AI Recommendations)
-        const layer4Response = await authFetch('/api/passes/check/CAPITAL_FLOW_L4');
-        const layer4Result = await layer4Response.json();
-        // Admin users or users with valid pass get access
-        if (layer4Result.success && (layer4Result.data?.isAdmin || (layer4Result.data?.hasPass && layer4Result.data?.canUse))) {
-          setLayer4Unlocked(true);
-        }
-      } catch (err) {
-        console.error('Failed to check passes:', err);
-      }
-    };
-    checkPasses();
-  }, []);
-
-  // Unlock Layer 3 with 25 credits via Daily Pass
-  const unlockLayer3 = async () => {
-    setUnlockingLayer3(true);
-    try {
-      const response = await authFetch('/api/passes/purchase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passType: 'CAPITAL_FLOW_L3' }),
-      });
-      const result = await response.json();
-      if (result.success) {
-        setLayer3Unlocked(true);
-      } else {
-        alert(result.error?.message || 'Insufficient credits. You need 25 credits to unlock Sector Activity.');
-      }
-    } catch (err) {
-      console.error('Failed to unlock Layer 3:', err);
-      alert('Failed to unlock. Please try again.');
-    } finally {
-      setUnlockingLayer3(false);
-    }
-  };
-
-  // Unlock Layer 4 with 25 credits via Daily Pass
-  const unlockLayer4 = async () => {
-    setUnlockingLayer4(true);
-    try {
-      const response = await authFetch('/api/passes/purchase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passType: 'CAPITAL_FLOW_L4' }),
-      });
-      const result = await response.json();
-      if (result.success) {
-        setLayer4Unlocked(true);
-      } else {
-        alert(result.error?.message || 'Insufficient credits. You need 25 credits to unlock AI Recommendations.');
-      }
-    } catch (err) {
-      console.error('Failed to unlock Layer 4:', err);
-      alert('Failed to unlock. Please try again.');
-    } finally {
-      setUnlockingLayer4(false);
-    }
-  };
 
   // Market Analysis Modal state
   const [analysisMarket, setAnalysisMarket] = useState<MarketFlow | null>(null);
@@ -1093,6 +1685,9 @@ export default function CapitalFlowPage() {
   const [downloadingReport, setDownloadingReport] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+
+  // AI Concierge modal state
+  const [showConciergeModal, setShowConciergeModal] = useState(false);
 
   // Ref for fullscreen modal
   const contentRef = useRef<HTMLDivElement>(null);
@@ -1123,14 +1718,14 @@ export default function CapitalFlowPage() {
     {
       target: '#tour-layer-3',
       title: 'Layer 3: Sector Activity',
-      content: 'Drill down into specific sectors (DeFi, L2, Tech, etc.). See which sectors are hot and which are cooling down. Requires 25 credits/day.',
+      content: 'Drill down into specific sectors (DeFi, L2, Tech, etc.). See which sectors are hot and which are cooling down.',
       placement: 'bottom',
       spotlightPadding: 8,
     },
     {
       target: '#tour-layer-4',
       title: 'Layer 4: AI Recommendations',
-      content: 'Get AI-powered BUY/SELL recommendations based on flow analysis. Shows phase (Early/Mid/Late/Exit) and confidence level. Requires 25 credits/day.',
+      content: 'Get AI-powered BUY/SELL recommendations based on flow analysis. Shows phase (Early/Mid/Late/Exit) and confidence level.',
       placement: 'bottom',
       spotlightPadding: 8,
     },
@@ -1338,6 +1933,29 @@ export default function CapitalFlowPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Show AI Concierge modal once per session
+  useEffect(() => {
+    const hasSeenConciergeModal = sessionStorage.getItem('capitalFlowConciergeModalShown');
+    if (!hasSeenConciergeModal) {
+      // Small delay to let the page load first
+      const timer = setTimeout(() => {
+        setShowConciergeModal(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleConciergeModalClose = () => {
+    sessionStorage.setItem('capitalFlowConciergeModalShown', 'true');
+    setShowConciergeModal(false);
+  };
+
+  const handleGoToConcierge = () => {
+    sessionStorage.setItem('capitalFlowConciergeModalShown', 'true');
+    setShowConciergeModal(false);
+    router.push('/concierge');
+  };
+
   if (loading) {
     return (
       <div className="relative min-h-screen bg-slate-50 dark:bg-[#0B1120]">
@@ -1385,6 +2003,76 @@ export default function CapitalFlowPage() {
         tourId="capital-flow"
         autoStart={true}
       />
+
+      {/* AI Concierge Continuation Modal */}
+      {showConciergeModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md mx-4 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden">
+            {/* Close button */}
+            <button
+              onClick={handleConciergeModalClose}
+              className="absolute top-4 right-4 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Modal content */}
+            <div className="p-6 pt-8">
+              {/* Header with gradient icon */}
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+                  <Bot className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                  Try AI Concierge
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Get instant analysis with natural language commands
+                </p>
+              </div>
+
+              {/* Feature highlights */}
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                  <MessageSquare className="w-5 h-5 text-teal-500" />
+                  <span className="text-sm text-slate-700 dark:text-slate-300">
+                    Ask questions like "How is BTC doing?"
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                  <Zap className="w-5 h-5 text-amber-500" />
+                  <span className="text-sm text-slate-700 dark:text-slate-300">
+                    Get instant AI-powered market insights
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                  <Target className="w-5 h-5 text-purple-500" />
+                  <span className="text-sm text-slate-700 dark:text-slate-300">
+                    Receive trade recommendations in seconds
+                  </span>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="space-y-3">
+                <button
+                  onClick={handleGoToConcierge}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                >
+                  <Bot className="w-5 h-5" />
+                  Continue with AI Concierge
+                </button>
+                <button
+                  onClick={handleConciergeModalClose}
+                  className="w-full py-3 px-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Stay on Capital Flow
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Fullscreen Layer Modal */}
       {fullscreenLayer && (
@@ -1523,24 +2211,7 @@ export default function CapitalFlowPage() {
               {/* Layer 3: Sector Activity */}
               {fullscreenLayer === 3 && (
                 <div className="space-y-6">
-                  {!layer3Unlocked ? (
-                    <div className="flex flex-col items-center justify-center py-12">
-                      <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg">
-                        <Zap className="w-8 h-8 text-white" />
-                      </div>
-                      <h4 className="text-lg font-bold text-white mb-2">Unlock Sector Activity</h4>
-                      <p className="text-sm text-slate-400 mb-4 text-center max-w-xs">
-                        See which sectors are receiving capital inflows. Requires 25 credits/day.
-                      </p>
-                      <button
-                        onClick={unlockLayer3}
-                        disabled={unlockingLayer3}
-                        className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all shadow-lg"
-                      >
-                        {unlockingLayer3 ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Unlock for 25 Credits'}
-                      </button>
-                    </div>
-                  ) : selectedMarket ? (
+                  {selectedMarket ? (
                     <div className="space-y-4">
                       <p className="text-sm text-slate-400">
                         Showing sectors for <strong className="capitalize text-white">{selectedMarket.market}</strong>
@@ -1598,25 +2269,7 @@ export default function CapitalFlowPage() {
               {/* Layer 4: AI Recommendations */}
               {fullscreenLayer === 4 && (
                 <div className="space-y-6">
-                  {!layer4Unlocked ? (
-                    <div className="flex flex-col items-center justify-center py-12">
-                      <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
-                        <Zap className="w-8 h-8 text-white" />
-                      </div>
-                      <h4 className="text-lg font-bold text-white mb-2">Unlock AI Recommendations</h4>
-                      <p className="text-sm text-slate-400 mb-4 text-center max-w-xs">
-                        Get specific BUY and SELL recommendations with confidence scores. Requires 25 credits/day.
-                      </p>
-                      <button
-                        onClick={unlockLayer4}
-                        disabled={unlockingLayer4}
-                        className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg"
-                      >
-                        {unlockingLayer4 ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Unlock for 25 Credits'}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+                  <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
                       {/* BUY Opportunity */}
                       <div className="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/30">
                         <div className="flex items-center gap-3 mb-4">
@@ -1677,8 +2330,7 @@ export default function CapitalFlowPage() {
                         </div>
                       )}
                     </div>
-                  )}
-                  {data.insights?.layer4 && layer4Unlocked && <InsightBox insight={data.insights.layer4} icon={Brain} />}
+                  {data.insights?.layer4 && <InsightBox insight={data.insights.layer4} icon={Brain} />}
                 </div>
               )}
             </div>
@@ -1812,6 +2464,9 @@ export default function CapitalFlowPage() {
           </div>
         </div>
 
+        {/* ===== MIND MAP - Interactive Capital Flow Visualization ===== */}
+        <SystemFlowChart apiData={data} />
+
         {/* ===== LAYER FLOW SUMMARY - Quick Overview ===== */}
         <section className="mb-8 animate-slide-up" style={{ animationDelay: '0.3s' }}>
           <div className="flex items-center justify-center gap-2 mb-4">
@@ -1892,28 +2547,20 @@ export default function CapitalFlowPage() {
               );
             })()}
 
-            {/* Layer 4: Recommendation - Locked until 25 credits paid */}
+            {/* Layer 4: AI Recommendations */}
             <LayerSummaryBox
               id="tour-layer-4"
               layerNum={4}
               title="Recommendation"
-              status={layer4Unlocked
-                ? `${data.recommendation.action.toUpperCase()} ${data.recommendation.primaryMarket.toUpperCase()}`
-                : '🔒 LOCKED'
-              }
+              status={`${data.recommendation.action.toUpperCase()} ${data.recommendation.primaryMarket.toUpperCase()}`}
               statusType={
-                !layer4Unlocked
-                  ? 'warning'
-                  : data.recommendation.action === 'analyze'
+                data.recommendation.action === 'analyze'
                   ? 'positive'
                   : data.recommendation.action === 'wait'
                   ? 'warning'
                   : 'negative'
               }
-              details={layer4Unlocked
-                ? `Phase: ${data.recommendation.phase.toUpperCase()} • Confidence: ${data.recommendation.confidence}%`
-                : '25 credits to unlock • Valid 24h'
-              }
+              details={`Phase: ${data.recommendation.phase.toUpperCase()} • Confidence: ${data.recommendation.confidence}%`}
               icon={Target}
               color="amber"
               onClick={() => setFullscreenLayer(4)}
@@ -2065,74 +2712,10 @@ export default function CapitalFlowPage() {
                   <div className="flex items-center gap-2 mb-4">
                     <div className="w-6 h-6 bg-amber-500 rounded flex items-center justify-center text-white text-xs font-bold">4</div>
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">AI Recommendations</h3>
-                    {!layer4Unlocked && (
-                      <span className="ml-auto px-2 py-0.5 text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">
-                        25 Credits
-                      </span>
-                    )}
                   </div>
 
-                  {/* Paywall - Show when Layer 4 is NOT unlocked */}
-                  {!layer4Unlocked ? (
-                    <div className="relative">
-                      {/* Blurred Preview */}
-                      <div className="blur-sm opacity-50 pointer-events-none select-none">
-                        <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-                          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                            <div className="flex items-center gap-2 mb-2">
-                              <TrendingUp className="w-4 h-4 text-emerald-500" />
-                              <span className="text-sm font-semibold text-emerald-600">BUY Opportunity</span>
-                            </div>
-                            <div className="h-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
-                          </div>
-                          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-                            <div className="flex items-center gap-2 mb-2">
-                              <TrendingDown className="w-4 h-4 text-red-500" />
-                              <span className="text-sm font-semibold text-red-600">SELL Opportunity</span>
-                            </div>
-                            <div className="h-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Unlock Overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-white/90 via-white/70 to-transparent dark:from-slate-900/90 dark:via-slate-900/70">
-                        <div className="text-center p-6">
-                          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
-                            <Zap className="w-8 h-8 text-white" />
-                          </div>
-                          <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                            Unlock AI Recommendations
-                          </h4>
-                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 max-w-xs">
-                            Get specific BUY and SELL recommendations with confidence scores and target sectors.
-                          </p>
-                          <button
-                            onClick={unlockLayer4}
-                            disabled={unlockingLayer4}
-                            className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
-                          >
-                            {unlockingLayer4 ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Unlocking...
-                              </>
-                            ) : (
-                              <>
-                                <Coins className="w-4 h-4" />
-                                Unlock for 25 Credits
-                              </>
-                            )}
-                          </button>
-                          <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">
-                            Valid for 24 hours
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Unlocked Content - Show BUY and SELL Recommendations */
-                    <div className={cn(
+                  {/* BUY and SELL Recommendations */}
+                  <div className={cn(
                       "grid gap-4",
                       data.sellRecommendation ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
                     )}>
@@ -2156,7 +2739,6 @@ export default function CapitalFlowPage() {
                         </div>
                       )}
                     </div>
-                  )}
                 </div>
               )}
             </div>

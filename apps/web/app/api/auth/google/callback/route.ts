@@ -91,8 +91,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=no_token', baseUrl));
     }
 
-    // Create response with redirect to dashboard
-    const response = NextResponse.redirect(new URL('/dashboard', baseUrl));
+    // Create response with redirect to capital-flow
+    const response = NextResponse.redirect(new URL('/capital-flow', baseUrl));
 
     // Set httpOnly cookie for secure token storage
     response.cookies.set('auth-token', accessToken, {

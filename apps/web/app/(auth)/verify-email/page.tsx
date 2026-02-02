@@ -134,10 +134,10 @@ export default function VerifyEmailPage() {
             Your email has been successfully verified. You can now access all features.
           </p>
           <Link
-            href="/dashboard"
+            href="/capital-flow"
             className="block w-full py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition text-center"
           >
-            Go to Dashboard
+            Go to Capital Flow
           </Link>
         </div>
       </>

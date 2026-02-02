@@ -20,7 +20,7 @@ const protectedPaths = [
   '/ai-expert',
 ];
 
-// Routes that should redirect to dashboard if already authenticated
+// Routes that should redirect to capital-flow if already authenticated
 const authPaths = ['/login', '/register'];
 
 // Auth pages that should be accessible even when logged in
@@ -65,11 +65,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Redirect to dashboard if accessing login/register while authenticated
+  // Redirect to capital-flow if accessing login/register while authenticated
   // (but not for public auth pages like forgot-password, verify-email, etc.)
   if (isAuthPage && !isPublicAuthPage && isLoggedIn) {
-    const dashboardUrl = new URL('/dashboard', request.url);
-    return NextResponse.redirect(dashboardUrl);
+    const capitalFlowUrl = new URL('/capital-flow', request.url);
+    return NextResponse.redirect(capitalFlowUrl);
   }
 
   return NextResponse.next();
