@@ -18,7 +18,6 @@ import {
   AlertTriangle,
   CheckCircle,
   Loader2,
-  ArrowLeft,
   Zap,
   TrendingUp,
   Activity,
@@ -655,15 +654,6 @@ export function AnalysisDialog({
         {/* Header */}
         <div className="relative flex items-center justify-between p-4 sm:p-5 border-b border-white/10">
           <div className="flex items-center gap-3">
-            {dialogStep !== 'mode-select' && (
-              <button
-                onClick={() => setDialogStep('mode-select')}
-                disabled={isRunning}
-                className="p-1.5 hover:bg-white/10 rounded-lg transition disabled:opacity-50"
-              >
-                <ArrowLeft className="w-4 h-4 text-slate-400" />
-              </button>
-            )}
             <div className="relative w-10 h-10 sm:w-12 sm:h-12">
               {/* Morphing glow ring */}
               <div
