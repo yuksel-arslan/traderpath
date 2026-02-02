@@ -1056,7 +1056,7 @@ function formatMindMapFlow(value: number): string {
 }
 
 // System Flow Chart - Mind Map Component
-function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
+function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummary | null; onLayerClick?: (layer: number) => void }) {
   const [isVisible, setIsVisible] = useState(false);
   const [expandedLayers, setExpandedLayers] = useState<{ [key: number]: boolean }>({
     1: true,
@@ -1201,7 +1201,10 @@ function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
             {/* Layer Header - Corporate Teal Gradient */}
             <div
               className="flex justify-center cursor-pointer group"
-              onClick={() => toggleLayer(1)}
+              onClick={() => {
+                toggleLayer(1);
+                onLayerClick?.(1);
+              }}
             >
               <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-teal-500/20 ${expandedLayers[1] ? 'ring-2 ring-teal-500/30' : ''}`}>
                 {/* Gradient border */}
@@ -1359,7 +1362,10 @@ function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
             {/* Layer Header */}
             <div
               className="flex justify-center cursor-pointer group"
-              onClick={() => toggleLayer(2)}
+              onClick={() => {
+                toggleLayer(2);
+                onLayerClick?.(2);
+              }}
             >
               <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-cyan-500/20 ${expandedLayers[2] ? 'ring-2 ring-cyan-500/30' : ''}`}>
                 {/* Gradient border */}
@@ -1473,7 +1479,10 @@ function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
             {/* Layer Header */}
             <div
               className="flex justify-center cursor-pointer group"
-              onClick={() => toggleLayer(3)}
+              onClick={() => {
+                toggleLayer(3);
+                onLayerClick?.(3);
+              }}
             >
               <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/20 ${expandedLayers[3] ? 'ring-2 ring-purple-500/30' : ''}`}>
                 {/* Gradient border */}
@@ -1553,7 +1562,10 @@ function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
             {/* Layer Header */}
             <div
               className="flex justify-center cursor-pointer group"
-              onClick={() => toggleLayer(4)}
+              onClick={() => {
+                toggleLayer(4);
+                onLayerClick?.(4);
+              }}
             >
               <div className={`relative backdrop-blur-xl rounded-2xl p-4 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/20 ${expandedLayers[4] ? 'ring-2 ring-amber-500/30' : ''}`}>
                 {/* Gradient border */}
@@ -2466,7 +2478,7 @@ export default function CapitalFlowPage() {
         </div>
 
         {/* ===== MIND MAP - Interactive Capital Flow Visualization ===== */}
-        <SystemFlowChart apiData={data} />
+        <SystemFlowChart apiData={data} onLayerClick={setFullscreenLayer} />
 
         {/* ===== LAYER FLOW SUMMARY - Quick Overview ===== */}
         <section className="mb-8 animate-slide-up" style={{ animationDelay: '0.3s' }}>
