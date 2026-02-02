@@ -1775,6 +1775,20 @@ Kullanıcı Hakları Aktif:
   - **Örnek çıktı**: "Metal piyasasından %3.2 sermaye çıkışı var. Bonolar %5.8 giriş alıyor."
   - Anlam tekrarı kaldırıldı, kısa ve öz yanıtlar
   - Dosya: `apps/api/src/modules/concierge/concierge.service.ts`
+- **Analyze Sayfasına Capital Flow Summary Eklendi**:
+  - Capital Flow API verisi sayfa yüklendiğinde çekiliyor
+  - **4-Layer Yatay Özet Bar** (L1→L2→L3→L4):
+    - L1: Global Liquidity bias göstergesi (RISK ON/OFF/NEUTRAL)
+    - L2: Market flows phase badge'leri ile
+    - L3: Önerilen market için sektörler
+    - L4: AI recommendation direction (BUY/SELL)
+  - **Layer 4 AI Recommendation Detay Kartları**:
+    - BUY Opportunity kartı: market, phase, 7D flow, suggested assets
+    - SELL/Short Opportunity kartı (varsa): aynı detaylar
+    - Tek tıkla analiz butonları
+    - Suggested assets quick selection butonları
+  - Capital Flow'dan navigate edildiğinde kullanıcı context görüyor
+  - Dosya: `apps/web/app/(dashboard)/analyze/page.tsx`
 
 ---
 
