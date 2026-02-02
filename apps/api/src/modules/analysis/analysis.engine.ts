@@ -41,6 +41,101 @@ import {
   AssetClass,
 } from './providers/multi-asset-data-provider';
 
+// NEW: Asset-Specific Analyzers import
+import {
+  assetAnalyzerOrchestrator,
+  MetalsMetrics,
+  StocksMetrics,
+  BondsMetrics,
+  CryptoMetrics,
+  AssetMetrics,
+  SignalDirection,
+  MarketRegime,
+} from './services/asset-specific';
+
+// ===========================================
+// Asset-Specific Market Context
+// ===========================================
+
+interface AssetSpecificContext {
+  assetClass: AssetClass;
+  metrics: AssetMetrics | null;
+  interMarketContext: {
+    regime: MarketRegime;
+    regimeConfidence: number;
+    expectedBehavior: SignalDirection;
+    anomalies: string[];
+  } | null;
+  keyDrivers: string[];
+  warnings: string[];
+}
+
+/**
+ * Get asset-specific market context for non-crypto assets
+ * Uses specialized analyzers for metals, stocks, bonds
+ */
+async function getAssetSpecificContext(symbol: string): Promise<AssetSpecificContext> {
+  const assetClass = getAssetClass(symbol);
+
+  // For crypto, return null context (uses existing Market Pulse)
+  if (assetClass === 'crypto') {
+    return {
+      assetClass,
+      metrics: null,
+      interMarketContext: null,
+      keyDrivers: [],
+      warnings: [],
+    };
+  }
+
+  try {
+    // Analyze the asset with asset-specific metrics
+    const metrics = await assetAnalyzerOrchestrator.analyze(symbol);
+
+    // Get inter-market context
+    const interMarket = await assetAnalyzerOrchestrator.getInterMarketContext();
+
+    // Build context
+    const context: AssetSpecificContext = {
+      assetClass,
+      metrics,
+      interMarketContext: {
+        regime: interMarket.regime,
+        regimeConfidence: interMarket.regimeConfidence,
+        expectedBehavior: interMarket.expectedBehavior[assetClass],
+        anomalies: interMarket.anomalies
+          .filter(a => a.assetClass === assetClass)
+          .map(a => a.message),
+      },
+      keyDrivers: metrics.keyDrivers,
+      warnings: metrics.warnings,
+    };
+
+    // Add regime-specific warnings
+    if (context.interMarketContext) {
+      const expected = context.interMarketContext.expectedBehavior;
+      const actual = metrics.sentiment;
+
+      if (expected !== 'neutral' && actual !== 'neutral' && expected !== actual) {
+        context.warnings.push(
+          `⚠️ ${symbol} showing ${actual} behavior (expected ${expected} in ${interMarket.regime} regime)`
+        );
+      }
+    }
+
+    return context;
+  } catch (error) {
+    console.warn(`[AssetContext] Failed to get asset-specific context for ${symbol}:`, error);
+    return {
+      assetClass,
+      metrics: null,
+      interMarketContext: null,
+      keyDrivers: [],
+      warnings: [`Failed to analyze ${assetClass}-specific metrics`],
+    };
+  }
+}
+
 // ===========================================
 // RAG Gate Evaluation with Gemini
 // ===========================================
@@ -1797,6 +1892,19 @@ interface AssetScanResult {
   indicatorDetails?: IndicatorAnalysis;
   // NEW: Tokenomics analysis (financial structure of the token)
   tokenomics?: TokenomicsData;
+  // NEW: Asset-specific context for non-crypto assets (metals, stocks, bonds)
+  assetContext?: {
+    assetClass: AssetClass;
+    metrics: AssetMetrics | null;
+    interMarketContext: {
+      regime: MarketRegime;
+      regimeConfidence: number;
+      expectedBehavior: SignalDirection;
+      anomalies: string[];
+    } | null;
+    keyDrivers: string[];
+    warnings: string[];
+  };
   score: number;
   // Gate decision for sequential approach
   gate: {
@@ -3509,8 +3617,8 @@ export const analysisEngine = {
     // Extract base symbol for tokenomics (e.g., BTCUSDT -> BTC)
     const baseSymbol = symbol.replace('USDT', '').replace('BUSD', '').replace('USDC', '');
 
-    // Fetch candles and tokenomics in parallel (tokenomics only for crypto)
-    const [ticker, candlesPrimary, candlesSecondary, candlesConfirmation, tokenomicsData] = await Promise.all([
+    // Fetch candles, tokenomics, and asset-specific context in parallel
+    const [ticker, candlesPrimary, candlesSecondary, candlesConfirmation, tokenomicsData, assetContext] = await Promise.all([
       fetch24hTicker(symbol),
       fetchKlines(symbol, tf.primary, tf.candleCounts.primary),
       fetchKlines(symbol, tf.secondary, tf.candleCounts.secondary),
@@ -3522,6 +3630,8 @@ export const analysisEngine = {
             return null;
           })
         : Promise.resolve(null), // Skip tokenomics for non-crypto assets
+      // Asset-specific context for non-crypto assets (metals, stocks, bonds)
+      getAssetSpecificContext(symbol),
     ]);
 
     // For higher timeframe analysis (needed for trends), also fetch daily candles if not already
@@ -3757,6 +3867,9 @@ export const analysisEngine = {
       // NEW: Tokenomics analysis (financial structure of the token)
       // Includes: supply metrics, market cap/FDV, whale concentration, distribution
       tokenomics: tokenomicsData || undefined,
+      // NEW: Asset-specific context for non-crypto assets (metals, stocks, bonds)
+      // Uses specialized analyzers with asset-class-specific metrics
+      assetContext: assetContext.metrics ? assetContext : undefined,
       // Chart data for PDF generation (last 50 candles)
       chartCandles: candlesPrimary.slice(-50).map(c => ({
         timestamp: c.timestamp,
@@ -4852,6 +4965,68 @@ export const analysisEngine = {
           direction: safetyCheck.whaleActivity.orderFlowBias === 'buying' ? 'long' : 'short',
           weight: 0.10,
           reason: `Order flow ${(imbalance * 100).toFixed(0)}% ${safetyCheck.whaleActivity.orderFlowBias}`
+        });
+      }
+    }
+
+    // 11. Asset-Specific Context (25% weight for non-crypto) - Uses specialized analyzers
+    // For metals: DXY, Real Yields, VIX | For stocks: VIX, Breadth, Sectors | For bonds: Yield Curve, Fed
+    if (assetScan.assetContext?.metrics) {
+      const ctx = assetScan.assetContext;
+      const metrics = ctx.metrics;
+
+      // Use asset-specific sentiment as primary direction signal
+      if (metrics.sentiment !== 'neutral') {
+        directionSources.push({
+          source: `${ctx.assetClass.charAt(0).toUpperCase() + ctx.assetClass.slice(1)} Analysis`,
+          direction: metrics.sentiment === 'bullish' ? 'long' : 'short',
+          weight: 0.25, // High weight for non-crypto assets
+          reason: `${ctx.assetClass} sentiment: ${metrics.sentiment} (${metrics.sentimentScore}/100)`
+        });
+      }
+
+      // Add key drivers as reasons
+      for (const driver of metrics.keyDrivers.slice(0, 3)) {
+        const isPositive = metrics.sentiment === 'bullish' ||
+                          (metrics.sentiment === 'neutral' && metrics.sentimentScore >= 50);
+        reasons.push({
+          factor: driver,
+          positive: isPositive,
+          impact: 'high',
+          source: `${ctx.assetClass.charAt(0).toUpperCase() + ctx.assetClass.slice(1)} Driver`
+        });
+      }
+
+      // Add inter-market regime context
+      if (ctx.interMarketContext) {
+        const imc = ctx.interMarketContext;
+        if (imc.regimeConfidence >= 50) {
+          reasons.push({
+            factor: `Market regime: ${imc.regime.replace('_', ' ')} (${imc.regimeConfidence}% confidence)`,
+            positive: true,
+            impact: 'medium',
+            source: 'Inter-Market Context'
+          });
+        }
+
+        // Add anomaly warnings
+        for (const anomaly of imc.anomalies) {
+          reasons.push({
+            factor: anomaly,
+            positive: false,
+            impact: 'high',
+            source: 'Inter-Market Anomaly'
+          });
+        }
+      }
+
+      // Add asset-specific warnings
+      for (const warning of ctx.warnings) {
+        reasons.push({
+          factor: warning,
+          positive: false,
+          impact: 'medium',
+          source: `${ctx.assetClass.charAt(0).toUpperCase() + ctx.assetClass.slice(1)} Warning`
         });
       }
     }
