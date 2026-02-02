@@ -40,7 +40,7 @@ const FLOW_LAYERS = [
 const ASSET_ANALYSIS = {
   icon: BarChart3,
   title: 'Asset Analysis',
-  description: '7-Step Classic / MLIS Pro',
+  description: '7-Step + AI Confirmation',
   color: 'from-rose-500 to-pink-500',
 };
 
