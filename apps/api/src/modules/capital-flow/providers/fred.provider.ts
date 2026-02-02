@@ -5,6 +5,9 @@
  * - Fed Balance Sheet
  * - M2 Money Supply
  * - Treasury Yields (10Y, 2Y)
+ * - Reverse Repo (RRP) - Money parked at Fed
+ * - Treasury General Account (TGA) - Treasury's checking account
+ * - Net Liquidity = Fed BS - RRP - TGA
  *
  * API Docs: https://fred.stlouisfed.org/docs/api/fred/
  */
@@ -18,6 +21,8 @@ const SERIES = {
   TREASURY_10Y: 'DGS10',             // 10-Year Treasury Constant Maturity Rate
   TREASURY_2Y: 'DGS2',               // 2-Year Treasury Constant Maturity Rate
   TREASURY_3M: 'DTB3',               // 3-Month Treasury Bill Rate
+  REVERSE_REPO: 'RRPONTSYD',         // Overnight Reverse Repo Facility
+  TREASURY_GENERAL_ACCOUNT: 'WTREGEN', // Treasury General Account
 } as const;
 
 const FRED_BASE_URL = 'https://api.stlouisfed.org/fred/series/observations';
@@ -207,6 +212,196 @@ export async function getTreasuryYields(): Promise<{
 }
 
 /**
+ * Get Reverse Repo (RRP) data
+ * Money parked at the Fed - drains liquidity from the system
+ * Returns value in trillions USD
+ */
+export async function getReverseRepo(): Promise<{
+  value: number;
+  change7d: number;
+  change30d: number;
+  trend: 'draining' | 'filling' | 'stable';
+  history: FredSeriesData[];
+}> {
+  const data = await fetchFredSeries(SERIES.REVERSE_REPO, 60);
+
+  if (data.length < 2) {
+    return {
+      value: 0.5,
+      change7d: 0,
+      change30d: 0,
+      trend: 'stable',
+      history: [],
+    };
+  }
+
+  // RRPONTSYD is in billions, convert to trillions
+  const currentValue = data[0].value / 1000;
+
+  // Find value from ~7 days ago (daily data)
+  const sevenDaysAgo = data.find((d, i) => i >= 5) || data[data.length - 1];
+  const value7dAgo = sevenDaysAgo.value / 1000;
+
+  // Find value from ~30 days ago
+  const thirtyDaysAgo = data.find((d, i) => i >= 22) || data[data.length - 1];
+  const value30dAgo = thirtyDaysAgo.value / 1000;
+
+  const change7d = value7dAgo > 0 ? ((currentValue - value7dAgo) / value7dAgo) * 100 : 0;
+  const change30d = value30dAgo > 0 ? ((currentValue - value30dAgo) / value30dAgo) * 100 : 0;
+
+  // RRP draining = good for liquidity (money leaving RRP enters market)
+  // RRP filling = bad for liquidity (money leaving market goes to RRP)
+  let trend: 'draining' | 'filling' | 'stable' = 'stable';
+  if (change30d < -5) trend = 'draining';   // RRP decreasing = liquidity increasing
+  else if (change30d > 5) trend = 'filling'; // RRP increasing = liquidity decreasing
+
+  return {
+    value: parseFloat(currentValue.toFixed(3)),
+    change7d: parseFloat(change7d.toFixed(2)),
+    change30d: parseFloat(change30d.toFixed(2)),
+    trend,
+    history: data.slice(0, 30).map(d => ({
+      date: d.date,
+      value: d.value / 1000,
+    })),
+  };
+}
+
+/**
+ * Get Treasury General Account (TGA) data
+ * Treasury's checking account at the Fed - high TGA drains liquidity
+ * Returns value in trillions USD
+ */
+export async function getTreasuryGeneralAccount(): Promise<{
+  value: number;
+  change7d: number;
+  change30d: number;
+  trend: 'building' | 'spending' | 'stable';
+  history: FredSeriesData[];
+}> {
+  const data = await fetchFredSeries(SERIES.TREASURY_GENERAL_ACCOUNT, 60);
+
+  if (data.length < 2) {
+    return {
+      value: 0.7,
+      change7d: 0,
+      change30d: 0,
+      trend: 'stable',
+      history: [],
+    };
+  }
+
+  // WTREGEN is in millions, convert to trillions
+  const currentValue = data[0].value / 1_000_000;
+
+  // Find value from ~7 days ago (weekly data, so ~1 week ago)
+  const sevenDaysAgo = data[1] || data[0];
+  const value7dAgo = sevenDaysAgo.value / 1_000_000;
+
+  // Find value from ~30 days ago (~4 weeks)
+  const thirtyDaysAgo = data.find((d, i) => i >= 4) || data[data.length - 1];
+  const value30dAgo = thirtyDaysAgo.value / 1_000_000;
+
+  const change7d = value7dAgo > 0 ? ((currentValue - value7dAgo) / value7dAgo) * 100 : 0;
+  const change30d = value30dAgo > 0 ? ((currentValue - value30dAgo) / value30dAgo) * 100 : 0;
+
+  // TGA building = Treasury collecting taxes/issuing debt = drains liquidity
+  // TGA spending = Treasury spending = injects liquidity
+  let trend: 'building' | 'spending' | 'stable' = 'stable';
+  if (change30d > 10) trend = 'building';   // TGA increasing = liquidity decreasing
+  else if (change30d < -10) trend = 'spending'; // TGA decreasing = liquidity increasing
+
+  return {
+    value: parseFloat(currentValue.toFixed(3)),
+    change7d: parseFloat(change7d.toFixed(2)),
+    change30d: parseFloat(change30d.toFixed(2)),
+    trend,
+    history: data.slice(0, 30).map(d => ({
+      date: d.date,
+      value: d.value / 1_000_000,
+    })),
+  };
+}
+
+/**
+ * Get Net Liquidity calculation
+ * Net Liquidity = Fed Balance Sheet - RRP - TGA
+ * This is the key metric for available market liquidity
+ */
+export async function getNetLiquidity(): Promise<{
+  value: number;
+  change7d: number;
+  change30d: number;
+  trend: LiquidityTrend;
+  components: {
+    fedBalanceSheet: number;
+    reverseRepo: number;
+    tga: number;
+  };
+  interpretation: string;
+}> {
+  const [fedBS, rrp, tga] = await Promise.all([
+    getFedBalanceSheet(),
+    getReverseRepo(),
+    getTreasuryGeneralAccount(),
+  ]);
+
+  // Net Liquidity = Fed BS - RRP - TGA (all in trillions)
+  const netLiquidity = fedBS.value - rrp.value - tga.value;
+
+  // Calculate change based on component changes
+  // Simplified: use weighted average of component changes
+  const fedWeight = fedBS.value / (fedBS.value + rrp.value + tga.value);
+  const rrpWeight = rrp.value / (fedBS.value + rrp.value + tga.value);
+  const tgaWeight = tga.value / (fedBS.value + rrp.value + tga.value);
+
+  // Fed BS increase = positive for liquidity
+  // RRP increase = negative for liquidity
+  // TGA increase = negative for liquidity
+  const change30d = (fedBS.change30d * fedWeight) - (rrp.change30d * rrpWeight) - (tga.change30d * tgaWeight);
+
+  // Estimate 7d change (simplified)
+  const change7d = change30d / 4;
+
+  // Determine trend
+  let trend: LiquidityTrend = 'stable';
+  if (change30d > 2) trend = 'expanding';
+  else if (change30d < -2) trend = 'contracting';
+
+  // Generate interpretation
+  let interpretation: string;
+  const components: string[] = [];
+
+  if (fedBS.trend === 'expanding') components.push('Fed expanding balance sheet');
+  if (fedBS.trend === 'contracting') components.push('Fed contracting balance sheet');
+  if (rrp.trend === 'draining') components.push('RRP draining (positive)');
+  if (rrp.trend === 'filling') components.push('RRP filling (negative)');
+  if (tga.trend === 'spending') components.push('Treasury spending (positive)');
+  if (tga.trend === 'building') components.push('Treasury building reserves (negative)');
+
+  if (trend === 'expanding') {
+    interpretation = `Liquidity expanding: ${components.join(', ') || 'stable components'}`;
+  } else if (trend === 'contracting') {
+    interpretation = `Liquidity contracting: ${components.join(', ') || 'stable components'}`;
+  } else {
+    interpretation = `Liquidity stable: ${components.join(', ') || 'all components balanced'}`;
+  }
+
+  return {
+    value: parseFloat(netLiquidity.toFixed(2)),
+    change7d: parseFloat(change7d.toFixed(2)),
+    change30d: parseFloat(change30d.toFixed(2)),
+    trend,
+    components: {
+      fedBalanceSheet: fedBS.value,
+      reverseRepo: rrp.value,
+      tga: tga.value,
+    },
+    interpretation,
+  };
+}
+
+/**
  * Fallback data when API is unavailable
  */
 function getFallbackData(seriesId: string): FredSeriesData[] {
@@ -237,6 +432,26 @@ function getFallbackData(seriesId: string): FredSeriesData[] {
     case SERIES.TREASURY_2Y:
       return [{ date: baseDate, value: 4.3 }];
 
+    case SERIES.REVERSE_REPO:
+      // RRP has been declining in 2024-2026 from ~2.5T to ~0.5T
+      return [
+        { date: baseDate, value: 500 },       // $0.5T in billions
+        { date: getPastDate(7), value: 520 },
+        { date: getPastDate(14), value: 540 },
+        { date: getPastDate(21), value: 560 },
+        { date: getPastDate(28), value: 580 },
+      ];
+
+    case SERIES.TREASURY_GENERAL_ACCOUNT:
+      // TGA typically ranges from $400B to $800B
+      return [
+        { date: baseDate, value: 700_000 },   // $0.7T in millions
+        { date: getPastDate(7), value: 680_000 },
+        { date: getPastDate(14), value: 660_000 },
+        { date: getPastDate(21), value: 650_000 },
+        { date: getPastDate(28), value: 640_000 },
+      ];
+
     default:
       return [];
   }
@@ -252,10 +467,13 @@ function getPastDate(daysAgo: number): string {
  * Get all FRED data in one call
  */
 export async function getAllFredData() {
-  const [fedBalance, m2Supply, yields] = await Promise.all([
+  const [fedBalance, m2Supply, yields, rrp, tga, netLiq] = await Promise.all([
     getFedBalanceSheet(),
     getM2MoneySupply(),
     getTreasuryYields(),
+    getReverseRepo(),
+    getTreasuryGeneralAccount(),
+    getNetLiquidity(),
   ]);
 
   return {
@@ -273,6 +491,26 @@ export async function getAllFredData() {
       spread10y2y: yields.spread10y2y,
       inverted: yields.inverted,
       interpretation: yields.interpretation,
+    },
+    reverseRepo: {
+      value: rrp.value,
+      change7d: rrp.change7d,
+      change30d: rrp.change30d,
+      trend: rrp.trend,
+    },
+    treasuryGeneralAccount: {
+      value: tga.value,
+      change7d: tga.change7d,
+      change30d: tga.change30d,
+      trend: tga.trend,
+    },
+    netLiquidity: {
+      value: netLiq.value,
+      change7d: netLiq.change7d,
+      change30d: netLiq.change30d,
+      trend: netLiq.trend,
+      components: netLiq.components,
+      interpretation: netLiq.interpretation,
     },
   };
 }

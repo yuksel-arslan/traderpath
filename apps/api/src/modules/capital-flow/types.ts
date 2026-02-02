@@ -64,6 +64,12 @@ export interface MarketFlow {
   lastUpdated: Date;
 }
 
+// RRP Trend (Reverse Repo)
+export type RrpTrend = 'draining' | 'filling' | 'stable';
+
+// TGA Trend (Treasury General Account)
+export type TgaTrend = 'building' | 'spending' | 'stable';
+
 // Global Liquidity Metrics
 export interface GlobalLiquidity {
   fedBalanceSheet: {
@@ -92,6 +98,37 @@ export interface GlobalLiquidity {
   yieldCurve: {
     spread10y2y: number;       // 10Y - 2Y Treasury spread
     inverted: boolean;
+    interpretation: string;
+  };
+
+  // Reverse Repo - Money parked at Fed (drains liquidity)
+  reverseRepo: {
+    value: number;             // Trillions USD
+    change7d: number;
+    change30d: number;
+    trend: RrpTrend;
+  };
+
+  // Treasury General Account - Treasury's checking account (high TGA drains liquidity)
+  treasuryGeneralAccount: {
+    value: number;             // Trillions USD
+    change7d: number;
+    change30d: number;
+    trend: TgaTrend;
+  };
+
+  // Net Liquidity = Fed Balance Sheet - RRP - TGA
+  // This is the key metric for available market liquidity
+  netLiquidity: {
+    value: number;             // Trillions USD
+    change7d: number;
+    change30d: number;
+    trend: LiquidityTrend;
+    components: {
+      fedBalanceSheet: number;
+      reverseRepo: number;
+      tga: number;
+    };
     interpretation: string;
   };
 

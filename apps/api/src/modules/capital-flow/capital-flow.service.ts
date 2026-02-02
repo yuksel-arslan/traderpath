@@ -33,6 +33,8 @@ import {
   FlowDataPoint,
   PHASE_CONFIG,
   MARKET_CONFIG,
+  RrpTrend,
+  TgaTrend,
 } from './types';
 
 // Providers
@@ -170,6 +172,11 @@ export async function getGlobalLiquidity(): Promise<GlobalLiquidity> {
     dxy: dxyData,
     vix: vixData,
     yieldCurve: fredData.yieldCurve,
+    // RRP and TGA - key liquidity drains
+    reverseRepo: fredData.reverseRepo,
+    treasuryGeneralAccount: fredData.treasuryGeneralAccount,
+    // Net Liquidity = Fed BS - RRP - TGA (the KEY metric)
+    netLiquidity: fredData.netLiquidity,
     lastUpdated: new Date(),
   };
 
@@ -595,14 +602,32 @@ function detectRotationSignal(flow: { flow7d: number; flowVelocity: number }): '
 
 /**
  * Determine overall liquidity bias
+ * Uses Net Liquidity as the primary indicator
  */
 function determineLiquidityBias(liquidity: GlobalLiquidity): LiquidityBias {
   let riskOnScore = 0;
   let riskOffScore = 0;
 
-  // Fed Balance Sheet
-  if (liquidity.fedBalanceSheet.trend === 'expanding') riskOnScore += 2;
-  else if (liquidity.fedBalanceSheet.trend === 'contracting') riskOffScore += 2;
+  // Net Liquidity (PRIMARY INDICATOR - Fed BS - RRP - TGA)
+  // This is the most important metric for market liquidity
+  if (liquidity.netLiquidity.trend === 'expanding') riskOnScore += 3;
+  else if (liquidity.netLiquidity.trend === 'contracting') riskOffScore += 3;
+
+  // Net Liquidity change (momentum)
+  if (liquidity.netLiquidity.change30d > 2) riskOnScore += 1;
+  else if (liquidity.netLiquidity.change30d < -2) riskOffScore += 1;
+
+  // RRP trend (draining = positive for risk, filling = negative)
+  if (liquidity.reverseRepo.trend === 'draining') riskOnScore += 1;
+  else if (liquidity.reverseRepo.trend === 'filling') riskOffScore += 1;
+
+  // TGA trend (spending = positive for risk, building = negative)
+  if (liquidity.treasuryGeneralAccount.trend === 'spending') riskOnScore += 1;
+  else if (liquidity.treasuryGeneralAccount.trend === 'building') riskOffScore += 1;
+
+  // Fed Balance Sheet (secondary)
+  if (liquidity.fedBalanceSheet.trend === 'expanding') riskOnScore += 1;
+  else if (liquidity.fedBalanceSheet.trend === 'contracting') riskOffScore += 1;
 
   // M2 Money Supply
   if (liquidity.m2MoneySupply.yoyGrowth > 5) riskOnScore += 1;
@@ -623,8 +648,8 @@ function determineLiquidityBias(liquidity: GlobalLiquidity): LiquidityBias {
 
   const diff = riskOnScore - riskOffScore;
 
-  if (diff > 2) return 'risk_on';
-  if (diff < -2) return 'risk_off';
+  if (diff > 3) return 'risk_on';
+  if (diff < -3) return 'risk_off';
   return 'neutral';
 }
 
@@ -1349,7 +1374,11 @@ async function generateLayerInsights(
 
 DATA:
 Layer 1 - Global Liquidity:
+- NET LIQUIDITY: ${liquidity.netLiquidity.value.toFixed(2)}T USD (${liquidity.netLiquidity.trend}, 30d: ${liquidity.netLiquidity.change30d > 0 ? '+' : ''}${liquidity.netLiquidity.change30d.toFixed(1)}%)
+  * Formula: Fed BS (${liquidity.netLiquidity.components.fedBalanceSheet.toFixed(2)}T) - RRP (${liquidity.netLiquidity.components.reverseRepo.toFixed(2)}T) - TGA (${liquidity.netLiquidity.components.tga.toFixed(2)}T)
 - Fed Balance Sheet: ${liquidity.fedBalanceSheet.value.toFixed(2)}T USD (${liquidity.fedBalanceSheet.trend})
+- Reverse Repo (RRP): ${liquidity.reverseRepo.value.toFixed(2)}T USD (${liquidity.reverseRepo.trend}, 30d: ${liquidity.reverseRepo.change30d > 0 ? '+' : ''}${liquidity.reverseRepo.change30d.toFixed(1)}%)
+- Treasury General Account (TGA): ${liquidity.treasuryGeneralAccount.value.toFixed(2)}T USD (${liquidity.treasuryGeneralAccount.trend}, 30d: ${liquidity.treasuryGeneralAccount.change30d > 0 ? '+' : ''}${liquidity.treasuryGeneralAccount.change30d.toFixed(1)}%)
 - M2 Money Supply: ${liquidity.m2MoneySupply.value.toFixed(2)}T USD (YoY: ${liquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%)
 - DXY (Dollar): ${liquidity.dxy.value.toFixed(2)} (${liquidity.dxy.trend}, 7d: ${liquidity.dxy.change7d > 0 ? '+' : ''}${liquidity.dxy.change7d.toFixed(2)}%)
 - VIX: ${liquidity.vix.value.toFixed(2)} (${liquidity.vix.level})
@@ -1417,7 +1446,7 @@ Respond in this exact JSON format (no markdown, just pure JSON):
 
   // Fallback insights
   return {
-    layer1: `Fed balance sheet is ${liquidity.fedBalanceSheet.trend}. ${bias === 'risk_on' ? 'Liquidity conditions favor risk assets.' : bias === 'risk_off' ? 'Defensive positioning recommended.' : 'Mixed signals in liquidity.'}`,
+    layer1: `Net Liquidity is ${liquidity.netLiquidity.value.toFixed(2)}T USD (${liquidity.netLiquidity.trend}). ${bias === 'risk_on' ? 'Liquidity conditions favor risk assets.' : bias === 'risk_off' ? 'Defensive positioning recommended.' : 'Mixed signals in liquidity.'} ${liquidity.reverseRepo.trend === 'draining' ? 'RRP draining adds positive liquidity.' : liquidity.treasuryGeneralAccount.trend === 'spending' ? 'Treasury spending supports markets.' : ''}`,
     layer2: `${recommendation.primaryMarket.toUpperCase()} market is in ${recommendation.phase} phase with ${recommendation.confidence}% confidence.`,
     layer3: cryptoMarket?.sectors?.[0] ? `${cryptoMarket.sectors[0].name} is the leading sector with ${cryptoMarket.sectors[0].flow7d.toFixed(1)}% 7-day flow.` : 'Sector analysis pending.',
     layer4: `${recommendation.action === 'analyze' ? 'Good conditions to analyze opportunities.' : recommendation.action === 'wait' ? 'Wait for better entry conditions.' : 'Avoid new positions in current conditions.'}`,
@@ -1536,7 +1565,9 @@ MARKET DATA:
 ${topSectors ? `- Top Sectors: ${topSectors}` : ''}
 
 GLOBAL CONTEXT:
-- Liquidity: Fed ${liquidity.fedBalanceSheet.trend}, M2 YoY ${liquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%
+- Net Liquidity: ${liquidity.netLiquidity.value.toFixed(2)}T USD (${liquidity.netLiquidity.trend})
+- RRP: ${liquidity.reverseRepo.trend} (${liquidity.reverseRepo.value.toFixed(2)}T)
+- TGA: ${liquidity.treasuryGeneralAccount.trend} (${liquidity.treasuryGeneralAccount.value.toFixed(2)}T)
 - Dollar: ${liquidity.dxy.trend} (${liquidity.dxy.value.toFixed(2)})
 - VIX: ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level})
 - Yield Curve: ${liquidity.yieldCurve.inverted ? 'INVERTED' : 'Normal'}
