@@ -1707,6 +1707,17 @@ Kullanıcı Hakları Aktif:
     - Risk uyarısı ile profesyonel uyarı kutusu
   - **AnalysisReportData Interface**: `method` alanı eklendi ('classic' | 'mlis_pro')
   - Dosya: `apps/web/components/reports/AnalysisReport.tsx`
+- **Capital Flow RAG Yorumları Eklendi**:
+  - Her layer'ın sonuna 1-2 cümle RAG (Retrieval Augmented Generation) yorumu eklendi
+  - `LayerInsights` interface'e `ragLayer1-4` alanları eklendi
+  - Gemini AI prompt'u data-grounded RAG yorumları üretecek şekilde güncellendi
+  - 4 adet fallback RAG generator fonksiyonu eklendi (Türkçe):
+    - `generateFallbackRagLayer1()`: Net Liquidity yorumu
+    - `generateFallbackRagLayer2()`: Market rotasyonu yorumu
+    - `generateFallbackRagLayer3()`: Sektör fırsatı yorumu
+    - `generateFallbackRagLayer4()`: Aksiyon önerisi yorumu
+  - RAG yorumları veriden spesifik rakamlar cite ediyor
+  - Dosyalar: `capital-flow.service.ts`, `types.ts`
 
 ---
 
