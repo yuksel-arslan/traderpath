@@ -1051,12 +1051,15 @@ export default function DashboardPage() {
               <LayerCard
                 layerNum={3}
                 title="Sector Activity"
-                status={capitalFlow.markets.find(m => m.market === capitalFlow.recommendation.primaryMarket)?.phase?.toUpperCase() + ' PHASE' || 'ANALYZING'}
+                status={(() => {
+                  const phase = capitalFlow.markets.find(m => m.market === capitalFlow.recommendation?.primaryMarket)?.phase;
+                  return phase ? `${phase.toUpperCase()} PHASE` : 'ANALYZING';
+                })()}
                 statusType={
-                  capitalFlow.markets.find(m => m.market === capitalFlow.recommendation.primaryMarket)?.phase === 'early' ? 'positive' :
-                  capitalFlow.markets.find(m => m.market === capitalFlow.recommendation.primaryMarket)?.phase === 'mid' ? 'neutral' : 'warning'
+                  capitalFlow.markets.find(m => m.market === capitalFlow.recommendation?.primaryMarket)?.phase === 'early' ? 'positive' :
+                  capitalFlow.markets.find(m => m.market === capitalFlow.recommendation?.primaryMarket)?.phase === 'mid' ? 'neutral' : 'warning'
                 }
-                details={`${capitalFlow.recommendation.primaryMarket} recommended`}
+                details={`${capitalFlow.recommendation?.primaryMarket || 'Market'} recommended`}
                 icon={Activity}
                 color="purple"
                 href="/capital-flow"
@@ -1065,12 +1068,12 @@ export default function DashboardPage() {
               <LayerCard
                 layerNum={4}
                 title="Recommendation"
-                status={`${capitalFlow.recommendation.action.toUpperCase()} ${capitalFlow.recommendation.primaryMarket.toUpperCase()}`}
+                status={`${(capitalFlow.recommendation?.action || 'wait').toUpperCase()} ${(capitalFlow.recommendation?.primaryMarket || 'MARKET').toUpperCase()}`}
                 statusType={
-                  capitalFlow.recommendation.action === 'analyze' ? 'positive' :
-                  capitalFlow.recommendation.action === 'wait' ? 'warning' : 'negative'
+                  capitalFlow.recommendation?.action === 'analyze' ? 'positive' :
+                  capitalFlow.recommendation?.action === 'wait' ? 'warning' : 'negative'
                 }
-                details={`${capitalFlow.recommendation.confidence}% confidence`}
+                details={`${capitalFlow.recommendation?.confidence || 0}% confidence`}
                 icon={Target}
                 color="amber"
                 href="/capital-flow"

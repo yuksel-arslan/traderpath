@@ -569,7 +569,7 @@ export default function ConciergePage() {
           </div>
 
           {/* Capital Flow Summary Bar */}
-          {!flowLoading && capitalFlow && Array.isArray(capitalFlow.marketFlows) && capitalFlow.marketFlows.length > 0 && capitalFlow.recommendation && (
+          {!flowLoading && capitalFlow && Array.isArray(capitalFlow.markets) && capitalFlow.markets.length > 0 && capitalFlow.recommendation && (
             <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 shadow-sm">
               <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                 {/* Global Liquidity Status */}
@@ -587,7 +587,7 @@ export default function ConciergePage() {
 
                 {/* Market Flows */}
                 <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {capitalFlow.marketFlows.filter(m => m && m.market).map((market) => (
+                  {capitalFlow.markets.filter(m => m && m.market).map((market) => (
                     <MarketFlowCard
                       key={market.market}
                       market={market.market}
