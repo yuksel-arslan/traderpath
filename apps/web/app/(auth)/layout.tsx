@@ -49,7 +49,7 @@ export default function AuthLayout({
               <TraderPathLogo size="lg" showText={false} />
             </Link>
             <h2 className="text-4xl font-bold">
-              <span className="bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-600 dark:from-teal-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-teal-500 via-emerald-400 via-cyan-400 to-teal-500 dark:from-teal-400 dark:via-emerald-300 dark:via-cyan-300 dark:to-teal-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
                 TraderPath
               </span>
             </h2>
@@ -69,16 +69,15 @@ export default function AuthLayout({
           {/* Capital Flow Steps - Corporate 2026 Premium Style */}
           <div className="w-full max-w-sm mb-8">
             {/* Glassmorphism container */}
-            <div className="relative p-5 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 shadow-xl shadow-slate-200/20 dark:shadow-black/10">
+            <div className="relative p-6 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 shadow-xl shadow-slate-200/20 dark:shadow-black/10">
               {/* Inner glow effect */}
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-teal-500/5 via-transparent to-emerald-500/5 dark:from-teal-500/10 dark:to-emerald-500/10 pointer-events-none" />
 
-              <div className="relative space-y-4">
+              <div className="relative flex flex-col items-center space-y-3">
                 {FLOW_LAYERS.map((layer, index) => (
                   <div
                     key={layer.num}
-                    className="flex items-center gap-4 group cursor-default"
-                    style={{ animationDelay: `${index * 100}ms` }}
+                    className="flex items-center gap-3 group cursor-default w-full max-w-[280px]"
                   >
                     {/* Step number - minimal circle */}
                     <div className="relative flex-shrink-0">
@@ -89,7 +88,7 @@ export default function AuthLayout({
                       </div>
                       {/* Connecting line */}
                       {index < FLOW_LAYERS.length - 1 && (
-                        <div className="absolute top-7 left-1/2 -translate-x-1/2 w-[2px] h-4 bg-gradient-to-b from-teal-500/40 to-transparent rounded-full" />
+                        <div className="absolute top-7 left-1/2 -translate-x-1/2 w-[2px] h-3 bg-gradient-to-b from-teal-500/40 to-transparent rounded-full" />
                       )}
                     </div>
                     {/* Content */}
@@ -97,7 +96,7 @@ export default function AuthLayout({
                       <h3 className="font-semibold text-slate-800 dark:text-white text-sm leading-tight group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors duration-300">
                         {layer.title}
                       </h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5 truncate">
+                      <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
                         {layer.description}
                       </p>
                     </div>
