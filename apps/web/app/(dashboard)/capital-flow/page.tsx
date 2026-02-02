@@ -1056,7 +1056,7 @@ function formatMindMapFlow(value: number): string {
 }
 
 // System Flow Chart - Mind Map Component
-function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
+function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummary | null; onLayerClick?: (layer: number) => void }) {
   const [isVisible, setIsVisible] = useState(false);
   const [expandedLayers, setExpandedLayers] = useState<{ [key: number]: boolean }>({
     1: true,
@@ -1348,6 +1348,18 @@ function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
                   </p>
                 </div>
               </div>
+
+              {/* View Full Details Button */}
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => onLayerClick?.(1)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-teal-500/30 hover:shadow-xl hover:shadow-teal-500/40 hover:scale-105 transition-all duration-300"
+                >
+                  <Landmark className="w-4 h-4" />
+                  View Full Details
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1462,6 +1474,18 @@ function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
                   </div>
                 </div>
               </div>
+
+              {/* View Full Details Button */}
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => onLayerClick?.(2)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/40 hover:scale-105 transition-all duration-300"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  View Full Details
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1542,6 +1566,18 @@ function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
                   <p className="text-sm text-slate-500">Select a market to view sector breakdown</p>
                 </div>
               )}
+
+              {/* View Full Details Button */}
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => onLayerClick?.(3)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 hover:scale-105 transition-all duration-300"
+                >
+                  <Layers className="w-4 h-4" />
+                  View Full Details
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1642,6 +1678,18 @@ function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* View Full Details Button */}
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => onLayerClick?.(4)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-amber-500/30 hover:shadow-xl hover:shadow-amber-500/40 hover:scale-105 transition-all duration-300"
+                >
+                  <Brain className="w-4 h-4" />
+                  View Full Details
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
@@ -2466,7 +2514,7 @@ export default function CapitalFlowPage() {
         </div>
 
         {/* ===== MIND MAP - Interactive Capital Flow Visualization ===== */}
-        <SystemFlowChart apiData={data} />
+        <SystemFlowChart apiData={data} onLayerClick={setFullscreenLayer} />
 
         {/* ===== LAYER FLOW SUMMARY - Quick Overview ===== */}
         <section className="mb-8 animate-slide-up" style={{ animationDelay: '0.3s' }}>
