@@ -251,6 +251,81 @@ export const FIVE_FACTOR_WEIGHTS = {
   correlation: 0.10,  // 10%
 } as const;
 
+// ============================================================================
+// MLIS CONFIRMATION SYSTEM (Step 8)
+// ============================================================================
+// MLIS serves as a "second opinion" confirmation layer for 7-Step analysis
+// It validates or challenges the 7-Step verdict using different methodology
+
+/**
+ * Agreement Level between 7-Step and MLIS analysis
+ * - FULL_AGREEMENT: Both methodologies agree on direction and conviction
+ * - PARTIAL_AGREEMENT: Same direction but different conviction levels
+ * - NEUTRAL: MLIS is neutral, doesn't confirm or contradict
+ * - DISAGREEMENT: Methodologies disagree on direction
+ */
+export type AgreementLevel = 'FULL_AGREEMENT' | 'PARTIAL_AGREEMENT' | 'NEUTRAL' | 'DISAGREEMENT';
+
+/**
+ * Confidence adjustment based on agreement
+ * - FULL_AGREEMENT: Boost confidence by 10-15%
+ * - PARTIAL_AGREEMENT: No change
+ * - NEUTRAL: Slight reduction (5%)
+ * - DISAGREEMENT: Significant reduction (20-30%) with warning
+ */
+export interface MLISConfirmation {
+  // Core MLIS signals
+  mlisDirection: 'LONG' | 'SHORT' | 'NEUTRAL';
+  mlisRecommendation: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
+  mlisScore: number;          // 0-100
+  mlisConfidence: number;     // 0-100
+
+  // 7-Step comparison
+  sevenStepVerdict: string;   // GO, CONDITIONAL_GO, WAIT, AVOID
+  sevenStepDirection: string; // LONG, SHORT, NEUTRAL
+  sevenStepScore: number;     // 0-10
+
+  // Agreement analysis
+  agreementLevel: AgreementLevel;
+  agreementReason: string;
+
+  // Confidence adjustment
+  originalConfidence: number;
+  adjustedConfidence: number;
+  confidenceChange: number;
+
+  // Signals comparison
+  alignedSignals: string[];     // Signals where both agree
+  conflictingSignals: string[]; // Signals where they disagree
+
+  // Final recommendation
+  confirmationStatus: 'CONFIRMED' | 'PARTIALLY_CONFIRMED' | 'UNCONFIRMED' | 'CONTRADICTED';
+  warningMessage?: string;      // Warning if MLIS disagrees
+
+  // Metadata
+  analysisTimestamp: string;
+}
+
+/**
+ * MLIS Confirmation weights for confidence adjustment
+ */
+export const MLIS_CONFIRMATION_WEIGHTS = {
+  FULL_AGREEMENT: 1.15,      // Boost confidence by 15%
+  PARTIAL_AGREEMENT: 1.0,    // No change
+  NEUTRAL: 0.95,             // Reduce by 5%
+  DISAGREEMENT: 0.75,        // Reduce by 25%
+} as const;
+
+/**
+ * Mapping from 7-Step verdict to expected MLIS recommendation
+ */
+export const VERDICT_TO_MLIS_MAP: Record<string, string[]> = {
+  'GO': ['STRONG_BUY', 'BUY'],
+  'CONDITIONAL_GO': ['BUY', 'HOLD'],
+  'WAIT': ['HOLD'],
+  'AVOID': ['SELL', 'STRONG_SELL', 'HOLD'],
+} as const;
+
 // Suggested Asset for Layer 4 → Asset Analysis connection
 export interface SuggestedAsset {
   symbol: string;
