@@ -37,8 +37,18 @@ import {
 
 // Providers
 import { getAllFredData } from './providers/fred.provider';
-import { getAllYahooData, getDxyData, getVixData, getStocksFlow, getMetalsFlow } from './providers/yahoo.provider';
+import {
+  getAllYahooData,
+  getDxyData,
+  getVixData,
+  getStocksFlow,
+  getMetalsFlow,
+  getBondsFlowData,
+  getMetalsFlowData,
+  getStocksFlowData,
+} from './providers/yahoo.provider';
 import { getAllDefiLlamaData, getCryptoSectors, getDeFiTvl, getStablecoinMarketCap } from './providers/defillama.provider';
+import { getCompleteCryptoFlowData } from './providers/binance.provider';
 
 // Cache keys
 const CACHE_KEYS = {
@@ -222,74 +232,24 @@ export async function getMarketFlow(market: MarketType): Promise<MarketFlow> {
   return flow;
 }
 
-/**
- * Generate synthetic historical flow data for charts
- * Creates a 30-day history based on current flow values with realistic variation
- */
-function generateFlowHistory(flow7d: number, flow30d: number): FlowDataPoint[] {
-  const history: FlowDataPoint[] = [];
-  const now = new Date();
-
-  // Calculate daily average and apply some variation
-  const dailyAvg = flow30d / 30;
-
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-
-    // Apply sinusoidal variation to make it look more realistic
-    const variation = Math.sin((i / 5) * Math.PI) * (Math.abs(dailyAvg) * 0.3);
-    // Add random noise
-    const noise = (Math.random() - 0.5) * (Math.abs(dailyAvg) * 0.2);
-    // Calculate cumulative value from day 30 to current
-    const cumulative = dailyAvg * (30 - i) + variation + noise;
-
-    history.push({
-      date: date.toISOString().split('T')[0],
-      value: Number(cumulative.toFixed(2)),
-    });
-  }
-
-  // Ensure the last value matches flow30d
-  if (history.length > 0) {
-    history[history.length - 1].value = flow30d;
-  }
-
-  return history;
-}
-
-/**
- * Generate velocity history based on flow history
- */
-function generateVelocityHistory(flowHistory: FlowDataPoint[]): FlowDataPoint[] {
-  const velocityHistory: FlowDataPoint[] = [];
-
-  for (let i = 1; i < flowHistory.length; i++) {
-    const velocity = flowHistory[i].value - flowHistory[i - 1].value;
-    velocityHistory.push({
-      date: flowHistory[i].date,
-      value: Number(velocity.toFixed(2)),
-    });
-  }
-
-  return velocityHistory;
-}
+// Note: Synthetic data generation functions removed
+// Now using REAL data from Binance and Yahoo Finance providers
+// Flow = Volume × Price Direction × Conviction (not just price change)
 
 /**
  * Get Crypto market flow
+ * Uses REAL data from Binance (OHLCV, Order Book, Derivatives)
  */
 async function getCryptoFlow(): Promise<MarketFlow> {
-  const [tvlData, sectors, stablecoins] = await Promise.all([
-    getDeFiTvl(),
+  // Fetch real crypto flow data from Binance
+  const [binanceFlowData, sectors, stablecoins] = await Promise.all([
+    getCompleteCryptoFlowData(),
     getCryptoSectors(),
     getStablecoinMarketCap(),
   ]);
 
   // Also get CoinGecko global data for total market cap
   let totalMarketCap = 0;
-  let change7d = tvlData.change7d;
-  let change30d = tvlData.change30d;
-
   try {
     const response = await fetch('https://api.coingecko.com/api/v3/global', {
       signal: AbortSignal.timeout(10000),
@@ -297,26 +257,26 @@ async function getCryptoFlow(): Promise<MarketFlow> {
     if (response.ok) {
       const data = await response.json();
       totalMarketCap = data.data?.total_market_cap?.usd || 0;
-      change7d = data.data?.market_cap_change_percentage_24h_usd * 7 / 24 || change7d; // Rough 7d estimate
     }
   } catch (error) {
     console.error('[CapitalFlow] CoinGecko error:', error);
-    totalMarketCap = tvlData.current * 50; // Rough estimate: DeFi is ~2% of total crypto
+    totalMarketCap = binanceFlowData.totalVolume24h * 50; // Rough estimate from daily volume
   }
 
-  // Generate historical data for charts
-  const flowHistory = generateFlowHistory(change7d, change30d);
-  const velocityHistory = generateVelocityHistory(flowHistory);
-
+  // Use REAL flow data from Binance (volume-weighted, order book, derivatives)
   const baseFlow = {
     market: 'crypto' as const,
     currentValue: totalMarketCap / 1_000_000_000_000, // Trillions
-    flow7d: change7d,
-    flow30d: change30d,
-    flowVelocity: calculateVelocity(change7d, change30d),
-    flowHistory,
-    velocityHistory,
+    flow7d: binanceFlowData.flow7d,
+    flow30d: binanceFlowData.flow30d,
+    flowVelocity: binanceFlowData.flowVelocity,
+    flowHistory: binanceFlowData.flowHistory,
+    velocityHistory: binanceFlowData.velocityHistory,
     sectors,
+    // Additional real data components
+    orderBookImbalance: binanceFlowData.orderBookImbalance,
+    derivativesScore: binanceFlowData.derivativesScore,
+    volumeChange7d: binanceFlowData.volumeChange7d,
     lastUpdated: new Date(),
   };
 
@@ -334,19 +294,28 @@ async function getCryptoFlow(): Promise<MarketFlow> {
 
 /**
  * Get Stocks market flow
+ * Uses REAL volume-weighted ETF flow data from Yahoo Finance
  */
 async function getStocksMarketFlow(): Promise<MarketFlow> {
-  const stocksData = await getStocksFlow();
+  // Fetch REAL volume-weighted flow from ETFs (SPY, QQQ, IWM + sector ETFs)
+  const [volumeWeightedFlow, stocksData] = await Promise.all([
+    getStocksFlowData(),
+    getStocksFlow(),
+  ]);
 
-  // Generate historical data for charts
-  const flowHistory = generateFlowHistory(stocksData.flow7d, stocksData.flow30d);
-  const velocityHistory = generateVelocityHistory(flowHistory);
-
+  // Combine price data with real volume-weighted flow
   const baseFlow = {
-    ...stocksData,
+    market: 'stocks' as const,
     currentValue: stocksData.currentValue,
-    flowHistory,
-    velocityHistory,
+    flow7d: volumeWeightedFlow.flow7d,
+    flow30d: volumeWeightedFlow.flow30d,
+    flowVelocity: volumeWeightedFlow.flowVelocity,
+    flowHistory: volumeWeightedFlow.flowHistory,
+    velocityHistory: volumeWeightedFlow.velocityHistory,
+    sectors: stocksData.sectors,
+    // Additional real data
+    sectorRotation: volumeWeightedFlow.sectorRotation,
+    lastUpdated: new Date(),
   };
 
   const phase = detectPhase(baseFlow);
@@ -362,51 +331,70 @@ async function getStocksMarketFlow(): Promise<MarketFlow> {
 }
 
 /**
- * Get Bonds market flow (using yield as inverse proxy)
+ * Get Bonds market flow
+ * Uses REAL volume-weighted ETF flow data (TLT, IEF, SHY, LQD, HYG, TIP)
  */
 async function getBondsFlow(): Promise<MarketFlow> {
-  const fredData = await getAllFredData();
+  // Fetch REAL volume-weighted flow from bond ETFs
+  const [bondsFlowData, fredData] = await Promise.all([
+    getBondsFlowData(),
+    getAllFredData(),
+  ]);
 
-  // Bond prices move inversely to yields
-  // Rising yields = falling bond prices = outflow
-  // Falling yields = rising bond prices = inflow
-  const yieldChange = fredData.yieldCurve.spread10y2y;
+  // Create sector data based on real ETF flows
+  const tltFlow = bondsFlowData.bySymbol?.get('TLT');
+  const iefFlow = bondsFlowData.bySymbol?.get('IEF');
+  const shyFlow = bondsFlowData.bySymbol?.get('SHY');
+  const lqdFlow = bondsFlowData.bySymbol?.get('LQD');
+  const hygFlow = bondsFlowData.bySymbol?.get('HYG');
+  const tipFlow = bondsFlowData.bySymbol?.get('TIP');
 
-  // Simulate flow based on yield curve behavior
-  // When curve is inverted/flattening, money flows to bonds (safety)
-  const flow7d = yieldChange < 0 ? Math.abs(yieldChange) * 2 : -yieldChange * 2;
-  const flow30d = flow7d * 3; // Rough estimate
+  // Treasury sector (TLT + IEF + SHY)
+  const treasuryFlow7d = ((tltFlow?.flow7d || 0) + (iefFlow?.flow7d || 0) + (shyFlow?.flow7d || 0)) / 3;
+  const treasuryFlow30d = ((tltFlow?.flow30d || 0) + (iefFlow?.flow30d || 0) + (shyFlow?.flow30d || 0)) / 3;
 
-  // Generate historical data for charts
-  const flowHistory = generateFlowHistory(flow7d, flow30d);
-  const velocityHistory = generateVelocityHistory(flowHistory);
+  // Corporate sector (LQD + HYG)
+  const corpFlow7d = ((lqdFlow?.flow7d || 0) + (hygFlow?.flow7d || 0)) / 2;
+  const corpFlow30d = ((lqdFlow?.flow30d || 0) + (hygFlow?.flow30d || 0)) / 2;
 
   const baseFlow = {
     market: 'bonds' as const,
     currentValue: fredData.yieldCurve.spread10y2y,
-    flow7d,
-    flow30d,
-    flowVelocity: calculateVelocity(flow7d, flow30d),
-    flowHistory,
-    velocityHistory,
+    flow7d: bondsFlowData.flow7d,
+    flow30d: bondsFlowData.flow30d,
+    flowVelocity: bondsFlowData.flowVelocity,
+    flowHistory: bondsFlowData.flowHistory,
+    velocityHistory: bondsFlowData.velocityHistory,
     sectors: [
       {
         name: 'Treasury',
-        flow7d: flow7d,
-        flow30d: flow30d,
+        flow7d: Number(treasuryFlow7d.toFixed(2)),
+        flow30d: Number(treasuryFlow30d.toFixed(2)),
         dominance: 70,
-        trending: flow7d > 1 ? 'up' : flow7d < -1 ? 'down' : 'stable',
+        trending: treasuryFlow7d > 1 ? 'up' as const : treasuryFlow7d < -1 ? 'down' as const : 'stable' as const,
         topAssets: ['TLT', 'IEF', 'SHY', 'BND', 'AGG'],
       },
       {
         name: 'Corporate',
-        flow7d: flow7d * 0.8,
-        flow30d: flow30d * 0.8,
-        dominance: 30,
-        trending: flow7d > 1 ? 'up' : flow7d < -1 ? 'down' : 'stable',
+        flow7d: Number(corpFlow7d.toFixed(2)),
+        flow30d: Number(corpFlow30d.toFixed(2)),
+        dominance: 25,
+        trending: corpFlow7d > 1 ? 'up' as const : corpFlow7d < -1 ? 'down' as const : 'stable' as const,
         topAssets: ['LQD', 'HYG', 'JNK', 'VCIT', 'VCSH'],
       },
+      {
+        name: 'TIPS',
+        flow7d: tipFlow?.flow7d || 0,
+        flow30d: tipFlow?.flow30d || 0,
+        dominance: 5,
+        trending: (tipFlow?.flow7d || 0) > 1 ? 'up' as const : (tipFlow?.flow7d || 0) < -1 ? 'down' as const : 'stable' as const,
+        topAssets: ['TIP', 'SCHP', 'VTIP', 'STIP'],
+      },
     ],
+    // Additional real data
+    durationRotation: bondsFlowData.durationRotation,
+    creditRotation: bondsFlowData.creditRotation,
+    yieldCurve: fredData.yieldCurve,
     lastUpdated: new Date(),
   };
 
@@ -424,23 +412,76 @@ async function getBondsFlow(): Promise<MarketFlow> {
 
 /**
  * Get Metals market flow
+ * Uses REAL volume-weighted ETF flow data (GLD, SLV, CPER, GDX)
  */
 async function getMetalsMarketFlow(): Promise<MarketFlow> {
-  const metalsData = await getMetalsFlow();
+  // Fetch REAL volume-weighted flow from metal ETFs
+  const [metalsFlowData, metalsData] = await Promise.all([
+    getMetalsFlowData(),
+    getMetalsFlow(),
+  ]);
 
-  // Generate historical data for charts
-  const flowHistory = generateFlowHistory(metalsData.flow7d, metalsData.flow30d);
-  const velocityHistory = generateVelocityHistory(flowHistory);
+  // Create sector data based on real ETF flows
+  const gldFlow = metalsFlowData.bySymbol?.get('GLD');
+  const slvFlow = metalsFlowData.bySymbol?.get('SLV');
+  const cperFlow = metalsFlowData.bySymbol?.get('CPER');
+  const gdxFlow = metalsFlowData.bySymbol?.get('GDX');
 
-  const phase = detectPhase(metalsData);
-  const phaseInfo = getPhaseInfo(phase, metalsData);
+  const baseFlow = {
+    market: 'metals' as const,
+    currentValue: metalsData.currentValue,
+    flow7d: metalsFlowData.flow7d,
+    flow30d: metalsFlowData.flow30d,
+    flowVelocity: metalsFlowData.flowVelocity,
+    flowHistory: metalsFlowData.flowHistory,
+    velocityHistory: metalsFlowData.velocityHistory,
+    sectors: [
+      {
+        name: 'Gold',
+        flow7d: gldFlow?.flow7d || 0,
+        flow30d: gldFlow?.flow30d || 0,
+        dominance: 70,
+        trending: (gldFlow?.flow7d || 0) > 1 ? 'up' as const : (gldFlow?.flow7d || 0) < -1 ? 'down' as const : 'stable' as const,
+        topAssets: ['GLD', 'IAU', 'SGOL', 'GLDM', 'AAAU'],
+      },
+      {
+        name: 'Silver',
+        flow7d: slvFlow?.flow7d || 0,
+        flow30d: slvFlow?.flow30d || 0,
+        dominance: 15,
+        trending: (slvFlow?.flow7d || 0) > 1 ? 'up' as const : (slvFlow?.flow7d || 0) < -1 ? 'down' as const : 'stable' as const,
+        topAssets: ['SLV', 'SIVR', 'AGQ', 'SIL'],
+      },
+      {
+        name: 'Copper',
+        flow7d: cperFlow?.flow7d || 0,
+        flow30d: cperFlow?.flow30d || 0,
+        dominance: 10,
+        trending: (cperFlow?.flow7d || 0) > 1 ? 'up' as const : (cperFlow?.flow7d || 0) < -1 ? 'down' as const : 'stable' as const,
+        topAssets: ['CPER', 'COPX', 'JJC'],
+      },
+      {
+        name: 'Miners',
+        flow7d: gdxFlow?.flow7d || 0,
+        flow30d: gdxFlow?.flow30d || 0,
+        dominance: 5,
+        trending: (gdxFlow?.flow7d || 0) > 1 ? 'up' as const : (gdxFlow?.flow7d || 0) < -1 ? 'down' as const : 'stable' as const,
+        topAssets: ['GDX', 'GDXJ', 'SIL', 'SILJ'],
+      },
+    ],
+    // Additional real data
+    goldSilverRatio: metalsFlowData.goldSilverRatio,
+    safeHavenFlow: metalsFlowData.safeHavenFlow,
+    lastUpdated: new Date(),
+  };
+
+  const phase = detectPhase(baseFlow);
+  const phaseInfo = getPhaseInfo(phase, baseFlow);
 
   return {
-    ...metalsData,
-    flowHistory,
-    velocityHistory,
+    ...baseFlow,
     ...phaseInfo,
-    rotationSignal: detectRotationSignal(metalsData),
+    rotationSignal: detectRotationSignal(baseFlow),
     rotationTarget: null,
     rotationConfidence: 0,
   };
