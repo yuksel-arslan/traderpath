@@ -16,6 +16,7 @@ export interface AnalysisReportData {
   generatedAt: string;
   analysisId: string;
   tradeType?: 'scalping' | 'dayTrade' | 'swing';
+  method?: 'classic' | 'mlis_pro'; // Analysis method: Classic 7-Step or MLIS Pro
   chartImage?: string;
 
   marketPulse: {
@@ -632,28 +633,81 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
   const score = formatPercent(v?.overallScore);
   const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'Day Trade', swing: 'Swing Trade' };
 
+  // Method display
+  const methodDisplay = data.method === 'mlis_pro' ? 'MLIS Pro' : 'Classic 7-Step';
+  const methodColor = data.method === 'mlis_pro' ? '#8b5cf6' : '#14B8A6'; // Purple for MLIS, Teal for Classic
+
+  // Verdict and conditional explanation
+  const verdictAction = getVerdictAction(v);
+  const isConditional = verdictAction.toLowerCase().includes('conditional') || verdictAction.toLowerCase().includes('cond');
+
+  // Format date nicely
+  const reportDate = data.generatedAt || new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
-    <!-- Centered Brand Header for Executive Summary - Logo on top, Brand below -->
-    <div style="text-align: center; padding: 15px 0 20px 0; border-bottom: 2px solid #1a1a1a; margin-bottom: 15px;">
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 8px;">
-        <div class="logo" style="width: 48px; height: 48px;">${logoSvg.replace('width="32" height="32"', 'width="48" height="48"')}</div>
-        <div class="brand-name" style="font-size: 28px;"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+    <!-- Professional Report Header with Logo, Title, Method, and Date -->
+    <div style="text-align: center; padding: 20px 0 25px 0; border-bottom: 3px solid #1a1a1a; margin-bottom: 20px;">
+      <!-- TraderPath Brand with Larger Logo -->
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 15px;">
+        <div style="width: 56px; height: 56px;">
+          <svg width="56" height="56" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="tealGradPdf" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#5EEDC3"/><stop offset="50%" stop-color="#2DD4A8"/><stop offset="100%" stop-color="#14B8A6"/>
+              </linearGradient>
+              <linearGradient id="coralGradPdf" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FF8A9B"/><stop offset="50%" stop-color="#F87171"/><stop offset="100%" stop-color="#EF5A6F"/>
+              </linearGradient>
+            </defs>
+            <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealGradPdf)"/>
+            <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealGradPdf)"/>
+            <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralGradPdf)"/>
+            <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralGradPdf)"/>
+          </svg>
+        </div>
+        <div style="font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">
+          <span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span>
+        </div>
       </div>
-      <div style="font-size: 11px; font-weight: 600; color: #1a1a1a; text-transform: uppercase; letter-spacing: 1px;">Executive Summary</div>
-      <div style="font-size: 9px; color: #666; margin-top: 3px;">${tradeTypes[data.tradeType || ''] || 'Analysis'} | ${data.generatedAt}</div>
-      <div style="margin-top: 8px;">
-        <span class="symbol" style="font-size: 18px;">${data.symbol}/USDT</span>
-        <span class="direction-tag ${hasDirection ? (isLong ? 'tag-long' : 'tag-short') : ''}" style="font-size: 14px; margin-left: 10px; ${!hasDirection ? 'background: #fef3c7; color: #d97706;' : ''}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'WAIT'}</span>
+
+      <!-- Report Title -->
+      <div style="font-size: 16px; font-weight: 700; color: #1a1a1a; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">Asset Analysis Report</div>
+
+      <!-- Method Badge -->
+      <div style="display: inline-block; padding: 4px 12px; background: ${methodColor}; color: #fff; border-radius: 4px; font-size: 10px; font-weight: 600; margin-bottom: 10px;">
+        ${methodDisplay}
+      </div>
+
+      <!-- Report Date -->
+      <div style="font-size: 10px; color: #666; margin-top: 5px;">
+        <span style="font-weight: 600;">Report Date:</span> ${reportDate}
+      </div>
+      <div style="font-size: 9px; color: #888; margin-top: 2px;">${tradeTypes[data.tradeType || ''] || 'Analysis'}</div>
+
+      <!-- Symbol and Direction -->
+      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+        <span class="symbol" style="font-size: 22px; font-weight: 800;">${data.symbol}/USDT</span>
+        <span class="direction-tag ${hasDirection ? (isLong ? 'tag-long' : 'tag-short') : ''}" style="font-size: 14px; margin-left: 12px; padding: 3px 10px; border-radius: 4px; ${!hasDirection ? 'background: #fef3c7; color: #d97706;' : hasDirection ? (isLong ? 'background: #dcfce7; color: #16a34a;' : 'background: #fee2e2; color: #dc2626;') : ''}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'WAIT'}</span>
       </div>
     </div>
 
-    <!-- Direction & Quick Stats Box (No verdict here - verdict is on final page) -->
+    <!-- Verdict & Direction Box -->
     <div class="step-box" style="background: ${hasDirection ? (isLong ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fef2f2, #fee2e2)') : 'linear-gradient(135deg, #fef3c7, #fde68a)'}; border: 1px solid ${hasDirection ? (isLong ? '#16a34a' : '#dc2626') : '#d97706'}; padding: 10px 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <div style="font-size: 8px; color: #666; margin-bottom: 2px;">POSITION TYPE</div>
-          <div style="font-size: 18px; font-weight: 700; ${hasDirection ? (isLong ? 'color: #16a34a' : 'color: #dc2626') : 'color: #d97706'}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'WAIT'}</div>
+          <div style="font-size: 8px; color: #666; margin-bottom: 2px;">VERDICT</div>
+          <div style="font-size: 16px; font-weight: 700; ${isConditional ? 'color: #d97706' : hasDirection ? (isLong ? 'color: #16a34a' : 'color: #dc2626') : 'color: #d97706'}">${formatAction(verdictAction)}</div>
+        </div>
+        <div>
+          <div style="font-size: 8px; color: #666; margin-bottom: 2px;">DIRECTION</div>
+          <div style="font-size: 16px; font-weight: 700; ${hasDirection ? (isLong ? 'color: #16a34a' : 'color: #dc2626') : 'color: #d97706'}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'NEUTRAL'}</div>
         </div>
         <div style="text-align: center;">
           <div style="font-size: 8px; color: #666; margin-bottom: 2px;">CONFIDENCE</div>
@@ -665,6 +719,23 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
         </div>
       </div>
     </div>
+
+    ${isConditional ? `
+    <!-- CONDITIONAL GO Explanation Box -->
+    <div style="margin-top: 8px; margin-bottom: 8px; padding: 10px 12px; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #d97706; border-radius: 6px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+        <span style="font-size: 14px;">⚠️</span>
+        <span style="font-size: 10px; font-weight: 700; color: #92400e;">CONDITIONAL ENTRY - CONDITIONS REQUIRED</span>
+      </div>
+      <div style="font-size: 8px; color: #78350f; line-height: 1.5;">
+        <strong>This trade requires specific conditions to be met before entry:</strong>
+        <ul style="margin: 4px 0 0 15px; padding: 0;">
+          ${data.timing?.conditions?.filter(c => !c.met).map(c => `<li style="margin-bottom: 2px;">${c.name}: ${c.details || 'Pending confirmation'}</li>`).join('') || '<li>Wait for price to reach optimal entry zone</li><li>Monitor volume confirmation</li>'}
+        </ul>
+        ${data.timing?.waitFor ? `<div style="margin-top: 4px;"><strong>Wait for:</strong> ${data.timing.waitFor.event} (Est: ${data.timing.waitFor.estimatedTime})</div>` : ''}
+      </div>
+    </div>
+    ` : ''}
 
     <!-- Key Metrics Row -->
     <div class="row" style="margin-bottom: 15px;">
@@ -749,16 +820,30 @@ function generatePageTradePlan(data: AnalysisReportData, totalPages: number): st
   const tp = data.tradePlan;
   const as = data.assetScan;
   const isLong = tp?.direction === 'long';
+  const methodDisplay = data.method === 'mlis_pro' ? 'MLIS Pro' : 'Classic 7-Step';
+  const methodColor = data.method === 'mlis_pro' ? '#8b5cf6' : '#14B8A6';
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
     <div class="header">
       <div class="brand">
-        <div class="logo">${logoSvg}</div>
-        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+        <div class="logo">
+          <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="tealGrad2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#5EEDC3"/><stop offset="100%" stop-color="#14B8A6"/></linearGradient>
+              <linearGradient id="coralGrad2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FF8A9B"/><stop offset="100%" stop-color="#EF5A6F"/></linearGradient>
+            </defs>
+            <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealGrad2)"/>
+            <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealGrad2)"/>
+            <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralGrad2)"/>
+            <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralGrad2)"/>
+          </svg>
+        </div>
+        <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
         <div class="report-title">Trade Plan</div>
+        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -830,16 +915,30 @@ function generatePageTradePlan(data: AnalysisReportData, totalPages: number): st
 function generatePageTokenomics(data: AnalysisReportData, totalPages: number): string {
   const tk = data.tokenomics;
   const as = data.assetScan;
+  const methodDisplay = data.method === 'mlis_pro' ? 'MLIS Pro' : 'Classic 7-Step';
+  const methodColor = data.method === 'mlis_pro' ? '#8b5cf6' : '#14B8A6';
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
     <div class="header">
       <div class="brand">
-        <div class="logo">${logoSvg}</div>
-        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+        <div class="logo">
+          <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="tealGrad3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#5EEDC3"/><stop offset="100%" stop-color="#14B8A6"/></linearGradient>
+              <linearGradient id="coralGrad3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FF8A9B"/><stop offset="100%" stop-color="#EF5A6F"/></linearGradient>
+            </defs>
+            <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealGrad3)"/>
+            <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealGrad3)"/>
+            <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralGrad3)"/>
+            <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralGrad3)"/>
+          </svg>
+        </div>
+        <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
         <div class="report-title">Tokenomics Analysis</div>
+        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1020,15 +1119,30 @@ function generatePageSteps12(data: AnalysisReportData, totalPages: number): stri
   const trendIndicators = ind?.trend ? Object.values(ind.trend).filter(Boolean).slice(0, 4) : [];
   const volumeIndicators = ind?.volume ? Object.values(ind.volume).filter(Boolean).slice(0, 4) : [];
 
+  const methodDisplay = data.method === 'mlis_pro' ? 'MLIS Pro' : 'Classic 7-Step';
+  const methodColor = data.method === 'mlis_pro' ? '#8b5cf6' : '#14B8A6';
+
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
     <div class="header">
       <div class="brand">
-        <div class="logo">${logoSvg}</div>
-        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+        <div class="logo">
+          <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="tealGrad4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#5EEDC3"/><stop offset="100%" stop-color="#14B8A6"/></linearGradient>
+              <linearGradient id="coralGrad4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FF8A9B"/><stop offset="100%" stop-color="#EF5A6F"/></linearGradient>
+            </defs>
+            <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealGrad4)"/>
+            <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealGrad4)"/>
+            <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralGrad4)"/>
+            <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralGrad4)"/>
+          </svg>
+        </div>
+        <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
         <div class="report-title">Analysis Steps 1-2</div>
+        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1170,15 +1284,30 @@ function generatePageSteps34(data: AnalysisReportData, totalPages: number): stri
   const advancedIndicators = ind?.advanced ? Object.values(ind.advanced).filter(Boolean).slice(0, 4) : [];
   const momentumIndicators = ind?.momentum ? Object.values(ind.momentum).filter(Boolean).slice(0, 4) : [];
 
+  const methodDisplay = data.method === 'mlis_pro' ? 'MLIS Pro' : 'Classic 7-Step';
+  const methodColor = data.method === 'mlis_pro' ? '#8b5cf6' : '#14B8A6';
+
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
     <div class="header">
       <div class="brand">
-        <div class="logo">${logoSvg}</div>
-        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+        <div class="logo">
+          <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="tealGrad5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#5EEDC3"/><stop offset="100%" stop-color="#14B8A6"/></linearGradient>
+              <linearGradient id="coralGrad5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FF8A9B"/><stop offset="100%" stop-color="#EF5A6F"/></linearGradient>
+            </defs>
+            <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealGrad5)"/>
+            <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealGrad5)"/>
+            <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralGrad5)"/>
+            <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralGrad5)"/>
+          </svg>
+        </div>
+        <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
         <div class="report-title">Analysis Steps 3-4</div>
+        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1316,15 +1445,30 @@ function generatePageSteps56(data: AnalysisReportData, totalPages: number): stri
   const volatilityIndicators = ind?.volatility ? Object.values(ind.volatility).filter(Boolean).slice(0, 4) : [];
   const divergences = ind?.divergences || [];
 
+  const methodDisplay = data.method === 'mlis_pro' ? 'MLIS Pro' : 'Classic 7-Step';
+  const methodColor = data.method === 'mlis_pro' ? '#8b5cf6' : '#14B8A6';
+
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
     <div class="header">
       <div class="brand">
-        <div class="logo">${logoSvg}</div>
-        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+        <div class="logo">
+          <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="tealGrad6" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#5EEDC3"/><stop offset="100%" stop-color="#14B8A6"/></linearGradient>
+              <linearGradient id="coralGrad6" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FF8A9B"/><stop offset="100%" stop-color="#EF5A6F"/></linearGradient>
+            </defs>
+            <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealGrad6)"/>
+            <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealGrad6)"/>
+            <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralGrad6)"/>
+            <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralGrad6)"/>
+          </svg>
+        </div>
+        <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
         <div class="report-title">Analysis Steps 5-6</div>
+        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1462,15 +1606,34 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
   const isShort = direction === 'short';
   const hasDirection = direction === 'long' || direction === 'short';
 
+  const methodDisplay = data.method === 'mlis_pro' ? 'MLIS Pro' : 'Classic 7-Step';
+  const methodColor = data.method === 'mlis_pro' ? '#8b5cf6' : '#14B8A6';
+
+  // Check for conditional verdict
+  const verdictAction = getVerdictAction(v);
+  const isConditional = verdictAction.toLowerCase().includes('conditional') || verdictAction.toLowerCase().includes('cond');
+
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
     <div class="header">
       <div class="brand">
-        <div class="logo">${logoSvg}</div>
-        <div class="brand-name"><span class="brand-trade">Trader</span><span class="brand-path">Path</span></div>
+        <div class="logo">
+          <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="tealGrad7" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#5EEDC3"/><stop offset="100%" stop-color="#14B8A6"/></linearGradient>
+              <linearGradient id="coralGrad7" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FF8A9B"/><stop offset="100%" stop-color="#EF5A6F"/></linearGradient>
+            </defs>
+            <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#tealGrad7)"/>
+            <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#tealGrad7)"/>
+            <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#coralGrad7)"/>
+            <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#coralGrad7)"/>
+          </svg>
+        </div>
+        <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
         <div class="report-title">Final Verdict</div>
+        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1484,11 +1647,44 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
         <span class="step-box-title">Final Verdict</span>
       </div>
       <div style="text-align: center; padding: 10px 0;">
-        <div style="font-size: 24px; font-weight: 700; ${hasDirection ? (isLong ? 'color: #16a34a' : 'color: #dc2626') : 'color: #d97706'}">${formatAction(getVerdictAction(v))}</div>
+        <div style="font-size: 24px; font-weight: 700; ${isConditional ? 'color: #d97706' : hasDirection ? (isLong ? 'color: #16a34a' : 'color: #dc2626') : 'color: #d97706'}">${formatAction(getVerdictAction(v))}</div>
         <div style="font-size: 28px; font-weight: 800; margin: 8px 0;">${formatPercent(v?.overallScore)}</div>
-        <div style="font-size: 9px; color: #666;">${hasDirection ? (isLong ? 'Bullish setup - Long position recommended' : 'Bearish setup - Short position recommended') : 'Market conditions unclear - Wait for better setup'}</div>
+        <div style="font-size: 9px; color: #666;">${isConditional ? 'Conditional entry - Specific conditions must be met before entering' : hasDirection ? (isLong ? 'Bullish setup - Long position recommended' : 'Bearish setup - Short position recommended') : 'Market conditions unclear - Wait for better setup'}</div>
       </div>
     </div>
+
+    ${isConditional ? `
+    <!-- CONDITIONAL GO Explanation -->
+    <div style="margin-bottom: 10px; padding: 12px; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid #d97706; border-radius: 6px;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+        <span style="font-size: 18px;">⚠️</span>
+        <span style="font-size: 12px; font-weight: 700; color: #92400e;">CONDITIONAL ENTRY REQUIREMENTS</span>
+      </div>
+      <div style="font-size: 9px; color: #78350f; line-height: 1.6;">
+        <strong>This trade signal requires the following conditions to be met before entering:</strong>
+        <div style="margin-top: 8px; padding-left: 15px;">
+          ${data.timing?.conditions?.filter(c => !c.met).map(c => `
+            <div style="margin-bottom: 4px; display: flex; align-items: start; gap: 6px;">
+              <span style="color: #d97706;">◉</span>
+              <span><strong>${c.name}:</strong> ${c.details || 'Confirmation pending'}</span>
+            </div>
+          `).join('') || `
+            <div style="margin-bottom: 4px; display: flex; align-items: start; gap: 6px;"><span style="color: #d97706;">◉</span><span>Price must reach optimal entry zone</span></div>
+            <div style="margin-bottom: 4px; display: flex; align-items: start; gap: 6px;"><span style="color: #d97706;">◉</span><span>Volume confirmation required</span></div>
+            <div style="margin-bottom: 4px; display: flex; align-items: start; gap: 6px;"><span style="color: #d97706;">◉</span><span>Wait for trend confirmation on lower timeframe</span></div>
+          `}
+        </div>
+        ${data.timing?.waitFor ? `
+        <div style="margin-top: 8px; padding: 6px 10px; background: #fef9c3; border-radius: 4px;">
+          <strong>⏳ Wait for:</strong> ${data.timing.waitFor.event} (Estimated: ${data.timing.waitFor.estimatedTime})
+        </div>
+        ` : ''}
+        <div style="margin-top: 8px; padding: 6px 10px; background: #fef2f2; border-left: 3px solid #dc2626; font-size: 8px; color: #991b1b;">
+          <strong>Warning:</strong> Do NOT enter this trade until all conditions above are satisfied. Entering prematurely significantly increases risk.
+        </div>
+      </div>
+    </div>
+    ` : ''}
 
     <!-- Confidence Factors -->
     ${v?.confidenceFactors && v.confidenceFactors.length > 0 ? `
