@@ -74,7 +74,7 @@ interface CapitalFlowData {
     dxy: { trend: string; value: number };
     vix: { value: number; level: string };
   };
-  marketFlows: Array<{
+  markets: Array<{
     market: string;
     flow7d: number;
     flow30d: number;
@@ -569,7 +569,7 @@ export default function ConciergePage() {
           </div>
 
           {/* Capital Flow Summary Bar */}
-          {!flowLoading && capitalFlow && Array.isArray(capitalFlow.marketFlows) && capitalFlow.marketFlows.length > 0 && capitalFlow.recommendation && (
+          {!flowLoading && capitalFlow && Array.isArray(capitalFlow.markets) && capitalFlow.markets.length > 0 && capitalFlow.recommendation && (
             <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 shadow-sm">
               <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                 {/* Global Liquidity Status */}
@@ -587,7 +587,7 @@ export default function ConciergePage() {
 
                 {/* Market Flows */}
                 <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {capitalFlow.marketFlows.map((market) => (
+                  {capitalFlow.markets.filter(m => m && m.market).map((market) => (
                     <MarketFlowCard
                       key={market.market}
                       market={market.market}
@@ -622,7 +622,7 @@ export default function ConciergePage() {
                   <div>
                     <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Recommendation</p>
                     <p className="font-bold text-slate-800 dark:text-white capitalize">
-                      {capitalFlow.recommendation?.action || 'wait'} {(capitalFlow.recommendation?.primaryMarket || 'market').toUpperCase()}
+                      {capitalFlow.recommendation?.action || 'wait'} {String(capitalFlow.recommendation?.primaryMarket || 'market').toUpperCase()}
                     </p>
                   </div>
                 </div>
@@ -704,7 +704,7 @@ export default function ConciergePage() {
                         <div className="mt-4 p-4 rounded-xl bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10">
                           <div className="flex items-center justify-between mb-3">
                             <VerdictBadge verdict={msg.data.verdict} score={msg.data.score} />
-                            {msg.data.direction && (
+                            {msg.data.direction && typeof msg.data.direction === 'string' && (
                               <span className={cn(
                                 "px-3 py-1 rounded-lg text-sm font-semibold",
                                 msg.data.direction.toLowerCase() === 'long'
