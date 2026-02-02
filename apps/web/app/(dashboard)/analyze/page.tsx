@@ -308,6 +308,12 @@ const TIMEFRAMES: { value: Timeframe; label: string; type: string }[] = [
   { value: '1d', label: '1D', type: 'Swing' },
 ];
 
+// Safe number formatting helper (prevents toFixed errors on undefined)
+const safeToFixed = (value: number | undefined | null, decimals: number = 2): string => {
+  if (value === undefined || value === null || isNaN(value)) return '—';
+  return value.toFixed(decimals);
+};
+
 export default function AnalyzePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -659,19 +665,19 @@ export default function AnalyzePage() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
                     <p className="text-[10px] text-slate-500 mb-1">Fed Balance</p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">{flowData.globalLiquidity.fedBalanceSheet.value.toFixed(2)}T</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white notranslate">{safeToFixed(flowData.globalLiquidity?.fedBalanceSheet?.value, 2)}T</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
                     <p className="text-[10px] text-slate-500 mb-1">DXY</p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">{flowData.globalLiquidity.dxy.value.toFixed(1)}</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white notranslate">{safeToFixed(flowData.globalLiquidity?.dxy?.value, 1)}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
                     <p className="text-[10px] text-slate-500 mb-1">VIX</p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">{flowData.globalLiquidity.vix.value.toFixed(1)}</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white notranslate">{safeToFixed(flowData.globalLiquidity?.vix?.value, 1)}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
                     <p className="text-[10px] text-slate-500 mb-1">10Y-2Y Spread</p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">{flowData.globalLiquidity.yieldCurve.spread10y2y.toFixed(2)}%</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white notranslate">{safeToFixed(flowData.globalLiquidity?.yieldCurve?.spread10y2y, 2)}%</p>
                   </div>
                 </div>
               </div>
@@ -702,10 +708,10 @@ export default function AnalyzePage() {
                         <span className={cn("w-2 h-2 rounded-full", getPhaseColor(market.phase))} />
                       </div>
                       <p className={cn(
-                        "text-sm font-bold",
-                        market.flow7d >= 0 ? "text-emerald-600" : "text-red-600"
+                        "text-sm font-bold notranslate",
+                        (market.flow7d ?? 0) >= 0 ? "text-emerald-600" : "text-red-600"
                       )}>
-                        {market.flow7d >= 0 ? '+' : ''}{market.flow7d.toFixed(1)}%
+                        {(market.flow7d ?? 0) >= 0 ? '+' : ''}{safeToFixed(market.flow7d, 1)}%
                       </p>
                       <p className="text-[10px] text-slate-500">{market.phase} • {market.daysInPhase}d</p>
                     </button>
@@ -731,7 +737,7 @@ export default function AnalyzePage() {
                           "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
                         )}
                       >
-                        {sector.name} {sector.flow7d >= 0 ? '+' : ''}{sector.flow7d.toFixed(1)}%
+                        {sector.name} {(sector.flow7d ?? 0) >= 0 ? '+' : ''}{safeToFixed(sector.flow7d, 1)}%
                       </span>
                     ))}
                   </div>
@@ -872,8 +878,8 @@ export default function AnalyzePage() {
                   <CoinIcon symbol={coin.symbol} size={24} />
                   <div className="text-left">
                     <p className="text-xs font-bold text-slate-900 dark:text-white">{coin.symbol}</p>
-                    <p className={cn("text-[10px] font-medium", coin.priceChange24h >= 0 ? "text-emerald-500" : "text-red-500")}>
-                      {coin.priceChange24h >= 0 ? '+' : ''}{coin.priceChange24h?.toFixed(1)}%
+                    <p className={cn("text-[10px] font-medium notranslate", (coin.priceChange24h ?? 0) >= 0 ? "text-emerald-500" : "text-red-500")}>
+                      {(coin.priceChange24h ?? 0) >= 0 ? '+' : ''}{safeToFixed(coin.priceChange24h, 1)}%
                     </p>
                   </div>
                   <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold text-white", getVerdictColor(coin.verdict, coin.recommendation))}>
