@@ -83,19 +83,19 @@ export const ANALYSIS_COSTS = [
 
 // Analysis bundles with discounts
 // NOTE: These values must match backend credit-costs.service.ts (BUNDLE_FULL_ANALYSIS = 25)
+// MLIS Pro AI Confirmation is included in 7-Step Analysis as Step 8
 export const ANALYSIS_BUNDLES = [
-  { name: 'Classic Analysis', steps: 'All 7 Steps', credits: 25, description: 'Complete 7-step trading analysis', comingSoon: false, method: 'classic' },
-  { name: 'MLIS Pro Analysis', steps: '5-Layer Neural Network', credits: 35, description: 'Neural network based analysis', comingSoon: false, method: 'mlis_pro' },
+  { name: '7-Step Analysis', steps: '7 Steps + AI Confirmation', credits: 25, description: 'Complete analysis with MLIS Pro validation', comingSoon: false, method: 'classic' },
   { name: 'TFT Analysis', steps: 'Full Analysis + AI Price Prediction', credits: 50, description: 'With TFT deep learning model', comingSoon: true, method: 'tft' },
 ];
 
-// MLIS Pro layer credit costs
-export const MLIS_PRO_COSTS = [
-  { layer: 'Technical', credits: 5, description: 'Price patterns & indicators' },
-  { layer: 'Momentum', credits: 5, description: 'Trend strength analysis' },
-  { layer: 'Volatility', credits: 5, description: 'Market stability check' },
-  { layer: 'Volume', credits: 5, description: 'Trading volume analysis' },
-  { layer: 'Verdict', credits: 5, description: 'Final recommendation' },
+// MLIS Pro confirmation layers (included in 7-Step as Step 8)
+export const MLIS_PRO_LAYERS = [
+  { layer: 'Technical', description: 'Price patterns & indicators' },
+  { layer: 'Momentum', description: 'Trend strength analysis' },
+  { layer: 'Volatility', description: 'Market stability check' },
+  { layer: 'Volume', description: 'Trading volume analysis' },
+  { layer: 'Verdict', description: 'Confirmation verdict' },
 ];
 
 // Feature credit costs

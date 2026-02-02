@@ -583,7 +583,7 @@ function SystemFlowChart() {
                   </div>
                   <div>
                     <span className="text-sm font-bold text-slate-400 dark:text-slate-500">LAYER 4: Asset Analysis</span>
-                    <p className="text-xs text-slate-400 dark:text-slate-500">"Top 30 / 7-Step / MLIS Pro"</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">"7-Step + AI Confirmation"</p>
                   </div>
                   <div className="ml-2 flex items-center gap-2">
                     <Lock className="w-4 h-4 text-amber-500" />
@@ -750,7 +750,7 @@ const FAQS = [
   },
   {
     question: 'How does the 4-Layer System work?',
-    answer: 'Our top-down approach works in 4 layers: Layer 1 (Global Liquidity) checks if conditions favor risk assets. Layer 2 (Market Flow) identifies which market has strongest inflow (Crypto, Stocks, Bonds, Metals). Layer 3 (Sector Activity) pinpoints hot sectors. Layer 4 (Asset Analysis) provides detailed 7-Step or MLIS Pro analysis with entry/exit levels.',
+    answer: 'Our top-down approach works in 4 layers: Layer 1 (Global Liquidity) checks if conditions favor risk assets. Layer 2 (Market Flow) identifies which market has strongest inflow (Crypto, Stocks, Bonds, Metals). Layer 3 (Sector Activity) pinpoints hot sectors. Layer 4 (Asset Analysis) provides detailed 7-Step analysis with MLIS Pro AI confirmation and entry/exit levels.',
   },
   {
     question: 'What are the market phases (EARLY, MID, LATE, EXIT)?',
@@ -762,7 +762,7 @@ const FAQS = [
   },
   {
     question: 'Which markets does TraderPath analyze?',
-    answer: 'We track 4 major markets: Crypto (full 7-Step and MLIS Pro analysis via Binance), Stocks (SPY, QQQ, major equities via Yahoo Finance), Bonds (TLT, IEF, yield curve), and Precious Metals (Gold, Silver). Each market shows flow direction, velocity, phase, and rotation signals.',
+    answer: 'We track 4 major markets: Crypto (full 7-Step analysis with AI confirmation via Binance), Stocks (SPY, QQQ, major equities via Yahoo Finance), Bonds (TLT, IEF, yield curve), and Precious Metals (Gold, Silver). Each market shows flow direction, velocity, phase, and rotation signals.',
   },
   {
     question: 'Do I need to connect my exchange or wallet?',
@@ -770,7 +770,7 @@ const FAQS = [
   },
   {
     question: 'How does the credit system work?',
-    answer: 'Layer 1-2 (Global Liquidity, Market Flow) are FREE for all users. Layer 3 (Sector Activity) and Layer 4 (AI Recommendations) each cost 25 credits/day. Full asset analysis costs 100 credits/day for up to 10 analyses (7-Step or MLIS Pro). Earn free credits through daily login, quizzes, and referrals.',
+    answer: 'Layer 1-2 (Global Liquidity, Market Flow) are FREE for all users. Layer 3 (Sector Activity) and Layer 4 (AI Recommendations) each cost 25 credits/day. Full asset analysis costs 100 credits/day for up to 10 analyses (7-Step with MLIS Pro confirmation). Earn free credits through daily login, quizzes, and referrals.',
   },
   {
     question: 'How accurate is the analysis?',

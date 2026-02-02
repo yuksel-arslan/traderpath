@@ -555,8 +555,8 @@ export default function AnalyzePage() {
     },
     {
       target: '#tour-method',
-      title: 'Analysis Method',
-      content: 'Choose between Classic 7-Step Analysis (comprehensive) or MLIS Pro (multi-layer intelligence). Each has unique strengths.',
+      title: 'MLIS Pro Confirmation',
+      content: '7-Step Analysis runs 40+ indicators. Enable MLIS Pro for AI-powered confirmation of your analysis results (adds Step 8).',
       placement: 'bottom',
       spotlightPadding: 8,
     },
@@ -1021,35 +1021,21 @@ export default function AnalyzePage() {
                   ))}
                 </div>
 
-                {/* Method */}
-                <div id="tour-method" className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setMethod('classic')}
-                    className={cn(
-                      "p-3 rounded-xl border text-left transition-all",
-                      method === 'classic' ? "border-teal-500 bg-teal-50 dark:bg-teal-500/10" : "border-slate-200 dark:border-slate-700"
-                    )}
-                  >
+                {/* Analysis Info */}
+                <div id="tour-method" className="p-3 rounded-xl border border-teal-200 dark:border-teal-800 bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BarChart3 className="w-4 h-4 text-teal-500" />
+                    <span className="font-semibold text-sm text-slate-900 dark:text-white">7-Step Analysis</span>
+                    <span className="px-1.5 py-0.5 rounded bg-teal-100 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 text-[10px] font-bold">40+ Indicators</span>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <BarChart3 className="w-4 h-4 text-teal-500" />
-                      <span className="font-semibold text-sm text-slate-900 dark:text-white">7-Step</span>
+                      <Sparkles className="w-3.5 h-3.5 text-violet-500" />
+                      <span className="text-xs text-slate-600 dark:text-slate-400">MLIS Pro Confirmation</span>
+                      <span className="px-1 py-0.5 rounded bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 text-[8px] font-bold">Step 8</span>
                     </div>
-                    <p className="text-[10px] text-slate-500 mt-1">40+ indicators</p>
-                  </button>
-                  <button
-                    onClick={() => setMethod('mlis_pro')}
-                    className={cn(
-                      "relative p-3 rounded-xl border text-left transition-all",
-                      method === 'mlis_pro' ? "border-violet-500 bg-violet-50 dark:bg-violet-500/10" : "border-slate-200 dark:border-slate-700"
-                    )}
-                  >
-                    <div className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 bg-violet-500 text-white text-[8px] font-bold rounded-full">NEW</div>
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-violet-500" />
-                      <span className="font-semibold text-sm text-slate-900 dark:text-white">MLIS Pro</span>
-                    </div>
-                    <p className="text-[10px] text-slate-500 mt-1">5-layer neural</p>
-                  </button>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Included</span>
+                  </div>
                 </div>
 
                 {/* Selected Asset Display */}
@@ -1116,9 +1102,7 @@ export default function AnalyzePage() {
                   className={cn(
                     "w-full flex items-center justify-center gap-3 py-3.5 rounded-xl font-semibold text-white transition-all",
                     selectedSymbol && dailyPassStatus?.canUse
-                      ? method === 'mlis_pro'
-                        ? "bg-gradient-to-r from-violet-500 to-purple-600 hover:shadow-lg hover:shadow-violet-500/20"
-                        : "bg-gradient-to-r from-teal-500 to-emerald-600 hover:shadow-lg hover:shadow-teal-500/20"
+                      ? "bg-gradient-to-r from-teal-500 to-emerald-600 hover:shadow-lg hover:shadow-teal-500/20"
                       : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed"
                   )}
                 >

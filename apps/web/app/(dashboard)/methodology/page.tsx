@@ -142,8 +142,8 @@ export default function MethodologyPage() {
               <span className="font-semibold text-sm text-emerald-900 dark:text-emerald-300">Asset Analysis</span>
             </div>
             <ul className="text-[10px] text-emerald-700 dark:text-emerald-300/80 space-y-0.5">
-              <li>7-Step Classic</li>
-              <li>MLIS Pro (5-Layer)</li>
+              <li>7-Step Analysis (40+ indicators)</li>
+              <li>MLIS Pro AI Confirmation</li>
               <li>AI Expert Panel</li>
               <li>Trade Plan Generation</li>
             </ul>
@@ -354,11 +354,11 @@ export default function MethodologyPage() {
           <Brain className="w-4 h-4" />
           Asset Analysis Methods (Layer 4)
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {/* 7-Step Classic */}
+        <div className="space-y-3">
+          {/* 7-Step Analysis - Main Method */}
           <div className="p-3 bg-teal-50 dark:bg-teal-500/10 rounded-lg border border-teal-200 dark:border-teal-500/30">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-bold text-teal-700 dark:text-teal-400 text-sm">7-Step Classic</span>
+              <span className="font-bold text-teal-700 dark:text-teal-400 text-sm">7-Step Analysis</span>
               <span className="text-[10px] bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-300 px-1.5 py-0.5 rounded">40+ Indicators</span>
             </div>
             <div className="flex flex-wrap gap-1">
@@ -370,12 +370,18 @@ export default function MethodologyPage() {
             </div>
           </div>
 
-          {/* MLIS Pro */}
-          <div className="p-3 bg-violet-50 dark:bg-violet-500/10 rounded-lg border border-violet-200 dark:border-violet-500/30">
+          {/* MLIS Pro Confirmation - Step 8 */}
+          <div className="p-3 bg-gradient-to-r from-violet-50 to-teal-50 dark:from-violet-500/10 dark:to-teal-500/10 rounded-lg border border-violet-200 dark:border-violet-500/30">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-bold text-violet-700 dark:text-violet-400 text-sm">MLIS Pro</span>
-              <span className="text-[10px] bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 px-1.5 py-0.5 rounded">Neural Signals</span>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-violet-700 dark:text-violet-400 text-sm">MLIS Pro Confirmation</span>
+                <span className="text-[10px] bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 px-1.5 py-0.5 rounded">Step 8</span>
+              </div>
+              <span className="text-[10px] bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 px-1.5 py-0.5 rounded">AI Validation</span>
             </div>
+            <p className="text-[10px] text-slate-600 dark:text-slate-400 mb-2">
+              Neural network validates 7-Step findings with 5 independent layers:
+            </p>
             <div className="flex flex-wrap gap-1">
               {['Technical', 'Momentum', 'Volatility', 'Volume', 'Verdict'].map((layer, i) => (
                 <span key={layer} className="text-[9px] bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded">
@@ -383,6 +389,9 @@ export default function MethodologyPage() {
                 </span>
               ))}
             </div>
+            <p className="text-[9px] text-slate-500 dark:text-slate-500 mt-2 italic">
+              Confirms, partially confirms, or contradicts the 7-Step verdict
+            </p>
           </div>
         </div>
       </div>

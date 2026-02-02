@@ -2610,7 +2610,7 @@ export default function CapitalFlowPage() {
                     Start Analysis
                   </span>
                   <p className="text-sm text-white/80">
-                    {data.recommendation.primaryMarket === 'crypto' ? '7-Step Classic or MLIS Pro' : 'Asset Analysis'} for {data.recommendation.primaryMarket.charAt(0).toUpperCase() + data.recommendation.primaryMarket.slice(1)}
+                    7-Step Analysis with AI Confirmation for {data.recommendation.primaryMarket.charAt(0).toUpperCase() + data.recommendation.primaryMarket.slice(1)}
                   </p>
                 </div>
               </div>
