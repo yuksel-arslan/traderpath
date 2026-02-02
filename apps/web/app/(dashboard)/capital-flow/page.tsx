@@ -2308,19 +2308,14 @@ export default function CapitalFlowPage() {
                   ) : (
                     // Show all markets grid
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {getValidMarkets(data.markets).map((market) => {
-                        const marketName = market.market;
-                        return (
+                      {getValidMarkets(data.markets).map((market) => (
                           <MarketCard
-                            key={marketName}
+                            key={market.market}
                             market={market}
-                            onClick={() => {
-                              setSelectedMarket(selectedMarket?.market === marketName ? null : market);
-                            }}
+                            onClick={() => setSelectedMarket(market)}
                             onAnalyze={() => fetchMarketAnalysis(market)}
                           />
-                        );
-                      })}
+                      ))}
                     </div>
                   )}
                   {data.insights?.layer2 && <InsightBox insight={data.insights.layer2} icon={Sparkles} />}
@@ -2759,20 +2754,17 @@ export default function CapitalFlowPage() {
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">Market Flow Analyzer</h3>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {getValidMarkets(data.markets).map((market) => {
-                      const marketName = market.market;
-                      return (
+                    {getValidMarkets(data.markets).map((market) => (
                         <MarketCard
-                          key={marketName}
+                          key={market.market}
                           market={market}
                           onClick={() => {
-                            setSelectedMarket(selectedMarket?.market === marketName ? null : market);
-                            setSelectedLayer(3); // Switch to Layer 3 to show sectors
+                            setSelectedMarket(market);
+                            setSelectedLayer(3);
                           }}
                           onAnalyze={() => fetchMarketAnalysis(market)}
                         />
-                      );
-                    })}
+                    ))}
                   </div>
                   {data.insights?.layer2 && <InsightBox insight={data.insights.layer2} icon={Sparkles} />}
                 </div>
