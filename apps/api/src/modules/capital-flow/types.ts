@@ -300,6 +300,11 @@ export interface LayerInsights {
   layer2: string;  // Market Flow interpretation
   layer3: string;  // Sector analysis
   layer4: string;  // Overall recommendation reasoning
+  // RAG Yorumları - Veriye dayalı kısa özetler
+  ragLayer1?: string;  // Net Liquidity yorumu (1-2 cümle)
+  ragLayer2?: string;  // Market rotasyonu yorumu (1-2 cümle)
+  ragLayer3?: string;  // Sektör fırsatı yorumu (1-2 cümle)
+  ragLayer4?: string;  // Aksiyon önerisi yorumu (1-2 cümle)
   generatedAt: Date;
 }
 

@@ -1437,7 +1437,12 @@ async function generateLayerInsights(
   const bondsMarket = markets.find(m => m.market === 'bonds');
   const metalsMarket = markets.find(m => m.market === 'metals');
 
-  const prompt = `You are a financial analyst providing brief, actionable insights for a Capital Flow dashboard. Analyze the following data and provide 2-3 sentence insights for each layer. Be concise, specific, and actionable. Use plain language a trader would understand.
+  // Find best and worst performing markets
+  const sortedMarkets = [...markets].sort((a, b) => b.flow7d - a.flow7d);
+  const bestMarket = sortedMarkets[0];
+  const worstMarket = sortedMarkets[sortedMarkets.length - 1];
+
+  const prompt = `You are a financial analyst providing brief, actionable insights for a Capital Flow dashboard. Analyze the following data and provide 2-3 sentence insights for each layer PLUS a 1-2 sentence RAG (data-grounded) commentary. Be concise, specific, and actionable. Use plain language a trader would understand.
 
 DATA:
 Layer 1 - Global Liquidity:
@@ -1457,6 +1462,8 @@ Layer 2 - Market Flows:
 - Stocks: ${stocksMarket?.flow7d.toFixed(1)}% (7d), Phase: ${stocksMarket?.phase}, Signal: ${stocksMarket?.rotationSignal || 'none'}
 - Bonds: ${bondsMarket?.flow7d.toFixed(1)}% (7d), Phase: ${bondsMarket?.phase}, Signal: ${bondsMarket?.rotationSignal || 'none'}
 - Metals: ${metalsMarket?.flow7d.toFixed(1)}% (7d), Phase: ${metalsMarket?.phase}, Signal: ${metalsMarket?.rotationSignal || 'none'}
+- Best performer: ${bestMarket?.market.toUpperCase()} (+${bestMarket?.flow7d.toFixed(1)}%)
+- Worst performer: ${worstMarket?.market.toUpperCase()} (${worstMarket?.flow7d.toFixed(1)}%)
 
 Layer 3 - Top Sectors:
 ${cryptoMarket?.sectors?.slice(0, 3).map(s => `- ${s.name}: ${s.flow7d > 0 ? '+' : ''}${s.flow7d.toFixed(1)}%`).join('\n') || 'No sector data'}
@@ -1464,12 +1471,18 @@ ${cryptoMarket?.sectors?.slice(0, 3).map(s => `- ${s.name}: ${s.flow7d > 0 ? '+'
 Recommendation: ${recommendation.action.toUpperCase()} ${recommendation.primaryMarket.toUpperCase()} (${recommendation.confidence}% confidence)
 ${rotation ? `Active Rotation: ${rotation.from} → ${rotation.to}` : 'No active rotation detected'}
 
+IMPORTANT: RAG commentaries must cite specific numbers from the data above. Keep them 1-2 sentences max.
+
 Respond in this exact JSON format (no markdown, just pure JSON):
 {
   "layer1": "Your 2-3 sentence insight about global liquidity conditions and what they mean for traders",
   "layer2": "Your 2-3 sentence insight about which markets are attracting capital and the phase implications",
   "layer3": "Your 2-3 sentence insight about sector performance and opportunities",
-  "layer4": "Your 2-3 sentence synthesis tying everything together with actionable guidance"
+  "layer4": "Your 2-3 sentence synthesis tying everything together with actionable guidance",
+  "ragLayer1": "1-2 sentence citing specific Net Liquidity value and what it means (e.g., 'Net Liquidity at 5.8T with RRP draining signals...')",
+  "ragLayer2": "1-2 sentence citing which market is leading and its phase (e.g., 'Crypto leading with +4.2% 7d flow in EARLY phase...')",
+  "ragLayer3": "1-2 sentence citing top sector opportunity (e.g., 'DeFi sector +8.3% outperforming, focus on AAVE, UNI...')",
+  "ragLayer4": "1-2 sentence final action call with confidence (e.g., 'With 78% confidence, prioritize CRYPTO entries in DeFi sector.')"
 }`;
 
   try {
@@ -1496,6 +1509,11 @@ Respond in this exact JSON format (no markdown, just pure JSON):
           layer2: parsed.layer2 || 'Market flow data is being analyzed.',
           layer3: parsed.layer3 || 'Sector data is being analyzed.',
           layer4: parsed.layer4 || 'Overall analysis is in progress.',
+          // RAG Yorumları
+          ragLayer1: parsed.ragLayer1 || generateFallbackRagLayer1(liquidity, bias),
+          ragLayer2: parsed.ragLayer2 || generateFallbackRagLayer2(bestMarket, worstMarket),
+          ragLayer3: parsed.ragLayer3 || generateFallbackRagLayer3(cryptoMarket),
+          ragLayer4: parsed.ragLayer4 || generateFallbackRagLayer4(recommendation),
           generatedAt: new Date(),
         };
 
@@ -1511,14 +1529,86 @@ Respond in this exact JSON format (no markdown, just pure JSON):
     console.error('[CapitalFlow] Gemini API error:', error);
   }
 
-  // Fallback insights
+  // Fallback insights with RAG commentaries
   return {
     layer1: `Net Liquidity is ${liquidity.netLiquidity.value.toFixed(2)}T USD (${liquidity.netLiquidity.trend}). ${bias === 'risk_on' ? 'Liquidity conditions favor risk assets.' : bias === 'risk_off' ? 'Defensive positioning recommended.' : 'Mixed signals in liquidity.'} ${liquidity.reverseRepo.trend === 'draining' ? 'RRP draining adds positive liquidity.' : liquidity.treasuryGeneralAccount.trend === 'spending' ? 'Treasury spending supports markets.' : ''}`,
     layer2: `${recommendation.primaryMarket.toUpperCase()} market is in ${recommendation.phase} phase with ${recommendation.confidence}% confidence.`,
     layer3: cryptoMarket?.sectors?.[0] ? `${cryptoMarket.sectors[0].name} is the leading sector with ${cryptoMarket.sectors[0].flow7d.toFixed(1)}% 7-day flow.` : 'Sector analysis pending.',
     layer4: `${recommendation.action === 'analyze' ? 'Good conditions to analyze opportunities.' : recommendation.action === 'wait' ? 'Wait for better entry conditions.' : 'Avoid new positions in current conditions.'}`,
+    // RAG Yorumları - Fallback
+    ragLayer1: generateFallbackRagLayer1(liquidity, bias),
+    ragLayer2: generateFallbackRagLayer2(bestMarket, worstMarket),
+    ragLayer3: generateFallbackRagLayer3(cryptoMarket),
+    ragLayer4: generateFallbackRagLayer4(recommendation),
     generatedAt: new Date(),
   };
+}
+
+/**
+ * RAG Layer 1 Fallback - Net Liquidity yorumu
+ */
+function generateFallbackRagLayer1(liquidity: GlobalLiquidity, bias: LiquidityBias): string {
+  const netLiq = liquidity.netLiquidity.value.toFixed(2);
+  const trend = liquidity.netLiquidity.trend;
+  const rrpTrend = liquidity.reverseRepo.trend;
+  const tgaTrend = liquidity.treasuryGeneralAccount.trend;
+
+  if (trend === 'expanding' && rrpTrend === 'draining') {
+    return `Net Liquidity ${netLiq}T USD artıyor, RRP boşalması piyasalara likidite ekliyor. Risk varlıkları için olumlu ortam.`;
+  } else if (trend === 'contracting') {
+    return `Net Liquidity ${netLiq}T USD daralıyor. ${tgaTrend === 'building' ? 'TGA birikiyor, likidite çekiliyor.' : 'Dikkatli olunmalı.'}`;
+  }
+  return `Net Liquidity ${netLiq}T USD seviyesinde, ${bias === 'risk_on' ? 'risk iştahı yüksek' : bias === 'risk_off' ? 'güvenli limanlara yöneliş var' : 'kararsız bir ortam mevcut'}.`;
+}
+
+/**
+ * RAG Layer 2 Fallback - Market rotasyonu yorumu
+ */
+function generateFallbackRagLayer2(bestMarket: MarketFlow | undefined, worstMarket: MarketFlow | undefined): string {
+  if (!bestMarket || !worstMarket) {
+    return 'Market akış verileri analiz ediliyor.';
+  }
+
+  const best = bestMarket.market.toUpperCase();
+  const bestFlow = bestMarket.flow7d.toFixed(1);
+  const bestPhase = bestMarket.phase.toUpperCase();
+  const worst = worstMarket.market.toUpperCase();
+  const worstFlow = worstMarket.flow7d.toFixed(1);
+
+  return `${best} +${bestFlow}% ile lider, ${bestPhase} fazında. ${worst} (${worstFlow}%) en zayıf performans, rotasyon sinyali olabilir.`;
+}
+
+/**
+ * RAG Layer 3 Fallback - Sektör fırsatı yorumu
+ */
+function generateFallbackRagLayer3(cryptoMarket: MarketFlow | undefined): string {
+  const topSector = cryptoMarket?.sectors?.[0];
+  if (!topSector) {
+    return 'Sektör verileri yükleniyor.';
+  }
+
+  const sectorName = topSector.name;
+  const sectorFlow = topSector.flow7d.toFixed(1);
+  const topAssets = topSector.topAssets?.slice(0, 3).join(', ') || '';
+
+  return `${sectorName} sektörü ${sectorFlow > '0' ? '+' : ''}${sectorFlow}% ile öne çıkıyor.${topAssets ? ` Dikkat: ${topAssets}.` : ''}`;
+}
+
+/**
+ * RAG Layer 4 Fallback - Aksiyon önerisi yorumu
+ */
+function generateFallbackRagLayer4(recommendation: FlowRecommendation): string {
+  const market = recommendation.primaryMarket.toUpperCase();
+  const action = recommendation.action.toUpperCase();
+  const confidence = recommendation.confidence;
+  const phase = recommendation.phase?.toUpperCase() || 'N/A';
+
+  if (action === 'ANALYZE') {
+    return `%${confidence} güvenle ${market}'te fırsat arayın. ${phase} fazı giriş için uygun.`;
+  } else if (action === 'WAIT') {
+    return `${market}'te bekle. Faz ${phase}, daha iyi giriş noktası için sabır gerekiyor.`;
+  }
+  return `${market}'te yeni pozisyon açmayın. Risk/ödül oranı olumsuz.`;
 }
 
 /**
