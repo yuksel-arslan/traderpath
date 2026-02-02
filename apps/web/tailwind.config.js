@@ -235,6 +235,11 @@ module.exports = {
           '0%': { backgroundPosition: '200% 0' },
           '100%': { backgroundPosition: '-200% 0' },
         },
+        'gradient': {
+          '0%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+          '100%': { backgroundPosition: '0% 50%' },
+        },
         // Celebration animations
         'confetti-fall': {
           '0%': { transform: 'translateY(0) rotate(0deg)', opacity: '1' },
@@ -283,6 +288,7 @@ module.exports = {
         'soundwave-slow': 'soundwave-slow 0.8s ease-in-out infinite',
         'voice-pulse': 'voice-pulse 1.5s ease-out infinite',
         'shimmer': 'shimmer 3s ease-in-out infinite',
+        'gradient': 'gradient 4s ease-in-out infinite',
         // Celebration animations
         'confetti-fall': 'confetti-fall 4s linear forwards',
         'balloon-rise': 'balloon-rise 6s ease-out forwards',
