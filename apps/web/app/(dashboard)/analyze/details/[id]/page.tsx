@@ -494,6 +494,18 @@ export default function AnalysisDetailsPage() {
 
   const macdDesc = (step2.indicators?.macd?.histogram || 0) > 0 ? 'Bullish crossover' : 'Bearish momentum';
 
+  // Asset-specific context for non-crypto assets (metals, stocks, bonds)
+  const assetContext = step2.assetContext || null;
+  const isNonCrypto = assetContext?.assetClass && assetContext.assetClass !== 'crypto';
+  const assetClassLabel = assetContext?.assetClass ?
+    assetContext.assetClass.charAt(0).toUpperCase() + assetContext.assetClass.slice(1) : null;
+  const assetSentiment = assetContext?.metrics?.sentiment || null;
+  const assetSentimentScore = assetContext?.metrics?.sentimentScore || 0;
+  const assetKeyDrivers = assetContext?.keyDrivers || [];
+  const assetWarnings = assetContext?.warnings || [];
+  const interMarketRegime = assetContext?.interMarketContext?.regime || null;
+  const regimeConfidence = assetContext?.interMarketContext?.regimeConfidence || 0;
+
   // Trade plan data (only 2 TPs: TP1 and TP2)
   const stopLossPrice = step5.stopLoss?.price || step5.stopLoss;
   const tp1 = step5.takeProfits?.[0]?.price || step5.takeProfit1;
@@ -834,6 +846,97 @@ export default function AnalysisDetailsPage() {
                   Price: {formatPrice(step2.currentPrice)} • 24h: {(step2.priceChange24h || 0) >= 0 ? '+' : ''}{step2.priceChange24h?.toFixed(2) || '0'}%
                 </p>
               </div>
+
+              {/* Asset-Specific Context - Only for non-crypto (metals, stocks, bonds) */}
+              {isNonCrypto && assetContext?.metrics && (
+                <div className={cn(
+                  "bg-gradient-to-br rounded-xl p-4 border-2 col-span-1 sm:col-span-2",
+                  assetSentiment === 'bullish' ? 'from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-500/30' :
+                  assetSentiment === 'bearish' ? 'from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-red-500/30' :
+                  'from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border-amber-500/30'
+                )}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold",
+                        assetContext.assetClass === 'metals' ? 'bg-amber-500' :
+                        assetContext.assetClass === 'stocks' ? 'bg-blue-500' : 'bg-green-500'
+                      )}>
+                        {assetContext.assetClass === 'metals' ? '⚜️' :
+                         assetContext.assetClass === 'stocks' ? '📈' : '📊'}
+                      </div>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {assetClassLabel} Analysis
+                      </span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-300">
+                        Asset-Specific
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "text-sm font-bold",
+                        assetSentiment === 'bullish' ? 'text-green-600 dark:text-green-400' :
+                        assetSentiment === 'bearish' ? 'text-red-600 dark:text-red-400' :
+                        'text-amber-600 dark:text-amber-400'
+                      )}>
+                        {assetSentiment?.charAt(0).toUpperCase() + assetSentiment?.slice(1)}
+                      </span>
+                      <span className="text-sm text-gray-500 dark:text-slate-400">
+                        ({assetSentimentScore}/100)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Key Drivers */}
+                  {assetKeyDrivers.length > 0 && (
+                    <div className="mb-3">
+                      <span className="text-xs font-medium text-gray-600 dark:text-slate-400 uppercase tracking-wide">Key Drivers</span>
+                      <ul className="mt-1 space-y-1">
+                        {assetKeyDrivers.slice(0, 3).map((driver: string, i: number) => (
+                          <li key={i} className="text-sm text-gray-700 dark:text-slate-300 flex items-center gap-1.5">
+                            <span className={cn(
+                              "w-1.5 h-1.5 rounded-full",
+                              assetSentiment === 'bullish' ? 'bg-green-500' :
+                              assetSentiment === 'bearish' ? 'bg-red-500' : 'bg-amber-500'
+                            )} />
+                            {driver}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Inter-Market Regime */}
+                  {interMarketRegime && (
+                    <div className="flex items-center gap-2 text-sm mb-2">
+                      <span className="text-gray-500 dark:text-slate-400">Market Regime:</span>
+                      <span className={cn(
+                        "font-medium px-2 py-0.5 rounded text-xs",
+                        interMarketRegime === 'risk_on' ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300' :
+                        interMarketRegime === 'risk_off' ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300' :
+                        interMarketRegime === 'inflation' ? 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300' :
+                        interMarketRegime === 'deflation' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' :
+                        'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300'
+                      )}>
+                        {interMarketRegime.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                        {regimeConfidence >= 50 && ` (${regimeConfidence}%)`}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Warnings */}
+                  {assetWarnings.length > 0 && (
+                    <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
+                      {assetWarnings.map((warning: string, i: number) => (
+                        <p key={i} className="text-xs text-red-700 dark:text-red-300 flex items-start gap-1.5">
+                          <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                          {warning}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* 3. Safety Check */}
               <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
