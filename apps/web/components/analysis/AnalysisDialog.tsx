@@ -1396,7 +1396,6 @@ export function AnalysisDialog({
                 <DirectionArrow
                   direction={direction.toLowerCase() as 'long' | 'short'}
                   size="sm"
-                  animated={false}
                 />
               )}
 
