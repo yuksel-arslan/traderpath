@@ -495,19 +495,96 @@ async function getMetalsMarketFlow(): Promise<MarketFlow> {
 }
 
 /**
- * Detect market phase
+ * Calculate percentile of a value within an array
+ * @param value The value to find percentile for
+ * @param array Array of values to compare against
+ * @returns Percentile (0-100)
  */
-function detectPhase(flow: { flow7d: number; flow30d: number; flowVelocity: number }): Phase {
-  const { flow7d, flow30d, flowVelocity } = flow;
+function calculatePercentile(value: number, array: number[]): number {
+  if (array.length === 0) return 50; // Default to median if no data
 
+  const sorted = [...array].sort((a, b) => a - b);
+  let count = 0;
+
+  for (const v of sorted) {
+    if (v < value) count++;
+  }
+
+  return (count / sorted.length) * 100;
+}
+
+/**
+ * Detect market phase using PERCENTILE-BASED DETECTION
+ *
+ * This approach is more adaptive than simple thresholds:
+ * - Compares current flow to historical distribution
+ * - Self-calibrating based on market conditions
+ * - More accurate across different market environments
+ *
+ * Phase Detection Logic:
+ * - EARLY: High flow percentile (>75), positive velocity, not yet established (30d percentile < 75)
+ * - MID: Moderate flow percentile (25-75), stable velocity
+ * - LATE: High 30d flow (>75) but declining velocity (<25 percentile)
+ * - EXIT: Low flow percentile (<25) or negative velocity (<10 percentile)
+ */
+function detectPhase(flow: {
+  flow7d: number;
+  flow30d: number;
+  flowVelocity: number;
+  flowHistory?: FlowDataPoint[];
+  velocityHistory?: FlowDataPoint[];
+}): Phase {
+  const { flow7d, flow30d, flowVelocity, flowHistory, velocityHistory } = flow;
+
+  // Extract historical values for percentile calculation
+  const historicalFlows = flowHistory?.map(h => h.value) || [];
+  const historicalVelocities = velocityHistory?.map(h => h.value) || [];
+
+  // If we have sufficient historical data, use percentile-based detection
+  if (historicalFlows.length >= 10) {
+    const flow7dPercentile = calculatePercentile(flow7d, historicalFlows);
+    const flow30dPercentile = calculatePercentile(flow30d, historicalFlows);
+    const velocityPercentile = historicalVelocities.length >= 5
+      ? calculatePercentile(flowVelocity, historicalVelocities)
+      : 50;
+
+    // EARLY PHASE: Strong recent flow, positive acceleration, trend is young
+    // - 7d flow in top quartile (>75th percentile)
+    // - Positive velocity (accelerating)
+    // - 30d flow not yet at extreme (< 75th percentile) - trend hasn't matured
+    if (flow7dPercentile > 75 && velocityPercentile > 50 && flow30dPercentile < 75) {
+      return 'early';
+    }
+
+    // EXIT PHASE: Weak flow or negative velocity
+    // - 7d flow in bottom quartile (<25th percentile) OR
+    // - Velocity in bottom decile (<10th percentile)
+    if (flow7dPercentile < 25 || velocityPercentile < 10) {
+      return 'exit';
+    }
+
+    // LATE PHASE: Strong 30d flow but declining momentum
+    // - 30d flow in top quartile (>75th percentile)
+    // - Velocity in bottom quartile (<25th percentile) - slowing down
+    // - 7d flow weaker than 30d trend (exhaustion)
+    if (flow30dPercentile > 75 && velocityPercentile < 25 && flow7d < flow30d * 0.5) {
+      return 'late';
+    }
+
+    // MID PHASE: Everything in moderate range
+    // Default state when trend is established but not extreme
+    return 'mid';
+  }
+
+  // FALLBACK: Simple threshold-based detection when insufficient historical data
   // EARLY: New inflow starting (positive but not yet established)
   if (flow7d > 3 && flow30d < 10 && flowVelocity > 0) {
     return 'early';
   }
 
-  // MID: Established trend (consistent flow)
-  if (flow7d > 0 && flow30d > 5 && flow30d < 20) {
-    return 'mid';
+  // EXIT: Outflow or reversal
+  if (flow7d < -2 || flowVelocity < -3) {
+    return 'exit';
   }
 
   // LATE: Trend exhaustion (slowing down)
@@ -515,9 +592,9 @@ function detectPhase(flow: { flow7d: number; flow30d: number; flowVelocity: numb
     return 'late';
   }
 
-  // EXIT: Outflow or reversal
-  if (flow7d < -2 || flowVelocity < -3) {
-    return 'exit';
+  // MID: Established trend (consistent flow)
+  if (flow7d > 0 && flow30d > 5) {
+    return 'mid';
   }
 
   // Default to mid if can't determine
