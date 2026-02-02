@@ -539,7 +539,8 @@ Kullanıcı Hakları Aktif:
 | 2026-02-01 | Analysis details Export dropdown'da PNG/JPG/PDF/Email yerine sadece Download Report ve Email Report olmalıydı | Export dropdown sadeleştirildi: PNG, JPG seçenekleri kaldırıldı. Sadece "Download Report" (PDF) ve "Email Report" butonları kaldı. Kullanılmayan handleExportPNG ve handleExportJPG fonksiyonları silindi, Image import'u kaldırıldı | `analyze/details/[id]/page.tsx` |
 | 2026-02-01 | GLD ve diğer non-crypto varlıklar için TradePlanChart "Failed to load chart data" hatası | TradePlanChart doğrudan Binance API çağırıyordu (Binance'de GLD yok). Yeni `/api/analysis/chart/candles` endpoint eklendi - multi-asset data provider kullanarak crypto→Binance, stocks/metals/bonds→Yahoo Finance yönlendiriyor. Frontend bu endpoint'i kullanacak şekilde güncellendi | `analysis.routes.ts`, `TradePlanChart.tsx` |
 | 2026-02-02 | PDF rapor header'da TraderPath görünmüyor, rapor başlığı ve metod eksik | 1) Tüm sayfalara inline SVG logo eklendi (gradient id'ler sayfa bazlı unique), 2) "Asset Analysis Report" başlığı eklendi, 3) Analiz metodu badge'i eklendi (Classic 7-Step / MLIS Pro), 4) Rapor tarihi daha belirgin formatta gösteriliyor, 5) CONDITIONAL_GO durumunda koşulların açıklaması eklendi (Executive Summary ve Final Verdict sayfalarında) | `AnalysisReport.tsx` |
-| 2026-02-02 | PDF/Email export okunaksız ve beyaz arka plan | 1) backgroundColor #0f172a (dark mode) olarak değiştirildi, 2) onclone fonksiyonunda dark mode stilleri zorlandı, 3) CSS gradient text html2canvas'ta render olmuyordu - solid teal renk (#14B8A6) kullanıldı, 4) Email export için aynı dark mode stili uygulandı | `analyze/details/[id]/page.tsx` |
+| 2026-02-02 | AI Concierge "Altın alınır mı?" sorusuna hardcoded/robotik yanıt veriyordu | `generateDataDrivenAssetResponse()` metodu eklendi - yanıtlar tamamen gerçek veriye dayalı: 1) flow30d, flowVelocity, phase, rotationSignal değerleri dinamik kullanılıyor, 2) Örnek: "Metal piyasasından %3.2 sermaye çıkışı var. Bonolar %5.8 giriş alıyor.", 3) Veri değiştikçe cümle değişiyor (hardcode yok), 4) Anlam tekrarı yok, 5) Phase bazlı öneri (EARLY/MID/LATE/EXIT) | `concierge.service.ts` |
+| 2026-02-02 | Analyze sayfasında dil değişikliği yapınca hata oluşuyordu | Google Translate DOM'u değiştirdiğinde `.toFixed()` çağrıları undefined değerler üzerinde çalışıyordu. 1) `safeToFixed` helper fonksiyonu eklendi, 2) Optional chaining ile nested property erişimi güvenli hale getirildi, 3) Numerik değerlere `notranslate` class'ı eklendi, 4) Null coalescing ile karşılaştırmalar güvenli hale getirildi | `analyze/page.tsx` |
 
 ---
 
@@ -1757,6 +1758,17 @@ Kullanıcı Hakları Aktif:
     - Key drivers, inter-market regime, warnings gösterimi
     - Sentiment bazlı gradient arka plan (bullish/bearish/neutral)
   - Dosyalar: `analysis.engine.ts`, `analyze/details/[id]/page.tsx`
+- **AI Concierge Data-Driven Yanıt Sistemi**:
+  - `generateDataDrivenAssetResponse()` metodu ile tamamen veriye dayalı cümle üretimi
+  - **Kullanılan gerçek metrikler**:
+    - `flow30d`: 30 günlük akış yüzdesi (örn: "%3.2 sermaye çıkışı")
+    - `flowVelocity`: Akış hızı (hızlanıyor/yavaşlıyor)
+    - `phase`: Piyasa fazı (EARLY/MID/LATE/EXIT)
+    - `rotationSignal`: Rotasyon sinyali (entering/stable/exiting)
+  - **Dinamik cümle yapısı**: Veri değiştikçe cümle değişiyor, hardcode yok
+  - **Örnek çıktı**: "Metal piyasasından %3.2 sermaye çıkışı var. Bonolar %5.8 giriş alıyor."
+  - Anlam tekrarı kaldırıldı, kısa ve öz yanıtlar
+  - Dosya: `apps/api/src/modules/concierge/concierge.service.ts`
 
 ---
 

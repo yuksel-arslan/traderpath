@@ -23,8 +23,6 @@ import {
   Search,
   Crosshair,
   Check,
-  Download,
-  ChevronDown,
   FileText,
   Mail,
   Zap,
@@ -74,8 +72,8 @@ export default function AnalysisDetailsPage() {
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [autoEmailInProgress, setAutoEmailInProgress] = useState(false);
   const [autoEmailDone, setAutoEmailDone] = useState(false);
@@ -241,12 +239,11 @@ export default function AnalysisDetailsPage() {
     }
   }, [searchParams, analysis, loading, handleAutoPdf]);
 
-  // Export as PDF
-  const handleExportPDF = async () => {
-    if (!pageRef.current || exporting || !analysis) return;
+  // Download PDF (dark mode capture)
+  const handleDownloadPdf = async () => {
+    if (!pageRef.current || downloadingPdf || !analysis) return;
 
-    setExporting(true);
-    setExportDropdownOpen(false);
+    setDownloadingPdf(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -254,86 +251,29 @@ export default function AnalysisDetailsPage() {
       const { jsPDF } = await import('jspdf');
 
       const canvas = await html2canvas(pageRef.current, {
-        backgroundColor: '#0f172a', // Dark mode background (slate-900)
+        backgroundColor: '#0f172a', // Dark mode background
         scale: 2,
-        logging: true,
+        logging: false,
         useCORS: true,
         allowTaint: true,
         foreignObjectRendering: false,
         removeContainer: true,
         imageTimeout: 5000,
         onclone: (clonedDoc) => {
-          // Force dark mode styling on cloned document
-          const clonedElement = clonedDoc.querySelector('[data-export-container]') as HTMLElement;
+          // Force dark mode styles on cloned element
+          const clonedElement = clonedDoc.querySelector('[data-export-container]');
           if (clonedElement) {
-            clonedElement.style.overflow = 'visible';
-            clonedElement.style.backgroundColor = '#1e293b'; // slate-800
-            clonedElement.style.color = '#ffffff';
-            clonedElement.style.borderColor = 'transparent';
-
-            // Fix TraderPath brand text - gradient text doesn't render in canvas
-            const brandText = clonedElement.querySelector('[data-brand-text]') as HTMLElement;
-            if (brandText) {
-              brandText.style.background = 'none';
-              brandText.style.webkitBackgroundClip = 'unset';
-              brandText.style.webkitTextFillColor = '#14B8A6'; // Teal color
-              brandText.style.backgroundClip = 'unset';
-              brandText.style.color = '#14B8A6';
-            }
-
-            // Style export header for dark mode
-            const exportHeader = clonedElement.querySelector('[data-export-header]') as HTMLElement;
-            if (exportHeader) {
-              exportHeader.style.borderColor = 'rgba(51, 65, 85, 0.8)';
-            }
-
-            // Force dark mode on all child elements
-            const allElements = clonedElement.querySelectorAll('*');
-            allElements.forEach((el) => {
-              const element = el as HTMLElement;
-              // Skip brand text as we already styled it
-              if (element.hasAttribute('data-brand-text')) return;
-
-              // Convert light backgrounds to dark
-              const computedStyle = window.getComputedStyle(element);
-              const bgColor = computedStyle.backgroundColor;
-
-              // Convert white/light backgrounds to dark equivalents
-              if (bgColor === 'rgb(255, 255, 255)' || bgColor === 'rgba(0, 0, 0, 0)') {
-                element.style.backgroundColor = 'transparent';
-              }
-              if (bgColor === 'rgb(249, 250, 251)' || bgColor === 'rgb(243, 244, 246)') {
-                element.style.backgroundColor = 'rgba(51, 65, 85, 0.5)'; // slate-700/50
-              }
-
-              // Convert dark text to light
-              const textColor = computedStyle.color;
-              if (textColor === 'rgb(17, 24, 39)' || textColor === 'rgb(31, 41, 55)' || textColor === 'rgb(55, 65, 81)') {
-                element.style.color = '#ffffff';
-              }
-              if (textColor === 'rgb(107, 114, 128)' || textColor === 'rgb(75, 85, 99)') {
-                element.style.color = '#94a3b8'; // slate-400
-              }
-
-              // Convert light borders to dark
-              const borderColor = computedStyle.borderColor;
-              if (borderColor === 'rgb(229, 231, 235)' || borderColor === 'rgb(209, 213, 219)') {
-                element.style.borderColor = 'rgba(51, 65, 85, 0.5)';
-              }
-            });
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+            (clonedElement as HTMLElement).style.backgroundColor = '#1e293b';
+            (clonedElement as HTMLElement).style.color = '#ffffff';
+            clonedElement.classList.add('dark');
           }
-
-          // Hide problematic images
-          const images = clonedDoc.querySelectorAll('img');
-          images.forEach(img => {
-            if (img.src.includes('cryptoicons') || img.src.includes('coingecko')) {
-              img.style.display = 'none';
-            }
-          });
+          // Add dark class to root for Tailwind dark mode
+          clonedDoc.documentElement.classList.add('dark');
         },
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF({
         orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
         unit: 'px',
@@ -346,120 +286,73 @@ export default function AnalysisDetailsPage() {
       const date = new Date().toISOString().split('T')[0];
       pdf.save(`TraderPath_${symbol}_${date}.pdf`);
     } catch (err) {
-      console.error('Failed to export PDF:', err);
-      alert('Failed to export PDF: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      console.error('Failed to download PDF:', err);
+      alert('Failed to download PDF: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
-      setExporting(false);
+      setDownloadingPdf(false);
     }
   };
 
-  // Send via Email - downloads JPG and sends email
-  const handleSendEmail = async () => {
-    if (!pageRef.current || exporting || !analysis) return;
+  // Send Email with PDF attachment
+  const handleEmailReport = async () => {
+    if (!pageRef.current || sendingEmail || !analysis) return;
 
-    setExporting(true);
-    setExportDropdownOpen(false);
+    setSendingEmail(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
 
+      // Dynamic import jsPDF
+      const { jsPDF } = await import('jspdf');
+
+      // Capture in dark mode
       const canvas = await html2canvas(pageRef.current, {
-        backgroundColor: '#0f172a', // Dark mode background (slate-900)
-        scale: 1.5,
-        logging: true,
+        backgroundColor: '#0f172a',
+        scale: 2,
+        logging: false,
         useCORS: true,
         allowTaint: true,
         foreignObjectRendering: false,
         removeContainer: true,
         imageTimeout: 5000,
         onclone: (clonedDoc) => {
-          // Force dark mode styling on cloned document
-          const clonedElement = clonedDoc.querySelector('[data-export-container]') as HTMLElement;
+          const clonedElement = clonedDoc.querySelector('[data-export-container]');
           if (clonedElement) {
-            clonedElement.style.overflow = 'visible';
-            clonedElement.style.backgroundColor = '#1e293b'; // slate-800
-            clonedElement.style.color = '#ffffff';
-            clonedElement.style.borderColor = 'transparent';
-
-            // Fix TraderPath brand text - gradient text doesn't render in canvas
-            const brandText = clonedElement.querySelector('[data-brand-text]') as HTMLElement;
-            if (brandText) {
-              brandText.style.background = 'none';
-              brandText.style.webkitBackgroundClip = 'unset';
-              brandText.style.webkitTextFillColor = '#14B8A6'; // Teal color
-              brandText.style.backgroundClip = 'unset';
-              brandText.style.color = '#14B8A6';
-            }
-
-            // Style export header for dark mode
-            const exportHeader = clonedElement.querySelector('[data-export-header]') as HTMLElement;
-            if (exportHeader) {
-              exportHeader.style.borderColor = 'rgba(51, 65, 85, 0.8)';
-            }
-
-            // Force dark mode on all child elements
-            const allElements = clonedElement.querySelectorAll('*');
-            allElements.forEach((el) => {
-              const element = el as HTMLElement;
-              if (element.hasAttribute('data-brand-text')) return;
-
-              const computedStyle = window.getComputedStyle(element);
-              const bgColor = computedStyle.backgroundColor;
-
-              if (bgColor === 'rgb(255, 255, 255)' || bgColor === 'rgba(0, 0, 0, 0)') {
-                element.style.backgroundColor = 'transparent';
-              }
-              if (bgColor === 'rgb(249, 250, 251)' || bgColor === 'rgb(243, 244, 246)') {
-                element.style.backgroundColor = 'rgba(51, 65, 85, 0.5)';
-              }
-
-              const textColor = computedStyle.color;
-              if (textColor === 'rgb(17, 24, 39)' || textColor === 'rgb(31, 41, 55)' || textColor === 'rgb(55, 65, 81)') {
-                element.style.color = '#ffffff';
-              }
-              if (textColor === 'rgb(107, 114, 128)' || textColor === 'rgb(75, 85, 99)') {
-                element.style.color = '#94a3b8';
-              }
-
-              const borderColor = computedStyle.borderColor;
-              if (borderColor === 'rgb(229, 231, 235)' || borderColor === 'rgb(209, 213, 219)') {
-                element.style.borderColor = 'rgba(51, 65, 85, 0.5)';
-              }
-            });
+            (clonedElement as HTMLElement).style.overflow = 'visible';
+            (clonedElement as HTMLElement).style.backgroundColor = '#1e293b';
+            (clonedElement as HTMLElement).style.color = '#ffffff';
+            clonedElement.classList.add('dark');
           }
-
-          // Hide problematic images
-          const images = clonedDoc.querySelectorAll('img');
-          images.forEach(img => {
-            if (img.src.includes('cryptoicons') || img.src.includes('coingecko')) {
-              img.style.display = 'none';
-            }
-          });
+          clonedDoc.documentElement.classList.add('dark');
         },
       });
 
-      const imageBase64 = canvas.toDataURL('image/jpeg', 0.85);
+      // Generate PDF
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height],
+      });
+      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
 
-      // Download the image first
-      const link = document.createElement('a');
-      const symbol = analysis.symbol || 'Analysis';
-      const date = new Date().toISOString().split('T')[0];
-      link.download = `TraderPath_${symbol}_${date}.jpg`;
-      link.href = imageBase64;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Get PDF as base64
+      const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
-      // Then send via email
-      const response = await authFetch('/api/reports/email-screenshot', {
+      // Send email with PDF attachment
+      const response = await authFetch('/api/reports/email-pdf-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           analysisId: analysis.id,
           symbol: analysis.symbol,
           interval: analysis.interval,
-          screenshot: imageBase64,
+          pdfBase64,
           score: analysis.totalScore,
           direction: analysis.step5Result?.direction || analysis.step7Result?.direction || 'long',
+          verdict: isMLIS
+            ? (mlisRecommendation === 'STRONG_BUY' || mlisRecommendation === 'BUY' ? 'GO' :
+               mlisRecommendation === 'HOLD' ? 'WAIT' : 'AVOID')
+            : (step7.verdict?.toUpperCase() || 'WAIT'),
         }),
       });
 
@@ -469,13 +362,13 @@ export default function AnalysisDetailsPage() {
       } else {
         const errorData = await response.json().catch(() => ({}));
         console.error('Email send failed:', response.status, errorData);
-        alert(errorData?.error?.message || 'Image downloaded. Email failed - please check your email settings.');
+        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
       }
     } catch (err) {
       console.error('Failed to send email:', err);
       alert('Failed to send email: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
-      setExporting(false);
+      setSendingEmail(false);
     }
   };
 
@@ -676,50 +569,39 @@ export default function AnalysisDetailsPage() {
               <span>Back to Analyze</span>
             </Link>
 
-            {/* Export Dropdown - Outside modal for clean screenshots */}
-            <div className="relative">
+            {/* Download PDF and Email Report Buttons */}
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-                disabled={exporting}
+                onClick={handleDownloadPdf}
+                disabled={downloadingPdf}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg"
+              >
+                {downloadingPdf ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FileText className="w-4 h-4" />
+                )}
+                <span>{downloadingPdf ? 'Generating...' : 'Download PDF'}</span>
+              </button>
+              <button
+                onClick={handleEmailReport}
+                disabled={sendingEmail}
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50",
                   emailSent
                     ? "bg-green-500 text-white"
-                    : "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg"
+                    : "bg-slate-700 hover:bg-slate-600 text-white"
                 )}
               >
-                {exporting ? (
+                {sendingEmail ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : emailSent ? (
                   <Check className="w-4 h-4" />
                 ) : (
-                  <Download className="w-4 h-4" />
+                  <Mail className="w-4 h-4" />
                 )}
-                <span>{exporting ? 'Exporting...' : emailSent ? 'Sent!' : 'Export'}</span>
-                <ChevronDown className={cn("w-4 h-4 transition-transform", exportDropdownOpen && "rotate-180")} />
+                <span>{sendingEmail ? 'Sending...' : emailSent ? 'Sent!' : 'Email Report'}</span>
               </button>
-
-              {exportDropdownOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setExportDropdownOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 z-50 overflow-hidden">
-                    <button
-                      onClick={handleExportPDF}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-                    >
-                      <FileText className="w-4 h-4 text-teal-500" />
-                      <span>Download Report</span>
-                    </button>
-                    <button
-                      onClick={handleSendEmail}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-                    >
-                      <Mail className="w-4 h-4 text-teal-500" />
-                      <span>Email Report</span>
-                    </button>
-                  </div>
-                </>
-              )}
             </div>
           </div>
 

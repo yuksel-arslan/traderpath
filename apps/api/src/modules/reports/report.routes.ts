@@ -1581,6 +1581,137 @@ export async function reportRoutes(fastify: FastifyInstance) {
   );
 
   // ===========================================
+  // POST /api/reports/email-pdf-report - Send analysis PDF via email
+  // ===========================================
+  interface SendPdfEmailBody {
+    analysisId: string;
+    symbol: string;
+    interval: string;
+    pdfBase64: string; // Base64 PDF content (without data URL prefix)
+    score: number;
+    direction: string;
+    verdict: string;
+  }
+
+  fastify.post<{ Body: SendPdfEmailBody }>(
+    '/api/reports/email-pdf-report',
+    { preHandler: [authenticate] },
+    async (
+      request: FastifyRequest<{ Body: SendPdfEmailBody }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const userId = (request.user as JwtUser).id;
+        const { analysisId, symbol, interval, pdfBase64, score, direction, verdict } = request.body;
+
+        if (!symbol || !pdfBase64) {
+          return reply.code(400).send({
+            error: { code: 'MISSING_FIELDS', message: 'Missing required fields (symbol, pdfBase64)' },
+          });
+        }
+
+        // Get user info
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { name: true, email: true, isAdmin: true },
+        });
+
+        if (!user || !user.email) {
+          return reply.code(400).send({
+            error: { code: 'NO_EMAIL', message: 'User email not found' },
+          });
+        }
+
+        // Check free email limit for this analysis (admin bypasses)
+        if (!user.isAdmin && analysisId) {
+          const analysis = await prisma.analysis.findUnique({
+            where: { id: analysisId },
+            select: { emailsSentUsed: true },
+          });
+
+          if (analysis && (analysis.emailsSentUsed || 0) >= FREE_EMAILS_PER_ANALYSIS) {
+            // Check credit balance
+            const creditBalance = await prisma.creditBalance.findUnique({
+              where: { userId },
+            });
+
+            if (!creditBalance || creditBalance.balance < EMAIL_SEND_CREDIT_COST) {
+              return reply.code(402).send({
+                error: {
+                  code: 'INSUFFICIENT_CREDITS',
+                  message: `Requires ${EMAIL_SEND_CREDIT_COST} credits. You have ${creditBalance?.balance || 0} credits.`,
+                },
+              });
+            }
+
+            // Deduct credits
+            await prisma.creditBalance.update({
+              where: { userId },
+              data: {
+                balance: { decrement: EMAIL_SEND_CREDIT_COST },
+                lifetimeSpent: { increment: EMAIL_SEND_CREDIT_COST },
+              },
+            });
+          }
+
+          // Increment email count for this analysis
+          if (analysisId) {
+            try {
+              await prisma.analysis.update({
+                where: { id: analysisId },
+                data: { emailsSentUsed: { increment: 1 } },
+              });
+            } catch {
+              // Analysis might not exist, continue anyway
+            }
+          }
+        }
+
+        // Format data for email
+        const isLong = direction?.toLowerCase() === 'long';
+        const directionText = isLong ? 'LONG' : 'SHORT';
+        const scorePercent = Math.round(score * 10);
+        const verdictText = verdict || 'WAIT';
+        const date = new Date().toISOString().split('T')[0];
+        const fileName = `TraderPath_${symbol}_${date}.pdf`;
+
+        // Send email with PDF attachment
+        const result = await emailService.sendPdfReport(user.email, {
+          userName: user.name || 'Trader',
+          symbol,
+          direction: directionText,
+          verdict: verdictText,
+          score: scorePercent,
+          fileName,
+          pdfBase64,
+          generatedAt: new Date().toLocaleString('en-US', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          }),
+        });
+
+        if (!result.success) {
+          return reply.code(500).send({
+            error: { code: 'EMAIL_FAILED', message: 'Failed to send email', details: result.error },
+          });
+        }
+
+        fastify.log.info({ userId, email: user.email, symbol, analysisId }, 'PDF report email sent');
+
+        return reply.send({
+          success: true,
+          message: `Analysis PDF sent to ${user.email}`,
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to send PDF email' },
+        });
+      }
+    }
+  );
+
+  // ===========================================
   // POST /api/reports/send-capital-flow-email - Send Capital Flow report via email
   // ===========================================
   interface SendCapitalFlowEmailBody {

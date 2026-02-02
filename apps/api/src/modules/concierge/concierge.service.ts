@@ -1372,10 +1372,99 @@ Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
 
   private async handleCapitalFlowRecommendation(language: string, creditBalance: number, assetHint?: string): Promise<ConciergeResponse> {
     try {
-      const recommendation = await capitalFlowService.getFlowRecommendation();
+      // Get full summary to access market flows
+      const summary = await capitalFlowService.getCapitalFlowSummary();
+      const recommendation = summary.recommendation;
 
-      const actionEmoji = recommendation.action === 'analyze' ? '✅' : recommendation.action === 'wait' ? '⏳' : '⛔';
-      const confidenceBar = '█'.repeat(Math.floor(recommendation.confidence / 10)) + '░'.repeat(10 - Math.floor(recommendation.confidence / 10));
+      // Find markets with positive and negative flows
+      const sortedMarkets = [...summary.markets].sort((a, b) => b.flow30d - a.flow30d);
+      const inflowMarket = sortedMarkets[0]; // Highest positive flow
+      const outflowMarket = sortedMarkets[sortedMarkets.length - 1]; // Lowest/negative flow
+
+      // Market name translations
+      const marketNamesTr: Record<string, string> = {
+        crypto: 'Kripto',
+        stocks: 'Hisseler',
+        bonds: 'Bonolar',
+        metals: 'Metaller'
+      };
+
+      // If asset hint is provided, generate a dynamic response based on actual data
+      if (assetHint) {
+        // Determine asset market and names
+        let assetMarket = 'crypto';
+        let assetNameTr = assetHint;
+        let assetNameEn = assetHint;
+        let analysisSymbol = assetHint;
+        let assetEmojiIcon = '🪙';
+        let marketNameTr = 'Kripto';
+        let marketNameEn = 'Crypto';
+
+        if (assetHint === 'GOLD' || assetHint === 'SILVER') {
+          assetMarket = 'metals';
+          assetNameTr = assetHint === 'GOLD' ? 'Altın' : 'Gümüş';
+          assetNameEn = assetHint === 'GOLD' ? 'Gold' : 'Silver';
+          analysisSymbol = assetHint === 'GOLD' ? 'GLD' : 'SLV';
+          assetEmojiIcon = '🥇';
+          marketNameTr = 'Metal';
+          marketNameEn = 'Metals';
+        } else if (assetHint === 'STOCKS' || assetHint === 'SPY' || assetHint === 'QQQ' || assetHint === 'AAPL' || assetHint === 'MSFT' || assetHint === 'GOOGL' || assetHint === 'TSLA') {
+          assetMarket = 'stocks';
+          assetNameTr = assetHint === 'STOCKS' ? 'Hisse Senetleri' : assetHint;
+          assetNameEn = assetHint === 'STOCKS' ? 'Stocks' : assetHint;
+          analysisSymbol = assetHint === 'STOCKS' ? 'SPY' : assetHint;
+          assetEmojiIcon = '📈';
+          marketNameTr = 'Hisse';
+          marketNameEn = 'Stocks';
+        } else if (assetHint === 'BONDS' || assetHint === 'TLT' || assetHint === 'IEF' || assetHint === 'BND') {
+          assetMarket = 'bonds';
+          assetNameTr = assetHint === 'BONDS' ? 'Tahviller' : assetHint;
+          assetNameEn = assetHint === 'BONDS' ? 'Bonds' : assetHint;
+          analysisSymbol = assetHint === 'BONDS' ? 'TLT' : assetHint;
+          assetEmojiIcon = '📊';
+          marketNameTr = 'Tahvil';
+          marketNameEn = 'Bonds';
+        }
+
+        // Get actual flow data for the asset's market
+        const assetMarketFlow = summary.markets.find(m => m.market === assetMarket);
+        const flow30d = assetMarketFlow?.flow30d ?? 0;
+        const flowVelocity = assetMarketFlow?.flowVelocity ?? 0;
+        const phase = assetMarketFlow?.phase ?? 'mid';
+        const rotationSignal = assetMarketFlow?.rotationSignal ?? 'stable';
+
+        // Get inflow market data
+        const inflowFlow30d = inflowMarket?.flow30d ?? 0;
+        const inflowMarketNameTr = marketNamesTr[inflowMarket?.market || 'bonds'] || 'Bonolar';
+        const inflowMarketNameEn = inflowMarket?.market ? inflowMarket.market.charAt(0).toUpperCase() + inflowMarket.market.slice(1) : 'Bonds';
+
+        // Generate dynamic response based on actual data
+        const organicMessage = this.generateDataDrivenAssetResponse({
+          language,
+          assetNameTr,
+          assetNameEn,
+          assetEmojiIcon,
+          analysisSymbol,
+          marketNameTr,
+          marketNameEn,
+          flow30d,
+          flowVelocity,
+          phase,
+          rotationSignal,
+          inflowMarketNameTr,
+          inflowMarketNameEn,
+          inflowFlow30d,
+        });
+
+        return {
+          success: true,
+          intent: 'CAPITAL_FLOW_RECOMMENDATION',
+          message: organicMessage,
+          creditsSpent: 0,
+          creditsRemaining: creditBalance,
+          detectedLanguage: language,
+        };
+      }
 
       // Determine next steps based on action (English base)
       let nextSteps: string;
@@ -1395,128 +1484,9 @@ Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
 • Consider safe havens (gold, bonds)`;
       }
 
-      // Build asset-specific advice if assetHint is provided
-      let assetAdvice = '';
-      if (assetHint) {
-        const assetName = assetHint === 'GOLD' ? 'Gold' : assetHint === 'SILVER' ? 'Silver' : assetHint;
-        const assetNameTr = assetHint === 'GOLD' ? 'Altın' : assetHint === 'SILVER' ? 'Gümüş' : assetHint;
-
-        // Determine asset market
-        let assetMarket = 'crypto';
-        if (assetHint === 'GOLD' || assetHint === 'SILVER') {
-          assetMarket = 'metals';
-        } else if (assetHint === 'STOCKS' || assetHint === 'SPY' || assetHint === 'QQQ') {
-          assetMarket = 'stocks';
-        } else if (assetHint === 'BONDS' || assetHint === 'TLT') {
-          assetMarket = 'bonds';
-        }
-
-        // Check if the asset's market is favorable
-        const isAssetMarketFavorable = recommendation.primaryMarket.toLowerCase() === assetMarket;
-
-        if (assetHint === 'GOLD' || assetHint === 'SILVER') {
-          // Gold/Silver specific advice based on Capital Flow
-          const reasonText = recommendation.reason || '';
-          const dxyTrend = reasonText.toLowerCase().includes('dxy');
-          const isRiskOff = recommendation.action === 'avoid' || reasonText.toLowerCase().includes('risk-off');
-
-          if (isRiskOff || (recommendation.primaryMarket.toLowerCase() === 'metals')) {
-            assetAdvice = language === 'tr'
-              ? `
-
-═══════════════════════════════════
-🥇 ${assetNameTr.toUpperCase()} İÇİN ANALİZ
-═══════════════════════════════════
-${isRiskOff ? '✅ Risk-off ortamı: Altın/Gümüş için olumlu koşullar.' : '✅ Metal piyasasına para akışı tespit edildi.'}
-${dxyTrend ? '• DXY zayıflıyor - Değerli metaller için olumlu' : '• Dolar güçlü - Metaller baskı altında kalabilir'}
-
-📌 ÖNERİ: Detaylı teknik analiz için:
-• "GLD analiz" veya "GLD mlis pro" yazın
-• (GLD = Gold ETF)`
-              : `
-
-═══════════════════════════════════
-🥇 ${assetName.toUpperCase()} ANALYSIS
-═══════════════════════════════════
-${isRiskOff ? '✅ Risk-off environment: Favorable conditions for Gold/Silver.' : '✅ Capital flow detected into metals market.'}
-${dxyTrend ? '• DXY weakening - Positive for precious metals' : '• Dollar strong - Metals may face pressure'}
-
-📌 RECOMMENDATION: For detailed technical analysis:
-• Type "GLD analysis" or "GLD mlis pro"
-• (GLD = Gold ETF)`;
-          } else {
-            assetAdvice = language === 'tr'
-              ? `
-
-═══════════════════════════════════
-🥇 ${assetNameTr.toUpperCase()} İÇİN ANALİZ
-═══════════════════════════════════
-⚠️ Şu an önerilen piyasa: ${recommendation.primaryMarket.toUpperCase()}
-Metal piyasası ${isAssetMarketFavorable ? 'güçlü' : 'para akışı açısından zayıf'}.
-
-📌 Yine de analiz etmek isterseniz:
-• "GLD analiz" veya "GLD mlis pro" yazın`
-              : `
-
-═══════════════════════════════════
-🥇 ${assetName.toUpperCase()} ANALYSIS
-═══════════════════════════════════
-⚠️ Currently recommended market: ${recommendation.primaryMarket.toUpperCase()}
-Metals market is ${isAssetMarketFavorable ? 'strong' : 'not showing significant inflow'}.
-
-📌 If you still want to analyze:
-• Type "GLD analysis" or "GLD mlis pro"`;
-          }
-        } else if (assetHint === 'STOCKS' || assetHint === 'BONDS') {
-          const marketName = assetHint === 'STOCKS' ? 'stocks' : 'bonds';
-          const marketNameTr = assetHint === 'STOCKS' ? 'Hisse' : 'Tahvil';
-
-          assetAdvice = language === 'tr'
-            ? `
-
-═══════════════════════════════════
-📈 ${marketNameTr.toUpperCase()} PİYASASI
-═══════════════════════════════════
-${isAssetMarketFavorable ? '✅ Bu piyasaya sermaye akışı var!' : '⚠️ Şu an önerilen piyasa: ' + recommendation.primaryMarket.toUpperCase()}
-
-📌 Analiz için: "SPY analiz" veya "QQQ analiz" yazın`
-            : `
-
-═══════════════════════════════════
-📈 ${assetHint} MARKET
-═══════════════════════════════════
-${isAssetMarketFavorable ? '✅ Capital flowing into this market!' : '⚠️ Currently recommended market: ' + recommendation.primaryMarket.toUpperCase()}
-
-📌 For analysis: Type "SPY analysis" or "QQQ analysis"`;
-        } else {
-          // Crypto asset
-          assetAdvice = language === 'tr'
-            ? `
-
-═══════════════════════════════════
-🪙 ${assetHint} ANALİZİ
-═══════════════════════════════════
-${isAssetMarketFavorable ? '✅ Kripto piyasasına sermaye akışı var!' : '⚠️ Şu an önerilen piyasa: ' + recommendation.primaryMarket.toUpperCase()}
-
-📌 Detaylı analiz için:
-• "${assetHint} analiz" veya "${assetHint} mlis pro" yazın`
-            : `
-
-═══════════════════════════════════
-🪙 ${assetHint} ANALYSIS
-═══════════════════════════════════
-${isAssetMarketFavorable ? '✅ Capital flowing into crypto market!' : '⚠️ Currently recommended market: ' + recommendation.primaryMarket.toUpperCase()}
-
-📌 For detailed analysis:
-• Type "${assetHint} analysis" or "${assetHint} mlis pro"`;
-        }
-      }
-
       // Build English message
-      const messageEn = `═══════════════════════════════════
-🎯 AI RECOMMENDATION
+      const messageEn = `🎯 AI RECOMMENDATION
 "Where money flows, potential exists"
-═══════════════════════════════════
 
 📊 RECOMMENDED MARKET: ${recommendation.primaryMarket.toUpperCase()}
 
@@ -1528,11 +1498,8 @@ ${actionEmoji} ACTION: ${recommendation.action === 'analyze' ? 'ANALYZE' : recom
 💡 REASONING:
 ${recommendation.reason}
 
-═══════════════════════════════════
-📌 NEXT STEPS
-═══════════════════════════════════
-${nextSteps}
-═══════════════════════════════════`;
+📌 NEXT STEPS:
+${nextSteps}`;
 
       // Translate main message to target language if needed
       let message = await this.translateIfNeeded(messageEn, language);
@@ -1555,35 +1522,44 @@ ${nextSteps}
 
       // If we have an asset hint, provide a helpful fallback response
       if (assetHint) {
-        const assetName = assetHint === 'GOLD' ? 'Gold' : assetHint === 'SILVER' ? 'Silver' : assetHint;
-        const assetNameTr = assetHint === 'GOLD' ? 'Altın' : assetHint === 'SILVER' ? 'Gümüş' : assetHint;
-        const analysisSymbol = assetHint === 'GOLD' ? 'GLD' : assetHint === 'SILVER' ? 'SLV' : assetHint;
+        // Determine asset details for fallback
+        let assetNameEn = assetHint;
+        let assetNameTr = assetHint;
+        let analysisSymbol = assetHint;
+
+        if (assetHint === 'GOLD') {
+          assetNameEn = 'Gold';
+          assetNameTr = 'Altın';
+          analysisSymbol = 'GLD';
+        } else if (assetHint === 'SILVER') {
+          assetNameEn = 'Silver';
+          assetNameTr = 'Gümüş';
+          analysisSymbol = 'SLV';
+        } else if (assetHint === 'STOCKS') {
+          assetNameEn = 'Stocks';
+          assetNameTr = 'Hisse Senetleri';
+          analysisSymbol = 'SPY';
+        } else if (assetHint === 'BONDS') {
+          assetNameEn = 'Bonds';
+          assetNameTr = 'Tahviller';
+          analysisSymbol = 'TLT';
+        }
 
         const fallbackMessage = language === 'tr'
           ? `🔍 ${assetNameTr} Hakkında
 
-Capital Flow verileri şu an yüklenemiyor, ancak size yardımcı olabilirim:
+Capital Flow verileri şu an yüklenemiyor, ancak yine de analiz yapabilirsiniz.
 
-📊 **Teknik Analiz İçin:**
-• "${analysisSymbol} analiz" yazarak detaylı teknik analiz alabilirsiniz
-• "${analysisSymbol} mlis pro" yazarak AI destekli gelişmiş analiz alabilirsiniz
-
-💡 **Genel Bilgi:**
-${assetHint === 'GOLD' || assetHint === 'SILVER' ? `• Değerli metaller genellikle dolar zayıfladığında ve belirsizlik dönemlerinde yükselir
-• Risk-off ortamlarında güvenli liman olarak tercih edilir` : `• Detaylı analiz için yukarıdaki komutları kullanın`}
+📌 Detaylı analiz ve İşlem Planı için:
+• "${analysisSymbol} analiz" veya "${analysisSymbol} mlis pro" yazın
 
 Analiz maliyeti: 25 kredi`
-          : `🔍 About ${assetName}
+          : `🔍 About ${assetNameEn}
 
-Capital Flow data is currently unavailable, but I can still help:
+Capital Flow data is currently unavailable, but you can still run an analysis.
 
-📊 **For Technical Analysis:**
-• Type "${analysisSymbol} analysis" for detailed technical analysis
-• Type "${analysisSymbol} mlis pro" for AI-powered advanced analysis
-
-💡 **General Info:**
-${assetHint === 'GOLD' || assetHint === 'SILVER' ? `• Precious metals typically rise when dollar weakens and during uncertainty
-• Preferred as safe haven in risk-off environments` : `• Use the commands above for detailed analysis`}
+📌 For detailed analysis and Trade Plan:
+• Type "${analysisSymbol} analysis" or "${analysisSymbol} mlis pro"
 
 Analysis cost: 25 credits`;
 
@@ -1620,6 +1596,156 @@ You can try:
         creditsRemaining: creditBalance,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
+    }
+  }
+
+  /**
+   * Generates a dynamic, data-driven response for asset recommendations.
+   * Uses actual Capital Flow metrics to construct unique sentences.
+   */
+  private generateDataDrivenAssetResponse(params: {
+    language: string;
+    assetNameTr: string;
+    assetNameEn: string;
+    assetEmojiIcon: string;
+    analysisSymbol: string;
+    marketNameTr: string;
+    marketNameEn: string;
+    flow30d: number;
+    flowVelocity: number;
+    phase: string;
+    rotationSignal: string;
+    inflowMarketNameTr: string;
+    inflowMarketNameEn: string;
+    inflowFlow30d: number;
+  }): string {
+    const {
+      language, assetNameTr, assetNameEn, assetEmojiIcon, analysisSymbol,
+      marketNameTr, marketNameEn, flow30d, flowVelocity, phase, rotationSignal,
+      inflowMarketNameTr, inflowMarketNameEn, inflowFlow30d
+    } = params;
+
+    const isTurkish = language === 'tr';
+    const assetName = isTurkish ? assetNameTr : assetNameEn;
+    const marketName = isTurkish ? marketNameTr : marketNameEn;
+    const inflowMarketName = isTurkish ? inflowMarketNameTr : inflowMarketNameEn;
+
+    // Determine market condition based on actual data
+    const isOutflow = flow30d < 0;
+    const isStrongOutflow = flow30d < -5;
+    const isAccelerating = flowVelocity > 1;
+    const isDecelerating = flowVelocity < -1;
+    const isExitPhase = phase === 'exit' || phase === 'late';
+    const isExiting = rotationSignal === 'exiting';
+
+    // Build dynamic insight based on actual numbers
+    let flowInsight = '';
+    let recommendation = '';
+    let actionHint = '';
+
+    if (isTurkish) {
+      // Turkish - Dynamic flow description with actual data
+      if (isOutflow) {
+        const outflowPercent = Math.abs(flow30d).toFixed(1);
+        const inflowPercent = inflowFlow30d.toFixed(1);
+
+        if (isStrongOutflow) {
+          flowInsight = `Son 30 günde ${marketName} piyasasından %${outflowPercent} sermaye çıkışı var. ${inflowMarketName} ise %${inflowPercent} giriş alıyor.`;
+        } else {
+          flowInsight = `${marketName} piyasasında %${outflowPercent} negatif akış görülüyor, para ${inflowMarketName}'a yöneliyor.`;
+        }
+
+        if (isDecelerating) {
+          flowInsight += ` Çıkış hızlanıyor.`;
+        }
+
+        if (isExitPhase) {
+          recommendation = `Faz: ${phase.toUpperCase()}. Bu aşamada yeni pozisyon riskli.`;
+        } else {
+          recommendation = `Mevcut koşullarda ${assetName.toLowerCase()} için işlem önermiyorum.`;
+        }
+
+        actionHint = `SHORT için detaylı analiz istersen "${analysisSymbol} analiz" yaz.`;
+      } else {
+        const inflowPercent = flow30d.toFixed(1);
+
+        if (phase === 'early') {
+          flowInsight = `${marketName} piyasasına %${inflowPercent} giriş var ve henüz ERKEN fazda.`;
+          recommendation = `Giriş için uygun zamanlama olabilir.`;
+        } else if (phase === 'mid') {
+          flowInsight = `${marketName} %${inflowPercent} pozitif akışta, ORTA faz.`;
+          recommendation = `Dikkatli pozisyon alınabilir.`;
+        } else {
+          flowInsight = `${marketName} hala pozitif (%${inflowPercent}) ama ${phase.toUpperCase()} fazda.`;
+          recommendation = `Geç kalmış olabilirsin, dikkatli ol.`;
+        }
+
+        if (isAccelerating) {
+          flowInsight += ` Momentum güçleniyor.`;
+        }
+
+        actionHint = `Detaylı analiz için "${analysisSymbol} analiz" yaz.`;
+      }
+
+      return `${assetEmojiIcon} ${assetName.toUpperCase()}
+
+${flowInsight}
+
+${recommendation}
+
+📌 ${actionHint}`;
+
+    } else {
+      // English - Dynamic flow description with actual data
+      if (isOutflow) {
+        const outflowPercent = Math.abs(flow30d).toFixed(1);
+        const inflowPercent = inflowFlow30d.toFixed(1);
+
+        if (isStrongOutflow) {
+          flowInsight = `${marketName} market shows ${outflowPercent}% capital outflow over 30 days. ${inflowMarketName} is receiving +${inflowPercent}%.`;
+        } else {
+          flowInsight = `${marketName} has ${outflowPercent}% negative flow, capital rotating to ${inflowMarketName}.`;
+        }
+
+        if (isDecelerating) {
+          flowInsight += ` Outflow accelerating.`;
+        }
+
+        if (isExitPhase) {
+          recommendation = `Phase: ${phase.toUpperCase()}. New positions are risky at this stage.`;
+        } else {
+          recommendation = `I wouldn't recommend ${assetName.toLowerCase()} positions currently.`;
+        }
+
+        actionHint = `For SHORT analysis, type "${analysisSymbol} analysis".`;
+      } else {
+        const inflowPercent = flow30d.toFixed(1);
+
+        if (phase === 'early') {
+          flowInsight = `${marketName} showing +${inflowPercent}% inflow, EARLY phase.`;
+          recommendation = `Could be good timing for entry.`;
+        } else if (phase === 'mid') {
+          flowInsight = `${marketName} at +${inflowPercent}% flow, MID phase.`;
+          recommendation = `Cautious positioning possible.`;
+        } else {
+          flowInsight = `${marketName} still positive (+${inflowPercent}%) but in ${phase.toUpperCase()} phase.`;
+          recommendation = `May be late, proceed with caution.`;
+        }
+
+        if (isAccelerating) {
+          flowInsight += ` Momentum strengthening.`;
+        }
+
+        actionHint = `For detailed analysis, type "${analysisSymbol} analysis".`;
+      }
+
+      return `${assetEmojiIcon} ${assetName.toUpperCase()}
+
+${flowInsight}
+
+${recommendation}
+
+📌 ${actionHint}`;
     }
   }
 
