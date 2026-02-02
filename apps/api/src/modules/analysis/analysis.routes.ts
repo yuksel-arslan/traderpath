@@ -20,7 +20,13 @@ import { analyzeMLIS, MLISResult } from './services/mlis.service';
 import { logger } from '../../core/logger';
 import { fetchCandles, getAssetClass } from './providers/multi-asset-data-provider';
 import { getCapitalFlowModifier, CapitalFlowModifier } from '../capital-flow/capital-flow.service';
-import { MarketType } from '../capital-flow/types';
+import {
+  MarketType,
+  MLISConfirmation,
+  AgreementLevel,
+  MLIS_CONFIRMATION_WEIGHTS,
+  VERDICT_TO_MLIS_MAP,
+} from '../capital-flow/types';
 
 // User type from JWT
 interface JwtUser {
@@ -105,6 +111,205 @@ async function getGeminiInsight(
     logger.error({ error }, 'Gemini error');
     return { text: 'AI analysis temporarily unavailable', inputTokens: 0, outputTokens: 0, costUsd: 0 };
   }
+}
+
+// ============================================================================
+// STEP 8: MLIS CONFIRMATION SYSTEM
+// ============================================================================
+// MLIS serves as a "second opinion" to validate 7-Step analysis
+// Compares methodologies and adjusts confidence based on agreement
+
+/**
+ * Generate MLIS Confirmation by comparing 7-Step verdict with MLIS signals
+ * This is Step 8 of the analysis pipeline - the ML validation layer
+ */
+async function generateMLISConfirmation(
+  symbol: string,
+  interval: string,
+  sevenStepVerdict: { verdict: string; direction?: string; overallScore: number },
+  tradePlanConfidence: number
+): Promise<MLISConfirmation | null> {
+  try {
+    // Run MLIS analysis on the same symbol and timeframe
+    const mlisResult = await analyzeMLIS(symbol, interval);
+
+    if (!mlisResult || mlisResult.confidence === 0) {
+      logger.warn({ symbol, interval }, '[MLIS Confirmation] MLIS analysis returned no results');
+      return null;
+    }
+
+    // Extract 7-Step values
+    const verdict = sevenStepVerdict.verdict?.toUpperCase() || 'WAIT';
+    const sevenStepDirection = (sevenStepVerdict.direction || 'NEUTRAL').toUpperCase();
+    const sevenStepScore = sevenStepVerdict.overallScore;
+
+    // Determine agreement level
+    const { agreementLevel, agreementReason, alignedSignals, conflictingSignals } =
+      calculateAgreement(verdict, sevenStepDirection, mlisResult);
+
+    // Calculate confidence adjustment
+    const adjustmentWeight = MLIS_CONFIRMATION_WEIGHTS[agreementLevel];
+    const originalConfidence = tradePlanConfidence;
+    const adjustedConfidence = Math.min(100, Math.max(0, originalConfidence * adjustmentWeight));
+    const confidenceChange = adjustedConfidence - originalConfidence;
+
+    // Determine confirmation status
+    let confirmationStatus: MLISConfirmation['confirmationStatus'];
+    let warningMessage: string | undefined;
+
+    switch (agreementLevel) {
+      case 'FULL_AGREEMENT':
+        confirmationStatus = 'CONFIRMED';
+        break;
+      case 'PARTIAL_AGREEMENT':
+        confirmationStatus = 'PARTIALLY_CONFIRMED';
+        break;
+      case 'NEUTRAL':
+        confirmationStatus = 'UNCONFIRMED';
+        warningMessage = 'MLIS signals are neutral - proceed with standard caution';
+        break;
+      case 'DISAGREEMENT':
+        confirmationStatus = 'CONTRADICTED';
+        warningMessage = `⚠️ MLIS DISAGREES: ${mlisResult.recommendation} vs 7-Step ${verdict}. Consider waiting for clearer signals.`;
+        break;
+    }
+
+    const confirmation: MLISConfirmation = {
+      // MLIS values
+      mlisDirection: mlisResult.direction,
+      mlisRecommendation: mlisResult.recommendation,
+      mlisScore: mlisResult.overallScore,
+      mlisConfidence: mlisResult.confidence,
+
+      // 7-Step values
+      sevenStepVerdict: verdict,
+      sevenStepDirection,
+      sevenStepScore,
+
+      // Agreement analysis
+      agreementLevel,
+      agreementReason,
+
+      // Confidence adjustment
+      originalConfidence,
+      adjustedConfidence,
+      confidenceChange,
+
+      // Signal comparison
+      alignedSignals,
+      conflictingSignals,
+
+      // Final status
+      confirmationStatus,
+      warningMessage,
+
+      // Metadata
+      analysisTimestamp: new Date().toISOString(),
+    };
+
+    logger.info({
+      symbol,
+      agreementLevel,
+      confirmationStatus,
+      originalConfidence,
+      adjustedConfidence,
+      confidenceChange,
+      mlisRecommendation: mlisResult.recommendation,
+      sevenStepVerdict: verdict,
+    }, '[MLIS Confirmation] Analysis complete');
+
+    return confirmation;
+  } catch (error) {
+    logger.error({ error, symbol }, '[MLIS Confirmation] Failed to generate confirmation');
+    return null;
+  }
+}
+
+/**
+ * Calculate agreement level between 7-Step and MLIS
+ */
+function calculateAgreement(
+  verdict: string,
+  sevenStepDirection: string,
+  mlisResult: MLISResult
+): {
+  agreementLevel: AgreementLevel;
+  agreementReason: string;
+  alignedSignals: string[];
+  conflictingSignals: string[];
+} {
+  const mlisRec = mlisResult.recommendation;
+  const mlisDir = mlisResult.direction;
+
+  // Get expected MLIS recommendations for this verdict
+  const expectedMlis = VERDICT_TO_MLIS_MAP[verdict] || ['HOLD'];
+  const isRecommendationAligned = expectedMlis.includes(mlisRec);
+
+  // Check direction alignment
+  const isDirectionAligned =
+    sevenStepDirection === mlisDir ||
+    sevenStepDirection === 'NEUTRAL' ||
+    mlisDir === 'NEUTRAL';
+
+  // Collect aligned and conflicting signals
+  const alignedSignals: string[] = [];
+  const conflictingSignals: string[] = [];
+
+  // Direction comparison
+  if (sevenStepDirection === mlisDir && sevenStepDirection !== 'NEUTRAL') {
+    alignedSignals.push(`Both agree: ${sevenStepDirection} direction`);
+  } else if (sevenStepDirection !== mlisDir && sevenStepDirection !== 'NEUTRAL' && mlisDir !== 'NEUTRAL') {
+    conflictingSignals.push(`Direction conflict: 7-Step=${sevenStepDirection}, MLIS=${mlisDir}`);
+  }
+
+  // Recommendation comparison
+  if (isRecommendationAligned) {
+    alignedSignals.push(`MLIS ${mlisRec} aligns with ${verdict} verdict`);
+  } else {
+    conflictingSignals.push(`Recommendation conflict: MLIS=${mlisRec}, Expected=${expectedMlis.join('/')}`);
+  }
+
+  // Key MLIS signals
+  mlisResult.keySignals.slice(0, 3).forEach(signal => {
+    // Check if signal is bullish/bearish and matches direction
+    const isBullishSignal = signal.toLowerCase().includes('bullish') || signal.toLowerCase().includes('above');
+    const isBearishSignal = signal.toLowerCase().includes('bearish') || signal.toLowerCase().includes('below');
+
+    if ((isBullishSignal && sevenStepDirection === 'LONG') || (isBearishSignal && sevenStepDirection === 'SHORT')) {
+      alignedSignals.push(signal);
+    } else if ((isBullishSignal && sevenStepDirection === 'SHORT') || (isBearishSignal && sevenStepDirection === 'LONG')) {
+      conflictingSignals.push(signal);
+    }
+  });
+
+  // Determine agreement level
+  let agreementLevel: AgreementLevel;
+  let agreementReason: string;
+
+  if (mlisDir === 'NEUTRAL' || mlisRec === 'HOLD') {
+    // MLIS is neutral
+    agreementLevel = 'NEUTRAL';
+    agreementReason = 'MLIS signals are neutral/inconclusive';
+  } else if (isRecommendationAligned && isDirectionAligned) {
+    // Full agreement
+    agreementLevel = 'FULL_AGREEMENT';
+    agreementReason = `Both methodologies agree: ${sevenStepDirection} with ${mlisRec}`;
+  } else if (isDirectionAligned) {
+    // Same direction, different conviction
+    agreementLevel = 'PARTIAL_AGREEMENT';
+    agreementReason = `Same direction (${sevenStepDirection}) but different conviction levels`;
+  } else {
+    // Disagreement
+    agreementLevel = 'DISAGREEMENT';
+    agreementReason = `Methodologies disagree: 7-Step=${verdict}/${sevenStepDirection}, MLIS=${mlisRec}/${mlisDir}`;
+  }
+
+  return {
+    agreementLevel,
+    agreementReason,
+    alignedSignals: alignedSignals.slice(0, 5),
+    conflictingSignals: conflictingSignals.slice(0, 5),
+  };
 }
 
 export default async function analysisRoutes(app: FastifyInstance) {
@@ -747,7 +952,7 @@ Warn about potential traps and give protective advice.`;
         }
       }
 
-      // Step 8: Final Verdict - combines everything
+      // Step 7: Final Verdict - combines everything
       const verdict = await analysisEngine.getFinalVerdict(
         body.symbol,
         preliminaryVerdict,
@@ -756,21 +961,90 @@ Warn about potential traps and give protective advice.`;
         tradeType
       );
 
+      // Step 8: MLIS Confirmation - ML validation layer
+      // MLIS serves as a "second opinion" to validate the 7-Step verdict
+      // Compares both methodologies and adjusts confidence based on agreement
+      let mlisConfirmation: MLISConfirmation | null = null;
+      if (tradePlan) {
+        try {
+          mlisConfirmation = await generateMLISConfirmation(
+            body.symbol,
+            interval,
+            {
+              verdict: verdict.verdict,
+              direction: tradePlan.direction,
+              overallScore: verdict.overallScore,
+            },
+            tradePlan.confidence
+          );
+
+          // Apply MLIS confidence adjustment to trade plan
+          if (mlisConfirmation) {
+            const previousConfidence = tradePlan.confidence;
+            tradePlan.confidence = mlisConfirmation.adjustedConfidence;
+
+            // Store MLIS context in trade plan
+            (tradePlan as Record<string, unknown>).mlisConfirmation = {
+              confirmationStatus: mlisConfirmation.confirmationStatus,
+              agreementLevel: mlisConfirmation.agreementLevel,
+              agreementReason: mlisConfirmation.agreementReason,
+              mlisRecommendation: mlisConfirmation.mlisRecommendation,
+              mlisDirection: mlisConfirmation.mlisDirection,
+              mlisScore: mlisConfirmation.mlisScore,
+              confidenceChange: mlisConfirmation.confidenceChange,
+              alignedSignals: mlisConfirmation.alignedSignals,
+              conflictingSignals: mlisConfirmation.conflictingSignals,
+              warningMessage: mlisConfirmation.warningMessage,
+            };
+
+            logger.info({
+              symbol: body.symbol,
+              previousConfidence,
+              newConfidence: tradePlan.confidence,
+              agreementLevel: mlisConfirmation.agreementLevel,
+              confirmationStatus: mlisConfirmation.confirmationStatus,
+            }, '[Analysis] Step 8: MLIS Confirmation applied');
+          }
+        } catch (mlisError) {
+          // MLIS Confirmation is non-blocking - log error and continue
+          logger.warn({ error: mlisError, symbol: body.symbol }, '[Analysis] MLIS Confirmation failed, proceeding without ML validation');
+        }
+      }
+
       // Save analysis to database (regardless of verdict)
       // Use the interval from request, not derived from tradeConfig
+      // stepsCompleted now includes step 8 if MLIS confirmation was generated
+      const stepsCompleted = mlisConfirmation ? [1, 2, 3, 4, 5, 6, 7, 8] : [1, 2, 3, 4, 5, 6, 7];
+
       const savedAnalysis = await prisma.analysis.create({
         data: {
           userId,
           symbol: body.symbol,
           interval: interval, // Use the selected timeframe
-          stepsCompleted: [1, 2, 3, 4, 5, 6, 7],
+          stepsCompleted,
           step1Result: marketPulse as object,
           step2Result: assetScan as object,
           step3Result: safetyCheck as object,
           step4Result: timing as object,
           step5Result: tradePlan as object || null,
           step6Result: trapCheck as object,
-          step7Result: { ...verdict, preliminaryVerdict } as object,
+          step7Result: {
+            ...verdict,
+            preliminaryVerdict,
+            mlisConfirmation: mlisConfirmation ? {
+              confirmationStatus: mlisConfirmation.confirmationStatus,
+              agreementLevel: mlisConfirmation.agreementLevel,
+              agreementReason: mlisConfirmation.agreementReason,
+              mlisRecommendation: mlisConfirmation.mlisRecommendation,
+              mlisDirection: mlisConfirmation.mlisDirection,
+              mlisScore: mlisConfirmation.mlisScore,
+              mlisConfidence: mlisConfirmation.mlisConfidence,
+              confidenceChange: mlisConfirmation.confidenceChange,
+              alignedSignals: mlisConfirmation.alignedSignals,
+              conflictingSignals: mlisConfirmation.conflictingSignals,
+              warningMessage: mlisConfirmation.warningMessage,
+            } : null,
+          } as object,
           totalScore: verdict.overallScore,
           creditsSpent: cost,
         },
