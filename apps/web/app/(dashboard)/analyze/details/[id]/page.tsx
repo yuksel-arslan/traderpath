@@ -918,7 +918,7 @@ export default function AnalysisDetailsPage() {
                         interMarketRegime === 'deflation' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' :
                         'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300'
                       )}>
-                        {interMarketRegime.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                        {interMarketRegime.replace('_', ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
                         {regimeConfidence >= 50 && ` (${regimeConfidence}%)`}
                       </span>
                     </div>
