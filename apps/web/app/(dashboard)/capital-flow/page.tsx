@@ -216,6 +216,14 @@ interface CapitalFlowSummary {
   cacheExpiry: string;
 }
 
+// Helper function to safely filter markets with proper TypeScript typing
+function getValidMarkets(markets: MarketFlow[] | undefined | null): MarketFlow[] {
+  if (!markets || !Array.isArray(markets)) return [];
+  return markets.filter((m): m is MarketFlow => {
+    return m !== null && m !== undefined && typeof m.market === 'string';
+  });
+}
+
 // Market Analysis Modal Component
 function MarketAnalysisModal({
   market,
@@ -1112,12 +1120,12 @@ function SystemFlowChart({ apiData, onLayerClick, onMarketClick }: { apiData: Ca
       vixLevel: apiData.globalLiquidity.vix.value ? `${apiData.globalLiquidity.vix.level?.replace('_', ' ') || 'low'} (${Math.round(apiData.globalLiquidity.vix.value)})` : 'Low (14)',
       bias: apiData.liquidityBias || 'risk_on',
     },
-    markets: apiData.markets?.filter(m => m && m.market).map((m) => ({
-      name: (m.market || 'unknown').toUpperCase(),
+    markets: getValidMarkets(apiData.markets).map((m) => ({
+      name: m.market.toUpperCase(),
       flow7d: m.flow7d || 0,
       phase: m.phase || 'mid',
       isSelected: m.market === apiData.recommendation?.primaryMarket,
-    })) || [],
+    })),
     lastUpdated: new Date().toLocaleTimeString(),
   } : null;
 
@@ -2300,7 +2308,7 @@ export default function CapitalFlowPage() {
                   ) : (
                     // Show all markets grid
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {data.markets.map((market) => (
+                      {getValidMarkets(data.markets).map((market) => (
                         <MarketCard
                           key={market.market}
                           market={market}
@@ -2620,7 +2628,7 @@ export default function CapitalFlowPage() {
 
             {/* Layer 2: Market Flow */}
             {(() => {
-              const validMarkets = data.markets.filter(m => m && m.market);
+              const validMarkets = getValidMarkets(data.markets);
               const topMarket = validMarkets.length > 0
                 ? validMarkets.reduce((prev, curr) => curr.flow7d > prev.flow7d ? curr : prev)
                 : null;
@@ -2630,9 +2638,9 @@ export default function CapitalFlowPage() {
                   id="tour-layer-2"
                   layerNum={2}
                   title="Market Flow"
-                  status={topMarket ? `${(topMarket.market || 'UNKNOWN').toUpperCase()} LEADS` : 'NO DATA'}
+                  status={topMarket ? `${topMarket.market.toUpperCase()} LEADS` : 'NO DATA'}
                   statusType={topMarket && topMarket.flow7d > 2 ? 'positive' : topMarket && topMarket.flow7d > 0 ? 'neutral' : 'warning'}
-                  details={topMarket ? `${inflowCount}/4 markets inflow • Top: ${topMarket.flow7d > 0 ? '+' : ''}${(topMarket.flow7d || 0).toFixed(1)}% (7D)` : 'Loading...'}
+                  details={topMarket ? `${inflowCount}/4 markets inflow • Top: ${topMarket.flow7d > 0 ? '+' : ''}${topMarket.flow7d.toFixed(1)}% (7D)` : 'Loading...'}
                   icon={BarChart3}
                   color="emerald"
                   onClick={() => setFullscreenLayer(2)}
@@ -2643,7 +2651,7 @@ export default function CapitalFlowPage() {
 
             {/* Layer 3: Sector Status */}
             {(() => {
-              const validMarkets = data.markets.filter(m => m && m.market);
+              const validMarkets = getValidMarkets(data.markets);
               const allSectors = validMarkets.flatMap(m => m.sectors || []).filter(s => s && s.name);
               const topSector = allSectors.length > 0
                 ? allSectors.reduce((prev, curr) => (curr.flow7d || 0) > (prev.flow7d || 0) ? curr : prev)
@@ -2748,7 +2756,7 @@ export default function CapitalFlowPage() {
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">Market Flow Analyzer</h3>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {data.markets.map((market) => (
+                    {getValidMarkets(data.markets).map((market) => (
                       <MarketCard
                         key={market.market}
                         market={market}
