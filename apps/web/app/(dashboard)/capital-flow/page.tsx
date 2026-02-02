@@ -2414,7 +2414,7 @@ export default function CapitalFlowPage() {
               {downloadingReport ? (
                 <Loader2 className="w-5 h-5 text-teal-500 animate-spin" />
               ) : (
-                <FileText className="w-5 h-5 text-teal-500" />
+                <Download className="w-5 h-5 text-teal-500" />
               )}
             </button>
 
