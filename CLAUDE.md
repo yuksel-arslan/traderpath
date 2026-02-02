@@ -539,6 +539,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-01 | Analysis details Export dropdown'da PNG/JPG/PDF/Email yerine sadece Download Report ve Email Report olmalıydı | Export dropdown sadeleştirildi: PNG, JPG seçenekleri kaldırıldı. Sadece "Download Report" (PDF) ve "Email Report" butonları kaldı. Kullanılmayan handleExportPNG ve handleExportJPG fonksiyonları silindi, Image import'u kaldırıldı | `analyze/details/[id]/page.tsx` |
 | 2026-02-01 | GLD ve diğer non-crypto varlıklar için TradePlanChart "Failed to load chart data" hatası | TradePlanChart doğrudan Binance API çağırıyordu (Binance'de GLD yok). Yeni `/api/analysis/chart/candles` endpoint eklendi - multi-asset data provider kullanarak crypto→Binance, stocks/metals/bonds→Yahoo Finance yönlendiriyor. Frontend bu endpoint'i kullanacak şekilde güncellendi | `analysis.routes.ts`, `TradePlanChart.tsx` |
 | 2026-02-02 | PDF rapor header'da TraderPath görünmüyor, rapor başlığı ve metod eksik | 1) Tüm sayfalara inline SVG logo eklendi (gradient id'ler sayfa bazlı unique), 2) "Asset Analysis Report" başlığı eklendi, 3) Analiz metodu badge'i eklendi (Classic 7-Step / MLIS Pro), 4) Rapor tarihi daha belirgin formatta gösteriliyor, 5) CONDITIONAL_GO durumunda koşulların açıklaması eklendi (Executive Summary ve Final Verdict sayfalarında) | `AnalysisReport.tsx` |
+| 2026-02-02 | AI Concierge "Altın alınır mı?" sorusuna robotik yanıt veriyordu (yapısal, emoji/kutu dolu) | Yanıtlar daha organik ve doğal hale getirildi: 1) Capital Flow verilerinden market flow hesaplanıyor (para hangi piyasaya akıyor, hangisinden çıkıyor), 2) Tüm asset türleri için (Gold, Silver, Stocks, Bonds, Crypto) organik mesaj, 3) Para çıkışı varsa "işlem önermem" + SHORT önerisi, 4) Para girişi varsa olumlu değerlendirme + analiz önerisi, 5) Kutu karakterleri (═══) kaldırıldı, doğal dil kullanıldı | `concierge.service.ts` |
 
 ---
 
@@ -1756,6 +1757,18 @@ Kullanıcı Hakları Aktif:
     - Key drivers, inter-market regime, warnings gösterimi
     - Sentiment bazlı gradient arka plan (bullish/bearish/neutral)
   - Dosyalar: `analysis.engine.ts`, `analyze/details/[id]/page.tsx`
+- **AI Concierge Organik Yanıt Sistemi**:
+  - "Altın alınır mı?", "BTC almalı mıyım?" gibi sorulara artık doğal dilde yanıt veriliyor
+  - Capital Flow verilerinden para akış yönü hesaplanıyor (hangi piyasaya giriyor, hangisinden çıkıyor)
+  - **Tüm asset türleri destekleniyor**: Gold, Silver, Stocks, Bonds, Crypto
+  - **Para çıkışı tespit edildiğinde**:
+    - "İşlem önermem" + SHORT pozisyonu önerisi
+    - 7 Step Asset Analysis ile İşlem Planı alma imkanı
+  - **Para girişi tespit edildiğinde**:
+    - Olumlu değerlendirme + LONG potansiyeli
+    - Detaylı analiz önerisi
+  - Yapısal kutu karakterleri (═══) kaldırıldı, doğal Türkçe/İngilizce kullanıldı
+  - Dosya: `apps/api/src/modules/concierge/concierge.service.ts`
 
 ---
 
