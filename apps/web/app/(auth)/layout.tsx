@@ -3,9 +3,7 @@
 import Link from 'next/link';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
-import { Check } from 'lucide-react';
-
-// Capital Flow 4-Layer System + Asset Analysis - Checklist format
+// Capital Flow 4-Layer System + Asset Analysis - Corporate 2026 style
 const FLOW_LAYERS = [
   { num: 1, title: 'Global Liquidity', description: 'Fed, M2, DXY, VIX' },
   { num: 2, title: 'Market Flow', description: 'Crypto, Stocks, Bonds, Metals' },
@@ -68,24 +66,44 @@ export default function AuthLayout({
             </p>
           </div>
 
-          {/* Checklist Flow System */}
-          <div className="w-full max-w-sm mb-6">
-            <div className="space-y-3">
-              {FLOW_LAYERS.map((layer) => (
-                <div key={layer.num} className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-5 h-5 rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center mt-0.5">
-                    <Check className="w-3 h-3 text-white" strokeWidth={3} />
+          {/* Capital Flow Steps - Corporate 2026 Premium Style */}
+          <div className="w-full max-w-sm mb-8">
+            {/* Glassmorphism container */}
+            <div className="relative p-5 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 shadow-xl shadow-slate-200/20 dark:shadow-black/10">
+              {/* Inner glow effect */}
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-teal-500/5 via-transparent to-emerald-500/5 dark:from-teal-500/10 dark:to-emerald-500/10 pointer-events-none" />
+
+              <div className="relative space-y-4">
+                {FLOW_LAYERS.map((layer, index) => (
+                  <div
+                    key={layer.num}
+                    className="flex items-center gap-4 group cursor-default"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    {/* Step number - minimal circle */}
+                    <div className="relative flex-shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-teal-500/20 group-hover:shadow-teal-500/40 group-hover:scale-110 transition-all duration-300">
+                        <span className="text-xs font-bold text-white">
+                          {layer.num}
+                        </span>
+                      </div>
+                      {/* Connecting line */}
+                      {index < FLOW_LAYERS.length - 1 && (
+                        <div className="absolute top-7 left-1/2 -translate-x-1/2 w-[2px] h-4 bg-gradient-to-b from-teal-500/40 to-transparent rounded-full" />
+                      )}
+                    </div>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-slate-800 dark:text-white text-sm leading-tight group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors duration-300">
+                        {layer.title}
+                      </h3>
+                      <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5 truncate">
+                        {layer.description}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-800 dark:text-white text-sm leading-tight">
-                      {layer.title}
-                    </h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
-                      {layer.description}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
 
