@@ -616,17 +616,9 @@ export default function AnalysisDetailsPage() {
               {/* TraderPath Logo - Star */}
               <StarLogo size={36} uniqueId="export-header" animated={false} />
               <div className="flex flex-col">
-                <span
-                  data-brand-text
-                  className="text-xl font-bold"
-                  style={{
-                    background: 'linear-gradient(135deg, #14B8A6, #2DD4BF, #F87171, #EF5A6F)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                  }}
-                >
-                  TraderPath
+                <span data-brand-text className="text-xl font-bold">
+                  <span style={{ color: '#14B8A6' }}>Trader</span>
+                  <span style={{ color: '#F87171' }}>Path</span>
                 </span>
                 <span className="text-xs text-gray-500 dark:text-slate-400 -mt-0.5">Asset Analysis Report</span>
               </div>
