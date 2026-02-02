@@ -37,7 +37,7 @@ import {
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { X, Loader2, LineChart, FileText, Mail, ChevronUp, CheckCircle, HelpCircle, Lock, Search, Bot, MessageSquare } from 'lucide-react';
+import { X, Loader2, LineChart, Download, Mail, ChevronUp, CheckCircle, HelpCircle, Lock, Search, Bot, MessageSquare } from 'lucide-react';
 import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
 import { downloadCapitalFlowReport, generateCapitalFlowEmailHTML } from '@/lib/capital-flow-report-generator';
 
@@ -2077,7 +2077,7 @@ export default function CapitalFlowPage() {
                   {downloadingReport ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    <FileText className="w-5 h-5" />
+                    <Download className="w-5 h-5" />
                   )}
                 </button>
 
