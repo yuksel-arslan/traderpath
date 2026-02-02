@@ -3,46 +3,16 @@
 import Link from 'next/link';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
-import { Globe, TrendingUp, Layers, Lightbulb, BarChart3, ArrowDown } from 'lucide-react';
+import { Check } from 'lucide-react';
 
-// Capital Flow 4-Layer System + Asset Analysis
+// Capital Flow 4-Layer System + Asset Analysis - Checklist format
 const FLOW_LAYERS = [
-  {
-    num: 1,
-    icon: Globe,
-    title: 'Global Liquidity',
-    description: 'Fed, M2, DXY, VIX',
-    color: 'from-blue-500 to-cyan-500',
-  },
-  {
-    num: 2,
-    icon: TrendingUp,
-    title: 'Market Flow',
-    description: 'Crypto, Stocks, Bonds, Metals',
-    color: 'from-emerald-500 to-teal-500',
-  },
-  {
-    num: 3,
-    icon: Layers,
-    title: 'Sector Activity',
-    description: 'DeFi, L2, Tech, Finance',
-    color: 'from-violet-500 to-purple-500',
-  },
-  {
-    num: 4,
-    icon: Lightbulb,
-    title: 'AI Recommendations',
-    description: 'BUY / SELL Signals',
-    color: 'from-amber-500 to-orange-500',
-  },
+  { num: 1, title: 'Global Liquidity', description: 'Fed, M2, DXY, VIX' },
+  { num: 2, title: 'Market Flow', description: 'Crypto, Stocks, Bonds, Metals' },
+  { num: 3, title: 'Sector Activity', description: 'DeFi, L2, Tech, Finance' },
+  { num: 4, title: 'AI Recommendations', description: 'BUY / SELL Signals' },
+  { num: 5, title: 'Asset Analysis', description: '7-Step + AI Confirmation' },
 ];
-
-const ASSET_ANALYSIS = {
-  icon: BarChart3,
-  title: 'Asset Analysis',
-  description: '7-Step + AI Confirmation',
-  color: 'from-rose-500 to-pink-500',
-};
 
 export default function AuthLayout({
   children,
@@ -98,43 +68,24 @@ export default function AuthLayout({
             </p>
           </div>
 
-          {/* 4-Layer Flow System */}
-          <div className="w-full max-w-sm mb-4">
-            <div className="space-y-2">
-              {FLOW_LAYERS.map((layer, index) => (
-                <div key={layer.num} className="relative">
-                  <div className="flex flex-col items-center text-center p-3 rounded-xl bg-slate-200/50 dark:bg-white/5 border border-slate-300/50 dark:border-white/10 hover:bg-slate-200/80 dark:hover:bg-white/10 transition-all group">
-                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${layer.color} flex items-center justify-center shadow-lg mb-2`}>
-                      <layer.icon className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-bold text-slate-400 dark:text-slate-500">LAYER {layer.num}</span>
-                    </div>
-                    <h3 className="font-semibold text-slate-800 dark:text-white text-sm">{layer.title}</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">{layer.description}</p>
+          {/* Checklist Flow System */}
+          <div className="w-full max-w-sm mb-6">
+            <div className="space-y-3">
+              {FLOW_LAYERS.map((layer) => (
+                <div key={layer.num} className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-5 h-5 rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center mt-0.5">
+                    <Check className="w-3 h-3 text-white" strokeWidth={3} />
                   </div>
-                  {/* Connector Arrow */}
-                  {index < FLOW_LAYERS.length - 1 && (
-                    <div className="flex justify-center py-1">
-                      <ArrowDown className="w-4 h-4 text-slate-400 dark:text-slate-600" />
-                    </div>
-                  )}
+                  <div>
+                    <h3 className="font-semibold text-slate-800 dark:text-white text-sm leading-tight">
+                      {layer.title}
+                    </h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
+                      {layer.description}
+                    </p>
+                  </div>
                 </div>
               ))}
-            </div>
-
-            {/* Arrow to Asset Analysis */}
-            <div className="flex justify-center py-2">
-              <ArrowDown className="w-5 h-5 text-rose-400 dark:text-rose-500" />
-            </div>
-
-            {/* Asset Analysis - Final Step */}
-            <div className="flex flex-col items-center text-center p-4 rounded-xl bg-gradient-to-br from-rose-500/10 to-pink-500/10 border-2 border-rose-500/30 dark:border-rose-500/40 hover:border-rose-500/50 transition-all">
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${ASSET_ANALYSIS.color} flex items-center justify-center shadow-lg mb-2`}>
-                <ASSET_ANALYSIS.icon className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="font-bold text-slate-800 dark:text-white text-base">{ASSET_ANALYSIS.title}</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">{ASSET_ANALYSIS.description}</p>
             </div>
           </div>
 
