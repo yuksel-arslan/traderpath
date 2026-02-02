@@ -678,54 +678,51 @@ export default function AnalyzePage() {
           )}
         </div>
 
-        {/* Main Content - Two Columns */}
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left Column - Analysis Result Area */}
-          <div className="lg:col-span-2">
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 min-h-[400px] flex items-center justify-center">
-              {selectedSymbol ? (
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-3 mb-4">
-                    {assetType === 'crypto' && <CoinIcon symbol={selectedSymbol} size={48} />}
-                    <div className="text-left">
-                      <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{selectedSymbol}</h2>
-                      <p className="text-sm text-slate-500">{currentAssets.find(a => a.symbol === selectedSymbol)?.name}</p>
-                    </div>
+        {/* Main Content - Stacked Layout */}
+        <div className="space-y-6">
+          {/* Analysis Result Area */}
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 min-h-[300px] flex items-center justify-center">
+            {selectedSymbol ? (
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  {assetType === 'crypto' && <CoinIcon symbol={selectedSymbol} size={48} />}
+                  <div className="text-left">
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{selectedSymbol}</h2>
+                    <p className="text-sm text-slate-500">{currentAssets.find(a => a.symbol === selectedSymbol)?.name}</p>
                   </div>
-                  <div className="flex items-center justify-center gap-2 mb-6">
-                    <span className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-sm font-medium">{ASSET_CONFIGS[assetType].name}</span>
-                    <span className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-sm font-medium">{timeframe}</span>
-                  </div>
-                  <button
-                    onClick={runAnalysis}
-                    disabled={!dailyPassStatus?.canUse}
-                    className={cn(
-                      "inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all",
-                      dailyPassStatus?.canUse
-                        ? "bg-gradient-to-r from-teal-500 to-emerald-600 hover:shadow-lg hover:shadow-teal-500/20"
-                        : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed"
-                    )}
-                  >
-                    <Zap className="w-5 h-5" />
-                    Run 7-Step Analysis
-                  </button>
-                  <p className="text-xs text-slate-400 mt-3">40+ indicators • AI-powered • ~60 seconds</p>
                 </div>
-              ) : (
-                <div className="text-center">
-                  <Target className="w-12 h-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Select an Asset</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md">
-                    Choose a market, sector, and asset from the dropdowns above to start your analysis.
-                  </p>
+                <div className="flex items-center justify-center gap-2 mb-6">
+                  <span className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-sm font-medium">{ASSET_CONFIGS[assetType].name}</span>
+                  <span className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-sm font-medium">{timeframe}</span>
                 </div>
-              )}
-            </div>
+                <button
+                  onClick={runAnalysis}
+                  disabled={!dailyPassStatus?.canUse}
+                  className={cn(
+                    "inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all",
+                    dailyPassStatus?.canUse
+                      ? "bg-gradient-to-r from-teal-500 to-emerald-600 hover:shadow-lg hover:shadow-teal-500/20"
+                      : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed"
+                  )}
+                >
+                  <Zap className="w-5 h-5" />
+                  Run 7-Step Analysis
+                </button>
+                <p className="text-xs text-slate-400 mt-3">40+ indicators • AI-powered • ~60 seconds</p>
+              </div>
+            ) : (
+              <div className="text-center">
+                <Target className="w-12 h-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Select an Asset</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md">
+                  Choose a market, sector, and asset from the dropdowns above to start your analysis.
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Right Column - Recent Analyses */}
-          <div className="lg:col-span-1">
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+          {/* Recent Analyses - Full Width Below */}
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
               {/* Header */}
               <div className="p-4 border-b border-slate-200 dark:border-slate-700">
                 <div className="flex items-center justify-between mb-3">
@@ -921,7 +918,6 @@ export default function AnalyzePage() {
                   </div>
                 )}
               </div>
-            </div>
           </div>
         </div>
       </div>
