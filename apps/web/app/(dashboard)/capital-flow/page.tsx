@@ -2299,18 +2299,23 @@ export default function CapitalFlowPage() {
                     </div>
                   ) : (
                     // Show all markets grid
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {data.markets.filter((m): m is MarketFlow => Boolean(m && m.market)).map((market) => (
-                        <MarketCard
-                          key={market.market}
-                          market={market}
-                          onClick={() => {
-                            setSelectedMarket(selectedMarket?.market === market.market ? null : market);
-                          }}
-                          onAnalyze={() => fetchMarketAnalysis(market)}
-                        />
-                      ))}
-                    </div>
+                    (() => {
+                      const validMarkets = data.markets.filter((m): m is MarketFlow => Boolean(m && m.market));
+                      return (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                          {validMarkets.map((market) => (
+                            <MarketCard
+                              key={market.market}
+                              market={market}
+                              onClick={() => {
+                                setSelectedMarket(selectedMarket?.market === market.market ? null : market);
+                              }}
+                              onAnalyze={() => fetchMarketAnalysis(market)}
+                            />
+                          ))}
+                        </div>
+                      );
+                    })()
                   )}
                   {data.insights?.layer2 && <InsightBox insight={data.insights.layer2} icon={Sparkles} />}
                 </div>
@@ -2747,19 +2752,24 @@ export default function CapitalFlowPage() {
                     <div className="w-6 h-6 bg-emerald-500 rounded flex items-center justify-center text-white text-xs font-bold">2</div>
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">Market Flow Analyzer</h3>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {data.markets.filter((m): m is MarketFlow => Boolean(m && m.market)).map((market) => (
-                      <MarketCard
-                        key={market.market}
-                        market={market}
-                        onClick={() => {
-                          setSelectedMarket(selectedMarket?.market === market.market ? null : market);
-                          setSelectedLayer(3); // Switch to Layer 3 to show sectors
-                        }}
-                        onAnalyze={() => fetchMarketAnalysis(market)}
-                      />
-                    ))}
-                  </div>
+                  {(() => {
+                    const validMarkets = data.markets.filter((m): m is MarketFlow => Boolean(m && m.market));
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {validMarkets.map((market) => (
+                          <MarketCard
+                            key={market.market}
+                            market={market}
+                            onClick={() => {
+                              setSelectedMarket(selectedMarket?.market === market.market ? null : market);
+                              setSelectedLayer(3); // Switch to Layer 3 to show sectors
+                            }}
+                            onAnalyze={() => fetchMarketAnalysis(market)}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })()}
                   {data.insights?.layer2 && <InsightBox insight={data.insights.layer2} icon={Sparkles} />}
                 </div>
               )}
