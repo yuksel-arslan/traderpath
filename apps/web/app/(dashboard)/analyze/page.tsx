@@ -38,6 +38,12 @@ import {
   Layers,
   Activity,
   Calendar,
+  Globe,
+  DollarSign,
+  ArrowRight,
+  ChevronRight,
+  Brain,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch, getAuthToken, getApiUrl } from '../../../lib/api';
@@ -62,6 +68,52 @@ type TradeType = 'scalping' | 'dayTrade' | 'swing';
 type VerdictFilter = 'all' | 'go' | 'conditional_go' | 'wait' | 'avoid';
 type OutcomeFilter = 'all' | 'live' | 'tp' | 'sl';
 type SortOption = 'time_desc' | 'time_asc' | 'pnl_desc' | 'pnl_asc' | 'score_desc' | 'score_asc';
+type Phase = 'early' | 'mid' | 'late' | 'exit';
+type LiquidityBias = 'risk_on' | 'risk_off' | 'neutral';
+
+// Capital Flow types
+interface GlobalLiquidity {
+  fedBalanceSheet: { value: number; change30d: number; trend: 'expanding' | 'contracting' | 'stable' };
+  m2MoneySupply: { value: number; change30d: number; yoyGrowth: number };
+  dxy: { value: number; change7d: number; trend: 'strengthening' | 'weakening' | 'stable' };
+  vix: { value: number; level: string };
+  yieldCurve: { spread10y2y: number; inverted: boolean; interpretation: string };
+  netLiquidity?: { value: number; change7d: number; change30d: number; trend: string; interpretation: string };
+}
+
+interface MarketFlow {
+  market: AssetType;
+  currentValue: number;
+  flow7d: number;
+  flow30d: number;
+  flowVelocity: number;
+  phase: Phase;
+  daysInPhase: number;
+  rotationSignal: 'entering' | 'stable' | 'exiting' | null;
+  sectors?: { name: string; flow7d: number; flow30d: number; dominance: number; trending: 'up' | 'down' | 'stable'; phase?: Phase }[];
+}
+
+interface FlowRecommendation {
+  primaryMarket: AssetType;
+  phase: Phase;
+  action: 'analyze' | 'wait' | 'avoid';
+  direction: 'BUY' | 'SELL';
+  reason: string;
+  sectors?: string[];
+  confidence: number;
+  suggestedAssets?: { symbol: string; name: string; market: AssetType; sector?: string; riskLevel: 'low' | 'medium' | 'high'; reason: string }[];
+}
+
+interface CapitalFlowSummary {
+  timestamp: string;
+  globalLiquidity: GlobalLiquidity;
+  liquidityBias: LiquidityBias;
+  markets: MarketFlow[];
+  recommendation: FlowRecommendation;
+  sellRecommendation?: FlowRecommendation;
+  activeRotation: { from: string; to: string; confidence: number; estimatedDuration: string } | null;
+  insights?: { layer1: string; layer2: string; layer3: string; layer4: string; ragLayer1?: string; ragLayer2?: string; ragLayer3?: string; ragLayer4?: string };
+}
 
 interface RecentAnalysis {
   id: string;
@@ -290,6 +342,10 @@ export default function AnalyzePage() {
   } | null>(null);
   const [purchasingPass, setPurchasingPass] = useState(false);
 
+  // Capital Flow state
+  const [capitalFlow, setCapitalFlow] = useState<CapitalFlowSummary | null>(null);
+  const [capitalFlowLoading, setCapitalFlowLoading] = useState(true);
+
   // Fetch Daily Pass status
   const fetchDailyPassStatus = useCallback(async () => {
     try {
@@ -384,12 +440,31 @@ export default function AnalyzePage() {
     }
   }, []);
 
+  // Fetch Capital Flow data
+  const fetchCapitalFlow = useCallback(async () => {
+    try {
+      setCapitalFlowLoading(true);
+      const res = await authFetch('/api/capital-flow/summary');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data) {
+          setCapitalFlow(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch capital flow:', error);
+    } finally {
+      setCapitalFlowLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchDailyPassStatus();
     fetchAnalyses();
+    fetchCapitalFlow();
     const interval = setInterval(fetchAnalyses, 30000);
     return () => clearInterval(interval);
-  }, [fetchDailyPassStatus, fetchAnalyses]);
+  }, [fetchDailyPassStatus, fetchAnalyses, fetchCapitalFlow]);
 
   // Purchase Daily Pass
   const purchaseDailyPass = async () => {
@@ -494,6 +569,40 @@ export default function AnalyzePage() {
     }
   });
 
+  // Helper functions for Capital Flow display
+  const safeToFixed = (val: number | undefined | null, decimals: number = 1): string => {
+    if (val === null || val === undefined || isNaN(val)) return '0';
+    return val.toFixed(decimals);
+  };
+
+  const getPhaseConfig = (phase: Phase) => {
+    const config: Record<Phase, { color: string; bg: string; label: string }> = {
+      early: { color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-500/20', label: 'EARLY' },
+      mid: { color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-100 dark:bg-yellow-500/20', label: 'MID' },
+      late: { color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-500/20', label: 'LATE' },
+      exit: { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-500/20', label: 'EXIT' },
+    };
+    return config[phase] || config.mid;
+  };
+
+  const getBiasConfig = (bias: LiquidityBias) => {
+    const config: Record<LiquidityBias, { color: string; bg: string; label: string; icon: typeof TrendingUp }> = {
+      risk_on: { color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-500/20', label: 'RISK ON', icon: TrendingUp },
+      risk_off: { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-500/20', label: 'RISK OFF', icon: TrendingDown },
+      neutral: { color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-500/20', label: 'NEUTRAL', icon: Minus },
+    };
+    return config[bias] || config.neutral;
+  };
+
+  const getMarketIcon = (market: AssetType) => {
+    const icons: Record<AssetType, typeof Coins> = { crypto: Coins, stocks: BarChart3, bonds: Landmark, metals: Gem };
+    return icons[market] || Activity;
+  };
+
+  // Find the recommended market and its data
+  const recommendedMarket = capitalFlow?.markets?.find(m => m.market === capitalFlow?.recommendation?.primaryMarket);
+  const sellMarket = capitalFlow?.sellRecommendation ? capitalFlow.markets?.find(m => m.market === capitalFlow.sellRecommendation?.primaryMarket) : null;
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* Header */}
@@ -522,6 +631,317 @@ export default function AnalyzePage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Capital Flow Context Summary */}
+        {capitalFlowLoading ? (
+          <div className="mb-6 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <div className="flex items-center justify-center gap-2 py-4">
+              <Loader2 className="w-5 h-5 text-teal-500 animate-spin" />
+              <span className="text-sm text-slate-500">Loading Capital Flow data...</span>
+            </div>
+          </div>
+        ) : capitalFlow ? (
+          <div className="mb-6 space-y-4">
+            {/* Layer Flow Summary Bar */}
+            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white via-slate-50 to-white dark:from-slate-900 dark:via-slate-800/50 dark:to-slate-900">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-teal-500" />
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 notranslate">Capital Flow Summary</span>
+                </div>
+                <Link
+                  href="/capital-flow"
+                  className="text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1"
+                >
+                  View Details <ChevronRight className="w-3 h-3" />
+                </Link>
+              </div>
+
+              {/* 4-Layer Horizontal Flow */}
+              <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
+                {/* Layer 1: Global Liquidity */}
+                <div className="flex-1 min-w-[120px] p-3 rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-500/10 dark:to-emerald-500/10 border border-teal-200/50 dark:border-teal-500/20">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <DollarSign className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                    <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300">L1: LIQUIDITY</span>
+                  </div>
+                  {(() => {
+                    const biasConfig = getBiasConfig(capitalFlow.liquidityBias);
+                    const BiasIcon = biasConfig.icon;
+                    return (
+                      <div className={cn("flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold w-fit", biasConfig.bg, biasConfig.color)}>
+                        <BiasIcon className="w-3 h-3" />
+                        {biasConfig.label}
+                      </div>
+                    );
+                  })()}
+                  <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-1">
+                    Net: {safeToFixed(capitalFlow.globalLiquidity.netLiquidity?.change30d ?? capitalFlow.globalLiquidity.m2MoneySupply?.change30d)}%
+                  </p>
+                </div>
+
+                <ArrowRight className="w-4 h-4 text-slate-300 dark:text-slate-600 flex-shrink-0" />
+
+                {/* Layer 2: Market Flow */}
+                <div className="flex-1 min-w-[120px] p-3 rounded-xl bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-500/10 dark:to-blue-500/10 border border-cyan-200/50 dark:border-cyan-500/20">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <TrendingUp className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                    <span className="text-[10px] font-bold text-cyan-700 dark:text-cyan-300">L2: MARKETS</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {capitalFlow.markets?.filter(m => m && m.market).slice(0, 4).map((market) => {
+                      const phaseConfig = getPhaseConfig(market.phase);
+                      return (
+                        <span
+                          key={market.market}
+                          className={cn(
+                            "px-1.5 py-0.5 rounded text-[9px] font-medium",
+                            market.market === capitalFlow.recommendation?.primaryMarket
+                              ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/50"
+                              : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
+                          )}
+                        >
+                          {market.market.toUpperCase()} <span className={cn("text-[8px]", market.flow7d >= 0 ? "text-emerald-600" : "text-red-600")}>{market.flow7d >= 0 ? '+' : ''}{safeToFixed(market.flow7d)}%</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <ArrowRight className="w-4 h-4 text-slate-300 dark:text-slate-600 flex-shrink-0" />
+
+                {/* Layer 3: Sector */}
+                <div className="flex-1 min-w-[120px] p-3 rounded-xl bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-500/10 dark:to-purple-500/10 border border-violet-200/50 dark:border-violet-500/20">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Layers className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+                    <span className="text-[10px] font-bold text-violet-700 dark:text-violet-300">L3: SECTORS</span>
+                  </div>
+                  {recommendedMarket?.sectors?.slice(0, 2).map((sector, idx) => (
+                    <span
+                      key={idx}
+                      className={cn(
+                        "inline-block px-1.5 py-0.5 rounded text-[9px] font-medium mr-1 mb-1",
+                        sector.trending === 'up'
+                          ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                          : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
+                      )}
+                    >
+                      {sector.name}
+                    </span>
+                  )) || <span className="text-[9px] text-slate-400">No sectors</span>}
+                </div>
+
+                <ArrowRight className="w-4 h-4 text-slate-300 dark:text-slate-600 flex-shrink-0" />
+
+                {/* Layer 4: Recommendation */}
+                <div className="flex-1 min-w-[120px] p-3 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 border border-amber-200/50 dark:border-amber-500/20">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Brain className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                    <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300">L4: AI REC</span>
+                  </div>
+                  <div className={cn(
+                    "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold w-fit",
+                    capitalFlow.recommendation?.direction === 'BUY'
+                      ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                      : "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
+                  )}>
+                    {capitalFlow.recommendation?.direction === 'BUY' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                    {capitalFlow.recommendation?.direction} {capitalFlow.recommendation?.primaryMarket?.toUpperCase()}
+                  </div>
+                  <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-1">
+                    {capitalFlow.recommendation?.confidence ?? 0}% confidence
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Layer 4 Detail Cards - AI Recommendations */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* BUY Opportunity Card */}
+              {capitalFlow.recommendation && (
+                <div className="p-4 rounded-2xl border-2 border-emerald-200 dark:border-emerald-500/30 bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-emerald-900/20 dark:via-slate-900 dark:to-teal-900/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                        <TrendingUp className="w-4 h-4 text-white" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">BUY Opportunity</span>
+                        <p className="text-[10px] text-slate-500">Capital flowing in</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{capitalFlow.recommendation.confidence}%</span>
+                      <p className="text-[10px] text-slate-500">Confidence</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mb-3">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-500">Market</span>
+                      <div className="flex items-center gap-1.5">
+                        {(() => {
+                          const MarketIcon = getMarketIcon(capitalFlow.recommendation.primaryMarket);
+                          return <MarketIcon className="w-4 h-4 text-emerald-600" />;
+                        })()}
+                        <span className="font-semibold text-slate-900 dark:text-white capitalize">{capitalFlow.recommendation.primaryMarket}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-500">Phase</span>
+                      {(() => {
+                        const phaseConfig = getPhaseConfig(capitalFlow.recommendation.phase);
+                        return (
+                          <span className={cn("px-2 py-0.5 rounded-full text-xs font-bold", phaseConfig.bg, phaseConfig.color)}>
+                            {phaseConfig.label}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    {recommendedMarket && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500">7D Flow</span>
+                        <span className={cn("font-semibold", recommendedMarket.flow7d >= 0 ? "text-emerald-600" : "text-red-600")}>
+                          {recommendedMarket.flow7d >= 0 ? '+' : ''}{safeToFixed(recommendedMarket.flow7d)}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 p-2 bg-emerald-100/50 dark:bg-emerald-500/10 rounded-lg">
+                    {capitalFlow.recommendation.reason || 'Strong capital inflow detected.'}
+                  </p>
+
+                  {/* Suggested Assets */}
+                  {capitalFlow.recommendation.suggestedAssets && capitalFlow.recommendation.suggestedAssets.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-[10px] text-slate-500 mb-1">Suggested Assets:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {capitalFlow.recommendation.suggestedAssets.slice(0, 4).map((asset, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              setAssetType(asset.market);
+                              setSelectedSymbol(asset.symbol);
+                            }}
+                            className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-500/30 text-xs font-medium text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all"
+                          >
+                            {asset.symbol}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setAssetType(capitalFlow.recommendation.primaryMarket);
+                      const marketAssets = ALL_SYMBOLS[capitalFlow.recommendation.primaryMarket]?.all;
+                      if (marketAssets && marketAssets.length > 0) {
+                        setSelectedSymbol(marketAssets[0].symbol);
+                      }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold rounded-xl hover:from-emerald-600 hover:to-teal-600 hover:shadow-lg hover:shadow-emerald-500/25 transition-all"
+                  >
+                    <Search className="w-4 h-4" />
+                    Analyze {capitalFlow.recommendation.primaryMarket.toUpperCase()} Assets
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* SELL Opportunity Card */}
+              {capitalFlow.sellRecommendation ? (
+                <div className="p-4 rounded-2xl border-2 border-red-200 dark:border-red-500/30 bg-gradient-to-br from-red-50 via-white to-rose-50 dark:from-red-900/20 dark:via-slate-900 dark:to-rose-900/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-500 flex items-center justify-center shadow-lg shadow-red-500/30">
+                        <TrendingDown className="w-4 h-4 text-white" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-bold text-red-700 dark:text-red-400">SELL/Short Opportunity</span>
+                        <p className="text-[10px] text-slate-500">Capital flowing out</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-2xl font-bold text-red-600 dark:text-red-400">{capitalFlow.sellRecommendation.confidence}%</span>
+                      <p className="text-[10px] text-slate-500">Confidence</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mb-3">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-500">Market</span>
+                      <div className="flex items-center gap-1.5">
+                        {(() => {
+                          const MarketIcon = getMarketIcon(capitalFlow.sellRecommendation!.primaryMarket);
+                          return <MarketIcon className="w-4 h-4 text-red-600" />;
+                        })()}
+                        <span className="font-semibold text-slate-900 dark:text-white capitalize">{capitalFlow.sellRecommendation.primaryMarket}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-500">Phase</span>
+                      {(() => {
+                        const phaseConfig = getPhaseConfig(capitalFlow.sellRecommendation!.phase);
+                        return (
+                          <span className={cn("px-2 py-0.5 rounded-full text-xs font-bold", phaseConfig.bg, phaseConfig.color)}>
+                            {phaseConfig.label}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    {sellMarket && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500">7D Flow</span>
+                        <span className={cn("font-semibold", (sellMarket.flow7d ?? 0) >= 0 ? "text-emerald-600" : "text-red-600")}>
+                          {(sellMarket.flow7d ?? 0) >= 0 ? '+' : ''}{safeToFixed(sellMarket.flow7d)}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 p-2 bg-red-100/50 dark:bg-red-500/10 rounded-lg">
+                    {capitalFlow.sellRecommendation.reason || 'Capital outflow detected - potential short opportunity.'}
+                  </p>
+
+                  <button
+                    onClick={() => {
+                      setAssetType(capitalFlow.sellRecommendation!.primaryMarket);
+                      const marketAssets = ALL_SYMBOLS[capitalFlow.sellRecommendation!.primaryMarket]?.all;
+                      if (marketAssets && marketAssets.length > 0) {
+                        setSelectedSymbol(marketAssets[0].symbol);
+                      }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-500 to-rose-500 text-white text-sm font-semibold rounded-xl hover:from-red-600 hover:to-rose-600 hover:shadow-lg hover:shadow-red-500/25 transition-all"
+                  >
+                    <Search className="w-4 h-4" />
+                    Find Short Opportunities
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                /* No SELL recommendation - Show info card */
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <AlertTriangle className="w-5 h-5 text-slate-400" />
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">No SELL Signal</span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                    Currently no significant capital outflow detected in any market. Focus on the BUY opportunity.
+                  </p>
+                  <Link
+                    href="/capital-flow"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-all"
+                  >
+                    <Globe className="w-4 h-4" />
+                    View Full Capital Flow
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
+
         {/* Selection Row - All dropdowns in one line */}
         <div className="mb-6 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <div className="flex flex-wrap items-center gap-3">
