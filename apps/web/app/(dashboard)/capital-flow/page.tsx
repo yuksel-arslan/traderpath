@@ -1660,7 +1660,7 @@ export default function CapitalFlowPage() {
   const [scanningMarket, setScanningMarket] = useState<ScanningMarket>(null);
   const [scanProgress, setScanProgress] = useState(0);
 
-  // Export states - simplified to Download Report and Email Report
+  // Export states
   const [downloadingReport, setDownloadingReport] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -1708,18 +1708,7 @@ export default function CapitalFlowPage() {
       placement: 'bottom',
       spotlightPadding: 8,
     },
-    {
-      target: '#tour-export',
-      title: 'Export & Share',
-      content: 'Download a professional PDF report or send it via email for reference or sharing.',
-      placement: 'top',
-      spotlightPadding: 8,
-    },
   ];
-
-  // ===========================================
-  // Professional Report Functions
-  // ===========================================
 
   // Download Professional PDF Report
   const handleDownloadReport = async () => {
@@ -2075,40 +2064,41 @@ export default function CapitalFlowPage() {
                 </h2>
               </div>
               <div className="flex items-center gap-2">
-                {/* Professional Export Buttons */}
+                {/* Download Report Icon */}
                 <button
                   onClick={handleDownloadReport}
                   disabled={downloadingReport || !data}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-all disabled:opacity-50",
-                    "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-md hover:shadow-lg"
+                    "p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-teal-400 transition",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
                   )}
+                  title="Download Report"
                 >
                   {downloadingReport ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    <FileText className="w-4 h-4" />
+                    <FileText className="w-5 h-5" />
                   )}
-                  <span>{downloadingReport ? 'Generating...' : 'Download Report'}</span>
                 </button>
+
+                {/* Email Report Icon */}
                 <button
                   onClick={handleEmailReport}
                   disabled={sendingEmail || !data}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-all disabled:opacity-50",
-                    emailSent
-                      ? "bg-green-500 text-white"
-                      : "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md hover:shadow-lg"
+                    "p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                    emailSent ? "text-green-400" : "text-slate-400 hover:text-violet-400"
                   )}
+                  title={emailSent ? "Email Sent!" : "Email Report"}
                 >
                   {sendingEmail ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : emailSent ? (
-                    <CheckCircle className="w-4 h-4" />
+                    <CheckCircle className="w-5 h-5" />
                   ) : (
-                    <Mail className="w-4 h-4" />
+                    <Mail className="w-5 h-5" />
                   )}
-                  <span>{sendingEmail ? 'Sending...' : emailSent ? 'Sent!' : 'Email Report'}</span>
                 </button>
 
                 {/* Close Button */}
@@ -2406,53 +2396,47 @@ export default function CapitalFlowPage() {
                 "p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm",
                 refreshing && "opacity-50 cursor-not-allowed"
               )}
+              title="Refresh"
             >
               <RefreshCw className={cn("w-5 h-5 text-slate-500", refreshing && "animate-spin")} />
             </button>
 
-            {/* Professional Export Buttons */}
-            <div id="tour-export" className="flex items-center gap-2">
-              {/* Download Report Button */}
-              <button
-                onClick={handleDownloadReport}
-                disabled={downloadingReport || !data}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all",
-                  "bg-gradient-to-r from-teal-500 to-emerald-600 text-white",
-                  "hover:shadow-lg hover:shadow-teal-500/25 hover:scale-[1.02]",
-                  "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
-                )}
-              >
-                {downloadingReport ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <FileText className="w-4 h-4" />
-                )}
-                <span>{downloadingReport ? 'Generating...' : 'Download Report'}</span>
-              </button>
+            {/* Download Report Icon */}
+            <button
+              onClick={handleDownloadReport}
+              disabled={downloadingReport || !data}
+              className={cn(
+                "p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm",
+                "disabled:opacity-50 disabled:cursor-not-allowed"
+              )}
+              title="Download Report"
+            >
+              {downloadingReport ? (
+                <Loader2 className="w-5 h-5 text-teal-500 animate-spin" />
+              ) : (
+                <FileText className="w-5 h-5 text-teal-500" />
+              )}
+            </button>
 
-              {/* Email Report Button */}
-              <button
-                onClick={handleEmailReport}
-                disabled={sendingEmail || !data}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all",
-                  "bg-gradient-to-r from-violet-500 to-purple-600 text-white",
-                  "hover:shadow-lg hover:shadow-violet-500/25 hover:scale-[1.02]",
-                  "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none",
-                  emailSent && "from-green-500 to-emerald-600"
-                )}
-              >
-                {sendingEmail ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : emailSent ? (
-                  <CheckCircle className="w-4 h-4" />
-                ) : (
-                  <Mail className="w-4 h-4" />
-                )}
-                <span>{sendingEmail ? 'Sending...' : emailSent ? 'Email Sent!' : 'Email Report'}</span>
-              </button>
-            </div>
+            {/* Email Report Icon */}
+            <button
+              onClick={handleEmailReport}
+              disabled={sendingEmail || !data}
+              className={cn(
+                "p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+                emailSent && "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700"
+              )}
+              title={emailSent ? "Email Sent!" : "Email Report"}
+            >
+              {sendingEmail ? (
+                <Loader2 className="w-5 h-5 text-violet-500 animate-spin" />
+              ) : emailSent ? (
+                <CheckCircle className="w-5 h-5 text-green-500" />
+              ) : (
+                <Mail className="w-5 h-5 text-violet-500" />
+              )}
+            </button>
 
             {/* Tour Trigger Button */}
             <TourTriggerButton tourId="capital-flow" />
