@@ -254,7 +254,7 @@ export default function AnalysisDetailsPage() {
       const { jsPDF } = await import('jspdf');
 
       const canvas = await html2canvas(pageRef.current, {
-        backgroundColor: '#ffffff',
+        backgroundColor: '#0f172a', // Dark mode background (slate-900)
         scale: 2,
         logging: true,
         useCORS: true,
@@ -263,17 +263,73 @@ export default function AnalysisDetailsPage() {
         removeContainer: true,
         imageTimeout: 5000,
         onclone: (clonedDoc) => {
+          // Force dark mode styling on cloned document
+          const clonedElement = clonedDoc.querySelector('[data-export-container]') as HTMLElement;
+          if (clonedElement) {
+            clonedElement.style.overflow = 'visible';
+            clonedElement.style.backgroundColor = '#1e293b'; // slate-800
+            clonedElement.style.color = '#ffffff';
+            clonedElement.style.borderColor = 'transparent';
+
+            // Fix TraderPath brand text - gradient text doesn't render in canvas
+            const brandText = clonedElement.querySelector('[data-brand-text]') as HTMLElement;
+            if (brandText) {
+              brandText.style.background = 'none';
+              brandText.style.webkitBackgroundClip = 'unset';
+              brandText.style.webkitTextFillColor = '#14B8A6'; // Teal color
+              brandText.style.backgroundClip = 'unset';
+              brandText.style.color = '#14B8A6';
+            }
+
+            // Style export header for dark mode
+            const exportHeader = clonedElement.querySelector('[data-export-header]') as HTMLElement;
+            if (exportHeader) {
+              exportHeader.style.borderColor = 'rgba(51, 65, 85, 0.8)';
+            }
+
+            // Force dark mode on all child elements
+            const allElements = clonedElement.querySelectorAll('*');
+            allElements.forEach((el) => {
+              const element = el as HTMLElement;
+              // Skip brand text as we already styled it
+              if (element.hasAttribute('data-brand-text')) return;
+
+              // Convert light backgrounds to dark
+              const computedStyle = window.getComputedStyle(element);
+              const bgColor = computedStyle.backgroundColor;
+
+              // Convert white/light backgrounds to dark equivalents
+              if (bgColor === 'rgb(255, 255, 255)' || bgColor === 'rgba(0, 0, 0, 0)') {
+                element.style.backgroundColor = 'transparent';
+              }
+              if (bgColor === 'rgb(249, 250, 251)' || bgColor === 'rgb(243, 244, 246)') {
+                element.style.backgroundColor = 'rgba(51, 65, 85, 0.5)'; // slate-700/50
+              }
+
+              // Convert dark text to light
+              const textColor = computedStyle.color;
+              if (textColor === 'rgb(17, 24, 39)' || textColor === 'rgb(31, 41, 55)' || textColor === 'rgb(55, 65, 81)') {
+                element.style.color = '#ffffff';
+              }
+              if (textColor === 'rgb(107, 114, 128)' || textColor === 'rgb(75, 85, 99)') {
+                element.style.color = '#94a3b8'; // slate-400
+              }
+
+              // Convert light borders to dark
+              const borderColor = computedStyle.borderColor;
+              if (borderColor === 'rgb(229, 231, 235)' || borderColor === 'rgb(209, 213, 219)') {
+                element.style.borderColor = 'rgba(51, 65, 85, 0.5)';
+              }
+            });
+          }
+
+          // Hide problematic images
           const images = clonedDoc.querySelectorAll('img');
           images.forEach(img => {
             if (img.src.includes('cryptoicons') || img.src.includes('coingecko')) {
               img.style.display = 'none';
             }
           });
-          const clonedElement = clonedDoc.querySelector('[data-export-container]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.overflow = 'visible';
-            (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-          }
         },
       });
 
@@ -307,7 +363,7 @@ export default function AnalysisDetailsPage() {
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const canvas = await html2canvas(pageRef.current, {
-        backgroundColor: '#ffffff',
+        backgroundColor: '#0f172a', // Dark mode background (slate-900)
         scale: 1.5,
         logging: true,
         useCORS: true,
@@ -316,16 +372,68 @@ export default function AnalysisDetailsPage() {
         removeContainer: true,
         imageTimeout: 5000,
         onclone: (clonedDoc) => {
+          // Force dark mode styling on cloned document
+          const clonedElement = clonedDoc.querySelector('[data-export-container]') as HTMLElement;
+          if (clonedElement) {
+            clonedElement.style.overflow = 'visible';
+            clonedElement.style.backgroundColor = '#1e293b'; // slate-800
+            clonedElement.style.color = '#ffffff';
+            clonedElement.style.borderColor = 'transparent';
+
+            // Fix TraderPath brand text - gradient text doesn't render in canvas
+            const brandText = clonedElement.querySelector('[data-brand-text]') as HTMLElement;
+            if (brandText) {
+              brandText.style.background = 'none';
+              brandText.style.webkitBackgroundClip = 'unset';
+              brandText.style.webkitTextFillColor = '#14B8A6'; // Teal color
+              brandText.style.backgroundClip = 'unset';
+              brandText.style.color = '#14B8A6';
+            }
+
+            // Style export header for dark mode
+            const exportHeader = clonedElement.querySelector('[data-export-header]') as HTMLElement;
+            if (exportHeader) {
+              exportHeader.style.borderColor = 'rgba(51, 65, 85, 0.8)';
+            }
+
+            // Force dark mode on all child elements
+            const allElements = clonedElement.querySelectorAll('*');
+            allElements.forEach((el) => {
+              const element = el as HTMLElement;
+              if (element.hasAttribute('data-brand-text')) return;
+
+              const computedStyle = window.getComputedStyle(element);
+              const bgColor = computedStyle.backgroundColor;
+
+              if (bgColor === 'rgb(255, 255, 255)' || bgColor === 'rgba(0, 0, 0, 0)') {
+                element.style.backgroundColor = 'transparent';
+              }
+              if (bgColor === 'rgb(249, 250, 251)' || bgColor === 'rgb(243, 244, 246)') {
+                element.style.backgroundColor = 'rgba(51, 65, 85, 0.5)';
+              }
+
+              const textColor = computedStyle.color;
+              if (textColor === 'rgb(17, 24, 39)' || textColor === 'rgb(31, 41, 55)' || textColor === 'rgb(55, 65, 81)') {
+                element.style.color = '#ffffff';
+              }
+              if (textColor === 'rgb(107, 114, 128)' || textColor === 'rgb(75, 85, 99)') {
+                element.style.color = '#94a3b8';
+              }
+
+              const borderColor = computedStyle.borderColor;
+              if (borderColor === 'rgb(229, 231, 235)' || borderColor === 'rgb(209, 213, 219)') {
+                element.style.borderColor = 'rgba(51, 65, 85, 0.5)';
+              }
+            });
+          }
+
+          // Hide problematic images
           const images = clonedDoc.querySelectorAll('img');
           images.forEach(img => {
             if (img.src.includes('cryptoicons') || img.src.includes('coingecko')) {
               img.style.display = 'none';
             }
           });
-          const clonedElement = clonedDoc.querySelector('[data-export-container]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.overflow = 'visible';
-          }
         },
       });
 
@@ -621,13 +729,30 @@ export default function AnalysisDetailsPage() {
           data-export-container
           className="bg-white dark:bg-slate-800/80 rounded-2xl p-4 sm:p-6 shadow-xl border border-gray-200 dark:border-transparent">
           {/* Export Header - TraderPath Branding (visible in export) */}
-          <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-slate-700">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-slate-700" data-export-header>
+            <div className="flex items-center gap-3">
               {/* TraderPath Logo - Star */}
-              <StarLogo size={32} uniqueId="export-header" animated={false} />
-              <span className="text-lg font-bold bg-gradient-to-r from-teal-500 via-emerald-400 to-coral-500 bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(135deg, #14B8A6, #2DD4BF, #F87171, #EF5A6F)' }}>TraderPath</span>
+              <StarLogo size={36} uniqueId="export-header" animated={false} />
+              <div className="flex flex-col">
+                <span
+                  data-brand-text
+                  className="text-xl font-bold"
+                  style={{
+                    background: 'linear-gradient(135deg, #14B8A6, #2DD4BF, #F87171, #EF5A6F)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  TraderPath
+                </span>
+                <span className="text-xs text-gray-500 dark:text-slate-400 -mt-0.5">Asset Analysis Report</span>
+              </div>
             </div>
-            <span className="text-xs text-gray-500 dark:text-slate-400">traderpath.io</span>
+            <div className="flex flex-col items-end">
+              <span className="text-sm font-medium text-gray-700 dark:text-slate-300">traderpath.io</span>
+              <span className="text-xs text-gray-500 dark:text-slate-400">{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+            </div>
           </div>
 
           {/* Header */}
