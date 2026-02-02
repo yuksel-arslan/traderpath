@@ -95,6 +95,31 @@ interface MarketFlow {
   sectors?: SectorFlow[];
 }
 
+interface FiveFactorScore {
+  liquidityScore: number;
+  flowScore: number;
+  phaseScore: number;
+  rotationScore: number;
+  correlationScore: number;
+  totalScore: number;
+  breakdown: {
+    liquidity: string;
+    flow: string;
+    phase: string;
+    rotation: string;
+    correlation: string;
+  };
+}
+
+interface RecommendedAsset {
+  symbol: string;
+  name: string;
+  market: string;
+  sector?: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  reason: string;
+}
+
 interface FlowRecommendation {
   primaryMarket: string;
   phase: string;
@@ -102,6 +127,8 @@ interface FlowRecommendation {
   reason: string;
   sectors?: string[];
   confidence: number;
+  fiveFactorScore?: FiveFactorScore;
+  suggestedAssets?: RecommendedAsset[];
 }
 
 interface CapitalFlowData {
@@ -711,22 +738,104 @@ export default function AnalyzePage() {
                 </div>
               )}
 
-              {/* Recommendation */}
+              {/* L4: Recommendation with 5-Factor Score */}
               {flowData.recommendation && (
-                <div className={cn(
-                  "p-3 rounded-xl",
-                  flowData.recommendation.action === 'analyze' ? "bg-emerald-50 dark:bg-emerald-500/10" :
-                  flowData.recommendation.action === 'wait' ? "bg-amber-50 dark:bg-amber-500/10" :
-                  "bg-red-50 dark:bg-red-500/10"
-                )}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Target className="w-4 h-4 text-teal-600" />
-                    <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                      {flowData.recommendation.action.toUpperCase()}: {flowData.recommendation.primaryMarket.toUpperCase()}
-                    </span>
-                    <span className="text-xs text-slate-500 ml-auto">{flowData.recommendation.confidence}% confidence</span>
+                <div className="space-y-3">
+                  {/* Main Recommendation Box */}
+                  <div className={cn(
+                    "p-4 rounded-xl border-2",
+                    flowData.recommendation.action === 'analyze' ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30" :
+                    flowData.recommendation.action === 'wait' ? "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30" :
+                    "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30"
+                  )}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-xs font-bold">4</div>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">
+                          {flowData.recommendation.action.toUpperCase()}: {flowData.recommendation.primaryMarket.toUpperCase()}
+                        </span>
+                        <span className={cn(
+                          "px-2 py-0.5 rounded text-[10px] font-bold uppercase",
+                          flowData.recommendation.phase === 'early' ? "bg-emerald-500 text-white" :
+                          flowData.recommendation.phase === 'mid' ? "bg-amber-500 text-white" :
+                          flowData.recommendation.phase === 'late' ? "bg-orange-500 text-white" :
+                          "bg-red-500 text-white"
+                        )}>
+                          {flowData.recommendation.phase} Phase
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-lg font-bold text-slate-900 dark:text-white">
+                          {flowData.recommendation.confidence}
+                        </span>
+                        <span className="text-[10px] text-slate-500">/100</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">{flowData.recommendation.reason}</p>
+
+                    {/* 5-Factor Score Visual */}
+                    {flowData.recommendation.fiveFactorScore && (
+                      <div className="grid grid-cols-5 gap-1 mb-2">
+                        {[
+                          { key: 'liquidity', label: 'LIQ', score: flowData.recommendation.fiveFactorScore.liquidityScore, color: 'bg-blue-500' },
+                          { key: 'flow', label: 'FLW', score: flowData.recommendation.fiveFactorScore.flowScore, color: 'bg-emerald-500' },
+                          { key: 'phase', label: 'PHS', score: flowData.recommendation.fiveFactorScore.phaseScore, color: 'bg-purple-500' },
+                          { key: 'rotation', label: 'ROT', score: flowData.recommendation.fiveFactorScore.rotationScore, color: 'bg-amber-500' },
+                          { key: 'correlation', label: 'COR', score: flowData.recommendation.fiveFactorScore.correlationScore, color: 'bg-pink-500' },
+                        ].map((factor) => (
+                          <div key={factor.key} className="text-center">
+                            <div className="h-1 rounded-full bg-slate-200 dark:bg-slate-700 mb-1 overflow-hidden">
+                              <div className={cn("h-full rounded-full transition-all", factor.color)} style={{ width: `${factor.score}%` }} />
+                            </div>
+                            <p className="text-[9px] text-slate-500">{factor.label}</p>
+                            <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300">{factor.score}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">{flowData.recommendation.reason}</p>
+
+                  {/* Suggested Assets from Capital Flow */}
+                  {flowData.recommendation.suggestedAssets && flowData.recommendation.suggestedAssets.length > 0 && (
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles className="w-4 h-4 text-amber-500" />
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Suggested Assets</span>
+                        <span className="text-[10px] text-slate-500 ml-auto">Click to analyze</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {flowData.recommendation.suggestedAssets.slice(0, 5).map((asset) => (
+                          <button
+                            key={asset.symbol}
+                            onClick={() => {
+                              setSelectedSymbol(asset.symbol);
+                              setAssetType(asset.market as AssetType);
+                            }}
+                            className={cn(
+                              "flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all hover:scale-105",
+                              selectedSymbol === asset.symbol
+                                ? "bg-teal-50 dark:bg-teal-500/10 border-teal-500"
+                                : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 hover:border-teal-300"
+                            )}
+                          >
+                            <CoinIcon symbol={asset.symbol} size={20} />
+                            <div className="text-left">
+                              <p className="text-xs font-semibold text-slate-900 dark:text-white">{asset.symbol}</p>
+                              <p className="text-[10px] text-slate-500 line-clamp-1">{asset.reason}</p>
+                            </div>
+                            <span className={cn(
+                              "px-1.5 py-0.5 rounded text-[9px] font-bold uppercase",
+                              asset.riskLevel === 'low' ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300" :
+                              asset.riskLevel === 'medium' ? "bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300" :
+                              "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300"
+                            )}>
+                              {asset.riskLevel}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

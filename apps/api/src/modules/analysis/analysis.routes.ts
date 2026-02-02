@@ -19,6 +19,8 @@ import { coinScoreCacheService, CoinScore } from './services/coin-score-cache.se
 import { analyzeMLIS, MLISResult } from './services/mlis.service';
 import { logger } from '../../core/logger';
 import { fetchCandles, getAssetClass } from './providers/multi-asset-data-provider';
+import { getCapitalFlowModifier, CapitalFlowModifier } from '../capital-flow/capital-flow.service';
+import { MarketType } from '../capital-flow/types';
 
 // User type from JWT
 interface JwtUser {
@@ -696,6 +698,54 @@ Warn about potential traps and give protective advice.`;
         { marketPulse, assetScan, safetyCheck, timing, trapCheck },
         body.accountSize
       );
+
+      // Step 7.5: Apply Capital Flow Modifier to Trade Plan confidence
+      // "Para nereye akıyorsa potansiyel oradadır" - Capital Flow integration
+      let capitalFlowModifier: CapitalFlowModifier | null = null;
+      if (tradePlan) {
+        try {
+          // Get asset market type (crypto, stocks, bonds, metals)
+          const assetMarket = getAssetClass(body.symbol) as MarketType;
+          const direction = tradePlan.direction?.toUpperCase() === 'SHORT' ? 'SHORT' : 'LONG';
+
+          // Get Capital Flow modifier based on global liquidity, market phase, and flow direction
+          capitalFlowModifier = await getCapitalFlowModifier(assetMarket, direction);
+
+          // Apply modifier to trade plan confidence
+          // Original confidence × Capital Flow modifier = Adjusted confidence
+          const originalConfidence = tradePlan.confidence;
+          const adjustedConfidence = Math.min(100, Math.max(0, originalConfidence * capitalFlowModifier.modifier));
+          tradePlan.confidence = adjustedConfidence;
+
+          // Add Capital Flow context to trade plan
+          (tradePlan as Record<string, unknown>).capitalFlowContext = {
+            originalConfidence,
+            adjustedConfidence,
+            modifier: capitalFlowModifier.modifier,
+            fiveFactorScore: capitalFlowModifier.fiveFactorScore,
+            phase: capitalFlowModifier.phase,
+            phaseModifier: capitalFlowModifier.phaseModifier,
+            marketAlignment: capitalFlowModifier.marketAlignment,
+            action: capitalFlowModifier.action,
+            riskAdjustment: capitalFlowModifier.riskAdjustment,
+            reason: capitalFlowModifier.reason,
+          };
+
+          logger.info({
+            symbol: body.symbol,
+            assetMarket,
+            direction,
+            originalConfidence,
+            adjustedConfidence,
+            modifier: capitalFlowModifier.modifier,
+            fiveFactorScore: capitalFlowModifier.fiveFactorScore,
+            phase: capitalFlowModifier.phase,
+          }, '[Analysis] Capital Flow modifier applied');
+        } catch (cfError) {
+          // Capital Flow integration is non-blocking - log error and continue
+          logger.warn({ error: cfError, symbol: body.symbol }, '[Analysis] Capital Flow modifier failed, using original confidence');
+        }
+      }
 
       // Step 8: Final Verdict - combines everything
       const verdict = await analysisEngine.getFinalVerdict(
