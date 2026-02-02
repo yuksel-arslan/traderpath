@@ -251,6 +251,16 @@ export const FIVE_FACTOR_WEIGHTS = {
   correlation: 0.10,  // 10%
 } as const;
 
+// Suggested Asset for Layer 4 → Asset Analysis connection
+export interface SuggestedAsset {
+  symbol: string;
+  name: string;
+  market: MarketType;
+  sector?: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  reason: string;  // Why this asset is suggested
+}
+
 // Flow Recommendation
 export interface FlowRecommendation {
   primaryMarket: MarketType;
@@ -261,6 +271,8 @@ export interface FlowRecommendation {
   sectors?: string[];
   confidence: number;
   fiveFactorScore?: FiveFactorScore;  // 5-factor scoring breakdown
+  // Layer 4 → Asset Analysis connection
+  suggestedAssets?: SuggestedAsset[];
 }
 
 // Capital Flow Summary (main response)

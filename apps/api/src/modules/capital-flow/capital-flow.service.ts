@@ -31,6 +31,7 @@ import {
   TradeOpportunities,
   RotationTradeOpportunity,
   FlowDataPoint,
+  SuggestedAsset,
   PHASE_CONFIG,
   MARKET_CONFIG,
   RrpTrend,
@@ -733,6 +734,248 @@ function determineLiquidityBias(liquidity: GlobalLiquidity): LiquidityBias {
 }
 
 /**
+ * Asset Database for Layer 4 → Asset Analysis Connection
+ * Phase-based asset selection: Early = aggressive, Late = defensive
+ */
+const ASSET_DATABASE: Record<MarketType, Record<string, Array<{
+  symbol: string;
+  name: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  phases: Phase[];  // Phases where this asset is recommended
+}>>> = {
+  crypto: {
+    DeFi: [
+      { symbol: 'AAVE', name: 'Aave', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'UNI', name: 'Uniswap', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'MKR', name: 'Maker', riskLevel: 'medium', phases: ['early', 'mid', 'late'] },
+      { symbol: 'CRV', name: 'Curve', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'LDO', name: 'Lido', riskLevel: 'medium', phases: ['early', 'mid'] },
+    ],
+    Layer2: [
+      { symbol: 'ARB', name: 'Arbitrum', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'OP', name: 'Optimism', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'MATIC', name: 'Polygon', riskLevel: 'medium', phases: ['early', 'mid', 'late'] },
+      { symbol: 'IMX', name: 'Immutable X', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'STRK', name: 'Starknet', riskLevel: 'high', phases: ['early'] },
+    ],
+    AI: [
+      { symbol: 'FET', name: 'Fetch.ai', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'RNDR', name: 'Render', riskLevel: 'high', phases: ['early', 'mid'] },
+      { symbol: 'TAO', name: 'Bittensor', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'AGIX', name: 'SingularityNET', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'OCEAN', name: 'Ocean Protocol', riskLevel: 'high', phases: ['early'] },
+    ],
+    Gaming: [
+      { symbol: 'AXS', name: 'Axie Infinity', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'SAND', name: 'Sandbox', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'MANA', name: 'Decentraland', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'GALA', name: 'Gala Games', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'ENJ', name: 'Enjin', riskLevel: 'medium', phases: ['early', 'mid'] },
+    ],
+    Meme: [
+      { symbol: 'DOGE', name: 'Dogecoin', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'SHIB', name: 'Shiba Inu', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'PEPE', name: 'Pepe', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'BONK', name: 'Bonk', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'WIF', name: 'Dogwifhat', riskLevel: 'high', phases: ['early'] },
+    ],
+    Infrastructure: [
+      { symbol: 'LINK', name: 'Chainlink', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'GRT', name: 'The Graph', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'FIL', name: 'Filecoin', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'AR', name: 'Arweave', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'ATOM', name: 'Cosmos', riskLevel: 'medium', phases: ['early', 'mid', 'late'] },
+    ],
+    // Default for crypto market (majors)
+    default: [
+      { symbol: 'BTC', name: 'Bitcoin', riskLevel: 'low', phases: ['early', 'mid', 'late', 'exit'] },
+      { symbol: 'ETH', name: 'Ethereum', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'SOL', name: 'Solana', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'BNB', name: 'BNB', riskLevel: 'medium', phases: ['early', 'mid', 'late'] },
+      { symbol: 'XRP', name: 'XRP', riskLevel: 'medium', phases: ['early', 'mid', 'late'] },
+    ],
+  },
+  stocks: {
+    Tech: [
+      { symbol: 'QQQ', name: 'Nasdaq 100 ETF', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'XLK', name: 'Tech Sector ETF', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'AAPL', name: 'Apple', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'MSFT', name: 'Microsoft', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'NVDA', name: 'Nvidia', riskLevel: 'medium', phases: ['early', 'mid'] },
+    ],
+    Finance: [
+      { symbol: 'XLF', name: 'Financial Sector ETF', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'JPM', name: 'JPMorgan', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'BAC', name: 'Bank of America', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'GS', name: 'Goldman Sachs', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'V', name: 'Visa', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+    ],
+    Energy: [
+      { symbol: 'XLE', name: 'Energy Sector ETF', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'XOM', name: 'Exxon Mobil', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'CVX', name: 'Chevron', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'COP', name: 'ConocoPhillips', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'SLB', name: 'Schlumberger', riskLevel: 'medium', phases: ['early', 'mid'] },
+    ],
+    Healthcare: [
+      { symbol: 'XLV', name: 'Healthcare Sector ETF', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'UNH', name: 'UnitedHealth', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'JNJ', name: 'Johnson & Johnson', riskLevel: 'low', phases: ['mid', 'late', 'exit'] },
+      { symbol: 'LLY', name: 'Eli Lilly', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'PFE', name: 'Pfizer', riskLevel: 'low', phases: ['mid', 'late'] },
+    ],
+    Consumer: [
+      { symbol: 'XLY', name: 'Consumer Discretionary ETF', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'AMZN', name: 'Amazon', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'TSLA', name: 'Tesla', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'HD', name: 'Home Depot', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'MCD', name: 'McDonald\'s', riskLevel: 'low', phases: ['mid', 'late'] },
+    ],
+    Industrial: [
+      { symbol: 'XLI', name: 'Industrial Sector ETF', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'CAT', name: 'Caterpillar', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'DE', name: 'Deere', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'UPS', name: 'UPS', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'HON', name: 'Honeywell', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+    ],
+    // Default for stocks market (indices)
+    default: [
+      { symbol: 'SPY', name: 'S&P 500 ETF', riskLevel: 'low', phases: ['early', 'mid', 'late', 'exit'] },
+      { symbol: 'QQQ', name: 'Nasdaq 100 ETF', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'DIA', name: 'Dow Jones ETF', riskLevel: 'low', phases: ['mid', 'late', 'exit'] },
+      { symbol: 'IWM', name: 'Russell 2000 ETF', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'VTI', name: 'Total Stock Market ETF', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+    ],
+  },
+  bonds: {
+    Treasury: [
+      { symbol: 'TLT', name: '20+ Year Treasury ETF', riskLevel: 'low', phases: ['early', 'mid', 'late', 'exit'] },
+      { symbol: 'IEF', name: '7-10 Year Treasury ETF', riskLevel: 'low', phases: ['early', 'mid', 'late', 'exit'] },
+      { symbol: 'SHY', name: '1-3 Year Treasury ETF', riskLevel: 'low', phases: ['late', 'exit'] },
+      { symbol: 'GOVT', name: 'US Treasury Bond ETF', riskLevel: 'low', phases: ['early', 'mid', 'late', 'exit'] },
+      { symbol: 'BIL', name: 'Short-Term Treasury ETF', riskLevel: 'low', phases: ['exit'] },
+    ],
+    Corporate: [
+      { symbol: 'LQD', name: 'Investment Grade Corporate ETF', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'HYG', name: 'High Yield Corporate ETF', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'VCIT', name: 'Intermediate-Term Corporate ETF', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'VCSH', name: 'Short-Term Corporate ETF', riskLevel: 'low', phases: ['mid', 'late'] },
+      { symbol: 'JNK', name: 'High Yield Bond ETF', riskLevel: 'high', phases: ['early'] },
+    ],
+    // Default for bonds market
+    default: [
+      { symbol: 'BND', name: 'Total Bond Market ETF', riskLevel: 'low', phases: ['early', 'mid', 'late', 'exit'] },
+      { symbol: 'AGG', name: 'US Aggregate Bond ETF', riskLevel: 'low', phases: ['early', 'mid', 'late', 'exit'] },
+      { symbol: 'TLT', name: '20+ Year Treasury ETF', riskLevel: 'low', phases: ['early', 'mid', 'late', 'exit'] },
+      { symbol: 'TIP', name: 'TIPS Bond ETF', riskLevel: 'low', phases: ['mid', 'late', 'exit'] },
+      { symbol: 'BNDX', name: 'International Bond ETF', riskLevel: 'low', phases: ['mid', 'late'] },
+    ],
+  },
+  metals: {
+    Gold: [
+      { symbol: 'GLD', name: 'SPDR Gold ETF', riskLevel: 'low', phases: ['early', 'mid', 'late', 'exit'] },
+      { symbol: 'IAU', name: 'iShares Gold ETF', riskLevel: 'low', phases: ['early', 'mid', 'late', 'exit'] },
+      { symbol: 'GDX', name: 'Gold Miners ETF', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'GDXJ', name: 'Junior Gold Miners ETF', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'SGOL', name: 'Aberdeen Gold ETF', riskLevel: 'low', phases: ['early', 'mid', 'late', 'exit'] },
+    ],
+    Silver: [
+      { symbol: 'SLV', name: 'iShares Silver ETF', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'SIVR', name: 'Aberdeen Silver ETF', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'SIL', name: 'Silver Miners ETF', riskLevel: 'high', phases: ['early'] },
+      { symbol: 'SILJ', name: 'Junior Silver Miners ETF', riskLevel: 'high', phases: ['early'] },
+    ],
+    // Default for metals market
+    default: [
+      { symbol: 'GLD', name: 'SPDR Gold ETF', riskLevel: 'low', phases: ['early', 'mid', 'late', 'exit'] },
+      { symbol: 'SLV', name: 'iShares Silver ETF', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'IAU', name: 'iShares Gold ETF', riskLevel: 'low', phases: ['early', 'mid', 'late', 'exit'] },
+      { symbol: 'GDX', name: 'Gold Miners ETF', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'DBP', name: 'Precious Metals ETF', riskLevel: 'medium', phases: ['early', 'mid', 'late'] },
+    ],
+  },
+};
+
+/**
+ * Get suggested assets based on market, sector, and phase
+ * Early = aggressive (high risk), Late = defensive (low risk)
+ */
+function getSuggestedAssets(
+  market: MarketType,
+  phase: Phase,
+  sectors?: string[],
+  direction: 'BUY' | 'SELL' = 'BUY',
+  maxAssets: number = 5
+): SuggestedAsset[] {
+  const marketAssets = ASSET_DATABASE[market];
+  if (!marketAssets) return [];
+
+  const suggestions: SuggestedAsset[] = [];
+  const addedSymbols = new Set<string>();
+
+  // First, add sector-specific assets if sectors provided
+  if (sectors && sectors.length > 0) {
+    for (const sector of sectors) {
+      const sectorAssets = marketAssets[sector];
+      if (sectorAssets) {
+        for (const asset of sectorAssets) {
+          // Skip if already added or doesn't match phase
+          if (addedSymbols.has(asset.symbol)) continue;
+          if (!asset.phases.includes(phase)) continue;
+
+          // For SELL, prefer low/medium risk assets that can be shorted
+          if (direction === 'SELL' && asset.riskLevel === 'high') continue;
+
+          addedSymbols.add(asset.symbol);
+          suggestions.push({
+            symbol: asset.symbol,
+            name: asset.name,
+            market,
+            sector,
+            riskLevel: asset.riskLevel,
+            reason: `${sector} sector with ${phase.toUpperCase()} phase opportunity`,
+          });
+
+          if (suggestions.length >= maxAssets) break;
+        }
+      }
+      if (suggestions.length >= maxAssets) break;
+    }
+  }
+
+  // Fill remaining with default market assets if needed
+  if (suggestions.length < maxAssets) {
+    const defaultAssets = marketAssets.default || [];
+    for (const asset of defaultAssets) {
+      if (addedSymbols.has(asset.symbol)) continue;
+      if (!asset.phases.includes(phase)) continue;
+
+      addedSymbols.add(asset.symbol);
+      suggestions.push({
+        symbol: asset.symbol,
+        name: asset.name,
+        market,
+        riskLevel: asset.riskLevel,
+        reason: `Core ${MARKET_CONFIG[market].name} asset for ${phase.toUpperCase()} phase`,
+      });
+
+      if (suggestions.length >= maxAssets) break;
+    }
+  }
+
+  // Sort by risk level (phase appropriate)
+  const riskOrder = phase === 'early'
+    ? { high: 1, medium: 2, low: 3 }  // Early: prefer higher risk
+    : phase === 'exit'
+      ? { low: 1, medium: 2, high: 3 }  // Exit: prefer lower risk
+      : { medium: 1, low: 2, high: 3 };  // Mid/Late: prefer medium risk
+
+  suggestions.sort((a, b) => riskOrder[a.riskLevel] - riskOrder[b.riskLevel]);
+
+  return suggestions.slice(0, maxAssets);
+}
+
+/**
  * Generate BUY recommendation (markets with inflow)
  * NOW USES 5-FACTOR SCORING SYSTEM
  */
@@ -768,15 +1011,17 @@ function generateRecommendation(
     const safeMarket = safeMarketData?.market || topMarket;
     const safeScore = safeMarketData?.score || fiveFactorScore;
 
+    const safeSectors = safeMarket.sectors?.slice(0, 3).map(s => s.name);
     return {
       primaryMarket: safeMarket.market,
       phase: safeMarket.phase,
       action: safeMarket.phase === 'exit' ? 'avoid' : 'wait',
       direction: 'BUY',
       reason: `Risk-off environment (Net Liquidity ${liquidity.netLiquidity.trend}). Prefer safe haven assets (${MARKET_CONFIG[safeMarket.market].name}). 5-Factor Score: ${safeScore.totalScore}/100.`,
-      sectors: safeMarket.sectors?.slice(0, 3).map(s => s.name),
+      sectors: safeSectors,
       confidence: safeScore.totalScore,
       fiveFactorScore: safeScore,
+      suggestedAssets: getSuggestedAssets(safeMarket.market, safeMarket.phase, safeSectors, 'BUY'),
     };
   }
 
@@ -813,6 +1058,7 @@ function generateRecommendation(
     sectors: topSectors,
     confidence: fiveFactorScore.totalScore,
     fiveFactorScore,
+    suggestedAssets: getSuggestedAssets(topMarket.market, topMarket.phase, topSectors, 'BUY'),
   };
 }
 
@@ -915,6 +1161,7 @@ function generateSellRecommendation(
     sectors: weakSectors?.length ? weakSectors : undefined,
     confidence: fiveFactorScore.totalScore,
     fiveFactorScore,
+    suggestedAssets: getSuggestedAssets(worstMarket.market, worstMarket.phase, weakSectors, 'SELL'),
   };
 }
 
@@ -970,6 +1217,112 @@ export async function getFlowRecommendation(): Promise<FlowRecommendation> {
       reason: 'Capital flow data is temporarily unavailable. Please check the Capital Flow Radar for detailed analysis when data is restored.',
       sectors: [],
       confidence: 30,
+    };
+  }
+}
+
+/**
+ * Capital Flow Modifier for Trade Plan Integration
+ * Returns a modifier (0.5-1.5) to adjust trade confidence based on Capital Flow context
+ *
+ * Formula:
+ * - Base: 5-Factor Score / 100 → 0.0-1.0
+ * - Phase modifier: early=+0.3, mid=+0.1, late=-0.1, exit=-0.3
+ * - Alignment bonus: if asset market matches recommended market → +0.1
+ *
+ * Result: confidence × modifier adjusts trade plan quality
+ */
+export interface CapitalFlowModifier {
+  modifier: number;              // 0.5-1.5 multiplier for confidence
+  fiveFactorScore: number;       // 0-100 raw score
+  phase: Phase;
+  phaseModifier: number;         // -0.3 to +0.3
+  marketAlignment: boolean;      // Does asset market match recommendation?
+  action: 'analyze' | 'wait' | 'avoid';
+  riskAdjustment: 'aggressive' | 'moderate' | 'defensive';
+  reason: string;
+}
+
+export async function getCapitalFlowModifier(
+  assetMarket: MarketType,
+  direction: 'LONG' | 'SHORT' = 'LONG'
+): Promise<CapitalFlowModifier> {
+  try {
+    const summary = await getCapitalFlowSummary();
+    const rec = summary.recommendation;
+    const sellRec = summary.sellRecommendation;
+
+    // Use appropriate recommendation based on direction
+    const activeRec = direction === 'LONG' ? rec : (sellRec || rec);
+    const fiveFactorScore = activeRec.fiveFactorScore?.totalScore || activeRec.confidence;
+
+    // Base modifier from 5-factor score (0.4 to 1.2)
+    let modifier = 0.4 + (fiveFactorScore / 100) * 0.8;
+
+    // Phase modifier
+    const phaseModifiers: Record<Phase, number> = {
+      early: 0.3,   // Early phase = aggressive
+      mid: 0.1,     // Mid phase = moderate
+      late: -0.1,   // Late phase = caution
+      exit: -0.3,   // Exit phase = defensive
+    };
+    const phaseModifier = phaseModifiers[activeRec.phase as Phase] || 0;
+    modifier += phaseModifier;
+
+    // Market alignment bonus
+    const marketAlignment = assetMarket === activeRec.primaryMarket;
+    if (marketAlignment) {
+      modifier += 0.1;
+    }
+
+    // Action penalty
+    if (activeRec.action === 'avoid') {
+      modifier -= 0.2;
+    } else if (activeRec.action === 'wait') {
+      modifier -= 0.1;
+    }
+
+    // Clamp modifier to 0.5-1.5 range
+    modifier = Math.max(0.5, Math.min(1.5, modifier));
+
+    // Determine risk adjustment
+    let riskAdjustment: 'aggressive' | 'moderate' | 'defensive';
+    if (activeRec.phase === 'early' && activeRec.action === 'analyze') {
+      riskAdjustment = 'aggressive';
+    } else if (activeRec.phase === 'late' || activeRec.phase === 'exit') {
+      riskAdjustment = 'defensive';
+    } else {
+      riskAdjustment = 'moderate';
+    }
+
+    // Generate reason
+    const reason = `Capital Flow ${activeRec.action.toUpperCase()} signal for ${activeRec.primaryMarket.toUpperCase()} (${activeRec.phase} phase). ` +
+      `5-Factor Score: ${fiveFactorScore}/100. ` +
+      (marketAlignment ? `Asset market (${assetMarket}) matches recommendation. ` : `Asset market (${assetMarket}) differs from recommended (${activeRec.primaryMarket}). `) +
+      `Modifier: ${(modifier * 100).toFixed(0)}%`;
+
+    return {
+      modifier: parseFloat(modifier.toFixed(2)),
+      fiveFactorScore,
+      phase: activeRec.phase as Phase,
+      phaseModifier,
+      marketAlignment,
+      action: activeRec.action,
+      riskAdjustment,
+      reason,
+    };
+  } catch (error) {
+    console.error('[CapitalFlow] Error calculating modifier:', error);
+    // Return neutral modifier on error
+    return {
+      modifier: 1.0,
+      fiveFactorScore: 50,
+      phase: 'mid',
+      phaseModifier: 0,
+      marketAlignment: false,
+      action: 'wait',
+      riskAdjustment: 'moderate',
+      reason: 'Capital Flow data unavailable. Using neutral modifier.',
     };
   }
 }
