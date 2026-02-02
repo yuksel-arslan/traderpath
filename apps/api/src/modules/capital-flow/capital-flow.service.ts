@@ -33,12 +33,24 @@ import {
   FlowDataPoint,
   PHASE_CONFIG,
   MARKET_CONFIG,
+  RrpTrend,
+  TgaTrend,
 } from './types';
 
 // Providers
 import { getAllFredData } from './providers/fred.provider';
-import { getAllYahooData, getDxyData, getVixData, getStocksFlow, getMetalsFlow } from './providers/yahoo.provider';
+import {
+  getAllYahooData,
+  getDxyData,
+  getVixData,
+  getStocksFlow,
+  getMetalsFlow,
+  getBondsFlowData,
+  getMetalsFlowData,
+  getStocksFlowData,
+} from './providers/yahoo.provider';
 import { getAllDefiLlamaData, getCryptoSectors, getDeFiTvl, getStablecoinMarketCap } from './providers/defillama.provider';
+import { getCompleteCryptoFlowData } from './providers/binance.provider';
 
 // Cache keys
 const CACHE_KEYS = {
@@ -81,22 +93,24 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
   // Determine liquidity bias
   const liquidityBias = determineLiquidityBias(globalLiquidity);
 
-  // Generate BUY recommendation (markets with inflow)
-  const recommendation = generateRecommendation(globalLiquidity, markets, liquidityBias);
-
-  // Generate SELL recommendation (markets with outflow)
-  const sellRecommendation = generateSellRecommendation(markets, liquidityBias);
-
-  // Detect active rotation
-  const activeRotation = detectActiveRotation(markets);
-
-  // Calculate market correlations
+  // Calculate market correlations first (needed for 5-factor scoring)
   let correlations: CorrelationMatrix | undefined;
   try {
     correlations = await calculateMarketCorrelations(markets);
   } catch (error) {
     console.error('[CapitalFlow] Error calculating correlations:', error);
   }
+
+  // Generate BUY recommendation using 5-FACTOR SCORING SYSTEM
+  const recommendation = generateRecommendation(globalLiquidity, markets, liquidityBias, correlations);
+
+  // Generate SELL recommendation using 5-FACTOR SCORING SYSTEM
+  const sellRecommendation = generateSellRecommendation(markets, liquidityBias, globalLiquidity, correlations);
+
+  // Detect active rotation
+  const activeRotation = detectActiveRotation(markets);
+
+  // Note: correlations already calculated above for 5-factor scoring
 
   // Detect trade opportunities from rotation
   let tradeOpportunities: TradeOpportunities | undefined;
@@ -160,6 +174,11 @@ export async function getGlobalLiquidity(): Promise<GlobalLiquidity> {
     dxy: dxyData,
     vix: vixData,
     yieldCurve: fredData.yieldCurve,
+    // RRP and TGA - key liquidity drains
+    reverseRepo: fredData.reverseRepo,
+    treasuryGeneralAccount: fredData.treasuryGeneralAccount,
+    // Net Liquidity = Fed BS - RRP - TGA (the KEY metric)
+    netLiquidity: fredData.netLiquidity,
     lastUpdated: new Date(),
   };
 
@@ -222,74 +241,24 @@ export async function getMarketFlow(market: MarketType): Promise<MarketFlow> {
   return flow;
 }
 
-/**
- * Generate synthetic historical flow data for charts
- * Creates a 30-day history based on current flow values with realistic variation
- */
-function generateFlowHistory(flow7d: number, flow30d: number): FlowDataPoint[] {
-  const history: FlowDataPoint[] = [];
-  const now = new Date();
-
-  // Calculate daily average and apply some variation
-  const dailyAvg = flow30d / 30;
-
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-
-    // Apply sinusoidal variation to make it look more realistic
-    const variation = Math.sin((i / 5) * Math.PI) * (Math.abs(dailyAvg) * 0.3);
-    // Add random noise
-    const noise = (Math.random() - 0.5) * (Math.abs(dailyAvg) * 0.2);
-    // Calculate cumulative value from day 30 to current
-    const cumulative = dailyAvg * (30 - i) + variation + noise;
-
-    history.push({
-      date: date.toISOString().split('T')[0],
-      value: Number(cumulative.toFixed(2)),
-    });
-  }
-
-  // Ensure the last value matches flow30d
-  if (history.length > 0) {
-    history[history.length - 1].value = flow30d;
-  }
-
-  return history;
-}
-
-/**
- * Generate velocity history based on flow history
- */
-function generateVelocityHistory(flowHistory: FlowDataPoint[]): FlowDataPoint[] {
-  const velocityHistory: FlowDataPoint[] = [];
-
-  for (let i = 1; i < flowHistory.length; i++) {
-    const velocity = flowHistory[i].value - flowHistory[i - 1].value;
-    velocityHistory.push({
-      date: flowHistory[i].date,
-      value: Number(velocity.toFixed(2)),
-    });
-  }
-
-  return velocityHistory;
-}
+// Note: Synthetic data generation functions removed
+// Now using REAL data from Binance and Yahoo Finance providers
+// Flow = Volume × Price Direction × Conviction (not just price change)
 
 /**
  * Get Crypto market flow
+ * Uses REAL data from Binance (OHLCV, Order Book, Derivatives)
  */
 async function getCryptoFlow(): Promise<MarketFlow> {
-  const [tvlData, sectors, stablecoins] = await Promise.all([
-    getDeFiTvl(),
+  // Fetch real crypto flow data from Binance
+  const [binanceFlowData, sectors, stablecoins] = await Promise.all([
+    getCompleteCryptoFlowData(),
     getCryptoSectors(),
     getStablecoinMarketCap(),
   ]);
 
   // Also get CoinGecko global data for total market cap
   let totalMarketCap = 0;
-  let change7d = tvlData.change7d;
-  let change30d = tvlData.change30d;
-
   try {
     const response = await fetch('https://api.coingecko.com/api/v3/global', {
       signal: AbortSignal.timeout(10000),
@@ -297,26 +266,26 @@ async function getCryptoFlow(): Promise<MarketFlow> {
     if (response.ok) {
       const data = await response.json();
       totalMarketCap = data.data?.total_market_cap?.usd || 0;
-      change7d = data.data?.market_cap_change_percentage_24h_usd * 7 / 24 || change7d; // Rough 7d estimate
     }
   } catch (error) {
     console.error('[CapitalFlow] CoinGecko error:', error);
-    totalMarketCap = tvlData.current * 50; // Rough estimate: DeFi is ~2% of total crypto
+    totalMarketCap = binanceFlowData.totalVolume24h * 50; // Rough estimate from daily volume
   }
 
-  // Generate historical data for charts
-  const flowHistory = generateFlowHistory(change7d, change30d);
-  const velocityHistory = generateVelocityHistory(flowHistory);
-
+  // Use REAL flow data from Binance (volume-weighted, order book, derivatives)
   const baseFlow = {
     market: 'crypto' as const,
     currentValue: totalMarketCap / 1_000_000_000_000, // Trillions
-    flow7d: change7d,
-    flow30d: change30d,
-    flowVelocity: calculateVelocity(change7d, change30d),
-    flowHistory,
-    velocityHistory,
+    flow7d: binanceFlowData.flow7d,
+    flow30d: binanceFlowData.flow30d,
+    flowVelocity: binanceFlowData.flowVelocity,
+    flowHistory: binanceFlowData.flowHistory,
+    velocityHistory: binanceFlowData.velocityHistory,
     sectors,
+    // Additional real data components
+    orderBookImbalance: binanceFlowData.orderBookImbalance,
+    derivativesScore: binanceFlowData.derivativesScore,
+    volumeChange7d: binanceFlowData.volumeChange7d,
     lastUpdated: new Date(),
   };
 
@@ -334,19 +303,28 @@ async function getCryptoFlow(): Promise<MarketFlow> {
 
 /**
  * Get Stocks market flow
+ * Uses REAL volume-weighted ETF flow data from Yahoo Finance
  */
 async function getStocksMarketFlow(): Promise<MarketFlow> {
-  const stocksData = await getStocksFlow();
+  // Fetch REAL volume-weighted flow from ETFs (SPY, QQQ, IWM + sector ETFs)
+  const [volumeWeightedFlow, stocksData] = await Promise.all([
+    getStocksFlowData(),
+    getStocksFlow(),
+  ]);
 
-  // Generate historical data for charts
-  const flowHistory = generateFlowHistory(stocksData.flow7d, stocksData.flow30d);
-  const velocityHistory = generateVelocityHistory(flowHistory);
-
+  // Combine price data with real volume-weighted flow
   const baseFlow = {
-    ...stocksData,
+    market: 'stocks' as const,
     currentValue: stocksData.currentValue,
-    flowHistory,
-    velocityHistory,
+    flow7d: volumeWeightedFlow.flow7d,
+    flow30d: volumeWeightedFlow.flow30d,
+    flowVelocity: volumeWeightedFlow.flowVelocity,
+    flowHistory: volumeWeightedFlow.flowHistory,
+    velocityHistory: volumeWeightedFlow.velocityHistory,
+    sectors: stocksData.sectors,
+    // Additional real data
+    sectorRotation: volumeWeightedFlow.sectorRotation,
+    lastUpdated: new Date(),
   };
 
   const phase = detectPhase(baseFlow);
@@ -362,51 +340,70 @@ async function getStocksMarketFlow(): Promise<MarketFlow> {
 }
 
 /**
- * Get Bonds market flow (using yield as inverse proxy)
+ * Get Bonds market flow
+ * Uses REAL volume-weighted ETF flow data (TLT, IEF, SHY, LQD, HYG, TIP)
  */
 async function getBondsFlow(): Promise<MarketFlow> {
-  const fredData = await getAllFredData();
+  // Fetch REAL volume-weighted flow from bond ETFs
+  const [bondsFlowData, fredData] = await Promise.all([
+    getBondsFlowData(),
+    getAllFredData(),
+  ]);
 
-  // Bond prices move inversely to yields
-  // Rising yields = falling bond prices = outflow
-  // Falling yields = rising bond prices = inflow
-  const yieldChange = fredData.yieldCurve.spread10y2y;
+  // Create sector data based on real ETF flows
+  const tltFlow = bondsFlowData.bySymbol?.get('TLT');
+  const iefFlow = bondsFlowData.bySymbol?.get('IEF');
+  const shyFlow = bondsFlowData.bySymbol?.get('SHY');
+  const lqdFlow = bondsFlowData.bySymbol?.get('LQD');
+  const hygFlow = bondsFlowData.bySymbol?.get('HYG');
+  const tipFlow = bondsFlowData.bySymbol?.get('TIP');
 
-  // Simulate flow based on yield curve behavior
-  // When curve is inverted/flattening, money flows to bonds (safety)
-  const flow7d = yieldChange < 0 ? Math.abs(yieldChange) * 2 : -yieldChange * 2;
-  const flow30d = flow7d * 3; // Rough estimate
+  // Treasury sector (TLT + IEF + SHY)
+  const treasuryFlow7d = ((tltFlow?.flow7d || 0) + (iefFlow?.flow7d || 0) + (shyFlow?.flow7d || 0)) / 3;
+  const treasuryFlow30d = ((tltFlow?.flow30d || 0) + (iefFlow?.flow30d || 0) + (shyFlow?.flow30d || 0)) / 3;
 
-  // Generate historical data for charts
-  const flowHistory = generateFlowHistory(flow7d, flow30d);
-  const velocityHistory = generateVelocityHistory(flowHistory);
+  // Corporate sector (LQD + HYG)
+  const corpFlow7d = ((lqdFlow?.flow7d || 0) + (hygFlow?.flow7d || 0)) / 2;
+  const corpFlow30d = ((lqdFlow?.flow30d || 0) + (hygFlow?.flow30d || 0)) / 2;
 
   const baseFlow = {
     market: 'bonds' as const,
     currentValue: fredData.yieldCurve.spread10y2y,
-    flow7d,
-    flow30d,
-    flowVelocity: calculateVelocity(flow7d, flow30d),
-    flowHistory,
-    velocityHistory,
+    flow7d: bondsFlowData.flow7d,
+    flow30d: bondsFlowData.flow30d,
+    flowVelocity: bondsFlowData.flowVelocity,
+    flowHistory: bondsFlowData.flowHistory,
+    velocityHistory: bondsFlowData.velocityHistory,
     sectors: [
       {
         name: 'Treasury',
-        flow7d: flow7d,
-        flow30d: flow30d,
+        flow7d: Number(treasuryFlow7d.toFixed(2)),
+        flow30d: Number(treasuryFlow30d.toFixed(2)),
         dominance: 70,
-        trending: flow7d > 1 ? 'up' : flow7d < -1 ? 'down' : 'stable',
+        trending: treasuryFlow7d > 1 ? 'up' as const : treasuryFlow7d < -1 ? 'down' as const : 'stable' as const,
         topAssets: ['TLT', 'IEF', 'SHY', 'BND', 'AGG'],
       },
       {
         name: 'Corporate',
-        flow7d: flow7d * 0.8,
-        flow30d: flow30d * 0.8,
-        dominance: 30,
-        trending: flow7d > 1 ? 'up' : flow7d < -1 ? 'down' : 'stable',
+        flow7d: Number(corpFlow7d.toFixed(2)),
+        flow30d: Number(corpFlow30d.toFixed(2)),
+        dominance: 25,
+        trending: corpFlow7d > 1 ? 'up' as const : corpFlow7d < -1 ? 'down' as const : 'stable' as const,
         topAssets: ['LQD', 'HYG', 'JNK', 'VCIT', 'VCSH'],
       },
+      {
+        name: 'TIPS',
+        flow7d: tipFlow?.flow7d || 0,
+        flow30d: tipFlow?.flow30d || 0,
+        dominance: 5,
+        trending: (tipFlow?.flow7d || 0) > 1 ? 'up' as const : (tipFlow?.flow7d || 0) < -1 ? 'down' as const : 'stable' as const,
+        topAssets: ['TIP', 'SCHP', 'VTIP', 'STIP'],
+      },
     ],
+    // Additional real data
+    durationRotation: bondsFlowData.durationRotation,
+    creditRotation: bondsFlowData.creditRotation,
+    yieldCurve: fredData.yieldCurve,
     lastUpdated: new Date(),
   };
 
@@ -424,42 +421,172 @@ async function getBondsFlow(): Promise<MarketFlow> {
 
 /**
  * Get Metals market flow
+ * Uses REAL volume-weighted ETF flow data (GLD, SLV, CPER, GDX)
  */
 async function getMetalsMarketFlow(): Promise<MarketFlow> {
-  const metalsData = await getMetalsFlow();
+  // Fetch REAL volume-weighted flow from metal ETFs
+  const [metalsFlowData, metalsData] = await Promise.all([
+    getMetalsFlowData(),
+    getMetalsFlow(),
+  ]);
 
-  // Generate historical data for charts
-  const flowHistory = generateFlowHistory(metalsData.flow7d, metalsData.flow30d);
-  const velocityHistory = generateVelocityHistory(flowHistory);
+  // Create sector data based on real ETF flows
+  const gldFlow = metalsFlowData.bySymbol?.get('GLD');
+  const slvFlow = metalsFlowData.bySymbol?.get('SLV');
+  const cperFlow = metalsFlowData.bySymbol?.get('CPER');
+  const gdxFlow = metalsFlowData.bySymbol?.get('GDX');
 
-  const phase = detectPhase(metalsData);
-  const phaseInfo = getPhaseInfo(phase, metalsData);
+  const baseFlow = {
+    market: 'metals' as const,
+    currentValue: metalsData.currentValue,
+    flow7d: metalsFlowData.flow7d,
+    flow30d: metalsFlowData.flow30d,
+    flowVelocity: metalsFlowData.flowVelocity,
+    flowHistory: metalsFlowData.flowHistory,
+    velocityHistory: metalsFlowData.velocityHistory,
+    sectors: [
+      {
+        name: 'Gold',
+        flow7d: gldFlow?.flow7d || 0,
+        flow30d: gldFlow?.flow30d || 0,
+        dominance: 70,
+        trending: (gldFlow?.flow7d || 0) > 1 ? 'up' as const : (gldFlow?.flow7d || 0) < -1 ? 'down' as const : 'stable' as const,
+        topAssets: ['GLD', 'IAU', 'SGOL', 'GLDM', 'AAAU'],
+      },
+      {
+        name: 'Silver',
+        flow7d: slvFlow?.flow7d || 0,
+        flow30d: slvFlow?.flow30d || 0,
+        dominance: 15,
+        trending: (slvFlow?.flow7d || 0) > 1 ? 'up' as const : (slvFlow?.flow7d || 0) < -1 ? 'down' as const : 'stable' as const,
+        topAssets: ['SLV', 'SIVR', 'AGQ', 'SIL'],
+      },
+      {
+        name: 'Copper',
+        flow7d: cperFlow?.flow7d || 0,
+        flow30d: cperFlow?.flow30d || 0,
+        dominance: 10,
+        trending: (cperFlow?.flow7d || 0) > 1 ? 'up' as const : (cperFlow?.flow7d || 0) < -1 ? 'down' as const : 'stable' as const,
+        topAssets: ['CPER', 'COPX', 'JJC'],
+      },
+      {
+        name: 'Miners',
+        flow7d: gdxFlow?.flow7d || 0,
+        flow30d: gdxFlow?.flow30d || 0,
+        dominance: 5,
+        trending: (gdxFlow?.flow7d || 0) > 1 ? 'up' as const : (gdxFlow?.flow7d || 0) < -1 ? 'down' as const : 'stable' as const,
+        topAssets: ['GDX', 'GDXJ', 'SIL', 'SILJ'],
+      },
+    ],
+    // Additional real data
+    goldSilverRatio: metalsFlowData.goldSilverRatio,
+    safeHavenFlow: metalsFlowData.safeHavenFlow,
+    lastUpdated: new Date(),
+  };
+
+  const phase = detectPhase(baseFlow);
+  const phaseInfo = getPhaseInfo(phase, baseFlow);
 
   return {
-    ...metalsData,
-    flowHistory,
-    velocityHistory,
+    ...baseFlow,
     ...phaseInfo,
-    rotationSignal: detectRotationSignal(metalsData),
+    rotationSignal: detectRotationSignal(baseFlow),
     rotationTarget: null,
     rotationConfidence: 0,
   };
 }
 
 /**
- * Detect market phase
+ * Calculate percentile of a value within an array
+ * @param value The value to find percentile for
+ * @param array Array of values to compare against
+ * @returns Percentile (0-100)
  */
-function detectPhase(flow: { flow7d: number; flow30d: number; flowVelocity: number }): Phase {
-  const { flow7d, flow30d, flowVelocity } = flow;
+function calculatePercentile(value: number, array: number[]): number {
+  if (array.length === 0) return 50; // Default to median if no data
 
+  const sorted = [...array].sort((a, b) => a - b);
+  let count = 0;
+
+  for (const v of sorted) {
+    if (v < value) count++;
+  }
+
+  return (count / sorted.length) * 100;
+}
+
+/**
+ * Detect market phase using PERCENTILE-BASED DETECTION
+ *
+ * This approach is more adaptive than simple thresholds:
+ * - Compares current flow to historical distribution
+ * - Self-calibrating based on market conditions
+ * - More accurate across different market environments
+ *
+ * Phase Detection Logic:
+ * - EARLY: High flow percentile (>75), positive velocity, not yet established (30d percentile < 75)
+ * - MID: Moderate flow percentile (25-75), stable velocity
+ * - LATE: High 30d flow (>75) but declining velocity (<25 percentile)
+ * - EXIT: Low flow percentile (<25) or negative velocity (<10 percentile)
+ */
+function detectPhase(flow: {
+  flow7d: number;
+  flow30d: number;
+  flowVelocity: number;
+  flowHistory?: FlowDataPoint[];
+  velocityHistory?: FlowDataPoint[];
+}): Phase {
+  const { flow7d, flow30d, flowVelocity, flowHistory, velocityHistory } = flow;
+
+  // Extract historical values for percentile calculation
+  const historicalFlows = flowHistory?.map(h => h.value) || [];
+  const historicalVelocities = velocityHistory?.map(h => h.value) || [];
+
+  // If we have sufficient historical data, use percentile-based detection
+  if (historicalFlows.length >= 10) {
+    const flow7dPercentile = calculatePercentile(flow7d, historicalFlows);
+    const flow30dPercentile = calculatePercentile(flow30d, historicalFlows);
+    const velocityPercentile = historicalVelocities.length >= 5
+      ? calculatePercentile(flowVelocity, historicalVelocities)
+      : 50;
+
+    // EARLY PHASE: Strong recent flow, positive acceleration, trend is young
+    // - 7d flow in top quartile (>75th percentile)
+    // - Positive velocity (accelerating)
+    // - 30d flow not yet at extreme (< 75th percentile) - trend hasn't matured
+    if (flow7dPercentile > 75 && velocityPercentile > 50 && flow30dPercentile < 75) {
+      return 'early';
+    }
+
+    // EXIT PHASE: Weak flow or negative velocity
+    // - 7d flow in bottom quartile (<25th percentile) OR
+    // - Velocity in bottom decile (<10th percentile)
+    if (flow7dPercentile < 25 || velocityPercentile < 10) {
+      return 'exit';
+    }
+
+    // LATE PHASE: Strong 30d flow but declining momentum
+    // - 30d flow in top quartile (>75th percentile)
+    // - Velocity in bottom quartile (<25th percentile) - slowing down
+    // - 7d flow weaker than 30d trend (exhaustion)
+    if (flow30dPercentile > 75 && velocityPercentile < 25 && flow7d < flow30d * 0.5) {
+      return 'late';
+    }
+
+    // MID PHASE: Everything in moderate range
+    // Default state when trend is established but not extreme
+    return 'mid';
+  }
+
+  // FALLBACK: Simple threshold-based detection when insufficient historical data
   // EARLY: New inflow starting (positive but not yet established)
   if (flow7d > 3 && flow30d < 10 && flowVelocity > 0) {
     return 'early';
   }
 
-  // MID: Established trend (consistent flow)
-  if (flow7d > 0 && flow30d > 5 && flow30d < 20) {
-    return 'mid';
+  // EXIT: Outflow or reversal
+  if (flow7d < -2 || flowVelocity < -3) {
+    return 'exit';
   }
 
   // LATE: Trend exhaustion (slowing down)
@@ -467,9 +594,9 @@ function detectPhase(flow: { flow7d: number; flow30d: number; flowVelocity: numb
     return 'late';
   }
 
-  // EXIT: Outflow or reversal
-  if (flow7d < -2 || flowVelocity < -3) {
-    return 'exit';
+  // MID: Established trend (consistent flow)
+  if (flow7d > 0 && flow30d > 5) {
+    return 'mid';
   }
 
   // Default to mid if can't determine
@@ -554,14 +681,32 @@ function detectRotationSignal(flow: { flow7d: number; flowVelocity: number }): '
 
 /**
  * Determine overall liquidity bias
+ * Uses Net Liquidity as the primary indicator
  */
 function determineLiquidityBias(liquidity: GlobalLiquidity): LiquidityBias {
   let riskOnScore = 0;
   let riskOffScore = 0;
 
-  // Fed Balance Sheet
-  if (liquidity.fedBalanceSheet.trend === 'expanding') riskOnScore += 2;
-  else if (liquidity.fedBalanceSheet.trend === 'contracting') riskOffScore += 2;
+  // Net Liquidity (PRIMARY INDICATOR - Fed BS - RRP - TGA)
+  // This is the most important metric for market liquidity
+  if (liquidity.netLiquidity.trend === 'expanding') riskOnScore += 3;
+  else if (liquidity.netLiquidity.trend === 'contracting') riskOffScore += 3;
+
+  // Net Liquidity change (momentum)
+  if (liquidity.netLiquidity.change30d > 2) riskOnScore += 1;
+  else if (liquidity.netLiquidity.change30d < -2) riskOffScore += 1;
+
+  // RRP trend (draining = positive for risk, filling = negative)
+  if (liquidity.reverseRepo.trend === 'draining') riskOnScore += 1;
+  else if (liquidity.reverseRepo.trend === 'filling') riskOffScore += 1;
+
+  // TGA trend (spending = positive for risk, building = negative)
+  if (liquidity.treasuryGeneralAccount.trend === 'spending') riskOnScore += 1;
+  else if (liquidity.treasuryGeneralAccount.trend === 'building') riskOffScore += 1;
+
+  // Fed Balance Sheet (secondary)
+  if (liquidity.fedBalanceSheet.trend === 'expanding') riskOnScore += 1;
+  else if (liquidity.fedBalanceSheet.trend === 'contracting') riskOffScore += 1;
 
   // M2 Money Supply
   if (liquidity.m2MoneySupply.yoyGrowth > 5) riskOnScore += 1;
@@ -582,78 +727,76 @@ function determineLiquidityBias(liquidity: GlobalLiquidity): LiquidityBias {
 
   const diff = riskOnScore - riskOffScore;
 
-  if (diff > 2) return 'risk_on';
-  if (diff < -2) return 'risk_off';
+  if (diff > 3) return 'risk_on';
+  if (diff < -3) return 'risk_off';
   return 'neutral';
 }
 
 /**
  * Generate BUY recommendation (markets with inflow)
+ * NOW USES 5-FACTOR SCORING SYSTEM
  */
 function generateRecommendation(
   liquidity: GlobalLiquidity,
   markets: MarketFlow[],
-  bias: LiquidityBias
+  bias: LiquidityBias,
+  correlations?: CorrelationMatrix
 ): FlowRecommendation {
-  // Sort markets by flow strength (highest first for BUY)
-  const sortedMarkets = [...markets].sort((a, b) => {
-    const scoreA = a.flow7d * 0.7 + a.flowVelocity * 0.3;
-    const scoreB = b.flow7d * 0.7 + b.flowVelocity * 0.3;
-    return scoreB - scoreA;
-  });
+  // Calculate 5-factor scores for all markets
+  const marketScores = markets.map(market => ({
+    market,
+    score: calculateFiveFactorScore(market, liquidity, markets, correlations, 'BUY'),
+  }));
 
-  const topMarket = sortedMarkets[0];
+  // Sort by total 5-factor score (highest first for BUY)
+  marketScores.sort((a, b) => b.score.totalScore - a.score.totalScore);
+
+  const topMarketData = marketScores[0];
+  const topMarket = topMarketData.market;
+  const fiveFactorScore = topMarketData.score;
 
   // In risk-off, recommend safe assets
   if (bias === 'risk_off') {
-    const bondsMarket = markets.find(m => m.market === 'bonds');
-    const metalsMarket = markets.find(m => m.market === 'metals');
+    const bondsScore = marketScores.find(m => m.market.market === 'bonds');
+    const metalsScore = marketScores.find(m => m.market.market === 'metals');
 
-    const safeMarket = (bondsMarket?.flow7d || 0) > (metalsMarket?.flow7d || 0)
-      ? bondsMarket || topMarket
-      : metalsMarket || topMarket;
+    // Compare safe haven scores
+    const safeMarketData = (bondsScore?.score.totalScore || 0) > (metalsScore?.score.totalScore || 0)
+      ? bondsScore
+      : metalsScore;
+
+    const safeMarket = safeMarketData?.market || topMarket;
+    const safeScore = safeMarketData?.score || fiveFactorScore;
 
     return {
       primaryMarket: safeMarket.market,
       phase: safeMarket.phase,
       action: safeMarket.phase === 'exit' ? 'avoid' : 'wait',
       direction: 'BUY',
-      reason: 'Risk-off environment. Prefer safe haven assets (Bonds, Gold).',
+      reason: `Risk-off environment (Net Liquidity ${liquidity.netLiquidity.trend}). Prefer safe haven assets (${MARKET_CONFIG[safeMarket.market].name}). 5-Factor Score: ${safeScore.totalScore}/100.`,
       sectors: safeMarket.sectors?.slice(0, 3).map(s => s.name),
-      confidence: 70,
+      confidence: safeScore.totalScore,
+      fiveFactorScore: safeScore,
     };
   }
 
-  // Determine action based on phase
+  // Determine action based on 5-factor score thresholds
   let action: 'analyze' | 'wait' | 'avoid';
   let reason: string;
-  let confidence: number;
 
-  switch (topMarket.phase) {
-    case 'early':
-      action = 'analyze';
-      reason = `${MARKET_CONFIG[topMarket.market].name} showing early inflow signals. Optimal entry window.`;
-      confidence = 85;
-      break;
-    case 'mid':
-      action = 'analyze';
-      reason = `${MARKET_CONFIG[topMarket.market].name} in established trend. Proceed with caution.`;
-      confidence = 70;
-      break;
-    case 'late':
-      action = 'wait';
-      reason = `${MARKET_CONFIG[topMarket.market].name} trend showing exhaustion. No new entries recommended.`;
-      confidence = 60;
-      break;
-    case 'exit':
-      action = 'avoid';
-      reason = `${MARKET_CONFIG[topMarket.market].name} experiencing outflows. Wait for rotation.`;
-      confidence = 75;
-      break;
-    default:
-      action = 'wait';
-      reason = 'Market conditions unclear. Wait for better signals.';
-      confidence = 50;
+  // Score-based action determination
+  if (fiveFactorScore.totalScore >= 70) {
+    action = 'analyze';
+    reason = `${MARKET_CONFIG[topMarket.market].name} has strong 5-Factor Score (${fiveFactorScore.totalScore}/100). ${topMarket.phase.toUpperCase()} phase with favorable flow conditions.`;
+  } else if (fiveFactorScore.totalScore >= 55) {
+    action = topMarket.phase === 'early' || topMarket.phase === 'mid' ? 'analyze' : 'wait';
+    reason = `${MARKET_CONFIG[topMarket.market].name} has moderate 5-Factor Score (${fiveFactorScore.totalScore}/100). ${topMarket.phase.toUpperCase()} phase - proceed with caution.`;
+  } else if (fiveFactorScore.totalScore >= 40) {
+    action = 'wait';
+    reason = `${MARKET_CONFIG[topMarket.market].name} has weak 5-Factor Score (${fiveFactorScore.totalScore}/100). Wait for better entry conditions.`;
+  } else {
+    action = 'avoid';
+    reason = `${MARKET_CONFIG[topMarket.market].name} has poor 5-Factor Score (${fiveFactorScore.totalScore}/100). Avoid new positions.`;
   }
 
   const topSectors = topMarket.sectors
@@ -668,103 +811,92 @@ function generateRecommendation(
     direction: 'BUY',
     reason,
     sectors: topSectors,
-    confidence,
+    confidence: fiveFactorScore.totalScore,
+    fiveFactorScore,
   };
 }
 
 /**
  * Generate SELL recommendation (markets with outflow or weakest performance)
+ * NOW USES 5-FACTOR SCORING SYSTEM
  */
 function generateSellRecommendation(
   markets: MarketFlow[],
-  bias: LiquidityBias
+  bias: LiquidityBias,
+  liquidity: GlobalLiquidity,
+  correlations?: CorrelationMatrix
 ): FlowRecommendation | null {
   // Safety check - need at least 2 markets to compare
   if (!markets || markets.length < 2) {
     return null;
   }
 
-  // Sort markets by flow strength (lowest/most negative first for SELL)
-  const sortedMarkets = [...markets].sort((a, b) => {
-    const scoreA = a.flow7d * 0.7 + a.flowVelocity * 0.3;
-    const scoreB = b.flow7d * 0.7 + b.flowVelocity * 0.3;
-    return scoreA - scoreB; // Ascending order - worst performing first
-  });
+  // Calculate 5-factor scores for SELL direction
+  const marketScores = markets.map(market => ({
+    market,
+    score: calculateFiveFactorScore(market, liquidity, markets, correlations, 'SELL'),
+  }));
 
-  const worstMarket = sortedMarkets[0];
-  const bestMarket = sortedMarkets[sortedMarkets.length - 1];
+  // Sort by total SELL score (highest first - best short candidates)
+  marketScores.sort((a, b) => b.score.totalScore - a.score.totalScore);
 
-  // Safety check for undefined
-  if (!worstMarket || !bestMarket) {
-    return null;
-  }
+  const topSellCandidate = marketScores[0];
+  const worstMarket = topSellCandidate.market;
+  const fiveFactorScore = topSellCandidate.score;
 
-  // Calculate relative weakness (difference from best performer)
-  const relativeWeakness = bestMarket.flow7d - worstMarket.flow7d;
+  // Find best performing market for comparison
+  const bestMarketBuy = [...marketScores].sort((a, b) =>
+    calculateFiveFactorScore(a.market, liquidity, markets, correlations, 'BUY').totalScore -
+    calculateFiveFactorScore(b.market, liquidity, markets, correlations, 'BUY').totalScore
+  )[marketScores.length - 1]?.market;
+
+  // Calculate relative weakness
+  const relativeWeakness = (bestMarketBuy?.flow7d || 0) - worstMarket.flow7d;
 
   // In risk-off, SELL risky assets
   if (bias === 'risk_off') {
-    const cryptoMarket = markets.find(m => m.market === 'crypto');
-    const stocksMarket = markets.find(m => m.market === 'stocks');
+    const cryptoScore = marketScores.find(m => m.market.market === 'crypto');
+    const stocksScore = marketScores.find(m => m.market.market === 'stocks');
 
-    // SELL the riskier asset with worse performance
-    const riskyMarket = (cryptoMarket?.flow7d || 0) < (stocksMarket?.flow7d || 0)
-      ? cryptoMarket || worstMarket
-      : stocksMarket || worstMarket;
+    // SELL the riskier asset with higher SELL score
+    const riskyMarketData = (cryptoScore?.score.totalScore || 0) > (stocksScore?.score.totalScore || 0)
+      ? cryptoScore
+      : stocksScore;
 
-    if (riskyMarket) {
+    if (riskyMarketData) {
+      const riskyMarket = riskyMarketData.market;
+      const riskyScore = riskyMarketData.score;
+
       return {
         primaryMarket: riskyMarket.market,
         phase: riskyMarket.phase,
-        action: riskyMarket.flow7d < 0 ? 'analyze' : 'wait',
+        action: riskyScore.totalScore >= 60 ? 'analyze' : 'wait',
         direction: 'SELL',
-        reason: `Risk-off environment. ${MARKET_CONFIG[riskyMarket.market].name} underperforming (${riskyMarket.flow7d >= 0 ? '+' : ''}${riskyMarket.flow7d.toFixed(1)}%). Consider reducing exposure or short positions.`,
+        reason: `Risk-off environment (Net Liquidity ${liquidity.netLiquidity.trend}). ${MARKET_CONFIG[riskyMarket.market].name} is the best SELL candidate. 5-Factor SELL Score: ${riskyScore.totalScore}/100.`,
         sectors: riskyMarket.sectors?.filter(s => s.trending === 'down' || s.flow7d < (riskyMarket.flow7d / 2)).slice(0, 3).map(s => s.name),
-        confidence: riskyMarket.flow7d < 0 ? 75 : 60,
+        confidence: riskyScore.totalScore,
+        fiveFactorScore: riskyScore,
       };
     }
   }
 
-  // Determine SELL action based on absolute outflow, relative weakness, or being the underperformer
+  // Determine SELL action based on 5-factor score
   let action: 'analyze' | 'wait' | 'avoid';
   let reason: string;
-  let confidence: number;
 
-  if (worstMarket.flow7d < 0) {
-    // Actual outflow - stronger signal
-    if (worstMarket.phase === 'exit' || worstMarket.rotationSignal === 'exiting') {
-      action = 'analyze';
-      reason = `${MARKET_CONFIG[worstMarket.market].name} experiencing outflows (${worstMarket.flow7d.toFixed(1)}%). Capital rotating out. Look for short opportunities.`;
-      confidence = 80;
-    } else if (worstMarket.flow7d < -5) {
-      action = 'analyze';
-      reason = `${MARKET_CONFIG[worstMarket.market].name} in significant decline (${worstMarket.flow7d.toFixed(1)}%). Consider short positions on weak sectors.`;
-      confidence = 75;
-    } else {
-      action = 'wait';
-      reason = `${MARKET_CONFIG[worstMarket.market].name} showing mild outflows (${worstMarket.flow7d.toFixed(1)}%). Monitor for stronger short signals.`;
-      confidence = 60;
-    }
-  } else if (relativeWeakness > 5) {
-    // No absolute outflow but significantly weaker than best performer
+  // Score-based action determination for SELL
+  if (fiveFactorScore.totalScore >= 70) {
+    action = 'analyze';
+    reason = `${MARKET_CONFIG[worstMarket.market].name} has strong SELL signal (5-Factor Score: ${fiveFactorScore.totalScore}/100). ${worstMarket.phase.toUpperCase()} phase with capital exiting.`;
+  } else if (fiveFactorScore.totalScore >= 55) {
+    action = worstMarket.flow7d < 0 || worstMarket.phase === 'late' || worstMarket.phase === 'exit' ? 'analyze' : 'wait';
+    reason = `${MARKET_CONFIG[worstMarket.market].name} has moderate SELL signal (5-Factor Score: ${fiveFactorScore.totalScore}/100). ${relativeWeakness > 3 ? `Underperforming by ${relativeWeakness.toFixed(1)}%.` : 'Monitor for stronger signals.'}`;
+  } else if (fiveFactorScore.totalScore >= 40) {
     action = 'wait';
-    reason = `${MARKET_CONFIG[worstMarket.market].name} underperforming vs ${MARKET_CONFIG[bestMarket.market].name} (${relativeWeakness.toFixed(1)}% gap). Watch for rotation out.`;
-    confidence = 55;
-  } else if (worstMarket.flowVelocity < -1) {
-    // Slowing momentum - potential reversal
-    action = 'wait';
-    reason = `${MARKET_CONFIG[worstMarket.market].name} momentum slowing (velocity: ${worstMarket.flowVelocity.toFixed(1)}). Early warning for potential outflow.`;
-    confidence = 50;
-  } else if (relativeWeakness > 0) {
-    // Even small underperformance - show as "avoid" opportunity
-    action = 'avoid';
-    reason = `${MARKET_CONFIG[worstMarket.market].name} is the relative underperformer (${worstMarket.flow7d >= 0 ? '+' : ''}${worstMarket.flow7d.toFixed(1)}% vs ${MARKET_CONFIG[bestMarket.market].name} +${bestMarket.flow7d.toFixed(1)}%). Not ideal for new longs.`;
-    confidence = 40;
+    reason = `${MARKET_CONFIG[worstMarket.market].name} has weak SELL signal (5-Factor Score: ${fiveFactorScore.totalScore}/100). No clear short opportunity yet.`;
   } else {
-    // All markets exactly equal - extremely rare
     action = 'avoid';
-    reason = `All markets performing similarly. No clear underperformer for short opportunities.`;
-    confidence = 30;
+    reason = `${MARKET_CONFIG[worstMarket.market].name} has poor SELL signal (5-Factor Score: ${fiveFactorScore.totalScore}/100). Shorting not recommended.`;
   }
 
   // Get weakest sectors (trending down or below market average)
@@ -781,7 +913,8 @@ function generateSellRecommendation(
     direction: 'SELL',
     reason,
     sectors: weakSectors?.length ? weakSectors : undefined,
-    confidence,
+    confidence: fiveFactorScore.totalScore,
+    fiveFactorScore,
   };
 }
 
@@ -1308,7 +1441,11 @@ async function generateLayerInsights(
 
 DATA:
 Layer 1 - Global Liquidity:
+- NET LIQUIDITY: ${liquidity.netLiquidity.value.toFixed(2)}T USD (${liquidity.netLiquidity.trend}, 30d: ${liquidity.netLiquidity.change30d > 0 ? '+' : ''}${liquidity.netLiquidity.change30d.toFixed(1)}%)
+  * Formula: Fed BS (${liquidity.netLiquidity.components.fedBalanceSheet.toFixed(2)}T) - RRP (${liquidity.netLiquidity.components.reverseRepo.toFixed(2)}T) - TGA (${liquidity.netLiquidity.components.tga.toFixed(2)}T)
 - Fed Balance Sheet: ${liquidity.fedBalanceSheet.value.toFixed(2)}T USD (${liquidity.fedBalanceSheet.trend})
+- Reverse Repo (RRP): ${liquidity.reverseRepo.value.toFixed(2)}T USD (${liquidity.reverseRepo.trend}, 30d: ${liquidity.reverseRepo.change30d > 0 ? '+' : ''}${liquidity.reverseRepo.change30d.toFixed(1)}%)
+- Treasury General Account (TGA): ${liquidity.treasuryGeneralAccount.value.toFixed(2)}T USD (${liquidity.treasuryGeneralAccount.trend}, 30d: ${liquidity.treasuryGeneralAccount.change30d > 0 ? '+' : ''}${liquidity.treasuryGeneralAccount.change30d.toFixed(1)}%)
 - M2 Money Supply: ${liquidity.m2MoneySupply.value.toFixed(2)}T USD (YoY: ${liquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%)
 - DXY (Dollar): ${liquidity.dxy.value.toFixed(2)} (${liquidity.dxy.trend}, 7d: ${liquidity.dxy.change7d > 0 ? '+' : ''}${liquidity.dxy.change7d.toFixed(2)}%)
 - VIX: ${liquidity.vix.value.toFixed(2)} (${liquidity.vix.level})
@@ -1376,7 +1513,7 @@ Respond in this exact JSON format (no markdown, just pure JSON):
 
   // Fallback insights
   return {
-    layer1: `Fed balance sheet is ${liquidity.fedBalanceSheet.trend}. ${bias === 'risk_on' ? 'Liquidity conditions favor risk assets.' : bias === 'risk_off' ? 'Defensive positioning recommended.' : 'Mixed signals in liquidity.'}`,
+    layer1: `Net Liquidity is ${liquidity.netLiquidity.value.toFixed(2)}T USD (${liquidity.netLiquidity.trend}). ${bias === 'risk_on' ? 'Liquidity conditions favor risk assets.' : bias === 'risk_off' ? 'Defensive positioning recommended.' : 'Mixed signals in liquidity.'} ${liquidity.reverseRepo.trend === 'draining' ? 'RRP draining adds positive liquidity.' : liquidity.treasuryGeneralAccount.trend === 'spending' ? 'Treasury spending supports markets.' : ''}`,
     layer2: `${recommendation.primaryMarket.toUpperCase()} market is in ${recommendation.phase} phase with ${recommendation.confidence}% confidence.`,
     layer3: cryptoMarket?.sectors?.[0] ? `${cryptoMarket.sectors[0].name} is the leading sector with ${cryptoMarket.sectors[0].flow7d.toFixed(1)}% 7-day flow.` : 'Sector analysis pending.',
     layer4: `${recommendation.action === 'analyze' ? 'Good conditions to analyze opportunities.' : recommendation.action === 'wait' ? 'Wait for better entry conditions.' : 'Avoid new positions in current conditions.'}`,
@@ -1495,7 +1632,9 @@ MARKET DATA:
 ${topSectors ? `- Top Sectors: ${topSectors}` : ''}
 
 GLOBAL CONTEXT:
-- Liquidity: Fed ${liquidity.fedBalanceSheet.trend}, M2 YoY ${liquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%
+- Net Liquidity: ${liquidity.netLiquidity.value.toFixed(2)}T USD (${liquidity.netLiquidity.trend})
+- RRP: ${liquidity.reverseRepo.trend} (${liquidity.reverseRepo.value.toFixed(2)}T)
+- TGA: ${liquidity.treasuryGeneralAccount.trend} (${liquidity.treasuryGeneralAccount.value.toFixed(2)}T)
 - Dollar: ${liquidity.dxy.trend} (${liquidity.dxy.value.toFixed(2)})
 - VIX: ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level})
 - Yield Curve: ${liquidity.yieldCurve.inverted ? 'INVERTED' : 'Normal'}
@@ -1587,6 +1726,371 @@ Provide your analysis in this exact JSON format (no markdown):
   }
 
   return analysis;
+}
+
+// ============================================================================
+// 5-FACTOR SCORING SYSTEM FOR LAYER 4 RECOMMENDATIONS
+// ============================================================================
+// Each factor scores 0-100, weighted to produce final confidence
+//
+// 1. LIQUIDITY SCORE (25% weight) - Global liquidity conditions
+//    - Net Liquidity trend and magnitude
+//    - RRP/TGA direction (draining RRP = bullish, spending TGA = bullish)
+//
+// 2. FLOW SCORE (30% weight) - Market-specific capital flow
+//    - 7-day flow strength and direction
+//    - 30-day trend confirmation
+//    - Flow velocity (acceleration)
+//
+// 3. PHASE SCORE (20% weight) - Cycle timing
+//    - Early = optimal entry (100)
+//    - Mid = proceed with caution (70)
+//    - Late = avoid new positions (30)
+//    - Exit = do not enter (10)
+//
+// 4. ROTATION SCORE (15% weight) - Capital rotation signals
+//    - Entering signal strength
+//    - Exiting markets as source
+//    - Rotation confidence
+//
+// 5. CORRELATION SCORE (10% weight) - Cross-market alignment
+//    - Correlation with other markets
+//    - Hedging opportunities
+//    - Risk-on/risk-off alignment
+// ============================================================================
+
+interface FiveFactorScore {
+  liquidityScore: number;       // 0-100
+  flowScore: number;            // 0-100
+  phaseScore: number;           // 0-100
+  rotationScore: number;        // 0-100
+  correlationScore: number;     // 0-100
+  totalScore: number;           // Weighted average
+  breakdown: {
+    liquidity: string;          // Explanation
+    flow: string;
+    phase: string;
+    rotation: string;
+    correlation: string;
+  };
+}
+
+// Factor weights (must sum to 1.0)
+const FACTOR_WEIGHTS = {
+  liquidity: 0.25,
+  flow: 0.30,
+  phase: 0.20,
+  rotation: 0.15,
+  correlation: 0.10,
+};
+
+/**
+ * Calculate 5-Factor Score for a market
+ * Used to generate high-confidence recommendations
+ */
+export function calculateFiveFactorScore(
+  market: MarketFlow,
+  liquidity: GlobalLiquidity,
+  allMarkets: MarketFlow[],
+  correlations?: CorrelationMatrix,
+  direction: 'BUY' | 'SELL' = 'BUY'
+): FiveFactorScore {
+  // 1. LIQUIDITY SCORE (0-100)
+  const liquidityScore = calculateLiquidityScore(liquidity, direction);
+
+  // 2. FLOW SCORE (0-100)
+  const flowScore = calculateFlowScore(market, direction);
+
+  // 3. PHASE SCORE (0-100)
+  const phaseScore = calculatePhaseScore(market.phase, direction);
+
+  // 4. ROTATION SCORE (0-100)
+  const rotationScore = calculateRotationScore(market, allMarkets, direction);
+
+  // 5. CORRELATION SCORE (0-100)
+  const correlationScore = calculateCorrelationScore(market, correlations, direction);
+
+  // Calculate weighted total
+  const totalScore = Math.round(
+    liquidityScore * FACTOR_WEIGHTS.liquidity +
+    flowScore * FACTOR_WEIGHTS.flow +
+    phaseScore * FACTOR_WEIGHTS.phase +
+    rotationScore * FACTOR_WEIGHTS.rotation +
+    correlationScore * FACTOR_WEIGHTS.correlation
+  );
+
+  return {
+    liquidityScore,
+    flowScore,
+    phaseScore,
+    rotationScore,
+    correlationScore,
+    totalScore,
+    breakdown: {
+      liquidity: getLiquidityBreakdown(liquidity, liquidityScore),
+      flow: getFlowBreakdown(market, flowScore, direction),
+      phase: getPhaseBreakdown(market.phase, phaseScore),
+      rotation: getRotationBreakdown(market, rotationScore),
+      correlation: getCorrelationBreakdown(correlationScore),
+    },
+  };
+}
+
+/**
+ * Factor 1: Liquidity Score
+ * Measures global liquidity conditions (Net Liquidity, RRP, TGA)
+ */
+function calculateLiquidityScore(liquidity: GlobalLiquidity, direction: 'BUY' | 'SELL'): number {
+  let score = 50; // Neutral baseline
+
+  // Net Liquidity is the PRIMARY indicator
+  // Expanding = bullish, Contracting = bearish
+  if (liquidity.netLiquidity.trend === 'expanding') {
+    score += direction === 'BUY' ? 20 : -10;
+  } else if (liquidity.netLiquidity.trend === 'contracting') {
+    score += direction === 'SELL' ? 20 : -10;
+  }
+
+  // Net Liquidity change magnitude
+  if (liquidity.netLiquidity.change30d > 3) {
+    score += direction === 'BUY' ? 10 : -5;
+  } else if (liquidity.netLiquidity.change30d < -3) {
+    score += direction === 'SELL' ? 10 : -5;
+  }
+
+  // RRP trend (draining = money entering markets = bullish)
+  if (liquidity.reverseRepo.trend === 'draining') {
+    score += direction === 'BUY' ? 8 : -4;
+  } else if (liquidity.reverseRepo.trend === 'filling') {
+    score += direction === 'SELL' ? 8 : -4;
+  }
+
+  // TGA trend (spending = money entering markets = bullish)
+  if (liquidity.treasuryGeneralAccount.trend === 'spending') {
+    score += direction === 'BUY' ? 8 : -4;
+  } else if (liquidity.treasuryGeneralAccount.trend === 'building') {
+    score += direction === 'SELL' ? 8 : -4;
+  }
+
+  // Dollar strength (weak dollar = bullish for risk assets)
+  if (liquidity.dxy.trend === 'weakening') {
+    score += direction === 'BUY' ? 5 : -2;
+  } else if (liquidity.dxy.trend === 'strengthening') {
+    score += direction === 'SELL' ? 5 : -2;
+  }
+
+  // VIX level
+  if (liquidity.vix.level === 'complacent') {
+    score += direction === 'BUY' ? 3 : -1;
+  } else if (liquidity.vix.level === 'extreme_fear') {
+    score += direction === 'SELL' ? 5 : 3; // Fear can be good for BUY (contrarian)
+  }
+
+  return Math.max(0, Math.min(100, score));
+}
+
+/**
+ * Factor 2: Flow Score
+ * Measures market-specific capital flow strength
+ */
+function calculateFlowScore(market: MarketFlow, direction: 'BUY' | 'SELL'): number {
+  let score = 50; // Neutral baseline
+
+  // 7-day flow (most recent signal)
+  const flow7d = market.flow7d;
+  if (direction === 'BUY') {
+    if (flow7d > 5) score += 25;
+    else if (flow7d > 3) score += 18;
+    else if (flow7d > 1) score += 10;
+    else if (flow7d < -3) score -= 20;
+    else if (flow7d < -1) score -= 10;
+  } else {
+    // SELL direction
+    if (flow7d < -5) score += 25;
+    else if (flow7d < -3) score += 18;
+    else if (flow7d < -1) score += 10;
+    else if (flow7d > 3) score -= 20;
+    else if (flow7d > 1) score -= 10;
+  }
+
+  // 30-day flow (trend confirmation)
+  const flow30d = market.flow30d;
+  if (direction === 'BUY') {
+    if (flow30d > 10) score += 12;
+    else if (flow30d > 5) score += 8;
+    else if (flow30d < -5) score -= 10;
+  } else {
+    if (flow30d < -10) score += 12;
+    else if (flow30d < -5) score += 8;
+    else if (flow30d > 5) score -= 10;
+  }
+
+  // Flow velocity (acceleration)
+  const velocity = market.flowVelocity;
+  if (direction === 'BUY') {
+    if (velocity > 2) score += 10;
+    else if (velocity > 0) score += 5;
+    else if (velocity < -2) score -= 10;
+  } else {
+    if (velocity < -2) score += 10;
+    else if (velocity < 0) score += 5;
+    else if (velocity > 2) score -= 10;
+  }
+
+  return Math.max(0, Math.min(100, score));
+}
+
+/**
+ * Factor 3: Phase Score
+ * Measures cycle timing (when in the trend are we?)
+ */
+function calculatePhaseScore(phase: Phase, direction: 'BUY' | 'SELL'): number {
+  const phaseScores = {
+    BUY: {
+      early: 95,  // Optimal entry
+      mid: 65,    // Proceed with caution
+      late: 25,   // Avoid new longs
+      exit: 10,   // Do not buy
+    },
+    SELL: {
+      early: 15,  // Risky to short (trend starting)
+      mid: 40,    // Caution with shorts
+      late: 70,   // Good for shorts (trend exhaustion)
+      exit: 90,   // Optimal short entry
+    },
+  };
+
+  return phaseScores[direction][phase];
+}
+
+/**
+ * Factor 4: Rotation Score
+ * Measures capital rotation signals
+ */
+function calculateRotationScore(market: MarketFlow, allMarkets: MarketFlow[], direction: 'BUY' | 'SELL'): number {
+  let score = 50; // Neutral baseline
+
+  const signal = market.rotationSignal;
+
+  if (direction === 'BUY') {
+    if (signal === 'entering') {
+      score += 30;
+      // Bonus if other markets are exiting (clear rotation)
+      const exitingCount = allMarkets.filter(m => m.rotationSignal === 'exiting').length;
+      if (exitingCount > 0) score += exitingCount * 8;
+    } else if (signal === 'exiting') {
+      score -= 25;
+    } else if (signal === 'stable') {
+      score += 5; // Slight positive for stability
+    }
+  } else {
+    // SELL direction
+    if (signal === 'exiting') {
+      score += 30;
+      // Bonus if other markets are entering (clear rotation)
+      const enteringCount = allMarkets.filter(m => m.rotationSignal === 'entering').length;
+      if (enteringCount > 0) score += enteringCount * 8;
+    } else if (signal === 'entering') {
+      score -= 25;
+    }
+  }
+
+  return Math.max(0, Math.min(100, score));
+}
+
+/**
+ * Factor 5: Correlation Score
+ * Measures cross-market alignment
+ */
+function calculateCorrelationScore(
+  market: MarketFlow,
+  correlations: CorrelationMatrix | undefined,
+  direction: 'BUY' | 'SELL'
+): number {
+  if (!correlations) return 50; // Neutral if no correlation data
+
+  let score = 50;
+
+  // Find correlations involving this market
+  const marketCorrelations = correlations.correlations.filter(c =>
+    c.market1 === market.market || c.market2 === market.market
+  );
+
+  if (marketCorrelations.length === 0) return 50;
+
+  // Analyze correlations
+  for (const corr of marketCorrelations) {
+    const otherMarket = corr.market1 === market.market ? corr.market2 : corr.market1;
+
+    if (direction === 'BUY') {
+      // For BUY: positive correlation with strong markets is good
+      // Negative correlation with weak markets is also good (hedging potential)
+      if (corr.direction === 'positive' && corr.strength === 'strong') {
+        score += 8;
+      } else if (corr.direction === 'negative' && corr.strength === 'strong') {
+        score += 5; // Good for hedging
+      }
+    } else {
+      // For SELL: negative correlation with strong markets supports the short
+      if (corr.direction === 'negative' && corr.strength === 'strong') {
+        score += 10;
+      }
+    }
+  }
+
+  return Math.max(0, Math.min(100, score));
+}
+
+// ============================================================================
+// BREAKDOWN DESCRIPTIONS
+// ============================================================================
+
+function getLiquidityBreakdown(liquidity: GlobalLiquidity, score: number): string {
+  const parts: string[] = [];
+
+  parts.push(`Net Liquidity: ${liquidity.netLiquidity.value.toFixed(2)}T (${liquidity.netLiquidity.trend})`);
+  if (liquidity.reverseRepo.trend === 'draining') parts.push('RRP draining adds liquidity');
+  if (liquidity.treasuryGeneralAccount.trend === 'spending') parts.push('Treasury spending supports markets');
+  if (liquidity.dxy.trend === 'weakening') parts.push('Weak dollar is bullish');
+
+  return `Score: ${score}/100. ${parts.join('. ')}.`;
+}
+
+function getFlowBreakdown(market: MarketFlow, score: number, direction: 'BUY' | 'SELL'): string {
+  const flow7dLabel = market.flow7d >= 0 ? '+' + market.flow7d.toFixed(1) : market.flow7d.toFixed(1);
+  const flow30dLabel = market.flow30d >= 0 ? '+' + market.flow30d.toFixed(1) : market.flow30d.toFixed(1);
+  const velocityLabel = market.flowVelocity >= 0 ? '+' + market.flowVelocity.toFixed(1) : market.flowVelocity.toFixed(1);
+
+  return `Score: ${score}/100. 7d: ${flow7dLabel}%, 30d: ${flow30dLabel}%, Velocity: ${velocityLabel}. ${direction === 'BUY' ? 'Positive' : 'Negative'} flow ${direction === 'BUY' ? 'supports' : 'confirms'} ${direction.toLowerCase()} signal.`;
+}
+
+function getPhaseBreakdown(phase: Phase, score: number): string {
+  const phaseDescriptions = {
+    early: 'EARLY phase - optimal entry window, trend just starting',
+    mid: 'MID phase - trend established, proceed with caution',
+    late: 'LATE phase - trend exhaustion, avoid new positions',
+    exit: 'EXIT phase - capital exiting, do not enter',
+  };
+
+  return `Score: ${score}/100. ${phaseDescriptions[phase]}.`;
+}
+
+function getRotationBreakdown(market: MarketFlow, score: number): string {
+  const signal = market.rotationSignal || 'none';
+  const signalDescriptions: Record<string, string> = {
+    entering: 'Capital ENTERING - money rotating into this market',
+    exiting: 'Capital EXITING - money rotating out of this market',
+    stable: 'STABLE - no significant rotation detected',
+    none: 'No clear rotation signal',
+  };
+
+  return `Score: ${score}/100. ${signalDescriptions[signal]}.`;
+}
+
+function getCorrelationBreakdown(score: number): string {
+  if (score >= 70) return `Score: ${score}/100. Strong correlation alignment supports the trade.`;
+  if (score >= 50) return `Score: ${score}/100. Moderate correlation - trade is consistent with cross-market signals.`;
+  return `Score: ${score}/100. Weak or conflicting correlations - additional caution advised.`;
 }
 
 /**
