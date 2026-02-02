@@ -474,13 +474,36 @@ function MarketIcon({ market, className }: { market: string; className?: string 
   return <Icon className={className} />;
 }
 
-// Mini Sparkline Chart Component
+// Calculate Simple Moving Average
+function calculateSMA(values: number[], period: number): number[] {
+  const sma: number[] = [];
+  for (let i = 0; i < values.length; i++) {
+    if (i < period - 1) {
+      // Not enough data points yet, use available average
+      const slice = values.slice(0, i + 1);
+      sma.push(slice.reduce((a, b) => a + b, 0) / slice.length);
+    } else {
+      const slice = values.slice(i - period + 1, i + 1);
+      sma.push(slice.reduce((a, b) => a + b, 0) / period);
+    }
+  }
+  return sma;
+}
+
+// Mini Sparkline Chart Component with Moving Averages (smoother, laminar flow)
 function MiniSparkline({ data, color, height = 40 }: { data: FlowDataPoint[]; color: 'emerald' | 'blue' | 'red' | 'amber'; height?: number }) {
   if (!data || data.length < 2) return null;
 
   const values = data.map(d => d.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+
+  // Calculate moving averages for smoother lines
+  const sma3 = calculateSMA(values, 3);  // 3-day MA (responsive)
+  const sma7 = calculateSMA(values, 7);  // 7-day MA (smooth)
+
+  // Use smoothed values for scale calculation
+  const allSmoothedValues = [...sma3, ...sma7];
+  const min = Math.min(...allSmoothedValues);
+  const max = Math.max(...allSmoothedValues);
   const range = max - min || 1;
 
   const width = 100;
@@ -488,23 +511,30 @@ function MiniSparkline({ data, color, height = 40 }: { data: FlowDataPoint[]; co
   const chartHeight = height - padding * 2;
   const chartWidth = width - padding * 2;
 
-  // Generate path
-  const points = values.map((v, i) => {
-    const x = padding + (i / (values.length - 1)) * chartWidth;
+  // Generate path for 7-day SMA (main smooth line)
+  const points7d = sma7.map((v, i) => {
+    const x = padding + (i / (sma7.length - 1)) * chartWidth;
     const y = padding + chartHeight - ((v - min) / range) * chartHeight;
     return `${x},${y}`;
   });
+  const path7d = `M ${points7d.join(' L ')}`;
 
-  const pathD = `M ${points.join(' L ')}`;
+  // Generate path for 3-day SMA (secondary line)
+  const points3d = sma3.map((v, i) => {
+    const x = padding + (i / (sma3.length - 1)) * chartWidth;
+    const y = padding + chartHeight - ((v - min) / range) * chartHeight;
+    return `${x},${y}`;
+  });
+  const path3d = `M ${points3d.join(' L ')}`;
 
-  // Area path (for gradient fill)
-  const areaD = `${pathD} L ${padding + chartWidth},${height - padding} L ${padding},${height - padding} Z`;
+  // Area path (for gradient fill under 7d line)
+  const area7d = `${path7d} L ${padding + chartWidth},${height - padding} L ${padding},${height - padding} Z`;
 
   const colorMap = {
-    emerald: { stroke: '#10b981', fill: 'url(#emeraldGradient)' },
-    blue: { stroke: '#3b82f6', fill: 'url(#blueGradient)' },
-    red: { stroke: '#ef4444', fill: 'url(#redGradient)' },
-    amber: { stroke: '#f59e0b', fill: 'url(#amberGradient)' },
+    emerald: { stroke: '#10b981', strokeLight: '#34d399', fill: 'url(#emeraldGradient)' },
+    blue: { stroke: '#3b82f6', strokeLight: '#60a5fa', fill: 'url(#blueGradient)' },
+    red: { stroke: '#ef4444', strokeLight: '#f87171', fill: 'url(#redGradient)' },
+    amber: { stroke: '#f59e0b', strokeLight: '#fbbf24', fill: 'url(#amberGradient)' },
   };
 
   return (
@@ -527,8 +557,12 @@ function MiniSparkline({ data, color, height = 40 }: { data: FlowDataPoint[]; co
           <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d={areaD} fill={colorMap[color].fill} />
-      <path d={pathD} fill="none" stroke={colorMap[color].stroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Gradient fill under 7d MA */}
+      <path d={area7d} fill={colorMap[color].fill} />
+      {/* 3-day MA - lighter, thinner (recent trend) */}
+      <path d={path3d} fill="none" stroke={colorMap[color].strokeLight} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.5" />
+      {/* 7-day MA - main line (smooth trend) */}
+      <path d={path7d} fill="none" stroke={colorMap[color].stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -596,7 +630,7 @@ function MarketCard({ market, onClick, onAnalyze }: { market: MarketFlow; onClic
           <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
             <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1">
               <TrendingUp className="w-3 h-3" />
-              Money Flow (30d)
+              Money Flow (7d MA)
             </p>
             <MiniSparkline
               data={market.flowHistory}
@@ -608,7 +642,7 @@ function MarketCard({ market, onClick, onAnalyze }: { market: MarketFlow; onClic
           <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
             <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1">
               <Activity className="w-3 h-3" />
-              Flow Velocity (30d)
+              Flow Velocity (7d MA)
             </p>
             {market.velocityHistory && (
               <MiniSparkline

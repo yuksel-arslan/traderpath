@@ -594,6 +594,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-31 | Analyze sayfası: LAYER 4 minimalist tasarım | Karmaşık animasyonlar kaldırıldı, Capital Flow context eklendi, 4 adımlı akış |
 | 2026-01-31 | Dashboard: Platform + My Performance bölümleri | Capital Flow entegrasyonu, her layer için özet kartları, platform ve kişisel AI stats |
 | 2026-01-31 | Scheduled sayfası: Kurumsal stil tasarımı | Glassmorphism kartlar, gradient orbs, animasyonlu status badge'leri, progress bar, hover efektleri |
+| 2026-02-02 | Capital Flow: Dual-line Moving Average Sparklines | Gürültülü günlük veriler yerine 3d MA (ince, soluk) ve 7d MA (kalın, belirgin) ile daha düzgün, laminar akış gösterimi |
 
 ---
 
