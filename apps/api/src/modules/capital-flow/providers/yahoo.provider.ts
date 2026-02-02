@@ -642,6 +642,7 @@ export async function getStocksFlow(): Promise<Omit<MarketFlow, 'phase' | 'daysI
 
 /**
  * Get Stock Sector data
+ * Comprehensive coverage of all 11 GICS sectors
  */
 async function getStockSectors(): Promise<SectorFlow[]> {
   const sectorSymbols = [
@@ -649,8 +650,13 @@ async function getStockSectors(): Promise<SectorFlow[]> {
     { symbol: SYMBOLS.XLF, name: 'Finance' },
     { symbol: SYMBOLS.XLE, name: 'Energy' },
     { symbol: SYMBOLS.XLV, name: 'Healthcare' },
-    { symbol: SYMBOLS.XLY, name: 'Consumer' },
+    { symbol: SYMBOLS.XLY, name: 'Consumer Discretionary' },
     { symbol: SYMBOLS.XLI, name: 'Industrial' },
+    { symbol: SYMBOLS.XLP, name: 'Consumer Staples' },
+    { symbol: SYMBOLS.XLU, name: 'Utilities' },
+    { symbol: SYMBOLS.XLB, name: 'Materials' },
+    { symbol: SYMBOLS.XLRE, name: 'Real Estate' },
+    { symbol: SYMBOLS.XLC, name: 'Communication' },
   ];
 
   const results = await Promise.all(
@@ -782,15 +788,43 @@ export async function getMetalsFlow(): Promise<Omit<MarketFlow, 'phase' | 'daysI
 
 /**
  * Get top assets for each stock sector
+ * Comprehensive list of top holdings for all 11 GICS sectors
  */
 function getSectorTopAssets(sector: string): string[] {
   const assets: Record<string, string[]> = {
-    Tech: ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META'],
-    Finance: ['JPM', 'BAC', 'WFC', 'GS', 'MS'],
-    Energy: ['XOM', 'CVX', 'COP', 'SLB', 'EOG'],
-    Healthcare: ['UNH', 'JNJ', 'LLY', 'PFE', 'ABBV'],
-    Consumer: ['AMZN', 'TSLA', 'HD', 'MCD', 'NKE'],
-    Industrial: ['CAT', 'DE', 'UPS', 'BA', 'HON'],
+    // Technology
+    'Tech': ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META'],
+
+    // Financials
+    'Finance': ['JPM', 'BAC', 'WFC', 'GS', 'MS'],
+
+    // Energy
+    'Energy': ['XOM', 'CVX', 'COP', 'SLB', 'EOG'],
+
+    // Healthcare
+    'Healthcare': ['UNH', 'JNJ', 'LLY', 'PFE', 'ABBV'],
+
+    // Consumer Discretionary
+    'Consumer Discretionary': ['AMZN', 'TSLA', 'HD', 'MCD', 'NKE'],
+    'Consumer': ['AMZN', 'TSLA', 'HD', 'MCD', 'NKE'],  // Legacy alias
+
+    // Industrials
+    'Industrial': ['CAT', 'DE', 'UPS', 'BA', 'HON'],
+
+    // Consumer Staples
+    'Consumer Staples': ['PG', 'KO', 'PEP', 'COST', 'WMT'],
+
+    // Utilities
+    'Utilities': ['NEE', 'SO', 'DUK', 'SRE', 'AEP'],
+
+    // Materials
+    'Materials': ['LIN', 'APD', 'SHW', 'FCX', 'NEM'],
+
+    // Real Estate
+    'Real Estate': ['PLD', 'AMT', 'EQIX', 'SPG', 'O'],
+
+    // Communication Services
+    'Communication': ['GOOGL', 'META', 'NFLX', 'DIS', 'T'],
   };
 
   return assets[sector] || [];

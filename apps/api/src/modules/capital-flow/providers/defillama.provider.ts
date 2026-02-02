@@ -244,9 +244,11 @@ export async function getCryptoSectors(): Promise<SectorFlow[]> {
 
 /**
  * Map DefiLlama category to our sector categories
+ * Comprehensive mapping covering all major DeFi categories
  */
 function mapProtocolCategory(category: string): CryptoSector | null {
   const mapping: Record<string, CryptoSector> = {
+    // DeFi - Core financial primitives
     'Dexes': 'DeFi',
     'Lending': 'DeFi',
     'Derivatives': 'DeFi',
@@ -254,18 +256,65 @@ function mapProtocolCategory(category: string): CryptoSector | null {
     'Yield': 'DeFi',
     'Yield Aggregator': 'DeFi',
     'Liquid Staking': 'DeFi',
+    'Staking': 'DeFi',
+    'Liquidity Manager': 'DeFi',
+    'Options': 'DeFi',
+    'Options Vault': 'DeFi',
+    'Synthetics': 'DeFi',
+    'Leveraged Farming': 'DeFi',
+    'Insurance': 'DeFi',
+    'Reserve Currency': 'DeFi',
+    'Indexes': 'DeFi',
+    'RWA': 'DeFi',                    // Real World Assets
+    'Real World Assets': 'DeFi',
+    'Algo-Stables': 'DeFi',
+    'Decentralized Stablecoin': 'DeFi',
+    'Farm': 'DeFi',
+
+    // Infrastructure - Core blockchain infrastructure
     'Bridge': 'Infrastructure',
     'Cross Chain': 'Infrastructure',
     'Oracle': 'Infrastructure',
     'Launchpad': 'Infrastructure',
+    'Chain': 'Infrastructure',
+    'Privacy': 'Infrastructure',
+    'Payments': 'Infrastructure',
+    'SoFi': 'Infrastructure',         // Social Finance
+    'Services': 'Infrastructure',
+    'Restaking': 'Infrastructure',
+    'Rollup': 'Infrastructure',
+
+    // Gaming & NFTs
     'Gaming': 'Gaming',
     'NFT Marketplace': 'Gaming',
     'NFT Lending': 'Gaming',
     'Prediction Market': 'Gaming',
+    'NFT': 'Gaming',
+    'Metaverse': 'Gaming',
+    'Gambling': 'Gaming',
+    'SocialFi': 'Gaming',
+
+    // AI - Artificial Intelligence tokens
     'AI': 'AI',
+    'Artificial Intelligence': 'AI',
+    'AI-Agent': 'AI',
+    'Compute': 'AI',
+
+    // Meme - Community tokens
+    'Meme': 'Meme',
+    'Memes': 'Meme',
+    'Meme Coin': 'Meme',
   };
 
-  return mapping[category] || null;
+  // Case-insensitive matching
+  const normalizedCategory = category.toLowerCase();
+  for (const [key, value] of Object.entries(mapping)) {
+    if (key.toLowerCase() === normalizedCategory) {
+      return value;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -282,6 +331,7 @@ function getFallbackTvlData() {
 
 /**
  * Fallback sector data
+ * Comprehensive crypto sectors with realistic flow estimates
  */
 function getFallbackSectors(): SectorFlow[] {
   return [
@@ -289,7 +339,7 @@ function getFallbackSectors(): SectorFlow[] {
       name: 'DeFi',
       flow7d: 3.2,
       flow30d: 12.5,
-      dominance: 65,
+      dominance: 55,
       trending: 'up',
       topAssets: ['AAVE', 'UNI', 'MKR', 'CRV', 'LDO'],
     },
@@ -297,31 +347,39 @@ function getFallbackSectors(): SectorFlow[] {
       name: 'Layer2',
       flow7d: 5.8,
       flow30d: 18.2,
-      dominance: 20,
+      dominance: 18,
       trending: 'up',
       topAssets: ['ARB', 'OP', 'MATIC', 'IMX', 'STRK'],
-    },
-    {
-      name: 'Gaming',
-      flow7d: -1.2,
-      flow30d: 4.5,
-      dominance: 8,
-      trending: 'stable',
-      topAssets: ['AXS', 'SAND', 'MANA', 'GALA', 'IMX'],
     },
     {
       name: 'AI',
       flow7d: 8.5,
       flow30d: 25.3,
-      dominance: 5,
+      dominance: 10,
       trending: 'up',
       topAssets: ['FET', 'AGIX', 'OCEAN', 'RNDR', 'TAO'],
+    },
+    {
+      name: 'Gaming',
+      flow7d: -1.2,
+      flow30d: 4.5,
+      dominance: 7,
+      trending: 'stable',
+      topAssets: ['AXS', 'SAND', 'MANA', 'GALA', 'IMX'],
+    },
+    {
+      name: 'Meme',
+      flow7d: 12.3,
+      flow30d: 35.6,
+      dominance: 6,
+      trending: 'up',
+      topAssets: ['DOGE', 'SHIB', 'PEPE', 'BONK', 'WIF'],
     },
     {
       name: 'Infrastructure',
       flow7d: 1.5,
       flow30d: 6.8,
-      dominance: 2,
+      dominance: 4,
       trending: 'stable',
       topAssets: ['LINK', 'GRT', 'FIL', 'AR', 'ATOM'],
     },
