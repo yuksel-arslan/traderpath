@@ -224,12 +224,13 @@ export async function getCryptoSectors(): Promise<SectorFlow[]> {
       .filter(([_, data]) => data.tvl > 0)
       .map(([name, data]) => {
         const weightedChange = data.tvl > 0 ? data.change7d / data.tvl : 0;
+        const trending: 'up' | 'down' | 'stable' = weightedChange > 3 ? 'up' : weightedChange < -3 ? 'down' : 'stable';
         return {
           name,
           flow7d: parseFloat(weightedChange.toFixed(2)),
           flow30d: 0, // Would need historical data
           dominance: parseFloat(((data.tvl / totalTvl) * 100).toFixed(2)),
-          trending: weightedChange > 3 ? 'up' : weightedChange < -3 ? 'down' : 'stable',
+          trending,
           topAssets: data.protocols,
         };
       })

@@ -224,6 +224,33 @@ export interface TradeOpportunities {
   lastUpdated: Date;
 }
 
+// 5-Factor Scoring System for Layer 4 Recommendations
+// Each factor scores 0-100, weighted to produce final confidence
+export interface FiveFactorScore {
+  liquidityScore: number;       // 0-100 - Global liquidity conditions (25% weight)
+  flowScore: number;            // 0-100 - Market-specific capital flow (30% weight)
+  phaseScore: number;           // 0-100 - Cycle timing (20% weight)
+  rotationScore: number;        // 0-100 - Capital rotation signals (15% weight)
+  correlationScore: number;     // 0-100 - Cross-market alignment (10% weight)
+  totalScore: number;           // Weighted average (0-100)
+  breakdown: {
+    liquidity: string;          // Human-readable explanation
+    flow: string;
+    phase: string;
+    rotation: string;
+    correlation: string;
+  };
+}
+
+// Factor weights for 5-factor scoring (exported for frontend display)
+export const FIVE_FACTOR_WEIGHTS = {
+  liquidity: 0.25,    // 25%
+  flow: 0.30,         // 30%
+  phase: 0.20,        // 20%
+  rotation: 0.15,     // 15%
+  correlation: 0.10,  // 10%
+} as const;
+
 // Flow Recommendation
 export interface FlowRecommendation {
   primaryMarket: MarketType;
@@ -233,6 +260,7 @@ export interface FlowRecommendation {
   reason: string;
   sectors?: string[];
   confidence: number;
+  fiveFactorScore?: FiveFactorScore;  // 5-factor scoring breakdown
 }
 
 // Capital Flow Summary (main response)
