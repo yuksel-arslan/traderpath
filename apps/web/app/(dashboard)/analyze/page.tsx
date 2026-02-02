@@ -818,7 +818,7 @@ export default function AnalyzePage() {
                                 : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 hover:border-teal-300"
                             )}
                           >
-                            <CoinIcon symbol={asset.symbol} size="sm" />
+                            <CoinIcon symbol={asset.symbol} size={20} />
                             <div className="text-left">
                               <p className="text-xs font-semibold text-slate-900 dark:text-white">{asset.symbol}</p>
                               <p className="text-[10px] text-slate-500 line-clamp-1">{asset.reason}</p>
