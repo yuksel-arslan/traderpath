@@ -1647,6 +1647,14 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
                       <p className="text-xs text-slate-600 dark:text-slate-300 pt-2 border-t border-emerald-500/20">
                         {apiData.recommendation.reason || 'Analysis in progress...'}
                       </p>
+                      <Link
+                        href={`/analyze?market=${apiData.recommendation.primaryMarket}`}
+                        className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-semibold rounded-lg hover:from-emerald-600 hover:to-teal-600 hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-emerald-500/25"
+                      >
+                        <Search className="w-3.5 h-3.5" />
+                        Asset Analysis
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
                     </div>
                   </div>
                 )}
@@ -1675,6 +1683,14 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
                       <p className="text-xs text-slate-600 dark:text-slate-300 pt-2 border-t border-red-500/20">
                         {apiData.sellRecommendation.reason || 'Analysis in progress...'}
                       </p>
+                      <Link
+                        href={`/analyze?market=${apiData.sellRecommendation.primaryMarket}`}
+                        className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500 to-rose-500 text-white text-xs font-semibold rounded-lg hover:from-red-600 hover:to-rose-600 hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-red-500/25"
+                      >
+                        <Search className="w-3.5 h-3.5" />
+                        Asset Analysis
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
                     </div>
                   </div>
                 )}
@@ -2345,6 +2361,14 @@ export default function CapitalFlowPage() {
                           <p className="text-sm text-slate-300 pt-2 border-t border-emerald-500/20">
                             {data.recommendation?.reason || 'No recommendation available'}
                           </p>
+                          <Link
+                            href={`/analyze?market=${data.recommendation?.primaryMarket || 'crypto'}`}
+                            className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold rounded-xl hover:from-emerald-600 hover:to-teal-600 hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-emerald-500/30"
+                          >
+                            <Search className="w-4 h-4" />
+                            Asset Analysis
+                            <ArrowRight className="w-4 h-4" />
+                          </Link>
                         </div>
                       </div>
 
@@ -2375,6 +2399,14 @@ export default function CapitalFlowPage() {
                             <p className="text-sm text-slate-300 pt-2 border-t border-red-500/20">
                               {data.sellRecommendation.reason}
                             </p>
+                            <Link
+                              href={`/analyze?market=${data.sellRecommendation.primaryMarket}`}
+                              className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-500 to-rose-500 text-white text-sm font-semibold rounded-xl hover:from-red-600 hover:to-rose-600 hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-red-500/30"
+                            >
+                              <Search className="w-4 h-4" />
+                              Asset Analysis
+                              <ArrowRight className="w-4 h-4" />
+                            </Link>
                           </div>
                         </div>
                       )}
