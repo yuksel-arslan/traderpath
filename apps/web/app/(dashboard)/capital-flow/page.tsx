@@ -1349,17 +1349,6 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
                 </div>
               </div>
 
-              {/* View Full Details Button */}
-              <div className="flex justify-center mt-4">
-                <button
-                  onClick={() => onLayerClick?.(1)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-teal-500/30 hover:shadow-xl hover:shadow-teal-500/40 hover:scale-105 transition-all duration-300"
-                >
-                  <Landmark className="w-4 h-4" />
-                  View Full Details
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
             </div>
           </div>
 
@@ -1419,14 +1408,19 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
                   ]).map((market, idx) => (
                     <div
                       key={market.name}
-                      className={`backdrop-blur-xl rounded-xl p-3 text-center transition-all duration-500 ${
+                      onClick={() => onLayerClick?.(2)}
+                      className={`backdrop-blur-xl rounded-xl p-3 text-center transition-all duration-500 cursor-pointer hover:scale-105 group relative ${
                         market.isSelected
                           ? 'bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 border-2 border-emerald-500 ring-4 ring-emerald-500/20 shadow-lg scale-105'
-                          : 'bg-slate-100/80 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 opacity-60 hover:opacity-80'
+                          : 'bg-slate-100/80 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/20'
                       }`}
                       style={{ animationDelay: `${idx * 100}ms` }}
                     >
-                      <div className={`font-bold text-sm mb-1 ${market.isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                      {/* Details indicator on hover */}
+                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ChevronRight className="w-4 h-4 text-cyan-500" />
+                      </div>
+                      <div className={`font-bold text-sm mb-1 ${market.isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400 group-hover:text-cyan-600 dark:group-hover:text-cyan-400'}`}>
                         {showTypewriter[2] ? (
                           <TypewriterText text={market.name} delay={idx * 150} speed={40} />
                         ) : market.name}
@@ -1475,17 +1469,6 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
                 </div>
               </div>
 
-              {/* View Full Details Button */}
-              <div className="flex justify-center mt-4">
-                <button
-                  onClick={() => onLayerClick?.(2)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/40 hover:scale-105 transition-all duration-300"
-                >
-                  <BarChart3 className="w-4 h-4" />
-                  View Full Details
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
             </div>
           </div>
 
@@ -1567,17 +1550,6 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
                 </div>
               )}
 
-              {/* View Full Details Button */}
-              <div className="flex justify-center mt-4">
-                <button
-                  onClick={() => onLayerClick?.(3)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 hover:scale-105 transition-all duration-300"
-                >
-                  <Layers className="w-4 h-4" />
-                  View Full Details
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
             </div>
           </div>
 
@@ -1680,17 +1652,6 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
                 )}
               </div>
 
-              {/* View Full Details Button */}
-              <div className="flex justify-center mt-4">
-                <button
-                  onClick={() => onLayerClick?.(4)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-amber-500/30 hover:shadow-xl hover:shadow-amber-500/40 hover:scale-105 transition-all duration-300"
-                >
-                  <Brain className="w-4 h-4" />
-                  View Full Details
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
             </div>
           </div>
 
