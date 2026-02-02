@@ -1389,7 +1389,7 @@ Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
         metals: 'Metaller'
       };
 
-      // If asset hint is provided, generate an organic response for that specific asset
+      // If asset hint is provided, generate a dynamic response based on actual data
       if (assetHint) {
         // Determine asset market and names
         let assetMarket = 'crypto';
@@ -1424,80 +1424,46 @@ Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
           assetEmojiIcon = '📊';
           marketNameTr = 'Tahvil';
           marketNameEn = 'Bonds';
-        } else {
-          // Crypto
-          assetMarket = 'crypto';
-          assetNameTr = assetHint;
-          assetNameEn = assetHint;
-          analysisSymbol = assetHint;
-          assetEmojiIcon = '🪙';
-          marketNameTr = 'Kripto';
-          marketNameEn = 'Crypto';
         }
 
-        // Find asset's market flow
+        // Get actual flow data for the asset's market
         const assetMarketFlow = summary.markets.find(m => m.market === assetMarket);
-        const isAssetMarketWeak = assetMarketFlow ? assetMarketFlow.flow30d < 0 || assetMarketFlow.rotationSignal === 'exiting' : true;
+        const flow30d = assetMarketFlow?.flow30d ?? 0;
+        const flowVelocity = assetMarketFlow?.flowVelocity ?? 0;
+        const phase = assetMarketFlow?.phase ?? 'mid';
+        const rotationSignal = assetMarketFlow?.rotationSignal ?? 'stable';
 
-        // Determine where money is flowing TO
-        const inflowMarketNameTr = marketNamesTr[inflowMarket?.market || 'bonds'] || inflowMarket?.market || 'Bonolar';
+        // Get inflow market data
+        const inflowFlow30d = inflowMarket?.flow30d ?? 0;
+        const inflowMarketNameTr = marketNamesTr[inflowMarket?.market || 'bonds'] || 'Bonolar';
         const inflowMarketNameEn = inflowMarket?.market ? inflowMarket.market.charAt(0).toUpperCase() + inflowMarket.market.slice(1) : 'Bonds';
-        const outflowMarketNameTr = marketNamesTr[assetMarket] || marketNameTr;
-        const outflowMarketNameEn = marketNameEn;
 
-        if (isAssetMarketWeak) {
-          // Money is exiting this asset's market - recommend against, but offer SHORT option
-          const organicMessageTr = `${assetEmojiIcon} ${assetNameTr.toUpperCase()} İÇİN ANALİZ
+        // Generate dynamic response based on actual data
+        const organicMessage = this.generateDataDrivenAssetResponse({
+          language,
+          assetNameTr,
+          assetNameEn,
+          assetEmojiIcon,
+          analysisSymbol,
+          marketNameTr,
+          marketNameEn,
+          flow30d,
+          flowVelocity,
+          phase,
+          rotationSignal,
+          inflowMarketNameTr,
+          inflowMarketNameEn,
+          inflowFlow30d,
+        });
 
-Capital Flow Analysis'a göre para ${inflowMarketNameTr}'a doğru akıyor ve ${outflowMarketNameTr} piyasasından çıkıyor. Bu nedenle ${assetNameTr.toLowerCase()} için işlem önermem.
-
-Ancak mutlaka işlem yapmak isterseniz, SHORT pozisyonu için İşlem Planı almak istiyorsanız 7 Step Asset Analysis yapabilirsiniz.
-
-📌 Yine de analiz etmek isterseniz:
-• "${analysisSymbol} analiz" veya "${analysisSymbol} mlis pro" yazın`;
-
-          const organicMessageEn = `${assetEmojiIcon} ${assetNameEn.toUpperCase()} ANALYSIS
-
-According to Capital Flow Analysis, money is flowing into ${inflowMarketNameEn} and exiting the ${outflowMarketNameEn} market. Therefore, I wouldn't recommend trading ${assetNameEn.toLowerCase()} at this time.
-
-However, if you still want to trade, you can run a 7 Step Asset Analysis for a SHORT position Trade Plan.
-
-📌 If you want to analyze anyway:
-• Type "${analysisSymbol} analysis" or "${analysisSymbol} mlis pro"`;
-
-          return {
-            success: true,
-            intent: 'CAPITAL_FLOW_RECOMMENDATION',
-            message: language === 'tr' ? organicMessageTr : organicMessageEn,
-            creditsSpent: 0,
-            creditsRemaining: creditBalance,
-            detectedLanguage: language,
-          };
-        } else {
-          // Money is flowing into this asset's market - recommend analysis
-          const organicMessageTr = `${assetEmojiIcon} ${assetNameTr.toUpperCase()} İÇİN ANALİZ
-
-Capital Flow Analysis'a göre ${outflowMarketNameTr} piyasasına para akışı tespit edildi. ${assetNameTr} için koşullar olumlu görünüyor.
-
-📌 Detaylı analiz ve İşlem Planı için:
-• "${analysisSymbol} analiz" veya "${analysisSymbol} mlis pro" yazın`;
-
-          const organicMessageEn = `${assetEmojiIcon} ${assetNameEn.toUpperCase()} ANALYSIS
-
-According to Capital Flow Analysis, capital is flowing into the ${outflowMarketNameEn} market. Conditions look favorable for ${assetNameEn}.
-
-📌 For detailed analysis and Trade Plan:
-• Type "${analysisSymbol} analysis" or "${analysisSymbol} mlis pro"`;
-
-          return {
-            success: true,
-            intent: 'CAPITAL_FLOW_RECOMMENDATION',
-            message: language === 'tr' ? organicMessageTr : organicMessageEn,
-            creditsSpent: 0,
-            creditsRemaining: creditBalance,
-            detectedLanguage: language,
-          };
-        }
+        return {
+          success: true,
+          intent: 'CAPITAL_FLOW_RECOMMENDATION',
+          message: organicMessage,
+          creditsSpent: 0,
+          creditsRemaining: creditBalance,
+          detectedLanguage: language,
+        };
       }
 
       // Determine next steps based on action (English base)
@@ -1630,6 +1596,156 @@ You can try:
         creditsRemaining: creditBalance,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
+    }
+  }
+
+  /**
+   * Generates a dynamic, data-driven response for asset recommendations.
+   * Uses actual Capital Flow metrics to construct unique sentences.
+   */
+  private generateDataDrivenAssetResponse(params: {
+    language: string;
+    assetNameTr: string;
+    assetNameEn: string;
+    assetEmojiIcon: string;
+    analysisSymbol: string;
+    marketNameTr: string;
+    marketNameEn: string;
+    flow30d: number;
+    flowVelocity: number;
+    phase: string;
+    rotationSignal: string;
+    inflowMarketNameTr: string;
+    inflowMarketNameEn: string;
+    inflowFlow30d: number;
+  }): string {
+    const {
+      language, assetNameTr, assetNameEn, assetEmojiIcon, analysisSymbol,
+      marketNameTr, marketNameEn, flow30d, flowVelocity, phase, rotationSignal,
+      inflowMarketNameTr, inflowMarketNameEn, inflowFlow30d
+    } = params;
+
+    const isTurkish = language === 'tr';
+    const assetName = isTurkish ? assetNameTr : assetNameEn;
+    const marketName = isTurkish ? marketNameTr : marketNameEn;
+    const inflowMarketName = isTurkish ? inflowMarketNameTr : inflowMarketNameEn;
+
+    // Determine market condition based on actual data
+    const isOutflow = flow30d < 0;
+    const isStrongOutflow = flow30d < -5;
+    const isAccelerating = flowVelocity > 1;
+    const isDecelerating = flowVelocity < -1;
+    const isExitPhase = phase === 'exit' || phase === 'late';
+    const isExiting = rotationSignal === 'exiting';
+
+    // Build dynamic insight based on actual numbers
+    let flowInsight = '';
+    let recommendation = '';
+    let actionHint = '';
+
+    if (isTurkish) {
+      // Turkish - Dynamic flow description with actual data
+      if (isOutflow) {
+        const outflowPercent = Math.abs(flow30d).toFixed(1);
+        const inflowPercent = inflowFlow30d.toFixed(1);
+
+        if (isStrongOutflow) {
+          flowInsight = `Son 30 günde ${marketName} piyasasından %${outflowPercent} sermaye çıkışı var. ${inflowMarketName} ise %${inflowPercent} giriş alıyor.`;
+        } else {
+          flowInsight = `${marketName} piyasasında %${outflowPercent} negatif akış görülüyor, para ${inflowMarketName}'a yöneliyor.`;
+        }
+
+        if (isDecelerating) {
+          flowInsight += ` Çıkış hızlanıyor.`;
+        }
+
+        if (isExitPhase) {
+          recommendation = `Faz: ${phase.toUpperCase()}. Bu aşamada yeni pozisyon riskli.`;
+        } else {
+          recommendation = `Mevcut koşullarda ${assetName.toLowerCase()} için işlem önermiyorum.`;
+        }
+
+        actionHint = `SHORT için detaylı analiz istersen "${analysisSymbol} analiz" yaz.`;
+      } else {
+        const inflowPercent = flow30d.toFixed(1);
+
+        if (phase === 'early') {
+          flowInsight = `${marketName} piyasasına %${inflowPercent} giriş var ve henüz ERKEN fazda.`;
+          recommendation = `Giriş için uygun zamanlama olabilir.`;
+        } else if (phase === 'mid') {
+          flowInsight = `${marketName} %${inflowPercent} pozitif akışta, ORTA faz.`;
+          recommendation = `Dikkatli pozisyon alınabilir.`;
+        } else {
+          flowInsight = `${marketName} hala pozitif (%${inflowPercent}) ama ${phase.toUpperCase()} fazda.`;
+          recommendation = `Geç kalmış olabilirsin, dikkatli ol.`;
+        }
+
+        if (isAccelerating) {
+          flowInsight += ` Momentum güçleniyor.`;
+        }
+
+        actionHint = `Detaylı analiz için "${analysisSymbol} analiz" yaz.`;
+      }
+
+      return `${assetEmojiIcon} ${assetName.toUpperCase()}
+
+${flowInsight}
+
+${recommendation}
+
+📌 ${actionHint}`;
+
+    } else {
+      // English - Dynamic flow description with actual data
+      if (isOutflow) {
+        const outflowPercent = Math.abs(flow30d).toFixed(1);
+        const inflowPercent = inflowFlow30d.toFixed(1);
+
+        if (isStrongOutflow) {
+          flowInsight = `${marketName} market shows ${outflowPercent}% capital outflow over 30 days. ${inflowMarketName} is receiving +${inflowPercent}%.`;
+        } else {
+          flowInsight = `${marketName} has ${outflowPercent}% negative flow, capital rotating to ${inflowMarketName}.`;
+        }
+
+        if (isDecelerating) {
+          flowInsight += ` Outflow accelerating.`;
+        }
+
+        if (isExitPhase) {
+          recommendation = `Phase: ${phase.toUpperCase()}. New positions are risky at this stage.`;
+        } else {
+          recommendation = `I wouldn't recommend ${assetName.toLowerCase()} positions currently.`;
+        }
+
+        actionHint = `For SHORT analysis, type "${analysisSymbol} analysis".`;
+      } else {
+        const inflowPercent = flow30d.toFixed(1);
+
+        if (phase === 'early') {
+          flowInsight = `${marketName} showing +${inflowPercent}% inflow, EARLY phase.`;
+          recommendation = `Could be good timing for entry.`;
+        } else if (phase === 'mid') {
+          flowInsight = `${marketName} at +${inflowPercent}% flow, MID phase.`;
+          recommendation = `Cautious positioning possible.`;
+        } else {
+          flowInsight = `${marketName} still positive (+${inflowPercent}%) but in ${phase.toUpperCase()} phase.`;
+          recommendation = `May be late, proceed with caution.`;
+        }
+
+        if (isAccelerating) {
+          flowInsight += ` Momentum strengthening.`;
+        }
+
+        actionHint = `For detailed analysis, type "${analysisSymbol} analysis".`;
+      }
+
+      return `${assetEmojiIcon} ${assetName.toUpperCase()}
+
+${flowInsight}
+
+${recommendation}
+
+📌 ${actionHint}`;
     }
   }
 
