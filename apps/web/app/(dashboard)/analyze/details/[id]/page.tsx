@@ -611,13 +611,30 @@ export default function AnalysisDetailsPage() {
           data-export-container
           className="bg-white dark:bg-slate-800/80 rounded-2xl p-4 sm:p-6 shadow-xl border border-gray-200 dark:border-transparent">
           {/* Export Header - TraderPath Branding (visible in export) */}
-          <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-slate-700">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-slate-700" data-export-header>
+            <div className="flex items-center gap-3">
               {/* TraderPath Logo - Star */}
-              <StarLogo size={32} uniqueId="export-header" animated={false} />
-              <span className="text-lg font-bold bg-gradient-to-r from-teal-500 via-emerald-400 to-coral-500 bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(135deg, #14B8A6, #2DD4BF, #F87171, #EF5A6F)' }}>TraderPath</span>
+              <StarLogo size={36} uniqueId="export-header" animated={false} />
+              <div className="flex flex-col">
+                <span
+                  data-brand-text
+                  className="text-xl font-bold"
+                  style={{
+                    background: 'linear-gradient(135deg, #14B8A6, #2DD4BF, #F87171, #EF5A6F)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  TraderPath
+                </span>
+                <span className="text-xs text-gray-500 dark:text-slate-400 -mt-0.5">Asset Analysis Report</span>
+              </div>
             </div>
-            <span className="text-xs text-gray-500 dark:text-slate-400">traderpath.io</span>
+            <div className="flex flex-col items-end">
+              <span className="text-sm font-medium text-gray-700 dark:text-slate-300">traderpath.io</span>
+              <span className="text-xs text-gray-500 dark:text-slate-400">{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+            </div>
           </div>
 
           {/* Header */}
