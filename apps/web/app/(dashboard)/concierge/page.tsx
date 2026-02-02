@@ -74,7 +74,7 @@ interface CapitalFlowData {
     dxy: { trend: string; value: number };
     vix: { value: number; level: string };
   };
-  marketFlows: Array<{
+  markets: Array<{
     market: string;
     flow7d: number;
     flow30d: number;
