@@ -28,7 +28,6 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
-import { InterfacePreferenceModal } from '../../components/common/InterfacePreferenceModal';
 import { LanguageSelector } from '../../components/common/LanguageSelector';
 import { cn } from '../../lib/utils';
 import { authFetch, clearAuthToken } from '../../lib/api';
@@ -172,7 +171,6 @@ interface UserInfo {
   avatarUrl?: string;
   level?: number;
   isAdmin?: boolean;
-  preferredInterface?: 'ui' | 'concierge' | null;
 }
 
 export default function DashboardLayout({
@@ -185,7 +183,6 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
-  const [showPreferenceModal, setShowPreferenceModal] = useState(false);
 
   // Fetch user info with React Query
   const { data: user } = useQuery<UserInfo | null>({
@@ -211,45 +208,6 @@ export default function DashboardLayout({
 
   // Get admin status from user
   const isAdmin = user?.isAdmin || false;
-
-  // Show preference modal on every new session (login)
-  useEffect(() => {
-    if (!user) return;
-
-    // Check if preference modal was already shown in this session
-    const preferenceShownThisSession = sessionStorage.getItem('preferenceModalShown');
-
-    if (!preferenceShownThisSession) {
-      // Show modal on new session
-      setShowPreferenceModal(true);
-    }
-  }, [user]);
-
-  // Handle preference selection
-  const handlePreferenceSelect = async (preference: 'ui' | 'concierge') => {
-    try {
-      const res = await authFetch('/api/user/preference', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferredInterface: preference }),
-      });
-
-      if (res.ok) {
-        // Mark as shown for this session
-        sessionStorage.setItem('preferenceModalShown', 'true');
-        setShowPreferenceModal(false);
-
-        // Redirect based on selection
-        if (preference === 'concierge') {
-          router.push('/concierge');
-        } else {
-          router.push('/analyze');
-        }
-      }
-    } catch (error) {
-      console.error('Failed to save preference:', error);
-    }
-  };
 
   // Fetch alerts only when notification menu is open (no background polling)
   const { data: alertsData } = useQuery<PriceAlert[]>({
@@ -646,15 +604,6 @@ export default function DashboardLayout({
         </div>
       </footer>
 
-      {/* Interface Preference Modal - shown to new users */}
-      <InterfacePreferenceModal
-        isOpen={showPreferenceModal}
-        onClose={() => {
-          sessionStorage.setItem('preferenceModalShown', 'true');
-          setShowPreferenceModal(false);
-        }}
-        onSelect={handlePreferenceSelect}
-      />
     </div>
   );
 }
