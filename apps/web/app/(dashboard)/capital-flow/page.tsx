@@ -2300,7 +2300,7 @@ export default function CapitalFlowPage() {
                   ) : (
                     // Show all markets grid
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {data.markets.filter(m => m && m.market).map((market) => (
+                      {data.markets.filter((m): m is MarketFlow => Boolean(m && m.market)).map((market) => (
                         <MarketCard
                           key={market.market}
                           market={market}
@@ -2748,7 +2748,7 @@ export default function CapitalFlowPage() {
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">Market Flow Analyzer</h3>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {data.markets.filter(m => m && m.market).map((market) => (
+                    {data.markets.filter((m): m is MarketFlow => Boolean(m && m.market)).map((market) => (
                       <MarketCard
                         key={market.market}
                         market={market}
