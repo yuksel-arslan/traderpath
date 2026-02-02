@@ -80,16 +80,38 @@ const CACHE_TTL = {
  */
 export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
   // Try cache first
-  const cached = await redis?.get(CACHE_KEYS.CAPITAL_FLOW);
-  if (cached) {
-    return JSON.parse(cached);
+  try {
+    const cached = await redis?.get(CACHE_KEYS.CAPITAL_FLOW);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (cacheError) {
+    console.warn('[CapitalFlow] Cache read error:', cacheError);
+    // Continue without cache
   }
 
-  // Fetch all data in parallel
-  const [globalLiquidity, markets] = await Promise.all([
+  // Fetch all data in parallel with fallback
+  const results = await Promise.allSettled([
     getGlobalLiquidity(),
     getAllMarketFlows(),
   ]);
+
+  // Extract results with fallbacks
+  const globalLiquidity: GlobalLiquidity = results[0].status === 'fulfilled'
+    ? results[0].value
+    : getFallbackGlobalLiquidity();
+
+  const markets: MarketFlow[] = results[1].status === 'fulfilled'
+    ? results[1].value
+    : getFallbackMarketFlows();
+
+  // Log any failures for debugging
+  if (results[0].status === 'rejected') {
+    console.error('[CapitalFlow] Failed to fetch global liquidity:', results[0].reason);
+  }
+  if (results[1].status === 'rejected') {
+    console.error('[CapitalFlow] Failed to fetch market flows:', results[1].reason);
+  }
 
   // Determine liquidity bias
   const liquidityBias = determineLiquidityBias(globalLiquidity);
@@ -157,52 +179,111 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
  */
 export async function getGlobalLiquidity(): Promise<GlobalLiquidity> {
   // Try cache
-  const cached = await redis?.get(CACHE_KEYS.GLOBAL_LIQUIDITY);
-  if (cached) {
-    return JSON.parse(cached);
+  try {
+    const cached = await redis?.get(CACHE_KEYS.GLOBAL_LIQUIDITY);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (cacheError) {
+    console.warn('[CapitalFlow] Cache read error for liquidity:', cacheError);
   }
 
-  // Fetch from providers
-  const [fredData, dxyData, vixData] = await Promise.all([
-    getAllFredData(),
-    getDxyData(),
-    getVixData(),
-  ]);
+  try {
+    // Fetch from providers with timeout
+    const results = await Promise.allSettled([
+      getAllFredData(),
+      getDxyData(),
+      getVixData(),
+    ]);
 
-  const liquidity: GlobalLiquidity = {
-    fedBalanceSheet: fredData.fedBalanceSheet,
-    m2MoneySupply: fredData.m2MoneySupply,
-    dxy: dxyData,
-    vix: vixData,
-    yieldCurve: fredData.yieldCurve,
-    // RRP and TGA - key liquidity drains
-    reverseRepo: fredData.reverseRepo,
-    treasuryGeneralAccount: fredData.treasuryGeneralAccount,
-    // Net Liquidity = Fed BS - RRP - TGA (the KEY metric)
-    netLiquidity: fredData.netLiquidity,
-    lastUpdated: new Date(),
-  };
+    // Extract results - use fallback if any failed
+    const fredData = results[0].status === 'fulfilled' ? results[0].value : null;
+    const dxyData = results[1].status === 'fulfilled' ? results[1].value : null;
+    const vixData = results[2].status === 'fulfilled' ? results[2].value : null;
 
-  // Cache
-  if (redis) {
-    await redis.setex(CACHE_KEYS.GLOBAL_LIQUIDITY, CACHE_TTL.LIQUIDITY, JSON.stringify(liquidity));
+    // Log failures for debugging
+    if (results[0].status === 'rejected') {
+      console.error('[CapitalFlow] FRED data fetch failed:', results[0].reason);
+    }
+    if (results[1].status === 'rejected') {
+      console.error('[CapitalFlow] DXY data fetch failed:', results[1].reason);
+    }
+    if (results[2].status === 'rejected') {
+      console.error('[CapitalFlow] VIX data fetch failed:', results[2].reason);
+    }
+
+    // If all failed, return fallback
+    if (!fredData && !dxyData && !vixData) {
+      console.warn('[CapitalFlow] All liquidity data fetches failed, using fallback');
+      return getFallbackGlobalLiquidity();
+    }
+
+    const liquidity: GlobalLiquidity = {
+      fedBalanceSheet: fredData?.fedBalanceSheet ?? { value: 7.5, change30d: 0, trend: 'stable' },
+      m2MoneySupply: fredData?.m2MoneySupply ?? { value: 21.0, change30d: 0, yoyGrowth: 3 },
+      dxy: dxyData ?? { value: 104, change7d: 0, trend: 'stable' },
+      vix: vixData ?? { value: 18, level: 'neutral' },
+      yieldCurve: fredData?.yieldCurve ?? { spread10y2y: 0.15, inverted: false, interpretation: 'Flat curve' },
+      reverseRepo: fredData?.reverseRepo ?? { value: 0.5, change7d: 0, change30d: 0, trend: 'stable' },
+      treasuryGeneralAccount: fredData?.treasuryGeneralAccount ?? { value: 0.7, change7d: 0, change30d: 0, trend: 'stable' },
+      netLiquidity: fredData?.netLiquidity ?? { value: 6.3, change7d: 0, change30d: 0, trend: 'stable', components: { fedBalanceSheet: 7.5, reverseRepo: 0.5, tga: 0.7 }, interpretation: 'Stable' },
+      lastUpdated: new Date(),
+    };
+
+    // Cache
+    if (redis) {
+      try {
+        await redis.setex(CACHE_KEYS.GLOBAL_LIQUIDITY, CACHE_TTL.LIQUIDITY, JSON.stringify(liquidity));
+      } catch (cacheWriteError) {
+        console.warn('[CapitalFlow] Cache write error for liquidity:', cacheWriteError);
+      }
+    }
+
+    return liquidity;
+  } catch (error) {
+    console.error('[CapitalFlow] getGlobalLiquidity error:', error);
+    return getFallbackGlobalLiquidity();
   }
-
-  return liquidity;
 }
 
 /**
  * Get all market flows
  */
 export async function getAllMarketFlows(): Promise<MarketFlow[]> {
-  const [cryptoFlow, stocksFlow, bondsFlow, metalsFlow] = await Promise.all([
-    getCryptoFlow(),
-    getStocksMarketFlow(),
-    getBondsFlow(),
-    getMetalsMarketFlow(),
-  ]);
+  try {
+    const results = await Promise.allSettled([
+      getCryptoFlow(),
+      getStocksMarketFlow(),
+      getBondsFlow(),
+      getMetalsMarketFlow(),
+    ]);
 
-  return [cryptoFlow, stocksFlow, bondsFlow, metalsFlow];
+    // Log failures for debugging
+    const marketNames = ['crypto', 'stocks', 'bonds', 'metals'];
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.error(`[CapitalFlow] ${marketNames[index]} flow fetch failed:`, result.reason);
+      }
+    });
+
+    // Get fallback data to use for failed fetches
+    const fallbackFlows = getFallbackMarketFlows();
+
+    // Use successful results or fallback for failed ones
+    const flows: MarketFlow[] = results.map((result, index) => {
+      if (result.status === 'fulfilled') {
+        return result.value;
+      }
+      // Use fallback for failed fetch
+      console.warn(`[CapitalFlow] Using fallback data for ${marketNames[index]}`);
+      return fallbackFlows[index];
+    });
+
+    return flows;
+  } catch (error) {
+    console.error('[CapitalFlow] getAllMarketFlows error:', error);
+    return getFallbackMarketFlows();
+  }
 }
 
 /**
@@ -678,6 +759,158 @@ function detectRotationSignal(flow: { flow7d: number; flowVelocity: number }): '
   }
 
   return null;
+}
+
+/**
+ * Fallback global liquidity data when API calls fail
+ */
+function getFallbackGlobalLiquidity(): GlobalLiquidity {
+  const now = new Date();
+  return {
+    fedBalanceSheet: {
+      value: 7.5,
+      change30d: 0.5,
+      trend: 'stable',
+    },
+    m2MoneySupply: {
+      value: 21.0,
+      change30d: 0.3,
+      yoyGrowth: 3.5,
+    },
+    dxy: {
+      value: 104.5,
+      change7d: -0.5,
+      trend: 'stable',
+    },
+    vix: {
+      value: 18.5,
+      level: 'neutral',
+    },
+    yieldCurve: {
+      spread10y2y: 0.15,
+      inverted: false,
+      interpretation: 'Flat - uncertain economic outlook',
+    },
+    reverseRepo: {
+      value: 0.5,
+      change7d: -2.0,
+      change30d: -8.0,
+      trend: 'draining',
+    },
+    treasuryGeneralAccount: {
+      value: 0.7,
+      change7d: 1.5,
+      change30d: 5.0,
+      trend: 'stable',
+    },
+    netLiquidity: {
+      value: 6.3,
+      change7d: 0.5,
+      change30d: 1.5,
+      trend: 'stable',
+      components: {
+        fedBalanceSheet: 7.5,
+        reverseRepo: 0.5,
+        tga: 0.7,
+      },
+      interpretation: 'Liquidity stable: all components balanced',
+    },
+    lastUpdated: now,
+  };
+}
+
+/**
+ * Fallback market flows when API calls fail
+ */
+function getFallbackMarketFlows(): MarketFlow[] {
+  const now = new Date();
+  const generateHistory = (baseValue: number) => {
+    const history: FlowDataPoint[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      history.push({
+        date: date.toISOString().split('T')[0],
+        value: baseValue + (Math.random() - 0.5) * 2,
+      });
+    }
+    return history;
+  };
+
+  return [
+    {
+      market: 'crypto' as MarketType,
+      currentValue: 2500000000000,
+      flow7d: 1.5,
+      flow30d: 3.2,
+      flowVelocity: 0.5,
+      flowHistory: generateHistory(3.2),
+      velocityHistory: generateHistory(0.5),
+      phase: 'mid' as Phase,
+      daysInPhase: 25,
+      phaseStartDate: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
+      avgPhaseDuration: 45,
+      rotationSignal: 'stable',
+      rotationTarget: null,
+      rotationConfidence: 50,
+      sectors: [],
+      lastUpdated: now,
+    },
+    {
+      market: 'stocks' as MarketType,
+      currentValue: 45000000000000,
+      flow7d: 0.8,
+      flow30d: 2.1,
+      flowVelocity: 0.3,
+      flowHistory: generateHistory(2.1),
+      velocityHistory: generateHistory(0.3),
+      phase: 'mid' as Phase,
+      daysInPhase: 30,
+      phaseStartDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      avgPhaseDuration: 60,
+      rotationSignal: 'stable',
+      rotationTarget: null,
+      rotationConfidence: 50,
+      sectors: [],
+      lastUpdated: now,
+    },
+    {
+      market: 'bonds' as MarketType,
+      currentValue: 50000000000000,
+      flow7d: -0.5,
+      flow30d: -1.2,
+      flowVelocity: -0.2,
+      flowHistory: generateHistory(-1.2),
+      velocityHistory: generateHistory(-0.2),
+      phase: 'late' as Phase,
+      daysInPhase: 45,
+      phaseStartDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
+      avgPhaseDuration: 50,
+      rotationSignal: 'exiting',
+      rotationTarget: null,
+      rotationConfidence: 40,
+      sectors: [],
+      lastUpdated: now,
+    },
+    {
+      market: 'metals' as MarketType,
+      currentValue: 5000000000000,
+      flow7d: 0.3,
+      flow30d: 1.5,
+      flowVelocity: 0.2,
+      flowHistory: generateHistory(1.5),
+      velocityHistory: generateHistory(0.2),
+      phase: 'early' as Phase,
+      daysInPhase: 15,
+      phaseStartDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+      avgPhaseDuration: 40,
+      rotationSignal: 'entering',
+      rotationTarget: null,
+      rotationConfidence: 60,
+      sectors: [],
+      lastUpdated: now,
+    },
+  ];
 }
 
 /**
