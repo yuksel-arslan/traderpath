@@ -216,6 +216,14 @@ interface CapitalFlowSummary {
   cacheExpiry: string;
 }
 
+// Helper function to safely filter markets with proper TypeScript typing
+function getValidMarkets(markets: MarketFlow[] | undefined | null): MarketFlow[] {
+  if (!markets || !Array.isArray(markets)) return [];
+  return markets.filter((m): m is MarketFlow => {
+    return m !== null && m !== undefined && typeof m.market === 'string';
+  });
+}
+
 // Market Analysis Modal Component
 function MarketAnalysisModal({
   market,
@@ -474,13 +482,36 @@ function MarketIcon({ market, className }: { market: string; className?: string 
   return <Icon className={className} />;
 }
 
-// Mini Sparkline Chart Component
+// Calculate Simple Moving Average
+function calculateSMA(values: number[], period: number): number[] {
+  const sma: number[] = [];
+  for (let i = 0; i < values.length; i++) {
+    if (i < period - 1) {
+      // Not enough data points yet, use available average
+      const slice = values.slice(0, i + 1);
+      sma.push(slice.reduce((a, b) => a + b, 0) / slice.length);
+    } else {
+      const slice = values.slice(i - period + 1, i + 1);
+      sma.push(slice.reduce((a, b) => a + b, 0) / period);
+    }
+  }
+  return sma;
+}
+
+// Mini Sparkline Chart Component with Moving Averages (smoother, laminar flow)
 function MiniSparkline({ data, color, height = 40 }: { data: FlowDataPoint[]; color: 'emerald' | 'blue' | 'red' | 'amber'; height?: number }) {
   if (!data || data.length < 2) return null;
 
   const values = data.map(d => d.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+
+  // Calculate moving averages for smoother lines
+  const sma3 = calculateSMA(values, 3);  // 3-day MA (responsive)
+  const sma7 = calculateSMA(values, 7);  // 7-day MA (smooth)
+
+  // Use smoothed values for scale calculation
+  const allSmoothedValues = [...sma3, ...sma7];
+  const min = Math.min(...allSmoothedValues);
+  const max = Math.max(...allSmoothedValues);
   const range = max - min || 1;
 
   const width = 100;
@@ -488,23 +519,30 @@ function MiniSparkline({ data, color, height = 40 }: { data: FlowDataPoint[]; co
   const chartHeight = height - padding * 2;
   const chartWidth = width - padding * 2;
 
-  // Generate path
-  const points = values.map((v, i) => {
-    const x = padding + (i / (values.length - 1)) * chartWidth;
+  // Generate path for 7-day SMA (main smooth line)
+  const points7d = sma7.map((v, i) => {
+    const x = padding + (i / (sma7.length - 1)) * chartWidth;
     const y = padding + chartHeight - ((v - min) / range) * chartHeight;
     return `${x},${y}`;
   });
+  const path7d = `M ${points7d.join(' L ')}`;
 
-  const pathD = `M ${points.join(' L ')}`;
+  // Generate path for 3-day SMA (secondary line)
+  const points3d = sma3.map((v, i) => {
+    const x = padding + (i / (sma3.length - 1)) * chartWidth;
+    const y = padding + chartHeight - ((v - min) / range) * chartHeight;
+    return `${x},${y}`;
+  });
+  const path3d = `M ${points3d.join(' L ')}`;
 
-  // Area path (for gradient fill)
-  const areaD = `${pathD} L ${padding + chartWidth},${height - padding} L ${padding},${height - padding} Z`;
+  // Area path (for gradient fill under 7d line)
+  const area7d = `${path7d} L ${padding + chartWidth},${height - padding} L ${padding},${height - padding} Z`;
 
   const colorMap = {
-    emerald: { stroke: '#10b981', fill: 'url(#emeraldGradient)' },
-    blue: { stroke: '#3b82f6', fill: 'url(#blueGradient)' },
-    red: { stroke: '#ef4444', fill: 'url(#redGradient)' },
-    amber: { stroke: '#f59e0b', fill: 'url(#amberGradient)' },
+    emerald: { stroke: '#10b981', strokeLight: '#34d399', fill: 'url(#emeraldGradient)' },
+    blue: { stroke: '#3b82f6', strokeLight: '#60a5fa', fill: 'url(#blueGradient)' },
+    red: { stroke: '#ef4444', strokeLight: '#f87171', fill: 'url(#redGradient)' },
+    amber: { stroke: '#f59e0b', strokeLight: '#fbbf24', fill: 'url(#amberGradient)' },
   };
 
   return (
@@ -527,8 +565,12 @@ function MiniSparkline({ data, color, height = 40 }: { data: FlowDataPoint[]; co
           <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d={areaD} fill={colorMap[color].fill} />
-      <path d={pathD} fill="none" stroke={colorMap[color].stroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Gradient fill under 7d MA */}
+      <path d={area7d} fill={colorMap[color].fill} />
+      {/* 3-day MA - lighter, thinner (recent trend) */}
+      <path d={path3d} fill="none" stroke={colorMap[color].strokeLight} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.5" />
+      {/* 7-day MA - main line (smooth trend) */}
+      <path d={path7d} fill="none" stroke={colorMap[color].stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -596,7 +638,7 @@ function MarketCard({ market, onClick, onAnalyze }: { market: MarketFlow; onClic
           <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
             <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1">
               <TrendingUp className="w-3 h-3" />
-              Money Flow (30d)
+              Money Flow (7d MA)
             </p>
             <MiniSparkline
               data={market.flowHistory}
@@ -608,7 +650,7 @@ function MarketCard({ market, onClick, onAnalyze }: { market: MarketFlow; onClic
           <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
             <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1">
               <Activity className="w-3 h-3" />
-              Flow Velocity (30d)
+              Flow Velocity (7d MA)
             </p>
             {market.velocityHistory && (
               <MiniSparkline
@@ -971,7 +1013,7 @@ function formatMindMapFlow(value: number): string {
 }
 
 // System Flow Chart - Mind Map Component
-function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummary | null; onLayerClick?: (layer: number) => void }) {
+function SystemFlowChart({ apiData, onLayerClick, onMarketClick }: { apiData: CapitalFlowSummary | null; onLayerClick?: (layer: number) => void; onMarketClick?: (marketName: string) => void }) {
   const [isVisible, setIsVisible] = useState(false);
   const [expandedLayers, setExpandedLayers] = useState<{ [key: number]: boolean }>({
     1: true,
@@ -993,12 +1035,12 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
       vixLevel: apiData.globalLiquidity.vix.value ? `${apiData.globalLiquidity.vix.level?.replace('_', ' ') || 'low'} (${Math.round(apiData.globalLiquidity.vix.value)})` : 'Low (14)',
       bias: apiData.liquidityBias || 'risk_on',
     },
-    markets: apiData.markets?.filter(m => m && m.market).map((m) => ({
-      name: (m.market || 'unknown').toUpperCase(),
+    markets: getValidMarkets(apiData.markets).map((m) => ({
+      name: m.market.toUpperCase(),
       flow7d: m.flow7d || 0,
       phase: m.phase || 'mid',
       isSelected: m.market === apiData.recommendation?.primaryMarket,
-    })) || [],
+    })),
     lastUpdated: new Date().toLocaleTimeString(),
   } : null;
 
@@ -1323,7 +1365,7 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
                   ]).map((market, idx) => (
                     <div
                       key={market.name}
-                      onClick={() => onLayerClick?.(2)}
+                      onClick={() => onMarketClick?.(market.name.toLowerCase())}
                       className={`backdrop-blur-xl rounded-xl p-3 text-center transition-all duration-500 cursor-pointer hover:scale-105 group relative ${
                         market.isSelected
                           ? 'bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 border-2 border-emerald-500 ring-4 ring-emerald-500/20 shadow-lg scale-105'
@@ -2122,18 +2164,80 @@ export default function CapitalFlowPage() {
               {/* Layer 2: Market Flow */}
               {fullscreenLayer === 2 && (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {data.markets.filter(m => m && m.market).map((market) => (
-                      <MarketCard
-                        key={market.market}
-                        market={market}
-                        onClick={() => {
-                          setSelectedMarket(selectedMarket?.market === market.market ? null : market);
-                        }}
-                        onAnalyze={() => fetchMarketAnalysis(market)}
-                      />
-                    ))}
-                  </div>
+                  {selectedMarket ? (
+                    // Show only the selected market's details
+                    <div className="space-y-6">
+                      {/* Back button to show all markets */}
+                      <button
+                        onClick={() => setSelectedMarket(null)}
+                        className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+                      >
+                        <ChevronRight className="w-4 h-4 rotate-180" />
+                        Back to all markets
+                      </button>
+
+                      {/* Selected Market Card - Large Version */}
+                      <div className="max-w-2xl mx-auto">
+                        <MarketCard
+                          market={selectedMarket}
+                          onClick={() => {}}
+                          onAnalyze={() => fetchMarketAnalysis(selectedMarket)}
+                        />
+                      </div>
+
+                      {/* Sectors for selected market */}
+                      {selectedMarket.sectors && selectedMarket.sectors.length > 0 && (
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                            <Layers className="w-5 h-5 text-purple-400" />
+                            {selectedMarket.market.charAt(0).toUpperCase() + selectedMarket.market.slice(1)} Sectors
+                          </h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {selectedMarket.sectors.map((sector, idx) => (
+                              <div
+                                key={idx}
+                                className={cn(
+                                  "p-4 rounded-xl border transition-all",
+                                  sector.trending === 'up'
+                                    ? "bg-emerald-500/10 border-emerald-500/30"
+                                    : sector.trending === 'down'
+                                    ? "bg-red-500/10 border-red-500/30"
+                                    : "bg-slate-800/50 border-slate-700"
+                                )}
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="font-semibold text-white">{sector.name}</span>
+                                  <span className={cn(
+                                    "text-sm font-bold",
+                                    (sector.flow7d ?? 0) > 0 ? "text-emerald-400" : "text-red-400"
+                                  )}>
+                                    {(sector.flow7d ?? 0) > 0 ? '+' : ''}{(sector.flow7d ?? 0).toFixed(1)}%
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-slate-400">
+                                  <span>Phase: {sector.phase || 'mid'}</span>
+                                  <span>•</span>
+                                  <span className="capitalize">{sector.trending || 'stable'}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    // Show all markets grid
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {getValidMarkets(data.markets).map((market) => (
+                          <MarketCard
+                            key={market.market}
+                            market={market}
+                            onClick={() => setSelectedMarket(market)}
+                            onAnalyze={() => fetchMarketAnalysis(market)}
+                          />
+                      ))}
+                    </div>
+                  )}
                   {data.insights?.layer2 && <InsightBox insight={data.insights.layer2} icon={Sparkles} />}
                 </div>
               )}
@@ -2405,7 +2509,17 @@ export default function CapitalFlowPage() {
         </div>
 
         {/* ===== MIND MAP - Interactive Capital Flow Visualization ===== */}
-        <SystemFlowChart apiData={data} onLayerClick={setFullscreenLayer} />
+        <SystemFlowChart
+          apiData={data}
+          onLayerClick={setFullscreenLayer}
+          onMarketClick={(marketName) => {
+            const market = data.markets.find(m => m.market === marketName);
+            if (market) {
+              setSelectedMarket(market);
+              setFullscreenLayer(2);
+            }
+          }}
+        />
 
 
         {/* Market Correlations - Collapsible */}
