@@ -77,34 +77,56 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
 
   // Reset to English (remove translation)
   const resetToEnglish = useCallback(() => {
-    // Try to find and click the "Show original" button
-    const frame = document.querySelector('.goog-te-banner-frame') as HTMLIFrameElement;
-    if (frame?.contentDocument) {
-      const showOriginalBtn = frame.contentDocument.querySelector('.goog-te-button button') as HTMLButtonElement;
-      if (showOriginalBtn) {
-        showOriginalBtn.click();
-        return true;
-      }
-    }
-
-    // Alternative: Set combo to empty (original language)
+    // Method 1: Use the combo box with 'en' value
     const combo = findTranslateCombo();
     if (combo) {
-      combo.value = '';
+      // Try setting to 'en' first
+      combo.value = 'en';
       fireEvent(combo, 'change');
-      return true;
+
+      // If that doesn't work, try empty string
+      setTimeout(() => {
+        if (document.documentElement.classList.contains('translated-ltr') ||
+            document.documentElement.classList.contains('translated-rtl')) {
+          combo.value = '';
+          fireEvent(combo, 'change');
+        }
+      }, 100);
     }
 
-    // Fallback: Clear cookies and let page handle it
+    // Method 2: Clear cookies
     const domain = window.location.hostname;
     document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     document.cookie = `googtrans=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     document.cookie = `googtrans=; path=/; domain=.${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
 
-    // Remove translated classes
-    document.documentElement.classList.remove('translated-ltr', 'translated-rtl');
+    // Method 3: Try to click "Show original" in banner (if accessible)
+    try {
+      const frame = document.querySelector('.goog-te-banner-frame') as HTMLIFrameElement;
+      if (frame?.contentDocument) {
+        const showOriginalBtn = frame.contentDocument.querySelector('.goog-te-button button') as HTMLButtonElement;
+        if (showOriginalBtn) {
+          showOriginalBtn.click();
+          return true;
+        }
+      }
+    } catch (e) {
+      // Cross-origin access denied, ignore
+    }
 
-    return false;
+    // Method 4: If still translated after 500ms, reload the page
+    setTimeout(() => {
+      if (document.documentElement.classList.contains('translated-ltr') ||
+          document.documentElement.classList.contains('translated-rtl')) {
+        // Remove classes manually
+        document.documentElement.classList.remove('translated-ltr', 'translated-rtl');
+
+        // Force reload as last resort
+        window.location.reload();
+      }
+    }, 500);
+
+    return true;
   }, [findTranslateCombo]);
 
   // Load Google Translate script
@@ -172,7 +194,10 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
       if (lang.code === 'en') {
         // Reset to English
         resetToEnglish();
-        setIsChanging(false);
+        // Give time for reset methods to work
+        setTimeout(() => {
+          setIsChanging(false);
+        }, 600);
       } else {
         // Set cookie for persistence
         const domain = window.location.hostname;
