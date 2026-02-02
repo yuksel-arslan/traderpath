@@ -1056,7 +1056,7 @@ function formatMindMapFlow(value: number): string {
 }
 
 // System Flow Chart - Mind Map Component
-function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummary | null; onLayerClick?: (layer: number) => void }) {
+function SystemFlowChart({ apiData, onLayerClick, onMarketClick }: { apiData: CapitalFlowSummary | null; onLayerClick?: (layer: number) => void; onMarketClick?: (marketName: string) => void }) {
   const [isVisible, setIsVisible] = useState(false);
   const [expandedLayers, setExpandedLayers] = useState<{ [key: number]: boolean }>({
     1: true,
@@ -1408,7 +1408,7 @@ function SystemFlowChart({ apiData, onLayerClick }: { apiData: CapitalFlowSummar
                   ]).map((market, idx) => (
                     <div
                       key={market.name}
-                      onClick={() => onLayerClick?.(2)}
+                      onClick={() => onMarketClick?.(market.name.toLowerCase())}
                       className={`backdrop-blur-xl rounded-xl p-3 text-center transition-all duration-500 cursor-pointer hover:scale-105 group relative ${
                         market.isSelected
                           ? 'bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 border-2 border-emerald-500 ring-4 ring-emerald-500/20 shadow-lg scale-105'
@@ -2202,18 +2202,82 @@ export default function CapitalFlowPage() {
               {/* Layer 2: Market Flow */}
               {fullscreenLayer === 2 && (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {data.markets.filter(m => m && m.market).map((market) => (
-                      <MarketCard
-                        key={market.market}
-                        market={market}
-                        onClick={() => {
-                          setSelectedMarket(selectedMarket?.market === market.market ? null : market);
-                        }}
-                        onAnalyze={() => fetchMarketAnalysis(market)}
-                      />
-                    ))}
-                  </div>
+                  {selectedMarket ? (
+                    // Show only the selected market's details
+                    <div className="space-y-6">
+                      {/* Back button to show all markets */}
+                      <button
+                        onClick={() => setSelectedMarket(null)}
+                        className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+                      >
+                        <ChevronRight className="w-4 h-4 rotate-180" />
+                        Back to all markets
+                      </button>
+
+                      {/* Selected Market Card - Large Version */}
+                      <div className="max-w-2xl mx-auto">
+                        <MarketCard
+                          market={selectedMarket}
+                          onClick={() => {}}
+                          onAnalyze={() => fetchMarketAnalysis(selectedMarket)}
+                        />
+                      </div>
+
+                      {/* Sectors for selected market */}
+                      {selectedMarket.sectors && selectedMarket.sectors.length > 0 && (
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                            <Layers className="w-5 h-5 text-purple-400" />
+                            {selectedMarket.market.charAt(0).toUpperCase() + selectedMarket.market.slice(1)} Sectors
+                          </h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {selectedMarket.sectors.map((sector, idx) => (
+                              <div
+                                key={idx}
+                                className={cn(
+                                  "p-4 rounded-xl border transition-all",
+                                  sector.trending === 'up'
+                                    ? "bg-emerald-500/10 border-emerald-500/30"
+                                    : sector.trending === 'down'
+                                    ? "bg-red-500/10 border-red-500/30"
+                                    : "bg-slate-800/50 border-slate-700"
+                                )}
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="font-semibold text-white">{sector.name}</span>
+                                  <span className={cn(
+                                    "text-sm font-bold",
+                                    (sector.flow7d ?? 0) > 0 ? "text-emerald-400" : "text-red-400"
+                                  )}>
+                                    {(sector.flow7d ?? 0) > 0 ? '+' : ''}{(sector.flow7d ?? 0).toFixed(1)}%
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-slate-400">
+                                  <span>Phase: {sector.phase || 'mid'}</span>
+                                  <span>•</span>
+                                  <span className="capitalize">{sector.trending || 'stable'}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    // Show all markets grid
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {data.markets.filter(m => m && m.market).map((market) => (
+                        <MarketCard
+                          key={market.market}
+                          market={market}
+                          onClick={() => {
+                            setSelectedMarket(selectedMarket?.market === market.market ? null : market);
+                          }}
+                          onAnalyze={() => fetchMarketAnalysis(market)}
+                        />
+                      ))}
+                    </div>
+                  )}
                   {data.insights?.layer2 && <InsightBox insight={data.insights.layer2} icon={Sparkles} />}
                 </div>
               )}
@@ -2475,7 +2539,17 @@ export default function CapitalFlowPage() {
         </div>
 
         {/* ===== MIND MAP - Interactive Capital Flow Visualization ===== */}
-        <SystemFlowChart apiData={data} onLayerClick={setFullscreenLayer} />
+        <SystemFlowChart
+          apiData={data}
+          onLayerClick={setFullscreenLayer}
+          onMarketClick={(marketName) => {
+            const market = data.markets.find(m => m.market === marketName);
+            if (market) {
+              setSelectedMarket(market);
+              setFullscreenLayer(2);
+            }
+          }}
+        />
 
         {/* ===== LAYER FLOW SUMMARY - Quick Overview ===== */}
         <section className="mb-8 animate-slide-up" style={{ animationDelay: '0.3s' }}>
