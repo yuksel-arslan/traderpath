@@ -538,6 +538,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-01 | 7-Step Classic analiz skor ölçek karışıklığı ve neutral direction handling | 6 kritik hata düzeltildi: 1) reports/page.tsx yanlış `/10` bölümü kaldırıldı (totalScore zaten 0-10), 2) reports/[id]/page.tsx TradeDecisionVisual'a `*10` eklendi (0-100 scale), 3) FinalVerdict.tsx TradeDecisionVisual'a `*10` eklendi, 4) details/[id]/page.tsx neutral direction desteği (isNeutral, gray renk, NEUTRAL text), 5) RecentAnalyses.tsx neutral direction badge (gray + Minus icon), 6) Tüm TradePlanChart'lar neutral olduğunda gizleniyor | `reports/page.tsx`, `reports/[id]/page.tsx`, `FinalVerdict.tsx`, `details/[id]/page.tsx`, `RecentAnalyses.tsx` |
 | 2026-02-01 | Analysis details Export dropdown'da PNG/JPG/PDF/Email yerine sadece Download Report ve Email Report olmalıydı | Export dropdown sadeleştirildi: PNG, JPG seçenekleri kaldırıldı. Sadece "Download Report" (PDF) ve "Email Report" butonları kaldı. Kullanılmayan handleExportPNG ve handleExportJPG fonksiyonları silindi, Image import'u kaldırıldı | `analyze/details/[id]/page.tsx` |
 | 2026-02-01 | GLD ve diğer non-crypto varlıklar için TradePlanChart "Failed to load chart data" hatası | TradePlanChart doğrudan Binance API çağırıyordu (Binance'de GLD yok). Yeni `/api/analysis/chart/candles` endpoint eklendi - multi-asset data provider kullanarak crypto→Binance, stocks/metals/bonds→Yahoo Finance yönlendiriyor. Frontend bu endpoint'i kullanacak şekilde güncellendi | `analysis.routes.ts`, `TradePlanChart.tsx` |
+| 2026-02-02 | PDF rapor header'da TraderPath görünmüyor, rapor başlığı ve metod eksik | 1) Tüm sayfalara inline SVG logo eklendi (gradient id'ler sayfa bazlı unique), 2) "Asset Analysis Report" başlığı eklendi, 3) Analiz metodu badge'i eklendi (Classic 7-Step / MLIS Pro), 4) Rapor tarihi daha belirgin formatta gösteriliyor, 5) CONDITIONAL_GO durumunda koşulların açıklaması eklendi (Executive Summary ve Final Verdict sayfalarında) | `AnalysisReport.tsx` |
 
 ---
 
@@ -1687,6 +1688,25 @@ Kullanıcı Hakları Aktif:
   - **Hata 6**: TradePlanChart'lar neutral direction'da crash olabiliyordu
   - Tüm sayfalar artık neutral direction'ı düzgün gösteriyor (gray renk, Minus ikon, NEUTRAL text)
   - TradePlanChart neutral olduğunda gizleniyor (chart için direction gerekli)
+
+### 2026-02-02
+- **PDF Rapor Profesyonel Başlık Sistemi Eklendi**:
+  - **Report Title**: Tüm sayfalara "Asset Analysis Report" başlığı eklendi
+  - **Analysis Method Badge**: Rapor metodu gösterimi (Classic 7-Step veya MLIS Pro)
+    - Classic: Teal renk (#14B8A6)
+    - MLIS Pro: Purple renk (#8b5cf6)
+  - **Report Date**: Daha belirgin tarih formatı (January 2, 2026 şeklinde)
+  - **TraderPath Logo Düzeltmesi**: Inline SVG ile logo her sayfada görünür
+    - Her sayfa için unique gradient ID'ler (tealGrad1, coralGrad1, vb.)
+    - 4-noktalı yıldız logosu teal/coral gradient ile
+    - "TraderPath" brand text teal ve coral renklerle
+  - **CONDITIONAL_GO Koşul Açıklaması**:
+    - Executive Summary ve Final Verdict sayfalarına eklendi
+    - Koşulların listesi (karşılanmamış timing conditions)
+    - "Wait for" event bilgisi (varsa)
+    - Risk uyarısı ile profesyonel uyarı kutusu
+  - **AnalysisReportData Interface**: `method` alanı eklendi ('classic' | 'mlis_pro')
+  - Dosya: `apps/web/components/reports/AnalysisReport.tsx`
 
 ---
 
