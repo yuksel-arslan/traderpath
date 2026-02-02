@@ -286,13 +286,13 @@ function MarketAnalysisModal({
               <div className="flex items-center justify-between">
                 <span className={cn(
                   'px-4 py-2 rounded-full font-bold text-sm',
-                  trendBg[analysis.trend],
-                  trendColors[analysis.trend]
+                  trendBg[analysis.trend || 'neutral'],
+                  trendColors[analysis.trend || 'neutral']
                 )}>
-                  {analysis.trend.toUpperCase()}
+                  {(analysis.trend || 'neutral').toUpperCase()}
                 </span>
                 <span className="text-sm text-slate-500">
-                  Confidence: <span className="font-bold text-slate-900 dark:text-white">{analysis.confidence}%</span>
+                  Confidence: <span className="font-bold text-slate-900 dark:text-white">{analysis.confidence || 0}%</span>
                 </span>
               </div>
 
@@ -433,12 +433,13 @@ function RotationBadge({ signal }: { signal: 'entering' | 'stable' | 'exiting' |
     exiting: { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-500/20', icon: ArrowDownRight },
   };
 
-  const { color, bg, icon: Icon } = config[signal];
+  const signalConfig = config[signal] || config.stable;
+  const { color, bg, icon: Icon } = signalConfig;
 
   return (
     <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', bg, color)}>
       <Icon className="w-3 h-3" />
-      {signal.toUpperCase()}
+      {(signal || 'stable').toUpperCase()}
     </span>
   );
 }
@@ -570,20 +571,20 @@ function MarketCard({ market, onClick, onAnalyze }: { market: MarketFlow; onClic
       <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="text-center">
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">7D Flow</p>
-          <p className={cn('text-sm font-bold', market.flow7d >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
-            {market.flow7d >= 0 ? '+' : ''}{market.flow7d.toFixed(1)}%
+          <p className={cn('text-sm font-bold', (market.flow7d ?? 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
+            {(market.flow7d ?? 0) >= 0 ? '+' : ''}{(market.flow7d ?? 0).toFixed(1)}%
           </p>
         </div>
         <div className="text-center">
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">30D Flow</p>
-          <p className={cn('text-sm font-bold', market.flow30d >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
-            {market.flow30d >= 0 ? '+' : ''}{market.flow30d.toFixed(1)}%
+          <p className={cn('text-sm font-bold', (market.flow30d ?? 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
+            {(market.flow30d ?? 0) >= 0 ? '+' : ''}{(market.flow30d ?? 0).toFixed(1)}%
           </p>
         </div>
         <div className="text-center">
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Velocity</p>
-          <p className={cn('text-sm font-bold', market.flowVelocity >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400')}>
-            {market.flowVelocity >= 0 ? '+' : ''}{market.flowVelocity.toFixed(1)}
+          <p className={cn('text-sm font-bold', (market.flowVelocity ?? 0) >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400')}>
+            {(market.flowVelocity ?? 0) >= 0 ? '+' : ''}{(market.flowVelocity ?? 0).toFixed(1)}
           </p>
         </div>
       </div>
@@ -764,19 +765,19 @@ function SectorRow({ sector }: { sector: SectorFlow }) {
           sector.trending === 'down' ? 'bg-red-500' :
           'bg-slate-500'
         )}>
-          {sector.name.slice(0, 2).toUpperCase()}
+          {(sector.name || 'UN').slice(0, 2).toUpperCase()}
         </div>
         <div>
-          <p className="font-medium text-slate-900 dark:text-white text-sm">{sector.name}</p>
-          <p className="text-xs text-slate-500">{sector.dominance.toFixed(1)}% dominance</p>
+          <p className="font-medium text-slate-900 dark:text-white text-sm">{sector.name || 'Unknown'}</p>
+          <p className="text-xs text-slate-500">{(sector.dominance || 0).toFixed(1)}% dominance</p>
         </div>
       </div>
       <div className="text-right">
         <p className={cn(
           'font-bold text-sm',
-          sector.flow7d >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+          (sector.flow7d ?? 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
         )}>
-          {sector.flow7d >= 0 ? '+' : ''}{sector.flow7d.toFixed(1)}%
+          {(sector.flow7d ?? 0) >= 0 ? '+' : ''}{(sector.flow7d ?? 0).toFixed(1)}%
         </p>
         <p className="text-xs text-slate-500">7D</p>
       </div>
@@ -905,8 +906,8 @@ function RecommendationCard({ recommendation, rotation, showRotation = true }: {
               </span>
             </div>
             <div>
-              <h3 className="font-bold text-white text-lg">{recommendation.action.toUpperCase()}: {recommendation.primaryMarket.toUpperCase()}</h3>
-              <p className="text-white/80 text-sm">Phase: {recommendation.phase.toUpperCase()}</p>
+              <h3 className="font-bold text-white text-lg">{(recommendation.action || 'wait').toUpperCase()}: {(recommendation.primaryMarket || 'N/A').toUpperCase()}</h3>
+              <p className="text-white/80 text-sm">Phase: {(recommendation.phase || 'unknown').toUpperCase()}</p>
             </div>
           </div>
           <div className="text-right">
@@ -951,13 +952,13 @@ function RecommendationCard({ recommendation, rotation, showRotation = true }: {
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-900 dark:text-white">{rotation.from.toUpperCase()}</span>
+                <span className="font-bold text-slate-900 dark:text-white">{(rotation.from || 'N/A').toUpperCase()}</span>
                 <ArrowRight className="w-4 h-4 text-slate-500" />
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">{rotation.to.toUpperCase()}</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">{(rotation.to || 'N/A').toUpperCase()}</span>
               </div>
               <div className="text-right">
                 <p className="text-xs text-slate-500">Est. Duration</p>
-                <p className="font-medium text-slate-900 dark:text-white">{rotation.estimatedDuration}</p>
+                <p className="font-medium text-slate-900 dark:text-white">{rotation.estimatedDuration || 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -1077,8 +1078,8 @@ function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
       vixLevel: apiData.globalLiquidity.vix.value ? `${apiData.globalLiquidity.vix.level?.replace('_', ' ') || 'low'} (${Math.round(apiData.globalLiquidity.vix.value)})` : 'Low (14)',
       bias: apiData.liquidityBias || 'risk_on',
     },
-    markets: apiData.markets?.map((m) => ({
-      name: m.market.toUpperCase(),
+    markets: apiData.markets?.filter(m => m && m.market).map((m) => ({
+      name: (m.market || 'unknown').toUpperCase(),
       flow7d: m.flow7d || 0,
       phase: m.phase || 'mid',
       isSelected: m.market === apiData.recommendation?.primaryMarket,
@@ -1429,8 +1430,8 @@ function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
                           />
                         ) : formatMindMapFlow(market.flow7d)}
                       </div>
-                      <div className={`mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold inline-block ${getPhaseColor(market.phase)}`}>
-                        {market.phase.toUpperCase()}
+                      <div className={`mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold inline-block ${getPhaseColor(market.phase || 'mid')}`}>
+                        {(market.phase || 'mid').toUpperCase()}
                       </div>
                       {market.isSelected && <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto mt-1 animate-bounce" />}
                     </div>
@@ -1528,8 +1529,8 @@ function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                          <span className={`px-1.5 py-0.5 rounded ${getPhaseColor(sector.phase)}`}>{sector.phase.toUpperCase()}</span>
-                          <span className="capitalize">{sector.trending}</span>
+                          <span className={`px-1.5 py-0.5 rounded ${getPhaseColor(sector.phase || 'mid')}`}>{(sector.phase || 'mid').toUpperCase()}</span>
+                          <span className="capitalize">{sector.trending || 'stable'}</span>
                         </div>
                       </div>
                     ))}
@@ -1576,7 +1577,7 @@ function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
                         ? "bg-emerald-500 shadow-emerald-500/30"
                         : "bg-red-500 shadow-red-500/30"
                     )}>
-                      {apiData.recommendation.direction} {apiData.recommendation.primaryMarket.toUpperCase()}
+                      {apiData.recommendation.direction || 'BUY'} {(apiData.recommendation.primaryMarket || 'N/A').toUpperCase()}
                     </span>
                   )}
                 </div>
@@ -1603,12 +1604,12 @@ function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500">Phase</span>
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${getPhaseColor(apiData.recommendation.phase)}`}>
-                          {apiData.recommendation.phase.toUpperCase()}
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${getPhaseColor(apiData.recommendation.phase || 'mid')}`}>
+                          {(apiData.recommendation.phase || 'mid').toUpperCase()}
                         </span>
                       </div>
                       <p className="text-xs text-slate-600 dark:text-slate-300 pt-2 border-t border-emerald-500/20">
-                        {apiData.recommendation.reason}
+                        {apiData.recommendation.reason || 'Analysis in progress...'}
                       </p>
                     </div>
                   </div>
@@ -1631,12 +1632,12 @@ function SystemFlowChart({ apiData }: { apiData: CapitalFlowSummary | null }) {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500">Phase</span>
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${getPhaseColor(apiData.sellRecommendation.phase)}`}>
-                          {apiData.sellRecommendation.phase.toUpperCase()}
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${getPhaseColor(apiData.sellRecommendation.phase || 'late')}`}>
+                          {(apiData.sellRecommendation.phase || 'late').toUpperCase()}
                         </span>
                       </div>
                       <p className="text-xs text-slate-600 dark:text-slate-300 pt-2 border-t border-red-500/20">
-                        {apiData.sellRecommendation.reason}
+                        {apiData.sellRecommendation.reason || 'Analysis in progress...'}
                       </p>
                     </div>
                   </div>
@@ -2173,9 +2174,9 @@ export default function CapitalFlowPage() {
                     />
                     <LiquidityMetric
                       title="VIX (Fear Index)"
-                      value={data.globalLiquidity.vix.value.toFixed(2)}
+                      value={(data.globalLiquidity.vix.value || 0).toFixed(2)}
                       icon={Activity}
-                      info={`Market sentiment: ${data.globalLiquidity.vix.level.replace('_', ' ').toUpperCase()}`}
+                      info={`Market sentiment: ${(data.globalLiquidity.vix.level || 'neutral').replace('_', ' ').toUpperCase()}`}
                     />
                     <LiquidityMetric
                       title="Yield Curve (10Y-2Y)"
@@ -2193,7 +2194,7 @@ export default function CapitalFlowPage() {
               {fullscreenLayer === 2 && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {data.markets.map((market) => (
+                    {data.markets.filter(m => m && m.market).map((market) => (
                       <MarketCard
                         key={market.market}
                         market={market}
@@ -2502,18 +2503,19 @@ export default function CapitalFlowPage() {
 
             {/* Layer 2: Market Flow */}
             {(() => {
-              const topMarket = data.markets.reduce((prev, curr) =>
-                curr.flow7d > prev.flow7d ? curr : prev
-              );
-              const inflowCount = data.markets.filter(m => m.flow7d > 0).length;
+              const validMarkets = data.markets.filter(m => m && m.market);
+              const topMarket = validMarkets.length > 0
+                ? validMarkets.reduce((prev, curr) => curr.flow7d > prev.flow7d ? curr : prev)
+                : null;
+              const inflowCount = validMarkets.filter(m => m.flow7d > 0).length;
               return (
                 <LayerSummaryBox
                   id="tour-layer-2"
                   layerNum={2}
                   title="Market Flow"
-                  status={`${topMarket.market.toUpperCase()} LEADS`}
-                  statusType={topMarket.flow7d > 2 ? 'positive' : topMarket.flow7d > 0 ? 'neutral' : 'warning'}
-                  details={`${inflowCount}/4 markets inflow • Top: ${topMarket.flow7d > 0 ? '+' : ''}${topMarket.flow7d.toFixed(1)}% (7D)`}
+                  status={topMarket ? `${(topMarket.market || 'UNKNOWN').toUpperCase()} LEADS` : 'NO DATA'}
+                  statusType={topMarket && topMarket.flow7d > 2 ? 'positive' : topMarket && topMarket.flow7d > 0 ? 'neutral' : 'warning'}
+                  details={topMarket ? `${inflowCount}/4 markets inflow • Top: ${topMarket.flow7d > 0 ? '+' : ''}${(topMarket.flow7d || 0).toFixed(1)}% (7D)` : 'Loading...'}
                   icon={BarChart3}
                   color="emerald"
                   onClick={() => setFullscreenLayer(2)}
@@ -2524,9 +2526,10 @@ export default function CapitalFlowPage() {
 
             {/* Layer 3: Sector Status */}
             {(() => {
-              const allSectors = data.markets.flatMap(m => m.sectors || []);
+              const validMarkets = data.markets.filter(m => m && m.market);
+              const allSectors = validMarkets.flatMap(m => m.sectors || []).filter(s => s && s.name);
               const topSector = allSectors.length > 0
-                ? allSectors.reduce((prev, curr) => curr.flow7d > prev.flow7d ? curr : prev)
+                ? allSectors.reduce((prev, curr) => (curr.flow7d || 0) > (prev.flow7d || 0) ? curr : prev)
                 : null;
               const upSectors = allSectors.filter(s => s.trending === 'up').length;
               return (
@@ -2534,10 +2537,10 @@ export default function CapitalFlowPage() {
                   id="tour-layer-3"
                   layerNum={3}
                   title="Sector Activity"
-                  status={topSector ? `${topSector.name.toUpperCase()} HOT` : 'SELECT MARKET'}
+                  status={topSector ? `${(topSector.name || 'UNKNOWN').toUpperCase()} HOT` : 'SELECT MARKET'}
                   statusType={topSector && topSector.flow7d > 3 ? 'positive' : topSector && topSector.flow7d > 0 ? 'neutral' : 'warning'}
                   details={topSector
-                    ? `${upSectors} sectors up • Top: ${topSector.flow7d > 0 ? '+' : ''}${topSector.flow7d.toFixed(1)}%`
+                    ? `${upSectors} sectors up • Top: ${topSector.flow7d > 0 ? '+' : ''}${(topSector.flow7d || 0).toFixed(1)}%`
                     : 'Click a market to see sectors'}
                   icon={Activity}
                   color="purple"
@@ -2552,15 +2555,15 @@ export default function CapitalFlowPage() {
               id="tour-layer-4"
               layerNum={4}
               title="Recommendation"
-              status={`${data.recommendation.action.toUpperCase()} ${data.recommendation.primaryMarket.toUpperCase()}`}
+              status={`${(data.recommendation?.action || 'wait').toUpperCase()} ${(data.recommendation?.primaryMarket || 'N/A').toUpperCase()}`}
               statusType={
-                data.recommendation.action === 'analyze'
+                data.recommendation?.action === 'analyze'
                   ? 'positive'
-                  : data.recommendation.action === 'wait'
+                  : data.recommendation?.action === 'wait'
                   ? 'warning'
                   : 'negative'
               }
-              details={`Phase: ${data.recommendation.phase.toUpperCase()} • Confidence: ${data.recommendation.confidence}%`}
+              details={`Phase: ${(data.recommendation?.phase || 'unknown').toUpperCase()} • Confidence: ${data.recommendation?.confidence || 0}%`}
               icon={Target}
               color="amber"
               onClick={() => setFullscreenLayer(4)}
@@ -2604,9 +2607,9 @@ export default function CapitalFlowPage() {
                     />
                     <LiquidityMetric
                       title="VIX (Fear Index)"
-                      value={data.globalLiquidity.vix.value.toFixed(2)}
+                      value={(data.globalLiquidity.vix.value || 0).toFixed(2)}
                       icon={Activity}
-                      info={`Market sentiment: ${data.globalLiquidity.vix.level.replace('_', ' ').toUpperCase()}`}
+                      info={`Market sentiment: ${(data.globalLiquidity.vix.level || 'neutral').replace('_', ' ').toUpperCase()}`}
                     />
                     <LiquidityMetric
                       title="Yield Curve (10Y-2Y)"
@@ -2628,7 +2631,7 @@ export default function CapitalFlowPage() {
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">Market Flow Analyzer</h3>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {data.markets.map((market) => (
+                    {data.markets.filter(m => m && m.market).map((market) => (
                       <MarketCard
                         key={market.market}
                         market={market}
@@ -3007,10 +3010,10 @@ export default function CapitalFlowPage() {
                                 ? "bg-emerald-200 dark:bg-emerald-500/30 text-emerald-800 dark:text-emerald-200"
                                 : "bg-red-200 dark:bg-red-500/30 text-red-800 dark:text-red-200"
                             )}>
-                              {opp.flowSignal.toUpperCase()}
+                              {(opp.flowSignal || 'stable').toUpperCase()}
                             </span>
-                            <span className={cn("text-xs px-2 py-0.5 rounded-full", riskColors[opp.riskLevel])}>
-                              {opp.riskLevel.toUpperCase()} RISK
+                            <span className={cn("text-xs px-2 py-0.5 rounded-full", riskColors[opp.riskLevel || 'medium'])}>
+                              {(opp.riskLevel || 'medium').toUpperCase()} RISK
                             </span>
                           </div>
                         </div>
@@ -3044,7 +3047,7 @@ export default function CapitalFlowPage() {
                       <div className="mb-3 p-2 rounded-lg bg-white/50 dark:bg-slate-800/50">
                         <div className="flex items-center justify-between text-xs mb-1">
                           <span className="text-slate-500 dark:text-slate-400">
-                            {opp.phaseContext.currentPhase.toUpperCase()} Phase
+                            {(opp.phaseContext.currentPhase || 'mid').toUpperCase()} Phase
                           </span>
                           <span className="text-slate-600 dark:text-slate-300 font-medium">
                             {opp.phaseContext.daysInPhase}d / {opp.phaseContext.avgDuration}d avg
@@ -3192,7 +3195,7 @@ export default function CapitalFlowPage() {
                     Start Analysis
                   </span>
                   <p className="text-sm text-white/80">
-                    7-Step Analysis with AI Confirmation for {data.recommendation.primaryMarket.charAt(0).toUpperCase() + data.recommendation.primaryMarket.slice(1)}
+                    7-Step Analysis with AI Confirmation for {(data.recommendation?.primaryMarket || 'market').charAt(0).toUpperCase() + (data.recommendation?.primaryMarket || 'market').slice(1)}
                   </p>
                 </div>
               </div>
