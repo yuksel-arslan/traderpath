@@ -95,6 +95,49 @@ function getDirectionColor(direction: string): string {
 // PDF Report Generator - Single Page Corporate Style
 // ===========================================
 
+// Helper: Draw TraderPath Star Logo
+function drawStarLogo(pdf: jsPDF, centerX: number, centerY: number, size: number) {
+  const scale = size / 200; // Original viewBox is 200x200
+
+  // Star points coordinates (scaled)
+  const points = {
+    top: { x: centerX, y: centerY - 85 * scale },
+    right: { x: centerX + 85 * scale, y: centerY },
+    bottom: { x: centerX, y: centerY + 85 * scale },
+    left: { x: centerX - 85 * scale, y: centerY },
+    center: { x: centerX, y: centerY },
+    // Inner points for 3D effect
+    topLeft: { x: centerX - 30 * scale, y: centerY - 25 * scale },
+    topRight: { x: centerX + 30 * scale, y: centerY - 25 * scale },
+    bottomLeft: { x: centerX - 30 * scale, y: centerY + 25 * scale },
+    bottomRight: { x: centerX + 30 * scale, y: centerY + 25 * scale },
+  };
+
+  // TOP POINT - Teal (left face bright, right face dark)
+  pdf.setFillColor('#2DD4BF'); // Teal bright
+  pdf.triangle(points.top.x, points.top.y, points.center.x, points.center.y, points.topLeft.x, points.topLeft.y, 'F');
+  pdf.setFillColor('#0D9488'); // Teal dark
+  pdf.triangle(points.top.x, points.top.y, points.topRight.x, points.topRight.y, points.center.x, points.center.y, 'F');
+
+  // RIGHT POINT - Coral (top face bright, bottom face dark)
+  pdf.setFillColor('#F87171'); // Coral bright
+  pdf.triangle(points.right.x, points.right.y, points.center.x, points.center.y, points.topRight.x, points.topRight.y, 'F');
+  pdf.setFillColor('#DC2626'); // Coral dark
+  pdf.triangle(points.right.x, points.right.y, points.bottomRight.x, points.bottomRight.y, points.center.x, points.center.y, 'F');
+
+  // BOTTOM POINT - Coral (right face bright, left face dark)
+  pdf.setFillColor('#F87171'); // Coral bright
+  pdf.triangle(points.bottom.x, points.bottom.y, points.center.x, points.center.y, points.bottomRight.x, points.bottomRight.y, 'F');
+  pdf.setFillColor('#DC2626'); // Coral dark
+  pdf.triangle(points.bottom.x, points.bottom.y, points.bottomLeft.x, points.bottomLeft.y, points.center.x, points.center.y, 'F');
+
+  // LEFT POINT - Teal (bottom face bright, top face dark)
+  pdf.setFillColor('#2DD4BF'); // Teal bright
+  pdf.triangle(points.left.x, points.left.y, points.center.x, points.center.y, points.bottomLeft.x, points.bottomLeft.y, 'F');
+  pdf.setFillColor('#0D9488'); // Teal dark
+  pdf.triangle(points.left.x, points.left.y, points.topLeft.x, points.topLeft.y, points.center.x, points.center.y, 'F');
+}
+
 export async function generateCapitalFlowPDF(data: CapitalFlowData): Promise<Blob> {
   const pdf = new jsPDF({
     orientation: 'portrait',
@@ -104,7 +147,7 @@ export async function generateCapitalFlowPDF(data: CapitalFlowData): Promise<Blo
 
   const pageWidth = 210;
   const pageHeight = 297;
-  const margin = 12;
+  const margin = 15;
   const contentWidth = pageWidth - (margin * 2);
 
   // Helper: Draw rounded rectangle
@@ -115,326 +158,294 @@ export async function generateCapitalFlowPDF(data: CapitalFlowData): Promise<Blo
   };
 
   // ===========================================
-  // HEADER - Compact Corporate Style
+  // HEADER - Corporate Style with Star Logo
   // ===========================================
 
-  // Dark header bar
-  pdf.setFillColor('#0F172A');
-  pdf.rect(0, 0, pageWidth, 42, 'F');
+  let y = 15;
+
+  // Draw Star Logo
+  drawStarLogo(pdf, margin + 8, y + 8, 40);
+
+  // Brand name with gradient colors (Trader in teal, Path in coral)
+  pdf.setFontSize(22);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor('#0D9488'); // Teal
+  pdf.text('Trader', margin + 22, y + 10);
+  const traderWidth = pdf.getTextWidth('Trader');
+  pdf.setTextColor('#DC2626'); // Coral
+  pdf.text('Path', margin + 22 + traderWidth, y + 10);
+
+  // Report date - right aligned
+  const reportDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(COLORS.muted);
+  pdf.text(reportDate, pageWidth - margin, y + 5, { align: 'right' });
+
+  y += 22;
 
   // Teal accent line
   pdf.setFillColor(COLORS.primary);
-  pdf.rect(0, 42, pageWidth, 1.5, 'F');
+  pdf.rect(margin, y, contentWidth, 1, 'F');
 
-  // Logo (4-dot star)
-  const logoX = margin;
-  const logoY = 10;
-  const dotSize = 3;
-  pdf.setFillColor(COLORS.primary);
-  pdf.circle(logoX + dotSize, logoY, dotSize/2, 'F');
-  pdf.setFillColor(COLORS.secondary);
-  pdf.circle(logoX + dotSize*2.5, logoY, dotSize/2, 'F');
-  pdf.setFillColor(COLORS.primary);
-  pdf.circle(logoX + dotSize, logoY + dotSize*1.5, dotSize/2, 'F');
-  pdf.setFillColor(COLORS.secondary);
-  pdf.circle(logoX + dotSize*2.5, logoY + dotSize*1.5, dotSize/2, 'F');
+  y += 8;
 
-  // Brand name
-  pdf.setTextColor('#FFFFFF');
+  // ===========================================
+  // REPORT TITLE - Executive Summary
+  // ===========================================
+
+  pdf.setTextColor(COLORS.dark);
   pdf.setFontSize(18);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('TraderPath', logoX + dotSize*4, logoY + 5);
-
-  // Subtitle
-  pdf.setFontSize(8);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor('#94A3B8');
-  pdf.text('Capital Flow Intelligence Report', logoX + dotSize*4, logoY + 10);
-
-  // Report date - right side
-  const reportDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-  pdf.setFontSize(8);
-  pdf.setTextColor('#64748B');
-  pdf.text(reportDate, pageWidth - margin, logoY + 2, { align: 'right' });
-
-  // Main recommendation - right side prominent
-  const direction = data.recommendation?.direction || 'BUY';
-  const confidence = data.recommendation?.confidence || 0;
-  const primaryMarket = data.recommendation?.primaryMarket?.toUpperCase() || 'N/A';
-  const dirColor = getDirectionColor(direction);
-
-  drawRoundedRect(pageWidth - margin - 35, logoY + 8, 35, 14, 3, dirColor);
-  pdf.setTextColor('#FFFFFF');
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text(direction, pageWidth - margin - 17.5, logoY + 17, { align: 'center' });
-
-  pdf.setFontSize(7);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor('#94A3B8');
-  pdf.text(`${confidence}% • ${primaryMarket}`, pageWidth - margin - 17.5, logoY + 24, { align: 'center' });
-
-  // ===========================================
-  // MAIN CONTENT - 2 Column Layout
-  // ===========================================
-
-  let y = 50;
-  const colWidth = (contentWidth - 6) / 2;
-  const leftCol = margin;
-  const rightCol = margin + colWidth + 6;
-
-  // --- LEFT COLUMN ---
-
-  // LAYER 1: Global Liquidity
-  pdf.setTextColor(COLORS.dark);
-  pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('GLOBAL LIQUIDITY', leftCol, y);
-
-  // L1 badge
-  drawRoundedRect(leftCol + 48, y - 4, 10, 5, 1.5, '#3B82F6');
-  pdf.setTextColor('#FFFFFF');
-  pdf.setFontSize(5);
-  pdf.text('L1', leftCol + 53, y - 1, { align: 'center' });
-
-  y += 5;
-
-  const liquidity = data.globalLiquidity;
-  const bias = data.liquidityBias || 'neutral';
-  const biasLabel = bias === 'risk_on' ? 'RISK-ON' : bias === 'risk_off' ? 'RISK-OFF' : 'NEUTRAL';
-  const biasColor = getBiasColor(bias);
-
-  // Bias badge
-  drawRoundedRect(leftCol, y, 22, 6, 2, biasColor);
-  pdf.setTextColor('#FFFFFF');
-  pdf.setFontSize(5);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text(biasLabel, leftCol + 11, y + 4, { align: 'center' });
+  pdf.text('Executive Summary', margin, y);
 
   y += 10;
 
-  // Liquidity metrics - compact 2x2 grid
+  // ===========================================
+  // AI RECOMMENDATION - Prominent Card
+  // ===========================================
+
+  const direction = data.recommendation?.direction || 'BUY';
+  const confidence = data.recommendation?.confidence || 0;
+  const primaryMarket = data.recommendation?.primaryMarket?.toUpperCase() || 'N/A';
+  const phase = data.recommendation?.phase || 'N/A';
+  const reason = data.recommendation?.reason || 'Analysis in progress...';
+
+  const recBgColor = direction === 'BUY' ? '#ECFDF5' : '#FEF2F2';
+  const recBorderColor = direction === 'BUY' ? '#10B981' : '#EF4444';
+
+  drawRoundedRect(margin, y, contentWidth, 38, 4, recBgColor, recBorderColor);
+
+  // Direction badge
+  drawRoundedRect(margin + 8, y + 8, 45, 22, 4, recBorderColor);
+  pdf.setTextColor('#FFFFFF');
+  pdf.setFontSize(18);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(direction, margin + 30.5, y + 22, { align: 'center' });
+
+  // Confidence and details
+  pdf.setTextColor(COLORS.dark);
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(`${confidence}% Confidence`, margin + 62, y + 15);
+
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`Primary Market: ${primaryMarket}`, margin + 62, y + 24);
+
+  // Phase badge
+  const phaseColor = getPhaseColor(phase);
+  drawRoundedRect(margin + 62, y + 27, 25, 7, 2, phaseColor);
+  pdf.setTextColor('#FFFFFF');
+  pdf.setFontSize(7);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(phase.toUpperCase(), margin + 74.5, y + 32, { align: 'center' });
+
+  // Bias badge
+  const bias = data.liquidityBias || 'neutral';
+  const biasLabel = bias === 'risk_on' ? 'RISK-ON' : bias === 'risk_off' ? 'RISK-OFF' : 'NEUTRAL';
+  const biasColor = getBiasColor(bias);
+  drawRoundedRect(margin + 92, y + 27, 28, 7, 2, biasColor);
+  pdf.setTextColor('#FFFFFF');
+  pdf.text(biasLabel, margin + 106, y + 32, { align: 'center' });
+
+  y += 46;
+
+  // ===========================================
+  // ANALYSIS SUMMARY
+  // ===========================================
+
+  drawRoundedRect(margin, y, contentWidth, 28, 3, '#F8FAFC', COLORS.border);
+
+  const splitReason = pdf.splitTextToSize(reason, contentWidth - 12);
+  pdf.setTextColor(COLORS.dark);
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(splitReason.slice(0, 3), margin + 6, y + 8);
+
+  y += 34;
+
+  // ===========================================
+  // GLOBAL LIQUIDITY - L1
+  // ===========================================
+
+  pdf.setTextColor(COLORS.dark);
+  pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Global Liquidity', margin, y);
+
+  // L1 badge
+  drawRoundedRect(margin + 42, y - 4, 12, 6, 2, '#3B82F6');
+  pdf.setTextColor('#FFFFFF');
+  pdf.setFontSize(6);
+  pdf.text('L1', margin + 48, y, { align: 'center' });
+
+  y += 6;
+
+  // Liquidity metrics - 4 column grid
+  const liquidity = data.globalLiquidity;
   const liqMetrics = [
-    { label: 'Fed B/S', value: formatNumber(liquidity?.fedBalanceSheet?.value || 0), change: liquidity?.fedBalanceSheet?.change30d || 0 },
-    { label: 'M2', value: formatNumber(liquidity?.m2MoneySupply?.value || 0), change: liquidity?.m2MoneySupply?.change30d || 0 },
-    { label: 'DXY', value: (liquidity?.dxy?.value || 0).toFixed(1), change: liquidity?.dxy?.change7d || 0 },
-    { label: 'VIX', value: (liquidity?.vix?.value || 0).toFixed(1), level: liquidity?.vix?.level || '' },
+    { label: 'Fed Balance Sheet', value: formatNumber(liquidity?.fedBalanceSheet?.value || 0), change: liquidity?.fedBalanceSheet?.change30d || 0 },
+    { label: 'M2 Money Supply', value: formatNumber(liquidity?.m2MoneySupply?.value || 0), change: liquidity?.m2MoneySupply?.change30d || 0 },
+    { label: 'DXY Index', value: (liquidity?.dxy?.value || 0).toFixed(2), change: liquidity?.dxy?.change7d || 0 },
+    { label: 'VIX', value: (liquidity?.vix?.value || 0).toFixed(2), level: liquidity?.vix?.level || '' },
   ];
 
-  const metricW = (colWidth - 3) / 2;
-  const metricH = 16;
+  const metricW = (contentWidth - 9) / 4;
+  const metricH = 20;
 
   liqMetrics.forEach((metric, idx) => {
-    const col = idx % 2;
-    const row = Math.floor(idx / 2);
-    const mx = leftCol + (col * (metricW + 3));
-    const my = y + (row * (metricH + 3));
+    const mx = margin + (idx * (metricW + 3));
 
-    drawRoundedRect(mx, my, metricW, metricH, 2, '#F8FAFC', COLORS.border);
+    drawRoundedRect(mx, y, metricW, metricH, 2, '#FFFFFF', COLORS.border);
 
     pdf.setTextColor(COLORS.muted);
     pdf.setFontSize(6);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(metric.label, mx + 3, my + 5);
+    pdf.text(metric.label, mx + 3, y + 5);
 
     pdf.setTextColor(COLORS.dark);
-    pdf.setFontSize(10);
+    pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(metric.value, mx + 3, my + 12);
+    pdf.text(metric.value, mx + 3, y + 14);
 
     if (metric.change && metric.change !== 0) {
       const chgColor = metric.change >= 0 ? COLORS.success : COLORS.danger;
       pdf.setTextColor(chgColor);
       pdf.setFontSize(6);
-      pdf.text(formatPercent(metric.change), mx + metricW - 3, my + 12, { align: 'right' });
+      pdf.text(formatPercent(metric.change), mx + metricW - 3, y + 14, { align: 'right' });
     }
   });
 
-  y += (metricH * 2) + 12;
+  y += metricH + 8;
 
-  // LAYER 2: Market Flow
+  // ===========================================
+  // MARKET FLOW - L2
+  // ===========================================
+
   pdf.setTextColor(COLORS.dark);
-  pdf.setFontSize(9);
+  pdf.setFontSize(11);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('MARKET FLOW', leftCol, y);
+  pdf.text('Market Flow', margin, y);
 
   // L2 badge
-  drawRoundedRect(leftCol + 36, y - 4, 10, 5, 1.5, '#10B981');
+  drawRoundedRect(margin + 32, y - 4, 12, 6, 2, '#10B981');
   pdf.setTextColor('#FFFFFF');
-  pdf.setFontSize(5);
-  pdf.text('L2', leftCol + 41, y - 1, { align: 'center' });
+  pdf.setFontSize(6);
+  pdf.text('L2', margin + 38, y, { align: 'center' });
 
   y += 6;
 
-  // Market table - compact
+  // Market flow table
   const markets = data.markets || [];
-  const rowH = 9;
 
   // Table header
-  drawRoundedRect(leftCol, y, colWidth, 7, 1, COLORS.dark);
+  drawRoundedRect(margin, y, contentWidth, 8, 2, COLORS.dark);
   pdf.setTextColor('#FFFFFF');
-  pdf.setFontSize(5);
+  pdf.setFontSize(7);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('MARKET', leftCol + 3, y + 4.5);
-  pdf.text('7D', leftCol + 30, y + 4.5);
-  pdf.text('30D', leftCol + 45, y + 4.5);
-  pdf.text('PHASE', leftCol + 65, y + 4.5);
+  pdf.text('MARKET', margin + 5, y + 5.5);
+  pdf.text('7D FLOW', margin + 50, y + 5.5);
+  pdf.text('30D FLOW', margin + 85, y + 5.5);
+  pdf.text('VELOCITY', margin + 125, y + 5.5);
+  pdf.text('PHASE', margin + 160, y + 5.5);
 
-  y += 8;
+  y += 9;
 
+  const rowH = 10;
   markets.forEach((market, idx) => {
     const rowY = y + (idx * rowH);
     const bgCol = idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC';
 
-    drawRoundedRect(leftCol, rowY, colWidth, rowH - 1, 0, bgCol);
+    drawRoundedRect(margin, rowY, contentWidth, rowH - 1, 0, bgCol);
 
-    pdf.setTextColor(COLORS.dark);
-    pdf.setFontSize(7);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(market.market.toUpperCase(), leftCol + 3, rowY + 6);
-
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(market.flow7d >= 0 ? COLORS.success : COLORS.danger);
-    pdf.text(formatPercent(market.flow7d), leftCol + 28, rowY + 6);
-
-    pdf.setTextColor(market.flow30d >= 0 ? COLORS.success : COLORS.danger);
-    pdf.text(formatPercent(market.flow30d), leftCol + 43, rowY + 6);
-
-    // Phase badge
-    const phColor = getPhaseColor(market.phase);
-    drawRoundedRect(leftCol + 62, rowY + 1.5, 18, 5, 1.5, phColor);
-    pdf.setTextColor('#FFFFFF');
-    pdf.setFontSize(4.5);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(market.phase.toUpperCase(), leftCol + 71, rowY + 5, { align: 'center' });
-  });
-
-  // --- RIGHT COLUMN ---
-
-  let ry = 50;
-
-  // LAYER 4: AI Recommendation
-  pdf.setTextColor(COLORS.dark);
-  pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('AI RECOMMENDATION', rightCol, ry);
-
-  // L4 badge
-  drawRoundedRect(rightCol + 52, ry - 4, 10, 5, 1.5, '#8B5CF6');
-  pdf.setTextColor('#FFFFFF');
-  pdf.setFontSize(5);
-  pdf.text('L4', rightCol + 57, ry - 1, { align: 'center' });
-
-  ry += 6;
-
-  // Large recommendation card
-  const recBgColor = direction === 'BUY' ? '#ECFDF5' : '#FEF2F2';
-  const recBorderColor = direction === 'BUY' ? '#10B981' : '#EF4444';
-  drawRoundedRect(rightCol, ry, colWidth, 50, 4, recBgColor, recBorderColor);
-
-  // Direction - large
-  pdf.setTextColor(recBorderColor);
-  pdf.setFontSize(28);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text(direction, rightCol + colWidth/2, ry + 18, { align: 'center' });
-
-  // Confidence bar
-  const barWidth = colWidth - 20;
-  const barHeight = 6;
-  const barX = rightCol + 10;
-  const barY = ry + 25;
-
-  drawRoundedRect(barX, barY, barWidth, barHeight, 2, '#E2E8F0');
-  drawRoundedRect(barX, barY, (barWidth * confidence) / 100, barHeight, 2, recBorderColor);
-
-  pdf.setTextColor(COLORS.dark);
-  pdf.setFontSize(7);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(`${confidence}% Confidence`, rightCol + colWidth/2, barY + 12, { align: 'center' });
-
-  // Target & Phase
-  const phase = data.recommendation?.phase || 'N/A';
-  pdf.setFontSize(8);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text(`Target: ${primaryMarket}`, rightCol + 8, ry + 44);
-
-  const phaseColor = getPhaseColor(phase);
-  drawRoundedRect(rightCol + colWidth - 25, ry + 38, 20, 7, 2, phaseColor);
-  pdf.setTextColor('#FFFFFF');
-  pdf.setFontSize(5);
-  pdf.text(phase.toUpperCase(), rightCol + colWidth - 15, ry + 43, { align: 'center' });
-
-  ry += 58;
-
-  // Executive Summary Box
-  pdf.setTextColor(COLORS.dark);
-  pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('EXECUTIVE SUMMARY', rightCol, ry);
-
-  ry += 6;
-
-  drawRoundedRect(rightCol, ry, colWidth, 45, 3, '#F8FAFC', COLORS.border);
-
-  const reason = data.recommendation?.reason || 'Analysis in progress...';
-  const splitReason = pdf.splitTextToSize(reason, colWidth - 8);
-
-  pdf.setTextColor(COLORS.dark);
-  pdf.setFontSize(7);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(splitReason.slice(0, 6), rightCol + 4, ry + 7); // Max 6 lines
-
-  ry += 52;
-
-  // Sectors (if available)
-  if (data.recommendation?.sectors && data.recommendation.sectors.length > 0) {
     pdf.setTextColor(COLORS.dark);
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('FOCUS SECTORS', rightCol, ry);
+    pdf.text(market.market.toUpperCase(), margin + 5, rowY + 6.5);
 
-    ry += 6;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(market.flow7d >= 0 ? COLORS.success : COLORS.danger);
+    pdf.text(formatPercent(market.flow7d), margin + 50, rowY + 6.5);
 
-    const sectors = data.recommendation.sectors.slice(0, 6); // Max 6 sectors
+    pdf.setTextColor(market.flow30d >= 0 ? COLORS.success : COLORS.danger);
+    pdf.text(formatPercent(market.flow30d), margin + 85, rowY + 6.5);
+
+    const velocityColor = market.flowVelocity >= 0 ? COLORS.success : COLORS.danger;
+    pdf.setTextColor(velocityColor);
+    pdf.text(market.flowVelocity?.toFixed(2) || '0.00', margin + 125, rowY + 6.5);
+
+    // Phase badge
+    const phColor = getPhaseColor(market.phase);
+    drawRoundedRect(margin + 155, rowY + 1.5, 22, 6, 2, phColor);
+    pdf.setTextColor('#FFFFFF');
+    pdf.setFontSize(6);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(market.phase.toUpperCase(), margin + 166, rowY + 5.5, { align: 'center' });
+  });
+
+  y += (markets.length * rowH) + 8;
+
+  // ===========================================
+  // FOCUS SECTORS (if available)
+  // ===========================================
+
+  if (data.recommendation?.sectors && data.recommendation.sectors.length > 0) {
+    pdf.setTextColor(COLORS.dark);
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Focus Sectors', margin, y);
+
+    y += 6;
+
+    const sectors = data.recommendation.sectors.slice(0, 6);
+    const sectorW = (contentWidth - 10) / Math.min(sectors.length, 3);
+
     sectors.forEach((sector, idx) => {
-      const sectorX = rightCol + (idx % 3) * (colWidth / 3);
-      const sectorY = ry + Math.floor(idx / 3) * 10;
+      const sectorX = margin + (idx % 3) * (sectorW + 5);
+      const sectorY = y + Math.floor(idx / 3) * 12;
 
-      drawRoundedRect(sectorX, sectorY, colWidth/3 - 2, 8, 2, COLORS.primary);
+      drawRoundedRect(sectorX, sectorY, sectorW, 10, 3, COLORS.primary);
       pdf.setTextColor('#FFFFFF');
-      pdf.setFontSize(5);
+      pdf.setFontSize(8);
       pdf.setFont('helvetica', 'bold');
-      const sectorName = sector.length > 8 ? sector.substring(0, 8) + '..' : sector;
-      pdf.text(sectorName.toUpperCase(), sectorX + (colWidth/6 - 1), sectorY + 5.5, { align: 'center' });
+      pdf.text(sector.toUpperCase(), sectorX + sectorW / 2, sectorY + 7, { align: 'center' });
     });
   }
 
   // ===========================================
-  // FOOTER
+  // FOOTER - Standard Corporate
   // ===========================================
 
-  // Footer separator line
+  // Footer separator
   pdf.setDrawColor(COLORS.border);
-  pdf.setLineWidth(0.3);
-  pdf.line(margin, pageHeight - 18, pageWidth - margin, pageHeight - 18);
+  pdf.setLineWidth(0.5);
+  pdf.line(margin, pageHeight - 20, pageWidth - margin, pageHeight - 20);
 
-  // Footer content
+  // Footer left - Company info
   pdf.setTextColor(COLORS.muted);
-  pdf.setFontSize(6);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text('Generated by TraderPath Capital Flow Intelligence • traderpath.io', margin, pageHeight - 12);
-  pdf.text('This report is for informational purposes only. Not financial advice.', margin, pageHeight - 8);
-
-  const timestamp = new Date().toISOString().split('T')[0];
-  pdf.text(`Report ID: CF-${timestamp}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
-
-  // Page number
   pdf.setFontSize(7);
-  pdf.text('Page 1 of 1', pageWidth - margin, pageHeight - 8, { align: 'right' });
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('TraderPath Capital Flow Intelligence', margin, pageHeight - 14);
+  pdf.text('traderpath.io', margin, pageHeight - 10);
+
+  // Footer center - Disclaimer
+  pdf.setFontSize(6);
+  pdf.setTextColor('#94A3B8');
+  const disclaimer = 'This report is for informational purposes only and does not constitute financial advice.';
+  pdf.text(disclaimer, pageWidth / 2, pageHeight - 14, { align: 'center' });
+
+  // Footer right - Report info
+  pdf.setFontSize(7);
+  pdf.setTextColor(COLORS.muted);
+  const timestamp = new Date().toISOString().split('T')[0];
+  pdf.text(`Report: CF-${timestamp}`, pageWidth - margin, pageHeight - 14, { align: 'right' });
+  pdf.text('Page 1 of 1', pageWidth - margin, pageHeight - 10, { align: 'right' });
 
   // Return as blob
   return pdf.output('blob');
