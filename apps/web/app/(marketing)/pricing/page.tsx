@@ -28,7 +28,6 @@ import {
   Sparkles,
   Calendar,
   Gift,
-  Sparkles,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost, SIGNAL_SUBSCRIPTIONS, DAILY_PASS_COSTS } from '../../../lib/pricing-config';
@@ -219,12 +218,6 @@ export default function PricingPage() {
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
               Active trader? Buy credits for on-demand analysis. Prefer ready signals? Subscribe to our signal service.
               {!isLoggedIn && ` Start with ${FREE_SIGNUP_CREDITS} free credits.`}
-              Choose Your Trading Plan
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Subscribe to unlock daily credits and premium features.
-              Save up to 20% with yearly billing.
-              {!isLoggedIn && ` Or start free with ${FREE_SIGNUP_CREDITS} credits.`}
             </p>
 
             {/* Pricing Mode Toggle */}
