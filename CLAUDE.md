@@ -1809,6 +1809,20 @@ Kullanıcı Hakları Aktif:
   - "Executive Summary" rapor başlığı
   - Standart kurumsal footer (şirket bilgisi, disclaimer, rapor tarihi)
   - Dosya: `apps/web/lib/capital-flow-report-generator.ts`
+- **Asset Analysis Report Tek Sayfa Formatı Eklendi**:
+  - `AnalysisReportData` interface'ine `capitalFlow` ve `mlConfirmation` alanları eklendi
+  - `generateSinglePageReport()` fonksiyonu eklendi
+  - **Bölüm 1: Capital Flow Analysis Summary** (4 kutu 2x2 grid):
+    - L1 Global Liquidity, L2 Market Flow
+    - L3 Sector Activity, L4 AI Recommendation
+  - **Bölüm 2: 7 Step Analysis** (2 kolonlu layout):
+    - Sol: Market Pulse, Asset Scanner, Technical Analysis
+    - Sağ: Safety Check, Timing Analysis, Trap Check
+  - **Trade Decision** (tam genişlik): verdict ve skor
+  - **ML Confirmation** (tam genişlik): MLIS Pro layer'ları
+  - **Trade Plan** (tam genişlik): Entry • TP1-2 • SL ile R:R
+  - `generateAnalysisReport(data, captureChart, singlePage)` parametresi eklendi
+  - Dosya: `apps/web/components/reports/AnalysisReport.tsx`
 
 ---
 
