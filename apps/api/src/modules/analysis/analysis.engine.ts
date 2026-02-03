@@ -2043,6 +2043,11 @@ interface TradePlanResult {
     source: string; // Where this entry came from
   }>;
   averageEntry: number;
+  currentPrice: number;
+  // Entry status - whether user should enter now or wait
+  needsToWaitForEntry: boolean;
+  entryDistancePercent: number; // How far current price is from entry (%)
+  entryStatus: 'immediate' | 'wait_for_pullback' | 'wait_for_rally';
   stopLoss: {
     price: number;
     percentage: number;
@@ -5515,6 +5520,18 @@ export const analysisEngine = {
     const entryDistancePercent = Math.abs((currentPrice - averageEntry) / averageEntry * 100);
     const needsToWaitForEntry = entryDistancePercent > 1; // More than 1% away from entry
 
+    // Determine entry status based on price relationship
+    let entryStatus: 'immediate' | 'wait_for_pullback' | 'wait_for_rally';
+    if (!needsToWaitForEntry) {
+      entryStatus = 'immediate';
+    } else if (direction === 'long') {
+      // LONG position: if current price > entry, need to wait for pullback
+      entryStatus = currentPrice > averageEntry ? 'wait_for_pullback' : 'wait_for_rally';
+    } else {
+      // SHORT position: if current price < entry, need to wait for rally
+      entryStatus = currentPrice < averageEntry ? 'wait_for_rally' : 'wait_for_pullback';
+    }
+
     // ===== STOP LOSS (from Safety Check + ATR + Trap Check) =====
     const atr = assetScan.indicators.atr;
 
@@ -5768,6 +5785,11 @@ export const analysisEngine = {
       type: 'limit',
       entries,
       averageEntry,
+      currentPrice,
+      // Entry status fields - whether to enter immediately or wait
+      needsToWaitForEntry,
+      entryDistancePercent: parseFloat(entryDistancePercent.toFixed(2)),
+      entryStatus,
       stopLoss: {
         price: roundPrice(stopPrice),
         percentage: parseFloat(stopPercentage.toFixed(2)),

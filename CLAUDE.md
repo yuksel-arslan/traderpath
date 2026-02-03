@@ -546,6 +546,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-02 | Concierge ve Dashboard Capital Flow verileri görünmüyordu (KÖKÜ NEDEN) | **Alan adı uyuşmazlığı**: Backend `CapitalFlowSummary` interface'i `markets` alanı döndürüyordu ama Concierge sayfası `capitalFlow.marketFlows` kullanıyordu. Dashboard sayfası doğru alan adını (`markets`) kullanıyordu. Çözüm: Concierge sayfasında tüm `marketFlows` referansları `markets` olarak düzeltildi | `concierge/page.tsx`, `dashboard/page.tsx` |
 | 2026-02-02 | Capital Flow sayfasında "Cannot read properties of undefined (reading 'toUpperCase')" hatası | `data.markets.map()` ve `data.recommendation` property'leri undefined olabiliyordu. 1) Tüm `.map()` çağrıları öncesinde `.filter(m => m && m.market)` eklendi, 2) Tüm `.toUpperCase()` çağrılarına fallback değerler eklendi (örn: `(market.phase \|\| 'mid').toUpperCase()`), 3) Tüm `.toFixed()` çağrılarına null coalescing eklendi (örn: `(market.flow7d ?? 0).toFixed(1)`), 4) `reduce()` çağrıları boş dizi kontrolü eklendi, 5) recommendation properties'e optional chaining eklendi | `capital-flow/page.tsx` |
 | 2026-02-02 | Mind map Layer 2'de market kartlarına tıklayınca tüm marketler gösteriliyordu (sadece seçilen market olmalıydı) | `SystemFlowChart` komponentine `onMarketClick` callback eklendi. Market kartına tıklandığında `setSelectedMarket()` ile market seçilip fullscreen modal açılıyor. Modal'da `selectedMarket` varsa sadece o marketin kartı + sektörleri gösteriliyor, "Back to all markets" butonu ile tüm marketlere dönülebiliyor | `capital-flow/page.tsx` |
+| 2026-02-03 | Trade plan entry/TP/SL seviyeleri güncel fiyata göre mantıksız görünüyordu (pullback beklentisi frontend'e iletilmiyordu) | `needsToWaitForEntry`, `entryDistancePercent`, ve `entryStatus` alanları TradePlanResult interface'ine ve return objesine eklendi. LONG pozisyonlarda fiyat entry'nin üstündeyse "wait_for_pullback", SHORT pozisyonlarda fiyat entry'nin altındaysa "wait_for_rally" döndürülüyor. Frontend bu bilgiyi kullanarak kullanıcıya giriş beklemesi gerektiğini gösterebilir | `analysis.engine.ts:2046-2050,5518-5528,5783-5787` |
 
 ---
 
@@ -1789,6 +1790,25 @@ Kullanıcı Hakları Aktif:
     - Suggested assets quick selection butonları
   - Capital Flow'dan navigate edildiğinde kullanıcı context görüyor
   - Dosya: `apps/web/app/(dashboard)/analyze/page.tsx`
+
+### 2026-02-03
+- **Trade Plan Entry Status Alanları Eklendi**:
+  - `TradePlanResult` interface'ine yeni alanlar eklendi:
+    - `currentPrice`: Analiz anındaki güncel fiyat
+    - `needsToWaitForEntry`: Entry'nin >%1 uzakta olup olmadığı (boolean)
+    - `entryDistancePercent`: Entry'den uzaklık yüzdesi
+    - `entryStatus`: 'immediate' | 'wait_for_pullback' | 'wait_for_rally'
+  - LONG pozisyonlarda fiyat > entry ise "wait_for_pullback" döner
+  - SHORT pozisyonlarda fiyat < entry ise "wait_for_rally" döner
+  - Frontend bu bilgiyi kullanarak "Pullback Bekle" uyarısı gösterebilir
+  - Dosya: `apps/api/src/modules/analysis/analysis.engine.ts`
+- **Capital Flow PDF Rapor Tek Sayfa Kurumsal Tasarım**:
+  - TraderPath yıldız logosu 3D efekti ile çiziliyor (teal/coral gradient)
+  - "TraderPath" marka yazısı kurumsal gradient renklerde
+  - Tek sütun layout (2 kolon yerine)
+  - "Executive Summary" rapor başlığı
+  - Standart kurumsal footer (şirket bilgisi, disclaimer, rapor tarihi)
+  - Dosya: `apps/web/lib/capital-flow-report-generator.ts`
 
 ---
 
