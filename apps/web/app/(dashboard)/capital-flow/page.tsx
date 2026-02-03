@@ -42,6 +42,7 @@ import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboar
 import { downloadCapitalFlowReport, generateCapitalFlowEmailHTML } from '@/lib/capital-flow-report-generator';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 import { UpgradePrompt, UpgradeCard } from '@/components/modals/UpgradePrompt';
+import { SubscriptionTier } from '@/hooks/useSubscription';
 
 // Types
 interface GlobalLiquidity {
@@ -1023,7 +1024,21 @@ function formatMindMapFlow(value: number): string {
 }
 
 // System Flow Chart - Mind Map Component
-function SystemFlowChart({ apiData, onLayerClick, onMarketClick }: { apiData: CapitalFlowSummary | null; onLayerClick?: (layer: number) => void; onMarketClick?: (marketName: string) => void }) {
+function SystemFlowChart({
+  apiData,
+  onLayerClick,
+  onMarketClick,
+  layer3Unlocked = true,
+  layer4Unlocked = true,
+  currentTier = 'free' as SubscriptionTier,
+}: {
+  apiData: CapitalFlowSummary | null;
+  onLayerClick?: (layer: number) => void;
+  onMarketClick?: (marketName: string) => void;
+  layer3Unlocked?: boolean;
+  layer4Unlocked?: boolean;
+  currentTier?: SubscriptionTier;
+}) {
   const [isVisible, setIsVisible] = useState(false);
   const [expandedLayers, setExpandedLayers] = useState<{ [key: number]: boolean }>({
     1: true,
@@ -2557,6 +2572,9 @@ export default function CapitalFlowPage() {
               setFullscreenLayer(2);
             }
           }}
+          layer3Unlocked={layer3Unlocked}
+          layer4Unlocked={layer4Unlocked}
+          currentTier={currentTier}
         />
 
 
