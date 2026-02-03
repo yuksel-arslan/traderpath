@@ -2039,44 +2039,44 @@ function generateSinglePageReport(data: AnalysisReportData): string {
     <head>
       <style>
         ${styles}
-        .single-page { padding: 12px 16px; }
+        .single-page { padding: 12px 24px; max-width: 560px; margin: 0 auto; }
         .section-box { border: 1px solid #ddd; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; background: #fff; }
-        .section-title-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e0e0e0; }
+        .section-title-bar { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e0e0e0; }
         .section-num { font-size: 8px; font-weight: 700; color: #fff; background: #1a1a1a; padding: 2px 6px; border-radius: 3px; }
         .section-name { font-size: 10px; font-weight: 600; color: #1a1a1a; }
-        .layer-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-        .two-col { display: flex; gap: 8px; }
-        .two-col > div { flex: 1; }
+        .layer-grid { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+        .two-col { display: flex; gap: 8px; justify-content: center; }
+        .two-col > div { flex: 1; max-width: 260px; }
         .step-mini { border: 1px solid #e5e5e5; border-radius: 3px; padding: 5px 7px; margin-bottom: 5px; background: #fafafa; }
         .step-mini-header { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
         .step-mini-num { font-size: 7px; font-weight: 700; color: #666; }
         .step-mini-title { font-size: 8px; font-weight: 600; color: #1a1a1a; }
         .step-mini-gate { margin-left: auto; font-size: 6px; font-weight: 600; }
         .step-mini-content { font-size: 7px; color: #444; line-height: 1.35; }
-        .step-mini-row { display: flex; gap: 4px; margin-top: 3px; }
-        .step-mini-metric { background: #fff; border: 1px solid #eee; border-radius: 2px; padding: 2px 5px; flex: 1; }
+        .step-mini-row { display: flex; gap: 4px; margin-top: 3px; justify-content: center; }
+        .step-mini-metric { background: #fff; border: 1px solid #eee; border-radius: 2px; padding: 2px 5px; flex: 1; text-align: center; }
         .step-mini-metric-label { font-size: 5px; color: #888; text-transform: uppercase; }
         .step-mini-metric-value { font-size: 8px; font-weight: 600; color: #1a1a1a; }
         .trade-decision-box { border: 2px solid #1a1a1a; border-radius: 4px; padding: 8px 12px; text-align: center; background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%); }
         .trade-decision-action { font-size: 20px; font-weight: 700; }
         .trade-decision-sub { font-size: 7px; color: #666; margin-top: 2px; }
         .ml-box { border: 1px solid #8b5cf6; border-radius: 4px; padding: 6px 10px; background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); margin-top: 6px; }
-        .ml-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+        .ml-header { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px; }
         .ml-badge { font-size: 7px; font-weight: 700; color: #fff; background: #8b5cf6; padding: 2px 6px; border-radius: 3px; }
         .ml-title { font-size: 8px; font-weight: 600; color: #6b21a8; }
-        .ml-content { display: flex; gap: 8px; }
+        .ml-content { display: flex; gap: 8px; justify-content: center; }
         .ml-rec { font-size: 12px; font-weight: 700; color: #6b21a8; }
         .ml-conf { font-size: 8px; color: #7c3aed; }
-        .ml-layers { display: flex; gap: 4px; flex: 1; }
-        .ml-layer { flex: 1; background: #fff; border: 1px solid #ddd6fe; border-radius: 2px; padding: 2px 4px; text-align: center; }
+        .ml-layers { display: flex; gap: 4px; flex: 1; justify-content: center; }
+        .ml-layer { flex: 1; max-width: 60px; background: #fff; border: 1px solid #ddd6fe; border-radius: 2px; padding: 2px 4px; text-align: center; }
         .ml-layer-name { font-size: 5px; color: #7c3aed; text-transform: uppercase; }
         .ml-layer-score { font-size: 8px; font-weight: 600; color: #6b21a8; }
         .trade-plan-box { border: 1px solid #0d9488; border-radius: 4px; padding: 8px 10px; background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); margin-top: 6px; }
-        .tp-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+        .tp-header { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 6px; }
         .tp-badge { font-size: 7px; font-weight: 700; color: #fff; background: #0d9488; padding: 2px 6px; border-radius: 3px; }
         .tp-title { font-size: 9px; font-weight: 600; color: #0f766e; }
-        .tp-grid { display: flex; gap: 6px; }
-        .tp-item { flex: 1; background: #fff; border: 1px solid #99f6e4; border-radius: 3px; padding: 4px 6px; text-align: center; }
+        .tp-grid { display: flex; gap: 6px; justify-content: center; }
+        .tp-item { flex: 1; max-width: 120px; background: #fff; border: 1px solid #99f6e4; border-radius: 3px; padding: 4px 6px; text-align: center; }
         .tp-item-label { font-size: 6px; color: #0f766e; text-transform: uppercase; }
         .tp-item-value { font-size: 10px; font-weight: 700; color: #0d9488; }
         .tp-item-sub { font-size: 6px; color: #5eead4; }
@@ -2085,18 +2085,18 @@ function generateSinglePageReport(data: AnalysisReportData): string {
     <body>
       <div class="page single-page">
         <!-- HEADER -->
-        <div class="header" style="margin-bottom: 8px; padding-bottom: 6px;">
-          <div class="brand">
+        <div class="header" style="margin-bottom: 8px; padding-bottom: 6px; display: flex; justify-content: center; align-items: center; gap: 16px;">
+          <div class="brand" style="display: flex; align-items: center; gap: 4px;">
             <div class="logo">${logoSvgSinglePage}</div>
             <div class="brand-name" style="font-size: 11px;">
               <span style="color: #0D9488;">Trader</span><span style="color: #DC2626;">Path</span>
             </div>
           </div>
-          <div class="header-center">
+          <div class="header-center" style="text-align: center;">
             <div class="report-title" style="font-size: 10px;">Asset Analysis Report</div>
             <div class="report-subtitle" style="font-size: 6px;">${data.method === 'mlis_pro' ? 'MLIS Pro' : 'Classic 7-Step'} | ${new Date(data.generatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</div>
           </div>
-          <div class="header-right">
+          <div class="header-right" style="text-align: center;">
             <div class="symbol" style="font-size: 12px;">${data.symbol}
               <span class="direction-tag ${isLong ? 'tag-long' : isShort ? 'tag-short' : ''}" style="font-size: 8px;">${directionStr}</span>
             </div>
@@ -2136,7 +2136,7 @@ function generateSinglePageReport(data: AnalysisReportData): string {
 
           <!-- 2-COLUMN LAYOUT -->
           <div class="two-col">
-            <!-- LEFT COLUMN: Market Pulse, Asset Scan, Stocks Analysis, Safety Check, Timing Analysis -->
+            <!-- LEFT COLUMN: Market Pulse, Asset Scan, Technical Analysis -->
             <div>
               <!-- Market Pulse -->
               <div class="step-mini">
@@ -2184,7 +2184,7 @@ function generateSinglePageReport(data: AnalysisReportData): string {
                 </div>
               </div>
 
-              <!-- Stocks/Technical Analysis -->
+              <!-- Technical Analysis -->
               <div class="step-mini">
                 <div class="step-mini-header">
                   <span class="step-mini-num">3</span>
@@ -2205,7 +2205,10 @@ function generateSinglePageReport(data: AnalysisReportData): string {
                   </div>
                 </div>
               </div>
+            </div>
 
+            <!-- RIGHT COLUMN: Safety Check, Timing Analysis, Trap Check -->
+            <div>
               <!-- Safety Check -->
               <div class="step-mini">
                 <div class="step-mini-header">
@@ -2247,41 +2250,11 @@ function generateSinglePageReport(data: AnalysisReportData): string {
                   </div>
                 </div>
               </div>
-            </div>
-
-            <!-- RIGHT COLUMN: Trade Plan, Trap Check, ML Confirmation, AI Recommendation -->
-            <div>
-              <!-- Trade Plan (Entry • TP1-2 • SL) -->
-              <div class="step-mini" style="background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); border-color: #0d9488;">
-                <div class="step-mini-header">
-                  <span class="step-mini-num" style="background: #0d9488; color: white; padding: 1px 4px; border-radius: 2px;">6</span>
-                  <span class="step-mini-title" style="color: #0f766e;">Trade Plan</span>
-                  <span style="margin-left: auto; font-size: 6px; font-weight: 600; color: #0f766e;">R:R ${formatRiskReward(tp.riskReward)}</span>
-                </div>
-                <div class="step-mini-row">
-                  <div class="step-mini-metric" style="border-color: #99f6e4;">
-                    <div class="step-mini-metric-label">Entry</div>
-                    <div class="step-mini-metric-value" style="color: #0d9488;">${formatPrice(tp.averageEntry)}</div>
-                  </div>
-                  <div class="step-mini-metric" style="border-color: #99f6e4;">
-                    <div class="step-mini-metric-label">TP1</div>
-                    <div class="step-mini-metric-value text-green">${formatPrice(tp.takeProfits?.[0]?.price)}</div>
-                  </div>
-                  <div class="step-mini-metric" style="border-color: #99f6e4;">
-                    <div class="step-mini-metric-label">TP2</div>
-                    <div class="step-mini-metric-value text-green">${formatPrice(tp.takeProfits?.[1]?.price)}</div>
-                  </div>
-                  <div class="step-mini-metric" style="border-color: #99f6e4;">
-                    <div class="step-mini-metric-label">SL</div>
-                    <div class="step-mini-metric-value text-red">${formatPrice(tp.stopLoss?.price)}</div>
-                  </div>
-                </div>
-              </div>
 
               <!-- Trap Check -->
               <div class="step-mini">
                 <div class="step-mini-header">
-                  <span class="step-mini-num">7</span>
+                  <span class="step-mini-num">6</span>
                   <span class="step-mini-title">Trap Check</span>
                   <span class="step-mini-gate" style="color: ${getGateStatus(tc.gate).color};">${getGateStatus(tc.gate).text}</span>
                 </div>
@@ -2300,50 +2273,6 @@ function generateSinglePageReport(data: AnalysisReportData): string {
                   </div>
                 </div>
               </div>
-
-              <!-- ML Confirmation -->
-              <div class="step-mini" style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-color: #8b5cf6;">
-                <div class="step-mini-header">
-                  <span class="step-mini-num" style="background: #8b5cf6; color: white; padding: 1px 4px; border-radius: 2px;">ML</span>
-                  <span class="step-mini-title" style="color: #6b21a8;">ML Confirmation</span>
-                </div>
-                ${ml ? `
-                <div class="step-mini-row">
-                  <div class="step-mini-metric" style="border-color: #ddd6fe; flex: 1.5;">
-                    <div class="step-mini-metric-label">Recommendation</div>
-                    <div class="step-mini-metric-value" style="color: #6b21a8; font-size: 9px;">${ml.recommendation || 'HOLD'}</div>
-                  </div>
-                  <div class="step-mini-metric" style="border-color: #ddd6fe;">
-                    <div class="step-mini-metric-label">Confidence</div>
-                    <div class="step-mini-metric-value" style="color: #7c3aed;">${ml.confidence || 0}%</div>
-                  </div>
-                </div>
-                ` : `
-                <div style="font-size: 6px; color: #9ca3af; text-align: center; padding: 4px;">Run MLIS Pro for ML confirmation</div>
-                `}
-              </div>
-
-              <!-- AI Recommendation (from Capital Flow L4) -->
-              <div class="step-mini" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-color: #f59e0b;">
-                <div class="step-mini-header">
-                  <span class="step-mini-num" style="background: #f59e0b; color: white; padding: 1px 4px; border-radius: 2px;">AI</span>
-                  <span class="step-mini-title" style="color: #92400e;">AI Recommendation</span>
-                </div>
-                <div class="step-mini-row">
-                  <div class="step-mini-metric" style="border-color: #fcd34d; flex: 1;">
-                    <div class="step-mini-metric-label">Direction</div>
-                    <div class="step-mini-metric-value ${l4Dir === 'BUY' ? 'text-green' : l4Dir === 'SELL' ? 'text-red' : ''}" style="font-size: 10px;">${l4Dir}</div>
-                  </div>
-                  <div class="step-mini-metric" style="border-color: #fcd34d; flex: 1;">
-                    <div class="step-mini-metric-label">Market</div>
-                    <div class="step-mini-metric-value" style="color: #92400e;">${cf.layer4?.market || '-'}</div>
-                  </div>
-                  <div class="step-mini-metric" style="border-color: #fcd34d; flex: 1;">
-                    <div class="step-mini-metric-label">Confidence</div>
-                    <div class="step-mini-metric-value" style="color: #b45309;">${cf.layer4?.confidence || 0}%</div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -2355,9 +2284,89 @@ function generateSinglePageReport(data: AnalysisReportData): string {
             </div>
           </div>
 
+          <!-- ML CONFIRMATION (Full Width) -->
+          <div class="ml-box" style="margin-top: 6px;">
+            <div class="ml-header">
+              <span class="ml-badge">ML</span>
+              <span class="ml-title">ML Confirmation</span>
+            </div>
+            ${ml ? `
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <div class="ml-rec">${ml.recommendation || 'HOLD'}</div>
+              <div class="ml-conf">Confidence: ${ml.confidence || 0}%</div>
+              <div class="ml-layers" style="flex: 1;">
+                ${ml.layers ? Object.entries(ml.layers).slice(0, 4).map(([name, score]) => `
+                  <div class="ml-layer">
+                    <div class="ml-layer-name">${name}</div>
+                    <div class="ml-layer-score">${typeof score === 'number' ? score.toFixed(0) : score}</div>
+                  </div>
+                `).join('') : ''}
+              </div>
+            </div>
+            ` : `
+            <div style="font-size: 7px; color: #9ca3af; text-align: center; padding: 4px;">Run MLIS Pro for ML confirmation</div>
+            `}
+          </div>
+
+          <!-- AI RECOMMENDATION (Full Width) -->
+          <div style="border: 1px solid #f59e0b; border-radius: 4px; padding: 6px 10px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); margin-top: 6px;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px;">
+              <span style="font-size: 7px; font-weight: 700; color: #fff; background: #f59e0b; padding: 2px 6px; border-radius: 3px;">AI</span>
+              <span style="font-size: 8px; font-weight: 600; color: #92400e;">AI Recommendation</span>
+            </div>
+            <div style="display: flex; gap: 8px; justify-content: center;">
+              <div style="flex: 1; max-width: 90px; background: #fff; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
+                <div style="font-size: 6px; color: #92400e; text-transform: uppercase;">Direction</div>
+                <div style="font-size: 12px; font-weight: 700; color: ${l4Dir === 'BUY' ? '#16a34a' : l4Dir === 'SELL' ? '#dc2626' : '#666'};">${l4Dir}</div>
+              </div>
+              <div style="flex: 1; max-width: 90px; background: #fff; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
+                <div style="font-size: 6px; color: #92400e; text-transform: uppercase;">Market</div>
+                <div style="font-size: 10px; font-weight: 600; color: #92400e;">${cf.layer4?.market || '-'}</div>
+              </div>
+              <div style="flex: 1; max-width: 90px; background: #fff; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
+                <div style="font-size: 6px; color: #92400e; text-transform: uppercase;">Confidence</div>
+                <div style="font-size: 10px; font-weight: 600; color: #b45309;">${cf.layer4?.confidence || 0}%</div>
+              </div>
+              <div style="flex: 2; max-width: 200px; background: #fff; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
+                <div style="font-size: 6px; color: #92400e; text-transform: uppercase;">Reason</div>
+                <div style="font-size: 7px; color: #78350f;">${cf.layer4?.reason || 'Capital flow analysis based recommendation'}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TRADE PLAN (Full Width) -->
+          <div class="trade-plan-box" style="margin-top: 6px;">
+            <div class="tp-header">
+              <span class="tp-badge">PLAN</span>
+              <span class="tp-title">Trade Plan</span>
+              <span style="margin-left: auto; font-size: 7px; font-weight: 600; color: #0f766e;">R:R ${formatRiskReward(tp.riskReward)}</span>
+            </div>
+            <div class="tp-grid">
+              <div class="tp-item">
+                <div class="tp-item-label">Entry</div>
+                <div class="tp-item-value">${formatPrice(tp.averageEntry)}</div>
+              </div>
+              <div class="tp-item">
+                <div class="tp-item-label">TP1</div>
+                <div class="tp-item-value" style="color: #16a34a;">${formatPrice(tp.takeProfits?.[0]?.price)}</div>
+                <div class="tp-item-sub">${tp.takeProfits?.[0]?.percentage ? `+${tp.takeProfits[0].percentage.toFixed(1)}%` : ''}</div>
+              </div>
+              <div class="tp-item">
+                <div class="tp-item-label">TP2</div>
+                <div class="tp-item-value" style="color: #16a34a;">${formatPrice(tp.takeProfits?.[1]?.price)}</div>
+                <div class="tp-item-sub">${tp.takeProfits?.[1]?.percentage ? `+${tp.takeProfits[1].percentage.toFixed(1)}%` : ''}</div>
+              </div>
+              <div class="tp-item">
+                <div class="tp-item-label">Stop Loss</div>
+                <div class="tp-item-value" style="color: #dc2626;">${formatPrice(tp.stopLoss?.price)}</div>
+                <div class="tp-item-sub">${tp.stopLoss?.percentage ? `-${Math.abs(tp.stopLoss.percentage).toFixed(1)}%` : ''}</div>
+              </div>
+            </div>
+          </div>
+
           <!-- TRADE PLAN CHART (Full Width) -->
           <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px; margin-top: 6px; background: #1a1a2e;">
-            <div style="font-size: 7px; font-weight: 600; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <div style="font-size: 7px; font-weight: 600; color: #fff; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 6px;">
               <span>Trade Plan Chart</span>
               <span style="font-size: 6px; color: #9ca3af;">Entry • TP1-2 • SL</span>
             </div>
@@ -2366,13 +2375,13 @@ function generateSinglePageReport(data: AnalysisReportData): string {
         </div>
 
         <!-- FOOTER -->
-        <div class="footer" style="position: absolute; bottom: 8px; left: 16px; right: 16px;">
-          <div class="footer-row">
+        <div class="footer" style="position: absolute; bottom: 8px; left: 24px; right: 24px; max-width: 560px; margin: 0 auto;">
+          <div class="footer-row" style="display: flex; justify-content: center; gap: 16px;">
             <span>TraderPath.io</span>
             <span>Analysis ID: ${data.analysisId || 'N/A'}</span>
             <span>${new Date(data.generatedAt).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
           </div>
-          <div class="footer-disclaimer">${DISCLAIMER_TEXT}</div>
+          <div class="footer-disclaimer" style="text-align: center;">${DISCLAIMER_TEXT}</div>
         </div>
       </div>
     </body>
