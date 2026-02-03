@@ -2,7 +2,7 @@
 
 > **Version:** 1.0
 > **Date:** 2026-02-03
-> **Status:** Ready for Stripe Implementation
+> **Status:** Phase 4 Complete - Ready for Phase 5 (Free Tier)
 
 ---
 
@@ -371,16 +371,44 @@ POST   /api/credits/purchase             - One-time credit purchase
 5. ✅ Daily credit allocation cron job (00:00 UTC)
 6. ✅ Webhook handlers for all subscription events
 
-### Next Steps (Phase 4 - Frontend)
+### Phase 4 Implementation Status
 
-1. Update pricing page with new subscription tiers
-2. Add subscription checkout flow
-3. Add billing settings page
-4. Implement tier-based feature guards in UI
-5. Test full end-to-end flow
+### Completed (2026-02-03)
+
+1. ✅ Updated pricing page with subscription tiers
+   - Added `SubscriptionTiers` component with monthly/yearly toggle
+   - Shows 17% savings badge for yearly billing
+   - Credit packages moved to "Add-on Credits" section
+2. ✅ Subscription checkout flow implemented
+   - `useSubscription` hook for state management
+   - Stripe checkout session creation
+   - Redirect to Stripe Checkout
+3. ✅ Billing settings page completed
+   - Shows current subscription tier with color-coded badge
+   - Daily credits display
+   - Manage Billing button (Stripe portal)
+   - Cancel/Resume subscription buttons
+   - Renewal date and "Cancels Soon" warning
+4. ✅ Tier-based feature display
+   - `SubscriptionTiers` component shows all features per tier
+   - Current plan highlighted
+   - Upgrade prompts for free users
+
+**Frontend Files Created/Updated:**
+- `apps/web/hooks/useSubscription.ts` - Subscription state management hook
+- `apps/web/components/pricing/SubscriptionTiers.tsx` - Tier cards component
+- `apps/web/app/(marketing)/pricing/page.tsx` - Public pricing page
+- `apps/web/app/(dashboard)/settings/page.tsx` - Billing settings section
 
 ### Next Steps (Phase 5 - Free Tier)
 
 1. Implement free tier limitations
+   - Restrict Capital Flow L3/L4 access
+   - Limit MLIS Pro access
+   - Cap daily analyses to 1
 2. Add upgrade prompts for free users
+   - Show upgrade CTA when limits reached
+   - Feature-gated UI components
 3. Track and enforce daily credit limits
+   - Credit guard middleware
+   - Daily credit reset verification
