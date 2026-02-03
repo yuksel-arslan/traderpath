@@ -2295,10 +2295,10 @@ function generateSinglePageReport(data: AnalysisReportData): string {
               <div class="ml-rec">${ml.recommendation || 'HOLD'}</div>
               <div class="ml-conf">Confidence: ${ml.confidence || 0}%</div>
               <div class="ml-layers" style="flex: 1;">
-                ${ml.layers ? Object.entries(ml.layers).slice(0, 4).map(([name, score]) => `
+                ${ml.layers ? Object.entries(ml.layers).slice(0, 4).map(([name, layer]) => `
                   <div class="ml-layer">
                     <div class="ml-layer-name">${name}</div>
-                    <div class="ml-layer-score">${typeof score === 'number' ? score.toFixed(0) : score}</div>
+                    <div class="ml-layer-score">${layer?.score?.toFixed(0) || '-'}</div>
                   </div>
                 `).join('') : ''}
               </div>
