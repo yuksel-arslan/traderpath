@@ -14,17 +14,18 @@ export interface TierConfig {
   dailyCredits: number;
 
   // Feature access
-  capitalFlowL3: boolean;
-  capitalFlowL4: boolean;
-  mlisProAccess: boolean;
-  aiConcierge: boolean;
-  apiAccess: boolean;
-  prioritySupport: boolean;
-  earlyFeatures: boolean;
+  capitalFlowL3: boolean;      // Layer 3: Sector Analysis
+  capitalFlowL4: boolean;      // Layer 4: AI Recommendations
+  assetAnalysis: boolean;      // 7-Step + MLIS Pro Analysis
+  aiFeatures: boolean;         // AI Concierge + AI Experts
+  reportsExport: boolean;      // PDF, Email, Screenshot export
+  automation: boolean;         // Scheduled Reports, Price Alerts
+  rewards: boolean;            // Daily Login, Spin, Quiz, Referral
 
   // Limits (-1 = unlimited)
   maxScheduledReports: number;
   maxAlerts: number;
+  maxDailyAnalyses: number;
   monthlyAiExpertQuestions: number;
   monthlyEmailReports: number;
   monthlyPdfReports: number;
@@ -60,65 +61,73 @@ export interface CreditPackageConfig {
 // =============================================================================
 
 export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
+  // FREE: Only Capital Flow L1-L2 (Global Liquidity + Market Flow)
   free: {
-    dailyCredits: 10,
+    dailyCredits: 0,
     capitalFlowL3: false,
     capitalFlowL4: false,
-    mlisProAccess: false,
-    aiConcierge: false,
-    apiAccess: false,
-    prioritySupport: false,
-    earlyFeatures: false,
+    assetAnalysis: false,
+    aiFeatures: false,
+    reportsExport: false,
+    automation: false,
+    rewards: false,
     maxScheduledReports: 0,
-    maxAlerts: 3,
+    maxAlerts: 0,
+    maxDailyAnalyses: 0,
     monthlyAiExpertQuestions: 0,
     monthlyEmailReports: 0,
     monthlyPdfReports: 0,
   },
 
+  // STARTER: L1-2-3-4 + Reports/Automation/Rewards
   starter: {
     dailyCredits: 100,
     capitalFlowL3: true,
     capitalFlowL4: true,
-    mlisProAccess: true,
-    aiConcierge: true,
-    apiAccess: false,
-    prioritySupport: false,
-    earlyFeatures: false,
+    assetAnalysis: false,
+    aiFeatures: false,
+    reportsExport: true,
+    automation: true,
+    rewards: true,
     maxScheduledReports: 3,
     maxAlerts: 10,
-    monthlyAiExpertQuestions: 10,
+    maxDailyAnalyses: 0,
+    monthlyAiExpertQuestions: 0,
     monthlyEmailReports: 10,
     monthlyPdfReports: 10,
   },
 
+  // PRO: Starter + Asset Analysis (7-Step, MLIS Pro)
   pro: {
-    dailyCredits: 250,
+    dailyCredits: 200,
     capitalFlowL3: true,
     capitalFlowL4: true,
-    mlisProAccess: true,
-    aiConcierge: true,
-    apiAccess: false,
-    prioritySupport: true,
-    earlyFeatures: false,
+    assetAnalysis: true,
+    aiFeatures: false,
+    reportsExport: true,
+    automation: true,
+    rewards: true,
     maxScheduledReports: 10,
     maxAlerts: 50,
-    monthlyAiExpertQuestions: 50,
+    maxDailyAnalyses: 10,
+    monthlyAiExpertQuestions: 0,
     monthlyEmailReports: 50,
     monthlyPdfReports: 50,
   },
 
+  // ELITE: Pro + AI Features (Concierge + Experts)
   elite: {
-    dailyCredits: 500,
+    dailyCredits: 350,
     capitalFlowL3: true,
     capitalFlowL4: true,
-    mlisProAccess: true,
-    aiConcierge: true,
-    apiAccess: true,
-    prioritySupport: true,
-    earlyFeatures: true,
+    assetAnalysis: true,
+    aiFeatures: true,
+    reportsExport: true,
+    automation: true,
+    rewards: true,
     maxScheduledReports: -1, // Unlimited
     maxAlerts: -1,
+    maxDailyAnalyses: -1,
     monthlyAiExpertQuestions: -1,
     monthlyEmailReports: -1,
     monthlyPdfReports: -1,
@@ -132,7 +141,7 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
 export const STRIPE_PRODUCTS: Record<Exclude<SubscriptionTier, 'free'>, StripeProductConfig> = {
   starter: {
     name: 'TraderPath Starter',
-    description: 'Perfect for casual traders. 100 credits/day, Capital Flow access, AI analysis.',
+    description: 'Full Capital Flow access (L1-L4), Reports, Automation, Rewards.',
     metadata: {
       tier: 'starter',
       credits_daily: 100,
@@ -141,19 +150,19 @@ export const STRIPE_PRODUCTS: Record<Exclude<SubscriptionTier, 'free'>, StripePr
 
   pro: {
     name: 'TraderPath Pro',
-    description: 'For active traders. 250 credits/day, priority support, advanced features.',
+    description: 'Starter + Asset Analysis (7-Step, MLIS Pro). Up to 10 analyses/day.',
     metadata: {
       tier: 'pro',
-      credits_daily: 250,
+      credits_daily: 200,
     },
   },
 
   elite: {
     name: 'TraderPath Elite',
-    description: 'For professional traders. 500 credits/day, API access, early features.',
+    description: 'Pro + AI Features (Concierge, Experts). Unlimited everything.',
     metadata: {
       tier: 'elite',
-      credits_daily: 500,
+      credits_daily: 350,
     },
   },
 };

@@ -318,15 +318,14 @@ function TierCard({
       {/* Features */}
       <div className={cn('space-y-2 mb-4', isCompact && 'text-sm')}>
         <FeatureItem included={true} text="Capital Flow L1-L2" compact={isCompact} />
-        <FeatureItem included={plan.features.capitalFlowL3} text="Capital Flow L3" compact={isCompact} />
-        <FeatureItem included={plan.features.capitalFlowL4} text="AI Recommendations" compact={isCompact} />
-        <FeatureItem included={plan.features.mlisProAccess} text="MLIS Pro" compact={isCompact} />
+        <FeatureItem included={plan.features.capitalFlowL3} text="Capital Flow L3-L4" compact={isCompact} />
+        <FeatureItem included={plan.features.assetAnalysis} text="Asset Analysis" compact={isCompact} />
+        <FeatureItem included={plan.features.aiFeatures} text="AI Features" compact={isCompact} />
         {!isCompact && (
           <>
-            <FeatureItem included={plan.features.aiConcierge} text="AI Concierge" compact={isCompact} />
-            <FeatureItem included={plan.features.prioritySupport} text="Priority Support" compact={isCompact} />
-            <FeatureItem included={plan.features.apiAccess} text="API Access" compact={isCompact} />
-            <FeatureItem included={plan.features.earlyFeatures} text="Early Features" compact={isCompact} />
+            <FeatureItem included={plan.features.reportsExport} text="Reports & Export" compact={isCompact} />
+            <FeatureItem included={plan.features.automation} text="Automation" compact={isCompact} />
+            <FeatureItem included={plan.features.rewards} text="Rewards" compact={isCompact} />
           </>
         )}
       </div>
@@ -335,16 +334,14 @@ function TierCard({
       {!isCompact && (
         <div className="text-xs text-muted-foreground space-y-1 mb-6">
           <p>
+            Daily Analyses:{' '}
+            {plan.limits.maxDailyAnalyses === -1 ? 'Unlimited' : plan.limits.maxDailyAnalyses || 'N/A'}
+          </p>
+          <p>
             Scheduled Reports:{' '}
             {plan.limits.maxScheduledReports === -1 ? 'Unlimited' : plan.limits.maxScheduledReports}
           </p>
           <p>Price Alerts: {plan.limits.maxAlerts === -1 ? 'Unlimited' : plan.limits.maxAlerts}</p>
-          <p>
-            AI Expert Questions/mo:{' '}
-            {plan.limits.monthlyAiExpertQuestions === -1
-              ? 'Unlimited'
-              : plan.limits.monthlyAiExpertQuestions}
-          </p>
         </div>
       )}
 
