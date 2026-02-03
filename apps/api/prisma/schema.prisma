@@ -716,28 +716,32 @@ model CostSettings {
 
   // Analysis Steps
   creditCostMarketPulse    Int @default(0) @map("credit_cost_market_pulse")
-  creditCostAssetScanner   Int @default(2) @map("credit_cost_asset_scanner")
-  creditCostSafetyCheck    Int @default(5) @map("credit_cost_safety_check")
-  creditCostTiming         Int @default(3) @map("credit_cost_timing")
-  creditCostTradePlan      Int @default(5) @map("credit_cost_trade_plan")
-  creditCostTrapCheck      Int @default(5) @map("credit_cost_trap_check")
-  creditCostFinalVerdict   Int @default(0) @map("credit_cost_final_verdict")
+  creditCostAssetScanner   Int @default(1) @map("credit_cost_asset_scanner")
+  creditCostSafetyCheck    Int @default(2) @map("credit_cost_safety_check")
+  creditCostTiming         Int @default(2) @map("credit_cost_timing")
+  creditCostTradePlan      Int @default(2) @map("credit_cost_trade_plan")
+  creditCostTrapCheck      Int @default(2) @map("credit_cost_trap_check")
+  creditCostFinalVerdict   Int @default(1) @map("credit_cost_final_verdict")
 
   // Bundles
-  creditCostFullAnalysis   Int @default(25) @map("credit_cost_full_analysis")
+  creditCostFullAnalysis   Int @default(10) @map("credit_cost_full_analysis")
   creditCostQuickCheck     Int @default(5) @map("credit_cost_quick_check")
   creditCostSmartEntry     Int @default(12) @map("credit_cost_smart_entry")
 
   // MLIS Pro Analysis (5-Layer Neural Network)
-  creditCostMlisProAnalysis    Int @default(35) @map("credit_cost_mlis_pro_analysis")      // Full MLIS Pro analysis bundle
-  creditCostMlisTechnicalLayer Int @default(5) @map("credit_cost_mlis_technical_layer")   // Technical layer
-  creditCostMlisMomentumLayer  Int @default(5) @map("credit_cost_mlis_momentum_layer")    // Momentum layer
-  creditCostMlisVolatilityLayer Int @default(5) @map("credit_cost_mlis_volatility_layer") // Volatility layer
-  creditCostMlisVolumeLayer    Int @default(5) @map("credit_cost_mlis_volume_layer")      // Volume layer
-  creditCostMlisVerdictLayer   Int @default(5) @map("credit_cost_mlis_verdict_layer")     // Final verdict layer
+  creditCostMlisProAnalysis    Int @default(10) @map("credit_cost_mlis_pro_analysis")     // Full MLIS Pro analysis bundle
+  creditCostMlisTechnicalLayer Int @default(2) @map("credit_cost_mlis_technical_layer")   // Technical layer
+  creditCostMlisMomentumLayer  Int @default(2) @map("credit_cost_mlis_momentum_layer")    // Momentum layer
+  creditCostMlisVolatilityLayer Int @default(2) @map("credit_cost_mlis_volatility_layer") // Volatility layer
+  creditCostMlisVolumeLayer    Int @default(2) @map("credit_cost_mlis_volume_layer")      // Volume layer
+  creditCostMlisVerdictLayer   Int @default(2) @map("credit_cost_mlis_verdict_layer")     // Final verdict layer
+
+  // Capital Flow
+  creditCostCapitalFlowL3L4 Int @default(5) @map("credit_cost_capital_flow_l3_l4")  // L3 + L4 combined
 
   // Features
-  creditCostAiExpert       Int @default(10) @map("credit_cost_ai_expert")
+  creditCostAiExpert       Int @default(5) @map("credit_cost_ai_expert")
+  creditCostAiConcierge    Int @default(5) @map("credit_cost_ai_concierge")
   creditCostPdfReport      Int @default(5) @map("credit_cost_pdf_report")
   creditCostTranslation    Int @default(5) @map("credit_cost_translation")
   creditCostEmailSend      Int @default(5) @map("credit_cost_email_send")

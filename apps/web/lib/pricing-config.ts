@@ -70,23 +70,22 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
   },
 ];
 
-// Analysis step credit costs
+// Analysis step credit costs (for display purposes)
 export const ANALYSIS_COSTS = [
   { step: 'Market Pulse', credits: 0, description: 'Overall market conditions' },
-  { step: 'Asset Scanner', credits: 2, description: 'Deep asset analysis' },
-  { step: 'Safety Check', credits: 5, description: 'Manipulation detection' },
-  { step: 'Timing Analysis', credits: 3, description: 'Optimal entry timing' },
-  { step: 'Trade Plan', credits: 5, description: 'Complete trading strategy' },
-  { step: 'Trap Check', credits: 5, description: 'Liquidation zone analysis' },
-  { step: 'Final Verdict', credits: 0, description: 'Overall recommendation' },
+  { step: 'Asset Scanner', credits: 1, description: 'Deep asset analysis' },
+  { step: 'Safety Check', credits: 2, description: 'Manipulation detection' },
+  { step: 'Timing Analysis', credits: 2, description: 'Optimal entry timing' },
+  { step: 'Trade Plan', credits: 2, description: 'Complete trading strategy' },
+  { step: 'Trap Check', credits: 2, description: 'Liquidation zone analysis' },
+  { step: 'Final Verdict', credits: 1, description: 'Overall recommendation' },
 ];
 
 // Analysis bundles with discounts
-// NOTE: These values must match backend credit-costs.service.ts (BUNDLE_FULL_ANALYSIS = 25)
-// MLIS Pro AI Confirmation is included in 7-Step Analysis as Step 8
+// NOTE: These values must match backend subscription-tiers.ts SERVICE_CREDITS
 export const ANALYSIS_BUNDLES = [
-  { name: '7-Step Analysis', steps: '7 Steps + AI Confirmation', credits: 25, description: 'Complete analysis with MLIS Pro validation', comingSoon: false, method: 'classic' },
-  { name: 'TFT Analysis', steps: 'Full Analysis + AI Price Prediction', credits: 50, description: 'With TFT deep learning model', comingSoon: true, method: 'tft' },
+  { name: '7-Step Analysis', steps: '7 Steps + AI Confirmation', credits: 10, description: 'Complete analysis with MLIS Pro validation', comingSoon: false, method: 'classic' },
+  { name: 'TFT Analysis', steps: 'Full Analysis + AI Price Prediction', credits: 20, description: 'With TFT deep learning model', comingSoon: true, method: 'tft' },
 ];
 
 // MLIS Pro confirmation layers (included in 7-Step as Step 8)
@@ -99,11 +98,14 @@ export const MLIS_PRO_LAYERS = [
 ];
 
 // Feature credit costs
+// NOTE: These values must match backend subscription-tiers.ts SERVICE_CREDITS
 export const FEATURE_COSTS = [
-  { name: 'AI Expert Chat', credits: 5, description: 'Per message' },
-  { name: 'PDF Report', credits: 10, description: 'Full analysis report' },
-  { name: 'Translation', credits: 5, description: 'Translate analysis' },
-  { name: 'Email Send', credits: 1, description: 'Send report via email' },
+  { name: 'Capital Flow L3+L4', credits: 5, description: 'Sector analysis + AI recommendations' },
+  { name: 'Asset Analysis', credits: 10, description: '7-Step or MLIS Pro analysis' },
+  { name: 'AI Expert Chat', credits: 5, description: 'Per chat session' },
+  { name: 'AI Concierge', credits: 5, description: 'Per chat session' },
+  { name: 'PDF Report', credits: 5, description: 'Full analysis report' },
+  { name: 'Email Send', credits: 5, description: 'Send report via email' },
   { name: 'Price Alert', credits: 1, description: 'Per alert created' },
 ];
 
