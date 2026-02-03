@@ -18,7 +18,6 @@ import {
   Calculator,
   Activity,
   FileText,
-  Clock,
   Globe,
   Target,
 } from 'lucide-react';
@@ -378,71 +377,44 @@ export default function FinancePage() {
             </div>
           </div>
 
-          {/* Daily Pass Pricing Section */}
-          <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-500/30 rounded-lg p-6 mb-6">
+          {/* Per-Use Credit Pricing Section */}
+          <div className="bg-gradient-to-r from-teal-500/10 via-emerald-500/10 to-teal-500/10 border border-teal-500/30 rounded-lg p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-500/20 rounded-lg">
-                  <Clock className="w-5 h-5 text-amber-500" />
+                <div className="p-2 bg-teal-500/20 rounded-lg">
+                  <Zap className="w-5 h-5 text-teal-500" />
                 </div>
                 <div>
-                  <h4 className="font-semibold text-lg">Daily Pass Pricing</h4>
-                  <p className="text-sm text-muted-foreground">Users pay once per day for unlimited access</p>
+                  <h4 className="font-semibold text-lg">Per-Use Credit Pricing</h4>
+                  <p className="text-sm text-muted-foreground">Users pay credits per operation</p>
                 </div>
               </div>
-              <span className="bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded">
-                NEW MODEL
+              <span className="bg-teal-500 text-white text-xs font-bold px-2 py-1 rounded">
+                ACTIVE MODEL
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Layer 3 - Sector Activity */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Capital Flow L3+L4 */}
               <div className="bg-card border rounded-lg p-4">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-purple-500/10 rounded-lg">
                     <Globe className="w-5 h-5 text-purple-500" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">Layer 3 - Sectors</p>
-                    <p className="text-xs text-muted-foreground">Sector drill-down</p>
+                    <p className="font-medium">Capital Flow L3+L4</p>
+                    <p className="text-xs text-muted-foreground">Sectors + AI Recs</p>
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      value={editingCosts.creditCostCapitalFlowL3Daily ?? 25}
-                      onChange={(e) => setEditingCosts({ ...editingCosts, creditCostCapitalFlowL3Daily: parseInt(e.target.value) || 0 })}
-                      className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
-                    />
-                    <span className="text-sm text-muted-foreground">cr/day</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Layer 4 - AI Recommendations */}
-              <div className="bg-card border rounded-lg p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-amber-500/10 rounded-lg">
-                    <Target className="w-5 h-5 text-amber-500" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">Layer 4 - AI Recs</p>
-                    <p className="text-xs text-muted-foreground">BUY/SELL signals</p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      value={editingCosts.creditCostCapitalFlowL4Daily ?? 25}
-                      onChange={(e) => setEditingCosts({ ...editingCosts, creditCostCapitalFlowL4Daily: parseInt(e.target.value) || 0 })}
-                      className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
-                    />
-                    <span className="text-sm text-muted-foreground">cr/day</span>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingCosts.creditCostCapitalFlowL3L4 ?? 5}
+                    onChange={(e) => setEditingCosts({ ...editingCosts, creditCostCapitalFlowL3L4: parseInt(e.target.value) || 0 })}
+                    className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
+                  />
+                  <span className="text-sm text-muted-foreground">cr/use</span>
                 </div>
               </div>
 
@@ -457,18 +429,61 @@ export default function FinancePage() {
                     <p className="text-xs text-muted-foreground">7-Step / MLIS Pro</p>
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      value={editingCosts.creditCostAssetAnalysisDaily ?? 100}
-                      onChange={(e) => setEditingCosts({ ...editingCosts, creditCostAssetAnalysisDaily: parseInt(e.target.value) || 0 })}
-                      className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
-                    />
-                    <span className="text-sm text-muted-foreground">cr/day</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingCosts.creditCostFullAnalysis ?? 10}
+                    onChange={(e) => setEditingCosts({ ...editingCosts, creditCostFullAnalysis: parseInt(e.target.value) || 0 })}
+                    className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
+                  />
+                  <span className="text-sm text-muted-foreground">cr/analysis</span>
+                </div>
+              </div>
+
+              {/* AI Expert Chat */}
+              <div className="bg-card border rounded-lg p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-amber-500/10 rounded-lg">
+                    <Star className="w-5 h-5 text-amber-500" />
                   </div>
-                  <span className="text-xs text-amber-500 font-medium">Max 10</span>
+                  <div className="flex-1">
+                    <p className="font-medium">AI Expert Chat</p>
+                    <p className="text-xs text-muted-foreground">Per chat session</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingCosts.creditCostAiExpert ?? 5}
+                    onChange={(e) => setEditingCosts({ ...editingCosts, creditCostAiExpert: parseInt(e.target.value) || 0 })}
+                    className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
+                  />
+                  <span className="text-sm text-muted-foreground">cr/chat</span>
+                </div>
+              </div>
+
+              {/* AI Concierge */}
+              <div className="bg-card border rounded-lg p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-emerald-500/10 rounded-lg">
+                    <Target className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">AI Concierge</p>
+                    <p className="text-xs text-muted-foreground">Per chat session</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingCosts.creditCostAiConcierge ?? 5}
+                    onChange={(e) => setEditingCosts({ ...editingCosts, creditCostAiConcierge: parseInt(e.target.value) || 0 })}
+                    className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
+                  />
+                  <span className="text-sm text-muted-foreground">cr/chat</span>
                 </div>
               </div>
             </div>
@@ -479,24 +494,24 @@ export default function FinancePage() {
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-purple-500" />
-                    <span className="text-muted-foreground">L3:</span>
-                    <span className="font-mono font-medium">{editingCosts.creditCostCapitalFlowL3Daily ?? 25}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-amber-500" />
-                    <span className="text-muted-foreground">L4:</span>
-                    <span className="font-mono font-medium">{editingCosts.creditCostCapitalFlowL4Daily ?? 25}</span>
+                    <span className="text-muted-foreground">L3+L4:</span>
+                    <span className="font-mono font-medium">{editingCosts.creditCostCapitalFlowL3L4 ?? 5} cr</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-violet-500" />
                     <span className="text-muted-foreground">Analysis:</span>
-                    <span className="font-mono font-medium">{editingCosts.creditCostAssetAnalysisDaily ?? 100}</span>
+                    <span className="font-mono font-medium">{editingCosts.creditCostFullAnalysis ?? 10} cr</span>
                   </div>
-                </div>
-                <div className="text-muted-foreground">
-                  Total: <span className="font-mono font-medium text-foreground">
-                    {(editingCosts.creditCostCapitalFlowL3Daily ?? 25) + (editingCosts.creditCostCapitalFlowL4Daily ?? 25) + (editingCosts.creditCostAssetAnalysisDaily ?? 100)} cr/day
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    <span className="text-muted-foreground">AI Expert:</span>
+                    <span className="font-mono font-medium">{editingCosts.creditCostAiExpert ?? 5} cr</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="text-muted-foreground">Concierge:</span>
+                    <span className="font-mono font-medium">{editingCosts.creditCostAiConcierge ?? 5} cr</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -509,7 +524,6 @@ export default function FinancePage() {
                 <h4 className="font-semibold mb-4 flex items-center gap-2">
                   <FileText className="w-4 h-4" />
                   Analysis Bundles
-                  <span className="text-xs text-muted-foreground font-normal">(Legacy - per analysis)</span>
                 </h4>
                 <div className="space-y-4">
                   {[
@@ -557,7 +571,9 @@ export default function FinancePage() {
                 </h4>
                 <div className="space-y-4">
                   {[
-                    { key: 'creditCostAiExpert', label: 'AI Expert Chat', desc: 'Per message' },
+                    { key: 'creditCostAiExpert', label: 'AI Expert Chat', desc: 'Per chat session' },
+                    { key: 'creditCostAiConcierge', label: 'AI Concierge', desc: 'Per chat session' },
+                    { key: 'creditCostCapitalFlowL3L4', label: 'Capital Flow L3+L4', desc: 'Per use' },
                     { key: 'creditCostPdfReport', label: 'PDF Report', desc: 'Generate PDF' },
                     { key: 'creditCostTranslation', label: 'Translation', desc: 'Translate report' },
                     { key: 'creditCostEmailSend', label: 'Email Send', desc: 'Send via email' },
